@@ -112,7 +112,41 @@ async function getTenantProjectStatusUsage(
   };
 }
 
-async function buildTenantProjectStatusDeletionValidation(
+type ProjectTemplateStatusUsage = {
+  count: number;
+  templateNames: string[];
+};
+
+async function getTenantProjectTemplateStatusUsage(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<ProjectTemplateStatusUsage> {
+  const usageQuery = tenantScopedTable(trx, 'project_template_status_mappings as ptsm', tenant);
+  tenantDb(trx, tenant).tenantJoin(usageQuery, 'project_templates as t', 'ptsm.template_id', 't.template_id', { type: 'left' });
+  const rows = await usageQuery
+    .where({ 'ptsm.status_id': statusId })
+    .distinct<{ template_id: string; template_name: string | null }[]>(
+      'ptsm.template_id as template_id',
+      't.template_name as template_name'
+    )
+    .orderBy('t.template_name');
+
+  return {
+    count: rows.length,
+    templateNames: rows.map((row) => row.template_name || `Unknown template (${row.template_id})`)
+  };
+}
+
+function formatTemplateUsageDescription(templateNames: string[], count: number): string {
+  const visibleNames = templateNames.slice(0, 5);
+  const remainingCount = count - visibleNames.length;
+  const suffix = remainingCount > 0 ? ` and ${remainingCount} more` : '';
+
+  return `Templates: ${visibleNames.join(', ')}${suffix}`;
+}
+
+export async function buildTenantProjectStatusDeletionValidation(
   trx: Knex.Transaction,
   tenant: string,
   statusId: string
@@ -127,6 +161,24 @@ async function buildTenantProjectStatusDeletionValidation(
       code: 'NOT_FOUND',
       message: 'Project task status not found.',
       dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const templateUsage = await getTenantProjectTemplateStatusUsage(trx, tenant, statusId);
+  if (templateUsage.count > 0) {
+    const templateLabel = templateUsage.count === 1 ? 'project template' : 'project templates';
+
+    return {
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: `Cannot delete status "${status.name}" because it is used by ${templateUsage.count} ${templateLabel}. Replace the status in each template's Status Columns before deleting.`,
+      dependencies: [{
+        type: 'project_template',
+        count: templateUsage.count,
+        label: templateLabel,
+        description: formatTemplateUsageDescription(templateUsage.templateNames, templateUsage.count)
+      }],
       alternatives: []
     };
   }

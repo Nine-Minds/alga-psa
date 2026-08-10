@@ -135,13 +135,26 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                id="use-template"
-                onClick={() => setShowApplyDialog(true)}
-              >
-                <Rocket className="h-4 w-4 mr-2" />
-                {t('templates.editor.useTemplate', 'Use Template')}
-              </Button>
+              {template.unresolved_status_mapping_count ? (
+                <Button
+                  id="repair-status-columns"
+                  variant="outline"
+                  onClick={() => setShowApplyDialog(true)}
+                  title={t('templates.statuses.unresolved_apply_guard', {
+                    count: template.unresolved_status_mapping_count,
+                  })}
+                >
+                  {t('templates.statuses.repair_status_columns')}
+                </Button>
+              ) : (
+                <Button
+                  id="use-template"
+                  onClick={() => setShowApplyDialog(true)}
+                >
+                  <Rocket className="h-4 w-4 mr-2" />
+                  {t('templates.editor.useTemplate', 'Use Template')}
+                </Button>
+              )}
               <Button
                 id="delete-template"
                 variant="outline"

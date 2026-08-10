@@ -959,7 +959,17 @@
       "add_title": "Agregar columna de estado",
       "select_placeholder": "Seleccionar un estado...",
       "all_in_use": "Todos los estados disponibles están en uso",
-      "create_new": "Crear nuevo"
+      "create_new": "Crear nuevo",
+      "status_no_longer_exists": "Status no longer exists",
+      "missing_status": "Missing status",
+      "ambiguous_status": "Ambiguous historical status",
+      "replace_placeholder": "Select replacement status...",
+      "replace_status": "Replace status",
+      "replacing": "Replacing...",
+      "replaced": "Status column replaced",
+      "replace_failed": "Failed to replace status column",
+      "repair_status_columns": "Repair status columns",
+      "unresolved_apply_guard": "Status columns need repair ({{count}})"
     },
     "list": {
       "title": "Plantillas de proyecto",
@@ -1047,7 +1057,8 @@
         "all": "Copiar todas las asignaciones"
       },
       "fixErrors": "Corrige los siguientes errores:",
-      "addStatus": "Agregar nuevo estado"
+      "addStatus": "Agregar nuevo estado",
+      "unresolved_guard": "This template has status columns that must be repaired before it can be applied."
     },
     "detail": {
       "description": "Descripción:",

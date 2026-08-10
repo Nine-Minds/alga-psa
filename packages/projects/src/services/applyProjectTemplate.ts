@@ -6,6 +6,12 @@ import ProjectTaskModel from '../models/projectTask';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { validateData } from '@alga-psa/validation';
 import { applyTemplateSchema } from '../schemas/projectTemplate.schemas';
+import {
+  assertTemplateMappingsResolved,
+  resolveTemplateStatusMappings,
+  type ResolvedTemplateStatusMapping,
+  type TemplateStatusMappingRow,
+} from '../lib/projectTemplateStatusMappingResolution';
 
 export interface ApplyProjectTemplateInput {
   project_name: string;
@@ -57,11 +63,21 @@ export async function applyProjectTemplate(
     }
 
     // 1. Pre-load template statuses
-    const templateStatuses = options.copyStatuses
+    const templateStatuses: TemplateStatusMappingRow[] = options.copyStatuses
       ? await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .where({ template_id: templateId })
           .orderBy('display_order')
       : [];
+
+    // 1b. Resolve every effective mapping and preflight unresolved rows BEFORE
+    // any project/phases/tasks are written. The server guard is authoritative;
+    // the UI disable is only a convenience.
+    const resolvedTemplateStatuses = await resolveTemplateStatusMappings(
+      trx,
+      tenant,
+      templateStatuses
+    );
+    assertTemplateMappingsResolved(templateId, resolvedTemplateStatuses);
 
     // 2. Create project directly (no need to call createProject which has extra overhead)
     // Get project statuses for the project status field
@@ -189,17 +205,33 @@ export async function applyProjectTemplate(
       // No need to delete - we passed empty array to createProject so no status mappings were created
       // Add template status mappings and build mapping
       console.log(`[applyTemplate] Creating ${templateStatuses.length} status mappings from template`);
-      for (const templateStatus of templateStatuses) {
-        let statusIdToUse = templateStatus.status_id;
+      const resolvedByMappingId = new Map<string, ResolvedTemplateStatusMapping>(
+        resolvedTemplateStatuses.map((resolved) => [resolved.mappingId, resolved])
+      );
 
-        // If it's a custom status (no status_id), look for existing or create a new status
-        if (!templateStatus.status_id && templateStatus.custom_status_name) {
+      for (const templateStatus of templateStatuses) {
+        const resolved = resolvedByMappingId.get(templateStatus.template_status_mapping_id);
+        if (!resolved) {
+          throw new Error('Status mapping not found');
+        }
+
+        let statusIdToUse: string | null = null;
+        let standardStatusIdToUse: string | null = null;
+        let isStandard = false;
+
+        if (resolved.source === 'tenant') {
+          statusIdToUse = resolved.statusId;
+        } else if (resolved.source === 'standard') {
+          standardStatusIdToUse = resolved.standardStatusId;
+          isStandard = true;
+        } else if (resolved.source === 'inline') {
+          // If it's a custom status (no reference), look for existing or create a new status
           try {
             // First, check if a status with this name already exists for the tenant
             const existingStatus = await tenantScopedTable(trx, 'statuses', tenant)
               .where({
                 status_type: 'project_task',
-                name: templateStatus.custom_status_name
+                name: resolved.name
               })
               .first();
 
@@ -215,15 +247,15 @@ export async function applyProjectTemplate(
                 .first();
               const orderNumber = (maxOrder?.max ?? 0) + 1;
 
-              console.log(`[applyTemplate] Creating custom status: "${templateStatus.custom_status_name}" with order_number=${orderNumber}`);
+              console.log(`[applyTemplate] Creating custom status: "${resolved.name}" with order_number=${orderNumber}`);
 
               const insertResult = await tenantScopedTable(trx, 'statuses', tenant)
                 .insert({
                   tenant,
                   item_type: 'project_task',
                   status_type: 'project_task',
-                  name: templateStatus.custom_status_name,
-                  color: templateStatus.custom_status_color || '#6B7280',
+                  name: resolved.name,
+                  color: resolved.color || '#6B7280',
                   is_closed: false,
                   order_number: orderNumber,
                   created_at: new Date().toISOString()
@@ -231,7 +263,7 @@ export async function applyProjectTemplate(
                 .returning('*');
 
               if (!insertResult || insertResult.length === 0) {
-                throw new Error(`Custom status insert for "${templateStatus.custom_status_name}" completed without returning a row.`);
+                throw new Error(`Custom status insert for "${resolved.name}" completed without returning a row.`);
               }
 
               const newStatus = insertResult[0];
@@ -239,7 +271,7 @@ export async function applyProjectTemplate(
               console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
             }
           } catch (statusError) {
-            console.error(`[applyTemplate] Error creating custom status "${templateStatus.custom_status_name}":`, statusError);
+            console.error(`[applyTemplate] Error creating custom status "${resolved.name}":`, statusError);
             throw statusError;
           }
         }
@@ -252,10 +284,11 @@ export async function applyProjectTemplate(
               ? phaseMap.get(templateStatus.template_phase_id) ?? null
               : null,
             status_id: statusIdToUse,
-            custom_name: templateStatus.custom_status_name,
+            standard_status_id: standardStatusIdToUse,
+            custom_name: null,
             display_order: templateStatus.display_order,
             is_visible: true,
-            is_standard: false  // Custom statuses from the statuses table are never standard
+            is_standard: isStandard
           })
           .returning('*');
 

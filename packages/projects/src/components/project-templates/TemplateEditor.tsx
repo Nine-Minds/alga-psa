@@ -169,6 +169,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [statusMappings, setStatusMappings] = useState<IProjectTemplateStatusMapping[]>(
     initialTemplate.status_mappings || []
   );
+  const [unresolvedStatusMappingCount, setUnresolvedStatusMappingCount] = useState<number>(
+    initialTemplate.unresolved_status_mapping_count ?? 0
+  );
   const [taskAssignments, setTaskAssignments] = useState<IProjectTemplateTaskAssignment[]>(
     initialTemplate.task_assignments || []
   );
@@ -928,6 +931,20 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     setStatusMappings((prev) => [...prev, newMapping]);
   };
 
+  const handleStatusReplaced = (result: {
+    mapping: IProjectTemplateStatusMapping;
+    unresolvedStatusMappingCount: number;
+  }) => {
+    setStatusMappings((prev) =>
+      prev.map((m) =>
+        m.template_status_mapping_id === result.mapping.template_status_mapping_id
+          ? result.mapping
+          : m
+      )
+    );
+    setUnresolvedStatusMappingCount(result.unresolvedStatusMappingCount);
+  };
+
   const handleStatusRemoved = (mappingId: string) => {
     setStatusMappings((prev) => prev.filter((m) => m.template_status_mapping_id !== mappingId));
     // Clear status from tasks that used this mapping
@@ -1113,6 +1130,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           }}
           onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
+          onStatusReplaced={handleStatusReplaced}
         />
       )}
 
@@ -1185,10 +1203,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 onChange={handleViewModeChange}
                 options={viewOptions}
               />
-              <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
-                <Rocket className="h-4 w-4 mr-2" />
-                {t('templates.editor.useTemplate', 'Use Template')}
-              </Button>
+              {unresolvedStatusMappingCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-destructive font-medium">
+                    {t('templates.statuses.unresolved_apply_guard', {
+                      count: unresolvedStatusMappingCount,
+                    })}
+                  </span>
+                  <Button
+                    id="repair-status-columns"
+                    variant="outline"
+                    onClick={() => setShowStatusManager(true)}
+                  >
+                    {t('templates.statuses.repair_status_columns')}
+                  </Button>
+                </div>
+              ) : (
+                <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  {t('templates.editor.useTemplate', 'Use Template')}
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

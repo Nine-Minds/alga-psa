@@ -327,6 +327,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countStatusUsage('project_task', 'project_status_mappings', 'status_id')
       },
       {
+        type: 'project_template_status_mapping',
+        table: 'project_template_status_mappings',
+        label: 'project template status column',
+        countQuery: countStatusUsage('project_task', 'project_template_status_mappings', 'status_id')
+      },
+      {
         type: 'interaction',
         table: 'interactions',
         label: 'interaction',
