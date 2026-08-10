@@ -435,7 +435,7 @@
         "label": "Activo"
       },
       "board": {
-        "label": "Junta *",
+        "label": "Tablero *",
         "placeholder": "Seleccionar tablero"
       },
       "status": {

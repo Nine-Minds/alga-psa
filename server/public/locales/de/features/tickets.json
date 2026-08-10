@@ -297,7 +297,8 @@
     "closeFailed": "Ticket konnte nicht geschlossen werden",
     "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
-    "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden"
+    "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
+    "errorWithMessage": "Fehler: {{message}}"
   },
   "conversation": {
     "comments": "Kommentare",

@@ -224,6 +224,14 @@
       "heading": "Buy credits or manage the subscription",
       "body": "Top-ups, auto-top-up, and subscription changes are handled in the Nine Minds store.",
       "openStore": "Open the store"
+    },
+    "status": {
+      "none": "No subscription",
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid"
     }
   },
   "managementPage": {

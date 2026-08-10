@@ -1356,7 +1356,9 @@
     "loadingProjects": "Caricamento progetti...",
     "noDescription": "Nessuna descrizione fornita",
     "noPhasesOrTasks": "Nessuna fase o attività da visualizzare",
-    "loadError": "Impossibile caricare i dettagli del progetto"
+    "loadError": "Impossibile caricare i dettagli del progetto",
+    "errorWithMessage": "Errore: {{message}}",
+    "notFoundOrNoAccess": "Progetto non trovato oppure non hai accesso a questo progetto."
   },
   "backToProjects": "Torna ai Progetti",
   "invalidProjectData": "Dati del progetto non validi",

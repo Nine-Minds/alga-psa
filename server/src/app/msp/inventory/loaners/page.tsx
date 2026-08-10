@@ -7,11 +7,16 @@ import { redirect } from 'next/navigation';
 import type { LoanerOutRow } from '@alga-psa/inventory/actions';
 import type { IClient } from '@alga-psa/types';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Loaners',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.loaners.title', { defaultValue: 'Loaners' }),
+  };
+}
 
 export default async function LoanersPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/loaners', scope: 'msp' });

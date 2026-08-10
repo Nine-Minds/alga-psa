@@ -5,7 +5,7 @@
  */
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
 
@@ -78,9 +78,10 @@ export async function resolveEmailLocale(
           ? userPref.setting_value.replace(/"/g, '')
           : userPref.setting_value;
 
-        if (isSupportedLocale(locale)) {
-          logger.debug('[EmailLocaleResolver] Using user preference:', { locale, userId: recipient.userId });
-          return locale;
+        const userLocale = normalizeLocale(locale);
+        if (userLocale) {
+          logger.debug('[EmailLocaleResolver] Using user preference:', { locale: userLocale, userId: recipient.userId });
+          return userLocale;
         }
       }
 
@@ -96,8 +97,8 @@ export async function resolveEmailLocale(
         .where({ client_id: clientId })
         .first();
 
-      const clientLocale = client?.properties?.defaultLocale;
-      if (clientLocale && isSupportedLocale(clientLocale)) {
+      const clientLocale = normalizeLocale(client?.properties?.defaultLocale);
+      if (clientLocale) {
         logger.debug('[EmailLocaleResolver] Using client preference:', { locale: clientLocale, clientId });
         return clientLocale;
       }
@@ -108,8 +109,8 @@ export async function resolveEmailLocale(
       const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
         .first();
 
-      const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-      if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
+      const clientPortalLocale = normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale);
+      if (clientPortalLocale) {
         logger.debug('[EmailLocaleResolver] Using client-portal default:', { locale: clientPortalLocale });
         return clientPortalLocale;
       }
@@ -135,15 +136,15 @@ export async function getTenantDefaultLocale(
     const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
       .first();
 
-    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+    const tenantDefaultLocale = normalizeLocale(tenantSettings?.settings?.defaultLocale);
+    if (tenantDefaultLocale) {
       return tenantDefaultLocale;
     }
 
     // Legacy MSP-only default (retired split UI)
     if (userType === 'internal') {
-      const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
-      if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
+      const legacyMspLocale = normalizeLocale(tenantSettings?.settings?.mspPortal?.defaultLocale);
+      if (legacyMspLocale) {
         return legacyMspLocale;
       }
     }

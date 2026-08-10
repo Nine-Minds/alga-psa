@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import ProjectTaskSearchRedirectClient from './ProjectTaskSearchRedirectClient';
 
 interface ProjectTaskSearchRedirectPageProps {
@@ -8,9 +9,13 @@ interface ProjectTaskSearchRedirectPageProps {
   }>;
 }
 
-export const metadata: Metadata = {
-  title: 'Project Task',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.projects.detail.tasks.detail.title', { defaultValue: 'Project Task' }),
+  };
+}
 
 export default async function ProjectTaskSearchRedirectPage({
   params,

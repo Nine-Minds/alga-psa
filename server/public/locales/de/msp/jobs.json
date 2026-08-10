@@ -136,5 +136,9 @@
       "none": "Keine passenden Jobs zum Löschen.",
       "error": "Job-Verlauf konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
     }
+  },
+  "page": {
+    "heading": "Jobüberwachung",
+    "recentJobs": "Aktuelle Jobs"
   }
 }

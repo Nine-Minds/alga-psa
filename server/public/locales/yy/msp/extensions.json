@@ -346,5 +346,30 @@
     "scopeToOneInstall": "55555",
     "overrideTenantContext": "55555",
     "matchRequestId": "55555"
+  },
+  "permissions": {
+    "categoryHeadings": {
+      "storage": "55555",
+      "ui": "55555",
+      "data": "55555",
+      "api": "55555",
+      "system": "55555",
+      "other": "55555"
+    },
+    "access": {
+      "low": "55555",
+      "medium": "55555",
+      "high": "55555"
+    },
+    "severity": {
+      "low": "55555",
+      "medium": "55555",
+      "high": "55555"
+    },
+    "legend": {
+      "low": "55555",
+      "medium": "55555",
+      "high": "55555"
+    }
   }
 }

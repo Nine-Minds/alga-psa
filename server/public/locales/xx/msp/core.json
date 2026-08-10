@@ -459,7 +459,10 @@
     "goToDashboard": "11111",
     "logoAlt": "11111",
     "expandSidebar": "11111",
-    "collapseSidebar": "11111"
+    "collapseSidebar": "11111",
+    "collapseSection": "11111 {{section}} 11111",
+    "expandSection": "11111 {{section}} 11111",
+    "appLogoAlt": "11111 {{appName}} 11111"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
     "title": "11111",
     "description": "11111",
     "action": "11111"
+  },
+  "githubStar": {
+    "label": "11111",
+    "ariaLabel": "11111 {{repository}} 11111"
   }
 }

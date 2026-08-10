@@ -1356,7 +1356,9 @@
     "loadingProjects": "55555",
     "noDescription": "55555",
     "noPhasesOrTasks": "55555",
-    "loadError": "55555"
+    "loadError": "55555",
+    "errorWithMessage": "55555 {{message}} 55555",
+    "notFoundOrNoAccess": "55555"
   },
   "backToProjects": "55555",
   "invalidProjectData": "55555",

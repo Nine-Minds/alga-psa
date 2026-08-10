@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "11111",
       "operations": "11111",
-      "billing": "11111"
+      "billing": "11111",
+      "inventory": "11111"
     },
     "badges": {
       "planned": "11111"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "11111",
       "openInBilling": "11111",
+      "openReport": "11111",
       "requiresTier": "11111 {{tier}} 11111",
       "comingSoon": "11111"
     },
@@ -148,6 +150,18 @@
         "description": "11111"
       },
       "contractReports": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "inventoryMargin": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "inventoryWriteOffs": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "inventoryGhostUsage": {
         "title": "11111",
         "description": "11111"
       }

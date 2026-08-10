@@ -5,11 +5,16 @@ import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Write-offs',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.writeOffs.title', { defaultValue: 'Write-offs' }),
+  };
+}
 
 export default async function WriteOffsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/write-offs', scope: 'msp' });

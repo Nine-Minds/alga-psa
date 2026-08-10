@@ -7,6 +7,7 @@ import { ClientDetails } from '@alga-psa/clients';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedClient = cache((id: string) => getClientById(id));
@@ -21,7 +22,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch client title:', error);
   }
-  return { title: 'Client Details' };
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.clients.detail.fallbackTitle', { defaultValue: 'Client Details' }) };
 }
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {

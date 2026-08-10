@@ -297,7 +297,8 @@
     "closeFailed": "Falha ao fechar ticket",
     "scheduleVisitFailed": "Falha ao abrir o agendador",
     "loadCommentsFailed": "Falha ao carregar os comentários",
-    "updateTicketFailed": "Falha ao atualizar o ticket"
+    "updateTicketFailed": "Falha ao atualizar o ticket",
+    "errorWithMessage": "Erro: {{message}}"
   },
   "conversation": {
     "comments": "Comentários",
@@ -1241,7 +1242,7 @@
   },
   "validation": {
     "categoryNameRequired": "O nome da categoria é obrigatório",
-    "boardRequiredForTopLevelCategory": "O conselho é obrigatório para categorias de nível superior",
+    "boardRequiredForTopLevelCategory": "O quadro é obrigatório para categorias de nível superior",
     "selectBoardForImport": "Selecione um quadro para as categorias importadas",
     "importParentCategoriesRequired": "Não é possível importar subcategorias sem suas categorias principais. Selecione também: {{parents}}",
     "quickAdd": {
@@ -1254,7 +1255,7 @@
     },
     "category": {
       "nameRequired": "O nome da categoria é obrigatório",
-      "boardRequiredForTopLevel": "O conselho é obrigatório para categorias de nível superior"
+      "boardRequiredForTopLevel": "O quadro é obrigatório para categorias de nível superior"
     },
     "materials": {
       "productRequired": "Selecione um produto",

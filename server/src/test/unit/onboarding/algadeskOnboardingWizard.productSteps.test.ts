@@ -51,7 +51,11 @@ describe('AlgaDesk onboarding wizard product steps', () => {
 
   it('defines AlgaDesk onboarding translation keys for every locale', () => {
     const localesRoot = join(process.cwd(), 'public/locales');
-    const locales = readdirSync(localesRoot);
+    // Directories only — a stray .DS_Store next to the locale folders would
+    // otherwise be read as a locale and blow up with ENOTDIR.
+    const locales = readdirSync(localesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
 
     for (const locale of locales) {
       const source = readFileSync(join(localesRoot, locale, 'msp/onboarding.json'), 'utf8');

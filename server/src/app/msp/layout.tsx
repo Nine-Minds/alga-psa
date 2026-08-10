@@ -9,16 +9,23 @@ import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingC
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // This template overrides the root layout's template for all /msp/* pages.
 // The default includes the suffix because defaults bypass their own template
 // (i.e. 'Dashboard | AlgaPSA' is rendered literally, not wrapped by the template).
-export const metadata: Metadata = {
-  title: {
-    template: '%s | AlgaPSA',
-    default: 'Dashboard | AlgaPSA',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: {
+      // '%s' is Next's own slot for the child route's title, not an i18next
+      // placeholder — it passes through translation untouched.
+      template: '%s | AlgaPSA',
+      default: t('msp.layout.defaultTitle', { defaultValue: 'Dashboard | AlgaPSA' }),
+    },
+  };
+}
 
 export default async function MspLayout({
   children,

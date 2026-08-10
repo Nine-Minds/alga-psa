@@ -7,6 +7,7 @@ import { Label, Input, Button, Alert, AlertDescription, Checkbox } from '@alga-p
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
@@ -31,6 +32,7 @@ export default function MspLoginForm({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const captcha = useLoginCaptcha();
+  const { t } = useTranslation('msp/auth');
 
   useEffect(() => {
     setEmail(initialEmail ?? '');
@@ -78,12 +80,12 @@ export default function MspLoginForm({
         onTwoFactorRequired();
       } else if (result?.code === 'CAPTCHA_REQUIRED') {
         await captcha.requireCaptcha();
-        setLookupError('Please complete the verification below, then sign in again.');
+        setLookupError(t('signIn.errors.captchaRequired', 'Please complete the verification below, then sign in again.'));
       } else if (result?.code === 'RATE_LIMITED') {
         onError({
           type: 'error',
-          title: 'Too Many Attempts',
-          message: 'Too many failed sign-in attempts. Please wait a few minutes before trying again.'
+          title: t('signIn.errors.rateLimitedTitle', 'Too Many Attempts'),
+          message: t('signIn.errors.rateLimitedMessage', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.')
         });
       } else if (result?.error) {
         if (captcha.required) {
@@ -91,18 +93,18 @@ export default function MspLoginForm({
         }
         onError({
           type: 'error',
-          title: 'Sign-in Failed',
-          message: 'Invalid email or password. Please try again.'
+          title: t('signIn.errors.failedTitle', 'Sign-in Failed'),
+          message: t('signIn.errors.failedMessage', 'Invalid email or password. Please try again.')
         });
       } else if (result?.url) {
         await persistRememberedEmail();
         window.location.href = result.url;
       }
     } catch (error) {
-      onError({ 
-        type: 'error', 
-        title: 'Error', 
-        message: 'An unexpected error occurred. Please try again.' 
+      onError({
+        type: 'error',
+        title: t('signIn.alerts.errorTitle', 'Error'),
+        message: t('signIn.errors.unexpectedMessage', 'An unexpected error occurred. Please try again.')
       });
     } finally {
       setIsSubmitting(false);
@@ -119,12 +121,12 @@ export default function MspLoginForm({
     >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="msp-email-field">Email</Label>
+          <Label htmlFor="msp-email-field">{t('signIn.form.emailLabel', 'Email')}</Label>
           <Input
             type="email"
             id="msp-email-field"
             name="email"
-            placeholder="Enter your email"
+            placeholder={t('signIn.form.emailPlaceholder', 'Enter your email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -132,13 +134,13 @@ export default function MspLoginForm({
           />
         </div>
         <div className="space-y-2 relative">
-          <Label htmlFor="msp-password-field">Password</Label>
+          <Label htmlFor="msp-password-field">{t('signIn.form.passwordLabel', 'Password')}</Label>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
               id="msp-password-field"
               name="password"
-              placeholder="Password"
+              placeholder={t('signIn.form.passwordPlaceholder', 'Password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -164,7 +166,7 @@ export default function MspLoginForm({
         <Checkbox
           id="msp-public-workstation-checkbox"
           checked={isPublicWorkstation}
-          label="Public workstation - do not remember my email"
+          label={t('signIn.form.publicWorkstation', 'Public workstation - do not remember my email')}
           onChange={(event) => setIsPublicWorkstation(event.target.checked)}
         />
       </div>
@@ -189,18 +191,18 @@ export default function MspLoginForm({
             <Link href="/auth/msp/forgot-password"
             className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
             {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
-              Forgot your password?
+              {t('signIn.form.forgotPassword', 'Forgot your password?')}
             </Link>
           </div>
           <div className="text-[rgb(var(--color-text-600))]">
-            Don&apos;t have an account?{' '}
+            {t('signIn.form.noAccount', "Don't have an account?")}{' '}
             <a
               href="https://www.nineminds.com/plans"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
             >
-              Sign up
+              {t('signIn.form.signUp', 'Sign up')}
             </a>
           </div>
         </div>
@@ -212,7 +214,7 @@ export default function MspLoginForm({
           id="msp-sign-in-button"
           disabled={isSubmitting || (captcha.required && !!captcha.config?.siteKey && !captcha.token)}
         >
-          Sign in
+          {t('signIn.form.submit', 'Sign in')}
         </Button>
       </div>
 

@@ -340,7 +340,7 @@
       "openCount": "Opportunità aperte",
       "opportunityCount_one": "{{count}} opportunità",
       "opportunityCount_other": "{{count}} opportunità",
-      "pipelineByStage": "Conduttura per fase",
+      "pipelineByStage": "Pipeline per fase",
       "stalled": "In stallo",
       "subtitle": "Pipeline aperta e lavoro di follow-up che richiede attenzione.",
       "title": "Istantanea dell'opportunità",
@@ -427,10 +427,10 @@
       "snooze": "Posticipa"
     },
     "tabs": {
-      "board": "Consiglio",
+      "board": "Bacheca",
       "forecast": "Previsione",
       "meeting": "Incontro",
-      "pipeline": "Conduttura",
+      "pipeline": "Pipeline di vendita",
       "queue": "Coda",
       "reports": "Report",
       "suggestions": "Suggerimenti"

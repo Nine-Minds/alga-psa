@@ -1,0 +1,614 @@
+{
+  "app": {
+    "description": "Managed Service Provider Application",
+    "keywords": "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services"
+  },
+  "auth": {
+    "checkEmail": {
+      "layout": {
+        "title": "Check Email"
+      }
+    },
+    "clientPortal": {
+      "forgotPassword": {
+        "layout": {
+          "title": "Forgot Password"
+        }
+      },
+      "handoff": {
+        "title": "Signing In"
+      },
+      "signin": {
+        "title": "Client Portal Sign In"
+      }
+    },
+    "msp": {
+      "forgotPassword": {
+        "layout": {
+          "title": "Forgot Password"
+        }
+      },
+      "signin": {
+        "title": "MSP Sign In"
+      }
+    },
+    "passwordReset": {
+      "confirmation": {
+        "layout": {
+          "title": "Password Reset"
+        }
+      },
+      "setNewPassword": {
+        "layout": {
+          "title": "Set New Password"
+        }
+      }
+    },
+    "portal": {
+      "setup": {
+        "layout": {
+          "title": "Portal Setup"
+        }
+      }
+    },
+    "register": {
+      "layout": {
+        "title": "Register"
+      }
+    },
+    "signin": {
+      "title": "Sign In"
+    },
+    "team": {
+      "setup": {
+        "layout": {
+          "title": "Team Setup"
+        }
+      }
+    },
+    "verify": {
+      "layout": {
+        "description": "Verify your email address to complete registration",
+        "title": "Verify Email"
+      }
+    },
+    "verifyEmail": {
+      "layout": {
+        "title": "Verify Email"
+      }
+    },
+    "layout": {
+      "defaultTitle": "Sign In | AlgaPSA"
+    }
+  },
+  "clientPortal": {
+    "account": {
+      "layout": {
+        "title": "Account"
+      }
+    },
+    "appointments": {
+      "detail": {
+        "layout": {
+          "title": "Appointment Details"
+        }
+      },
+      "layout": {
+        "title": "Appointments"
+      }
+    },
+    "billing": {
+      "invoices": {
+        "detail": {
+          "pay": {
+            "title": "Pay Invoice"
+          },
+          "paymentSuccess": {
+            "title": "Payment Success"
+          }
+        }
+      },
+      "quotes": {
+        "detail": {
+          "title": "Quote Details"
+        }
+      },
+      "title": "Billing"
+    },
+    "clientSettings": {
+      "description": "Manage your company settings and configurations",
+      "title": "Company Settings"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "devices": {
+      "title": "My devices"
+    },
+    "documents": {
+      "title": "Documents"
+    },
+    "extensions": {
+      "detail": {
+        "title": "Extension"
+      }
+    },
+    "knowledgeBase": {
+      "layout": {
+        "title": "Knowledge Base"
+      }
+    },
+    "licenses": {
+      "title": "Licenses"
+    },
+    "profile": {
+      "layout": {
+        "title": "Profile"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "Project Details"
+      },
+      "title": "Projects"
+    },
+    "requestServices": {
+      "detail": {
+        "title": "Service Request"
+      },
+      "myRequests": {
+        "detail": {
+          "title": "Request Details"
+        },
+        "title": "My Requests"
+      },
+      "title": "Request Services"
+    },
+    "tickets": {
+      "detail": {
+        "fallbackTitle": "Ticket Details",
+        "title": "Ticket #{{ticketNumber}} - {{ticketTitle}}"
+      },
+      "layout": {
+        "title": "Tickets"
+      }
+    },
+    "layout": {
+      "titleTemplate": "%s | Client Portal",
+      "defaultTitle": "Dashboard | Client Portal"
+    }
+  },
+  "msp": {
+    "account": {
+      "layout": {
+        "title": "Account"
+      }
+    },
+    "addOns": {
+      "layout": {
+        "title": "Add-ons"
+      }
+    },
+    "assets": {
+      "automation": {
+        "title": "Asset Automation"
+      },
+      "detail": {
+        "edit": {
+          "description": "Edit asset details",
+          "title": "Edit Asset"
+        },
+        "fallbackTitle": "Asset Details"
+      },
+      "imports": {
+        "title": "Asset Imports"
+      },
+      "integrations": {
+        "title": "Asset Integrations"
+      },
+      "maintenance": {
+        "title": "Asset Maintenance"
+      },
+      "policies": {
+        "title": "Asset Policies"
+      },
+      "title": "Assets"
+    },
+    "billing": {
+      "credits": {
+        "title": "Credits"
+      }
+    },
+    "chat": {
+      "title": "Chat"
+    },
+    "clients": {
+      "detail": {
+        "fallbackTitle": "Client Details"
+      },
+      "title": "Clients"
+    },
+    "contacts": {
+      "title": "Contacts",
+      "detail": {
+        "fallbackTitle": "Contact Details",
+        "activity": {
+          "title": "{{contactName}} - Activity",
+          "fallbackTitle": "Contact Activity"
+        }
+      }
+    },
+    "createAsset": {
+      "title": "Create Asset"
+    },
+    "createClient": {
+      "title": "Create Client"
+    },
+    "createContact": {
+      "title": "Create Contact"
+    },
+    "createOpportunity": {
+      "title": "Create Opportunity"
+    },
+    "createProduct": {
+      "title": "Create Product"
+    },
+    "createProject": {
+      "title": "Create Project"
+    },
+    "createService": {
+      "title": "Create Service"
+    },
+    "createTicket": {
+      "title": "Create Ticket"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "documentTemplates": {
+      "detail": {
+        "fallbackTitle": "Document Layouts",
+        "title": "{{documentType}} Layouts"
+      }
+    },
+    "documents": {
+      "title": "Documents"
+    },
+    "emailLogs": {
+      "title": "Email Logs"
+    },
+    "extensions": {
+      "detail": {
+        "debug": {
+          "layout": {
+            "title": "Extension Debug"
+          }
+        }
+      },
+      "layout": {
+        "title": "Extensions"
+      }
+    },
+    "inventory": {
+      "counts": {
+        "title": "Cycle Counts"
+      },
+      "ghostUsage": {
+        "title": "Ghost Usage"
+      },
+      "kits": {
+        "title": "Kits"
+      },
+      "loaners": {
+        "title": "Loaners"
+      },
+      "locations": {
+        "title": "Stock Locations"
+      },
+      "margin": {
+        "title": "Margin Report"
+      },
+      "purchaseOrders": {
+        "title": "Purchase Orders"
+      },
+      "rma": {
+        "title": "RMA"
+      },
+      "salesOrders": {
+        "title": "Sales Orders"
+      },
+      "stock": {
+        "title": "Stock"
+      },
+      "title": "Inventory",
+      "transfers": {
+        "title": "Transfers"
+      },
+      "units": {
+        "title": "Stock Units"
+      },
+      "vendorBills": {
+        "title": "Vendor Bills"
+      },
+      "vendors": {
+        "title": "Vendors"
+      },
+      "writeOffs": {
+        "title": "Write-offs"
+      }
+    },
+    "invoices": {
+      "detail": {
+        "title": "Invoice"
+      }
+    },
+    "jobs": {
+      "title": "Jobs"
+    },
+    "knowledgeBase": {
+      "review": {
+        "title": "Knowledge Base Review"
+      },
+      "title": "Knowledge Base"
+    },
+    "marketing": {
+      "calendar": {
+        "title": "Marketing Calendar"
+      },
+      "campaigns": {
+        "title": "Marketing Campaigns"
+      },
+      "channels": {
+        "title": "Marketing Channels"
+      },
+      "content": {
+        "title": "Marketing Content"
+      },
+      "forms": {
+        "title": "Marketing Forms"
+      },
+      "posts": {
+        "title": "Marketing Posts"
+      },
+      "sequences": {
+        "title": "Marketing Sequences"
+      },
+      "title": "Marketing"
+    },
+    "onboarding": {
+      "layout": {
+        "title": "Onboarding"
+      }
+    },
+    "platformUpdates": {
+      "detail": {
+        "title": "Platform Update"
+      }
+    },
+    "profile": {
+      "layout": {
+        "title": "Profile"
+      }
+    },
+    "projects": {
+      "detail": {
+        "fallbackTitle": "Project Details",
+        "tasks": {
+          "detail": {
+            "title": "Project Task"
+          }
+        }
+      },
+      "templates": {
+        "detail": {
+          "layout": {
+            "title": "Template Details"
+          }
+        },
+        "layout": {
+          "title": "Project Templates"
+        }
+      },
+      "title": "Projects"
+    },
+    "quoteApprovals": {
+      "title": "Quote Approvals"
+    },
+    "quoteDocumentTemplates": {
+      "title": "Quote Layouts"
+    },
+    "reports": {
+      "title": "Reports"
+    },
+    "schedule": {
+      "title": "Schedule"
+    },
+    "search": {
+      "title": "Search"
+    },
+    "securitySettings": {
+      "title": "Security Settings"
+    },
+    "serviceRequests": {
+      "detail": {
+        "fallbackTitle": "Service Request"
+      },
+      "title": "Service Requests"
+    },
+    "settings": {
+      "extensions": {
+        "description": "Manage extensions",
+        "detail": {
+          "description": "View extension details",
+          "layout": {
+            "title": "Extension Settings"
+          },
+          "settings": {
+            "description": "Configure extension settings",
+            "layout": {
+              "title": "Extension Configuration"
+            },
+            "title": "Extension Settings"
+          },
+          "title": "Extension Details"
+        },
+        "layout": {
+          "title": "Extension Settings"
+        },
+        "title": "Extensions"
+      },
+      "notifications": {
+        "layout": {
+          "title": "Notification Settings"
+        }
+      },
+      "sla": {
+        "layout": {
+          "title": "SLA Settings"
+        }
+      },
+      "title": "Settings"
+    },
+    "shareDocument": {
+      "title": "Share Document"
+    },
+    "surveys": {
+      "analytics": {
+        "title": "Survey Analytics"
+      },
+      "dashboard": {
+        "title": "Survey Dashboard"
+      },
+      "responses": {
+        "detail": {
+          "title": "Response Details"
+        },
+        "title": "Survey Responses"
+      },
+      "settings": {
+        "title": "Survey Settings"
+      },
+      "title": "Surveys"
+    },
+    "technicianDispatch": {
+      "title": "Technician Dispatch"
+    },
+    "test": {
+      "collab": {
+        "title": "Collaboration Test"
+      },
+      "layout": {
+        "title": "Test"
+      },
+      "onboarding": {
+        "layout": {
+          "title": "Onboarding Test"
+        }
+      },
+      "uiKit": {
+        "layout": {
+          "title": "UI Kit"
+        }
+      }
+    },
+    "tickets": {
+      "bulkAssign": {
+        "title": "Assign Tickets"
+      },
+      "bulkDueDate": {
+        "title": "Set Due Date"
+      },
+      "bulkPriority": {
+        "title": "Set Priority"
+      },
+      "bulkStatus": {
+        "title": "Set Status"
+      },
+      "bulkTags": {
+        "title": "Set Tags"
+      },
+      "export": {
+        "title": "Export Tickets"
+      },
+      "import": {
+        "title": "Import Tickets"
+      },
+      "title": "Tickets",
+      "detail": {
+        "title": "Ticket #{{ticketNumber}} - {{ticketTitle}}",
+        "fallbackTitle": "Ticket Details"
+      }
+    },
+    "timeEntry": {
+      "timesheet": {
+        "detail": {
+          "title": "Timesheet"
+        }
+      },
+      "title": "Time Entry"
+    },
+    "timeSheetApprovals": {
+      "title": "Timesheet Approvals"
+    },
+    "userActivities": {
+      "title": "User Activities"
+    },
+    "workflowControl": {
+      "title": "Workflow Control"
+    },
+    "workflowEditor": {
+      "detail": {
+        "title": "Edit Workflow"
+      },
+      "new": {
+        "title": "New Workflow"
+      },
+      "title": "Workflow Editor"
+    },
+    "workflows": {
+      "runs": {
+        "detail": {
+          "layout": {
+            "title": "Workflow Run"
+          }
+        }
+      },
+      "title": "Workflows"
+    },
+    "layout": {
+      "defaultTitle": "Dashboard | AlgaPSA"
+    }
+  },
+  "share": {
+    "detail": {
+      "layout": {
+        "title": "Shared Document"
+      }
+    }
+  },
+  "static": {
+    "layout": {
+      "title": "AlgaPSA"
+    },
+    "masterTerms": {
+      "layout": {
+        "title": "Master Terms"
+      }
+    },
+    "privacyPolicy": {
+      "layout": {
+        "title": "Privacy Policy"
+      }
+    }
+  },
+  "teams": {
+    "auth": {
+      "popupComplete": {
+        "title": "Teams Authentication"
+      }
+    },
+    "tab": {
+      "title": "Teams"
+    }
+  }
+}

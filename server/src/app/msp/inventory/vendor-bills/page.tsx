@@ -11,11 +11,16 @@ import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Vendor Bills',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.vendorBills.title', { defaultValue: 'Vendor Bills' }),
+  };
+}
 
 export default async function VendorBillsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/vendor-bills', scope: 'msp' });

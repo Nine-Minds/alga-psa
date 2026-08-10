@@ -482,7 +482,7 @@
         "delete": "Falha ao excluir o quadro.",
         "defaultRequired": "Pelo menos um quadro deve ser definido como padrão",
         "defaultUpdate": "Falha ao definir quadro padrão",
-        "duplicate": "O conselho já existe",
+        "duplicate": "O quadro já existe",
         "create": "Falha ao criar o quadro. Por favor, tente novamente."
       },
       "delete": {
@@ -500,7 +500,7 @@
         "title": "Adicionar novo quadro",
         "fields": {
           "name": {
-            "label": "Nome do Conselho *",
+            "label": "Nome do Quadro *",
             "placeholder": "Digite o nome do quadro"
           },
           "description": {

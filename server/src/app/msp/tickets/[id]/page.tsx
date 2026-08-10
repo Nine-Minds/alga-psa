@@ -58,16 +58,24 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 }
 
 export async function generateMetadata({ params }: TicketDetailsPageProps): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
   try {
     const { id } = await params;
     const ticket = await getCachedTicket(id);
     if (ticket && 'ticket_number' in ticket) {
-      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+      return {
+        title: t('msp.tickets.detail.title', {
+          ticketNumber: ticket.ticket_number,
+          ticketTitle: ticket.title,
+          defaultValue: 'Ticket #{{ticketNumber}} - {{ticketTitle}}',
+        }),
+      };
     }
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch ticket title:', error);
   }
-  return { title: 'Ticket Details' };
+  return { title: t('msp.tickets.detail.fallbackTitle', { defaultValue: 'Ticket Details' }) };
 }
 
 interface TicketDetailsPageProps {

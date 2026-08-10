@@ -9,9 +9,13 @@ import {
   submitRequestServiceDefinitionAction,
 } from './actions';
 
-export const metadata: Metadata = {
-  title: 'Service Request',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
+  };
+}
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 

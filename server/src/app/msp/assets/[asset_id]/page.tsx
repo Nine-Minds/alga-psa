@@ -18,11 +18,14 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  const fallbackTitle = t('msp.assets.detail.fallbackTitle', { defaultValue: 'Asset Details' });
+
   try {
     const { asset_id } = await params;
     const bundle = await getCachedAssetBundle(asset_id);
     if (assetActionErrorFrom(bundle)) {
-      return { title: 'Asset Details' };
+      return { title: fallbackTitle };
     }
     if (bundle.asset?.name) {
       return { title: bundle.asset.name };
@@ -30,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch (error) {
     console.error('[generateMetadata] Failed to fetch asset title:', error);
   }
-  return { title: 'Asset Details' };
+  return { title: fallbackTitle };
 }
 
 export default async function AssetPage({ params }: Props) {

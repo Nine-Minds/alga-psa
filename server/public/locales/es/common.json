@@ -129,6 +129,19 @@
       "resendFailed": "No se pudo reenviar el correo. Inténtelo de nuevo.",
       "whatsNext": "¿Qué sigue?",
       "didntReceive": "¿No recibió el correo?"
+    },
+    "sso": {
+      "signInWithMicrosoft": "Iniciar sesión con Microsoft",
+      "signInWithGoogle": "Iniciar sesión con Google",
+      "redirecting": "Redirigiendo...",
+      "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."
+    },
+    "verify": {
+      "title": "La verificación por correo electrónico ya no está disponible",
+      "selfRegistrationRemoved": "El autorregistro mediante el dominio de correo electrónico ya no se admite por motivos de seguridad.",
+      "existingContactsOnly": "El registro ahora solo está disponible para contactos existentes. Comuníquese con su administrador para que primero lo agregue como contacto.",
+      "registerFromSignIn": "Si ya es un contacto existente, puede registrarse directamente desde la página de inicio de sesión con la dirección de correo electrónico de su contacto.",
+      "returnToSignIn": "Volver al inicio de sesión"
     }
   },
   "share": {
@@ -1289,5 +1302,17 @@
   },
   "richTextEditorSkeleton": {
     "loading": "Cargando editor…"
+  },
+  "productBoundary": {
+    "notFound": {
+      "cta": "Ir al panel",
+      "title": "Página no disponible",
+      "description": "Esta página no está disponible en su experiencia de producto actual."
+    },
+    "upgrade": {
+      "title": "Disponible en AlgaPSA",
+      "description": "Esta área forma parte del producto completo AlgaPSA. AlgaDesk incluye únicamente funciones específicas de mesa de ayuda.",
+      "cta": "Volver al panel de AlgaDesk"
+    }
   }
 }

@@ -136,5 +136,9 @@
       "success_one": "Cleared {{count}} job from history.",
       "success_other": "Cleared {{count}} jobs from history."
     }
+  },
+  "page": {
+    "heading": "Job Monitoring",
+    "recentJobs": "Recent Jobs"
   }
 }

@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Beperken tot één installatie",
     "overrideTenantContext": "Tenantcontext overschrijven",
     "matchRequestId": "x-request-id / context.request_id matchen"
+  },
+  "permissions": {
+    "severity": {
+      "low": "Laag",
+      "high": "Hoog",
+      "medium": "Gemiddeld"
+    },
+    "categoryHeadings": {
+      "storage": "Opslagmachtigingen",
+      "ui": "UI-machtigingen",
+      "data": "Gegevensmachtigingen",
+      "api": "API-machtigingen",
+      "system": "Systeemmachtigingen",
+      "other": "Overige machtigingen"
+    },
+    "access": {
+      "low": "Alleen-lezentoegang",
+      "medium": "Wijzigingstoegang",
+      "high": "Geavanceerde toegang"
+    },
+    "legend": {
+      "low": "Met alleen-lezenmachtigingen kan de extensie gegevens bekijken maar niet wijzigen.",
+      "medium": "Met wijzigingsmachtigingen kan de extensie bestaande gegevens bijwerken.",
+      "high": "Met geavanceerde machtigingen kan de extensie bewerkingen maken, verwijderen of uitvoeren."
+    }
   }
 }

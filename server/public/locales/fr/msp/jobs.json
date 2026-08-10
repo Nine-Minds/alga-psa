@@ -136,5 +136,9 @@
       "none": "Aucune tâche en arrière-plan correspondante à supprimer.",
       "error": "Impossible d'effacer l'historique des tâches en arrière-plan. Veuillez réessayer."
     }
+  },
+  "page": {
+    "heading": "Supervision des tâches",
+    "recentJobs": "Jobs récents"
   }
 }

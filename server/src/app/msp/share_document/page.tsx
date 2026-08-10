@@ -2,9 +2,13 @@ import { TextEditor } from '@alga-psa/ui/editor';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Share Document',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.shareDocument.title', { defaultValue: 'Share Document' }),
+  };
+}
 
 // NOTE: Currently not being saved in the Database
 export default async function TaskList() {

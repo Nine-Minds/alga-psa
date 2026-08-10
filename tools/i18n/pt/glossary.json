@@ -1,0 +1,801 @@
+{
+  "$schema": "../lib/glossary.schema.json",
+  "locale": "pt",
+  "dialect": "pt-BR",
+  "displayName": "Português (Brasil)",
+  "description": "Brazilian Portuguese terminology, dialect, and audit allowlist for the AlgaPSA pt locale.",
+  "domainTerms": [
+    {
+      "id": "account",
+      "en-term": "account",
+      "pt-br-term": "conta",
+      "notes": "Use for user, MSP, or customer account concepts. Do not use European register variants."
+    },
+    {
+      "id": "appointment",
+      "en-term": "appointment",
+      "pt-br-term": "compromisso",
+      "notes": "Use compromisso for calendar appointments; use agendamento when emphasizing the scheduling action."
+    },
+    {
+      "id": "approval",
+      "en-term": "approval",
+      "pt-br-term": "aprovação",
+      "notes": "Use for approval workflows, timesheets, invoices, and request approvals."
+    },
+    {
+      "id": "asset",
+      "en-term": "asset",
+      "pt-br-term": "ativo",
+      "notes": "Use ativo/ativos for managed devices, inventory, or configuration assets."
+    },
+    {
+      "id": "assignment",
+      "en-term": "assignment",
+      "pt-br-term": "atribuição",
+      "notes": "Use atribuição for assigning tickets, tasks, users, or technicians."
+    },
+    {
+      "id": "automation",
+      "en-term": "automation",
+      "pt-br-term": "automação",
+      "notes": "Use for workflow automation and automated operational behavior."
+    },
+    {
+      "id": "billing",
+      "en-term": "billing",
+      "pt-br-term": "faturamento",
+      "notes": "Use faturamento for the billing product area and invoice-generation process."
+    },
+    {
+      "id": "board",
+      "en-term": "board",
+      "pt-br-term": "quadro",
+      "notes": "Use quadro for ticket boards, kanban boards, and workflow boards."
+    },
+    {
+      "id": "bucket",
+      "en-term": "bucket",
+      "pt-br-term": "banco de horas",
+      "notes": "Use for prepaid or retainer hour pools. Keep bucket untranslated only in technical storage contexts."
+    },
+    {
+      "id": "budget",
+      "en-term": "budget",
+      "pt-br-term": "orçamento",
+      "notes": "Use orçamento only for project/financial budgets and spending limits. Never for sales quotes — those are cotações (see quote)."
+    },
+    {
+      "id": "client",
+      "en-term": "client",
+      "pt-br-term": "cliente",
+      "notes": "Use cliente for customer organizations and client-portal users."
+    },
+    {
+      "id": "client-portal",
+      "en-term": "client portal",
+      "pt-br-term": "portal do cliente",
+      "notes": "Use portal do cliente for the customer-facing app."
+    },
+    {
+      "id": "comment",
+      "en-term": "comment",
+      "pt-br-term": "comentário",
+      "notes": "Use for ticket, project, task, and document comments."
+    },
+    {
+      "id": "contact",
+      "en-term": "contact",
+      "pt-br-term": "contato",
+      "notes": "Brazilian spelling is contato. Do not use contacto."
+    },
+    {
+      "id": "contract",
+      "en-term": "contract",
+      "pt-br-term": "contrato",
+      "notes": "Use for service contracts, contract templates, and contract lines."
+    },
+    {
+      "id": "contract-line",
+      "en-term": "contract line",
+      "pt-br-term": "linha de contrato",
+      "notes": "Use for billable service lines associated with a contract."
+    },
+    {
+      "id": "credit",
+      "en-term": "credit",
+      "pt-br-term": "crédito",
+      "notes": "Use for account credits, credit balances, and credit memos."
+    },
+    {
+      "id": "dashboard",
+      "en-term": "dashboard",
+      "pt-br-term": "painel",
+      "notes": "Use painel in prose. Dashboard may remain identical when used as a product/UI label in the allowlist."
+    },
+    {
+      "id": "dispatch",
+      "en-term": "dispatch",
+      "pt-br-term": "alocação",
+      "notes": "Use alocação for technician dispatch (e.g. \"Alocação de técnicos\") and dispatch boards. Do not use despacho, which reads as a shipping/legal dispatch in Brazilian Portuguese."
+    },
+    {
+      "id": "document",
+      "en-term": "document",
+      "pt-br-term": "documento",
+      "notes": "Use for uploaded documents, folders, sharing, and document management."
+    },
+    {
+      "id": "email",
+      "en-term": "email",
+      "pt-br-term": "email",
+      "notes": "Brazilian Portuguese commonly uses email without accent in product UI."
+    },
+    {
+      "id": "email-address",
+      "en-term": "email address",
+      "pt-br-term": "endereço de email",
+      "notes": "Use endereço de email for a single address field. For the plural section header (Email Addresses) use Emails or Endereços de email — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "email-label",
+      "en-term": "email label",
+      "pt-br-term": "tipo de email",
+      "notes": "Use tipo de email for the label/type picker on an email row (mirrors tipo de telefone). Etiqueta de email is an acceptable alternative — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "extension",
+      "en-term": "extension",
+      "pt-br-term": "extensão",
+      "notes": "Use for platform/product extensions and installed extension metadata."
+    },
+    {
+      "id": "file",
+      "en-term": "file",
+      "pt-br-term": "arquivo",
+      "notes": "Use arquivo for files. Do not use ficheiro."
+    },
+    {
+      "id": "filter",
+      "en-term": "filter",
+      "pt-br-term": "filtro",
+      "notes": "Use as noun for UI filters; use filtrar for the action."
+    },
+    {
+      "id": "industry",
+      "en-term": "industry",
+      "pt-br-term": "ramo de atividade",
+      "notes": "Use ramo de atividade for the client/CRM industry field — native-reviewer confirmed 2026-07. Indústria reads as the manufacturing sector in Brazilian Portuguese, not a business vertical."
+    },
+    {
+      "id": "invoice",
+      "en-term": "invoice",
+      "pt-br-term": "fatura",
+      "notes": "Use fatura for customer invoices in the product; avoid nota fiscal unless specifically referring to Brazilian tax documents."
+    },
+    {
+      "id": "invoicing",
+      "en-term": "invoicing",
+      "pt-br-term": "faturamento",
+      "notes": "Use faturamento for the invoice-generation area/process."
+    },
+    {
+      "id": "job",
+      "en-term": "job",
+      "pt-br-term": "trabalho",
+      "notes": "Use trabalho for the background-job entity (job name, job history, job details). Use execução only when the context is a specific run/execution of a job; keep execução reserved for the run/execution sense so it does not collide with the job entity. Never use correr/correndo/corrida for the running state — use \"em execução\"."
+    },
+    {
+      "id": "knowledge-base",
+      "en-term": "knowledge base",
+      "pt-br-term": "base de conhecimento",
+      "notes": "Use for KB articles, categories, and review flows."
+    },
+    {
+      "id": "license",
+      "en-term": "license",
+      "pt-br-term": "licença",
+      "notes": "Use for software licensing and activation."
+    },
+    {
+      "id": "location",
+      "en-term": "location",
+      "pt-br-term": "local",
+      "notes": "Use local for client or service locations; use localização for map/GPS contexts."
+    },
+    {
+      "id": "milestone",
+      "en-term": "milestone",
+      "pt-br-term": "meta",
+      "notes": "Use meta for project milestones (reviewer preference). Do not use marco."
+    },
+    {
+      "id": "mobile-phone-type",
+      "en-term": "mobile (phone type)",
+      "pt-br-term": "celular",
+      "notes": "Use Celular for the mobile phone-type label — native-reviewer confirmed 2026-07; Móvel is not used for phones in Brazil. Keep dispositivo móvel / dispositivos móveis for the mobile *device* category and aplicativo móvel for mobile apps."
+    },
+    {
+      "id": "notification",
+      "en-term": "notification",
+      "pt-br-term": "notificação",
+      "notes": "Use for in-app and email notifications."
+    },
+    {
+      "id": "onboarding",
+      "en-term": "onboarding",
+      "pt-br-term": "onboarding",
+      "notes": "Keep onboarding as a loanword — it is standard and consolidated in the Brazilian MSP/IT market, and avoids the ambiguity of integração (which also means integration). Do not use integração/integração inicial for onboarding, nor literal embarque."
+    },
+    {
+      "id": "payment",
+      "en-term": "payment",
+      "pt-br-term": "pagamento",
+      "notes": "Use for invoice payments, online payments, and payment status."
+    },
+    {
+      "id": "pipeline",
+      "en-term": "pipeline",
+      "pt-br-term": "funil de vendas",
+      "notes": "Use funil de vendas para o pipeline comercial do CRM (confirmado pelo revisor nativo, alga0002243). Nunca gasoduto nem oleoduto: são dutos físicos."
+    },
+    {
+      "id": "primary-email",
+      "en-term": "primary email",
+      "pt-br-term": "email principal",
+      "notes": "Use Email principal for the primary email field on contacts/clients — native-reviewer suggestion 2026-07."
+    },
+    {
+      "id": "priority",
+      "en-term": "priority",
+      "pt-br-term": "prioridade",
+      "notes": "Use for ticket, task, and workflow priority labels."
+    },
+    {
+      "id": "progress",
+      "en-term": "progress",
+      "pt-br-term": "progresso",
+      "notes": "Use progresso for progress labels and indicators (e.g. onboarding progress). The all-caps micro-label PROGRESS renders as PROGRESSO to match the sibling locales (es PROGRESO, it AVANZAMENTO)."
+    },
+    {
+      "id": "project",
+      "en-term": "project",
+      "pt-br-term": "projeto",
+      "notes": "Use for project management, phases, tasks, budgets, and project templates."
+    },
+    {
+      "id": "quote",
+      "en-term": "quote",
+      "pt-br-term": "cotação",
+      "notes": "Use cotação (feminine: a cotação, cotações) for sales/service quotes — native-reviewer confirmed 2026-07. Never citação/citar (textual citation) and never orçamento, which is reserved for budgets (see budget)."
+    },
+    {
+      "id": "report",
+      "en-term": "report",
+      "pt-br-term": "relatório",
+      "notes": "Use for analytics, operational, billing, and audit reports."
+    },
+    {
+      "id": "request",
+      "en-term": "request",
+      "pt-br-term": "solicitação",
+      "notes": "Use for service requests, approval requests, and appointment requests."
+    },
+    {
+      "id": "schedule",
+      "en-term": "schedule",
+      "pt-br-term": "agenda",
+      "notes": "Use agenda as a noun; use agendar/agendamento for the action or booking."
+    },
+    {
+      "id": "screen",
+      "en-term": "screen",
+      "pt-br-term": "tela",
+      "notes": "Use tela for UI screens. Do not use ecrã. Context nuance: use layout when referring to UI structure/design, and interface for a full system screen/interface."
+    },
+    {
+      "id": "service",
+      "en-term": "service",
+      "pt-br-term": "serviço",
+      "notes": "Use for service catalog items, managed services, and support services."
+    },
+    {
+      "id": "service-catalog",
+      "en-term": "service catalog",
+      "pt-br-term": "catálogo de serviços",
+      "notes": "Use for the billing/service catalog product area."
+    },
+    {
+      "id": "settings",
+      "en-term": "settings",
+      "pt-br-term": "configurações",
+      "notes": "Use plural configurações for settings pages and controls."
+    },
+    {
+      "id": "single-sign-on",
+      "en-term": "single sign-on",
+      "pt-br-term": "login único",
+      "notes": "Use Login único for the Single Sign-On feature name, tab labels, and titles; lowercase login único inside running text. Do not use Logon único — logon is a dated register for Brazilian product UI. Keep the abbreviation SSO untranslated (see identicalAllowlist)."
+    },
+    {
+      "id": "sla",
+      "en-term": "SLA",
+      "pt-br-term": "SLA",
+      "notes": "Keep SLA as the standard abbreviation for service-level agreement."
+    },
+    {
+      "id": "status",
+      "en-term": "status",
+      "pt-br-term": "status",
+      "notes": "Status is acceptable in Brazilian Portuguese and may remain identical."
+    },
+    {
+      "id": "survey",
+      "en-term": "survey",
+      "pt-br-term": "pesquisa",
+      "notes": "Use pesquisa for satisfaction surveys and response analytics."
+    },
+    {
+      "id": "tag",
+      "en-term": "tag",
+      "pt-br-term": "tag",
+      "notes": "Tag is an accepted loanword in Brazilian software UI."
+    },
+    {
+      "id": "task",
+      "en-term": "task",
+      "pt-br-term": "tarefa",
+      "notes": "Use for project tasks, workflow tasks, and task inbox items."
+    },
+    {
+      "id": "technician",
+      "en-term": "technician",
+      "pt-br-term": "técnico",
+      "notes": "Use for field/service technicians and technician assignment."
+    },
+    {
+      "id": "tenant",
+      "en-term": "tenant",
+      "pt-br-term": "tenant",
+      "notes": "Keep tenant in developer/admin contexts; use organização only in user-facing prose when the customer organization is meant."
+    },
+    {
+      "id": "ticket",
+      "en-term": "ticket",
+      "pt-br-term": "ticket",
+      "notes": "Keep ticket as a loanword — it is standard in the Brazilian MSP industry. ticket is masculine (o ticket, os tickets). Never use bilhete or ingresso, which imply an admission/travel ticket in Brazilian Portuguese."
+    },
+    {
+      "id": "time-entry",
+      "en-term": "time entry",
+      "pt-br-term": "lançamento de horas",
+      "notes": "Use lançamento de horas for billable time records; apontamento de horas is acceptable where space allows."
+    },
+    {
+      "id": "timesheet",
+      "en-term": "timesheet",
+      "pt-br-term": "planilha de horas",
+      "notes": "Use planilha de horas for grouped/submitted time entries and approval flows. Do not use folha de ponto, planilha de ponto, or quadro de horários — ponto implies attendance/clock-in, but this tracks billable hours."
+    },
+    {
+      "id": "user",
+      "en-term": "user",
+      "pt-br-term": "usuário",
+      "notes": "Use usuário. Do not use utilizador."
+    },
+    {
+      "id": "webhook",
+      "en-term": "webhook",
+      "pt-br-term": "webhook",
+      "notes": "Keep webhook as a technical loanword."
+    },
+    {
+      "id": "work-phone-type",
+      "en-term": "work (phone type)",
+      "pt-br-term": "trabalho",
+      "notes": "Use the noun Trabalho for the work phone-type label — native-reviewer confirmed 2026-07. Trabalhar is the verb \"to work\" and is wrong as a label; it stays valid inside sentences."
+    },
+    {
+      "id": "workflow",
+      "en-term": "workflow",
+      "pt-br-term": "fluxo de trabalho",
+      "notes": "Use fluxo de trabalho in regular UI copy. Workflow can remain in integration names or technical labels when branded."
+    }
+  ],
+  "forbiddenTerms": [
+    {
+      "term": "autocarro",
+      "preferred": "ônibus",
+      "reason": "European Portuguese transport term; Brazilian Portuguese uses ônibus."
+    },
+    {
+      "term": "bilhete",
+      "preferred": "ticket",
+      "reason": "Wrong register for support tickets; bilhete means a pass/note. Use the loanword ticket."
+    },
+    {
+      "term": "casa de banho",
+      "preferred": "banheiro",
+      "reason": "European Portuguese phrase; Brazilian Portuguese uses banheiro."
+    },
+    {
+      "term": "cessionária",
+      "preferred": "responsável",
+      "reason": "Feminine of the mis-registered assignee term; use responsável."
+    },
+    {
+      "term": "cessionárias",
+      "preferred": "responsáveis",
+      "reason": "Feminine plural of the mis-registered assignee term; use responsáveis."
+    },
+    {
+      "term": "cessionário",
+      "preferred": "responsável",
+      "reason": "Wrong register for a ticket/work assignee; cessionário is a legal/financial transferee. Brazilian PSA UI uses responsável (or atribuído a)."
+    },
+    {
+      "term": "cessionários",
+      "preferred": "responsáveis",
+      "reason": "Plural of the mis-registered assignee term; use responsáveis."
+    },
+    {
+      "term": "citar",
+      "preferred": "cotação",
+      "reason": "Mis-registered quote noun; citar is the verb to cite. Sales quotes are cotações (native-reviewer confirmed)."
+    },
+    {
+      "term": "citação",
+      "preferred": "cotação",
+      "reason": "Wrong register for a sales quote; citação means a textual citation or legal summons. Use cotação (native-reviewer confirmed)."
+    },
+    {
+      "term": "citações",
+      "preferred": "cotações",
+      "reason": "Plural of the mis-registered quote term; use cotações."
+    },
+    {
+      "term": "comboio",
+      "preferred": "trem",
+      "reason": "European Portuguese transport term; Brazilian Portuguese uses trem."
+    },
+    {
+      "term": "conselho",
+      "preferred": "quadro",
+      "reason": "False friend for a kanban/ticket board; conselho is a board of directors or advice. Reported by the native reviewer in alga0002243.",
+      "enWhen": "\\bboards?\\b"
+    },
+    {
+      "term": "contacto",
+      "preferred": "contato",
+      "reason": "European spelling; Brazilian Portuguese uses contato."
+    },
+    {
+      "term": "corrida",
+      "preferred": "execução",
+      "reason": "Wrong register for a workflow run; corrida means a race/jog. Use execução."
+    },
+    {
+      "term": "corridas",
+      "preferred": "execuções",
+      "reason": "Plural of the mis-registered run term; use execuções."
+    },
+    {
+      "term": "ecrã",
+      "preferred": "tela",
+      "reason": "European Portuguese UI term; Brazilian Portuguese uses tela."
+    },
+    {
+      "term": "ficheiro",
+      "preferred": "arquivo",
+      "reason": "European Portuguese file term; Brazilian Portuguese uses arquivo."
+    },
+    {
+      "term": "gasoduto",
+      "preferred": "funil de vendas",
+      "reason": "A gas pipeline; the CRM sales pipeline is a funil de vendas. Reported by the native reviewer in alga0002243.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "indústria",
+      "preferred": "ramo de atividade",
+      "reason": "Wrong register for the client/CRM industry field; indústria reads as the manufacturing sector. Use ramo de atividade (native-reviewer confirmed)."
+    },
+    {
+      "term": "indústrias",
+      "preferred": "ramos de atividade",
+      "reason": "Plural of the mis-registered industry term; use ramos de atividade."
+    },
+    {
+      "term": "ingresso",
+      "preferred": "ticket",
+      "reason": "Wrong register for support tickets; ingresso means admission ticket. Use the loanword ticket."
+    },
+    {
+      "term": "logon",
+      "preferred": "login",
+      "reason": "Dated register for sign-in in Brazilian product UI; use login (and Login único for the Single Sign-On feature)."
+    },
+    {
+      "term": "oleoduto",
+      "preferred": "funil de vendas",
+      "reason": "An oil pipeline; the CRM sales pipeline is a funil de vendas.",
+      "enWhen": "\\bpipelines?\\b"
+    },
+    {
+      "term": "placa",
+      "preferred": "quadro",
+      "reason": "Wrong register for a board (kanban/ticket board); placa means a plate/sign/circuit board. Use quadro. Allowlist legit hardware compounds (e.g. placa-mãe) only if asset hardware copy needs them."
+    },
+    {
+      "term": "placas",
+      "preferred": "quadros",
+      "reason": "Plural of the mis-registered board term; use quadros."
+    },
+    {
+      "term": "rato",
+      "preferred": "mouse",
+      "reason": "European Portuguese device term; Brazilian Portuguese uses mouse."
+    },
+    {
+      "term": "registo",
+      "preferred": "registro",
+      "reason": "European spelling; Brazilian Portuguese uses registro."
+    },
+    {
+      "term": "telemóvel",
+      "preferred": "celular",
+      "reason": "European Portuguese phone term; Brazilian Portuguese uses celular."
+    },
+    {
+      "term": "utilizador",
+      "preferred": "usuário",
+      "reason": "European Portuguese user term; Brazilian Portuguese uses usuário."
+    }
+  ],
+  "dialectRules": [
+    {
+      "id": "br-user-register",
+      "rule": "Prefer Brazilian product UI nouns: usuário, tela, arquivo, registro, celular, contato.",
+      "notes": "These are audited through forbiddenTerms and targeted glossary checks."
+    },
+    {
+      "id": "ticket-register",
+      "rule": "Keep the loanword ticket for support tickets (o ticket, os tickets).",
+      "notes": "chamado is acceptable legacy wording, but ticket is now the standard term. Admission/travel meanings such as bilhete and ingresso are forbidden."
+    },
+    {
+      "id": "quote-register",
+      "rule": "Translate the sales-quote noun as cotação (feminine); orçamento is only ever a budget.",
+      "notes": "Native-reviewer confirmed 2026-07. citação/citações/citar are audited through forbiddenTerms; watch gender agreement (cotação aceita, not aceito)."
+    },
+    {
+      "id": "type-labels-are-nouns",
+      "rule": "Contact/phone type labels are nouns: Trabalho, Celular, Residencial — never verbs (Trabalhar) or European terms (Telemóvel); Móvel is reserved for devices (dispositivo móvel).",
+      "notes": "Native-reviewer confirmed 2026-07 for the New Client page phone types."
+    },
+    {
+      "id": "invoice-register",
+      "rule": "Translate invoice as fatura unless a Brazilian tax document is explicitly meant.",
+      "notes": "Do not introduce nota fiscal into generic invoice UI copy."
+    },
+    {
+      "id": "loanwords",
+      "rule": "Keep common Brazilian software loanwords when they are standard or shorter than the literal alternative.",
+      "notes": "Examples: email, status, tag, webhook, API, SLA, ticket, onboarding."
+    },
+    {
+      "id": "interpolation",
+      "rule": "Preserve every {{variable}} exactly as in the English source.",
+      "notes": "Do not translate placeholders, braces, or variable names."
+    }
+  ],
+  "identicalAllowlist": {
+    "exact": [
+      "AI",
+      "API",
+      "CSV",
+      "Dashboard",
+      "Email",
+      "Excel",
+      "HTML",
+      "ID",
+      "JSON",
+      "KB",
+      "OK",
+      "PDF",
+      "Portal",
+      "SLA",
+      "SMS",
+      "SSO",
+      "Status",
+      "Total",
+      "URL",
+      "UUID",
+      "XML",
+      "ZIP",
+      "AlgaPSA",
+      "Microsoft",
+      "Microsoft 365",
+      "Google",
+      "Google Workspace",
+      "QuickBooks",
+      "QuickBooks Online",
+      "Stripe",
+      "NinjaOne",
+      "Tanium",
+      "Datto",
+      "Huntress",
+      "Teams",
+      "Outlook",
+      "Gmail",
+      "IMAP",
+      "SMTP",
+      "OAuth",
+      "Entra ID",
+      "Hudu",
+      "Emojis",
+      "Google OAuth",
+      "Microsoft OAuth",
+      "Software",
+      "Subtotal",
+      "Item",
+      "Visual",
+      "Vertical",
+      "Horizontal",
+      "Normal",
+      "Zoom",
+      "Xero",
+      "Xero CSV",
+      "T&M",
+      "Kanban",
+      "h",
+      "download",
+      "total",
+      "Individual",
+      "Local",
+      "Fax",
+      "Solo",
+      "Webhooks",
+      "HMAC-SHA256",
+      "Experimental",
+      "Manual",
+      "Temporal",
+      "Cron",
+      "OAuth2 (XOAUTH2)",
+      "TTL:",
+      "Hardware",
+      "Phishing/Spam",
+      "Designer",
+      "Vars",
+      "Beta",
+      "Alga",
+      "Google Play (Android)",
+      "Global",
+      "Editor",
+      "Ctrl",
+      "Ad hoc",
+      "Virtual",
+      "Firewall",
+      "Host",
+      "RAM (GB)",
+      "NVMe",
+      "Windows",
+      "macOS",
+      "Linux",
+      "iOS",
+      "Android",
+      "Wi-Fi",
+      "Pro",
+      "AlgaDesk",
+      "Tokens",
+      "Microsoft 365 (Microsoft Graph)",
+      "Kit",
+      "—",
+      "RMAs",
+      "Marketing",
+      "Kits",
+      "Agenda",
+      "Slug",
+      "Original",
+      "CIPP (CyberDrain Improved Partner Portal)",
+      "Microsoft Entra",
+      "Bot",
+      "item",
+      ",",
+      "EUR — Euro"
+    ],
+    "caseInsensitive": [
+      "api",
+      "csv",
+      "email",
+      "html",
+      "id",
+      "json",
+      "ok",
+      "pdf",
+      "sla",
+      "sms",
+      "sso",
+      "status",
+      "tag",
+      "ticket",
+      "tickets",
+      "onboarding",
+      "url",
+      "webhook",
+      "min",
+      "xml",
+      "zip",
+      "van",
+      "vans"
+    ],
+    "patterns": [
+      "^\\s*$",
+      "^\\.\\.\\.$",
+      "^-$",
+      "^[-+]?\\d+(?:[.,:]\\d+)?\\s*(?:%|ms|s|min|h|MB|GB|TB)?$",
+      "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "^[A-Z]{2,8}$",
+      "^#[0-9A-Fa-f]{3,8}$",
+      "^\\{\\{[^{}]+\\}\\}$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^v\\{\\{[^{}]+\\}\\}$",
+      "^Item \\{\\{[^{}]+\\}\\}$",
+      "^Tickets?:?$",
+      "^Ticket #?\\{\\{[^{}]+\\}\\}$",
+      "^Ticket #…$",
+      "^Subtotal: \\{\\{[^{}]+\\}\\}\\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{count\\}\\} min$",
+      "^PO \\{\\{number\\}\\}$",
+      "^Status ?[:*]? ?(?:\\{\\{[^{}]+\\}\\})?$",
+      "^Total: \\{\\{[^{}]+\\}\\}$",
+      "^\\(\\{\\{[^{}]+\\}\\}h\\)$",
+      "^\\{\\{[^{}]+\\}\\} • \\{\\{[^{}]+\\}\\}$",
+      "^URL:$",
+      "^~\\{\\{[^{}]+\\}\\}%$",
+      "^via \\{\\{[^{}]+\\}\\}$",
+      "^\\{\\{[^{}]+\\}\\} ms$",
+      "^\\{\\{regionLabel\\}\\} - \\{\\{percentage\\}\\}% \\(\\{\\{description\\}\\}\\)$",
+      "^\\{\\{regionCode\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{description\\}\\} - \\{\\{percentage\\}\\}%$",
+      "^\\{\\{taxType\\}\\} \\(\\{\\{countryCode\\}\\}\\) - \\{\\{percentage\\}\\}%$",
+      "^re_x+$",
+      "^Gmail: \\{\\{gmail\\}\\}(?: · Microsoft: \\{\\{microsoft\\}\\})? · IMAP: \\{\\{imap\\}\\}$",
+      "^\\{\\{name\\}\\} v\\{\\{version\\}\\}$",
+      "^\\(\\{\\{size\\}\\} KB\\)$",
+      "^Gmail: \\{\\{scopes\\}\\}$",
+      "^ID: \\{\\{id\\}\\}(?:\\.\\.\\.)?$",
+      "^Total:? ?(?:\\{\\{[^{}]+\\}\\}/\\{\\{[^{}]+\\}\\})?$",
+      "^\\{\\{count\\}\\}(?:ms|s)$",
+      "^\\{\\{minutes\\}\\}m \\{\\{seconds\\}\\}s$",
+      "^\\{\\{hours\\}\\}h \\{\\{minutes\\}\\}m$",
+      "^\\+1 \\(555\\) 123-4567$",
+      "^(?:John|Jane|Smith)$",
+      "^TK-$",
+      "^• (?:LAN/WAN|Firewall|Phishing/Spam)$",
+      "^corr-\\d+$",
+      "^Etc/GMT[+-]\\d+$",
+      "^Cron: \\{\\{cron\\}\\}$",
+      "^\\{\\{count\\}\\} total$",
+      "^Cmd/Ctrl\\+K$",
+      "^%$",
+      "^[0-9./\\n]+$",
+      "^https?://",
+      "^[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}$",
+      "^P\\{\\{number\\}\\}$",
+      "^\\{\\{hours\\}\\} h$",
+      "^\\{\\{pct\\}\\}%$",
+      "^\\{\\{amount\\}\\} MRR$",
+      "^\\{\\{amount\\}\\} NRR$",
+      "^\\{\\{value\\}\\}%$",
+      "^\\{\\{days\\}\\}d$",
+      "^\\{\\{count\\}\\} POs?$",
+      "^\\{\\{count\\}\\} SOs$",
+      "^\\{\\{count\\}\\} kits$",
+      "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
+      "^\\(SN \\{\\{sn\\}\\}\\)$",
+      "^T[+-]\\{\\{days\\}\\}$"
+    ],
+    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns."
+  }
+}

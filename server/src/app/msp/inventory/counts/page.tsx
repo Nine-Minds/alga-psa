@@ -5,11 +5,16 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import { redirect } from 'next/navigation';
 import type { IStockLocation } from '@alga-psa/types';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Cycle Counts',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.counts.title', { defaultValue: 'Cycle Counts' }),
+  };
+}
 
 export default async function CycleCountsPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/counts', scope: 'msp' });

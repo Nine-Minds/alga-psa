@@ -107,7 +107,10 @@
     "goToDashboard": "Vá para o painel",
     "logoAlt": "Alga Logo",
     "expandSidebar": "Expandir barra lateral",
-    "collapseSidebar": "Recolher barra lateral"
+    "collapseSidebar": "Recolher barra lateral",
+    "collapseSection": "Recolher {{section}}",
+    "expandSection": "Expandir {{section}}",
+    "appLogoAlt": "Logotipo do {{appName}}"
   },
   "settings": {
     "sections": {
@@ -734,5 +737,9 @@
       "permissionDescription": "Você não tem permissão para ver marketing. Peça a um administrador a permissão de leitura de marketing.",
       "backToDashboard": "Ir para o painel"
     }
+  },
+  "githubStar": {
+    "label": "Marcar com estrela",
+    "ariaLabel": "Marcar {{repository}} com estrela no GitHub"
   }
 }

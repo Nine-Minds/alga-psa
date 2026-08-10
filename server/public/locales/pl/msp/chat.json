@@ -175,5 +175,8 @@
       "title": "Wymagana zgoda na udostępnianie danych",
       "body": "Administrator musi zaakceptować warunki udostępniania danych AI na tym urządzeniu, zanim będzie można korzystać z AI."
     }
+  },
+  "mentions": {
+    "removeChip": "Usuń {{mention}}"
   }
 }

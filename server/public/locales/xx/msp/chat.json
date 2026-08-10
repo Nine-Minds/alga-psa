@@ -175,5 +175,8 @@
       "title": "11111",
       "body": "11111"
     }
+  },
+  "mentions": {
+    "removeChip": "11111 {{mention}} 11111"
   }
 }

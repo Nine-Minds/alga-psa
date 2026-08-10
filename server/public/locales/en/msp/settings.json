@@ -30,7 +30,10 @@
     "loadingTeam": "Loading team configuration...",
     "loadingExperimental": "Loading experimental feature configuration...",
     "loadingInteractions": "Loading interaction settings...",
-    "keyboardShortcuts": "Keyboard Shortcuts"
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "opportunities": "Opportunities",
+    "mcpServer": "MCP Server",
+    "settingsFallback": "Settings"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

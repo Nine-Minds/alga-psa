@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const GitHubStarButton = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('msp/core');
 
   useEffect(() => {
     const container = containerRef.current;
@@ -16,8 +18,14 @@ const GitHubStarButton = () => {
     anchor.setAttribute('data-icon', 'octicon-star');
     anchor.setAttribute('data-show-count', 'false');
     anchor.setAttribute('data-size', 'small');
-    anchor.setAttribute('aria-label', 'Star Nine-Minds/alga-psa on GitHub');
-    anchor.textContent = 'Star';
+    anchor.setAttribute(
+      'aria-label',
+      t('githubStar.ariaLabel', {
+        repository: 'Nine-Minds/alga-psa',
+        defaultValue: 'Star {{repository}} on GitHub',
+      }),
+    );
+    anchor.textContent = t('githubStar.label', { defaultValue: 'Star' });
     container.appendChild(anchor);
 
     const script = document.createElement('script');
@@ -29,7 +37,7 @@ const GitHubStarButton = () => {
       container.innerHTML = '';
       script.remove();
     };
-  }, []);
+  }, [t]);
 
   return <div ref={containerRef} className="flex items-center mt-0.5" />;
 };

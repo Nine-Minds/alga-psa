@@ -224,6 +224,14 @@
       "heading": "Comprar créditos ou gerenciar a assinatura",
       "body": "Recargas, recarga automática e alterações de assinatura são feitas na loja da Nine Minds.",
       "openStore": "Abrir a loja"
+    },
+    "status": {
+      "canceled": "Cancelado",
+      "unpaid": "Não pago",
+      "none": "Sem assinatura",
+      "active": "Ativo",
+      "trialing": "Teste",
+      "past_due": "Vencido"
     }
   },
   "managementPage": {

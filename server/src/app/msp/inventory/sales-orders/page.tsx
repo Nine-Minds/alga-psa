@@ -20,11 +20,16 @@ import { redirect } from 'next/navigation';
 import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
 import type { SalesOrderServiceOption } from '@alga-psa/inventory/components';
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
-export const metadata: Metadata = {
-  title: 'Sales Orders',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: t('msp.inventory.salesOrders.title', { defaultValue: 'Sales Orders' }),
+  };
+}
 
 interface SalesOrdersPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

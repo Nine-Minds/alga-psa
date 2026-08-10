@@ -299,7 +299,7 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
               />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
-                  MSP Staff? Login here →
+                  {t('auth.mspStaffLogin', 'MSP Staff? Login here →')}
                 </a>
               </div>
             </CardContent>

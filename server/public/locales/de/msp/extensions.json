@@ -346,5 +346,30 @@
     "scopeToOneInstall": "Auf eine Installation einschränken",
     "overrideTenantContext": "Mandantenkontext überschreiben",
     "matchRequestId": "x-request-id / context.request_id abgleichen"
+  },
+  "permissions": {
+    "severity": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
+    "categoryHeadings": {
+      "storage": "Speicher-Berechtigungen",
+      "ui": "UI-Berechtigungen",
+      "data": "Daten-Berechtigungen",
+      "api": "API-Berechtigungen",
+      "system": "System-Berechtigungen",
+      "other": "Sonstige Berechtigungen"
+    },
+    "access": {
+      "low": "Nur-Lese-Zugriff",
+      "medium": "Änderungszugriff",
+      "high": "Erweiterter Zugriff"
+    },
+    "legend": {
+      "low": "Nur-Lese-Berechtigungen erlauben der Erweiterung, Daten anzusehen, aber nicht zu ändern.",
+      "medium": "Änderungsberechtigungen erlauben der Erweiterung, vorhandene Daten zu aktualisieren.",
+      "high": "Erweiterte Berechtigungen erlauben der Erweiterung, Vorgänge zu erstellen, zu löschen oder auszuführen."
+    }
   }
 }

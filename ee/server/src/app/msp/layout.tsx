@@ -3,15 +3,22 @@ import { getSession } from "@alga-psa/auth";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 // This template overrides the root layout's template for all /msp/* pages.
 // The default includes the suffix because defaults bypass their own template.
-export const metadata: Metadata = {
-  title: {
-    template: '%s | AlgaPSA',
-    default: 'Dashboard | AlgaPSA',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: {
+      // '%s' is Next's own slot for the child route's title, not an i18next
+      // placeholder — it passes through translation untouched.
+      template: '%s | AlgaPSA',
+      default: t('msp.layout.defaultTitle', { defaultValue: 'Dashboard | AlgaPSA' }),
+    },
+  };
+}
 
 /**
  * MSP Layout for Enterprise Edition

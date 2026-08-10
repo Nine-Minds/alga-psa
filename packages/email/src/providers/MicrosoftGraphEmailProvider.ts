@@ -56,7 +56,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
   private readonly mimeTransport = nodemailer.createTransport({
     streamTransport: true,
     buffer: true,
-    newline: 'unix',
+    newline: 'windows',
   });
 
   constructor(providerId: string) {

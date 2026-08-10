@@ -7,18 +7,25 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import type { Metadata } from 'next';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getClientPortalFeatureSettings } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const CLIENT_SIDEBAR_COOKIE = 'client_portal_sidebar_collapsed';
 
 // This template overrides the root layout's template for all /client-portal/* pages.
 // The default includes the suffix because defaults bypass their own template.
-export const metadata: Metadata = {
-  title: {
-    template: '%s | Client Portal',
-    default: 'Dashboard | Client Portal',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+
+  return {
+    title: {
+      // '%s' is Next's own slot for the child route's title, not an i18next
+      // placeholder — it passes through translation untouched.
+      template: t('clientPortal.layout.titleTemplate', { defaultValue: '%s | Client Portal' }),
+      default: t('clientPortal.layout.defaultTitle', { defaultValue: 'Dashboard | Client Portal' }),
+    },
+  };
+}
 
 export default async function Layout({
   children,

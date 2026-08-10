@@ -136,5 +136,9 @@
       "success_one": "{{count}} taak uit de geschiedenis gewist.",
       "success_other": "{{count}} taken uit de geschiedenis gewist."
     }
+  },
+  "page": {
+    "heading": "Jobbewaking",
+    "recentJobs": "Recente achtergrondtaken"
   }
 }

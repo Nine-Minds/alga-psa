@@ -185,7 +185,7 @@
     },
     "meeting": {
       "daysAgo": "{{count}} dni temu",
-      "done": "Przegląd rurociągu. Liczba zarejestrowanych transakcji: {{count}}.",
+      "done": "Przegląd lejka sprzedaży. Liczba zarejestrowanych transakcji: {{count}}.",
       "evidenceSays": "Dowody mówią",
       "gap": "Pewność wynosi {{confidence}}, ale dowody zatrzymują się na {{stage}}. Co właściwie zrobił klient?",
       "intro": "Prowadzi cotygodniowe spotkanie o lejku transakcja po transakcji, zaczynając od najcichszej, z dowodami obok oceny właściciela. Oznacz każdą transakcję jako przejrzaną, a sesja zostanie zapisana, więc możesz wykazać, że przeszliście cały lejek.",
@@ -225,7 +225,7 @@
       "doToday": "Zrób dzisiaj",
       "goingQuiet": "Idzie cicho",
       "lesson": {
-        "reviewPipeline": "Przejrzyj rurociąg",
+        "reviewPipeline": "Przejrzyj lejek sprzedaży",
         "viewAssessmentDeals": "Zobacz oferty oceny"
       },
       "markLost": "Marek przegrał",
@@ -344,9 +344,9 @@
       "opportunityCount_many": "Możliwości: {{count}}",
       "opportunityCount_one": "{{count}} możliwość",
       "opportunityCount_other": "Możliwości: {{count}}",
-      "pipelineByStage": "Rurociąg według etapów",
+      "pipelineByStage": "Lejek sprzedaży według etapów",
       "stalled": "Zatrzymane",
-      "subtitle": "Otwarty rurociąg i dalsze prace wymagające uwagi.",
+      "subtitle": "Otwarty lejek sprzedaży i dalsze prace wymagające uwagi.",
       "title": "Migawka możliwości",
       "unavailable": "Sumy możliwości są tymczasowo niedostępne. Otwarte możliwości dalszej pracy."
     },
@@ -437,10 +437,10 @@
       "snooze": "Odłóż"
     },
     "tabs": {
-      "board": "Deska",
+      "board": "Tablica",
       "forecast": "Prognoza",
       "meeting": "Spotkanie",
-      "pipeline": "Rurociąg",
+      "pipeline": "Lejek sprzedaży",
       "queue": "Kolejka",
       "reports": "Raporty",
       "suggestions": "Sugestie"

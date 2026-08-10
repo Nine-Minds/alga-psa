@@ -1356,7 +1356,9 @@
     "loadingProjects": "Loading projects...",
     "noDescription": "No description provided",
     "noPhasesOrTasks": "No phases or tasks to display",
-    "loadError": "Failed to load project details"
+    "loadError": "Failed to load project details",
+    "errorWithMessage": "Error: {{message}}",
+    "notFoundOrNoAccess": "Project not found or you do not have access to this project."
   },
   "backToProjects": "Back to Projects",
   "invalidProjectData": "Invalid project data",

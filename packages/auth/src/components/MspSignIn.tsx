@@ -7,17 +7,31 @@ import MspLoginForm from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
 
 interface MspSignInProps {
   initialEmail?: string;
 }
 
+// Marketing panel. Kept as data so each entry carries its own key rather than
+// seven copies of the same markup differing only by icon and heading.
+const FEATURES = [
+  { key: 'ticketing', icon: Ticket, defaultValue: 'Comprehensive Ticketing' },
+  { key: 'inboundEmails', icon: Mail, defaultValue: 'Inbound Emails' },
+  { key: 'dispatch', icon: Calendar, defaultValue: 'Technician Dispatch and Scheduling' },
+  { key: 'timeTracking', icon: Clock, defaultValue: 'Time Entry/Tracking' },
+  { key: 'projects', icon: Layers, defaultValue: 'Project Management Tools' },
+  { key: 'clients', icon: Users, defaultValue: 'Client and Contact Management' },
+  { key: 'documents', icon: FileText, defaultValue: 'Centralized Document Uploads and Storage' },
+] as const;
+
 export default function MspSignIn({ initialEmail }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
   const searchParams = useSearchParams();
+  const { t } = useTranslation('msp/auth');
 
   const callbackUrl = searchParams?.get('callbackUrl') || '/msp/dashboard';
   const error = searchParams?.get('error');
@@ -27,19 +41,19 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
-        title: 'Access Denied',
-        message: 'You do not have permission to access the MSP dashboard.'
+        title: t('signIn.alerts.accessDeniedTitle', 'Access Denied'),
+        message: t('signIn.alerts.accessDeniedMessage', 'You do not have permission to access the MSP dashboard.')
       });
       setIsAlertOpen(true);
     } else if (error === 'SessionRevoked') {
       setAlertInfo({
         type: 'warning',
-        title: 'Session Ended',
-        message: 'Your session has been signed out. Please sign in again.'
+        title: t('signIn.alerts.sessionEndedTitle', 'Session Ended'),
+        message: t('signIn.alerts.sessionEndedMessage', 'Your session has been signed out. Please sign in again.')
       });
       setIsAlertOpen(true);
     }
-  }, [error]);
+  }, [error, t]);
 
   const handle2FA = (twoFactorCode: string) => {
     setIsOpen2FA(false);
@@ -54,7 +68,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
       }
       setAlertInfo({
         type: 'error',
-        title: 'Error',
+        title: t('signIn.alerts.errorTitle', 'Error'),
         message: error
       });
     } else {
@@ -125,7 +139,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               className="block hover:opacity-80 transition-opacity"
             >
               <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
-                Professional Services Automation
+                {t('signIn.hero.title', 'Professional Services Automation')}
               </h1>
             </a>
             <a
@@ -135,87 +149,26 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               className="block hover:opacity-80 transition-opacity"
             >
               <p className="text-lg text-[rgb(var(--color-text-600))] mb-2 text-center">
-                Open source PSA platform for Managed Service Providers
+                {t('signIn.hero.subtitle', 'Open source PSA platform for Managed Service Providers')}
               </p>
             </a>
             <div className="space-y-3">
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Ticket className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Comprehensive Ticketing</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Mail className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Inbound Emails</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Calendar className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Technician Dispatch and Scheduling</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Clock className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Time Entry/Tracking</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Layers className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Project Management Tools</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <Users className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Client and Contact Management</h3>
-                </div>
-              </a>
-              <a
-                href="https://www.nineminds.com/alga-psa"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
-              >
-                <FileText className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Centralized Document Uploads and Storage</h3>
-                </div>
-              </a>
+              {FEATURES.map(({ key, icon: Icon, defaultValue }) => (
+                <a
+                  key={key}
+                  href="https://www.nineminds.com/alga-psa"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+                >
+                  <Icon className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">
+                      {t(`signIn.features.${key}`, defaultValue)}
+                    </h3>
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -225,10 +178,10 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
           <Card className="max-w-md w-full bg-card/95 backdrop-blur dark:bg-card dark:backdrop-blur-none dark:border dark:border-border-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
-                MSP Dashboard Login
+                {t('signIn.title', 'MSP Dashboard Login')}
               </CardTitle>
               <CardDescription className="text-center">
-                Access your managed services platform
+                {t('signIn.subtitle', 'Access your managed services platform')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -240,7 +193,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               />
               <div className="mt-6 text-center">
                 <a href="/auth/client-portal/signin" className="block text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
-                  Looking for the Client Portal? Click here →
+                  {t('signIn.clientPortalLink', 'Looking for the Client Portal? Click here →')}
                 </a>
               </div>
             </CardContent>

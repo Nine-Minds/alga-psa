@@ -1094,6 +1094,15 @@
       "noFields": "55555",
       "copyAllPaths": "55555",
       "copyAllFieldPaths": "55555"
+    },
+    "logoAlt": "55555",
+    "nodes": {
+      "action": "55555",
+      "process": "55555",
+      "clientId": "55555",
+      "clientSecret": "55555",
+      "tenantId": "55555",
+      "userEmail": "55555"
     }
   },
   "actionInputFieldInfo": {
@@ -1354,7 +1363,9 @@
     "insertReferenceHeading": "55555",
     "errors": {
       "noCodeBlock": "55555"
-    }
+    },
+    "placeholder": "55555",
+    "referenceHint": "55555"
   },
   "referenceSelector": {
     "placeholders": {
@@ -2525,5 +2536,25 @@
         "selectPriority": "55555"
       }
     }
+  },
+  "toggle": {
+    "disableTitle": "55555",
+    "enableTitle": "55555",
+    "confirmDisable": "55555",
+    "confirmEnable": "55555"
+  },
+  "mappingEditor": {
+    "error": {
+      "title": "55555",
+      "retry": "55555",
+      "retryWithCount": "55555 {{retryCount}} 55555 {{maxRetries}} 55555",
+      "attemptOfMax": "55555 {{retryCount}} 55555 {{maxRetries}} 55555",
+      "maxRetriesReached": "55555",
+      "contactSupport": "55555"
+    }
+  },
+  "actionInputTypeHint": {
+    "coercible": "55555 {{sourceType}} 55555 {{targetType}} 55555",
+    "incompatible": "55555 {{sourceType}} 55555 {{targetType}} 55555"
   }
 }

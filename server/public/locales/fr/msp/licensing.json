@@ -224,6 +224,14 @@
       "heading": "Acheter des crédits ou gérer l'abonnement",
       "body": "Les recharges, la recharge automatique et les changements d'abonnement sont gérés dans la boutique Nine Minds.",
       "openStore": "Ouvrir la boutique"
+    },
+    "status": {
+      "canceled": "Annulé",
+      "unpaid": "Impayée",
+      "none": "Aucun abonnement",
+      "active": "Actif",
+      "trialing": "Essai",
+      "past_due": "En retard"
     }
   },
   "managementPage": {
