@@ -10,7 +10,6 @@ import {
   getClientProjectBillingSummary,
   type ClientProjectBillingSummary,
 } from '@alga-psa/client-portal/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ProjectBillingSummarySectionProps {
@@ -23,15 +22,10 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
   const { t } = useTranslation('features/projects');
   const { formatDate } = useFormatters();
   const { money } = useCurrencyFormat();
-  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const [summary, setSummary] = useState<ClientProjectBillingSummary | null>(null);
 
   useEffect(() => {
     let active = true;
-    if (!projectBillingUiEnabled) {
-      setSummary(null);
-      return () => { active = false; };
-    }
     getClientProjectBillingSummary(projectId)
       .then((result) => {
         if (!active) return;
@@ -41,9 +35,9 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
       })
       .catch((error) => { console.error('Error fetching project billing summary:', error); });
     return () => { active = false; };
-  }, [projectId, projectBillingUiEnabled]);
+  }, [projectId]);
 
-  if (!projectBillingUiEnabled || !summary || !summary.enabled) return null;
+  if (!summary || !summary.enabled) return null;
 
   const currency = summary.currency ?? undefined;
 

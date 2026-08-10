@@ -163,24 +163,7 @@ Controls access to the new service request definition and client portal request-
 - When enabled: The full service request UI is accessible.
 - Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
 
-### 11. `project-billing-ui`
-Temporarily controls discovery and ambient UI for project billing before release.
-
-**Affected Areas:**
-- **MSP Portal:**
-  - Project Billing view option, billed header, phase billing badges/toast, and project/task/time-entry payment warnings
-  - Invoicing Hub Project Billing tab and ready-count badge
-  - Project client-portal Show Billing configuration
-- **Client Portal:**
-  - Embedded project billing summary
-
-**Behavior:**
-- When disabled (default): Ambient project-billing controls and signals are hidden.
-- Explicit `?view=billing` and `?tab=invoicing&subtab=project-billing` URLs remain functional.
-- A persisted Billing view preference without an explicit billing URL falls back to Kanban.
-- Backend actions, APIs, services, events, jobs, invoice behavior, database logic, and authorization are always available regardless of flag state.
-
-### 12. `entra-sync-feature`
+### 11. `entra-sync-feature`
 Temporarily controls discovery of the Microsoft Entra sync integration before release.
 
 **Affected Areas:**
@@ -203,7 +186,7 @@ Temporarily controls discovery of the Microsoft Entra sync integration before re
 **Note:** A future non-Entra identity integration would keep the Identity tab visible on
 its own; the flag gates the Entra entry, not the category.
 
-### 13. `skim-support-feature`
+### 12. `skim-support-feature`
 Controls discovery of the SCIM user-provisioning administration UI while the feature is being rolled out.
 
 **Affected Areas:**
@@ -215,7 +198,7 @@ Controls discovery of the SCIM user-provisioning administration UI while the fea
 - When enabled: The SCIM user-provisioning tab is available to eligible enterprise-edition tenants; existing tier and permission checks still apply.
 - SCIM API routes, backend actions, authentication, schemas, migrations, and provisioning behavior remain active regardless of flag state.
 
-### 14. `qbo-item-import`
+### 13. `qbo-item-import`
 Gates the QuickBooks Online Products & Services import (tenant-scoped for piloting).
 
 **Affected Areas:**
@@ -231,7 +214,7 @@ Gates the QuickBooks Online Products & Services import (tenant-scoped for piloti
 - Also gated by EE edition and billing/service RBAC (`billing_settings:read` for preview;
   `billing_settings:update` + `service:create` for execute).
 
-### 15. `contract-simulator`
+### 14. `contract-simulator`
 Controls discovery of the Contract Simulator while it is being rolled out.
 
 **Affected Areas:**
