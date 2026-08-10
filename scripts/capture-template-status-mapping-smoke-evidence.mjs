@@ -397,7 +397,7 @@ export function scanForSecretsAll(bundleDir, secrets) {
 
 export function collectSecretCandidates(dbPassword, algaPassword) {
   const secrets = [dbPassword, algaPassword];
-  for (const key of ['NEXTAUTH_SECRET', 'NEXTAUTH_URL', 'DB_PASSWORD_SERVER', 'DB_PASSWORD']) {
+  for (const key of ['NEXTAUTH_SECRET', 'DB_PASSWORD_SERVER', 'DB_PASSWORD']) {
     const value = parseDotenvValue(readEnvLocalText(), key);
     if (typeof value === 'string' && value.trim() !== '') {
       secrets.push(value);
