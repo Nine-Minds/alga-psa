@@ -983,25 +983,31 @@ export function verifyBundle(evidenceDirectory, options = {}) {
 export function main(argv) {
   const args = argv.slice(2);
   const flags = {};
+  const positional = [];
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg.startsWith('--timeout-ms=')) {
       flags.timeoutMs = Number(arg.split('=')[1]);
       continue;
     }
-    const eq = arg.indexOf('=');
     if (arg.startsWith('--')) {
+      const eq = arg.indexOf('=');
       const key = eq >= 0 ? arg.slice(2, eq) : arg.slice(2);
-      let value = eq >= 0 ? arg.slice(eq + 1) : args[index + 1];
-      if (eq < 0 && value && !value.startsWith('--')) {
-        index += 1;
-      } else if (eq < 0) {
-        value = '';
+      if (eq >= 0) {
+        flags[key] = arg.slice(eq + 1);
+      } else {
+        const value = args[index + 1];
+        if (value !== undefined && !value.startsWith('--')) {
+          flags[key] = value;
+          index += 1;
+        } else {
+          flags[key] = '';
+        }
       }
-      flags[key] = value;
+    } else {
+      positional.push(arg);
     }
   }
-  const positional = args.filter((arg) => !arg.startsWith('--'));
   if (positional.length !== 1) {
     process.stderr.write(
       'Usage: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
