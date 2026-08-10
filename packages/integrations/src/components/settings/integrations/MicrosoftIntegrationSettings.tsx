@@ -438,7 +438,10 @@ export function MicrosoftIntegrationSettings({
     setError(null);
 
     const [statusResult, bindingsResult] = await Promise.all([
-      getMicrosoftIntegrationStatus(),
+      // The Microsoft email settings flow opts into the conservative same-client
+      // issuer backfill. The shared status action does NOT backfill by default,
+      // so Teams settings loads stay pure reads of email provider state.
+      getMicrosoftIntegrationStatus({ runIssuerBackfill: true }),
       listMicrosoftConsumerBindings(),
     ]);
 

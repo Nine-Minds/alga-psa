@@ -1617,16 +1617,22 @@ export const getMicrosoftEmailIssuerOptions = withAuth(async (
 
 export const getMicrosoftIntegrationStatus = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  params: { runIssuerBackfill?: boolean } = {}
 ): Promise<MicrosoftProfileStatusResponse> => {
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
-    // Conservative same-client backfill: associates a legacy provider row with a
-    // profile only when its persisted client ID has exactly one eligible
-    // match. Never touches Teams rows.
-    const backfill = await backfillMicrosoftEmailProviderIssuerMetadata(tenant);
+    // The conservative same-client issuer backfill WRITES
+    // microsoft_email_provider_config rows. It must never run on shared read
+    // paths: the Teams settings page loads this status purely to render its
+    // profile picker, so a Teams page load would otherwise mutate email
+    // provider state. Only the Microsoft email settings / inbound-email flow
+    // opts in via runIssuerBackfill: true.
+    const backfill = params.runIssuerBackfill
+      ? await backfillMicrosoftEmailProviderIssuerMetadata(tenant)
+      : undefined;
     const baseUrl = await getDeploymentBaseUrl();
     const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
     const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');

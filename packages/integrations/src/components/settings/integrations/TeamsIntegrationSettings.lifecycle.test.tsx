@@ -176,4 +176,13 @@ describe('TeamsIntegrationSettings add-on lifecycle + stale manifest', () => {
     render(<TeamsIntegrationSettings />);
     await waitFor(() => expect(document.querySelector('#teams-stale-manifest-warning')).toBeInTheDocument());
   });
+
+  it('Teams settings loads Microsoft status WITHOUT the email issuer backfill opt-in', async () => {
+    // The Teams page shares getMicrosoftIntegrationStatus for its profile
+    // picker. It must never trigger the email issuer backfill, which writes
+    // microsoft_email_provider_config rows: the call has to be a pure read.
+    render(<TeamsIntegrationSettings />);
+    await waitFor(() => expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalled());
+    expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalledWith();
+  });
 });

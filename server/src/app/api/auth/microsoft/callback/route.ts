@@ -451,10 +451,10 @@ export async function GET(request: NextRequest) {
       // client_id/profile pinning, old subscription state).
       if (stateContext.providerId && stateContext.tenant) {
         try {
-          // The effective issuer metadata to persist. For the explicit flow it
-          // comes from the revalidated state choice; for legacy flows from the
-          // resolved binding/platform config. It is never re-resolved from the
-          // tenant binding after this point.
+          // The effective issuer metadata to persist comes from the signed
+          // state's revalidated selection (issuerResolution is always non-null
+          // here — this callback only runs with a verified signed state). It is
+          // never re-resolved from the tenant binding after this point.
           const issuerMetadata = issuerResolution
             ? {
                 client_id: issuerResolution.clientId,

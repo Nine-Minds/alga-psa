@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -793,5 +795,28 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(archiveMicrosoftProfileMock).toHaveBeenCalledWith('profile-2');
     });
+  });
+
+  it('loads status with the email issuer backfill opt-in (the email settings flow still backfills)', async () => {
+    render(<MicrosoftIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalled();
+    });
+    expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalledWith({ runIssuerBackfill: true });
+  });
+
+  it('contract: only the Microsoft email settings page opts into the email issuer backfill', () => {
+    const filePath = path.resolve(__dirname, 'MicrosoftIntegrationSettings.tsx');
+    const teamsFilePath = path.resolve(__dirname, 'TeamsIntegrationSettings.tsx');
+    const source = fs.readFileSync(filePath, 'utf8');
+    const teamsSource = fs.readFileSync(teamsFilePath, 'utf8');
+
+    // The Microsoft email settings page explicitly opts into the backfill.
+    expect(source).toContain('getMicrosoftIntegrationStatus({ runIssuerBackfill: true })');
+    // The Teams settings page shares the status action only to build its
+    // profile picker and must remain a pure read (no backfill writes).
+    expect(teamsSource).toContain('getMicrosoftIntegrationStatus()');
+    expect(teamsSource).not.toContain('runIssuerBackfill');
   });
 });
