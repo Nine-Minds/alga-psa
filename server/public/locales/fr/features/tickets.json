@@ -31,7 +31,9 @@
     "skipDropped_one": "Ignorer ({{count}} ticket supprimé)",
     "skipDropped_other": "Ignorer ({{count}} tickets supprimés)",
     "createdSuccess_one": "{{count}} ticket créé avec succès.",
-    "createdSuccess_other": "{{count}} tickets créés avec succès."
+    "createdSuccess_other": "{{count}} tickets créés avec succès.",
+    "rowLimitExceeded": "Limite de lignes dépassée :",
+    "rowLimitDescription": "Votre CSV a {{original}} lignes, mais seules les premières {{kept}} lignes seront importées. Divisez votre fichier en lots plus petits pour les lignes restantes."
   },
   "title": "Tickets d'assistance",
   "subtitle": "Consultez et gérez vos tickets d'assistance",
@@ -1350,7 +1352,9 @@
       "noChildren": "Aucun enfant dans ce groupe.",
       "addChildMultiClientMessage": "Cela ajoutera {{ticket}} d'un autre client au groupe. Confirmez que vous souhaitez continuer.",
       "thisTicket": "ce ticket"
-    }
+    },
+    "autoClose": "Sera fermé automatiquement le {{date}} en l'absence de nouvelle activité.",
+    "autoCloseWarned": "Le client a été prévenu."
   },
   "invalidTicketData": "Données du ticket non valides",
   "timeEntries": {

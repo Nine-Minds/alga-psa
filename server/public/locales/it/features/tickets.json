@@ -31,7 +31,9 @@
     "skipDropped_one": "Salta ({{count}} ticket scartato)",
     "skipDropped_other": "Salta ({{count}} ticket scartati)",
     "createdSuccess_one": "{{count}} ticket creato con successo.",
-    "createdSuccess_other": "{{count}} ticket creati con successo."
+    "createdSuccess_other": "{{count}} ticket creati con successo.",
+    "rowLimitExceeded": "Limite righe superato:",
+    "rowLimitDescription": "Il CSV ha {{original}} righe, ma verranno importate solo le prime {{kept}}. Dividi il file in batch più piccoli per le righe rimanenti."
   },
   "title": "Ticket di supporto",
   "subtitle": "Visualizza e gestisci i tuoi ticket di supporto",
@@ -1350,7 +1352,9 @@
       "noChildren": "Nessun figlio in questo gruppo.",
       "addChildMultiClientMessage": "Verrà aggiunto {{ticket}} di un cliente diverso al gruppo. Conferma di voler procedere.",
       "thisTicket": "questo ticket"
-    }
+    },
+    "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
+    "autoCloseWarned": "Il cliente è stato avvisato."
   },
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {

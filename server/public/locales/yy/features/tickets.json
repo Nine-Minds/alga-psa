@@ -31,7 +31,9 @@
     "skipDropped_one": "55555 {{count}} 55555",
     "skipDropped_other": "55555 {{count}} 55555",
     "createdSuccess_one": "55555 {{count}} 55555",
-    "createdSuccess_other": "55555 {{count}} 55555"
+    "createdSuccess_other": "55555 {{count}} 55555",
+    "rowLimitExceeded": "55555",
+    "rowLimitDescription": "55555 {{original}} 55555 {{kept}} 55555"
   },
   "title": "55555",
   "subtitle": "55555",
@@ -1358,7 +1360,9 @@
       "noChildren": "55555",
       "addChildMultiClientMessage": "55555 {{ticket}} 55555",
       "thisTicket": "55555"
-    }
+    },
+    "autoClose": "55555",
+    "autoCloseWarned": "55555"
   },
   "invalidTicketData": "55555",
   "timeEntries": {

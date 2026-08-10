@@ -38,6 +38,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 export interface ProjectListFilters {
@@ -153,6 +154,8 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
 
 export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
@@ -634,7 +637,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
     // Use a date-only value to keep SSR and client rendering consistent regardless of timezone.
     const date = parse(datePart, 'yyyy-MM-dd', new Date());
-    return isNaN(date.getTime()) ? projectListT('notAvailable', 'N/A') : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? projectListT('notAvailable', 'N/A') : formatDate(date, { dateStyle: 'medium' });
   };
 
   const columns: ColumnDefinition<IProject>[] = [

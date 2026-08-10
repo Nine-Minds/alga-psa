@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -100,6 +100,8 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
   onImportComplete,
 }) => {
   const { t } = useTranslation('features/tickets');
+  // Row counts followed the browser's grouping separators, not the app's.
+  const { formatNumber } = useFormatters();
   // Core state
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -1019,9 +1021,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
             {rowsTruncated && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>Row limit exceeded:</strong> Your CSV has {rowsTruncated.original.toLocaleString()} rows,
-                  but only the first {rowsTruncated.kept.toLocaleString()} rows will be imported.
-                  Please split your file into smaller batches for the remaining rows.
+                  <strong>{t('importDialog.rowLimitExceeded', 'Row limit exceeded:')}</strong>{' '}
+                  {t('importDialog.rowLimitDescription', 'Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows.', {
+                    original: formatNumber(rowsTruncated.original),
+                    kept: formatNumber(rowsTruncated.kept),
+                  })}
                 </AlertDescription>
               </Alert>
             )}
