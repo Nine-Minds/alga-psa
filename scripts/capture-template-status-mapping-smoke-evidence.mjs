@@ -1511,11 +1511,12 @@ function appendStepLog(state, entry) {
 export function commandInit(opts) {
   const root = REPO_ROOT;
   const bundleDir = loadOrCreateBundleDir(opts);
-  currentInitContext = { bundleDir, db: null, opts, seeded: false, validTemplateId: null };
+  currentInitContext = { bundleDir, db: null, opts, seeded: false, validTemplateId: null, createdBundleDir: false };
   if (fs.existsSync(bundleDir)) {
     fail(`bundle directory already exists: ${bundleDir} (choose a new name or reuse it with other commands)`);
   }
   fs.mkdirSync(bundleDir, { recursive: true });
+  currentInitContext.createdBundleDir = true;
 
   const gitHeadInfo = gitHead(root);
   if (!COMMIT_PATTERN.test(gitHeadInfo.headSha)) {
@@ -1991,7 +1992,7 @@ function main() {
           process.stderr.write(`error: fixture rollback failed: ${revertError instanceof Error ? revertError.message : String(revertError)}\n`);
         }
       }
-      if (currentInitContext.bundleDir && fs.existsSync(currentInitContext.bundleDir)) {
+      if (currentInitContext.createdBundleDir) {
         fs.rmSync(currentInitContext.bundleDir, { recursive: true, force: true });
         process.stderr.write(`error: removed incomplete bundle ${currentInitContext.bundleDir}\n`);
       }

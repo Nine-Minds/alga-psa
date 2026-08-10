@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 import test from 'node:test';
 
 import {
@@ -440,6 +442,14 @@ function writeJson(bundleDir, name, value) {
   fs.writeFileSync(path.join(bundleDir, name), `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function runInit(bundleDir, extraArgs = []) {
+  const scriptPath = path.join(WORKTREE, 'scripts', 'capture-template-status-mapping-smoke-evidence.mjs');
+  return spawnSync(process.execPath, [scriptPath, 'init', '--bundle', bundleDir, ...extraArgs], {
+    cwd: WORKTREE,
+    encoding: 'utf8',
+  });
+}
+
 test('utcTimestamp produces YYYYMMDDTHHMMSSZ', () => {
   assert.match(utcTimestamp(new Date('2026-08-10T13:14:15.123Z')), /^20260810T131415Z$/);
 });
@@ -689,4 +699,29 @@ test('createContext rejects path escapes', () => {
   const bundleDir = makeTempBundle('escape');
   const context = createContext(bundleDir);
   assert.throws(() => context.filePath('..'));
+});
+
+test('init rejects a pre-existing --bundle directory and leaves it untouched', () => {
+  const bundleDir = fs.mkdtempSync(path.join(os.tmpdir(), 'preexisting-bundle-'));
+  const sentinelPath = path.join(bundleDir, 'sentinel.txt');
+  const sentinelContents = 'KEEP';
+  fs.writeFileSync(sentinelPath, sentinelContents);
+
+  const result = runInit(bundleDir);
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /bundle directory already exists/);
+  assert.equal(fs.existsSync(bundleDir), true, 'the pre-existing bundle directory must survive the rejection');
+  assert.equal(fs.readFileSync(sentinelPath, 'utf8'), sentinelContents);
+});
+
+test('init removes a bundle directory it created when a later step fails', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'created-bundle-parent-'));
+  const bundleDir = path.join(parentDir, 'harness-created-bundle');
+  assert.equal(fs.existsSync(bundleDir), false);
+
+  const result = runInit(bundleDir, ['--db-port', '1']);
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.equal(fs.existsSync(bundleDir), false, 'a harness-created incomplete bundle must be removed on init failure');
 });
