@@ -32,7 +32,8 @@
     "loadingInteractions": "Interactie-instellingen laden...",
     "keyboardShortcuts": "Sneltoetsen",
     "mcpServer": "MCP-server",
-    "opportunities": "Verkoopkansen"
+    "opportunities": "Verkoopkansen",
+    "settingsFallback": "Instellingen"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",

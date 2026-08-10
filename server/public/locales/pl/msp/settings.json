@@ -34,7 +34,8 @@
     "loadingInteractions": "Ładowanie ustawień interakcji...",
     "keyboardShortcuts": "Skróty klawiaturowe",
     "mcpServer": "Serwer MCP",
-    "opportunities": "Szanse sprzedaży"
+    "opportunities": "Szanse sprzedaży",
+    "settingsFallback": "Ustawienia"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",

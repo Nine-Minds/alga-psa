@@ -1,7 +1,7 @@
 'use server';
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, isSupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -23,7 +23,10 @@ export const updateTenantClientPortalLocaleAction = withAuth(async (
     throw new Error('Only internal users can update tenant settings');
   }
 
-  if (!isSupportedLocale(locale)) {
+  // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+  // language we actually ship rather than sitting in the column unreadable.
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
@@ -38,7 +41,7 @@ export const updateTenantClientPortalLocaleAction = withAuth(async (
     ...existingSettings,
     clientPortal: {
       ...(existingSettings.clientPortal || {}),
-      defaultLocale: locale,
+      defaultLocale: normalizedLocale,
     },
   };
 
@@ -80,7 +83,7 @@ export const getTenantClientPortalLocaleAction = withOptionalAuth(async (
 
   const stored = tenantSettings?.settings?.clientPortal?.defaultLocale;
   return {
-    defaultLocale: isSupportedLocale(stored) ? stored : null,
+    defaultLocale: normalizeLocale(stored),
   };
 });
 

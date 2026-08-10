@@ -13,7 +13,8 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
-import { getServerLocale, getServerTranslation } from "@alga-psa/ui/lib/i18n/serverOnly";
+import { getServerLocale, getServerTranslation, registerServerLocaleResolver } from "@alga-psa/ui/lib/i18n/serverOnly";
+import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale';
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
@@ -44,6 +45,15 @@ const jetbrainsMono = localFont({
 
 export const dynamic = 'force-dynamic';
 //export const revalidate = false;
+
+// instrumentation.ts registers this too, but it is compiled into a different
+// webpack layer than server rendering, so the module-level singleton it sets is
+// invisible to `getServerLocale()`. Registering here puts the resolver in the
+// RSC layer's copy — the root layout is in every route's module graph. Without
+// it `getServerLocale()` reaches no caller-supplied options either, so the DB
+// hierarchy is skipped entirely and every server-rendered string falls back to
+// the browser's Accept-Language.
+registerServerLocaleResolver(() => getHierarchicalLocaleAction());
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();

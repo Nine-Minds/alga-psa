@@ -9,6 +9,7 @@ export {
   filterPseudoLocales,
   getNamespacesForRoute,
   isSupportedLocale,
+  normalizeLocale,
   getBestMatchingLocale,
 } from '@alga-psa/core/i18n/config';
 

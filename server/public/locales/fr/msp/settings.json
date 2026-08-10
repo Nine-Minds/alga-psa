@@ -32,7 +32,8 @@
     "loadingInteractions": "Chargement des paramètres d'interaction...",
     "keyboardShortcuts": "Raccourcis clavier",
     "opportunities": "Opportunités",
-    "mcpServer": "Serveur MCP"
+    "mcpServer": "Serveur MCP",
+    "settingsFallback": "Paramètres"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",

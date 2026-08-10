@@ -57,23 +57,20 @@ function detectLocale(request: NextRequest): SupportedLocale {
 
 /**
  * i18n middleware for locale resolution
- * Sets locale cookie and adds locale header for server components
+ * Adds a locale hint header for server components
+ *
+ * Deliberately does not write the locale cookie. Middleware has no database
+ * access, so all it can see is Accept-Language — a fallback, not a choice.
+ * Persisting that guess made it indistinguishable from an explicit selection,
+ * and getServerLocale() reads the cookie (step 1) ahead of the stored user,
+ * client and tenant preferences, so an English browser pinned every
+ * server-rendered string to English for a user whose configured locale was
+ * German. Only the language switcher writes this cookie.
  */
 export function i18nMiddleware(request: NextRequest, response: NextResponse = NextResponse.next()) {
   const locale = detectLocale(request);
 
-  // Set locale cookie if not already set or different
-  const currentLocaleCookie = request.cookies.get(LOCALE_CONFIG.cookie.name);
-  if (currentLocaleCookie?.value !== locale) {
-    response.cookies.set(LOCALE_CONFIG.cookie.name, locale, {
-      maxAge: LOCALE_CONFIG.cookie.maxAge,
-      sameSite: LOCALE_CONFIG.cookie.sameSite,
-      secure: LOCALE_CONFIG.cookie.secure,
-      path: '/',
-    });
-  }
-
-  // Add locale header for server components
+  // A hint for anonymous rendering; never authoritative over stored preferences.
   response.headers.set('x-locale', locale);
 
   // Add vary header for proper caching

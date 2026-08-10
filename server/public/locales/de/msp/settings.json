@@ -32,7 +32,8 @@
     "loadingInteractions": "Interaktionseinstellungen werden geladen...",
     "keyboardShortcuts": "Tastenkürzel",
     "mcpServer": "MCP-Server",
-    "opportunities": "Verkaufschancen"
+    "opportunities": "Verkaufschancen",
+    "settingsFallback": "Einstellungen"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",

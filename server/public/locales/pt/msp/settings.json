@@ -32,7 +32,8 @@
     "loadingInteractions": "Carregando configurações de interação...",
     "keyboardShortcuts": "Atalhos de teclado",
     "opportunities": "Oportunidades",
-    "mcpServer": "Servidor MCP"
+    "mcpServer": "Servidor MCP",
+    "settingsFallback": "Configurações"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",

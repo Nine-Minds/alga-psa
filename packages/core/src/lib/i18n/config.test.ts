@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, INCOMPLETE_LOCALES, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, getBestMatchingLocale, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -48,5 +48,45 @@ describe('filterPseudoLocales', () => {
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toEqual([
       'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
     ]);
+  });
+});
+
+describe('normalizeLocale', () => {
+  // The packs are language-only, so region-tagged values stored by imports and
+  // older UIs (a real 'pt_BR' sat in clients.properties.defaultLocale) used to
+  // fail a bare isSupportedLocale check and silently do nothing.
+  it.each([
+    ['pt_BR', 'pt'],
+    ['pt-BR', 'pt'],
+    ['PT_br', 'pt'],
+    ['en-US', 'en'],
+    ['  de  ', 'de'],
+    ['fr', 'fr'],
+  ])('normalizes %s to %s', (input, expected) => {
+    expect(normalizeLocale(input)).toBe(expected);
+  });
+
+  it.each([
+    ['zh-Hans-CN', 'a language we do not ship'],
+    ['klingon', 'nonsense'],
+    ['', 'the empty string'],
+  ])('rejects %s (%s)', (input) => {
+    expect(normalizeLocale(input)).toBeNull();
+  });
+
+  it('rejects non-strings rather than coercing them', () => {
+    for (const value of [null, undefined, 42, {}, []]) {
+      expect(normalizeLocale(value)).toBeNull();
+    }
+  });
+
+  it('keeps pseudo-locales resolvable for QA', () => {
+    expect(normalizeLocale('xx')).toBe('xx');
+  });
+
+  it('lets Accept-Language matching share the same rules', () => {
+    expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
+    expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
+    expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
   });
 });

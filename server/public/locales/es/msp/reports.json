@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Mesa de ayuda",
       "operations": "Operaciones",
-      "billing": "Facturación"
+      "billing": "Facturación",
+      "inventory": "Inventario"
     },
     "badges": {
       "planned": "Planificado"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Ver informe",
       "openInBilling": "Abrir en facturación",
+      "openReport": "Abrir informe",
       "requiresTier": "Requiere {{tier}}",
       "comingSoon": "Próximamente"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Informes de contratos",
         "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad."
+      },
+      "inventoryMargin": {
+        "title": "Informe de margen",
+        "description": "Ingresos, costo de los bienes vendidos y margen por producto de las órdenes de venta cumplidas."
+      },
+      "inventoryWriteOffs": {
+        "title": "Bajas",
+        "description": "Merma de inventario y ajustes dados de baja, por motivo y período."
+      },
+      "inventoryGhostUsage": {
+        "title": "Uso fantasma",
+        "description": "Tickets de hardware cerrados sin piezas registradas — costos que el taller pudo haber absorbido."
       }
     },
     "table": {

@@ -37,7 +37,8 @@
     "categories": {
       "helpdesk": "Helpdesk",
       "operations": "Betrieb",
-      "billing": "Abrechnung"
+      "billing": "Abrechnung",
+      "inventory": "Lagerbestand"
     },
     "badges": {
       "planned": "Geplant"
@@ -45,6 +46,7 @@
     "actions": {
       "viewReport": "Bericht anzeigen",
       "openInBilling": "In Abrechnung öffnen",
+      "openReport": "Bericht öffnen",
       "requiresTier": "Erfordert {{tier}}",
       "comingSoon": "Demnächst"
     },
@@ -150,6 +152,18 @@
       "contractReports": {
         "title": "Vertragsberichte",
         "description": "Vertragsumsatz, Verlängerungen, Kontingentnutzung und Rentabilität."
+      },
+      "inventoryMargin": {
+        "title": "Margenbericht",
+        "description": "Umsatz, Wareneinsatz und Marge pro Produkt aus ausgelieferten Kundenaufträgen."
+      },
+      "inventoryWriteOffs": {
+        "title": "Abschreibungen",
+        "description": "Abgeschriebener Bestandsschwund und Anpassungen, nach Grund und Zeitraum."
+      },
+      "inventoryGhostUsage": {
+        "title": "Ghost-Verbrauch",
+        "description": "Geschlossene Hardware-Tickets ohne erfasste Teile — Kosten, die der Betrieb möglicherweise verschluckt hat."
       }
     },
     "table": {

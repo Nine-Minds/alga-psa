@@ -1,9 +1,9 @@
 'use server';
 
-import { getConnection, tenantDb } from '@alga-psa/db';
+import { getConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
-import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
+import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
 import type { Knex } from 'knex';
 
 const DEV_HOSTS = new Set([
@@ -104,12 +104,8 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
 
     const branding: TenantBranding | null = tenantSettings.settings.branding || null;
 
-    const rawLocale = tenantSettings.settings.clientPortal?.defaultLocale
-      || tenantSettings.settings.defaultLocale
-      || null;
-    const locale = typeof rawLocale === 'string' && isSupportedLocale(rawLocale)
-      ? rawLocale
-      : null;
+    const locale = normalizeLocale(tenantSettings.settings.clientPortal?.defaultLocale)
+      ?? normalizeLocale(tenantSettings.settings.defaultLocale);
 
     return {
       branding,
@@ -141,6 +137,29 @@ export async function getTenantBrandingByDomain(domain: string): Promise<TenantB
 export async function getTenantLocaleByDomain(domain: string): Promise<SupportedLocale | null> {
   const config = await getTenantPortalConfigCached(domain);
   return config.locale ?? (isSupportedLocale(LOCALE_CONFIG.defaultLocale) ? LOCALE_CONFIG.defaultLocale : null);
+}
+
+/**
+ * Portal locale for a tenant identified by its public slug rather than a vanity
+ * host. Tenants without a custom domain reach the sign-in page as
+ * `?tenant=<slug>` — that identifies the tenant just as well as a Host header,
+ * so the configured portal language has to resolve from it too.
+ */
+export async function getTenantLocaleBySlug(slug: string): Promise<SupportedLocale | null> {
+  const tenantId = await getTenantIdBySlug(slug);
+  return tenantId ? getTenantLocaleByTenantId(tenantId) : null;
+}
+
+/** Same settings the domain lookup reads, for a tenant already identified. */
+export async function getTenantLocaleByTenantId(tenantId: string): Promise<SupportedLocale | null> {
+  try {
+    const tenantSettings = await getTenantSettings(tenantId);
+    return normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale)
+      ?? normalizeLocale(tenantSettings?.settings?.defaultLocale);
+  } catch (error) {
+    console.error('[getTenantLocaleByTenantId] Error fetching locale:', error);
+    return null;
+  }
 }
 
 export async function invalidateDomainBrandingCache(_domain: string): Promise<void> {

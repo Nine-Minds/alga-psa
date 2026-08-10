@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
-import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
+import { getTenantBrandingByDomain, getTenantLocaleByDomain, getTenantLocaleBySlug } from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
@@ -86,13 +86,16 @@ export default async function ClientSignInPage({
     return <ClientPortalTenantDiscovery callbackUrl={callbackUrl} />;
   }
 
-  // Fetch tenant branding and locale based on portalDomain (if present)
+  // Fetch tenant branding and locale based on portalDomain (if present).
+  // Without a vanity host the tenant is still known — the `?tenant=` slug names
+  // it — so the portal language resolves from that instead. Otherwise a tenant
+  // with no custom domain gets English regardless of what it configured.
   const [branding, locale] = portalDomain
     ? await Promise.all([
         getTenantBrandingByDomain(portalDomain),
         getTenantLocaleByDomain(portalDomain),
       ])
-    : [null, null];
+    : [null, tenantSlug ? await getTenantLocaleBySlug(tenantSlug) : null];
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>

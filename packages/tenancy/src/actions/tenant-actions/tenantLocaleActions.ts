@@ -1,7 +1,7 @@
 'use server';
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, isSupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -24,7 +24,10 @@ export const updateTenantDefaultLocaleAction = withAuth(async (
     throw new Error('Only internal users can update tenant settings');
   }
 
-  if (!isSupportedLocale(locale)) {
+  // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+  // language we actually ship rather than sitting in the column unreadable.
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
@@ -39,7 +42,7 @@ export const updateTenantDefaultLocaleAction = withAuth(async (
   // Build updated settings with tenant-wide locale
   const updatedSettings = {
     ...existingSettings,
-    defaultLocale: locale,
+    defaultLocale: normalizedLocale,
     enabledLocales: enabledLocales || LOCALE_CONFIG.supportedLocales,
     // Keep client portal settings separate
     clientPortal: {
@@ -94,9 +97,8 @@ export const getTenantLocaleSettingsAction = withOptionalAuth(async (user: IUser
   const enabledLocales = tenantSettings.settings.enabledLocales;
 
   return {
-    defaultLocale: isSupportedLocale(defaultLocale)
-      ? defaultLocale
-      : LOCALE_CONFIG.defaultLocale as SupportedLocale,
+    defaultLocale: normalizeLocale(defaultLocale)
+      ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale),
     enabledLocales: Array.isArray(enabledLocales) && enabledLocales.every(isSupportedLocale)
       ? enabledLocales
       : [...LOCALE_CONFIG.supportedLocales]

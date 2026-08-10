@@ -1,7 +1,7 @@
 'use server';
 
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { SupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import { resolveRequestLocale } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -74,8 +74,9 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
       ? userPref.setting_value.replace(/"/g, '')
       : userPref.setting_value;
 
-    if (isSupportedLocale(locale)) {
-      return locale;
+    const normalized = normalizeLocale(locale);
+    if (normalized) {
+      return normalized;
     }
   }
 
@@ -90,29 +91,29 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
         .where({ client_id: clientId })
         .first();
 
-      const clientLocale = client?.properties?.defaultLocale;
-      if (clientLocale && isSupportedLocale(clientLocale)) {
+      const clientLocale = normalizeLocale(client?.properties?.defaultLocale);
+      if (clientLocale) {
         return clientLocale;
       }
     }
 
-    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-    if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
+    const clientPortalLocale = normalizeLocale(tenantSettings?.settings?.clientPortal?.defaultLocale);
+    if (clientPortalLocale) {
       return clientPortalLocale;
     }
   }
 
   // 4. Organization default (applies to everyone)
-  const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-  if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+  const tenantDefaultLocale = normalizeLocale(tenantSettings?.settings?.defaultLocale);
+  if (tenantDefaultLocale) {
     return tenantDefaultLocale;
   }
 
   // Legacy: MSP-portal-only default written by the retired split UI. Kept so
   // tenants that only ever set the MSP default keep resolving.
   if (user.user_type === 'internal') {
-    const legacyMspLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
-    if (legacyMspLocale && isSupportedLocale(legacyMspLocale)) {
+    const legacyMspLocale = normalizeLocale(tenantSettings?.settings?.mspPortal?.defaultLocale);
+    if (legacyMspLocale) {
       return legacyMspLocale;
     }
   }

@@ -13,7 +13,7 @@ import {
   I18N_CONFIG,
   SupportedLocale,
   getBestMatchingLocale,
-  isSupportedLocale,
+  normalizeLocale,
 } from './config';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db/tenant';
@@ -123,7 +123,7 @@ export function registerServerLocaleResolver(
 export async function readLocaleCookie(): Promise<SupportedLocale | null> {
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
-  return localeCookie && isSupportedLocale(localeCookie) ? localeCookie : null;
+  return normalizeLocale(localeCookie);
 }
 
 /** The best supported match for the browser's Accept-Language header. */
@@ -178,8 +178,9 @@ export const getServerLocale = cache(
       if (!options && registeredServerLocaleResolver) {
         try {
           const resolved = await registeredServerLocaleResolver();
-          if (resolved && isSupportedLocale(resolved)) {
-            return resolved;
+          const normalizedResolved = normalizeLocale(resolved);
+          if (normalizedResolved) {
+            return normalizedResolved;
           }
         } catch (error) {
           console.error('Server locale resolver failed:', error);
@@ -210,8 +211,9 @@ export const getServerLocale = cache(
             ? userPref.setting_value.replace(/"/g, '') // Remove quotes if stored as JSON string
             : userPref.setting_value;
 
-          if (isSupportedLocale(locale)) {
-            return locale;
+          const normalized = normalizeLocale(locale);
+          if (normalized) {
+            return normalized;
           }
         }
       }
@@ -226,8 +228,9 @@ export const getServerLocale = cache(
           .first();
 
         const clientLocale = client?.properties?.defaultLocale;
-        if (clientLocale && isSupportedLocale(clientLocale)) {
-          return clientLocale;
+        const normalizedClientLocale = normalizeLocale(clientLocale);
+        if (normalizedClientLocale) {
+          return normalizedClientLocale;
         }
       }
 
@@ -238,14 +241,16 @@ export const getServerLocale = cache(
           .first();
 
         const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-        if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-          return clientPortalLocale;
+        const normalizedClientPortalLocale = normalizeLocale(clientPortalLocale);
+        if (normalizedClientPortalLocale) {
+          return normalizedClientPortalLocale;
         }
 
         // Check tenant-wide default locale
         const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-        if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
-          return tenantDefaultLocale;
+        const normalizedTenantDefaultLocale = normalizeLocale(tenantDefaultLocale);
+        if (normalizedTenantDefaultLocale) {
+          return normalizedTenantDefaultLocale;
         }
       }
 
@@ -290,12 +295,15 @@ export const getServerTranslation = cache(
  * Save user's locale preference to cookie
  */
 export async function setUserLocale(locale: SupportedLocale) {
-  if (!isSupportedLocale(locale)) {
+  // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+  // language we actually ship rather than sitting in the column unreadable.
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(LOCALE_CONFIG.cookie.name, locale, {
+  cookieStore.set(LOCALE_CONFIG.cookie.name, normalizedLocale, {
     maxAge: LOCALE_CONFIG.cookie.maxAge,
     sameSite: LOCALE_CONFIG.cookie.sameSite,
     secure: LOCALE_CONFIG.cookie.secure,
@@ -311,7 +319,10 @@ export async function updateUserLocalePreference(
   locale: SupportedLocale,
   tenantId: string,
 ) {
-  if (!isSupportedLocale(locale)) {
+  // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+  // language we actually ship rather than sitting in the column unreadable.
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
@@ -333,7 +344,7 @@ export async function updateUserLocalePreference(
         setting_name: 'locale'
       })
       .update({
-        setting_value: JSON.stringify(locale),
+        setting_value: JSON.stringify(normalizedLocale),
         updated_at: knex.fn.now()
       });
   } else {
@@ -342,7 +353,7 @@ export async function updateUserLocalePreference(
       user_id: userId,
       tenant: tenantId,
       setting_name: 'locale',
-      setting_value: JSON.stringify(locale),
+      setting_value: JSON.stringify(normalizedLocale),
       updated_at: knex.fn.now()
     });
   }
@@ -356,7 +367,10 @@ export async function updateTenantDefaultLocale(
   locale: SupportedLocale,
   enabledLocales?: SupportedLocale[],
 ) {
-  if (!isSupportedLocale(locale)) {
+  // Normalize before storing so a region-tagged value ('pt_BR') lands as the
+  // language we actually ship rather than sitting in the column unreadable.
+  const normalizedLocale = normalizeLocale(locale);
+  if (!normalizedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
@@ -373,7 +387,7 @@ export async function updateTenantDefaultLocale(
     ...existingSettings,
     clientPortal: {
       ...(existingSettings.clientPortal || {}),
-      defaultLocale: locale,
+      defaultLocale: normalizedLocale,
       enabledLocales: enabledLocales || LOCALE_CONFIG.supportedLocales,
     },
   };
