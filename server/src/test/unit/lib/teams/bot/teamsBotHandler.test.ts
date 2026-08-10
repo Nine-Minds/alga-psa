@@ -1692,6 +1692,48 @@ describe('teamsBotHandler', () => {
     expect(fallbackActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.hero');
   });
 
+  it('T071b: an expired connector token resends the Adaptive Card instead of downgrading to the hero fallback', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('my_tickets', {
+        summary: { title: 'My tickets', text: 'Found 1 assigned ticket for the signed-in technician.' },
+        items: [
+          {
+            id: 'ticket-uuid-1',
+            displayId: 'ALGA-101',
+            title: 'ALGA-101',
+            summary: 'Printer offline • Open',
+            entityType: 'ticket',
+            links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-1' }],
+          },
+        ],
+      })
+    );
+    // 401 means the cached connector token expired, not that the client
+    // rejected the card; the connector already dropped the token, so the same
+    // activity must go back out with a fresh one.
+    sendBotActivityMock
+      .mockRejectedValueOnce(new Error('Failed to send Bot Framework activity (401 Unauthorized): token expired'))
+      .mockResolvedValueOnce({ status: 'sent' });
+
+    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildPersonalMessageActivity('my tickets'),
+        id: 'activity-1',
+        serviceUrl: 'https://smba.trafficmanager.net/amer/',
+      }),
+    });
+
+    const response = await handleTeamsBotActivityRequest(request);
+    expect(response.status).toBe(200);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(2);
+    expect(sendBotActivityMock.mock.calls[1][0].activity.attachments?.[0]?.contentType).toBe(
+      'application/vnd.microsoft.card.adaptive'
+    );
+  });
+
   it('T072: the "Assign to me" card action executes assign_ticket and updates the card in place', async () => {
     isBotConnectorConfiguredMock.mockReturnValue(true);
     executeTeamsActionMock.mockResolvedValue(

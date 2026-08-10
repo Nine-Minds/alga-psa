@@ -2363,18 +2363,32 @@ function buildWireActivity(
   return wire;
 }
 
+// 401/403 mean the connector token was rejected and 429 means throttling —
+// none of them say anything about the card content, so downgrading the reply
+// to the hero rendering on those would silently lose the Adaptive Card.
+const NON_CARD_REJECTION_STATUSES = new Set([401, 403, 429]);
+
 function isCardRejectionError(error: unknown): boolean {
+  const status = botConnectorErrorStatus(error);
+  return status !== null && status >= 400 && status < 500 && !NON_CARD_REJECTION_STATUSES.has(status);
+}
+
+/** True when the send failed only because the cached connector token expired. */
+function isExpiredConnectorTokenError(error: unknown): boolean {
+  return botConnectorErrorStatus(error) === 401;
+}
+
+function botConnectorErrorStatus(error: unknown): number | null {
   if (error instanceof BotConnectorRequestError) {
-    return error.status >= 400 && error.status < 500;
+    return error.status;
   }
   if (error instanceof Error) {
     const match = error.message.match(/\((\d{3})\s/);
     if (match) {
-      const status = Number.parseInt(match[1], 10);
-      return status >= 400 && status < 500;
+      return Number.parseInt(match[1], 10);
     }
   }
-  return false;
+  return null;
 }
 
 export async function handleTeamsBotActivityRequest(
@@ -2428,6 +2442,20 @@ export async function handleTeamsBotActivityRequest(
           console.warn('[teams-bot] reply skipped', { reason: result.reason });
         }
       } catch (sendError) {
+        if (isExpiredConnectorTokenError(sendError)) {
+          // The cached token expired between the cache check and the request;
+          // the connector already dropped it, so resend the same activity.
+          const result = await sendBotActivity({
+            serviceUrl,
+            conversationId,
+            replyToId,
+            activity: primary,
+          });
+          if (result.status === 'skipped' && result.reason) {
+            console.warn('[teams-bot] reply skipped', { reason: result.reason });
+          }
+          return;
+        }
         // Some clients/channels reject Adaptive Cards with a 4xx — retry once
         // with the hero-card fallback rendering kept on the response.
         if (hasAdaptive && isCardRejectionError(sendError)) {
