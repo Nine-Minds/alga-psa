@@ -10,16 +10,6 @@ import ClientPortalConfigEditor from '../ClientPortalConfigEditor';
 import type { IClientPortalConfig } from '@alga-psa/types';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 
-const featureFlags = vi.hoisted(() => ({ projectBillingUiEnabled: false }));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({
-    enabled: featureFlags.projectBillingUiEnabled,
-    loading: false,
-    error: null,
-  }),
-}));
-
 function buildConfig(overrides: Partial<IClientPortalConfig> = {}): IClientPortalConfig {
   return { ...DEFAULT_CLIENT_PORTAL_CONFIG, ...overrides };
 }
@@ -33,10 +23,7 @@ function getBudgetHoursSwitch(): HTMLElement {
 }
 
 describe('ClientPortalConfigEditor — Show Budget Hours toggle', () => {
-  afterEach(() => {
-    cleanup();
-    featureFlags.projectBillingUiEnabled = false;
-  });
+  afterEach(cleanup);
 
   it('renders a toggle bound to the show_budget_hours field', () => {
     render(
@@ -146,27 +133,10 @@ describe('ClientPortalConfigEditor — Show Budget Hours toggle', () => {
   });
 });
 
-describe('ClientPortalConfigEditor — project billing UI flag', () => {
-  afterEach(() => {
-    cleanup();
-    featureFlags.projectBillingUiEnabled = false;
-  });
+describe('ClientPortalConfigEditor — project billing', () => {
+  afterEach(cleanup);
 
-  it('hides the Show Billing toggle and summary while disabled', () => {
-    render(
-      <ClientPortalConfigEditor
-        config={buildConfig({ show_billing: true })}
-        onChange={() => {}}
-      />
-    );
-
-    expect(document.querySelector('[data-automation-id="show-billing"]')).toBeNull();
-    expect(screen.queryByText(/Billing summary:/)).toBeNull();
-  });
-
-  it('shows the Show Billing toggle and summary while enabled', () => {
-    featureFlags.projectBillingUiEnabled = true;
-
+  it('shows the Show Billing toggle and summary', () => {
     render(
       <ClientPortalConfigEditor
         config={buildConfig({ show_billing: true })}
