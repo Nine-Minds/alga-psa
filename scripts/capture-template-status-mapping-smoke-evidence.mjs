@@ -1512,10 +1512,19 @@ export function commandInit(opts) {
   const root = REPO_ROOT;
   const bundleDir = loadOrCreateBundleDir(opts);
   currentInitContext = { bundleDir, db: null, opts, seeded: false, validTemplateId: null, createdBundleDir: false };
-  if (fs.existsSync(bundleDir)) {
-    fail(`bundle directory already exists: ${bundleDir} (choose a new name or reuse it with other commands)`);
+  fs.mkdirSync(path.dirname(bundleDir), { recursive: true });
+  if (process.env.SMOKE_TEST_INJECT_CONCURRENT_BUNDLE) {
+    fs.mkdirSync(bundleDir, { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, process.env.SMOKE_TEST_INJECT_CONCURRENT_BUNDLE), 'KEEP');
   }
-  fs.mkdirSync(bundleDir, { recursive: true });
+  try {
+    fs.mkdirSync(bundleDir);
+  } catch (error) {
+    if (error && error.code === 'EEXIST') {
+      fail(`bundle directory already exists: ${bundleDir} (choose a new name or reuse it with other commands)`);
+    }
+    throw error;
+  }
   currentInitContext.createdBundleDir = true;
 
   const gitHeadInfo = gitHead(root);

@@ -442,11 +442,12 @@ function writeJson(bundleDir, name, value) {
   fs.writeFileSync(path.join(bundleDir, name), `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function runInit(bundleDir, extraArgs = []) {
+function runInit(bundleDir, extraArgs = [], env = {}) {
   const scriptPath = path.join(WORKTREE, 'scripts', 'capture-template-status-mapping-smoke-evidence.mjs');
   return spawnSync(process.execPath, [scriptPath, 'init', '--bundle', bundleDir, ...extraArgs], {
     cwd: WORKTREE,
     encoding: 'utf8',
+    env: { ...process.env, ...env },
   });
 }
 
@@ -724,4 +725,17 @@ test('init removes a bundle directory it created when a later step fails', () =>
 
   assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
   assert.equal(fs.existsSync(bundleDir), false, 'a harness-created incomplete bundle must be removed on init failure');
+});
+
+test('init treats a concurrently created bundle directory as caller-owned and leaves it and its contents untouched', () => {
+  const parentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'concurrent-bundle-parent-'));
+  const bundleDir = path.join(parentDir, 'concurrent-creator-bundle');
+  assert.equal(fs.existsSync(bundleDir), false);
+
+  const result = runInit(bundleDir, [], { SMOKE_TEST_INJECT_CONCURRENT_BUNDLE: 'sentinel.txt' });
+
+  assert.notEqual(result.status, 0, `expected nonzero exit; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /bundle directory already exists/);
+  assert.equal(fs.existsSync(bundleDir), true, 'the concurrently created bundle directory must survive the rejection');
+  assert.equal(fs.readFileSync(path.join(bundleDir, 'sentinel.txt'), 'utf8'), 'KEEP', 'the concurrently written sentinel must survive the rejection');
 });
