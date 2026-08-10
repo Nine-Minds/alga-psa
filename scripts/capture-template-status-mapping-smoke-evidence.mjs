@@ -1,33 +1,45 @@
 #!/usr/bin/env node
 
 /**
- * Capture a sealed, HEAD-tied smoke-evidence bundle for the typed
+ * Capture a sealed, run- and HEAD-tied smoke-evidence bundle for the typed
  * project-template status-mapping flows (PR #3135, fix/template-status-mapping-fk).
  *
  * The bundle is generated against the live dev stack and is deliberately
- * verifier-consumable: every artifact is tied to `git rev-parse HEAD`, every DB
- * assertion records the exact SQL plus its unmodified psql output, the nine
- * UI screenshot slots are enumerated with per-file SHA-256 checksums, fixture
+ * verifier-consumable: every artifact is tied to (a) the board workflow run
+ * that is actually running for the card (discovered via
+ * `alga-dev workflow-get-project`, never guessed) and (b) the exact
+ * `git rev-parse HEAD` at capture time. Every DB assertion records the exact
+ * SQL plus its unmodified psql output, the nine UI screenshot slots are
+ * enumerated with per-file SHA-256 checksums and must be structurally valid
+ * PNGs, capture-source identity (browser pane, dev-server service session,
+ * worktree path, port) is recorded for the verifier to check, fixture
  * provenance records what was seeded and why, the failure-log scan is shown
- * (empty scans are displayed, not asserted), and restoration is recomputed
- * against the pre-mutation baseline.
+ * (empty scans are displayed, not asserted), cleanup declarations are written
+ * into the manifest (seeded / restored / retained projects) and re-checked
+ * against the SQL evidence, and restoration is recomputed against the
+ * pre-mutation baseline. Sealing is fail-closed: any capture command that
+ * exits nonzero, any browser capture without an explicit pane, and any
+ * unavailable dev-server scan abort the seal.
  *
  * Commands (run from the repository root):
  *
- *   node scripts/capture-template-status-mapping-smoke-evidence.mjs init
+ *   node scripts/capture-template-status-mapping-smoke-evidence.mjs init [--workflow-run-id <uuid>] [--browser-pane <id>]
  *   node scripts/capture-template-status-mapping-smoke-evidence.mjs capture after-apply
  *   node scripts/capture-template-status-mapping-smoke-evidence.mjs capture after-replace
  *   node scripts/capture-template-status-mapping-smoke-evidence.mjs capture after-global-reject
- *   node scripts/capture-template-status-mapping-smoke-evidence.mjs register-screenshot --slot <id> --file <png> [--url <url> --page-text <text>]
+ *   node scripts/capture-template-status-mapping-smoke-evidence.mjs register-screenshot --slot <id> --file <png> [--url <url> --page-text <text> --pane <id>]
  *   node scripts/capture-template-status-mapping-smoke-evidence.mjs register-artifact --name <key> --file <path> --description <text>
- *   node scripts/capture-template-status-mapping-smoke-evidence.mjs restore [--browser-pane <id>]
- *   node scripts/capture-template-status-mapping-smoke-evidence.mjs verify --bundle <dir>
+ *   node scripts/capture-template-status-mapping-smoke-evidence.mjs restore --browser-pane <id>
+ *   node scripts/capture-template-status-mapping-smoke-evidence.mjs verify --bundle <dir> --run-id <uuid> --head-sha <40-hex>
  *
  * The smoke agent follows `93-manual-actions.json` inside the bundle between
- * harness invocations: it performs the UI flows and registers the nine
- * screenshots into the bundle. `restore` reverts the seeded fixture, captures
- * the failure-log scan, seals the bundle (manifest + SHA256SUMS + a sealed copy
- * of the verifier), and refuses to seal a bundle that does not verify.
+ * harness invocations: it performs the UI flows in the card browser pane and
+ * registers the nine screenshots into the bundle. `restore` reverts the seeded
+ * fixture, captures the failure-log scan (browser console/network from the
+ * given pane, dev-server history from the card's dev-server service), seals
+ * the bundle (manifest + SHA256SUMS + a sealed copy of the verifier), and
+ * refuses to seal a bundle that does not verify against the recorded run ID,
+ * HEAD, and capture identity.
  *
  * No DB credentials are ever written to the bundle: psql runs with PGPASSWORD
  * set in the child environment and the recorded command substitutes a redaction
@@ -50,6 +62,7 @@ import {
   GIT_STATUS_FILE,
   ENVIRONMENT_FILE,
   SEED_SQL_FILE,
+  SEED_SQL_RESTORE_FILE,
   MANIFEST_FILE,
   README_FILE,
   CHECKSUM_FILE,
@@ -436,16 +449,21 @@ Commands:
   init                     Create a fresh bundle, seed the fixture, capture the
                            before-state evidence, and write the manual-action
                            checklist (93-manual-actions.json).
+                           [--workflow-run-id <uuid>] [--browser-pane <id>]
   capture <step>           Run a mid-flow evidence step: after-apply,
                            after-replace, after-global-reject.
   register-screenshot      Register a captured PNG into a screenshot slot.
-                           Requires --slot <id> --file <png> [--url --page-text].
+                           Requires --slot <id> --file <png> --url --page-text
+                           [--browser-pane <id>].
   register-artifact        Register a non-screenshot artifact (e.g. DOM text).
                            Requires --name <key> --file <path> [--description].
   restore                  Revert the fixture, capture the failure-log scan,
                            seal the bundle, and run the sealed verifier.
-                           [--browser-pane <id>] [--force]
-  verify                   Run the bundle's own verifier. Requires --bundle <dir>.
+                           Requires --browser-pane <id>.
+                           [--force]
+  verify                   Run the bundle's own verifier (provenance-bound).
+                           Requires --bundle <dir> --run-id <uuid>
+                           --head-sha <40-hex>.
 
 Options:
   --bundle <dir>           Bundle directory (init defaults to
@@ -462,6 +480,12 @@ Options:
   --deletion-guard-status-id <uuid> Status whose deletion must be guarded (default ${DEFAULT_DELETION_GUARD_STATUS_ID})
   --project-id <uuid>      Workflow board card owning the dev-server service
                            (default ${DEFAULT_PROJECT_ID})
+  --workflow-run-id <uuid> Override the board workflow run id (normally
+                           discovered from the single running run)
+  --browser-pane <id>      Browser pane the UI screenshots and console/network
+                           captures come from (required by restore)
+  --run-id <uuid>          verify: expected workflow run id (required)
+  --head-sha <40-hex>      verify: expected HEAD SHA (required)
 `);
 }
 
@@ -483,17 +507,29 @@ function gitHead(root) {
   };
 }
 
-function envIdentity(opts, envLocal, db) {
+function envIdentity(opts, envLocal, db, workflowRunId) {
+  let serverPort = null;
+  try {
+    serverPort = Number(new URL(opts.serverUrl).port) || (opts.serverUrl.startsWith('https') ? 443 : 80);
+  } catch {
+    serverPort = null;
+  }
   return {
+    projectId: opts.projectId,
+    workflowRunId,
     serverUrl: opts.serverUrl,
+    serverPort,
     dbHost: db.host,
     dbPort: db.port,
     dbName: db.name,
     dbUser: db.user,
+    worktreePath: REPO_ROOT,
     dbPortSource: `direct Postgres (this harness); the app's server/.env.local DB_PORT (${envLocal.dbPortApp ?? 'unknown'}) is the pgbouncer endpoint`,
     credentialsDerivation:
       'extracted from server/.env.local keys DB_HOST / DB_USER_SERVER / DB_PASSWORD_SERVER / DB_NAME_SERVER via dotenv-string parsing (never shell-sourced); see README.md; password values are never embedded, only referenced',
-    devServerService: 'board-owned dev-server service (workflow-list-services), log read via alga-dev terminal-get-history',
+    devServerService: 'dev-server',
+    devServerSessionId: null,
+    browserPane: opts.browserPane || null,
     browserAutomation: 'alga-dev (ghostty-pane-ide) browser pane',
   };
 }
@@ -776,6 +812,7 @@ function captureAfterApplyEvidence(db, opts, recorder) {
   );
   const projectIds = parseTuple(projectIdRecord);
   const appliedProjectId = projectIds[0] || null;
+  recorder.record.structuredData.appliedProjectId = appliedProjectId;
   assert(recorder, 'applied-project-created',
     'The valid-template apply created exactly one project',
     projectIds.length === 1,
@@ -1003,7 +1040,7 @@ function restoreFixture(db, opts, recorder) {
     `Delete the valid smoke template ${validTemplateId} (mappings cascade)`,
     `DELETE FROM project_templates WHERE tenant = '${tenant}' AND template_id = '${validTemplateId}'`
   );
-  fs.writeFileSync(path.join(recorder.bundleDir, `${SEED_SQL_FILE}.restore.sql`), `${seedLines.join('\n')}`);
+  fs.writeFileSync(path.join(recorder.bundleDir, SEED_SQL_RESTORE_FILE), `${seedLines.join('\n')}`);
 
   const restoredRecord = recorder.query(
     'seed-template-after-restore',
@@ -1082,17 +1119,55 @@ function fetchDevServerHistory(projectId) {
   if (!devServer || typeof devServer.sessionId !== 'string') {
     return { ok: false, command: servicesCommand, reason: 'no live dev-server service session found' };
   }
+  const serviceCwd = typeof devServer.cwd === 'string' ? devServer.cwd : '';
+  if (serviceCwd !== REPO_ROOT) {
+    return {
+      ok: false,
+      command: servicesCommand,
+      reason: `dev-server service cwd ${serviceCwd || '(unknown)'} does not match this worktree ${REPO_ROOT} — refusing to capture another card's logs`,
+    };
+  }
   const historyResult = runShell('alga-dev', [
     'terminal-get-history', '--sessionId', devServer.sessionId,
   ], { timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
   return {
     ok: true,
+    serviceName: devServer.name,
     sessionId: devServer.sessionId,
+    worktreePath: serviceCwd,
     servicesCommand,
     historyCommand: `alga-dev terminal-get-history --sessionId=${devServer.sessionId}`,
     history: historyResult.stdout,
     exitCode: historyResult.status,
   };
+}
+
+function discoverWorkflowRunId(projectId) {
+  const result = runShell('alga-dev', [
+    'workflow-get-project', `--projectId=${projectId}`,
+  ], { timeout: 60_000, maxBuffer: 64 * 1024 * 1024 });
+  const command = `alga-dev workflow-get-project --projectId=${projectId}`;
+  if (result.status !== 0) {
+    return { ok: false, reason: `workflow-get-project exited ${result.status}: ${result.stderr}` };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    return { ok: false, reason: 'workflow-get-project output was not JSON' };
+  }
+  const runs = Array.isArray(parsed.runs) ? parsed.runs : [];
+  const running = runs.filter((run) => run && run.status === 'running');
+  if (running.length === 0) {
+    return { ok: false, reason: `no running workflow run for project ${projectId}` };
+  }
+  if (running.length > 1) {
+    return {
+      ok: false,
+      reason: `multiple running workflow runs for project ${projectId}: ${running.map((run) => run.id).join(', ')} — pass --workflow-run-id explicitly`,
+    };
+  }
+  return { ok: true, runId: running[0].id, command };
 }
 
 function captureLogScans(bundleDir, opts, dbPassword) {
@@ -1111,7 +1186,9 @@ function captureLogScans(bundleDir, opts, dbPassword) {
       : `Dev-server scan unavailable: ${devServer.reason}`,
   };
   if (devServer.ok) {
+    scanJson.serviceName = devServer.serviceName;
     scanJson.sessionId = devServer.sessionId;
+    scanJson.worktreePath = devServer.worktreePath;
     scanJson.scanCommand = devServer.historyCommand;
     const patterns = ERROR_SCAN_PATTERNS.map((pattern) => pattern.regex);
     const matches = devServer.history.split('\n')
@@ -1139,6 +1216,9 @@ function captureLogScans(bundleDir, opts, dbPassword) {
   }
   fs.writeFileSync(path.join(bundleDir, DEV_SERVER_SCAN_JSON), `${JSON.stringify(scanJson, null, 2)}\n`);
   fs.writeFileSync(path.join(bundleDir, DEV_SERVER_SCAN_TXT), `${scanTxtLines.join('\n')}\n`);
+  if (!devServer.ok) {
+    fail(`dev-server log scan did not succeed: ${devServer.reason}`);
+  }
 
   const captureBrowserLog = (toolCommand, args, outFile, kind) => {
     const record = {
@@ -1149,33 +1229,40 @@ function captureLogScans(bundleDir, opts, dbPassword) {
       failedRequests: [],
     };
     if (!opts.browserPane) {
-      record.note = 'No --browser-pane supplied; run the scan command manually and register via register-artifact.';
-    } else {
-      const result = runShell('alga-dev', [toolCommand, ...args, '--paneId', opts.browserPane], { timeout: 60_000 });
-      record.rawExitCode = result.status;
-      record.rawStderr = result.stderr.trim() || undefined;
-      let parsed;
-      try {
-        parsed = JSON.parse(result.stdout);
-      } catch {
-        parsed = null;
-      }
-      const payload = parsed && typeof parsed === 'object' ? parsed.result ?? parsed : parsed;
-      if (kind === 'console') {
-        record.entries = Array.isArray(payload?.entries) ? payload.entries : [];
-        record.errors = Array.isArray(payload?.errors)
-          ? payload.errors
-          : record.entries.filter((entry) => String(entry?.level || entry?.type || '').toLowerCase() === 'error');
-        record.console = payload;
-      } else {
-        record.failedRequests = Array.isArray(payload?.failedRequests)
-          ? payload.failedRequests
-          : (Array.isArray(payload?.requests) ? payload.requests.filter((request) => (request?.status || request?.responseStatus || 0) >= 400) : []);
-        record.network = payload;
-      }
-      record.note = `Captured via ${record.scanCommand}`;
+      record.note = 'No --browser-pane supplied; browser capture is REQUIRED for a fail-closed seal.';
+      record.rawExitCode = -1;
+      record.rawStderr = 'missing --browser-pane';
+      fs.writeFileSync(path.join(bundleDir, outFile), `${JSON.stringify(record, null, 2)}\n`);
+      fail(`cannot capture ${kind} evidence without --browser-pane`);
     }
+    record.paneId = opts.browserPane;
+    const result = runShell('alga-dev', [toolCommand, ...args, '--paneId', opts.browserPane], { timeout: 60_000 });
+    record.rawExitCode = result.status;
+    record.rawStderr = result.stderr.trim() || undefined;
+    let parsed;
+    try {
+      parsed = JSON.parse(result.stdout);
+    } catch {
+      parsed = null;
+    }
+    const payload = parsed && typeof parsed === 'object' ? parsed.result ?? parsed : parsed;
+    if (kind === 'console') {
+      record.entries = Array.isArray(payload?.entries) ? payload.entries : [];
+      record.errors = Array.isArray(payload?.errors)
+        ? payload.errors
+        : record.entries.filter((entry) => String(entry?.level || entry?.type || '').toLowerCase() === 'error');
+      record.console = payload;
+    } else {
+      record.failedRequests = Array.isArray(payload?.failedRequests)
+        ? payload.failedRequests
+        : (Array.isArray(payload?.requests) ? payload.requests.filter((request) => (request?.status || request?.responseStatus || 0) >= 400) : []);
+      record.network = payload;
+    }
+    record.note = `Captured via ${record.scanCommand}`;
     fs.writeFileSync(path.join(bundleDir, outFile), `${JSON.stringify(record, null, 2)}\n`);
+    if (result.status !== 0) {
+      fail(`${kind} capture failed: ${result.stderr}`);
+    }
   };
 
   captureBrowserLog('browser-get-console', ['--level', 'error', '--limit', '500'], CONSOLE_FILE, 'console');
@@ -1195,11 +1282,22 @@ function buildReadme(bundleDir, opts, state) {
     `Worktree: \`${REPO_ROOT}\``,
     `Branch: \`${state.gitHead.branch}\``,
     `HEAD: \`${state.gitHead.headSha}\``,
+    `Workflow run: \`${state.workflowRunId}\``,
     `Server: ${opts.serverUrl}`,
     `Tenant: ${opts.tenant} (Oz)`,
     `Seed template: ${opts.seedTemplateId} ("Down the Rabbit Hole Migration")`,
     `Known-good mapping: ${opts.knownMappingId} (${opts.expectedTaskCount} task assignments)`,
     '',
+    '## Provenance',
+    '',
+    'This bundle is bound to the board workflow run and git commit it was',
+    'captured under. The verifier refuses to run without `--run-id` and',
+    '`--head-sha` and rejects any invocation whose values differ from the',
+    'manifest. The run id was discovered from the board (',
+    '`alga-dev workflow-get-project` single running run), never guessed. The',
+    'capture-source identity — browser pane, dev-server service session,',
+    'worktree path, server port — is recorded in `manifest.json` under',
+    '`captureIdentity` and is checked by the verifier.',
     '## What this bundle proves',
     '',
     '1. Applying a template with **standard** and **tenant/custom** mappings writes',
@@ -1272,8 +1370,26 @@ function buildReadme(bundleDir, opts, state) {
     '',
     '`30-restoration.json` recomputes the seed template mapping rows after restore',
     'against the pre-mutation baseline recorded in `10-fixture-before.json`; the',
-    'verifier fails unless they are byte-identical. The applied smoke project is',
-    'intentionally retained, following the prior smoke-run convention.',
+    'verifier fails unless they are byte-identical. The manifest `cleanup` block',
+    'declares what was seeded, what was restored, and which smoke project was',
+    'retained; the verifier re-checks those declarations against the SQL',
+    'evidence (a seeded fixture implies two unresolved mappings at init; a',
+    'restored fixture implies the seed template is back at its all-tenant',
+    'baseline; a retained project must be the one the apply created and must',
+    'not appear in the restore SQL). The applied smoke project is intentionally',
+    'retained, following the prior smoke-run convention.',
+    '',
+    '## Verification (provenance-bound)',
+    '',
+    '    node scripts/verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>',
+    '        --run-id <uuid> --head-sha <40-hex>',
+    '        [--expected-worktree <path>] [--expected-pane <id>]',
+    '        [--expected-server-url <url>] [--expected-dev-server-session <id>]',
+    '',
+    'Screenshots must be structurally valid PNGs (signature + IHDR/IDAT/IEND with',
+    'valid CRCs); arbitrary bytes or zero-length files are rejected. Capture',
+    'commands record their exit codes; any nonzero exit or a browser capture',
+    'without an explicit pane fails the seal.',
     '',
     '## What the smoke agent does manually (vs the harness)',
     '',
@@ -1288,6 +1404,24 @@ function buildReadme(bundleDir, opts, state) {
 function buildManifest(bundleDir, opts, state) {
   const run = JSON.parse(fs.readFileSync(path.join(bundleDir, RUN_FILE), 'utf8'));
   const screenshotNotes = JSON.parse(fs.readFileSync(path.join(bundleDir, SCREENSHOT_NOTES_FILE), 'utf8'));
+  let devServerSessionId = state.environment?.devServerSessionId || null;
+  const scanPath = path.join(bundleDir, DEV_SERVER_SCAN_JSON);
+  if (fs.existsSync(scanPath)) {
+    const scan = JSON.parse(fs.readFileSync(scanPath, 'utf8'));
+    if (typeof scan.sessionId === 'string') {
+      devServerSessionId = scan.sessionId;
+    }
+  }
+  const captureIdentity = {
+    projectId: opts.projectId,
+    workflowRunId: run.workflowRunId,
+    worktreePath: state.environment.worktreePath,
+    serverUrl: opts.serverUrl,
+    serverPort: state.environment.serverPort,
+    devServerService: state.environment.devServerService,
+    devServerSessionId,
+    browserPane: opts.browserPane || state.environment.browserPane,
+  };
   const manifest = {
     workflowRunId: run.workflowRunId,
     headSha: state.gitHead.headSha,
@@ -1296,6 +1430,8 @@ function buildManifest(bundleDir, opts, state) {
     gitStatusNote: 'package-lock.json is dirty in this worktree and is recorded, not touched or committed.',
     timestamp: nowIso(),
     environment: state.environment,
+    captureIdentity,
+    cleanup: state.cleanup || null,
     screenshotSlots: {
       workflowRunId: run.workflowRunId,
       slots: screenshotNotes.slots.map((slot) => ({
@@ -1355,10 +1491,17 @@ export function commandInit(opts) {
     fail(`seed template is not at the expected pre-mutation baseline: ${baseline.reason} (run a previous bundle's restore, or inspect the seed template)`);
   }
 
-  const workflowRunId = crypto.randomUUID();
+  const workflowRunDiscovery = opts.workflowRunId
+    ? { ok: true, runId: opts.workflowRunId, command: '--workflow-run-id override' }
+    : discoverWorkflowRunId(opts.projectId);
+  if (!workflowRunDiscovery.ok) {
+    fail(`could not discover the board workflow run id: ${workflowRunDiscovery.reason}`);
+  }
+  const workflowRunId = workflowRunDiscovery.runId;
   const startedAt = canonicalIso();
   fs.writeFileSync(path.join(bundleDir, RUN_FILE), `${JSON.stringify({
     workflowRunId,
+    workflowRunIdDiscoveredFrom: workflowRunDiscovery.command,
     startedAt,
     appUrl: opts.serverUrl,
     tenantId: opts.tenant,
@@ -1377,12 +1520,12 @@ export function commandInit(opts) {
     sealed: false,
     workflowRunId,
     gitHead: gitHeadInfo,
-    environment: envIdentity(opts, envLocal, db),
+    environment: envIdentity(opts, envLocal, db, workflowRunId),
     stepLog: [],
     artifacts: [],
+    cleanup: null,
     bundleDir,
   };
-  state.environment = envIdentity(opts, envLocal, db);
   fs.writeFileSync(path.join(bundleDir, ENVIRONMENT_FILE), `${JSON.stringify(state.environment, null, 2)}\n`);
   saveBundleState(bundleDir, state);
 
@@ -1540,6 +1683,7 @@ export function commandRegisterScreenshot(opts) {
   target.url = opts.url;
   target.pageText = opts.pageText;
   target.capturedAt = nowIso();
+  target.sourcePane = opts.browserPane || null;
   target.instructions = null;
   fs.writeFileSync(path.join(bundleDir, SCREENSHOT_NOTES_FILE), `${JSON.stringify(notes, null, 2)}\n`);
   appendStepLog(state, { command: `register-screenshot ${slot.id}`, result: `complete; sha256=${crypto.createHash('sha256').update(fs.readFileSync(dest)).digest('hex').slice(0, 12)}` });
@@ -1586,6 +1730,9 @@ export function commandRestore(opts) {
   if (state.sealed && !opts.force) {
     fail(`bundle is already sealed; pass --force to reseal`);
   }
+  if (!opts.browserPane) {
+    fail('restore requires --browser-pane <id> so the browser console/network captures come from the intended card pane');
+  }
   const envLocal = readEnvLocal(REPO_ROOT);
   const db = {
     host: opts.dbHost || envLocal.dbHost,
@@ -1609,6 +1756,26 @@ export function commandRestore(opts) {
   captureLogScans(bundleDir, opts, db.password);
   state = loadBundleState(bundleDir);
 
+  const scan = JSON.parse(fs.readFileSync(path.join(bundleDir, DEV_SERVER_SCAN_JSON), 'utf8'));
+  state.environment = state.environment || {};
+  state.environment.devServerSessionId = scan.sessionId || null;
+  state.environment.browserPane = opts.browserPane;
+  fs.writeFileSync(path.join(bundleDir, ENVIRONMENT_FILE), `${JSON.stringify(state.environment, null, 2)}\n`);
+
+  const afterApply = JSON.parse(fs.readFileSync(path.join(bundleDir, EVIDENCE_STEPS['after-apply'].json), 'utf8'));
+  const appliedProjectId = afterApply.structuredData?.appliedProjectId || null;
+  const fixture = state.fixture || {};
+  state.cleanup = {
+    seeded: true,
+    restored: true,
+    restoredAt: nowIso(),
+    retainedProjects: appliedProjectId
+      ? [{ id: appliedProjectId, name: fixture.validApplyProjectName || null }]
+      : [],
+    retainedNote: 'The project created from the valid mixed smoke template is intentionally retained for inspection, following the prior smoke-run convention; the seed template and the valid smoke template are fully restored.',
+  };
+  saveBundleState(bundleDir, state);
+
   buildReadme(bundleDir, opts, state);
   buildManifest(bundleDir, opts, state);
 
@@ -1626,7 +1793,15 @@ export function commandRestore(opts) {
   saveBundleState(bundleDir, state);
   writeChecksums(bundleDir);
 
-  const verdict = verifyBundle(bundleDir, { timeoutMs: 60_000 });
+  const verdict = verifyBundle(bundleDir, {
+    timeoutMs: 60_000,
+    expectedRunId: state.workflowRunId,
+    expectedHeadSha: state.gitHead.headSha,
+    expectedWorktree: REPO_ROOT,
+    expectedPane: opts.browserPane,
+    expectedServerUrl: opts.serverUrl,
+    expectedDevServerSession: scan.sessionId || undefined,
+  });
   if (!verdict.pass) {
     process.stdout.write(`VERDICT: FAIL\n`);
     for (const failure of verdict.failures) {
@@ -1636,6 +1811,7 @@ export function commandRestore(opts) {
     return { bundleDir, pass: false, verdict };
   }
   process.stdout.write(`VERDICT: PASS\n`);
+  process.stdout.write(`runId=${state.workflowRunId}\n`);
   process.stdout.write(`headSha=${verdict.headSha}\n`);
   process.stdout.write(`screenshots=${verdict.screenshots.complete}/${verdict.screenshots.total} complete (${verdict.screenshots.pending} pending)\n`);
   process.stdout.write(`bundleDigest=${verdict.bundleDigest}\n`);
@@ -1646,8 +1822,22 @@ export function commandVerify(opts) {
   if (!opts.bundle) {
     fail('verify requires --bundle <dir>');
   }
+  if (!opts.runId) {
+    fail('verify requires --run-id <uuid>');
+  }
+  if (!opts.headSha) {
+    fail('verify requires --head-sha <40-hex>');
+  }
   const bundleDir = path.resolve(opts.bundle);
-  const verdict = verifyBundle(bundleDir, { timeoutMs: opts.timeoutMs || 60_000 });
+  const verdict = verifyBundle(bundleDir, {
+    timeoutMs: opts.timeoutMs || 60_000,
+    expectedRunId: opts.runId,
+    expectedHeadSha: opts.headSha,
+    expectedWorktree: opts.expectedWorktree || undefined,
+    expectedPane: opts.expectedPane || undefined,
+    expectedServerUrl: opts.expectedServerUrl || undefined,
+    expectedDevServerSession: opts.expectedDevServerSession || undefined,
+  });
   if (!verdict.pass) {
     process.stdout.write(`VERDICT: FAIL\n`);
     for (const failure of verdict.failures) {
@@ -1694,6 +1884,13 @@ function resolveAllOptions(opts) {
     validTenantStatusId: pickOption(normalized, 'validTenantStatusId') || DEFAULT_VALID_TENANT_STATUS_ID,
     projectId: pickOption(normalized, 'projectId') || DEFAULT_PROJECT_ID,
     browserPane: pickOption(normalized, 'browserPane') || null,
+    workflowRunId: pickOption(normalized, 'workflowRunId') || null,
+    runId: pickOption(normalized, 'runId') || null,
+    headSha: pickOption(normalized, 'headSha') || null,
+    expectedWorktree: pickOption(normalized, 'expectedWorktree') || null,
+    expectedPane: pickOption(normalized, 'expectedPane') || null,
+    expectedServerUrl: pickOption(normalized, 'expectedServerUrl') || null,
+    expectedDevServerSession: pickOption(normalized, 'expectedDevServerSession') || null,
     force: pickOption(normalized, 'force') === true || pickOption(normalized, 'force') === 'true',
     timeoutMs: pickOption(normalized, 'timeoutMs') ? Number(pickOption(normalized, 'timeoutMs')) : undefined,
   };
