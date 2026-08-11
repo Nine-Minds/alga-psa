@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786414422735"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (26 tests) 12000ms 185 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  26 passed (26)
+   Start at  02:13:42
+   Duration  12.64s (transform 1.12s, setup 57ms, collect 259ms, tests 12.00s, environment 0ms, prepare 28ms)
+

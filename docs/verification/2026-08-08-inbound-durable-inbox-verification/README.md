@@ -1,17 +1,17 @@
 # Verification bundle — durable inbound-email inbox (mitigation round)
 
-**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `7c5adef2ee` (this round's
-verification run), prior bundle snapshot @ `f4b697d6ee`
-**Date:** 2026-08-08 (this round: 2026-08-10)
-**Round type:** verifier-timeout mitigation (round 2). The previous
-verifier-timeout (`e53d1420`) was recorded as an orchestration failure — the
-independent verifier subagent returned without a verdict after its terminal
-pane/thread could not be resumed; no substantive code defect was established
-(board annotation, 2026-08-08T21:03Z). This round reproduces and times the
-full verifier path at current HEAD to prove every step is bounded and exits
-cleanly, and refreshes this bundle to match HEAD `f4b697d6ee` (which added four
-bracketed-reply threading tests to the durable suite since this bundle's first
-commit `7e4f7d7952` at `4c7322a6f7`).
+**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `2dee4084d8` (this round's
+verification run), prior bundle snapshot @ `7c5adef2ee`
+**Date:** 2026-08-08 (initial), refreshed 2026-08-10 (this round: 2026-08-10)
+**Round type:** verifier-timeout mitigation (round 3). The draft-review
+verification failed with `verifier-timeout`; no substantive defect was reported.
+A previous identical failure was resolved by refreshing the committed
+verification bundle (round 2, commit `533bc56d2e`). This round re-runs the
+verification suites and typechecks at HEAD `2dee4084d8` and refreshes the
+bundle so a time-boxed reviewer has committed, current evidence for the newest
+commits (`2dee4084d8` outbox transaction threading + fail-closed reserve, and
+`7c5adef2ee` legacy backfill cursor losslessness). Evidence for this round is
+in `runs/*-outbox-threading-round.txt`.
 
 **Spec of record:** `docs/plans/2026-08-07-inbound-email-durable-inbox-plan.md`
 (commit `ce7dd8bcc8`). Every "does this truly fail?" judgment below is made
@@ -26,10 +26,19 @@ check the focused suite logs under `runs/` and the schema dumps under
 
 ## 1. Repo state
 
-Verbatim `git log --oneline main...HEAD` at bundle time:
+Verbatim `git log --oneline main...HEAD` at bundle time (this round, HEAD
+`2dee4084d8`):
 
 ```
+2dee4084d8 fix(inbound-email): thread outbox transaction through subscriber handlers and stop swallowing failure-ledger errors
+7c5adef2ee fix(inbound-email): make legacy backfill keyset cursor lossless for timestamptz(6)
+b35a3eca97 fix(inbound-email): make bounded legacy backfill progress past completed checkpoints
+d2d17152d6 fix(inbound-email): make canonical inbound identity normalization idempotent
+51139b9826 fix(inbound-email): normalize message-id expectations in reply journey test
+d55c9d0db8 fix(inbound-email): repair CI contract tests and temporal/schema guards
+533bc56d2e docs: refresh durable-inbox verification bundle to HEAD (verifier-timeout mitigation round 2)
 f4b697d6ee fix(inbound-email): normalize reply Message-ID threading and repair reply-event payloads
+7e4f7d7952 docs: add durable inbound-email inbox verification bundle (timeout mitigation)
 4c7322a6f7 fix(inbound-email): make consumer delivery idempotency crash-safe via a reservation state machine
 2fb075170e fix(inbound-email): resolve all four draft-review blockers
 7973a65372 fix(inbound-email): harden durable retry lifecycle, source-cursor safety, and legacy backfill
@@ -42,17 +51,11 @@ Verbatim `git status` at bundle time:
 
 ```
 On branch fix/inbound-email-durable-inbox
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git restore <file>..." to discard changes in working directory)
-	modified:   package-lock.json
-
-no changes added to commit (use "git add" and/or "git commit -a")
+nothing to commit, working tree clean
 ```
 
-`package-lock.json` shows exactly one pre-existing unstaged modification. It
-predates this card, was never staged or committed, and is not part of this
-bundle. The bundle commit below stages only `docs/verification/...`.
+The working tree is clean; `package-lock.json` is unmodified and unstaged. The
+bundle commit stages only `docs/verification/...`.
 
 The approved plan is present on the branch:
 
@@ -120,11 +123,13 @@ open (deliver) so a transient DB error can never suppress a notification
 
 All assertions below are copied verbatim from the DB-backed integration suite
 `server/src/test/integration/inboundEmailDurableInbox.integration.test.ts`
-(39 tests) and, where noted, the stub-driven subscriber suite
+(45 tests at current HEAD `2dee4084d8`) and, where noted, the stub-driven
+subscriber suite
 `server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts`
-(15 tests). Full raw output is in `runs/durable-suite.txt` and
-`runs/subscriber-suite.txt`. Line anchors refer to the test file at HEAD
-`f4b697d6ee`.
+(26 tests). Full raw output is in `runs/durable-suite.txt` and
+`runs/subscriber-suite.txt` (historical), with the current-round verbatim runs
+in `runs/*-outbox-threading-round.txt`. Line anchors refer to the test file at
+HEAD `2dee4084d8`.
 
 ### 3.1 Crash before core effect → replay creates exactly one ticket/comment
 
@@ -351,7 +356,10 @@ Error: REQUIRE_DB=1 but the test database at 127.0.0.1:5999 is unreachable. Refu
 ```
 
 Baseline confirmed: durable **39/39**, subscriber **15/15**, both real exit
-code 0 with the guard active.
+code 0 with the guard active. These are the historical round-2 counts; the
+current HEAD counts (durable **45/45**, subscriber **26/26**, combined
+**71/71**) are in section 5.2 with verbatim `runs/*-outbox-threading-round.txt`
+evidence.
 
 ---
 
@@ -419,6 +427,54 @@ the notification survives a simulated crash before commit).
 
 ---
 
+## 5.2 Outbox-threading round (2026-08-10): evidence at HEAD `2dee4084d8`
+
+This is a **verifier-timeout mitigation** round (round 3): draft-review
+verification failed with `verifier-timeout`, no defect was reported, and HEAD
+had advanced past the bundle's last evidence snapshot. Everything below was
+re-run at HEAD `2dee4084d8` (`fix(inbound-email): thread outbox transaction
+through subscriber handlers and stop swallowing failure-ledger errors`) with
+`REQUIRE_DB=1` against `127.0.0.1:5472`. Verbatim outputs in
+`runs/*-outbox-threading-round.txt`:
+
+- **Durable inbound suite** (`inboundEmailDurableInbox.integration.test.ts`) —
+  **45/45 passed**, 11.60s. `runs/durable-suite-outbox-threading-round.txt`.
+- **Subscriber suite** (`internal-notifications/eventSubscribers.integration.test.ts`) —
+  **26/26 passed**, 12.64s. `runs/subscriber-suite-outbox-threading-round.txt`.
+- **Combined single invocation** (both suites in one vitest run) —
+  **71/71 passed**, 24.05s wall clock. `runs/combined-single-invocation-outbox-threading-round.txt`.
+- **All five typechecks** — server, shared, email-service, packages/jobs,
+  ee/temporal-workflows, all exit 0 with zero diagnostics.
+  `runs/typechecks-outbox-threading-round.txt`.
+- **Shared dev DB audit rows intact** — the 23 pre-existing
+  `rfc822:rfc822`-prefixed inbox rows remain untouched by this round's runs.
+  `runs/audit-rows-intact-outbox-threading-round.txt`.
+
+**What changed since the last bundle snapshot (HEAD `7c5adef2ee` → `2dee4084d8`):**
+
+1. `7c5adef2ee` — legacy backfill keyset cursor made lossless for
+   `timestamptz(6)`: bounded backfill no longer skips rows sharing a
+   `processed_at` microsecond tie, so `limit=N` runs terminate and visit every
+   row exactly once (verified at HEAD by the durable suite's
+   `legacy backfill cursor is lossless` test).
+2. `2dee4084d8` — the outbox **transactional consumer** paths now thread the
+   caller-supplied outbox transaction through the subscriber handlers
+   (`handleTicketClosed` / `handleTicketCommentAdded` run their notification
+   writes on `opts.db` instead of a fresh pool connection), and the
+   failure-ledger write sites rethrow instead of swallowing, so an effect can
+   never commit with no durable ledger row and no retry. The transactional
+   reserve path fails closed (a reserve-ledger write failure prevents delivery
+   rather than delivering unrecorded).
+
+**Reviewer's short path:** the newest, least-reviewed surface is `2dee4084d8`
+(the transaction-threading in the four subscriber handlers and the fail-closed
+reserve/record-rethrow behavior), exercised by the 11 real-Postgres
+transactional-delivery tests in `eventSubscribers.integration.test.ts`
+(26/26) plus the transactional crash/rollback tests in the durable suite
+(45/45). The combined run proves both suites are green together in a single
+time-boxed invocation (71/71 in ~24s).
+
+---
 
 ## 6. Bounded-duplicate statement (external-effect semantics)
 
@@ -550,18 +606,24 @@ seeded on every run of `runs/durable-suite.txt`).
 
 ## 8. What this round changed
 
-This mitigation round refreshed the bundle to HEAD `f4b697d6ee`. The four
-bracketed-reply/threading tests added since the bundle's first commit
-(`7e4f7d7952`) bring the durable suite to 39 tests; all `runs/*.txt` files were
-regenerated verbatim at HEAD (durable 39/39, subscriber 15/15, the
-`REQUIRE_DB` negative control, all typechecks, `nx build-deps`), and the
-behavioral-evidence and typecheck sections now carry the updated counts, line
-anchors, and measured wall-clock times.
+Round 2 refreshed the bundle to HEAD `f4b697d6ee` (durable 39/39, subscriber
+15/15). Round 3 (this round) refreshes the bundle to HEAD `2dee4084d8`, which
+is two fix commits past the round-2 head:
+
+- `7c5adef2ee` — lossless legacy-backfill keyset cursor for `timestamptz(6)`
+  tie rows.
+- `2dee4084d8` — outbox transaction threading through the subscriber handlers
+  plus fail-closed reserve on the transactional path and failure-ledger
+  rethrows.
+
+All `runs/*-outbox-threading-round.txt` files were regenerated verbatim at HEAD
+(durable 45/45, subscriber 26/26, combined single invocation 71/71, the
+REQUIRE_DB-backed suite runs, and all five typechecks). Section 5.2 has the
+full counts and the reviewer's short path.
 
 No product-code files were modified in this round — the branch's code is
-unchanged from `f4b697d6ee`. The only unstaged change in the tree remains the
-pre-existing `package-lock.json` modification, which is untouched and not
-committed.
+unchanged from `2dee4084d8`; this is an evidence refresh only. The working
+tree is clean and `package-lock.json` is unmodified (nothing to restore).
 
 **Known-open items (not fixed in this round, listed for the reviewer):**
 
