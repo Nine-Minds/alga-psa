@@ -9,7 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Archive, Copy, MoreVertical, Plus, Sparkles, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   archiveServiceRequestDefinitionAction,
   createBlankServiceRequestDefinitionAction,
@@ -61,6 +61,7 @@ function lifecycleLabel(
 export default function ServiceRequestsManagementPage() {
   const router = useRouter();
   const { t } = useTranslation('msp/service-requests');
+  const { formatDate } = useFormatters();
   const [definitions, setDefinitions] = useState<ServiceRequestDefinitionRow[]>([]);
   const [templates, setTemplates] = useState<ServiceRequestTemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +135,7 @@ export default function ServiceRequestsManagementPage() {
       {
         title: t('management.columns.updated'),
         dataIndex: 'updated_at',
-        render: (value) => new Date(value as string).toLocaleString(),
+        render: (value) => formatDate(new Date(value as string), { dateStyle: 'medium', timeStyle: 'short' }),
       },
       {
         title: t('management.columns.actions'),
@@ -223,7 +224,7 @@ export default function ServiceRequestsManagementPage() {
         ),
       },
     ],
-    [startTransition, t]
+    [formatDate, startTransition, t]
   );
 
   return (

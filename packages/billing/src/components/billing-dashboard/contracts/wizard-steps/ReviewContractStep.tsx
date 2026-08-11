@@ -33,7 +33,7 @@ interface ReviewContractStepProps {
 
 export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency, formatDate: formatDateInLocale } = useFormatters();
+  const { formatCurrency, formatNumber, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
   const [clientName, setClientName] = useState<string>(
@@ -89,7 +89,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     }
 
     const included = mode === 'hours' ? overlay.total_minutes / 60 : overlay.total_minutes;
-    const formattedValue = included.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    // toLocaleString(undefined, …) is the browser's locale, not the app's.
+    const formattedValue = formatNumber(included, { maximumFractionDigits: 2 });
 
     const includedLabel =
       mode === 'hours'

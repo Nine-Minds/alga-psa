@@ -247,7 +247,7 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('autoDisabledAt: updated.autoDisabledAt');
     expect(adminWebhooksSource).toContain('{identityForm.autoDisabledAt ? (');
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.active.autoDisabled'");
-    expect(adminWebhooksSource).toContain('date: formatDateTime(identityForm.autoDisabledAt as string, neverLabel)');
+    expect(adminWebhooksSource).toContain('date: formatDateTime(identityForm.autoDisabledAt as string, locale, neverLabel)');
     expect(adminWebhooksSource).toContain('border-amber-200 bg-amber-50');
   });
 

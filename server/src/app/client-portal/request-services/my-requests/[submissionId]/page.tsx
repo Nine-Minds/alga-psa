@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { formatDate, getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
@@ -21,19 +22,26 @@ interface MyRequestDetailPageProps {
   }>;
 }
 
-function formatDateTime(value: Date | string, unknownLabel: string): string {
+// Module scope has no hook to read the locale from, so it is passed in rather
+// than omitted — omitting it silently means the browser's, not the app's.
+function formatDateTime(
+  value: Date | string,
+  locale: SupportedLocale,
+  unknownLabel: string,
+): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
     return unknownLabel;
   }
-  return date.toLocaleString();
+  return formatDate(date, locale, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export default async function MyRequestDetailPage(props: MyRequestDetailPageProps) {
   const { submissionId } = await props.params;
-  const [submission, { t }] = await Promise.all([
+  const [submission, { t }, locale] = await Promise.all([
     getMyServiceRequestSubmissionDetailAction(submissionId),
     getServerTranslation(undefined, 'client-portal/service-requests'),
+    getServerLocale(),
   ]);
 
   if (!submission) {
@@ -65,7 +73,7 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
         <h2 className="text-base font-semibold mb-2">{t('submissionDetail.statusSection')}</h2>
         <p className="text-sm">
           {t('submissionDetail.submittedAt', {
-            date: formatDateTime(submission.submitted_at, unknownLabel),
+            date: formatDateTime(submission.submitted_at, locale, unknownLabel),
           })}
         </p>
         <p className="text-sm">
