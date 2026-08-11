@@ -113,7 +113,10 @@ describe('ClientPortalSignInPage', () => {
     const result = await ClientPortalSignInPage({ searchParams: Promise.resolve({}) });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(PortalSwitchPromptMock);
+    // Same requirement as discovery above: unwrapped, this interstitial
+    // rendered English at every locale.
+    expect((result as any)?.type).toBe(I18nWrapperMock);
+    expect(inner(result)?.type).toBe(PortalSwitchPromptMock);
   });
 
   it('passes portal branding context to the client sign-in UI', async () => {
