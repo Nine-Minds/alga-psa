@@ -26,11 +26,24 @@ import {
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
+import {
+  backfillMicrosoftEmailProviderIssuerMetadata,
+  listEligibleMicrosoftEmailIssuers,
+  type MicrosoftEmailIssuerOptions,
+} from '../../lib/microsoftEmailIssuerSelection';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
+
+/**
+ * Stable, non-UUID sentinel used ONLY for the read-only legacy profile view
+ * synthesized on the status path when a tenant has legacy Microsoft secrets but
+ * no `microsoft_profiles` rows yet. It never corresponds to a materialized row,
+ * so it must never be passed to a mutation action as a profile id.
+ */
+const LEGACY_MICROSOFT_PROFILE_ID = 'legacy';
 
 function microsoftActionErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : '';
@@ -117,6 +130,14 @@ export interface MicrosoftProfileSummary {
   status: 'ready' | 'incomplete' | 'archived';
   archivedAt?: string | null;
   consumers: string[];
+  /**
+   * Present only on the synthesized view of legacy tenant credentials surfaced
+   * by the read-only status path. When true, the profile is NOT a materialized
+   * `microsoft_profiles` row; it is a read-only interpretation of the legacy
+   * `microsoft_client_*` tenant secrets. Its profileId must never be used as a
+   * mutation target.
+   */
+  isLegacyUnmigrated?: boolean;
 }
 
 export interface MicrosoftConsumerBindingSummary {
@@ -450,6 +471,100 @@ function hasLegacyMicrosoftConfig(values: {
   );
 }
 
+/**
+ * PURE READ: loads the legacy singleton Microsoft tenant secrets
+ * (`microsoft_client_id` / `microsoft_client_secret` / `microsoft_tenant_id`).
+ * These are the pre-profile way tenants configured Microsoft, and are the only
+ * source from which the read-only status path can surface an unmigrated legacy
+ * tenant. Never writes.
+ */
+async function readLegacyMicrosoftSecrets(
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  tenant: string
+): Promise<{ clientId: string; clientSecret: string; tenantId: string }> {
+  const [clientId, clientSecret, tenantId] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, MICROSOFT_CLIENT_ID_SECRET),
+    secretProvider.getTenantSecret(tenant, MICROSOFT_CLIENT_SECRET_SECRET),
+    secretProvider.getTenantSecret(tenant, MICROSOFT_TENANT_ID_SECRET),
+  ]);
+
+  return {
+    clientId: (clientId || '').trim(),
+    clientSecret: (clientSecret || '').trim(),
+    tenantId: normalizeTenantId(tenantId),
+  };
+}
+
+/**
+ * PURE READ: which visible consumers have legacy usage that a migration would
+ * bind. Mirrors the decision made by `ensureMicrosoftConsumerBindingMigration`
+ * (msp_sso domain, email provider + client credentials, calendar provider) but
+ * performs zero writes so a status read can reflect legacy state read-only.
+ */
+async function readLegacyConsumerLabels(
+  knex: any,
+  tenant: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  legacy: { clientId: string; clientSecret: string }
+): Promise<string[]> {
+  const labels: string[] = [];
+  const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
+
+  if (visibleConsumers.has('msp_sso') && await tenantHasLegacyMspSsoUsage(knex, tenant)) {
+    labels.push(getMicrosoftConsumerLabel('msp_sso'));
+  }
+  if (
+    visibleConsumers.has('email') &&
+    await tenantHasLegacyMicrosoftEmailUsage(knex, tenant) &&
+    Boolean((legacy.clientId || '').trim()) &&
+    Boolean((legacy.clientSecret || '').trim())
+  ) {
+    labels.push(getMicrosoftConsumerLabel('email'));
+  }
+  if (visibleConsumers.has('calendar') && await tenantHasLegacyMicrosoftCalendarUsage(knex, tenant)) {
+    labels.push(getMicrosoftConsumerLabel('calendar'));
+  }
+
+  return labels;
+}
+
+/**
+ * PURE READ: synthesizes a read-only legacy profile view from the legacy
+ * Microsoft tenant secrets WITHOUT materializing a `microsoft_profiles` row.
+ * The client secret is read straight from the legacy secret key so readiness
+ * reflects the actual legacy credential state. `isLegacyUnmigrated` marks the
+ * view so callers know the profile id is a display-only sentinel.
+ */
+async function buildLegacyMicrosoftProfileSummaryReadOnly(
+  tenant: string,
+  legacy: { clientId: string; clientSecret: string; tenantId: string },
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  knex: any
+): Promise<MicrosoftProfileSummary> {
+  const row: MicrosoftProfileRow = {
+    tenant,
+    profile_id: LEGACY_MICROSOFT_PROFILE_ID,
+    display_name: DEFAULT_MICROSOFT_PROFILE_NAME,
+    display_name_normalized: normalizeDisplayNameKey(DEFAULT_MICROSOFT_PROFILE_NAME),
+    client_id: normalizeMicrosoftClientId(legacy.clientId || ''),
+    tenant_id: legacy.tenantId,
+    client_secret_ref: MICROSOFT_CLIENT_SECRET_SECRET,
+    capabilities: [...DEFAULT_MICROSOFT_PROFILE_CAPABILITIES],
+    is_default: true,
+    is_archived: false,
+    archived_at: null,
+    created_by: null,
+    updated_by: null,
+    created_at: new Date(),
+    updated_at: new Date(),
+  };
+
+  const summary = await buildMicrosoftProfileSummary(tenant, row, secretProvider);
+  const consumers = await readLegacyConsumerLabels(knex, tenant, secretProvider, legacy);
+
+  return { ...summary, isLegacyUnmigrated: true, consumers };
+}
+
 async function mirrorLegacyMicrosoftSecrets(
   tenant: string,
   row: Pick<MicrosoftProfileRow, 'client_id' | 'tenant_id' | 'client_secret_ref'>,
@@ -552,14 +667,19 @@ async function tenantHasLegacyMicrosoftCalendarUsage(knex: any, tenant: string):
   return Boolean(provider);
 }
 
-async function ensureMicrosoftConsumerBindingMigration(
+/**
+ * PURE READ: computes the consumer→profile bindings a tenant SHOULD have —
+ * the explicitly persisted bindings plus any bindings a legacy migration would
+ * create (from msp_sso login domains, Microsoft email providers + client
+ * credentials, and Microsoft calendar providers mapped to a unique capable
+ * profile). Performs ZERO writes. Read paths use this to interpret legacy state
+ * without materializing rows; the migration wrapper inserts the missing rows.
+ */
+async function resolveExpectedMicrosoftConsumerBindingsReadOnly(
   knex: any,
   tenant: string,
-  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
-  userId?: string | null
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
 ): Promise<MicrosoftConsumerBindingRow[]> {
-  await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
-
   const existingBindings = await getTenantMicrosoftConsumerBindings(knex, tenant);
   const now = new Date();
   const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
@@ -583,39 +703,65 @@ async function ensureMicrosoftConsumerBindingMigration(
   ]);
   const shouldBackfillEmail = hasLegacyEmailUsage && hasLegacyEmailClientCredentials;
 
-  const consumersToBackfill: MicrosoftProfileConsumer[] = [];
+  const result = [...existingBindings];
 
-  if (shouldBackfillMspSso) {
-    consumersToBackfill.push('msp_sso');
-  }
-  if (shouldBackfillEmail) {
-    consumersToBackfill.push('email');
-  }
-  if (shouldBackfillCalendar) {
-    consumersToBackfill.push('calendar');
-  }
+  for (const [consumerType, shouldBackfill] of [
+    ['msp_sso', shouldBackfillMspSso],
+    ['email', shouldBackfillEmail],
+    ['calendar', shouldBackfillCalendar],
+  ] as Array<[MicrosoftProfileConsumer, boolean]>) {
+    if (!shouldBackfill) {
+      continue;
+    }
 
-  for (const consumerType of consumersToBackfill) {
     const candidateProfile = await resolveMicrosoftBindingCandidateProfile(knex, tenant, secretProvider, consumerType);
     if (!candidateProfile) {
       continue;
     }
 
-    const binding: MicrosoftConsumerBindingRow = {
+    result.push({
       tenant,
       consumer_type: consumerType,
       profile_id: candidateProfile.profile_id,
+      created_by: null,
+      updated_by: null,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
+  return result;
+}
+
+async function ensureMicrosoftConsumerBindingMigration(
+  knex: any,
+  tenant: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  userId?: string | null
+): Promise<MicrosoftConsumerBindingRow[]> {
+  await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
+
+  const expected = await resolveExpectedMicrosoftConsumerBindingsReadOnly(knex, tenant, secretProvider);
+  const existing = await getTenantMicrosoftConsumerBindings(knex, tenant);
+  const existingKeys = new Set(existing.map((row) => row.consumer_type));
+  const now = new Date();
+
+  for (const binding of expected) {
+    if (existingKeys.has(binding.consumer_type)) {
+      continue;
+    }
+
+    await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings').insert({
+      ...binding,
       created_by: userId || null,
       updated_by: userId || null,
       created_at: now,
       updated_at: now,
-    };
-
-    await tenantDb(knex, tenant).table('microsoft_profile_consumer_bindings').insert(binding);
-    existingBindings.push(binding);
+    });
+    existingKeys.add(binding.consumer_type);
   }
 
-  return existingBindings;
+  return expected;
 }
 
 function getVisibleConsumerLabels(
@@ -763,17 +909,39 @@ async function buildMicrosoftProfileSummary(
   };
 }
 
-async function listMicrosoftProfilesForTenant(
-  tenant: string,
-  userId?: string | null
+/**
+ * PURE READ core for listing Microsoft profiles. Reads persisted profiles and
+ * bindings directly and derives legacy-implied consumer labels without running
+ * any migration/backfill helper. Used by the status/settings read path, which
+ * must never write profile, binding, or secret rows as a page-load side effect.
+ */
+async function readMicrosoftProfilesForTenant(
+  tenant: string
 ): Promise<MicrosoftProfileSummary[]> {
   const { knex } = await createTenantKnex();
   const secretProvider = await getSecretProviderInstance();
+  return readMicrosoftProfilesWithKnex(knex, tenant, secretProvider);
+}
 
-  await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
-
+async function readMicrosoftProfilesWithKnex(
+  knex: any,
+  tenant: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
+): Promise<MicrosoftProfileSummary[]> {
   const rows = await getTenantMicrosoftProfiles(knex, tenant);
-  const bindings = await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, userId);
+
+  if (rows.length === 0) {
+    const legacy = await readLegacyMicrosoftSecrets(secretProvider, tenant);
+    if (hasLegacyMicrosoftConfig(legacy)) {
+      // Legacy tenant with no migrated profile: surface the legacy credentials
+      // as an unmigrated profile view instead of misleading emptiness. No row
+      // is materialized.
+      return [await buildLegacyMicrosoftProfileSummaryReadOnly(tenant, legacy, secretProvider, knex)];
+    }
+    return [];
+  }
+
+  const bindings = await resolveExpectedMicrosoftConsumerBindingsReadOnly(knex, tenant, secretProvider);
 
   return Promise.all(rows.map((row) => {
     const consumerLabels = bindings
@@ -782,6 +950,25 @@ async function listMicrosoftProfilesForTenant(
 
     return buildMicrosoftProfileSummary(tenant, row, secretProvider, consumerLabels);
   }));
+}
+
+/**
+ * Migrate-then-read listing used by the `listMicrosoftProfiles` action. It is
+ * the explicit profile-management entry point: unlike the status read it is
+ * allowed to materialize the legacy profile and its bindings. The status read
+ * path must use `readMicrosoftProfilesForTenant` instead.
+ */
+async function listMicrosoftProfilesForTenant(
+  tenant: string,
+  userId?: string | null
+): Promise<MicrosoftProfileSummary[]> {
+  const { knex } = await createTenantKnex();
+  const secretProvider = await getSecretProviderInstance();
+
+  await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
+  await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, userId);
+
+  return readMicrosoftProfilesWithKnex(knex, tenant, secretProvider);
 }
 
 async function resolveDefaultMicrosoftProfileRow(
@@ -1521,6 +1708,90 @@ export const resolveMicrosoftProfileForConsumer = async (
   return null;
 };
 
+/**
+ * PURE READ variant of `resolveMicrosoftProfileForConsumer`. Resolves the
+ * CURRENT persisted binding, plus a read-only legacy interpretation (an implied
+ * binding to a unique capable profile, or the synthesized legacy profile view
+ * when the tenant has only legacy secrets), WITHOUT running any migration or
+ * backfill helper. Status/settings reads must use this variant so a page load
+ * never writes profile or binding rows.
+ */
+export const resolveMicrosoftProfileForConsumerReadOnly = async (
+  tenant: string,
+  consumerType: string
+): Promise<MicrosoftProfileSummary | null> => {
+  if (!isSupportedMicrosoftProfileConsumer(consumerType)) {
+    return null;
+  }
+
+  const { knex } = await createTenantKnex();
+  const secretProvider = await getSecretProviderInstance();
+
+  // Explicit, persisted binding — pure read.
+  const binding = await getMicrosoftConsumerBindingRow(knex, tenant, consumerType as MicrosoftProfileConsumer);
+  if (binding) {
+    const row = await getMicrosoftProfileRow(knex, tenant, binding.profile_id);
+    if (row && !row.is_archived && profileHasCapability(row, consumerType)) {
+      return buildMicrosoftProfileSummary(tenant, row, secretProvider, [getMicrosoftConsumerLabel(consumerType as MicrosoftProfileConsumer)]);
+    }
+  }
+
+  const rows = await getTenantMicrosoftProfiles(knex, tenant);
+
+  // Legacy interpretation: an implied binding to a unique capable profile is
+  // surfaced without materializing a binding row.
+  if (rows.length > 0 && await consumerHasLegacyUsageFor(knex, tenant, secretProvider, consumerType)) {
+    const candidate = await resolveMicrosoftBindingCandidateProfile(knex, tenant, secretProvider, consumerType);
+    if (candidate) {
+      const row = rows.find((candidateRow) => candidateRow.profile_id === candidate.profile_id);
+      if (row && !row.is_archived && profileHasCapability(row, consumerType)) {
+        return buildMicrosoftProfileSummary(
+          tenant,
+          row,
+          secretProvider,
+          [getMicrosoftConsumerLabel(consumerType as MicrosoftProfileConsumer)]
+        );
+      }
+    }
+  }
+
+  // Legacy tenant with no profile rows: surface the legacy credentials as an
+  // unmigrated profile view (read-only, no rows materialized).
+  if (rows.length === 0 && consumerType !== 'teams') {
+    const legacy = await readLegacyMicrosoftSecrets(secretProvider, tenant);
+    if (
+      hasLegacyMicrosoftConfig(legacy) &&
+      await consumerHasLegacyUsageFor(knex, tenant, secretProvider, consumerType)
+    ) {
+      return buildLegacyMicrosoftProfileSummaryReadOnly(tenant, legacy, secretProvider, knex);
+    }
+  }
+
+  return null;
+};
+
+async function consumerHasLegacyUsageFor(
+  knex: any,
+  tenant: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  consumerType: string
+): Promise<boolean> {
+  if (consumerType === 'msp_sso') {
+    return tenantHasLegacyMspSsoUsage(knex, tenant);
+  }
+  if (consumerType === 'email') {
+    const [hasUsage, hasCredentials] = await Promise.all([
+      tenantHasLegacyMicrosoftEmailUsage(knex, tenant),
+      tenantHasLegacyMicrosoftEmailClientCredentials(secretProvider, tenant),
+    ]);
+    return hasUsage && hasCredentials;
+  }
+  if (consumerType === 'calendar') {
+    return tenantHasLegacyMicrosoftCalendarUsage(knex, tenant);
+  }
+  return false;
+}
+
 export const getMicrosoftConsumerSetupStatus = withAuth(async (
   user,
   { tenant },
@@ -1562,7 +1833,9 @@ export const getMicrosoftConsumerSetupStatus = withAuth(async (
       };
     }
 
-    const profile = await resolveMicrosoftProfileForConsumer(tenant, consumerType);
+    // Read-only resolution: this is a status read that feeds settings pages,
+    // so it must never run the legacy profile/binding migration as a side effect.
+    const profile = await resolveMicrosoftProfileForConsumerReadOnly(tenant, consumerType);
     if (!profile) {
       return {
         success: true,
@@ -1592,6 +1865,23 @@ export const getMicrosoftConsumerSetupStatus = withAuth(async (
   }
 });
 
+export const getMicrosoftEmailIssuerOptions = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string; issuers?: MicrosoftEmailIssuerOptions }> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+
+    return {
+      success: true,
+      issuers: await listEligibleMicrosoftEmailIssuers(tenant),
+    };
+  } catch (err: any) {
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft email application options') };
+  }
+});
+
 export const getMicrosoftIntegrationStatus = withAuth(async (
   user,
   { tenant }
@@ -1599,10 +1889,21 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
-    const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
+    const profiles = await readMicrosoftProfilesForTenant(tenant);
+    // STRICTLY READ-ONLY. This status powers both the Microsoft email settings
+    // page and the Teams settings profile picker, so it must never write to
+    // microsoft_profiles, microsoft_profile_consumer_bindings,
+    // microsoft_email_provider_config, or the secret provider. The conservative
+    // same-client issuer backfill is a deliberate mutation and lives in the
+    // dedicated runMicrosoftEmailIssuerBackfill action, which the email
+    // settings surface calls only as part of a user-initiated save/reconnect —
+    // never as a side effect of loading a status page. Profile listing and
+    // consumer resolution below use the read-only variants; for a legacy
+    // tenant whose migration has not run, the legacy credentials are surfaced
+    // as an unmigrated profile view without materializing rows.
     const baseUrl = await getDeploymentBaseUrl();
     const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
-    const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
+    const mspSsoProfile = await resolveMicrosoftProfileForConsumerReadOnly(tenant, 'msp_sso');
     const emailSetup = await getMicrosoftEmailSetupReadiness(tenant);
     const visibleProfiles = profiles.map((profile) => ({
       ...profile,
@@ -1625,6 +1926,34 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     };
   } catch (err: any) {
     return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft integration status') };
+  }
+});
+
+/**
+ * Explicitly run the conservative same-client email issuer backfill.
+ *
+ * This is a deliberate mutation of `microsoft_email_provider_config` rows: it
+ * pins legacy providers that have exactly one eligible same-client profile
+ * match. It must NEVER be invoked as a side effect of loading a settings or
+ * status page — the Microsoft email settings surface calls it only from an
+ * explicit user-initiated save/reconnect, and tests exercise it directly. The
+ * backfill keeps its internal secret-resolvability guard, so a profile whose
+ * secret cannot be resolved is never used as a pin.
+ */
+export const runMicrosoftEmailIssuerBackfill = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string; result?: { backfilled: number; ambiguous: number; unchanged: number } }> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+
+    return {
+      success: true,
+      result: await backfillMicrosoftEmailProviderIssuerMetadata(tenant),
+    };
+  } catch (err: any) {
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to backfill Microsoft email issuer metadata') };
   }
 });
 

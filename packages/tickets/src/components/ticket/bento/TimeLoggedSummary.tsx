@@ -2,7 +2,7 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
 
@@ -40,10 +40,10 @@ function entryDayKey(entry: { work_date: string | null; start_time: string }): s
   return `${year}-${month}-${day}`;
 }
 
-function dayLabel(key: string): string {
+function dayLabel(key: string, locale: string): string {
   const d = new Date(`${key}T00:00:00`);
   if (Number.isNaN(d.getTime())) return key;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 /**
@@ -52,6 +52,7 @@ function dayLabel(key: string): string {
  */
 export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary }: TimeLoggedSummaryProps) {
   const { t } = useTranslation('features/tickets');
+  const { locale } = useFormatters();
   const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
   const initialData = initialSummary ? use(initialSummary) : null;
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
@@ -90,7 +91,7 @@ export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary
     const sorted: DayBucket[] = [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-MAX_BARS)
-      .map(([key, minutes]) => ({ key, label: dayLabel(key), minutes }));
+      .map(([key, minutes]) => ({ key, label: dayLabel(key, locale), minutes }));
     return {
       totalMinutes: total,
       entryCount: entries.length,

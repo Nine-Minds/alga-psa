@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
 
 export interface MyRequestsTableRow {
@@ -36,15 +37,18 @@ interface MyRequestsTableProps {
   labels: MyRequestsTableLabels;
 }
 
-function formatDateTime(value: string, unknownLabel: string): string {
+// Module scope has no hook to read the locale from, so it is passed in rather
+// than omitted — omitting it silently means the browser's, not the app's.
+function formatDateTime(value: string, locale: string, unknownLabel: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return unknownLabel;
   }
-  return date.toLocaleString();
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
 export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
+  const { locale } = useFormatters();
   // LEVERAGE: friction datatable-client-paging — re-derives page/size state + reset handler DataTable already owns internally
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -58,7 +62,7 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
       {
         title: labels.submitted,
         dataIndex: 'submitted_at',
-        render: (value) => formatDateTime(value as string, labels.unknownDate),
+        render: (value) => formatDateTime(value as string, locale, labels.unknownDate),
       },
       {
         title: labels.status,
@@ -112,7 +116,7 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
         ),
       },
     ],
-    [labels]
+    [labels, locale]
   );
 
   return (

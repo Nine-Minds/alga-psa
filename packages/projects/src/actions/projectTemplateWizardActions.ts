@@ -33,7 +33,8 @@ function projectTemplateWizardActionErrorFrom(error: unknown): ProjectTemplateWi
     error.message === 'Template name is required' ||
     error.message === 'New template name is required' ||
     error.message === 'Template not found' ||
-    error.message === 'Source template not found'
+    error.message === 'Source template not found' ||
+    error.message === 'Template validation failed. Please review the template details and try again.'
   ) {
     return actionError(error.message);
   }
@@ -43,6 +44,10 @@ function projectTemplateWizardActionErrorFrom(error: unknown): ProjectTemplateWi
 
 type SourceTemplateStatusMappingRow = {
   status_id?: string | null;
+  standard_status_id?: string | null;
+  unresolved_status_id?: string | null;
+  unresolved_reason?: string | null;
+  status_source?: string | null;
   custom_status_name?: string | null;
   display_order: number;
 };
@@ -140,6 +145,12 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
     const statusMappingMap = new Map<string, string>(); // temp_id → template_status_mapping_id
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
+        const hasTenantStatus = Boolean(mapping.status_id);
+        const hasCustomName = Boolean(mapping.custom_status_name?.trim());
+        if (!hasTenantStatus && !hasCustomName) {
+          throw new Error('Template validation failed. Please review the template details and try again.');
+        }
+
         const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
@@ -147,7 +158,11 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
             template_phase_id: mapping.template_phase_id
               ? phaseMap.get(mapping.template_phase_id) || null
               : null,
-            status_id: mapping.status_id || null,
+            status_id: hasTenantStatus ? mapping.status_id : null,
+            standard_status_id: null,
+            unresolved_status_id: null,
+            unresolved_reason: null,
+            status_source: hasTenantStatus ? 'tenant' : 'inline',
             custom_status_name: mapping.custom_status_name || null,
             custom_status_color: mapping.custom_status_color || null,
             display_order: mapping.display_order,
@@ -332,6 +347,12 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     const statusMappingMap = new Map<string, string>();
     if (data.status_mappings && data.status_mappings.length > 0) {
       for (const mapping of data.status_mappings) {
+        const hasTenantStatus = Boolean(mapping.status_id);
+        const hasCustomName = Boolean(mapping.custom_status_name?.trim());
+        if (!hasTenantStatus && !hasCustomName) {
+          throw new Error('Template validation failed. Please review the template details and try again.');
+        }
+
         const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
           .insert({
             tenant,
@@ -339,7 +360,11 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
             template_phase_id: mapping.template_phase_id
               ? phaseMap.get(mapping.template_phase_id) || null
               : null,
-            status_id: mapping.status_id || null,
+            status_id: hasTenantStatus ? mapping.status_id : null,
+            standard_status_id: null,
+            unresolved_status_id: null,
+            unresolved_reason: null,
+            status_source: hasTenantStatus ? 'tenant' : 'inline',
             custom_status_name: mapping.custom_status_name || null,
             custom_status_color: mapping.custom_status_color || null,
             display_order: mapping.display_order,
@@ -493,6 +518,10 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
         tenant,
         template_id: newTemplate.template_id,
         status_id: mapping.status_id,
+        standard_status_id: mapping.standard_status_id,
+        unresolved_status_id: mapping.unresolved_status_id,
+        unresolved_reason: mapping.unresolved_reason,
+        status_source: mapping.status_source,
         custom_status_name: mapping.custom_status_name,
         display_order: mapping.display_order,
       }));

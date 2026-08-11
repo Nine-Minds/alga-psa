@@ -82,7 +82,8 @@
     "share": "Share",
     "done": "Done",
     "continue": "Continue",
-    "printSelected": "Print selected ({{count}})"
+    "printSelected": "Print selected ({{count}})",
+    "removeTag": "Remove tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -107,7 +108,11 @@
     "noUsersAvailable": "No users available",
     "searchBoards": "Search boards...",
     "searchBoardsLabel": "Search Boards",
-    "noBoardsFound": "No boards found"
+    "noBoardsFound": "No boards found",
+    "notAssigned": "Not assigned",
+    "searchUsersOrTeams": "Search users or teams...",
+    "unnamedUser": "Unnamed User",
+    "unnamedTeam": "Unnamed Team"
   },
   "tagFilter": {
     "placeholder": "Filter by tags...",
@@ -209,7 +214,9 @@
       "downloadLimitReached": "Download limit has been reached."
     },
     "downloadStarted": "Download started successfully!",
-    "enterPassword": "Enter password"
+    "enterPassword": "Enter password",
+    "downloadsUsed": "{{used}} of {{max}} downloads used",
+    "expiresAt": "Expires: {{date}}"
   },
   "tickets": {
     "origin": {
@@ -1122,6 +1129,13 @@
     "addOnDescription": {
       "ai_assistant": "Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team."
     }
+  },
+  "timePicker": {
+    "placeholder": "Select time",
+    "hour": "Hour",
+    "minute": "Minute",
+    "period": "Period",
+    "open": "Open time picker"
   },
   "timezonePicker": {
     "selectPlaceholder": "Select timezone...",

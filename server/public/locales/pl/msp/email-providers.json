@@ -251,7 +251,8 @@
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem. Spróbuj ponownie.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
-        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza"
+        "senderDisplayNameInvalid": "Nazwa wyświetlana nie może zawierać cudzysłowów, nawiasów ostrych ani znaków nowego wiersza",
+        "issuerRequired": "Wybierz aplikację Microsoft przed zalogowaniem się"
       },
       "requiredFields": {
         "providerName": "Nazwa konfiguracji",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {
-        "checking": "Sprawdzanie konfiguracji Microsoft…",
-        "ready": "Microsoft jest skonfigurowany. Zaloguj się za pomocą tej skrzynki pocztowej, aby zakończyć.",
-        "pending": "Oczekiwanie na administratora Microsoft 365. Konfiguracja została rozpoczęta w sekcji Dostawcy, ale nie została jeszcze zatwierdzona.",
-        "openProviders": "Otwórz Dostawców",
-        "notConfigured": "Microsoft nie jest jeszcze skonfigurowany. Skonfiguruj go raz w sekcji Dostawcy, a następnie wróć.",
-        "setUpInProviders": "Skonfiguruj w sekcji Dostawcy"
+        "openProviders": "Otwórz Dostawców"
+      },
+      "issuer": {
+        "title": "Aplikacja Microsoft, która autoryzuje tę skrzynkę pocztową",
+        "description": "Wybierz, która aplikacja loguje się jako ta skrzynka pocztowa. Ten wybór jest zapisywany wraz ze skrzynką pocztową i nie wpływa na inne usługi.",
+        "managedLabel": "Aplikacja AlgaPSA (zarządzana przez Nine Minds)",
+        "managedDescription": "Po Twojej stronie nie jest wymagana żadna rejestracja aplikacji Microsoft.",
+        "recommended": "Zalecana",
+        "currentApp": "Bieżąca aplikacja: {{app}}",
+        "selectedApp": "Wybrana aplikacja: {{app}}",
+        "pendingReauth": "Ponowna autoryzacja w toku",
+        "switchWarning": "Zmiana aplikacji Microsoft wymaga ponownego połączenia tej skrzynki pocztowej. Zaloguj się ponownie przez Microsoft, aby dokończyć zmianę.",
+        "noneAvailable": "Aby połączyć Microsoft 365, najpierw skonfiguruj aplikację Microsoft u Dostawców, a następnie wróć tutaj.",
+        "retry": "Spróbuj ponownie",
+        "pendingConsentEmpty": "Twoja aplikacja Microsoft czeka na zatwierdzenie przez administratora Microsoft 365. Po zatwierdzeniu u Dostawców wróć tutaj, aby się zalogować.",
+        "pendingConsentHint": "Twoja własna aplikacja Microsoft nadal czeka na zatwierdzenie przez administratora Microsoft 365.",
+        "ownAppPrompt": "Wolisz zalogować się za pomocą własnej aplikacji Microsoft?",
+        "ownAppSetupLink": "Skonfiguruj ją u Dostawców"
       }
     },
     "gmail": {

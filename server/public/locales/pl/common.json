@@ -96,7 +96,8 @@
     "continue": "Kontynuuj",
     "printSelected": "Drukuj zaznaczone ({{count}})",
     "printSelected_few": "Drukuj zaznaczone ({{count}})",
-    "printSelected_many": "Drukuj zaznaczone ({{count}})"
+    "printSelected_many": "Drukuj zaznaczone ({{count}})",
+    "removeTag": "Usuń tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -196,7 +197,9 @@
       "downloadLimitReached": "Osiągnięto limit pobierań."
     },
     "downloadStarted": "Pobieranie pomyślnie rozpoczęte!",
-    "enterPassword": "Wprowadź hasło"
+    "enterPassword": "Wprowadź hasło",
+    "downloadsUsed": "Wykorzystano {{used}} z {{max}} pobrań",
+    "expiresAt": "Wygasa: {{date}}"
   },
   "tickets": {
     "responseSource": {
@@ -1145,13 +1148,24 @@
     "noUsersAvailable": "Brak dostępnych użytkowników",
     "searchBoards": "Szukaj tablic...",
     "searchBoardsLabel": "Szukaj tablic",
-    "noBoardsFound": "Nie znaleziono tablic"
+    "noBoardsFound": "Nie znaleziono tablic",
+    "notAssigned": "Nieprzypisane",
+    "searchUsersOrTeams": "Szukaj użytkowników lub zespołów...",
+    "unnamedUser": "Użytkownik bez nazwy",
+    "unnamedTeam": "Zespół bez nazwy"
   },
   "tagFilter": {
     "placeholder": "Filtruj według tagów...",
     "filter": "Filtruj",
     "selectedCount": "Wybrano: {{count}}",
     "clearAll": "Wyczyść wszystko"
+  },
+  "timePicker": {
+    "placeholder": "Wybierz godzinę",
+    "hour": "Godzina",
+    "minute": "Minuta",
+    "period": "Pora dnia",
+    "open": "Otwórz wybór godziny"
   },
   "timezonePicker": {
     "selectPlaceholder": "Wybierz strefę czasową...",

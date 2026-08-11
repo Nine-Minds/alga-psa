@@ -338,18 +338,18 @@
       "emailLabel": "Email Address",
       "emailPlaceholder": "your.email@company.com",
       "submit": "Send Login Links",
-      "sending": "Sending...",
+      "submitting": "Sending...",
       "invalidEmail": "Please enter a valid email address",
       "linksSent": "Check your email for login links",
-      "checkEmailTitle": "Check Your Email",
-      "checkEmailDescription": "If an account exists with that email address, we've sent you login links for each organization you have access to.",
-      "noEmailPrompt": "Didn't receive an email?",
-      "tips": {
-        "spamFolder": "Check your spam folder",
-        "verifyEmail": "Verify the email address is correct",
-        "contactSupport": "Contact your organization's support team"
-      },
-      "tryAnotherEmail": "Try Another Email"
+      "sent": {
+        "title": "Check Your Email",
+        "description": "If an account exists with that email address, we've sent you login links for each organization you have access to.",
+        "noEmailReceived": "Didn't receive an email?",
+        "checkSpam": "Check your spam folder",
+        "verifyAddress": "Verify the email address is correct",
+        "contactSupport": "Contact your organization's support team",
+        "tryAnother": "Try Another Email"
+      }
     }
   },
   "account": {

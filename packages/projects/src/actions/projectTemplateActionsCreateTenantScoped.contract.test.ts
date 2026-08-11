@@ -89,11 +89,14 @@ describe('project template tenant-scoped query contract', () => {
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_phases', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_dependencies', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_status_mappings', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(knex, 'statuses', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_tasks', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_checklist_items', tenant)");
     expect(actionSource).toContain("tenantScopedTable(knex, 'project_template_task_resources', tenant)");
-    expect(actionSource).toContain("tenantDb(knex, tenant).table('standard_statuses')");
+    // Status enrichment now flows through the shared typed resolver, which
+    // batch-loads the tenant statuses and global standard catalog with
+    // tenantDb-scoped queries (see projectTemplateStatusMappingResolution.ts).
+    expect(actionSource).toContain("hydrateStatusMappings(knex, tenant, rawStatusMappings)");
+    expect(actionSource).toContain('unresolved_status_mapping_count: unresolvedStatusMappingCount');
     expect(actionSource).not.toContain(".where({ tenant })");
     expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
     expect(actionSource).not.toContain('.where({ status_id: mapping.status_id, tenant })');
@@ -178,10 +181,12 @@ describe('project template tenant-scoped query contract', () => {
       '// ============================================================\n// TASK RESOURCE (ADDITIONAL AGENTS) ACTIONS'
     );
 
-    expect(actionSource).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
     expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
     expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    // Replacement catalog validation lives in the shared
+    // replaceTemplateStatusMappingCore (tenantDb-scoped), called by the action.
+    expect(actionSource).toContain('replaceTemplateStatusMappingCore(');
     expect(actionSource).not.toContain('.where({ status_id: data.status_id, tenant })');
     expect(actionSource).not.toContain('.where({ template_status_mapping_id: mappingId, tenant })');
     expect(actionSource).not.toContain('.where({ template_status_mapping_id: orderedMappingIds[i], tenant })');

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -96,7 +96,7 @@ import {
     type TicketDetailLayout,
 } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
@@ -311,6 +311,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAgentSchedule = false,
 }) => {
     const { t } = useTranslation('features/tickets');
+    // Hardcoded English, and a date that followed the browser's locale.
+    const { formatDate, locale } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -1315,19 +1317,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const localDate = utcToLocal(ticket.entered_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.entered_at));
-            setCreatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
+            setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
-        
+
         if (ticket.updated_at) {
-            const localDate = utcToLocal(ticket.updated_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.updated_at));
-            setUpdatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
+            setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat]);
+    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -3300,8 +3300,10 @@ const handleClose = () => {
                                                 id={`${id}-auto-close-banner`}
                                                 className="flex-1 min-w-[260px] rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
                                             >
-                                                {`Will close automatically on ${new Date(autoCloseState.scheduled_close_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })} unless there's new activity.`}
-                                                {autoCloseState.warning_sent_at ? ' The customer has been warned.' : ''}
+                                                {t('details.autoClose', "Will close automatically on {{date}} unless there's new activity.", {
+                                                    date: formatDate(new Date(autoCloseState.scheduled_close_at), { year: 'numeric', month: 'long', day: 'numeric' }),
+                                                })}
+                                                {autoCloseState.warning_sent_at ? ` ${t('details.autoCloseWarned', 'The customer has been warned.')}` : ''}
                                             </div>
                                         )}
                                         {checklistSummary.requiredTotal > 0 && (
@@ -3410,8 +3412,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.entered_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}
@@ -3419,8 +3420,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.updated_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}

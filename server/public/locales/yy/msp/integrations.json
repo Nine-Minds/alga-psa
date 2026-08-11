@@ -1659,7 +1659,8 @@
           "email": {
             "description": "55555",
             "label": "55555",
-            "reconnect": "55555"
+            "reconnect": "55555",
+            "perProviderIssuerNote": "55555"
           },
           "mspSso": {
             "description": "55555",

@@ -290,7 +290,8 @@
     "bulkTagsPartial": "Nie udało się dodać tagów do niektórych zadań",
     "bulkTagsFailure": "Nie udało się dodać tagów do wybranych zadań",
     "bulkTagsSuccess_few": "Dodano tagi do {{count}} zadań",
-    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań"
+    "bulkTagsSuccess_many": "Dodano tagi do {{count}} zadań",
+    "taskTypeFallback": "Zadanie"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -981,7 +982,17 @@
       "add_title": "Dodaj kolumnę statusu",
       "select_placeholder": "Wybierz status...",
       "all_in_use": "Wszystkie dostępne statusy są w użyciu",
-      "create_new": "Utwórz nowy"
+      "create_new": "Utwórz nowy",
+      "status_no_longer_exists": "Status już nie istnieje",
+      "missing_status": "Brakujący status",
+      "ambiguous_status": "Niejednoznaczny status historyczny",
+      "replace_placeholder": "Wybierz status zastępczy...",
+      "replace_status": "Zastąp status",
+      "replacing": "Zastępowanie...",
+      "replaced": "Kolumna statusu zastąpiona",
+      "replace_failed": "Nie udało się zastąpić kolumny statusu",
+      "repair_status_columns": "Napraw kolumny statusu",
+      "unresolved_apply_guard": "Kolumny statusu wymagają naprawy ({{count}})"
     },
     "list": {
       "title": "Szablony projektów",
@@ -1069,7 +1080,8 @@
         "all": "Skopiuj wszystkie zadania"
       },
       "fixErrors": "Popraw następujące błędy:",
-      "addStatus": "Dodaj nowy status"
+      "addStatus": "Dodaj nowy status",
+      "unresolved_guard": "Ten szablon ma kolumny statusu, które wymagają naprawy przed zastosowaniem."
     },
     "detail": {
       "description": "Opis:",
@@ -1813,5 +1825,13 @@
       "ready": "Gotowe: {{amount}}",
       "total": "Łącznie: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Zadanie",
+    "bug": "Błąd",
+    "feature": "Funkcja",
+    "improvement": "Ulepszenie",
+    "epic": "Epik",
+    "story": "Historyjka"
   }
 }

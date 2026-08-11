@@ -3,7 +3,7 @@
 import React from 'react';
 import { Calendar, CalendarCheck, Phone, CreditCard, Plus } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import {
@@ -26,21 +26,23 @@ import {
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
-function formatShortDate(iso: string): { month: string; day: string } {
+// These run at module scope with no hook to read the app locale from, so it is
+// passed in: omitting it would format in the browser's locale, not the app's.
+function formatShortDate(iso: string, locale: string): { month: string; day: string } {
   const d = new Date(iso);
   return {
-    month: d.toLocaleString(undefined, { month: 'short' }),
+    month: d.toLocaleString(locale, { month: 'short' }),
     day: String(d.getDate()),
   };
 }
 
-function formatTimeRange(startIso: string, endIso: string): string {
+function formatTimeRange(startIso: string, endIso: string, locale: string): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const sameDay = start.toDateString() === end.toDateString();
-  const time = (d: Date) => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const time = (d: Date) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return `${time(start)} – ${time(end)}`;
-  const day = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const day = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   return `${day(start)} – ${day(end)}`;
 }
 
@@ -126,14 +128,15 @@ export function NextVisitTile({
 }
 
 function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntrySummary; t: (key: string, defaultValue: string) => string }) {
-  const date = formatShortDate(entry.scheduledStart);
+  const { locale } = useFormatters();
+  const date = formatShortDate(entry.scheduledStart, locale);
   return (
     <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
       <BentoDateChip month={date.month} day={date.day} />
       <div className="min-w-0">
         <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
         <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
-          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd)}
+          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, locale)}
           {entry.assignedUserNames.length > 0 ? ` · ${entry.assignedUserNames.join(', ')}` : ''}
           {!entry.isUpcoming ? ` · ${t('bento.tiles.scheduleDone', 'done')}` : ''}
         </div>
@@ -156,12 +159,12 @@ function appointmentStatusVariant(status: string): BadgeVariant {
   }
 }
 
-function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null): string | null {
+function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, locale: string): string | null {
   if (!date || !time) return null;
   try {
     const dt = fromZonedTime(`${date}T${time}:00`, tz || 'UTC');
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return dt.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   } catch {
     return null;
   }
@@ -176,7 +179,8 @@ function AppointmentRequestRow({
   request: TicketAppointmentRequestSummary;
   t: (key: string, defaultValue: string) => string;
 }) {
-  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone);
+  const { locale } = useFormatters();
+  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, locale);
   const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
   return (
     <BentoRow id={id} align="start" className="justify-between">
@@ -322,10 +326,11 @@ export function CallsEmailsTile({
 }
 
 function InteractionRow({ id, interaction, t }: { id: string; interaction: TicketInteractionSummary; t: (key: string, defaultValue: string) => string }) {
+  const { locale } = useFormatters();
   return (
     <BentoRow
       id={id}
-      meta={new Date(interaction.interactionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+      meta={new Date(interaction.interactionDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
     >
       <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
         {interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction')}

@@ -12,7 +12,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
@@ -141,6 +141,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
+  // toLocaleString() follows the browser; comment timestamps belong to the app locale.
+  const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
@@ -450,7 +452,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     {...withDataAutomationId({ id: `${commentId}-timestamp` })}
                     className="text-xs font-normal text-gray-500 dark:text-[rgb(var(--color-text-400))] whitespace-nowrap"
                   >
-                    {new Date(conversation.created_at).toLocaleString(undefined, {
+                    {formatDate(new Date(conversation.created_at), {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',
@@ -478,7 +480,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]">
                     {conversation.created_at && (
                       <span>
-                        {new Date(conversation.created_at).toLocaleString()}
+                        {formatDate(new Date(conversation.created_at), { dateStyle: 'medium', timeStyle: 'short' })}
                         {conversation.updated_at &&
                          new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
                          ` (${t('conversation.edited', 'edited')})`}

@@ -31,7 +31,9 @@
     "skipDropped_one": "Skip ({{count}} ticket dropped)",
     "skipDropped_other": "Skip ({{count}} tickets dropped)",
     "createdSuccess_one": "Successfully created {{count}} ticket.",
-    "createdSuccess_other": "Successfully created {{count}} tickets."
+    "createdSuccess_other": "Successfully created {{count}} tickets.",
+    "rowLimitExceeded": "Row limit exceeded:",
+    "rowLimitDescription": "Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows."
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
@@ -1358,7 +1360,9 @@
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
       "thisTicket": "this ticket"
-    }
+    },
+    "autoClose": "Will close automatically on {{date}} unless there's new activity.",
+    "autoCloseWarned": "The customer has been warned."
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {

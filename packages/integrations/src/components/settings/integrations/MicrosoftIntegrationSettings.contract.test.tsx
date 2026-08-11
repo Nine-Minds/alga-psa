@@ -2,6 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +11,7 @@ import '@testing-library/jest-dom';
 
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
+const runMicrosoftEmailIssuerBackfillMock = vi.hoisted(() => vi.fn());
 const listMicrosoftConsumerBindingsMock = vi.hoisted(() => vi.fn());
 const setMicrosoftConsumerBindingMock = vi.hoisted(() => vi.fn());
 const createMicrosoftProfileMock = vi.hoisted(() => vi.fn());
@@ -30,6 +33,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
+  runMicrosoftEmailIssuerBackfill: (...args: unknown[]) => runMicrosoftEmailIssuerBackfillMock(...args),
   listMicrosoftConsumerBindings: (...args: unknown[]) => listMicrosoftConsumerBindingsMock(...args),
   setMicrosoftConsumerBinding: (...args: unknown[]) => setMicrosoftConsumerBindingMock(...args),
   createMicrosoftProfile: (...args: unknown[]) => createMicrosoftProfileMock(...args),
@@ -42,6 +46,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 
 vi.mock('../../../actions/integrations/microsoftActions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
+  runMicrosoftEmailIssuerBackfill: (...args: unknown[]) => runMicrosoftEmailIssuerBackfillMock(...args),
   listMicrosoftConsumerBindings: (...args: unknown[]) => listMicrosoftConsumerBindingsMock(...args),
   setMicrosoftConsumerBinding: (...args: unknown[]) => setMicrosoftConsumerBindingMock(...args),
   createMicrosoftProfile: (...args: unknown[]) => createMicrosoftProfileMock(...args),
@@ -286,6 +291,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       value: true,
     });
     getMicrosoftIntegrationStatusMock.mockReset();
+    runMicrosoftEmailIssuerBackfillMock.mockReset().mockResolvedValue({ success: true, result: { backfilled: 0, ambiguous: 0, unchanged: 0 } });
     listMicrosoftConsumerBindingsMock.mockReset();
     setMicrosoftConsumerBindingMock.mockReset();
     createMicrosoftProfileMock.mockReset();
@@ -793,5 +799,40 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(archiveMicrosoftProfileMock).toHaveBeenCalledWith('profile-2');
     });
+  });
+
+  it('loading the page is a pure read: no backfill runs and the status action receives no write opt-in', async () => {
+    render(<MicrosoftIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalled();
+    });
+    // Pure read — no runIssuerBackfill param anywhere.
+    expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalledWith();
+    // The backfill is a deliberate write: it must NOT run on page load.
+    expect(runMicrosoftEmailIssuerBackfillMock).not.toHaveBeenCalled();
+  });
+
+  it('contract: the removed runIssuerBackfill surface is gone and the backfill is only reachable via the explicit mutation action', () => {
+    const filePath = path.resolve(__dirname, 'MicrosoftIntegrationSettings.tsx');
+    const teamsFilePath = path.resolve(__dirname, 'TeamsIntegrationSettings.tsx');
+    const source = fs.readFileSync(filePath, 'utf8');
+    const teamsSource = fs.readFileSync(teamsFilePath, 'utf8');
+
+    // The read-path foot-gun is removed: neither page references it.
+    expect(source).not.toContain('runIssuerBackfill');
+    expect(teamsSource).not.toContain('runIssuerBackfill');
+    // Both pages load the shared status as a pure read.
+    expect(source).toContain('getMicrosoftIntegrationStatus()');
+    expect(teamsSource).toContain('getMicrosoftIntegrationStatus()');
+    // The email settings page invokes the explicit backfill mutation only from
+    // its deliberate save/reconnect handler — never from the load effect.
+    const loadStart = source.indexOf('const load = React.useCallback');
+    const loadEnd = source.indexOf('}, [onStatusChange, t]);', loadStart);
+    const loadHandlerSource = source.slice(loadStart, loadEnd);
+    expect(loadHandlerSource).not.toContain('runMicrosoftEmailIssuerBackfill');
+    expect(source).toContain('runMicrosoftEmailIssuerBackfill');
+    // The Teams page never touches the backfill at all.
+    expect(teamsSource).not.toContain('runMicrosoftEmailIssuerBackfill');
   });
 });

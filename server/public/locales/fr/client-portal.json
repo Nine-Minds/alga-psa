@@ -285,22 +285,22 @@
     "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer.",
     "tenantDiscovery": {
       "title": "Trouvez votre organisation",
-      "description": "Saisissez votre adresse e-mail et nous vous enverrons les liens de connexion de toutes les organisations auxquelles vous avez accès.",
+      "description": "Saisissez votre adresse e-mail et nous vous enverrons des liens de connexion pour toutes les organisations auxquelles vous avez accès.",
       "emailLabel": "Adresse e-mail",
-      "emailPlaceholder": "votre.email@entreprise.fr",
+      "emailPlaceholder": "votre.email@entreprise.com",
       "submit": "Envoyer les liens de connexion",
-      "sending": "Envoi en cours...",
+      "submitting": "Envoi en cours...",
       "invalidEmail": "Veuillez saisir une adresse e-mail valide",
-      "linksSent": "Consultez votre messagerie pour obtenir les liens de connexion",
-      "checkEmailTitle": "Consultez votre messagerie",
-      "checkEmailDescription": "Si un compte existe avec cette adresse e-mail, nous vous avons envoyé les liens de connexion de chaque organisation à laquelle vous avez accès.",
-      "noEmailPrompt": "Vous n'avez pas reçu d'e-mail ?",
-      "tips": {
-        "spamFolder": "Vérifiez votre dossier de courriers indésirables",
-        "verifyEmail": "Vérifiez que l'adresse e-mail est correcte",
-        "contactSupport": "Contactez l'équipe d'assistance de votre organisation"
-      },
-      "tryAnotherEmail": "Essayer une autre adresse e-mail"
+      "linksSent": "Consultez votre boîte de réception pour les liens de connexion",
+      "sent": {
+        "title": "Consultez votre boîte de réception",
+        "description": "Si un compte existe avec cette adresse e-mail, nous vous avons envoyé des liens de connexion pour chaque organisation à laquelle vous avez accès.",
+        "noEmailReceived": "Vous n'avez pas reçu d'e-mail ?",
+        "checkSpam": "Vérifiez votre dossier de courrier indésirable",
+        "verifyAddress": "Vérifiez que l'adresse e-mail est correcte",
+        "contactSupport": "Contactez l'équipe d'assistance de votre organisation",
+        "tryAnother": "Essayer une autre adresse e-mail"
+      }
     }
   },
   "account": {

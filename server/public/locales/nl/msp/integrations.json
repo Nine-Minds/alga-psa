@@ -1659,7 +1659,8 @@
           "email": {
             "description": "Kies het Microsoft-profiel voor inkomende en uitgaande Outlook-e-mail.",
             "label": "E-mail",
-            "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden."
+            "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden.",
+            "perProviderIssuerNote": "Bestaande postvakverbindingen behouden hun huidige Microsoft-app totdat ze opnieuw worden verbonden. Deze keuze geldt voor nieuwe postvakverbindingen."
           },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",

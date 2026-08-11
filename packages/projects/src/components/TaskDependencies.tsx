@@ -11,6 +11,7 @@ import { addTaskDependency, removeTaskDependency } from '../actions/projectTaskA
 import { useDrawer } from "@alga-psa/ui";
 import TaskEdit from './TaskEdit';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -67,6 +68,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   currentPhaseId,
 }, ref) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const depsT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`taskDependencies.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
@@ -320,7 +322,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: typeInfo.color || '#6B7280' }}
-            title={typeInfo.type_name}
+            title={taskTypeLabel(typeInfo)}
           />
         )}
         <span className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
@@ -627,7 +629,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                       <span
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: taskTypeInfo.color || '#6B7280' }}
-                        title={taskTypeInfo.type_name}
+                        title={taskTypeLabel(taskTypeInfo)}
                       />
                     )}
                     <span className="text-sm font-medium">{dep.targetTaskName}</span>

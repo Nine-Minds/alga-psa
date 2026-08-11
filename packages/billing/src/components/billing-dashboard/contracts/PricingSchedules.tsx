@@ -23,7 +23,7 @@ import { PricingScheduleDialog } from './PricingScheduleDialog';
 import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -37,6 +37,7 @@ interface PricingSchedulesProps {
 
 const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
+  const { locale } = useFormatters();
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,13 +127,13 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
     {
       title: t('pricingSchedules.list.columns.effectiveDate', { defaultValue: 'Effective Date' }),
       dataIndex: 'effective_date',
-      render: (value) => toPlainDate(value as string).toLocaleString()
+      render: (value) => toPlainDate(value as string).toLocaleString(locale)
     },
     {
       title: t('pricingSchedules.list.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value) => value
-        ? toPlainDate(value as string).toLocaleString()
+        ? toPlainDate(value as string).toLocaleString(locale)
         : t('pricingSchedules.list.values.ongoing', { defaultValue: 'Ongoing' })
     },
     {
@@ -266,9 +267,9 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <div className="text-sm font-medium">
-                                    {toPlainDate(schedule.effective_date).toLocaleString()}
+                                    {toPlainDate(schedule.effective_date).toLocaleString(locale)}
                                     {schedule.end_date && (
-                                      <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString()}</span>
+                                      <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString(locale)}</span>
                                     )}
                                     {!schedule.end_date && index === schedules.length - 1 && (
                                       <span className="text-muted-foreground">

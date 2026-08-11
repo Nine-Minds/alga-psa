@@ -2,6 +2,7 @@ import { getSecretProviderInstance } from '../../core/secretProvider';
 import { getAdminConnection } from '../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import type { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
+import { MICROSOFT_TEAMS_APP_CLIENT_ID } from './microsoftGraphEndpoints';
 
 export type MicrosoftEmailCredentialSource = 'profile' | 'vendor' | 'environment' | 'legacy';
 
@@ -51,6 +52,11 @@ function hasEmailCapability(value: unknown): boolean {
   return !Array.isArray(capabilities) || capabilities.includes('email');
 }
 
+function isTeamsAppClientId(clientId: string): boolean {
+  const normalizedClientId = clientId.trim().toLowerCase();
+  return Boolean(normalizedClientId) && normalizedClientId === MICROSOFT_TEAMS_APP_CLIENT_ID.toLowerCase();
+}
+
 async function resolveBoundProfileCredentials(
   tenant: string
 ): Promise<MicrosoftEmailRuntimeCredentials | null> {
@@ -69,7 +75,54 @@ async function resolveBoundProfileCredentials(
       'profile.capabilities'
     );
 
-  if (!profile || !hasEmailCapability(profile.capabilities)) return null;
+  if (!profile || !hasEmailCapability(profile.capabilities) || isTeamsAppClientId(normalized(profile.client_id))) return null;
+  const secretProvider = await getSecretProviderInstance();
+  const clientSecret = normalized(
+    await secretProvider.getTenantSecret(tenant, profile.client_secret_ref)
+  );
+  const clientId = normalized(profile.client_id);
+  if (!clientId || !clientSecret) return null;
+
+  return {
+    clientId,
+    clientSecret,
+    tenantId: normalized(profile.tenant_id) || 'common',
+    profileId: profile.profile_id,
+    clientSecretRef: profile.client_secret_ref,
+    source: 'profile',
+  };
+}
+
+/**
+ * Resolve credentials from the provider row's pinned profile (the persisted
+ * `microsoft_profile_id` + `client_secret_ref`), which is authoritative for the
+ * app that issued the refresh token. Unlike the current Email binding this
+ * keeps working after a binding change, and it lets a same-client secret
+ * rotation flow through without a reconnect.
+ */
+async function resolveProviderPinnedProfileCredentials(
+  tenant: string,
+  vendorConfig: NonNullable<EmailProviderConfig['provider_config']>
+): Promise<MicrosoftEmailRuntimeCredentials | null> {
+  const profileId = normalized(vendorConfig.microsoft_profile_id);
+  const secretRef = normalized(vendorConfig.client_secret_ref);
+  if (!profileId || !secretRef) return null;
+
+  const knex = await getAdminConnection();
+  const db = tenantDb(knex, tenant);
+  const profile = await db
+    .table('microsoft_profiles')
+    .where({ profile_id: profileId })
+    .first(
+      'profile_id',
+      'client_id',
+      'client_secret_ref',
+      'tenant_id',
+      'capabilities',
+      'is_archived'
+    );
+
+  if (!profile || profile.is_archived || !hasEmailCapability(profile.capabilities) || isTeamsAppClientId(normalized(profile.client_id))) return null;
   const secretProvider = await getSecretProviderInstance();
   const clientSecret = normalized(
     await secretProvider.getTenantSecret(tenant, profile.client_secret_ref)
@@ -139,26 +192,49 @@ async function resolveFallbackCredentials(
 
 /**
  * Resolves credentials before adapter construction. The client id stored on the
- * vendor row pins an existing refresh token to its issuing app. A newly-bound
- * profile may supply a rotated secret only when its client id still matches.
+ * vendor row pins an existing refresh token to its issuing app. A provider
+ * pinned to a tenant profile (persisted `microsoft_profile_id`) is resolved
+ * *only* through that profile: an unresolvable pin (profile deleted, archived,
+ * secret missing, capability removed) is a hard failure, never a silent
+ * fallback to the current Email binding. Providers without a profile pin
+ * (managed or legacy rows) fall back to stored/environment/legacy credentials
+ * that still match the pinned client id; the current Email binding may narrow a
+ * same-client candidate but never supplies a different app.
  */
 export async function buildMicrosoftEmailProviderConfig(
   config: EmailProviderConfig
 ): Promise<EmailProviderConfig> {
   const vendorConfig = config.provider_config || {};
   const issuingClientId = normalized(vendorConfig.client_id);
-  const profileCredentials = await resolveBoundProfileCredentials(config.tenant);
-  const fallbackCredentials = await resolveFallbackCredentials(
-    config.tenant,
-    vendorConfig,
-    issuingClientId
-  );
+  const profileId = normalized(vendorConfig.microsoft_profile_id);
+  const hasProfilePin = Boolean(profileId);
 
-  const selected = selectMicrosoftEmailRuntimeCredentials({
-    issuingClientId,
-    profileCredentials,
-    fallbackCredentials,
-  });
+  let selected: MicrosoftEmailRuntimeCredentials | null = null;
+  if (hasProfilePin) {
+    const pinnedProfileCredentials = await resolveProviderPinnedProfileCredentials(config.tenant, vendorConfig);
+    if (!pinnedProfileCredentials) {
+      throw new Error(
+        `Microsoft email provider ${config.id} is pinned to profile ${profileId}, but that profile's credentials cannot be resolved (profile deleted, archived, or its secret/capability missing). Reconnect the mailbox to re-authorize it. (ms_email_provider_not_found)`
+      );
+    }
+    if (issuingClientId && !isSameClientId(issuingClientId, pinnedProfileCredentials.clientId)) {
+      throw new Error(
+        `Microsoft email provider ${config.id} is pinned to profile ${profileId} with client ${pinnedProfileCredentials.clientId}, which does not match the persisted issuing client ${issuingClientId}. Reconnect the mailbox to re-authorize it. (ms_email_client_mismatch_reconnect_required)`
+      );
+    }
+    selected = pinnedProfileCredentials;
+  } else {
+    const [boundProfileCredentials, fallbackCredentials] = await Promise.all([
+      resolveBoundProfileCredentials(config.tenant),
+      resolveFallbackCredentials(config.tenant, vendorConfig, issuingClientId),
+    ]);
+
+    selected = selectMicrosoftEmailRuntimeCredentials({
+      issuingClientId,
+      profileCredentials: boundProfileCredentials,
+      fallbackCredentials,
+    });
+  }
 
   if (!selected) {
     throw new Error(
@@ -178,4 +254,8 @@ export async function buildMicrosoftEmailProviderConfig(
       resolved_client_secret_ref: selected.clientSecretRef,
     },
   };
+}
+
+function isSameClientId(left: string, right: string): boolean {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
 }

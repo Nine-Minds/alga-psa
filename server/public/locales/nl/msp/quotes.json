@@ -752,7 +752,7 @@
       "templateGenerationFailed": "Voorbeeldsjabloon kan niet worden gegenereerd vanuit de huidige werkruimte."
     },
     "pipeline": {
-      "render": "Veroorzaken",
+      "render": "Renderen",
       "shape": "Vorm",
       "renderFailed": "Renderen mislukt.",
       "shapeFailed": "Shape mislukt.",

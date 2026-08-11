@@ -1,0 +1,11 @@
+Combined single-invocation run (both suites in one vitest invocation) at after-commit round HEAD.
+
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10833ms 144 MB heap used
+   ✓ Inbound email durable inbox (integration) > replay of a threaded reply is idempotent: stable IDs, one comment, no new outbox rows  684ms
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (29 tests) 12235ms 381 MB heap used
+
+ Test Files  2 passed (2)
+      Tests  74 passed (74)
+   Start at  03:45:40
+   Duration  24.06s (transform 1.50s, setup 53ms, collect 535ms, tests 23.07s, environment 0ms, prepare 26ms)
+

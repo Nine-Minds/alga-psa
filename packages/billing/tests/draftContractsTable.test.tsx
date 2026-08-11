@@ -45,8 +45,14 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       return result;
     },
   }),
+  // Faithful enough to catch the regression these date tests exist for:
+  // String(value) would pass whatever the component did with the locale.
   useFormatters: () => ({
-    formatDate: (value: unknown) => String(value),
+    locale: 'en',
+    formatDate: (value: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en', options).format(
+        typeof value === 'string' ? new Date(value) : value
+      ),
     formatCurrency: (value: number) => `$${value}`,
   }),
 }));
@@ -247,7 +253,11 @@ describe('Drafts tab DataTable', () => {
 
     render(<Contracts />);
 
-    expect(await screen.findByText(createdAt.toLocaleDateString())).toBeInTheDocument();
+    // The app locale, not the runner's: asserting toLocaleDateString() here
+    // would have passed against the browser-locale bug this test names.
+    expect(
+      await screen.findByText(new Intl.DateTimeFormat('en').format(createdAt))
+    ).toBeInTheDocument();
   });
 
   it('renders last modified date in localized format (T015)', async () => {
@@ -265,7 +275,9 @@ describe('Drafts tab DataTable', () => {
 
     render(<Contracts />);
 
-    expect(await screen.findByText(updatedAt.toLocaleDateString())).toBeInTheDocument();
+    expect(
+      await screen.findByText(new Intl.DateTimeFormat('en').format(updatedAt))
+    ).toBeInTheDocument();
   });
 
   it('renders actions dropdown for each row (T016)', async () => {

@@ -251,7 +251,8 @@
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen. Bitte versuchen Sie es erneut.",
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
-        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten"
+        "senderDisplayNameInvalid": "Der Anzeigename darf keine Anführungszeichen, spitzen Klammern oder Zeilenumbrüche enthalten",
+        "issuerRequired": "Wählen Sie vor der Anmeldung eine Microsoft-App aus."
       },
       "requiredFields": {
         "providerName": "Konfigurationsname",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
       },
       "readiness": {
-        "checking": "Microsoft-Einrichtung wird geprüft…",
-        "ready": "Microsoft ist eingerichtet. Melden Sie sich zum Abschluss mit diesem Postfach an.",
-        "pending": "Warten auf Ihren Microsoft 365-Administrator. Die Einrichtung wurde unter „Anbieter“ gestartet, aber noch nicht genehmigt.",
-        "openProviders": "Anbieter öffnen",
-        "notConfigured": "Microsoft ist noch nicht eingerichtet. Richten Sie Microsoft einmal unter „Anbieter“ ein und kehren Sie dann zurück.",
-        "setUpInProviders": "Unter „Anbieter“ einrichten"
+        "openProviders": "Anbieter öffnen"
+      },
+      "issuer": {
+        "title": "Microsoft-App, die dieses Postfach autorisiert",
+        "description": "Wählen Sie aus, welche Anwendung sich als dieses Postfach anmeldet. Diese Auswahl wird mit dem Postfach gespeichert und wirkt sich nicht auf andere Dienste aus.",
+        "managedLabel": "AlgaPSA-App (verwaltet von Nine Minds)",
+        "managedDescription": "Auf Ihrer Seite ist keine Registrierung einer Microsoft-App erforderlich.",
+        "recommended": "Empfohlen",
+        "currentApp": "Aktuelle App: {{app}}",
+        "selectedApp": "Ausgewählte App: {{app}}",
+        "pendingReauth": "Erneute Autorisierung ausstehend",
+        "switchWarning": "Der Wechsel der Microsoft-App erfordert eine erneute Verbindung dieses Postfachs. Melden Sie sich erneut bei Microsoft an, um den Wechsel abzuschließen.",
+        "noneAvailable": "Um Microsoft 365 zu verbinden, richten Sie zuerst eine Microsoft-App unter Anbieter ein und kommen Sie dann hierher zurück.",
+        "retry": "Erneut versuchen",
+        "pendingConsentEmpty": "Ihre Microsoft-App wartet auf die Genehmigung eines Microsoft-365-Administrators. Sobald sie unter Anbieter genehmigt wurde, kehren Sie hierher zurück, um sich anzumelden.",
+        "pendingConsentHint": "Ihre eigene Microsoft-App wartet noch auf die Genehmigung eines Microsoft-365-Administrators.",
+        "ownAppPrompt": "Möchten Sie sich lieber mit Ihrer eigenen Microsoft-App anmelden?",
+        "ownAppSetupLink": "Unter Anbieter einrichten"
       }
     },
     "gmail": {

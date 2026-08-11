@@ -285,7 +285,7 @@
       "import": {
         "title": "Importar tickets"
       },
-      "title": "Tickets de cliente",
+      "title": "Tickets",
       "detail": {
         "title": "Ticket nº {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Detalhes do ticket"
@@ -444,6 +444,7 @@
       }
     },
     "billing": {
+      "title": "Cobrança",
       "credits": {
         "title": "Créditos"
       }

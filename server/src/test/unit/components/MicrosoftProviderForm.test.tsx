@@ -17,9 +17,32 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   upsertEmailProvider: vi.fn(),
   initiateEmailOAuth: vi.fn().mockResolvedValue({ success: false, error: 'not used in unit tests' }),
   getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
+  getMicrosoftEmailIssuerOptions: vi.fn(),
 }));
 
 import * as emailProviderActions from '@alga-psa/integrations/actions';
+
+const managedIssuers = {
+  success: true,
+  issuers: {
+    managed: {
+      kind: 'managed',
+      label: 'AlgaPSA app (managed by Nine Minds)',
+      clientId: 'managed-client-id',
+      recommended: true,
+    },
+    profiles: [
+      {
+        kind: 'profile',
+        label: 'Acme Email App',
+        clientId: 'acme-client-id',
+        profileId: 'profile-1',
+        tenantId: 'tenant-dir-1',
+      },
+    ],
+    recommended: { kind: 'managed', clientId: 'managed-client-id' },
+  },
+};
 
 describe('MicrosoftProviderForm', () => {
   const mockOnSuccess = vi.fn();
@@ -40,6 +63,7 @@ describe('MicrosoftProviderForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue(managedIssuers as any);
     // Mock window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -176,6 +200,7 @@ describe('MicrosoftProviderForm', () => {
         mailbox: 'test@microsoft.com',
         isActive: true,
         inboundTicketDefaultsId: undefined,
+        microsoftIssuer: { kind: 'managed', clientId: 'managed-client-id' },
         microsoftConfig: {
           client_id: '',
           client_secret: '',
@@ -211,15 +236,57 @@ describe('MicrosoftProviderForm', () => {
     });
   });
 
-  it('shows the ready state and enables Microsoft sign-in', () => {
+  it('enables Microsoft sign-in once an app is selected, without a setup banner', async () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    expect(screen.getByText('Microsoft is set up. Sign in as this mailbox to finish.')).toBeInTheDocument();
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
     expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
-    expect(screen.queryByText(/platform-managed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Microsoft is set up. Sign in as this mailbox to finish.')).not.toBeInTheDocument();
   });
 
-  it('shows one Providers action while administrator approval is pending', () => {
+  it('offers the own-app path as a quiet prompt when only the managed app exists', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: {
+        managed: managedIssuers.issuers.managed,
+        profiles: [],
+        recommended: { kind: 'managed', clientId: 'managed-client-id' },
+      },
+    } as any);
+
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        emailSetup={{
+          state: 'not_configured',
+          source: null,
+          hosted: true,
+          platformOffered: true,
+          automatedCreationAvailable: true,
+        }}
+      />
+    );
+
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+    expect(screen.getByText('Prefer to sign in with your own Microsoft app?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Set it up in Providers/i })).toBeInTheDocument();
+    // Optional path guidance is not a warning and never blocks sign-in.
+    expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
+  });
+
+  it('keeps sign-in available and shows a quiet status while the own app awaits admin approval', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: {
+        managed: managedIssuers.issuers.managed,
+        profiles: [],
+        recommended: { kind: 'managed', clientId: 'managed-client-id' },
+      },
+    } as any);
+
     renderWithProviders(
       <MicrosoftProviderForm
         {...defaultProps}
@@ -234,27 +301,63 @@ describe('MicrosoftProviderForm', () => {
       />
     );
 
-    expect(screen.getByText(/Waiting for your Microsoft 365 administrator/i)).toBeInTheDocument();
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+    expect(
+      screen.getByText(/still waiting for Microsoft 365 administrator approval/i)
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Open Providers/i })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeEnabled();
   });
 
-  it('points an unconfigured mailbox to Providers', () => {
+  it('warns and points to Providers only when no Microsoft app can be selected', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: { managed: undefined, profiles: [], recommended: null },
+    } as any);
+
     renderWithProviders(
       <MicrosoftProviderForm
         {...defaultProps}
         emailSetup={{
           state: 'not_configured',
           source: null,
-          hosted: true,
-          platformOffered: true,
-          automatedCreationAvailable: true,
+          hosted: false,
+          platformOffered: false,
+          automatedCreationAvailable: false,
         }}
       />
     );
 
-    expect(screen.getByText(/Microsoft isn't set up yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Set up in Providers/i })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/first set up a Microsoft app in Providers/i)
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Open Providers/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
+  });
+
+  it('explains the pending own app in the empty state while approval is outstanding', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: { managed: undefined, profiles: [], recommended: null },
+    } as any);
+
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        emailSetup={{
+          state: 'pending_admin_consent',
+          source: 'tenant_app',
+          hosted: false,
+          platformOffered: false,
+          automatedCreationAvailable: false,
+          profileId: 'microsoft-profile-123',
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByText(/waiting for Microsoft 365 administrator approval/i)
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
   });
 
@@ -312,5 +415,204 @@ describe('MicrosoftProviderForm', () => {
     await user.clear(maxEmailsInput);
     await user.type(maxEmailsInput, '200');
     expect(maxEmailsInput).toHaveValue(200);
+  });
+
+  it('lists the managed issuer as Recommended alongside eligible tenant apps', async () => {
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    expect(await screen.findByText('AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+    expect(screen.getByText('Recommended')).toBeInTheDocument();
+    expect(screen.getByText('Acme Email App')).toBeInTheDocument();
+  });
+
+  it('carries the selected issuer and create purpose into OAuth initiation for a new mailbox', async () => {
+    vi.mocked(emailProviderActions.upsertEmailProvider).mockResolvedValueOnce({
+      provider: {
+        id: 'provider-new',
+        tenant: 'test-tenant-123',
+        providerType: 'microsoft',
+        providerName: 'New Microsoft',
+        mailbox: 'new@microsoft.com',
+        isActive: true,
+        status: 'configuring',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    } as any);
+    vi.mocked(emailProviderActions.initiateEmailOAuth).mockResolvedValueOnce({
+      success: true,
+      authUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+      state: 'signed-token',
+    } as any);
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    await user.type(screen.getByPlaceholderText('e.g., Support Mailbox (internal)'), 'New Microsoft');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'new@microsoft.com');
+    await user.click(screen.getByRole('button', { name: /sign in with microsoft/i }));
+
+    await waitFor(() => {
+      expect(emailProviderActions.initiateEmailOAuth).toHaveBeenCalledWith({
+        provider: 'microsoft',
+        providerId: 'provider-new',
+        purpose: 'create',
+        issuer: { kind: 'managed', clientId: 'managed-client-id' },
+      });
+    });
+  });
+
+  it('warns that switching the Microsoft app requires reconnecting an existing mailbox', async () => {
+    const existingProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'acme-client-id',
+        microsoft_profile_id: 'profile-1',
+        client_secret_ref: 'microsoft_profile_profile-1_client_secret',
+        tenant_id: 'tenant-dir-1',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider as any} />);
+    const managedOption = await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    expect(screen.queryByText(/changing the microsoft app requires reconnecting/i)).not.toBeInTheDocument();
+
+    await user.click(managedOption);
+
+    expect(
+      screen.getByText(
+        'Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the persisted app labeled Current while a different app is selected pending reauthorization', async () => {
+    const existingProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'acme-client-id',
+        microsoft_profile_id: 'profile-1',
+        client_secret_ref: 'microsoft_profile_profile-1_client_secret',
+        tenant_id: 'tenant-dir-1',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Persisted app is current; nothing selected differently yet, so no pending state.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+
+    // Select the managed app (a different app than the persisted Acme profile).
+    await user.click(screen.getByText('AlgaPSA app (managed by Nine Minds)'));
+
+    // Current must still be the persisted issuer; the new pick is selected/pending.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.getByText('Selected app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+    expect(screen.getByText('Pending reauthorization')).toBeInTheDocument();
+  });
+
+  it('labels the persisted issuer Current with no pending state after a successful reconnect persistence', async () => {
+    const postReconnectProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'managed-client-id',
+        client_secret_ref: 'microsoft_managed_app_client_secret',
+        tenant_id: 'common',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={postReconnectProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Beta (managed) is now the persisted issuer: it is Current, and because the
+    // form defaults to the persisted app there is no pending/switch state.
+    expect(screen.getByText('Current app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/changing the microsoft app requires reconnecting/i)).not.toBeInTheDocument();
+  });
+
+  it('shows no pending state when the already-persisted app is reselected', async () => {
+    const existingProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'acme-client-id',
+        microsoft_profile_id: 'profile-1',
+        client_secret_ref: 'microsoft_profile_profile-1_client_secret',
+        tenant_id: 'tenant-dir-1',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Defaults to the persisted Acme profile: current, no pending.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+
+    // Switch away, then reselect the persisted app: pending state clears.
+    await user.click(screen.getByText('AlgaPSA app (managed by Nine Minds)'));
+    expect(screen.getByText('Selected app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Acme Email App'));
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/changing the microsoft app requires reconnecting/i)).not.toBeInTheDocument();
   });
 });

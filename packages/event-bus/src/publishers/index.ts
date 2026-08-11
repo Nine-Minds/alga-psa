@@ -14,6 +14,16 @@ function getEmailEventChannel(): string {
 export interface PublishOptions {
   channel?: string;
   workflow?: WorkflowPublishHooks;
+  /** Caller-supplied stable event id (used by the inbound outbox dispatcher). */
+  eventId?: string;
+  /** Strict mode propagates an unsuccessful stream write (dispatcher only). */
+  strict?: boolean;
+  /**
+   * Recovery re-publish: bypasses the event-bus processed-event/handler Redis
+   * sets so incomplete inbound-outbox consumer deliveries re-run. Consumers
+   * that already completed are skipped by their own idempotency ledger.
+   */
+  force?: boolean;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -72,20 +82,43 @@ export async function publishEvent(
     const channel = options?.channel;
 
     // Always publish to the default global channel first (for workflows)
-    await getEventBus().publish(event as any, { workflow: options?.workflow });
+    await getEventBus().publish(event as any, {
+      workflow: options?.workflow,
+      eventId: options?.eventId,
+      strict: options?.strict,
+      force: options?.force,
+    });
 
     // If this is an internal notification event, publish to the internal-notifications channel
     if (isInternalNotificationEvent && !channel) {
-      await getEventBus().publish(event as any, { channel: 'internal-notifications', workflow: options?.workflow });
+      await getEventBus().publish(event as any, {
+        channel: 'internal-notifications',
+        workflow: options?.workflow,
+        eventId: options?.eventId,
+        strict: options?.strict,
+        force: options?.force,
+      });
     }
 
     // If this is an email event type and no specific channel was provided,
     // also publish to the email channel for email notifications
     if (isEmailEvent && !channel) {
-      await getEventBus().publish(event as any, { channel: getEmailEventChannel(), workflow: options?.workflow });
+      await getEventBus().publish(event as any, {
+        channel: getEmailEventChannel(),
+        workflow: options?.workflow,
+        eventId: options?.eventId,
+        strict: options?.strict,
+        force: options?.force,
+      });
     } else if (channel) {
       // If a specific channel was provided, publish to that channel as well
-      await getEventBus().publish(event as any, { channel, workflow: options?.workflow });
+      await getEventBus().publish(event as any, {
+        channel,
+        workflow: options?.workflow,
+        eventId: options?.eventId,
+        strict: options?.strict,
+        force: options?.force,
+      });
     }
   } catch (error) {
     logger.error('[EventPublisher] Failed to publish event:', {

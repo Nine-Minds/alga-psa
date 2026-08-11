@@ -848,7 +848,7 @@
     "placeholders": {
       "title": "Entrez le titre du ticket",
       "description": "Décrivez le problème...",
-      "loadingBoards": "Chargement des planches...",
+      "loadingBoards": "Chargement des tableaux...",
       "selectBoard": "Sélectionnez le tableau...",
       "selectBoardFirst": "Sélectionnez d'abord le tableau...",
       "loadingStatuses": "Chargement des statuts...",

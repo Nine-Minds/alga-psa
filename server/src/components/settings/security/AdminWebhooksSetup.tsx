@@ -27,7 +27,7 @@ import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/V
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isEnterprise } from '@alga-psa/core/features';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
@@ -168,8 +168,12 @@ const DEFAULT_FORM: WebhookFormState = {
 
 const DELIVERY_PAGE_SIZE = 10;
 
-function formatDateTime(value: string | null, neverLabel: string): string {
-  return value ? new Date(value).toLocaleString() : neverLabel;
+// Module scope has no hook to read the locale from, so it is passed in rather
+// than omitted — omitting it silently means the browser's, not the app's.
+function formatDateTime(value: string | null, locale: string, neverLabel: string): string {
+  return value
+    ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+    : neverLabel;
 }
 
 function formatPercent(value: number): string {
@@ -520,6 +524,7 @@ function formatInboundHandlerLabel(
 
 function InboundWebhooksListView() {
   const { t } = useTranslation('msp/profile');
+  const { locale } = useFormatters();
   const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
   const [inboundActions, setInboundActions] = useState<InboundActionDefinitionView[]>([]);
   const [workflowOptions, setWorkflowOptions] = useState<InboundWorkflowOptionView[]>([]);
@@ -729,6 +734,7 @@ function InboundWebhooksListView() {
       dataIndex: 'updatedAt',
       render: (_value, webhook) => formatDateTime(
         (lastDeliveries[webhook.inboundWebhookId]?.receivedAt as string | undefined) ?? null,
+        locale,
         neverLabel,
       ),
     },
@@ -818,7 +824,7 @@ function InboundWebhooksListView() {
         </DropdownMenu>
       ),
     },
-  ], [handleInboundViewClick, lastDeliveries, neverLabel, t]);
+  ], [handleInboundViewClick, lastDeliveries, locale, neverLabel, t]);
 
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
@@ -909,7 +915,7 @@ function InboundWebhooksListView() {
     {
       title: t('security.webhooks.inbound.deliveryLog.columns.received'),
       dataIndex: 'receivedAt',
-      render: (value) => formatDateTime(value as string | null, neverLabel),
+      render: (value) => formatDateTime(value as string | null, locale, neverLabel),
     },
     {
       title: t('security.webhooks.inbound.deliveryLog.columns.status'),
@@ -951,7 +957,7 @@ function InboundWebhooksListView() {
         </Button>
       ),
     },
-  ], [neverLabel, t]);
+  ], [locale, neverLabel, t]);
 
   const inboundDeliveryStatusOptions = useMemo(() => [
     { value: 'all', label: t('security.webhooks.inbound.deliveryLog.allStatuses') },
@@ -1607,7 +1613,7 @@ function InboundWebhooksListView() {
               {identityForm.autoDisabledAt ? (
                 <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   {t('security.webhooks.inbound.active.autoDisabled', {
-                    date: formatDateTime(identityForm.autoDisabledAt as string, neverLabel),
+                    date: formatDateTime(identityForm.autoDisabledAt as string, locale, neverLabel),
                   })}
                 </div>
               ) : null}
@@ -1658,7 +1664,7 @@ function InboundWebhooksListView() {
                   <div className="mt-2 text-xs text-gray-500">
                     {sampleCaptureActive
                       ? t('security.webhooks.inbound.sample.captureActive', {
-                        expiresAt: formatDateTime(identityForm.sampleCaptureExpiresAt as string, neverLabel),
+                        expiresAt: formatDateTime(identityForm.sampleCaptureExpiresAt as string, locale, neverLabel),
                       })
                       : identityForm.samplePayload
                         ? t('security.webhooks.inbound.sample.sampleAvailable')
@@ -1979,7 +1985,7 @@ function InboundWebhooksListView() {
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.received')}</dt>
-                <dd className="text-sm text-gray-900">{formatDateTime(selectedInboundDelivery.receivedAt as string, neverLabel)}</dd>
+                <dd className="text-sm text-gray-900">{formatDateTime(selectedInboundDelivery.receivedAt as string, locale, neverLabel)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.status')}</dt>
@@ -2093,6 +2099,7 @@ function InboundWebhooksListView() {
 
 function OutboundWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
+  const { locale } = useFormatters();
   const [webhooks, setWebhooks] = useState<WebhookSettingsView[]>([]);
   const [eventOptions, setEventOptions] = useState<string[]>([]);
   const [stats, setStats] = useState<WebhookStatsSnapshot | null>(null);
@@ -2461,7 +2468,7 @@ function OutboundWebhooksSetup() {
     {
       title: t('security.webhooks.list.columns.lastDelivery'),
       dataIndex: 'lastDeliveryAt',
-      render: (value) => formatDateTime(value as string | null, neverLabel),
+      render: (value) => formatDateTime(value as string | null, locale, neverLabel),
     },
     {
       title: t('security.webhooks.list.columns.success'),
@@ -2506,7 +2513,7 @@ function OutboundWebhooksSetup() {
         </DropdownMenu>
       ),
     },
-  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, handleViewClick, neverLabel, t]);
+  ], [handleDeleteFromRow, handleEditClick, handleToggleActiveFor, handleViewClick, locale, neverLabel, t]);
 
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
@@ -3003,6 +3010,7 @@ function DeliveriesTabBody(props: {
     testing, rotating, saving, neverLabel, noResponseCodeLabel,
     onSendTest, onRotateSecret, onToggleActive, onRetry, onLoadDeliveries, t,
   } = props;
+  const { locale } = useFormatters();
 
   if (!selectedWebhook) return null;
 
@@ -3103,7 +3111,7 @@ function DeliveriesTabBody(props: {
                         </div>
                       </td>
                       <td className="py-3 pr-4 align-top text-gray-700">
-                        {formatDateTime(delivery.attemptedAt, neverLabel)}
+                        {formatDateTime(delivery.attemptedAt, locale, neverLabel)}
                       </td>
                       <td className="py-3 pr-4 align-top">
                         <div className="text-gray-700">

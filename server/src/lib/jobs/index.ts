@@ -15,6 +15,11 @@ import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './ha
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
+import {
+  inboundEmailRecoveryHandler,
+  InboundEmailRecoveryJobData,
+  INBOUND_EMAIL_RECOVERY_JOB,
+} from './handlers/inboundEmailRecoveryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -202,6 +207,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register email webhook maintenance handler
     jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
       await emailWebhookMaintenanceHandler(job);
+    });
+
+    // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
+    jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
+      await inboundEmailRecoveryHandler(job);
     });
 
     // Register renewal queue processing handler
@@ -772,6 +782,21 @@ export const scheduleEmailWebhookMaintenanceJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<EmailWebhookMaintenanceJobData>(
     'email-webhook-maintenance',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleInboundEmailRecoveryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/1 * * * *' // Every minute
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<InboundEmailRecoveryJobData>(
+    INBOUND_EMAIL_RECOVERY_JOB,
     cronExpression,
     { tenantId }
   );

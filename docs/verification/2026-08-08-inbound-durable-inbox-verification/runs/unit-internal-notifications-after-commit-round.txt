@@ -1,0 +1,9 @@
+RUN of server/src/test/unit/internal-notifications/ at after-commit round HEAD (includes the 3 new createNotificationFromTemplateInternal after-commit unit tests and the updated @alga-psa/db mock).
+
+ ✓ src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts (4 tests) 2ms 67 MB heap used
+
+ Test Files  15 passed (15)
+      Tests  146 passed (146)
+   Start at  03:46:08
+   Duration  1.58s (transform 635ms, setup 86ms, collect 964ms, tests 138ms, environment 0ms, prepare 26ms)
+

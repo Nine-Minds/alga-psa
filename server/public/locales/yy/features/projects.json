@@ -286,7 +286,8 @@
     "bulkTasksMovedSuccess": "55555 {{count}} 55555",
     "bulkTasksMovedToPhase": "55555 {{count}} 55555 {{phaseName}} 55555",
     "moveTasksTitle": "55555",
-    "confirmMoveTasksMessage": "55555 {{count}} 55555 {{targetPhase}} 55555"
+    "confirmMoveTasksMessage": "55555 {{count}} 55555 {{targetPhase}} 55555",
+    "taskTypeFallback": "55555"
   },
   "taskForm": {
     "addTitle": "55555",
@@ -959,7 +960,17 @@
       "add_title": "55555",
       "select_placeholder": "55555",
       "all_in_use": "55555",
-      "create_new": "55555"
+      "create_new": "55555",
+      "status_no_longer_exists": "55555",
+      "missing_status": "55555",
+      "ambiguous_status": "55555",
+      "replace_placeholder": "55555",
+      "replace_status": "55555",
+      "replacing": "55555",
+      "replaced": "55555",
+      "replace_failed": "55555",
+      "repair_status_columns": "55555",
+      "unresolved_apply_guard": "55555 {{count}} 55555"
     },
     "list": {
       "title": "55555",
@@ -1047,7 +1058,8 @@
         "all": "55555"
       },
       "fixErrors": "55555",
-      "addStatus": "55555"
+      "addStatus": "55555",
+      "unresolved_guard": "55555"
     },
     "detail": {
       "description": "55555",
@@ -1787,5 +1799,13 @@
       "ready": "55555 {{amount}} 55555",
       "total": "55555 {{amount}} 55555"
     }
+  },
+  "taskTypes": {
+    "task": "55555",
+    "bug": "55555",
+    "feature": "55555",
+    "improvement": "55555",
+    "epic": "55555",
+    "story": "55555"
   }
 }

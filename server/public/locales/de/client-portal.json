@@ -284,23 +284,23 @@
     "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
     "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen.",
     "tenantDiscovery": {
-      "title": "Ihre Organisation finden",
-      "description": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
+      "title": "Finden Sie Ihre Organisation",
+      "description": "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
       "emailLabel": "E-Mail-Adresse",
-      "emailPlaceholder": "ihre.email@unternehmen.de",
+      "emailPlaceholder": "ihre.email@firma.com",
       "submit": "Anmeldelinks senden",
-      "sending": "Wird gesendet...",
+      "submitting": "Wird gesendet...",
       "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
-      "linksSent": "Prüfen Sie Ihre E-Mails auf Anmeldelinks",
-      "checkEmailTitle": "Prüfen Sie Ihre E-Mails",
-      "checkEmailDescription": "Wenn ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen Anmeldelinks für jede Organisation gesendet, auf die Sie Zugriff haben.",
-      "noEmailPrompt": "Keine E-Mail erhalten?",
-      "tips": {
-        "spamFolder": "Prüfen Sie Ihren Spam-Ordner",
-        "verifyEmail": "Prüfen Sie, ob die E-Mail-Adresse korrekt ist",
-        "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation"
-      },
-      "tryAnotherEmail": "Andere E-Mail-Adresse verwenden"
+      "linksSent": "Prüfen Sie Ihren Posteingang auf Anmeldelinks",
+      "sent": {
+        "title": "Prüfen Sie Ihre E-Mails",
+        "description": "Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen Anmeldelinks für jede Organisation gesendet, auf die Sie Zugriff haben.",
+        "noEmailReceived": "Keine E-Mail erhalten?",
+        "checkSpam": "Prüfen Sie Ihren Spam-Ordner",
+        "verifyAddress": "Prüfen Sie, ob die E-Mail-Adresse korrekt ist",
+        "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation",
+        "tryAnother": "Andere E-Mail-Adresse versuchen"
+      }
     }
   },
   "account": {

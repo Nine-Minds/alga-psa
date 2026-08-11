@@ -285,22 +285,22 @@
     "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą.",
     "tenantDiscovery": {
       "title": "Znajdź swoją organizację",
-      "description": "Wpisz swój adres e-mail, a wyślemy linki logowania do wszystkich organizacji, do których masz dostęp.",
+      "description": "Wpisz swój adres e-mail, a wyślemy Ci linki logowania do wszystkich organizacji, do których masz dostęp.",
       "emailLabel": "Adres e-mail",
-      "emailPlaceholder": "twoj.email@firma.pl",
+      "emailPlaceholder": "twoj.email@firma.com",
       "submit": "Wyślij linki logowania",
-      "sending": "Wysyłanie...",
+      "submitting": "Wysyłanie...",
       "invalidEmail": "Wpisz prawidłowy adres e-mail",
-      "linksSent": "Sprawdź, czy linki logowania dotarły na Twój adres e-mail",
-      "checkEmailTitle": "Sprawdź swoją pocztę",
-      "checkEmailDescription": "Jeśli istnieje konto z tym adresem e-mail, wysłaliśmy linki logowania do każdej organizacji, do której masz dostęp.",
-      "noEmailPrompt": "Wiadomość e-mail nie dotarła?",
-      "tips": {
-        "spamFolder": "Sprawdź folder ze spamem",
-        "verifyEmail": "Sprawdź, czy adres e-mail jest prawidłowy",
-        "contactSupport": "Skontaktuj się z zespołem pomocy technicznej swojej organizacji"
-      },
-      "tryAnotherEmail": "Użyj innego adresu e-mail"
+      "linksSent": "Sprawdź swoją skrzynkę, aby znaleźć linki logowania",
+      "sent": {
+        "title": "Sprawdź swoją skrzynkę",
+        "description": "Jeśli konto z tym adresem e-mail istnieje, wysłaliśmy Ci linki logowania do każdej organizacji, do której masz dostęp.",
+        "noEmailReceived": "Nie otrzymałeś wiadomości?",
+        "checkSpam": "Sprawdź folder ze spamem",
+        "verifyAddress": "Sprawdź, czy adres e-mail jest poprawny",
+        "contactSupport": "Skontaktuj się z zespołem wsparcia swojej organizacji",
+        "tryAnother": "Spróbuj innego adresu e-mail"
+      }
     }
   },
   "account": {

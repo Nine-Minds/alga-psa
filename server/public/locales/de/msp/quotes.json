@@ -752,7 +752,7 @@
       "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden."
     },
     "pipeline": {
-      "render": "Machen",
+      "render": "Rendern",
       "shape": "Form",
       "renderFailed": "Rendern fehlgeschlagen.",
       "shapeFailed": "Formung fehlgeschlagen.",

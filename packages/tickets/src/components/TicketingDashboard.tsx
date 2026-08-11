@@ -60,7 +60,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
   isTicketStatusOpenFilter,
@@ -171,18 +171,20 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
   { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
 ];
 
-function formatPrintDate(value?: string | null): string {
+// Module scope has no hook to read the app locale from, so the printing helpers
+// take it as an argument rather than defaulting to the browser's.
+function formatPrintDate(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatPrintDateTime(value?: string | null): string {
+function formatPrintDateTime(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -198,9 +200,9 @@ function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | strin
   ), ticket);
 }
 
-function formatTicketPrintValue(value: unknown): string {
+function formatTicketPrintValue(value: unknown, locale: string): string {
   if (value === null || value === undefined || value === '') return '';
-  if (value instanceof Date) return value.toLocaleString();
+  if (value instanceof Date) return value.toLocaleString(locale);
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -241,6 +243,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  // These followed the browser locale, so a German UI printed American dates.
+  const { formatDate } = useFormatters();
+  const { locale } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -1103,6 +1108,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
+      locale,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1560,8 +1566,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         const additionalAgents = ticket.additional_agents?.map((agent) => agent.name).filter(Boolean) ?? [];
         return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
       },
-      due_date: (ticket) => formatPrintDate(ticket.due_date) || t('dashboard.print.noDueDate', 'No due date'),
-      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at) || t('dashboard.print.emptyValue', '—'),
+      due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, locale) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
@@ -1588,13 +1594,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey))
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), locale)
           || t('dashboard.print.emptyValue', '—')
         )),
       };
     });
   }, [
     categories,
+    locale,
     t,
     ticketTagsRef,
   ]);
@@ -1800,7 +1807,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     if (selectedDueDateFilter !== 'all') {
-      const dateStr = dueDateFilterValue ? dueDateFilterValue.toLocaleDateString() : '';
+      const dateStr = dueDateFilterValue ? formatDate(dueDateFilterValue, { dateStyle: 'medium' }) : '';
       const map: Record<string, string> = {
         overdue: t('dashboard.filters.overdue', 'Overdue'),
         today: t('dashboard.filters.dueToday', 'Due Today'),
@@ -2089,10 +2096,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       { value: 'today', label: t('dashboard.filters.dueToday', 'Due Today') },
                       { value: 'upcoming', label: t('dashboard.filters.dueNext7Days', 'Due Next 7 Days') },
                       { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
-                        ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        ? t('dashboard.filters.beforeDateSelected', 'Before {{date}}', { date: formatDate(dueDateFilterValue, { dateStyle: 'medium' }) })
                         : t('dashboard.filters.beforeDate', 'Before Date...') },
                       { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
-                        ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: dueDateFilterValue.toLocaleDateString() })
+                        ? t('dashboard.filters.afterDateSelected', 'After {{date}}', { date: formatDate(dueDateFilterValue, { dateStyle: 'medium' }) })
                         : t('dashboard.filters.afterDate', 'After Date...') },
                       { value: 'no_due_date', label: t('dashboard.filters.noDueDate', 'No Due Date') },
                     ]}

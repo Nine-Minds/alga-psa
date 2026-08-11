@@ -7,7 +7,7 @@ import { Activity, AlertTriangle, ArrowDownUp, CheckCircle, Clock, Lock, Message
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -123,9 +123,9 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
   suppressInternalNotifications: false,
 });
 
-function formatClock(iso: string): string {
+function formatClock(iso: string, locale: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatMinutes(minutes: number): string {
@@ -322,6 +322,14 @@ export function BentoTimelineTile({
   className,
 }: BentoTimelineTileProps) {
   const { t } = useTranslation('features/tickets');
+  const { t: tCommon } = useTranslation('common');
+  const { locale } = useFormatters();
+  // dayLabel runs at module scope: without these it formats in the browser's
+  // locale and hardcodes an English "Today".
+  const dayLabelOptions = useMemo(
+    () => ({ locale, todayLabel: tCommon('time.today', 'Today') }),
+    [locale, tCommon],
+  );
   const laneFilters = useMemo<{ value: LaneFilter; label: string }[]>(
     () => [
       { value: 'everything', label: t('bento.timeline.filterEverything', 'Everything') },
@@ -813,7 +821,7 @@ export function BentoTimelineTile({
         <BentoTileEmpty id={`${id}-empty`}>
           {nodes.length === 0
             ? t('bento.timeline.nothingYet', 'Nothing yet. The ticket was opened {{when}}.', {
-                when: ticketCreatedAt ? dayLabel(ticketCreatedAt) : t('bento.timeline.recently', 'recently'),
+                when: ticketCreatedAt ? dayLabel(ticketCreatedAt, undefined, dayLabelOptions) : t('bento.timeline.recently', 'recently'),
               })
             : t('bento.timeline.nothingInLane', 'Nothing in this lane yet.')}
         </BentoTileEmpty>
@@ -826,7 +834,7 @@ export function BentoTimelineTile({
             className="absolute top-2 bottom-2 left-3 w-px bg-[rgb(var(--color-border-200))]"
           />
           {visible.map((node) => {
-            const day = dayLabel(node.occurredAt);
+            const day = dayLabel(node.occurredAt, undefined, dayLabelOptions);
             const showBreak = day !== lastDay;
             lastDay = day;
             const v = laneVisual(node);
@@ -883,6 +891,7 @@ export function BentoTimelineTile({
 // Compact single-line rows for the non-comment lanes. The lane icon is drawn
 // by the spine pin in the gutter, so these render just the text + timestamp.
 function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: Translator }) {
+  const { locale } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
     return (
@@ -898,7 +907,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt)}
+          {formatClock(node.occurredAt, locale)}
         </span>
       </div>
     );
@@ -918,7 +927,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           ) : null}
         </p>
         <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-          {formatClock(node.occurredAt)}
+          {formatClock(node.occurredAt, locale)}
         </span>
       </div>
     );
@@ -931,7 +940,7 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
         {node.entry ? describeSystemEntry(node.entry, t) : t('bento.timeline.ticketUpdated', 'Ticket updated')}
       </p>
       <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-        {formatClock(node.occurredAt)}
+        {formatClock(node.occurredAt, locale)}
       </span>
     </div>
   );

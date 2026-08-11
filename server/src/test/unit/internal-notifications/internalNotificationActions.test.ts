@@ -394,6 +394,13 @@ function buildNotification(overrides: Partial<NotificationRow>): NotificationRow
 
 let currentDb: MockDb | null = null;
 
+// After-commit hook queue mirroring @alga-psa/db's registerAfterCommit registry:
+// hooks registered during a transaction run after the (mocked) transaction
+// resolves successfully; on rollback the queue is dropped. This matches
+// production's flush-after-commit semantics so the deferred external effects
+// (broadcast/publish/hooks) fire exactly once on success and never on rollback.
+const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
+
 // vi.mock factories are hoisted above module-level consts, so the spy must live
 // in a vi.hoisted holder to be referenceable from the @alga-psa/db factory.
 const dbHoisted = vi.hoisted(() => ({
@@ -418,7 +425,24 @@ const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTran
     throw new Error('Mock database not configured');
   }
   const trx = createMockTransaction(currentDb);
-  return callback(trx);
+  try {
+    const result = await callback(trx);
+    // A successful transaction flushes the after-commit hooks before returning
+    // (production: the owning withTransaction frame flushes after commit).
+    const hooks = afterCommitHooksQueue.splice(0);
+    for (const hook of hooks) {
+      try {
+        await hook();
+      } catch {
+        // Production swallows after-commit hook failures.
+      }
+    }
+    return result;
+  } catch (error) {
+    // A rolled-back transaction drops its queued hooks untouched.
+    afterCommitHooksQueue.length = 0;
+    throw error;
+  }
 });
 dbHoisted.withTransactionSpy = withTransactionSpy;
 
@@ -442,6 +466,9 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => dbHoisted.withTransactionSpy(...args),
+  registerAfterCommit: (_trx: unknown, hook: () => unknown | Promise<unknown>, _label?: string) => {
+    afterCommitHooksQueue.push(hook);
+  },
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
   getConnection: vi.fn(),
   tenantDb: (conn: any, tenant: string) => ({
@@ -506,6 +533,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   currentDb = null;
+  afterCommitHooksQueue.length = 0;
   authHoisted.sessionUser.user_id = 'user-1';
   authHoisted.sessionUser.tenant = 'tenant-1';
   broadcastNotificationMock.mockResolvedValue(undefined);

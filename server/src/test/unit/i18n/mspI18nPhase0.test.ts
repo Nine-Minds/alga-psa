@@ -211,7 +211,11 @@ describe('MSP i18n Phase 0 - wrapper/provider wiring', () => {
     expect(src).toContain('namespaces?: string[]');
     expect(src).toContain('i18next.loadNamespaces');
     expect(src).toContain('i18next.hasResourceBundle');
-    expect(src).toMatch(/\[isInitialized, locale, namespaces\]/);
+    // Namespaces are loaded as part of initialization, not in a follow-up
+    // effect gated on isInitialized — that gap let children render and call
+    // t() against a namespace still in flight.
+    expect(src).toContain('await ensureNamespacesLoaded(resolvedLocale, namespaces)');
+    expect(src).not.toMatch(/\[isInitialized, locale, namespaces\]/);
   });
 
   it('T020-T022: I18nWrapper uses usePathname and passes namespaces', () => {

@@ -1,0 +1,58 @@
+                             Table "public.inbound_email_inbox"
+        Column         |           Type           | Collation | Nullable |      Default      
+-----------------------+--------------------------+-----------+----------+-------------------
+ tenant                | uuid                     |           | not null | 
+ inbox_id              | uuid                     |           | not null | gen_random_uuid()
+ ingress_id            | uuid                     |           |          | 
+ provider_id           | uuid                     |           | not null | 
+ provider_type         | text                     |           | not null | 
+ normalized_message_id | text                     |           | not null | 
+ provider_message_id   | text                     |           |          | 
+ rfc_message_id        | text                     |           |          | 
+ source_object_key     | text                     |           |          | 
+ source_sha256         | text                     |           |          | 
+ source_size_bytes     | bigint                   |           |          | 
+ source_staged_at      | timestamp with time zone |           |          | 
+ envelope              | jsonb                    |           | not null | 
+ legacy_imported       | boolean                  |           | not null | false
+ status                | text                     |           | not null | 'received'::text
+ attempt_count         | integer                  |           | not null | 0
+ lease_owner           | text                     |           |          | 
+ lease_token           | uuid                     |           |          | 
+ lease_version         | bigint                   |           | not null | '0'::bigint
+ lease_expires_at      | timestamp with time zone |           |          | 
+ next_attempt_at       | timestamp with time zone |           |          | 
+ outcome_kind          | text                     |           |          | 
+ outcome_reason        | text                     |           |          | 
+ ticket_id             | uuid                     |           |          | 
+ comment_id            | uuid                     |           |          | 
+ last_error            | text                     |           |          | 
+ error_details         | jsonb                    |           |          | 
+ received_at           | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ created_at            | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at            | timestamp with time zone |           | not null | CURRENT_TIMESTAMP
+ completed_at          | timestamp with time zone |           |          | 
+Indexes:
+    "inbound_email_inbox_pkey" PRIMARY KEY, btree (tenant, inbox_id)
+    "inbound_email_inbox_due_idx" btree (tenant, status, next_attempt_at, lease_expires_at)
+    "inbound_email_inbox_identity_unique" UNIQUE CONSTRAINT, btree (tenant, provider_id, normalized_message_id)
+    "inbound_email_inbox_terminal_lookup_idx" btree (tenant, provider_id, normalized_message_id, status)
+Check constraints:
+    "inbound_email_inbox_attempt_count_check" CHECK (attempt_count >= 0)
+    "inbound_email_inbox_outcome_kind_check" CHECK (outcome_kind = ANY (ARRAY['created'::text, 'replied'::text, 'skipped'::text, 'reconciled'::text]))
+    "inbound_email_inbox_processing_lease_check" CHECK (status <> 'processing'::text OR lease_owner IS NOT NULL AND lease_token IS NOT NULL AND lease_expires_at IS NOT NULL)
+    "inbound_email_inbox_retryable_next_attempt_check" CHECK (status <> 'retryable_failed'::text OR next_attempt_at IS NOT NULL)
+    "inbound_email_inbox_skipped_reason_check" CHECK (status <> 'skipped'::text OR outcome_kind = 'skipped'::text AND outcome_reason IS NOT NULL)
+    "inbound_email_inbox_skipped_status_check" CHECK (outcome_kind <> 'skipped'::text OR status = 'skipped'::text)
+    "inbound_email_inbox_source_required_check" CHECK (legacy_imported AND (status = ANY (ARRAY['succeeded'::text, 'skipped'::text, 'terminal_failed'::text])) OR ingress_id IS NOT NULL AND source_object_key IS NOT NULL AND source_sha256 IS NOT NULL AND source_size_bytes IS NOT NULL AND source_staged_at IS NOT NULL)
+    "inbound_email_inbox_source_size_check" CHECK (source_size_bytes IS NULL OR source_size_bytes >= 0)
+    "inbound_email_inbox_status_check" CHECK (status = ANY (ARRAY['received'::text, 'processing'::text, 'succeeded'::text, 'skipped'::text, 'retryable_failed'::text, 'terminal_failed'::text]))
+    "inbound_email_inbox_succeeded_entities_check" CHECK (status <> 'succeeded'::text OR outcome_kind IS NOT NULL AND (outcome_kind = ANY (ARRAY['created'::text, 'replied'::text, 'reconciled'::text])) AND ticket_id IS NOT NULL AND comment_id IS NOT NULL)
+    "inbound_email_inbox_terminal_lease_check" CHECK ((status <> ALL (ARRAY['succeeded'::text, 'skipped'::text, 'terminal_failed'::text])) OR completed_at IS NOT NULL AND lease_owner IS NULL AND lease_token IS NULL AND lease_expires_at IS NULL)
+Foreign-key constraints:
+    "inbound_email_inbox_tenant_ingress_id_foreign" FOREIGN KEY (tenant, ingress_id) REFERENCES inbound_email_ingress(tenant, ingress_id)
+Referenced by:
+    TABLE "inbound_email_artifacts" CONSTRAINT "inbound_email_artifacts_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+    TABLE "inbound_email_effects" CONSTRAINT "inbound_email_effects_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+    TABLE "inbound_email_outbox" CONSTRAINT "inbound_email_outbox_tenant_inbox_id_foreign" FOREIGN KEY (tenant, inbox_id) REFERENCES inbound_email_inbox(tenant, inbox_id)
+

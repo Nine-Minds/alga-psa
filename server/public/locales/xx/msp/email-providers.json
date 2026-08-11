@@ -251,7 +251,8 @@
         "popupBlocked": "11111",
         "closedEarly": "11111",
         "authorizationFailed": "11111",
-        "senderDisplayNameInvalid": "11111"
+        "senderDisplayNameInvalid": "11111",
+        "issuerRequired": "11111"
       },
       "requiredFields": {
         "providerName": "11111",
@@ -275,12 +276,24 @@
         "signIn": "11111"
       },
       "readiness": {
-        "checking": "11111",
-        "ready": "11111",
-        "pending": "11111",
-        "openProviders": "11111",
-        "notConfigured": "11111",
-        "setUpInProviders": "11111"
+        "openProviders": "11111"
+      },
+      "issuer": {
+        "title": "11111",
+        "description": "11111",
+        "managedLabel": "11111",
+        "managedDescription": "11111",
+        "recommended": "11111",
+        "currentApp": "11111 {{app}} 11111",
+        "selectedApp": "11111 {{app}} 11111",
+        "pendingReauth": "11111",
+        "switchWarning": "11111",
+        "noneAvailable": "11111",
+        "retry": "11111",
+        "pendingConsentEmpty": "11111",
+        "pendingConsentHint": "11111",
+        "ownAppPrompt": "11111",
+        "ownAppSetupLink": "11111"
       },
       "advanced": {
         "title": "11111",

@@ -28,6 +28,7 @@
       "@enterprise": ["../server/src"],
       "@enterprise/*": ["../server/src/*"],
       "@/*": ["../server/src/*"],
+      "@/lib/*": ["../server/src/lib/*", "../../server/src/lib/*"],
       "@/interfaces/*": ["../../server/src/interfaces/*"],
       "@alga-psa/integrations/email/domains/entry": ["../../packages/integrations/src/email/domains/ee/entry"],
       "@alga-psa/integrations/*": ["../../packages/integrations/src/*"],

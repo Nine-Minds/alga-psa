@@ -86,7 +86,7 @@
         "action": "Configurar Gmail"
       },
       "microsoft": {
-        "title": "microsoft 365",
+        "title": "Microsoft 365",
         "description": "Integración de Microsoft 365/Outlook",
         "features": {
           "accounts": "✓ Cuentas de Microsoft 365 y Outlook",
@@ -190,7 +190,7 @@
     },
     "types": {
       "google": "Gmail",
-      "microsoft": "microsoft 365",
+      "microsoft": "Microsoft 365",
       "imap": "IMAP"
     },
     "filters": {
@@ -251,7 +251,8 @@
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
         "closedEarly": "La ventana de autorización se cerró antes de completar. Por favor inténtelo de nuevo.",
         "authorizationFailed": "Autorización fallida",
-        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea"
+        "senderDisplayNameInvalid": "El nombre para mostrar no puede contener comillas, corchetes angulares ni saltos de línea",
+        "issuerRequired": "Elija una aplicación de Microsoft antes de iniciar sesión"
       },
       "requiredFields": {
         "providerName": "Nombre de configuración",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Máximo de correos electrónicos por sincronización"
       },
       "readiness": {
-        "checking": "Comprobando la configuración de Microsoft…",
-        "ready": "Microsoft está configurado. Inicie sesión con este buzón para finalizar.",
-        "pending": "Esperando a su administrador de Microsoft 365. La configuración se inició en Proveedores, pero aún no se aprobó.",
-        "openProviders": "Abrir Proveedores",
-        "notConfigured": "Microsoft aún no está configurado. Configúrelo una vez en Proveedores y luego regrese.",
-        "setUpInProviders": "Configurar en Proveedores"
+        "openProviders": "Abrir Proveedores"
+      },
+      "issuer": {
+        "title": "Aplicación de Microsoft que autoriza este buzón",
+        "description": "Elija qué aplicación inicia sesión como este buzón. Esta elección se guarda con el buzón y no afecta a otros servicios.",
+        "managedLabel": "Aplicación de AlgaPSA (administrada por Nine Minds)",
+        "managedDescription": "No se requiere ningún registro de aplicación de Microsoft por su parte.",
+        "recommended": "Recomendada",
+        "currentApp": "Aplicación actual: {{app}}",
+        "selectedApp": "Aplicación seleccionada: {{app}}",
+        "pendingReauth": "Reautorización pendiente",
+        "switchWarning": "Cambiar la aplicación de Microsoft requiere reconectar este buzón. Inicie sesión con Microsoft de nuevo para completar el cambio.",
+        "noneAvailable": "Para conectar Microsoft 365, primero configure una aplicación de Microsoft en Proveedores y luego vuelva.",
+        "retry": "Reintentar",
+        "pendingConsentEmpty": "Su aplicación de Microsoft espera la aprobación de un administrador de Microsoft 365. Una vez aprobada en Proveedores, vuelva para iniciar sesión.",
+        "pendingConsentHint": "Su propia aplicación de Microsoft todavía espera la aprobación de un administrador de Microsoft 365.",
+        "ownAppPrompt": "¿Prefiere iniciar sesión con su propia aplicación de Microsoft?",
+        "ownAppSetupLink": "Configurarla en Proveedores"
       }
     },
     "gmail": {

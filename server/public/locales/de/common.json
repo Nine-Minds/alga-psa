@@ -82,7 +82,8 @@
     "share": "Teilen",
     "done": "Fertig",
     "continue": "Weiter",
-    "printSelected": "Ausgewählte drucken ({{count}})"
+    "printSelected": "Ausgewählte drucken ({{count}})",
+    "removeTag": "Tag entfernen"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -656,7 +657,9 @@
       "downloadLimitReached": "Die Download-Grenze wurde erreicht."
     },
     "downloadStarted": "Download erfolgreich gestartet!",
-    "enterPassword": "Passwort eingeben"
+    "enterPassword": "Passwort eingeben",
+    "downloadsUsed": "{{used}} von {{max}} Downloads verwendet",
+    "expiresAt": "Läuft ab: {{date}}"
   },
   "tickets": {
     "responseSource": {
@@ -1115,13 +1118,24 @@
     "noUsersAvailable": "Keine Benutzer verfügbar",
     "searchBoards": "Boards suchen...",
     "searchBoardsLabel": "Boards suchen",
-    "noBoardsFound": "Keine Boards gefunden"
+    "noBoardsFound": "Keine Boards gefunden",
+    "notAssigned": "Nicht zugewiesen",
+    "searchUsersOrTeams": "Benutzer oder Teams suchen...",
+    "unnamedUser": "Unbenannter Benutzer",
+    "unnamedTeam": "Unbenanntes Team"
   },
   "tagFilter": {
     "placeholder": "Nach Tags filtern...",
     "filter": "Filter",
     "selectedCount": "{{count}} ausgewählt",
     "clearAll": "Alle löschen"
+  },
+  "timePicker": {
+    "placeholder": "Uhrzeit auswählen",
+    "hour": "Stunde",
+    "minute": "Minute",
+    "period": "Zeitraum",
+    "open": "Zeitauswahl öffnen"
   },
   "timezonePicker": {
     "selectPlaceholder": "Zeitzone auswählen...",

@@ -338,18 +338,18 @@
       "emailLabel": "11111",
       "emailPlaceholder": "11111",
       "submit": "11111",
-      "sending": "11111",
+      "submitting": "11111",
       "invalidEmail": "11111",
       "linksSent": "11111",
-      "checkEmailTitle": "11111",
-      "checkEmailDescription": "11111",
-      "noEmailPrompt": "11111",
-      "tips": {
-        "spamFolder": "11111",
-        "verifyEmail": "11111",
-        "contactSupport": "11111"
-      },
-      "tryAnotherEmail": "11111"
+      "sent": {
+        "title": "11111",
+        "description": "11111",
+        "noEmailReceived": "11111",
+        "checkSpam": "11111",
+        "verifyAddress": "11111",
+        "contactSupport": "11111",
+        "tryAnother": "11111"
+      }
     }
   },
   "account": {

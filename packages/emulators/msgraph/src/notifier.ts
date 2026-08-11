@@ -4,12 +4,16 @@ import type { GraphMessage, GraphSubscription, MsGraphCore } from './core';
 /**
  * Webhook I/O lives here, outside the pure core: Graph's subscription
  * validation handshake and change-notification delivery.
+ *
+ * Real Graph never follows redirects on either call, so both use
+ * `redirect: 'manual'`. Node's default of following them would let a
+ * redirecting notificationUrl pass here and fail in production.
  */
 export async function validateNotificationUrl(notificationUrl: string, validationToken: string): Promise<boolean> {
   const url = new URL(notificationUrl);
   url.searchParams.set('validationToken', validationToken);
   try {
-    const response = await fetch(url, { method: 'POST' });
+    const response = await fetch(url, { method: 'POST', redirect: 'manual' });
     return response.ok && (await response.text()) === validationToken;
   } catch {
     return false;
@@ -26,6 +30,7 @@ async function deliverOne(subscription: GraphSubscription, message: GraphMessage
   try {
     await fetch(subscription.notificationUrl, {
       method: 'POST',
+      redirect: 'manual',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         value: [

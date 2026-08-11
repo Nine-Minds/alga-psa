@@ -494,8 +494,14 @@ export class EventBus {
       const event = eventSchema.parse(rawEvent) as Event;
       const handlers = Array.from(subscription.handlers);
 
+      // Recovery re-publish (`force`): a durable consumer delivery ledger is
+      // the real idempotency authority, so the short-TTL Redis processed sets
+      // are bypassed to let incomplete consumer deliveries re-run. Consumers
+      // that already completed are skipped by their own ledger.
+      const forceRedelivery = message.message.force === '1';
+
       if (handlers.length > 0) {
-        const isProcessed = await this.isEventProcessed(event);
+        const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event);
         if (!isProcessed) {
           // Invoke every registered handler for (eventType, channel) — not
           // just the first — and track success per (event, handler) so a
@@ -505,7 +511,7 @@ export class EventBus {
           for (const handler of handlers) {
             const handlerKey = this.getHandlerKey(handler);
             try {
-              if (await this.isHandlerProcessed(event, handlerKey)) {
+              if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey)) {
                 continue;
               }
               await handler(event);
@@ -525,7 +531,9 @@ export class EventBus {
             // Don't acknowledge message on any failure to allow retry.
             return;
           }
-          await this.markEventProcessed(event);
+          if (!forceRedelivery) {
+            await this.markEventProcessed(event);
+          }
         } else {
           logger.info('[EventBus] Skipping already processed event:', {
             eventId: event.id,
@@ -739,10 +747,28 @@ export class EventBus {
 
   public async publish(
     event: Omit<Event, 'id' | 'timestamp'>,
-    options?: { channel?: string; workflow?: WorkflowPublishHooks }
+    options?: {
+      channel?: string;
+      workflow?: WorkflowPublishHooks;
+      /** Caller-supplied stable event id (used by the inbound outbox dispatcher). */
+      eventId?: string;
+      /** Strict mode propagates an unsuccessful stream write instead of swallowing it. */
+      strict?: boolean;
+      /**
+       * Recovery re-publish: bypasses the per-event and per-handler processed
+       * Redis sets so a re-published event actually re-runs handlers. Consumers
+       * that already completed are skipped by their own idempotency ledger, so
+       * this only re-drives incomplete consumer deliveries. Intended for the
+       * inbound-email outbox recovery sweeper.
+       */
+      force?: boolean;
+    }
   ): Promise<void> {
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
+      if (options?.strict) {
+        throw new Error(eventBusDisabledReason ?? 'Event bus is disabled');
+      }
       return;
     }
 
@@ -758,7 +784,7 @@ export class EventBus {
 
       const fullEvent: Event = {
         ...event,
-        id: uuidv4(),
+        id: options?.eventId ?? uuidv4(),
         timestamp: new Date().toISOString(),
       } as Event;
 
@@ -834,7 +860,8 @@ export class EventBus {
         '*',
         {
           event: JSON.stringify(fullEvent),
-          channel
+          channel,
+          ...(options?.force ? { force: '1' } : {}),
         },
         {
           TRIM: {
@@ -858,6 +885,11 @@ export class EventBus {
         eventBusDisabled = true;
         eventBusDisabledReason = message;
         logger.warn('[EventBus] Disabling event publishing due to Redis authentication failure. Events will be skipped until the service is restarted.');
+      }
+      // Strict dispatcher mode (inbound outbox) must propagate an unsuccessful
+      // stream write so the outbox row is not falsely marked `published`.
+      if (options?.strict) {
+        throw error;
       }
       // throw error;
     }

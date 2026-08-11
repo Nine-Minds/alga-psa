@@ -28,7 +28,8 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getUserContactId } from '@alga-psa/user-composition/actions';
-import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
+import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
@@ -40,7 +41,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
 import type { TicketLiveConflictState } from './ticketLiveFields';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -215,6 +216,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
+  // These read 'en-US' outright, so they stayed American in every locale.
+  const { formatDate, locale } = useFormatters();
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -818,9 +821,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               {(() => {
                 if (!ticket.entered_at) return t('properties.notAvailable', 'N/A');
                 try {
-                  const tz = getUserTimeZone();
-                  const local = utcToLocal(ticket.entered_at, tz);
-                  return formatDateTime(local, tz, dateTimeFormat);
+                  return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, getUserTimeZone());
                 } catch (e) {
                   return ticket.entered_at;
                 }
@@ -1096,7 +1097,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           try {
                             const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, request.requester_timezone || 'UTC');
                             if (!isNaN(dt.getTime())) {
-                              displayDateTime = dt.toLocaleString('en-US', {
+                              displayDateTime = formatDate(dt, {
                                 month: 'short', day: 'numeric',
                                 hour: '2-digit', minute: '2-digit'
                               });
@@ -1151,7 +1152,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                                       <div>
                                         <span className="text-sm text-gray-500">{t('properties.approvedAt', 'Approved At')}</span>
                                         <p className="text-sm font-medium">
-                                          {new Date(request.approved_at).toLocaleString('en-US', {
+                                          {formatDate(new Date(request.approved_at), {
                                             month: 'short', day: 'numeric', year: 'numeric',
                                             hour: '2-digit', minute: '2-digit'
                                           })}

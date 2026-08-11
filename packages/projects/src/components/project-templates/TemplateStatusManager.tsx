@@ -13,6 +13,7 @@ import {
   removeTemplateStatusMapping,
   removeTemplatePhaseStatuses,
   reorderTemplateStatusMappings,
+  replaceTemplateStatusMapping,
 } from '../../actions/projectTemplateActions';
 import { createTenantProjectStatus } from '../../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
@@ -45,6 +46,10 @@ interface TemplateStatusManagerProps {
   onStatusRemoved: (mappingId: string, moveTasksToMappingId?: string) => void;
   onPhaseStatusesRemoved?: (templatePhaseId: string) => void;
   onStatusReordered: (orderedMappingIds: string[], templatePhaseId?: string | null) => void;
+  onStatusReplaced?: (result: {
+    mapping: IProjectTemplateStatusMapping;
+    unresolvedStatusMappingCount: number;
+  }) => void;
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
@@ -70,6 +75,7 @@ export function TemplateStatusManager({
   onStatusRemoved,
   onPhaseStatusesRemoved,
   onStatusReordered,
+  onStatusReplaced,
 }: TemplateStatusManagerProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const [selectedStatusId, setSelectedStatusId] = useState('');
@@ -250,6 +256,29 @@ export function TemplateStatusManager({
     }
   };
 
+  const [replaceTargetByMapping, setReplaceTargetByMapping] = useState<Record<string, string>>({});
+  const [replacingMappingId, setReplacingMappingId] = useState<string | null>(null);
+
+  const handleReplaceStatus = async (mappingId: string) => {
+    const targetStatusId = replaceTargetByMapping[mappingId];
+    if (!targetStatusId) return;
+
+    setReplacingMappingId(mappingId);
+    try {
+      const result = unwrapTemplateActionResult(await replaceTemplateStatusMapping(
+        templateId,
+        mappingId,
+        { type: 'tenant', statusId: targetStatusId }
+      ));
+      onStatusReplaced?.(result);
+      toast.success(t('templates.statuses.replaced'));
+    } catch (error) {
+      handleError(error, t('templates.statuses.replace_failed'));
+    } finally {
+      setReplacingMappingId(null);
+    }
+  };
+
   return (
     <>
       {resetToDefaultsConfirmation && (
@@ -387,40 +416,92 @@ export function TemplateStatusManager({
                   <p className="text-sm text-gray-500">{t('templates.statuses.empty_hint')}</p>
                 </div>
               ) : (
-                sortedMappings.map((mapping, index) => (
+                sortedMappings.map((mapping, index) => {
+                  const isUnresolved = mapping.statusSource === 'unresolved';
+
+                  return (
                   <div
                     key={mapping.template_status_mapping_id}
                     draggable={editableMappings}
                     onDragStart={() => editableMappings && handleDragStart(index)}
                     onDragOver={(e) => editableMappings && handleDragOver(e, index)}
                     onDragEnd={editableMappings ? handleDragEnd : undefined}
-                    className={`flex items-center gap-3 p-3 bg-white dark:bg-[rgb(var(--color-card))] border rounded-lg ${
+                    className={`${isUnresolved ? 'space-y-2' : 'flex items-center gap-3'} p-3 bg-white dark:bg-[rgb(var(--color-card))] border rounded-lg ${
                       draggedIndex === index ? 'opacity-50' : ''
-                    }`}
+                    } ${isUnresolved ? 'border-destructive/40' : ''}`}
                   >
-                    <div className={`cursor-grab ${!editableMappings ? 'opacity-40' : ''}`}>
-                      <GripVertical className="w-4 h-4 text-gray-400" />
+                    <div className={`${isUnresolved ? 'flex items-center gap-3' : ''}`}>
+                      <div className={`cursor-grab ${!editableMappings ? 'opacity-40' : ''}`}>
+                        <GripVertical className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <Circle
+                        className="w-5 h-5"
+                        fill={mapping.color || '#6B7280'}
+                        stroke={mapping.color || '#6B7280'}
+                      />
+                      {isUnresolved ? (
+                        <div className="flex-1">
+                          <span className="font-medium text-destructive">
+                            {t('templates.statuses.status_no_longer_exists')}
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            {mapping.unresolved_reason === 'ambiguous'
+                              ? t('templates.statuses.ambiguous_status')
+                              : t('templates.statuses.missing_status')}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="flex-1 font-medium">
+                          {mapping.status_name || mapping.custom_status_name || 'Status'}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500">#{index + 1}</span>
+                      <Button
+                        id={`remove-status-${mapping.template_status_mapping_id}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => initiateRemove(mapping.template_status_mapping_id)}
+                        disabled={!editableMappings || sortedMappings.length <= 1}
+                      >
+                        <Trash className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
-                    <Circle
-                      className="w-5 h-5"
-                      fill={mapping.color || '#6B7280'}
-                      stroke={mapping.color || '#6B7280'}
-                    />
-                    <span className="flex-1 font-medium">
-                      {mapping.status_name || mapping.custom_status_name || 'Status'}
-                    </span>
-                    <span className="text-xs text-gray-500">#{index + 1}</span>
-                    <Button
-                      id={`remove-status-${mapping.template_status_mapping_id}`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => initiateRemove(mapping.template_status_mapping_id)}
-                      disabled={!editableMappings || sortedMappings.length <= 1}
-                    >
-                      <Trash className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {isUnresolved && (
+                      <div className="flex items-center gap-2 pl-8">
+                        <CustomSelect
+                          value={replaceTargetByMapping[mapping.template_status_mapping_id] || ''}
+                          onValueChange={(value) => setReplaceTargetByMapping((prev) => ({
+                            ...prev,
+                            [mapping.template_status_mapping_id]: value,
+                          }))}
+                          options={[
+                            { value: '', label: t('templates.statuses.replace_placeholder') },
+                            ...localAvailableStatuses.map((s) => ({
+                              value: s.status_id,
+                              label: `${s.name}${s.is_closed ? ` (${t('settings.statuses.closed')})` : ''}`,
+                            })),
+                          ]}
+                          disabled={replacingMappingId === mapping.template_status_mapping_id}
+                          className="flex-1"
+                        />
+                        <Button
+                          id={`replace-status-${mapping.template_status_mapping_id}`}
+                          size="sm"
+                          onClick={() => handleReplaceStatus(mapping.template_status_mapping_id)}
+                          disabled={
+                            !replaceTargetByMapping[mapping.template_status_mapping_id] ||
+                            replacingMappingId === mapping.template_status_mapping_id
+                          }
+                        >
+                          {replacingMappingId === mapping.template_status_mapping_id
+                            ? t('templates.statuses.replacing')
+                            : t('templates.statuses.replace_status')}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
 

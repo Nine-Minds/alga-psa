@@ -1,5 +1,12 @@
 export const TEMPLATE_DEFAULT_SCOPE = '__template_defaults__';
 
+/**
+ * User-safe message surfaced when a template cannot be applied because it still
+ * contains unresolved (missing or ambiguous) status mappings. Client-safe.
+ */
+export const TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE =
+  'This template has status columns that must be repaired before it can be applied.';
+
 type TemplateScopedStatusMapping = {
   template_phase_id?: string | null;
   display_order: number;

@@ -251,7 +251,8 @@
         "popupBlocked": "Échec de l'ouverture de la fenêtre contextuelle OAuth. Veuillez autoriser les popups pour ce site.",
         "closedEarly": "Fenêtre d'autorisation fermée avant de terminer. Veuillez réessayer.",
         "authorizationFailed": "L'autorisation a échoué",
-        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne"
+        "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne",
+        "issuerRequired": "Choisissez une application Microsoft avant de vous connecter"
       },
       "requiredFields": {
         "providerName": "Nom de configuration",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
       },
       "readiness": {
-        "checking": "Vérification de la configuration Microsoft…",
-        "ready": "Microsoft est configuré. Connectez-vous avec cette boîte aux lettres pour terminer.",
-        "pending": "En attente de votre administrateur Microsoft 365. La configuration a été lancée dans Fournisseurs, mais n'a pas encore été approuvée.",
-        "openProviders": "Ouvrir Fournisseurs",
-        "notConfigured": "Microsoft n'est pas encore configuré. Configurez-le une fois dans Fournisseurs, puis revenez.",
-        "setUpInProviders": "Configurer dans Fournisseurs"
+        "openProviders": "Ouvrir Fournisseurs"
+      },
+      "issuer": {
+        "title": "Application Microsoft qui autorise cette boîte aux lettres",
+        "description": "Choisissez l'application qui se connecte en tant que cette boîte aux lettres. Ce choix est enregistré avec la boîte aux lettres et n'affecte pas les autres services.",
+        "managedLabel": "Application AlgaPSA (gérée par Nine Minds)",
+        "managedDescription": "Aucun enregistrement d'application Microsoft n'est requis de votre côté.",
+        "recommended": "Recommandée",
+        "currentApp": "Application actuelle : {{app}}",
+        "selectedApp": "Application sélectionnée : {{app}}",
+        "pendingReauth": "Réautorisation en attente",
+        "switchWarning": "Changer l'application Microsoft nécessite de reconnecter cette boîte aux lettres. Connectez-vous à nouveau avec Microsoft pour terminer le changement.",
+        "noneAvailable": "Pour connecter Microsoft 365, configurez d'abord une application Microsoft dans Fournisseurs, puis revenez.",
+        "retry": "Réessayer",
+        "pendingConsentEmpty": "Votre application Microsoft attend l'approbation d'un administrateur Microsoft 365. Une fois approuvée dans Fournisseurs, revenez pour vous connecter.",
+        "pendingConsentHint": "Votre propre application Microsoft attend encore l'approbation d'un administrateur Microsoft 365.",
+        "ownAppPrompt": "Préférez-vous vous connecter avec votre propre application Microsoft ?",
+        "ownAppSetupLink": "La configurer dans Fournisseurs"
       }
     },
     "gmail": {

@@ -702,7 +702,10 @@
       "Bot",
       "item",
       ",",
-      "EUR — Euro"
+      "EUR — Euro",
+      "Meta",
+      "Alt",
+      "Shift"
     ],
     "caseInsensitive": [
       "api",

@@ -338,18 +338,18 @@
       "emailLabel": "55555",
       "emailPlaceholder": "55555",
       "submit": "55555",
-      "sending": "55555",
+      "submitting": "55555",
       "invalidEmail": "55555",
       "linksSent": "55555",
-      "checkEmailTitle": "55555",
-      "checkEmailDescription": "55555",
-      "noEmailPrompt": "55555",
-      "tips": {
-        "spamFolder": "55555",
-        "verifyEmail": "55555",
-        "contactSupport": "55555"
-      },
-      "tryAnotherEmail": "55555"
+      "sent": {
+        "title": "55555",
+        "description": "55555",
+        "noEmailReceived": "55555",
+        "checkSpam": "55555",
+        "verifyAddress": "55555",
+        "contactSupport": "55555",
+        "tryAnother": "55555"
+      }
     }
   },
   "account": {

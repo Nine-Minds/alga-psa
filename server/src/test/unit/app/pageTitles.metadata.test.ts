@@ -179,17 +179,24 @@ describe('route title metadata coverage', () => {
     }
   });
 
-  it('T007c: single-route tabbed pages derive the title from the ?tab= param', () => {
+  it('T007c: single-route tabbed pages derive a translated title from the ?tab= param', () => {
     // Billing and Settings are single routes whose sections are selected via the
     // `?tab=` query param. They use generateMetadata to mirror the active section
     // in the browser tab title, falling back to the page name.
+    //
+    // This assertion used to require the literal strings 'Billing', 'Invoicing',
+    // 'Quotes' and 'Reports' in the page — which is exactly what an untranslated
+    // hardcoded title map looks like, so the test passed *because* the bug was
+    // there. Titles must now resolve through the tab strip's labelKey.
     const billing = read('server/src/app/msp/billing/page.tsx');
     expect(billing).toMatch(/generateMetadata/);
     expect(billing).toContain('searchParams');
-    expect(billing).toContain("'Billing'");
-    for (const title of ['Invoicing', 'Quotes', 'Reports']) {
-      expect(billing).toContain(`'${title}'`);
-    }
+    expect(billing).toContain('getServerTranslation');
+    expect(billing).toContain('billingTabDefinitions');
+    expect(billing).toContain('definition.labelKey');
+    expect(billing).toContain("t('msp.billing.title'");
+    // No second, untranslated copy of the section titles.
+    expect(billing).not.toMatch(/BILLING_TAB_TITLES/);
 
     // Settings resolves the active section's label through the tab registry
     // rather than carrying its own copy of the titles.
@@ -202,6 +209,37 @@ describe('route title metadata coverage', () => {
     const registry = read('server/src/components/settings/settingsTabsRegistry.ts');
     for (const title of ['Integrations', 'Users', 'Email']) {
       expect(registry).toContain(`title: '${title}'`);
+    }
+  });
+
+  it('T007d: every billing tab title resolves in every shipped locale', () => {
+    // The ?tab= titles are only as translated as the bundles behind them: a
+    // labelKey missing from a locale silently falls back to its English
+    // defaultValue, which is the failure this route just came out of.
+    const config = read('packages/billing/src/components/billing-dashboard/billingTabsConfig.ts');
+    const labelKeys = [...config.matchAll(/labelKey:\s*'([^']+)'/g)].map((match) => match[1]);
+    expect(labelKeys.length).toBeGreaterThan(0);
+
+    const localesDir = path.join(repoRoot, 'server/public/locales');
+    const locales = fs
+      .readdirSync(localesDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+
+    for (const locale of locales) {
+      const bundle = JSON.parse(read(`server/public/locales/${locale}/msp/billing.json`));
+      const metadata = JSON.parse(read(`server/public/locales/${locale}/metadata.json`));
+
+      for (const key of labelKeys) {
+        const resolved = key
+          .split('.')
+          .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
+        expect(typeof resolved, `${locale} is missing msp/billing:${key}`).toBe('string');
+      }
+
+      expect(typeof metadata?.msp?.billing?.title, `${locale} is missing msp.billing.title`).toBe(
+        'string'
+      );
     }
   });
 

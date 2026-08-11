@@ -1659,7 +1659,8 @@
           "email": {
             "description": "Wybierz profil Microsoft dla przychodzącej i wychodzącej poczty Outlook.",
             "label": "E-mail",
-            "reconnect": "Istniejące połączenia e-mail Outlook muszą zostać ponownie autoryzowane, aby przyznać Mail.Send przed wysyłaniem poczty wychodzącej."
+            "reconnect": "Istniejące połączenia e-mail Outlook muszą zostać ponownie autoryzowane, aby przyznać Mail.Send przed wysyłaniem poczty wychodzącej.",
+            "perProviderIssuerNote": "Istniejące połączenia skrzynek pocztowych zachowują swoją bieżącą aplikację Microsoft, dopóki nie zostaną ponownie połączone. Ten wybór dotyczy nowych połączeń skrzynek pocztowych."
           },
           "mspSso": {
             "description": "Wybierz, który profil Microsoft obsługuje domeny logowania MSP SSO, logowanie Microsoft i wykrywanie tenanta.",

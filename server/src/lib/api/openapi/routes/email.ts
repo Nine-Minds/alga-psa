@@ -261,7 +261,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/email/oauth/initiate',
     summary: 'Initiate email OAuth flow',
     description:
-      'Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.',
+      'Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.',
     tags: [tag],
     security: [{ SessionCookieAuth: [] }],
     request: {

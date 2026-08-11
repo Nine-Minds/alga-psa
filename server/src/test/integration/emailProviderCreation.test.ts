@@ -213,7 +213,7 @@ describe('Email Provider Creation', () => {
   });
 
   describe('Microsoft Provider', () => {
-    it('should create a new Microsoft email provider with all required fields', async () => {
+    it('should create a new Microsoft email provider with an explicit issuer choice', async () => {
       // Arrange
       const providerData = {
         tenant: testTenant,
@@ -221,10 +221,15 @@ describe('Email Provider Creation', () => {
         providerName: 'Client Outlook',
         mailbox: 'outlook-support@client.com',
         isActive: true,
+        microsoftIssuer: {
+          kind: 'profile' as const,
+          profileId: microsoftProfileId,
+          clientId: microsoftProfileClientId,
+        },
         microsoftConfig: {
-          client_id: 'microsoft-client-id',
-          client_secret: 'microsoft-client-secret',
-          tenant_id: 'common',
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
           redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
           max_emails_per_sync: 100
         } as any
@@ -244,6 +249,8 @@ describe('Email Provider Creation', () => {
         .where('email_provider_id', result.provider.id)
         .first();
 
+      // The explicit issuer selection is pinned per-provider as authoritative
+      // issuer metadata, agreeing with the chosen profile.
       expect(configRecord).toMatchObject({
         client_id: microsoftProfileClientId,
         client_secret: microsoftProfileClientSecret,
@@ -252,6 +259,123 @@ describe('Email Provider Creation', () => {
         client_secret_ref: microsoftProfileSecretRef,
         max_emails_per_sync: 100
       });
+    });
+
+    it('should reject switching to a different Microsoft app without a reconnect', async () => {
+      // Arrange: a second eligible profile represents the "other" app.
+      const otherProfileId = uuidv4();
+      const otherSecretRef = `microsoft_profile_${otherProfileId}_client_secret`;
+      const otherSecretEnvKey = `TENANT_${testTenant}_${otherSecretRef}`;
+      process.env[otherSecretEnvKey] = 'other-profile-client-secret';
+      const otherNow = new Date();
+      await tenantTable('microsoft_profiles').insert({
+        tenant: testTenant,
+        profile_id: otherProfileId,
+        display_name: 'Other Email App',
+        display_name_normalized: 'other email app',
+        client_id: 'other-profile-client-id',
+        tenant_id: 'other-tenant-id',
+        client_secret_ref: otherSecretRef,
+        capabilities: JSON.stringify(['email']),
+        is_default: false,
+        is_archived: false,
+        archived_at: null,
+        created_by: null,
+        updated_by: null,
+        created_at: otherNow,
+        updated_at: otherNow
+      });
+
+      // A connected provider pinned to the bound profile.
+      const created = await createEmailProvider({
+        tenant: testTenant,
+        providerType: 'microsoft' as const,
+        providerName: 'Connected Outlook',
+        mailbox: 'connected-outlook@client.com',
+        isActive: true,
+        microsoftIssuer: {
+          kind: 'profile' as const,
+          profileId: microsoftProfileId,
+          clientId: microsoftProfileClientId,
+        },
+        microsoftConfig: {
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          auto_process_emails: true,
+          max_emails_per_sync: 50,
+          refresh_token: 'refresh-token-abc',
+          access_token: 'access-token-xyz',
+          token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        } as any,
+      }, true);
+
+      const connectedProviderId = (created as { provider: { id: string } }).provider.id;
+
+      // Act: a settings save that swaps the issuer to a different valid app
+      // without carrying a fresh token (i.e. without a reconnect).
+      const { updateEmailProvider } = await import('@alga-psa/integrations/actions/email-actions/emailProviderActions');
+      const result = await updateEmailProvider(connectedProviderId, {
+        tenant: testTenant,
+        providerType: 'microsoft' as const,
+        providerName: 'Connected Outlook',
+        mailbox: 'connected-outlook@client.com',
+        isActive: true,
+        microsoftIssuer: {
+          kind: 'profile' as const,
+          profileId: otherProfileId,
+          clientId: 'other-profile-client-id',
+        },
+        microsoftConfig: {
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          auto_process_emails: true,
+          max_emails_per_sync: 50,
+        } as any,
+      }, true);
+
+      // Assert: stable reconnect-required rejection, old issuer preserved.
+      expect((result as any).actionError).toContain('Reconnect the mailbox to switch Microsoft applications');
+      expect((result as any).errorCode).toBe('ms_email_client_mismatch_reconnect_required');
+
+      const configRecord = await tenantTable<any>('microsoft_email_provider_config')
+        .where('email_provider_id', connectedProviderId)
+        .first();
+      expect(configRecord.client_id).toBe(microsoftProfileClientId);
+      expect(configRecord.refresh_token).toBe('refresh-token-abc');
+
+      delete process.env[otherSecretEnvKey];
+    });
+
+    it('fails loudly when creating a Microsoft provider without an explicit issuer choice', async () => {
+      // No microsoftIssuer: the server must reject rather than silently
+      // resolving the tenant Email binding.
+      const result = await createEmailProvider({
+        tenant: testTenant,
+        providerType: 'microsoft' as const,
+        providerName: 'No Issuer',
+        mailbox: 'no-issuer@client.com',
+        isActive: true,
+        microsoftConfig: {
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          auto_process_emails: true,
+          max_emails_per_sync: 50,
+        } as any,
+      }, true);
+
+      expect((result as any).actionError).toContain('Choose which Microsoft application authorizes this mailbox');
+      expect((result as any).errorCode).toBe('ms_email_issuer_required');
+
+      const dbRecord = await tenantTable<any>('email_providers')
+        .where('mailbox', 'no-issuer@client.com')
+        .first();
+      expect(dbRecord).toBeUndefined();
     });
   });
 
@@ -274,6 +398,11 @@ describe('Email Provider Creation', () => {
         providerName: 'Outlook Provider',
         mailbox: 'outlook@client.com',
         isActive: true,
+        microsoftIssuer: {
+          kind: 'profile',
+          profileId: microsoftProfileId,
+          clientId: microsoftProfileClientId,
+        },
         microsoftConfig: {
           client_id: 'microsoft-client-id',
           client_secret: 'microsoft-client-secret',

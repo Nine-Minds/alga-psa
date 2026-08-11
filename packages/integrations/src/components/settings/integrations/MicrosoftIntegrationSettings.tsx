@@ -28,6 +28,7 @@ import {
   getMicrosoftIntegrationStatus,
   listMicrosoftConsumerBindings,
   resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill,
   setDefaultMicrosoftProfile,
   setMicrosoftConsumerBinding,
   updateMicrosoftProfile,
@@ -438,6 +439,10 @@ export function MicrosoftIntegrationSettings({
     setError(null);
 
     const [statusResult, bindingsResult] = await Promise.all([
+      // PURE READ. Loading this page must never write to
+      // microsoft_email_provider_config (the Teams settings page shares this
+      // status action to build its profile picker). The conservative same-client
+      // issuer backfill runs only from the deliberate save/reconnect handler.
       getMicrosoftIntegrationStatus(),
       listMicrosoftConsumerBindings(),
     ]);
@@ -625,6 +630,14 @@ export function MicrosoftIntegrationSettings({
             : t('integrations.microsoft.settings.toasts.profileUpdatedDescription', { defaultValue: 'Microsoft app changes saved.' }),
       });
       closeDialog();
+      // Deliberate mutation, not a load side effect: the conservative same-client
+      // issuer backfill pins legacy email providers to the app just saved. It is
+      // best-effort here — a backfill failure must not fail the profile save.
+      try {
+        await runMicrosoftEmailIssuerBackfill();
+      } catch (backfillErr) {
+        console.warn('Microsoft email issuer backfill after profile save failed', backfillErr);
+      }
       await load();
     } finally {
       setSaving(false);
@@ -1025,6 +1038,16 @@ export function MicrosoftIntegrationSettings({
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription>{warning}</AlertDescription>
                         </Alert>
+                      </div>
+                    )}
+
+                    {consumer.consumerType === 'email' && (
+                      <div className="lg:col-span-3">
+                        <p className="text-xs text-muted-foreground">
+                          {t('integrations.microsoft.settings.consumers.email.perProviderIssuerNote', {
+                            defaultValue: 'Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections.',
+                          })}
+                        </p>
                       </div>
                     )}
                   </div>

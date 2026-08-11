@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Tags zu {{count}} Aufgabe hinzugefügt",
     "bulkTagsSuccess_other": "Tags zu {{count}} Aufgaben hinzugefügt",
     "bulkTagsPartial": "Tags konnten zu einigen Aufgaben nicht hinzugefügt werden",
-    "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden"
+    "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
+    "taskTypeFallback": "Aufgabe"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -959,7 +960,17 @@
       "add_title": "Statusspalte hinzufügen",
       "select_placeholder": "Status auswählen...",
       "all_in_use": "Alle verfügbaren Status werden verwendet",
-      "create_new": "Neu erstellen"
+      "create_new": "Neu erstellen",
+      "status_no_longer_exists": "Status existiert nicht mehr",
+      "missing_status": "Fehlender Status",
+      "ambiguous_status": "Mehrdeutiger historischer Status",
+      "replace_placeholder": "Ersatzstatus auswählen...",
+      "replace_status": "Status ersetzen",
+      "replacing": "Wird ersetzt...",
+      "replaced": "Statusspalte ersetzt",
+      "replace_failed": "Statusspalte konnte nicht ersetzt werden",
+      "repair_status_columns": "Statusspalten reparieren",
+      "unresolved_apply_guard": "Statusspalten müssen repariert werden ({{count}})"
     },
     "list": {
       "title": "Projektvorlagen",
@@ -1047,7 +1058,8 @@
         "all": "Alle Zuweisungen kopieren"
       },
       "fixErrors": "Bitte korrigieren Sie die folgenden Fehler:",
-      "addStatus": "Neuen Status hinzufügen"
+      "addStatus": "Neuen Status hinzufügen",
+      "unresolved_guard": "Diese Vorlage enthält Statusspalten, die repariert werden müssen, bevor sie angewendet werden kann."
     },
     "detail": {
       "description": "Beschreibung:",
@@ -1787,5 +1799,13 @@
       "ready": "Bereit: {{amount}}",
       "total": "Gesamt: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Aufgabe",
+    "bug": "Fehler",
+    "feature": "Funktion",
+    "improvement": "Verbesserung",
+    "epic": "Epic",
+    "story": "Story"
   }
 }

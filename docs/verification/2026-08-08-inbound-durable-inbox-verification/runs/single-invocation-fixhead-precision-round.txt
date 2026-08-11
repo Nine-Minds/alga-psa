@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786390709212"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (15 tests) 2505ms 126 MB heap used
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10980ms 165 MB heap used
+   ✓ Inbound email durable inbox (integration) > bracketed reply resolves a legacy ticket whose email_metadata.messageId kept the bracketed form  606ms
+
+ Test Files  2 passed (2)
+      Tests  60 passed (60)
+   Start at  19:38:29
+   Duration  14.07s (transform 1.30s, setup 57ms, collect 163ms, tests 13.48s, environment 0ms, prepare 29ms)
+

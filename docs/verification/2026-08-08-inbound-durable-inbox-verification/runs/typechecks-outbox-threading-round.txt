@@ -1,0 +1,13 @@
+All five typechecks green at HEAD 2dee4084d8 (fix(inbound-email): thread outbox
+transaction through subscriber handlers and stop swallowing failure-ledger
+errors), verifier-timeout mitigation round 3.
+
+| Check | Command (from dir) | Exit | Wall clock |
+| --- | --- | --- | --- |
+| server | NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json (server/) | 0 | 21.98s |
+| shared | npx tsc --noEmit (shared/) | 0 | 15.96s |
+| services/email-service | npx tsc --noEmit -p tsconfig.json (services/email-service/) | 0 | 5.70s |
+| packages/jobs | npx tsc --noEmit (packages/jobs/) | 0 | 12.39s |
+| ee/temporal-workflows | npx tsc --noEmit (ee/temporal-workflows/) | 0 | 9.26s |
+
+All produced exit code 0 with zero diagnostics (empty tsc output).

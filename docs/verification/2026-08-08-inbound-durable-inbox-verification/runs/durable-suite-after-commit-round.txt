@@ -1,0 +1,15 @@
+RUN of the durable inbound suite at after-commit round HEAD (mitigation round: defer internal-notification external effects until after commit).
+
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786419906341"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10677ms 146 MB heap used
+   ✓ Inbound email durable inbox (integration) > reply event outbox payload is schema-valid and the dispatcher publishes it (never dead-letters)  546ms
+
+ Test Files  1 passed (1)
+      Tests  45 passed (45)
+   Start at  03:45:06
+   Duration  11.48s (transform 610ms, setup 51ms, collect 419ms, tests 10.68s, environment 0ms, prepare 27ms)
+

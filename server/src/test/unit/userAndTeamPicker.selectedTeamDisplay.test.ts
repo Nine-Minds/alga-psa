@@ -13,7 +13,11 @@ describe('UserAndTeamPicker selected team display', () => {
     expect(picker).toContain("const currentTeam = teams.find(team => team.team_id === value);");
     expect(picker).toContain("const selectedLabel = currentUser");
     expect(picker).toContain("    : currentTeam");
-    expect(picker).toContain("      ? currentTeam.team_name || 'Unnamed Team'");
+    // The unnamed-team fallback is translated, so assert the resolution path
+    // rather than the English literal it used to hold.
+    expect(picker).toContain(
+      "      ? currentTeam.team_name || t('pickers.unnamedTeam', 'Unnamed Team')",
+    );
     // The trigger label truncates so a long name cannot widen a narrow parent.
     expect(picker).toContain(
       "<span className={`truncate ${!hasSelection ? 'text-gray-400' : ''}`}>{selectedLabel}</span>",

@@ -82,7 +82,8 @@
     "share": "55555",
     "done": "55555",
     "continue": "55555",
-    "printSelected": "55555 {{count}} 55555"
+    "printSelected": "55555 {{count}} 55555",
+    "removeTag": "55555"
   },
   "upgradePrompt": {
     "editionLabel": "55555",
@@ -107,7 +108,11 @@
     "noUsersAvailable": "55555",
     "searchBoards": "55555",
     "searchBoardsLabel": "55555",
-    "noBoardsFound": "55555"
+    "noBoardsFound": "55555",
+    "notAssigned": "55555",
+    "searchUsersOrTeams": "55555",
+    "unnamedUser": "55555",
+    "unnamedTeam": "55555"
   },
   "tagFilter": {
     "placeholder": "55555",
@@ -209,7 +214,9 @@
       "downloadLimitReached": "55555"
     },
     "downloadStarted": "55555",
-    "enterPassword": "55555"
+    "enterPassword": "55555",
+    "downloadsUsed": "55555 {{used}} 55555 {{max}} 55555",
+    "expiresAt": "55555 {{date}} 55555"
   },
   "tickets": {
     "origin": {
@@ -1122,6 +1129,13 @@
     "addOnDescription": {
       "ai_assistant": "55555"
     }
+  },
+  "timePicker": {
+    "placeholder": "55555",
+    "hour": "55555",
+    "minute": "55555",
+    "period": "55555",
+    "open": "55555"
   },
   "timezonePicker": {
     "selectPlaceholder": "55555",

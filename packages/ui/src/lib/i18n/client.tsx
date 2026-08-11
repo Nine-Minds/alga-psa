@@ -106,13 +106,48 @@ function applyPreloadedResources(
   }
 }
 
-async function initI18n(locale?: SupportedLocale, preloaded?: PreloadedNamespaceResources) {
+/**
+ * Pull in any of the route's namespaces that aren't in memory yet.
+ *
+ * Without this awaited before children render, the first `t()` call in a
+ * namespace still in flight logs i18next's "was not yet loaded ... something
+ * IS WRONG in your setup" warning and returns the key's English defaultValue
+ * until the fetch lands. On a fast connection that resolves too quickly to
+ * see; on a cold cache or a slow link it is a visible flash of English — or a
+ * raw key for any call site without a defaultValue.
+ */
+async function ensureNamespacesLoaded(
+  locale: SupportedLocale,
+  namespaces?: string[],
+) {
+  if (!namespaces || namespaces.length === 0) return;
+
+  const missing = namespaces.filter(
+    (namespace) => !i18next.hasResourceBundle(locale, namespace)
+  );
+  if (missing.length === 0) return;
+
+  try {
+    await i18next.loadNamespaces(missing);
+  } catch (error) {
+    // A namespace that fails to load must not strand the page on its spinner;
+    // keys fall back to their defaultValue, as they did before this awaited.
+    console.error('Failed to load namespaces:', error);
+  }
+}
+
+async function initI18n(
+  locale?: SupportedLocale,
+  preloaded?: PreloadedNamespaceResources,
+  namespaces?: string[],
+) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
   if (i18nInitialized) {
     applyPreloadedResources(resolvedLocale, preloaded);
     if (locale && i18next.language !== locale) {
       await i18next.changeLanguage(locale);
     }
+    await ensureNamespacesLoaded(resolvedLocale, namespaces);
     return;
   }
 
@@ -132,6 +167,7 @@ async function initI18n(locale?: SupportedLocale, preloaded?: PreloadedNamespace
     });
 
   i18nInitialized = true;
+  await ensureNamespacesLoaded(resolvedLocale, namespaces);
 }
 
 /**
@@ -171,30 +207,24 @@ export function I18nProvider({
   );
   const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => {
-    // Initialize i18next
-    initI18n(locale, preloadedResources).then(() => {
-      setIsInitialized(true);
-    });
-  }, [locale, preloadedResources]);
+  // Identity, not contents, is what would re-run the effect: callers that build
+  // this array inline would otherwise reload namespaces on every render.
+  const namespaceKey = namespaces ? namespaces.join(',') : '';
 
   useEffect(() => {
-    if (!isInitialized || !namespaces || namespaces.length === 0) {
-      return;
-    }
-
-    const missing = namespaces.filter(
-      (namespace) => !i18next.hasResourceBundle(locale, namespace)
+    let cancelled = false;
+    // The route's namespaces are awaited as part of initialization rather than
+    // in a follow-up effect, so `isInitialized` means "translations are ready"
+    // and not merely "i18next exists". Children used to render in the gap.
+    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined).then(
+      () => {
+        if (!cancelled) setIsInitialized(true);
+      }
     );
-
-    if (missing.length === 0) {
-      return;
-    }
-
-    i18next.loadNamespaces(missing).catch((error) => {
-      console.error('Failed to load namespaces:', error);
-    });
-  }, [isInitialized, locale, namespaces]);
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, preloadedResources, namespaceKey]);
 
   const setLocale = async (newLocale: SupportedLocale) => {
     if (!isSupportedLocale(newLocale)) {
@@ -332,12 +362,22 @@ export function detectClientLocale(
 }
 
 /**
- * Format utilities for client-side use
+ * Format utilities for client-side use.
+ *
+ * Reads the locale optionally: a formatter must not crash the tree it renders
+ * in just because no provider is above it (drawers, print views and component
+ * tests all render outside one). Without a provider it falls back to the
+ * default locale, which at least stays deterministic rather than following
+ * whatever the browser happens to be set to. `locale` is returned so callers
+ * can pass it to module-scope helpers that have no hook of their own.
  */
 export function useFormatters() {
-  const { locale } = useI18n();
+  const context = useOptionalI18n();
+  const locale = context?.locale ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale);
 
   return useMemo(() => ({
+    locale,
+
     formatDate: (
       date: Date | string,
       options?: Intl.DateTimeFormatOptions

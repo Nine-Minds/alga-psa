@@ -752,7 +752,7 @@
       "templateGenerationFailed": "No se pudo generar la plantilla de vista previa desde el espacio de trabajo actual."
     },
     "pipeline": {
-      "render": "Prestar",
+      "render": "Renderizado",
       "shape": "Forma",
       "renderFailed": "Error de renderizado.",
       "shapeFailed": "Error al dar forma a los datos.",

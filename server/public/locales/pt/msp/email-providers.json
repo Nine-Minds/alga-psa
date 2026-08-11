@@ -251,7 +251,8 @@
         "popupBlocked": "Falha ao abrir o pop-up do OAuth. Por favor, permita pop-ups para este site.",
         "closedEarly": "Janela de autorização fechada antes da conclusão. Por favor, tente novamente.",
         "authorizationFailed": "Falha na autorização",
-        "senderDisplayNameInvalid": "O nome de exibição não pode conter aspas, colchetes angulares ou quebras de linha"
+        "senderDisplayNameInvalid": "O nome de exibição não pode conter aspas, colchetes angulares ou quebras de linha",
+        "issuerRequired": "Escolha um aplicativo da Microsoft antes de entrar"
       },
       "requiredFields": {
         "providerName": "Nome da configuração",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       },
       "readiness": {
-        "checking": "Verificando a configuração da Microsoft…",
-        "ready": "A Microsoft está configurada. Entre com esta caixa de correio para concluir.",
-        "pending": "Aguardando seu administrador do Microsoft 365. A configuração foi iniciada em Provedores, mas ainda não foi aprovada.",
-        "openProviders": "Abrir Provedores",
-        "notConfigured": "A Microsoft ainda não está configurada. Configure-a uma vez em Provedores e depois volte.",
-        "setUpInProviders": "Configurar em Provedores"
+        "openProviders": "Abrir Provedores"
+      },
+      "issuer": {
+        "title": "Aplicativo da Microsoft que autoriza esta caixa de correio",
+        "description": "Escolha qual aplicativo entra como esta caixa de correio. Esta escolha é armazenada com a caixa de correio e não afeta outros serviços.",
+        "managedLabel": "Aplicativo AlgaPSA (gerenciado pela Nine Minds)",
+        "managedDescription": "Nenhum registro de aplicativo da Microsoft é necessário do seu lado.",
+        "recommended": "Recomendado",
+        "currentApp": "Aplicativo atual: {{app}}",
+        "selectedApp": "Aplicativo selecionado: {{app}}",
+        "pendingReauth": "Reautorização pendente",
+        "switchWarning": "Alterar o aplicativo da Microsoft exige reconectar esta caixa de correio. Entre novamente com a Microsoft para concluir a troca.",
+        "noneAvailable": "Para conectar o Microsoft 365, primeiro configure um aplicativo da Microsoft em Provedores e depois volte.",
+        "retry": "Tentar novamente",
+        "pendingConsentEmpty": "Seu aplicativo da Microsoft está aguardando aprovação de um administrador do Microsoft 365. Depois de aprovado em Provedores, volte para entrar.",
+        "pendingConsentHint": "Seu próprio aplicativo da Microsoft ainda aguarda aprovação de um administrador do Microsoft 365.",
+        "ownAppPrompt": "Prefere entrar com seu próprio aplicativo da Microsoft?",
+        "ownAppSetupLink": "Configurá-lo em Provedores"
       }
     },
     "gmail": {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TicketInterval } from '@alga-psa/types';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -21,6 +21,8 @@ export function IntervalItem({
   onSelect
 }: IntervalItemProps) {
   const { t } = useTranslation('msp/time-entry');
+  // `[]` handed these to the browser's locale, so intervals stayed 12-hour English.
+  const { formatDate } = useFormatters();
   // Compact typography when rendered inside a Grid-layout bento tile.
   const isBento = useContentCardVariant() === 'bento';
   // Calculate duration if not provided
@@ -31,11 +33,11 @@ export function IntervalItem({
   );
   
   // Format dates for display
-  const startTime = new Date(interval.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const endTime = interval.endTime 
-    ? new Date(interval.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const startTime = formatDate(new Date(interval.startTime), { hour: '2-digit', minute: '2-digit' });
+  const endTime = interval.endTime
+    ? formatDate(new Date(interval.endTime), { hour: '2-digit', minute: '2-digit' })
     : t('intervalItem.now', { defaultValue: 'Now' });
-  const startDate = new Date(interval.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const startDate = formatDate(new Date(interval.startTime), { month: 'short', day: 'numeric' });
   
   const timeRange = `${startTime} - ${endTime}`;
 

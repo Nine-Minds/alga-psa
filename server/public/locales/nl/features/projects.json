@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Labels toegevoegd aan {{count}} taak",
     "bulkTagsSuccess_other": "Labels toegevoegd aan {{count}} taken",
     "bulkTagsPartial": "Labels konden niet aan sommige taken worden toegevoegd",
-    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd"
+    "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
+    "taskTypeFallback": "Taak"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -959,7 +960,17 @@
       "add_title": "Statuskolom toevoegen",
       "select_placeholder": "Selecteer een status...",
       "all_in_use": "Alle beschikbare statussen zijn in gebruik",
-      "create_new": "Nieuw aanmaken"
+      "create_new": "Nieuw aanmaken",
+      "status_no_longer_exists": "Status bestaat niet meer",
+      "missing_status": "Ontbrekende status",
+      "ambiguous_status": "Ambigu historische status",
+      "replace_placeholder": "Vervangende status selecteren...",
+      "replace_status": "Status vervangen",
+      "replacing": "Vervangen...",
+      "replaced": "Statuskolom vervangen",
+      "replace_failed": "Statuskolom vervangen mislukt",
+      "repair_status_columns": "Statuskolommen repareren",
+      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})"
     },
     "list": {
       "title": "Projectsjablonen",
@@ -1047,7 +1058,8 @@
         "all": "Kopieer alle opdrachten"
       },
       "fixErrors": "Los de volgende fouten op:",
-      "addStatus": "Nieuwe status toevoegen"
+      "addStatus": "Nieuwe status toevoegen",
+      "unresolved_guard": "Dit sjabloon heeft statuskolommen die moeten worden gerepareerd voordat het kan worden toegepast."
     },
     "detail": {
       "description": "Beschrijving:",
@@ -1787,5 +1799,13 @@
       "ready": "Gereed: {{amount}}",
       "total": "Totaal: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Taak",
+    "bug": "Bug",
+    "feature": "Functie",
+    "improvement": "Verbetering",
+    "epic": "Epic",
+    "story": "Story"
   }
 }

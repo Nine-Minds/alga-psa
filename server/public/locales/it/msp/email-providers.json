@@ -251,7 +251,8 @@
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "Finestra di autorizzazione chiusa prima del completamento. Per favore riprova.",
         "authorizationFailed": "Autorizzazione fallita",
-        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga"
+        "senderDisplayNameInvalid": "Il nome visualizzato non può contenere virgolette, parentesi angolari o interruzioni di riga",
+        "issuerRequired": "Scegli un'app Microsoft prima di accedere"
       },
       "requiredFields": {
         "providerName": "Nome configurazione",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {
-        "checking": "Verifica della configurazione Microsoft…",
-        "ready": "Microsoft è configurato. Accedi con questa cassetta postale per terminare.",
-        "pending": "In attesa del tuo amministratore di Microsoft 365. La configurazione è stata avviata in Fornitori, ma non è ancora stata approvata.",
-        "openProviders": "Apri Fornitori",
-        "notConfigured": "Microsoft non è ancora configurato. Configuralo una volta in Fornitori, quindi torna qui.",
-        "setUpInProviders": "Configura in Fornitori"
+        "openProviders": "Apri Fornitori"
+      },
+      "issuer": {
+        "title": "App Microsoft che autorizza questa casella di posta",
+        "description": "Scegli quale applicazione accede come questa casella di posta. Questa scelta viene salvata con la casella di posta e non influisce sugli altri servizi.",
+        "managedLabel": "App AlgaPSA (gestita da Nine Minds)",
+        "managedDescription": "Nessuna registrazione di un'app Microsoft è richiesta da parte tua.",
+        "recommended": "Consigliata",
+        "currentApp": "App attuale: {{app}}",
+        "selectedApp": "App selezionata: {{app}}",
+        "pendingReauth": "Ri-autorizzazione in sospeso",
+        "switchWarning": "La modifica dell'app Microsoft richiede di ricollegare questa casella di posta. Accedi di nuovo con Microsoft per completare il passaggio.",
+        "noneAvailable": "Per collegare Microsoft 365, configura prima un'app Microsoft in Fornitori, poi torna qui.",
+        "retry": "Riprova",
+        "pendingConsentEmpty": "La tua app Microsoft è in attesa dell'approvazione di un amministratore di Microsoft 365. Una volta approvata in Fornitori, torna qui per accedere.",
+        "pendingConsentHint": "La tua app Microsoft attende ancora l'approvazione di un amministratore di Microsoft 365.",
+        "ownAppPrompt": "Preferisci accedere con la tua app Microsoft?",
+        "ownAppSetupLink": "Configurala in Fornitori"
       }
     },
     "gmail": {

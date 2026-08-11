@@ -1,0 +1,5 @@
+Shared dev DB audit rows at after-commit round HEAD (the 23 pre-existing rfc822:rfc822 inbox rows are preserved history — never deleted/repair; totals unchanged from the outbox-threading round).
+
+inbox_rows_with_rfc822rfc822=23
+inbox_rows_total=57
+legacy_processed_messages_total=34

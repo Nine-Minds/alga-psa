@@ -651,15 +651,15 @@
       "january": "Januari",
       "february": "Februari",
       "march": "Maart",
-      "april": "april",
+      "april": "April",
       "may": "Mei",
-      "june": "juni",
-      "july": "juli",
-      "august": "augustus",
-      "september": "september",
-      "october": "oktober",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "Augustus",
+      "september": "September",
+      "october": "Oktober",
       "november": "November",
-      "december": "december"
+      "december": "December"
     }
   },
   "invoicePreview": {

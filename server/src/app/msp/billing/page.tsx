@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import BillingPageClient from './BillingPageClient';
+import { billingTabDefinitions } from '@alga-psa/billing/components/billing-dashboard/billingTabsConfig';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -17,34 +18,23 @@ interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-// Browser tab titles for each billing section. Billing is a single route whose
-// sections are selected via the `?tab=` query param, so the title is derived from
-// that param to mirror the active section. Keep in sync with `billingTabDefinitions`
-// in packages/billing/src/components/billing-dashboard/billingTabsConfig.ts.
-const BILLING_TAB_TITLES: Record<string, string> = {
-  quotes: 'Quotes',
-  'quote-templates': 'Quote Layouts',
-  'quote-business-templates': 'Quote Templates',
-  'client-contracts': 'Client Contracts',
-  'accounting-exports': 'Accounting Exports',
-  'contract-templates': 'Contract Templates',
-  invoicing: 'Invoicing',
-  'invoice-templates': 'Invoice Layouts',
-  'tax-rates': 'Tax Rates',
-  'contract-lines': 'Contract Line Presets',
-  'billing-cycles': 'Billing Cycles',
-  'service-periods': 'Service Periods',
-  'usage-tracking': 'Usage Tracking',
-  reports: 'Reports',
-  'service-types': 'Service Types',
-  'service-catalog': 'Services',
-  products: 'Products',
-};
-
+// Billing is a single route whose sections are selected via the `?tab=` query
+// param, so the browser tab title is derived from that param to mirror the
+// active section. It resolves through the tab strip's own labelKey rather than a
+// second copy of the titles, so the two can't drift and neither can go
+// untranslated.
 export async function generateMetadata({ searchParams }: BillingPageProps): Promise<Metadata> {
   const params = await searchParams;
   const tab = typeof params.tab === 'string' ? params.tab : undefined;
-  return { title: (tab && BILLING_TAB_TITLES[tab]) || 'Billing' };
+  const definition = tab ? billingTabDefinitions.find((entry) => entry.value === tab) : undefined;
+
+  if (definition) {
+    const { t } = await getServerTranslation(undefined, 'msp/billing');
+    return { title: t(definition.labelKey, { defaultValue: definition.label }) };
+  }
+
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.billing.title', { defaultValue: 'Billing' }) };
 }
 
 const BillingPage = async ({ searchParams }: BillingPageProps) => {

@@ -108,6 +108,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../../lib/useTaskTypeLabel';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -168,6 +169,9 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [tasks, setTasks] = useState<IProjectTemplateTask[]>(initialTemplate.tasks || []);
   const [statusMappings, setStatusMappings] = useState<IProjectTemplateStatusMapping[]>(
     initialTemplate.status_mappings || []
+  );
+  const [unresolvedStatusMappingCount, setUnresolvedStatusMappingCount] = useState<number>(
+    initialTemplate.unresolved_status_mapping_count ?? 0
   );
   const [taskAssignments, setTaskAssignments] = useState<IProjectTemplateTaskAssignment[]>(
     initialTemplate.task_assignments || []
@@ -928,6 +932,20 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     setStatusMappings((prev) => [...prev, newMapping]);
   };
 
+  const handleStatusReplaced = (result: {
+    mapping: IProjectTemplateStatusMapping;
+    unresolvedStatusMappingCount: number;
+  }) => {
+    setStatusMappings((prev) =>
+      prev.map((m) =>
+        m.template_status_mapping_id === result.mapping.template_status_mapping_id
+          ? result.mapping
+          : m
+      )
+    );
+    setUnresolvedStatusMappingCount(result.unresolvedStatusMappingCount);
+  };
+
   const handleStatusRemoved = (mappingId: string) => {
     setStatusMappings((prev) => prev.filter((m) => m.template_status_mapping_id !== mappingId));
     // Clear status from tasks that used this mapping
@@ -1113,6 +1131,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           }}
           onPhaseStatusesRemoved={handlePhaseStatusesRemoved}
           onStatusReordered={handleStatusReordered}
+          onStatusReplaced={handleStatusReplaced}
         />
       )}
 
@@ -1185,10 +1204,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 onChange={handleViewModeChange}
                 options={viewOptions}
               />
-              <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
-                <Rocket className="h-4 w-4 mr-2" />
-                {t('templates.editor.useTemplate', 'Use Template')}
-              </Button>
+              {unresolvedStatusMappingCount > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-destructive font-medium">
+                    {t('templates.statuses.unresolved_apply_guard', {
+                      count: unresolvedStatusMappingCount,
+                    })}
+                  </span>
+                  <Button
+                    id="repair-status-columns"
+                    variant="outline"
+                    onClick={() => setShowStatusManager(true)}
+                  >
+                    {t('templates.statuses.repair_status_columns')}
+                  </Button>
+                </div>
+              ) : (
+                <Button id="use-template" onClick={() => setShowApplyDialog(true)}>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  {t('templates.editor.useTemplate', 'Use Template')}
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -2099,6 +2135,7 @@ function TaskCard({
   zoomLevel = 50,
 }: TaskCardProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -2139,7 +2176,7 @@ function TaskCard({
       }`}
     >
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || taskTypeKey}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskTypeLabel(taskType, taskTypeKey)}>
         <Icon className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'} style={{ color: iconColor }} />
       </div>
 
