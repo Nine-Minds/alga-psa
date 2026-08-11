@@ -285,6 +285,8 @@
         "managedDescription": "11111",
         "recommended": "11111",
         "currentApp": "11111 {{app}} 11111",
+        "selectedApp": "11111 {{app}} 11111",
+        "pendingReauth": "11111",
         "switchWarning": "11111",
         "noneAvailable": "11111",
         "retry": "11111",

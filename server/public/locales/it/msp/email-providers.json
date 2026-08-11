@@ -293,6 +293,8 @@
         "managedDescription": "No Microsoft app registration is required on your side.",
         "recommended": "Recommended",
         "currentApp": "Current app: {{app}}",
+        "selectedApp": "Selected app: {{app}}",
+        "pendingReauth": "Pending reauthorization",
         "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
         "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
         "retry": "Try again",

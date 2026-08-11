@@ -500,4 +500,119 @@ describe('MicrosoftProviderForm', () => {
       )
     ).toBeInTheDocument();
   });
+
+  it('keeps the persisted app labeled Current while a different app is selected pending reauthorization', async () => {
+    const existingProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'acme-client-id',
+        microsoft_profile_id: 'profile-1',
+        client_secret_ref: 'microsoft_profile_profile-1_client_secret',
+        tenant_id: 'tenant-dir-1',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Persisted app is current; nothing selected differently yet, so no pending state.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+
+    // Select the managed app (a different app than the persisted Acme profile).
+    await user.click(screen.getByText('AlgaPSA app (managed by Nine Minds)'));
+
+    // Current must still be the persisted issuer; the new pick is selected/pending.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.getByText('Selected app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+    expect(screen.getByText('Pending reauthorization')).toBeInTheDocument();
+  });
+
+  it('labels the persisted issuer Current with no pending state after a successful reconnect persistence', async () => {
+    const postReconnectProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'managed-client-id',
+        client_secret_ref: 'microsoft_managed_app_client_secret',
+        tenant_id: 'common',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={postReconnectProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Beta (managed) is now the persisted issuer: it is Current, and because the
+    // form defaults to the persisted app there is no pending/switch state.
+    expect(screen.getByText('Current app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/changing the microsoft app requires reconnecting/i)).not.toBeInTheDocument();
+  });
+
+  it('shows no pending state when the already-persisted app is reselected', async () => {
+    const existingProvider = {
+      id: '123',
+      tenant: 'test-tenant-123',
+      providerType: 'microsoft' as const,
+      providerName: 'Existing Microsoft',
+      mailbox: 'existing@microsoft.com',
+      isActive: true,
+      status: 'connected' as const,
+      microsoftConfig: {
+        client_id: 'acme-client-id',
+        microsoft_profile_id: 'profile-1',
+        client_secret_ref: 'microsoft_profile_profile-1_client_secret',
+        tenant_id: 'tenant-dir-1',
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+        folder_filters: ['Inbox'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50,
+      },
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} provider={existingProvider as any} />);
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+
+    // Defaults to the persisted Acme profile: current, no pending.
+    expect(screen.getByText('Current app: Acme Email App')).toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+
+    // Switch away, then reselect the persisted app: pending state clears.
+    await user.click(screen.getByText('AlgaPSA app (managed by Nine Minds)'));
+    expect(screen.getByText('Selected app: AlgaPSA app (managed by Nine Minds)')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Acme Email App'));
+    expect(screen.queryByText(/Selected app:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending reauthorization/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/changing the microsoft app requires reconnecting/i)).not.toBeInTheDocument();
+  });
 });

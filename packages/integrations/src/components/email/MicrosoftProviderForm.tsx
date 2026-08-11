@@ -95,13 +95,31 @@ export function MicrosoftProviderForm({
     };
   }, [provider]);
 
-  const selectedIssuerLabel = React.useMemo(() => {
-    if (!issuerOptions) return null;
-    const option = [...(issuerOptions.managed ? [issuerOptions.managed] : []), ...issuerOptions.profiles].find(
-      (candidate) => candidate.clientId.toLowerCase() === selectedIssuer?.clientId.toLowerCase()
-    );
-    return option?.label ?? null;
-  }, [issuerOptions, selectedIssuer]);
+  const resolveIssuerLabel = React.useCallback(
+    (choice: MicrosoftEmailIssuerChoice | null): string | null => {
+      if (!issuerOptions || !choice) return null;
+      const option = [...(issuerOptions.managed ? [issuerOptions.managed] : []), ...issuerOptions.profiles].find(
+        (candidate) => candidate.clientId.toLowerCase() === choice.clientId.toLowerCase()
+      );
+      return option?.label ?? null;
+    },
+    [issuerOptions]
+  );
+
+  // Label for the app currently selected in the form (pending reauthorization).
+  const selectedIssuerLabel = React.useMemo(
+    () => resolveIssuerLabel(selectedIssuer),
+    [resolveIssuerLabel, selectedIssuer]
+  );
+
+  // Label for the app that actually issued this provider's refresh token.
+  // "Current" must always come from the persisted provider config (server
+  // truth), never from the unsaved selection — selecting a different app is
+  // pending reauthorization until the callback persists it.
+  const currentIssuerLabel = React.useMemo(
+    () => resolveIssuerLabel(currentIssuer),
+    [resolveIssuerLabel, currentIssuer]
+  );
 
   const isSwitchingIssuer = Boolean(
     isEditing &&
@@ -670,11 +688,29 @@ export function MicrosoftProviderForm({
             )}
 
             {isEditing && currentIssuer && (
-              <div className="text-xs text-muted-foreground">
-                {t('forms.microsoft.issuer.currentApp', {
-                  defaultValue: 'Current app: {{app}}',
-                  app: selectedIssuerLabel || currentIssuer.clientId,
-                })}
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {t('forms.microsoft.issuer.currentApp', {
+                    defaultValue: 'Current app: {{app}}',
+                    app: currentIssuerLabel || currentIssuer.clientId,
+                  })}
+                </div>
+
+                {isSwitchingIssuer && selectedIssuer && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2">
+                    <span className="text-xs font-medium">
+                      {t('forms.microsoft.issuer.selectedApp', {
+                        defaultValue: 'Selected app: {{app}}',
+                        app: selectedIssuerLabel || selectedIssuer.clientId,
+                      })}
+                    </span>
+                    <Badge variant="warning">
+                      {t('forms.microsoft.issuer.pendingReauth', {
+                        defaultValue: 'Pending reauthorization',
+                      })}
+                    </Badge>
+                  </div>
+                )}
               </div>
             )}
 
