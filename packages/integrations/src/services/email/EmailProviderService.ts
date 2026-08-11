@@ -46,6 +46,34 @@ export interface ProviderStatus {
   lastSyncAt?: string;
 }
 
+// Real writable columns on microsoft_email_provider_config (identity columns
+// email_provider_id/tenant and the timestamp columns are managed separately).
+// Only these may ever reach an UPDATE so a stray caller key (e.g.
+// `subscriptionId`) can never be written to a nonexistent column.
+const MICROSOFT_PROVIDER_CONFIG_COLUMNS = [
+  'client_id',
+  'client_secret',
+  'tenant_id',
+  'redirect_uri',
+  'auto_process_emails',
+  'max_emails_per_sync',
+  'folder_filters',
+  'access_token',
+  'refresh_token',
+  'token_expires_at',
+  'webhook_subscription_id',
+  'webhook_expires_at',
+  'webhook_verification_token',
+  'last_subscription_renewal',
+  'delivery_mode',
+  'last_webhook_delivery_at',
+  'webhook_silent_runs',
+  'next_subscription_probe_at',
+  'last_reconciliation_at',
+  'microsoft_profile_id',
+  'client_secret_ref',
+] as const;
+
 export class EmailProviderService {
   private readonly lifecycleService = new EmailProviderLifecycleService();
   private async getDb(tenant: string) {
@@ -289,13 +317,25 @@ export class EmailProviderService {
               updated_at: db.fn.now()
             });
         } else if (existingProvider.provider_type === 'microsoft') {
-          // Update Microsoft-specific configuration
+          // Update Microsoft-specific configuration. Only real
+          // microsoft_email_provider_config columns may reach the UPDATE: the
+          // merged config carries the existing row plus caller keys, and a
+          // non-column key (e.g. `subscriptionId`) would make Postgres throw,
+          // leaving the provider in Error. folder_filters is a jsonb column
+          // that the pg driver returns as a parsed array, so it must be
+          // re-stringified before it can be written back.
+          const microsoftUpdate: Record<string, unknown> = { updated_at: db.fn.now() };
+          for (const column of MICROSOFT_PROVIDER_CONFIG_COLUMNS) {
+            const value = (mergedConfig as Record<string, unknown>)[column];
+            if (value === undefined) continue;
+            microsoftUpdate[column] =
+              column === 'folder_filters' && Array.isArray(value)
+                ? JSON.stringify(value)
+                : value;
+          }
           await scopedDb.table('microsoft_email_provider_config')
             .where('email_provider_id', providerId)
-            .update({
-              ...mergedConfig,
-              updated_at: db.fn.now()
-            });
+            .update(microsoftUpdate);
         } else if (existingProvider.provider_type === 'imap') {
           const updatePayload = { ...mergedConfig };
           if (updatePayload.folder_filters && Array.isArray(updatePayload.folder_filters)) {
@@ -417,13 +457,13 @@ export class EmailProviderService {
           reason: 'provider configuration subscription succeeded',
         });
 
-        // Update provider with webhook subscription ID
-        await this.updateProvider(providerId, tenant, {
-          vendorConfig: {
-            ...provider.provider_config,
-            subscriptionId: result.subscriptionId
-          }
-        });
+        // The adapter already persisted the replacement subscription id and
+        // expiry (webhook_subscription_id / webhook_expires_at on
+        // microsoft_email_provider_config) inside registerWebhookSubscription,
+        // and it rethrows a persistence failure so webhookCompensation can
+        // delete the orphaned Graph subscription. Writing it again here would
+        // only duplicate that write with a wrong column name (`subscriptionId`
+        // is not a column), so nothing is done.
 
       } else if (provider.provider_type === 'google') {
         const gmailWebhookService = GmailWebhookService.getInstance();
