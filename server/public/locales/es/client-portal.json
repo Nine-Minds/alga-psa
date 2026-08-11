@@ -701,7 +701,13 @@
       "saveError": "Error al guardar la preferencia",
       "noCategories": "No hay categorías de notificaciones disponibles",
       "emailPreferences": "Correo electrónico",
-      "internalPreferences": "Interno"
+      "internalPreferences": "Interno",
+      "priority": {
+        "high": "Alta",
+        "normal": "Normal",
+        "low": "Baja"
+      },
+      "resetPriority": "Restablecer"
     },
     "categories": {
       "tickets": "Tickets",
@@ -710,6 +716,8 @@
       "projects": "Proyectos",
       "system": "Sistema"
     },
+    "needsAttention": "Requiere atención ({{count}})",
+    "lowPriority": "Prioridad baja ({{count}})",
     "filters": {
       "title": "Filtrar notificaciones",
       "description": "Seleccione criterios para filtrar las actividades de notificación.",

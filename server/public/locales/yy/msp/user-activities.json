@@ -435,6 +435,15 @@
           "cancel": "55555",
           "apply": "55555"
         }
+      },
+      "priority": {
+        "label": "55555",
+        "all": "55555",
+        "allPriorities": "55555",
+        "placeholder": "55555",
+        "high": "55555",
+        "normal": "55555",
+        "low": "55555"
       }
     }
   },

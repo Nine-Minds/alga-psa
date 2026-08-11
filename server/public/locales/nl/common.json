@@ -1328,5 +1328,9 @@
       "description": "Deze pagina is niet beschikbaar in uw huidige productervaring.",
       "cta": "Ga naar dashboard"
     }
+  },
+  "notifications": {
+    "needsAttention": "Vereist aandacht ({{count}})",
+    "lowPriority": "Lage prioriteit ({{count}})"
   }
 }

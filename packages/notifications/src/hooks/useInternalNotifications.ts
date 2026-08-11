@@ -53,6 +53,8 @@ interface UseInternalNotificationsOptions {
 interface UseInternalNotificationsReturn {
   notifications: InternalNotification[];
   unreadCount: number;
+  // Unread count of `high`-priority notifications, for the priority-aware bell badge.
+  highUnreadCount: number;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
@@ -68,6 +70,7 @@ export function useInternalNotifications(
 
   const [notifications, setNotifications] = useState<InternalNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [highUnreadCount, setHighUnreadCount] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +97,13 @@ export function useInternalNotifications(
       });
       setNotifications(response.notifications);
       setUnreadCount(response.unread_count);
+      // Prefer the server's authoritative unread-high count; fall back to
+      // deriving it from the loaded page for older payloads.
+      setHighUnreadCount(
+        typeof response.unread_high === 'number'
+          ? response.unread_high
+          : response.notifications.filter((n) => !n.is_read && n.priority === 'high').length
+      );
       setError(null);
 
       if (ydocRef.current && providerRef.current?.status === 'connected') {
@@ -117,6 +127,9 @@ export function useInternalNotifications(
 	    try {
 	      const response: UnreadCountResponse = await getUnreadCountAction(tenant, userId);
 	      setUnreadCount(response.unread_count);
+	      if (typeof response.high === 'number') {
+	        setHighUnreadCount(response.high);
+	      }
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
@@ -186,7 +199,10 @@ export function useInternalNotifications(
     notificationsMap.observe(() => {
       const notifData = notificationsMap.get('data');
       if (notifData) {
-        setNotifications(notifData as InternalNotification[]);
+        const list = notifData as InternalNotification[];
+        setNotifications(list);
+        // Keep the high-priority badge count in sync with realtime updates.
+        setHighUnreadCount(list.filter((n) => !n.is_read && n.priority === 'high').length);
       }
     });
 
@@ -249,6 +265,7 @@ export function useInternalNotifications(
   return {
     notifications,
     unreadCount,
+    highUnreadCount,
     isConnected,
     isLoading,
     error,

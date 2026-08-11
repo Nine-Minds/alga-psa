@@ -701,7 +701,13 @@
       "saveError": "Impossibile salvare la preferenza",
       "noCategories": "Nessuna categoria di notifica disponibile",
       "emailPreferences": "Email",
-      "internalPreferences": "Interne"
+      "internalPreferences": "Interne",
+      "priority": {
+        "high": "Alta",
+        "normal": "Normale",
+        "low": "Bassa"
+      },
+      "resetPriority": "Ripristina"
     },
     "categories": {
       "tickets": "Ticket",
@@ -710,6 +716,8 @@
       "projects": "Progetti",
       "system": "Sistema"
     },
+    "needsAttention": "Richiede attenzione ({{count}})",
+    "lowPriority": "Priorità bassa ({{count}})",
     "filters": {
       "title": "Filtra notifiche",
       "description": "Seleziona i criteri per filtrare le attività di notifica.",

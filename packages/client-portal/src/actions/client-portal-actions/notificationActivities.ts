@@ -10,7 +10,26 @@ import {
   NotificationActivity,
 } from '@alga-psa/types';
 
-function getNotificationPriority(type: string | null | undefined): ActivityPriority {
+// LEVERAGE: friction notification-priority-mapper — duplicated verbatim in
+// packages/user-activities/.../activityAggregationActions.ts. Kept local per the
+// task's "no drive-by refactors" scope; a shared @alga-psa/types helper is the
+// natural home if a third copy appears.
+//
+// Prefer the stored, configuration-resolved priority (high|normal|low) from
+// task 29.8.46; fall back to the legacy type→priority derivation only when it
+// is absent (rows created before the backfill).
+function getNotificationPriority(
+  storedPriority: string | null | undefined,
+  type: string | null | undefined
+): ActivityPriority {
+  switch (storedPriority) {
+    case 'high':
+      return ActivityPriority.HIGH;
+    case 'normal':
+      return ActivityPriority.MEDIUM;
+    case 'low':
+      return ActivityPriority.LOW;
+  }
   switch (type) {
     case 'error':
       return ActivityPriority.HIGH;
@@ -64,7 +83,7 @@ export const fetchNotificationActivities = withAuth(async (
       description: notification.message,
       type: ActivityType.NOTIFICATION,
       status: notification.type || 'info',
-      priority: getNotificationPriority(notification.type),
+      priority: getNotificationPriority(notification.priority, notification.type),
       assignedTo: notification.user_id ? [notification.user_id] : [],
       sourceId: String(notification.internal_notification_id),
       sourceType: ActivityType.NOTIFICATION,

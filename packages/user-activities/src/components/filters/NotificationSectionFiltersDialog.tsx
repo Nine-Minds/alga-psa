@@ -13,10 +13,34 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Label } from "@alga-psa/ui/components/Label";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
-import { ActivityFilters } from "@alga-psa/types";
+import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+type PriorityFilterKey = 'all' | 'high' | 'normal' | 'low';
+
+// Map the stored notification priority (ActivityPriority) onto the filter select key.
+function activityFiltersToPriorityKey(filters: Partial<ActivityFilters>): PriorityFilterKey {
+  if (filters.priority?.includes(ActivityPriority.HIGH)) return 'high';
+  if (filters.priority?.includes(ActivityPriority.MEDIUM)) return 'normal';
+  if (filters.priority?.includes(ActivityPriority.LOW)) return 'low';
+  return 'all';
+}
+
+function priorityKeyToActivityPriority(key: PriorityFilterKey): ActivityPriority | undefined {
+  switch (key) {
+    case 'high':
+      return ActivityPriority.HIGH;
+    case 'normal':
+      return ActivityPriority.MEDIUM;
+    case 'low':
+      return ActivityPriority.LOW;
+    default:
+      return undefined;
+  }
+}
 
 interface NotificationSectionFiltersDialogProps {
   isOpen: boolean;
@@ -32,6 +56,7 @@ export function NotificationSectionFiltersDialog({
   onApplyFilters,
 }: NotificationSectionFiltersDialogProps) {
   const { t } = useTranslation('msp/user-activities');
+  const { enabled } = useFeatureFlag('release-v1.5-feature');
 
   // Notification categories mapping
   const NOTIFICATION_CATEGORIES = [
@@ -43,11 +68,13 @@ export function NotificationSectionFiltersDialog({
   // Local state for filters
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => initialFilters);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters.search || 'all');
+  const [selectedPriority, setSelectedPriority] = useState<PriorityFilterKey>(() => activityFiltersToPriorityKey(initialFilters));
 
   // Sync local state when initial filters change from parent
   useEffect(() => {
     setLocalFilters(initialFilters);
     setSelectedCategory(initialFilters.search || 'all');
+    setSelectedPriority(activityFiltersToPriorityKey(initialFilters));
   }, [initialFilters]);
 
   const handleDateChange = (range: { from: string; to: string }) => {
@@ -75,6 +102,16 @@ export function NotificationSectionFiltersDialog({
 
     if (!filtersToApply.search) delete filtersToApply.search;
 
+    // Priority filter only exists when the flag is on; leave filters untouched otherwise.
+    if (enabled) {
+      const mappedPriority = priorityKeyToActivityPriority(selectedPriority);
+      if (mappedPriority) {
+        filtersToApply.priority = [mappedPriority];
+      } else {
+        delete filtersToApply.priority;
+      }
+    }
+
     onApplyFilters(filtersToApply);
     onOpenChange(false);
   };
@@ -88,6 +125,7 @@ export function NotificationSectionFiltersDialog({
     };
     setLocalFilters(clearedFilters);
     setSelectedCategory('all');
+    setSelectedPriority('all');
   };
 
   const footer = (
@@ -148,6 +186,25 @@ export function NotificationSectionFiltersDialog({
               placeholder={t('sections.notifications.filterDialog.fields.categoryPlaceholder', { defaultValue: 'Select Category...' })}
             />
           </div>
+
+          {/* Priority Filter (flag-gated) */}
+          {enabled && (
+            <div className="space-y-1">
+              <Label htmlFor="notification-priority-select" className="text-base font-semibold">{t('sections.notifications.priority.label', { defaultValue: 'Priority' })}</Label>
+              <CustomSelect
+                id="notification-priority-select"
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value as PriorityFilterKey)}
+                options={[
+                  { value: 'all', label: t('sections.notifications.priority.allPriorities', { defaultValue: 'All Priorities' }) },
+                  { value: 'high', label: t('sections.notifications.priority.high', { defaultValue: 'High' }) },
+                  { value: 'normal', label: t('sections.notifications.priority.normal', { defaultValue: 'Normal' }) },
+                  { value: 'low', label: t('sections.notifications.priority.low', { defaultValue: 'Low' }) },
+                ]}
+                placeholder={t('sections.notifications.priority.placeholder', { defaultValue: 'Select Priority...' })}
+              />
+            </div>
+          )}
 
           {/* Date Range */}
           <div className="space-y-1">

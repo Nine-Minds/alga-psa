@@ -701,7 +701,13 @@
       "saveError": "Voorkeur kon niet worden opgeslagen",
       "noCategories": "Geen notificatiecategorieën beschikbaar",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "priority": {
+        "high": "Hoog",
+        "normal": "Normaal",
+        "low": "Laag"
+      },
+      "resetPriority": "Terugzetten"
     },
     "categories": {
       "tickets": "Tickets",
@@ -710,6 +716,8 @@
       "projects": "Projecten",
       "system": "Systeem"
     },
+    "needsAttention": "Vereist aandacht ({{count}})",
+    "lowPriority": "Lage prioriteit ({{count}})",
     "filters": {
       "title": "Notificaties filteren",
       "description": "Selecteer criteria om notificatieactiviteiten te filteren.",

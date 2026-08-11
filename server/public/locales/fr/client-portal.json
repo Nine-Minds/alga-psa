@@ -701,7 +701,13 @@
       "saveError": "Échec de l'enregistrement de la préférence",
       "noCategories": "Aucune catégorie de notification disponible",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Internes"
+      "internalPreferences": "Internes",
+      "priority": {
+        "high": "Élevée",
+        "normal": "Normale",
+        "low": "Faible"
+      },
+      "resetPriority": "Réinitialiser"
     },
     "categories": {
       "tickets": "Tickets",
@@ -710,6 +716,8 @@
       "projects": "Projets",
       "system": "Système"
     },
+    "needsAttention": "Requiert votre attention ({{count}})",
+    "lowPriority": "Priorité basse ({{count}})",
     "filters": {
       "title": "Filtrer les notifications",
       "description": "Sélectionnez des critères pour filtrer les activités de notification.",

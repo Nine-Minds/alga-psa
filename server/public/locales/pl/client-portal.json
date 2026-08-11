@@ -703,7 +703,13 @@
       "saveError": "Nie udało się zapisać preferencji",
       "noCategories": "Brak dostępnych kategorii powiadomień",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Wewnętrzne"
+      "internalPreferences": "Wewnętrzne",
+      "priority": {
+        "high": "Wysoki",
+        "normal": "Normalny",
+        "low": "Niski"
+      },
+      "resetPriority": "Resetuj"
     },
     "categories": {
       "tickets": "Zgłoszenia",
@@ -712,6 +718,8 @@
       "projects": "Projekty",
       "system": "System"
     },
+    "needsAttention": "Wymaga uwagi ({{count}})",
+    "lowPriority": "Niski priorytet ({{count}})",
     "filters": {
       "title": "Filtruj powiadomienia",
       "description": "Wybierz kryteria filtrowania aktywności powiadomień.",

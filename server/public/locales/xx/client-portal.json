@@ -750,7 +750,13 @@
       "saveError": "11111",
       "noCategories": "11111",
       "emailPreferences": "11111",
-      "internalPreferences": "11111"
+      "internalPreferences": "11111",
+      "priority": {
+        "high": "11111",
+        "normal": "11111",
+        "low": "11111"
+      },
+      "resetPriority": "11111"
     },
     "categories": {
       "tickets": "11111",
@@ -759,6 +765,8 @@
       "projects": "11111",
       "system": "11111"
     },
+    "needsAttention": "11111 {{count}} 11111",
+    "lowPriority": "11111 {{count}} 11111",
     "filters": {
       "title": "11111",
       "description": "11111",

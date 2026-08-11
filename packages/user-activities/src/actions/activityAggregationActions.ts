@@ -31,6 +31,11 @@ import { IProjectTask } from '@alga-psa/types';
 import { fetchWorkflowTaskActivities } from '@alga-psa/user-activities/server/workflow-tasks';
 export { fetchWorkflowTaskActivities };
 
+// Configurable notification priorities (task 29.8.46): map the stored priority
+// to the activity tier, with legacy type-fallback. Extracted to a typed module
+// so it is unit-testable outside this @ts-nocheck file.
+import { mapStoredNotificationPriority } from './notificationPriority';
+
 // Enhanced in-memory cache implementation with different TTLs and invalidation
 const cache = {
   data: new Map<string, { value: string; expiry: number; tags: string[] }>(),
@@ -1479,18 +1484,12 @@ export async function fetchNotificationActivities(
 
     // Convert to activities
     const activities: NotificationActivity[] = notifications.map((notification: any) => {
-      // Map notification type to activity priority
-      let priority: ActivityPriority;
-      switch (notification.type) {
-        case 'error':
-          priority = ActivityPriority.HIGH;
-          break;
-        case 'warning':
-          priority = ActivityPriority.MEDIUM;
-          break;
-        default:
-          priority = ActivityPriority.LOW;
-      }
+      // Use the stored, configuration-resolved priority (task 29.8.46), falling
+      // back to the legacy type→priority derivation only when it is absent.
+      const priority: ActivityPriority = mapStoredNotificationPriority(
+        notification.priority,
+        notification.type
+      );
 
       // Ensure dates are properly formatted
       let createdAtISO: string;
@@ -1574,6 +1573,38 @@ export async function fetchNotificationActivities(
     console.error("Error fetching notification activities:", error);
     return [];
   }
+}
+
+/**
+ * Result of a single paged window of notification activities.
+ */
+export interface PagedNotificationActivities {
+  activities: NotificationActivity[];
+  /** Total number of notification activities matching the filters (before paging). */
+  total: number;
+}
+
+/**
+ * Paged variant of {@link fetchNotificationActivities} (task 29.8.46). Reuses the
+ * exact same query + priority-mapping + priority-filter logic — the underlying
+ * fetch already orders by created_at desc (chronological, newest first) — then
+ * returns a single offset/limit window plus the total matching count so the User
+ * Activities card view can render numbered server-side pagination instead of
+ * slicing a full client-side fetch. The unpaged fetchNotificationActivities is
+ * intentionally left untouched.
+ */
+export async function fetchNotificationActivitiesPagedInternal(
+  userId: string,
+  tenantId: string,
+  filters: ActivityFilters,
+  offset: number = 0,
+  limit: number = 20
+): Promise<PagedNotificationActivities> {
+  const all = await fetchNotificationActivities(userId, tenantId, filters) as NotificationActivity[];
+  const total = all.length;
+  const start = Math.max(0, offset);
+  const end = start + Math.max(0, limit);
+  return { activities: all.slice(start, end), total };
 }
 
 /**

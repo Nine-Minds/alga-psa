@@ -435,6 +435,15 @@
           "cancel": "Cancelar",
           "apply": "Aplicar filtros"
         }
+      },
+      "priority": {
+        "label": "Prioridad",
+        "all": "Todas",
+        "allPriorities": "Todas las prioridades",
+        "placeholder": "Seleccionar prioridad…",
+        "high": "Alta",
+        "normal": "Normal",
+        "low": "Baja"
       }
     }
   },

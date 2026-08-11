@@ -2,7 +2,7 @@
 
 
 import React, { useState } from 'react';
-import { CheckCheck, RefreshCw, WifiOff, AlertCircle, Bell as BellIcon } from 'lucide-react';
+import { CheckCheck, RefreshCw, WifiOff, AlertCircle, Bell as BellIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { NotificationItem } from './NotificationItem';
@@ -14,6 +14,9 @@ import { useSession } from 'next-auth/react';
 interface NotificationDropdownProps {
   notifications: InternalNotification[];
   unreadCount: number;
+  // Configurable notification priorities (task 29.8.46). When true, the panel
+  // groups by tier; when false/undefined it renders today's flat list.
+  priorityEnabled?: boolean;
   isLoading: boolean;
   error: string | null;
   isConnected: boolean;
@@ -26,6 +29,7 @@ interface NotificationDropdownProps {
 export function NotificationDropdown({
   notifications,
   unreadCount,
+  priorityEnabled = false,
   isLoading,
   error,
   isConnected,
@@ -36,6 +40,7 @@ export function NotificationDropdown({
 }: NotificationDropdownProps) {
   const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lowExpanded, setLowExpanded] = useState(false);
   const { data: session } = useSession();
   const tenant = useTenant();
 
@@ -168,6 +173,60 @@ export function NotificationDropdown({
             <p className="text-sm text-[rgb(var(--color-text-500))] font-medium">No notifications</p>
             <p className="text-xs text-[rgb(var(--color-text-400))] mt-1">You're all caught up!</p>
           </div>
+        ) : priorityEnabled ? (
+          (() => {
+            // Group by tier, preserving the incoming chronological order.
+            const high = notifications.filter((n) => n.priority === 'high');
+            const low = notifications.filter((n) => n.priority === 'low');
+            const normal = notifications.filter((n) => n.priority !== 'high' && n.priority !== 'low');
+
+            const renderItems = (items: InternalNotification[]) => (
+              <div className="divide-y divide-[rgb(var(--color-border-100))]">
+                {items.map((notification) => (
+                  <NotificationItem
+                    key={notification.internal_notification_id}
+                    notification={notification}
+                    priorityEnabled
+                    onClick={() => handleNotificationClick(notification)}
+                  />
+                ))}
+              </div>
+            );
+
+            return (
+              <div>
+                {/* "Needs attention" (high) pinned on top */}
+                {high.length > 0 && (
+                  <div>
+                    <div className="px-4 py-1.5 bg-[rgb(var(--color-border-50))] border-b border-[rgb(var(--color-border-200))]">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-rose-700">
+                        {t('notifications.needsAttention', { defaultValue: 'Needs attention ({{count}})', count: high.length })}
+                      </span>
+                    </div>
+                    {renderItems(high)}
+                  </div>
+                )}
+
+                {/* Normal stream in the middle */}
+                {normal.length > 0 && renderItems(normal)}
+
+                {/* Low priority collapsed behind an expander */}
+                {low.length > 0 && (
+                  <div className="border-t border-[rgb(var(--color-border-100))]">
+                    <button
+                      type="button"
+                      onClick={() => setLowExpanded((v) => !v)}
+                      className="flex items-center gap-1 w-full px-4 py-2 text-xs font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
+                    >
+                      {lowExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      <span>{t('notifications.lowPriority', { defaultValue: 'Low priority ({{count}})', count: low.length })}</span>
+                    </button>
+                    {lowExpanded && renderItems(low)}
+                  </div>
+                )}
+              </div>
+            );
+          })()
         ) : (
           <div className="divide-y divide-[rgb(var(--color-border-100))]">
             {notifications.map((notification) => (
@@ -185,7 +244,13 @@ export function NotificationDropdown({
       {userType && (
         <div className="border-t border-[rgb(var(--color-border-200))]">
           <Link
-            href={userType === 'client' ? '/client-portal/profile?tab=activity' : '/msp/user-activities'}
+            href={
+              userType === 'client'
+                ? '/client-portal/profile?tab=activity'
+                : priorityEnabled
+                  ? '/msp/user-activities?focus=notifications'
+                  : '/msp/user-activities'
+            }
             onClick={onClose}
             className="flex items-center justify-center px-4 py-3 text-sm font-medium text-main-600 hover:text-main-700 hover:bg-[rgb(var(--color-border-50))] transition-colors"
           >

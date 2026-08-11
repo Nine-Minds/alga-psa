@@ -1328,5 +1328,9 @@
       "description": "Dieser Bereich gehört zum vollständigen AlgaPSA-Produkt. AlgaDesk enthält ausschließlich fokussierte Helpdesk-Funktionen.",
       "cta": "Zurück zum AlgaDesk-Dashboard"
     }
+  },
+  "notifications": {
+    "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
+    "lowPriority": "Niedrige Priorität ({{count}})"
   }
 }

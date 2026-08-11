@@ -1500,7 +1500,8 @@
         "description": "Opis",
         "enabled": "Włączone",
         "defaultForUsers": "Domyślne dla użytkowników",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "priority": "Priorytet"
       },
       "actions": {
         "enableAllSubtypes": "Włącz wszystkie podtypy",
@@ -1512,7 +1513,8 @@
         "discardChanges": "Odrzuć zmiany",
         "saving": "Zapisywanie...",
         "saveChanges": "Zapisz zmiany",
-        "cancel": "Anuluj"
+        "cancel": "Anuluj",
+        "resetToDefault": "Przywróć domyślne"
       },
       "intro": "Określ, które typy powiadomień wewnętrznych są dostępne, i ustaw wartości domyślne dla nowych użytkowników.",
       "enabledLabel": "Włączone:",
@@ -1523,6 +1525,11 @@
       "discardDialog": {
         "title": "Odrzucić zmiany?",
         "message": "Czy na pewno chcesz odrzucić wszystkie niezapisane zmiany? Tej akcji nie można cofnąć."
+      },
+      "priority": {
+        "high": "Wysoki",
+        "normal": "Normalny",
+        "low": "Niski"
       }
     }
   },

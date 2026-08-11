@@ -1328,5 +1328,9 @@
       "description": "Esta área forma parte del producto completo AlgaPSA. AlgaDesk incluye únicamente funciones específicas de mesa de ayuda.",
       "cta": "Volver al panel de AlgaDesk"
     }
+  },
+  "notifications": {
+    "needsAttention": "Requiere atención ({{count}})",
+    "lowPriority": "Prioridad baja ({{count}})"
   }
 }
