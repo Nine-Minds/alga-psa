@@ -11,6 +11,7 @@ import { FileText, Link2, Trash2 } from 'lucide-react';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface DocumentCardProps {
   id?: string;
@@ -31,6 +32,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   onClick,
   isContentDocument = false
 }) => {
+  const { t } = useTranslation('features/documents');
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(document.document_name);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
@@ -55,6 +57,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
       return (
         <div className="space-y-4">
           <Input
+            id={`${id}-name-input`}
             data-automation-id={`${id}-name-input`}
             type="text"
             value={editedName}
@@ -74,7 +77,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               onClick={handleSave}
               className="bg-green-500 hover:bg-green-600 text-white"
             >
-              Save
+              {t('actions.save', { defaultValue: 'Save' })}
             </Button>
             <Button
               id={`${id}-cancel-btn`}
@@ -82,7 +85,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               onClick={handleCancel}
               variant="outline"
             >
-              Cancel
+              {t('actions.cancel', { defaultValue: 'Cancel' })}
             </Button>
           </div>
         </div>
@@ -96,7 +99,9 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
           <div>
             <h3 className="text-sm font-medium text-[rgb(var(--color-text-900))]">{document.document_name}</h3>
             <p className="text-sm text-[rgb(var(--color-text-500))]">
-              {document.entered_at ? new Date(document.entered_at).toLocaleDateString() : 'No date'}
+              {document.entered_at
+                ? new Date(document.entered_at).toLocaleDateString()
+                : t('card.noDate', { defaultValue: 'No date' })}
             </p>
           </div>
         </div>
@@ -129,7 +134,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   };
 
   return (
-    <ReflectionContainer id={id} label="Document Card">
+    <ReflectionContainer id={id} label={t('card.reflectionLabel', { defaultValue: 'Document Card' })}>
       <Card
         data-automation-id={`${id}-container`}
         className={`p-4 ${onClick && !isEditing ? 'cursor-pointer hover:bg-[rgb(var(--color-border-50))]' : ''}`}

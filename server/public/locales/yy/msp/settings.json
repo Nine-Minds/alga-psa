@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "55555",
       "holidayAdded": "55555",
       "holidayDeleted": "55555"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "55555",
+        "overdueHours": "55555 {{hours}} 55555 {{minutes}} 55555",
+        "overdueMinutes": "55555 {{minutes}} 55555",
+        "title": "55555"
+      },
+      "breachChart": {
+        "breachRate": "55555",
+        "empty": "55555",
+        "title": "55555"
+      },
+      "columns": {
+        "assignee": "55555",
+        "breachType": "55555",
+        "client": "55555",
+        "priority": "55555",
+        "progress": "55555",
+        "slaType": "55555",
+        "ticket": "55555",
+        "timeRemaining": "55555",
+        "when": "55555"
+      },
+      "gauge": {
+        "title": "55555"
+      },
+      "labels": {
+        "resolution": "55555",
+        "resolutionSla": "55555",
+        "response": "55555",
+        "responseSla": "55555"
+      },
+      "metrics": {
+        "approachingBreach": "55555",
+        "atRisk": "55555",
+        "currentlyPaused": "55555",
+        "metBreached": "55555 {{met}} 55555 {{breached}} 55555",
+        "overallCompliance": "55555",
+        "pausedSla": "55555",
+        "ticketsTracked_one": "55555 {{count}} 55555",
+        "ticketsTracked_other": "55555 {{count}} 55555"
+      },
+      "recentBreaches": {
+        "empty": "55555",
+        "title": "55555",
+        "unassigned": "55555"
+      },
+      "trendChart": {
+        "breaches": "55555",
+        "compliance": "55555",
+        "compliancePercent": "55555",
+        "empty": "55555",
+        "tickets": "55555",
+        "title": "55555"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "55555",
+        "loadFailed": "55555",
+        "responseTrackingUpdateFailed": "55555",
+        "saveStatusesFailed": "55555"
+      },
+      "global": {
+        "description": "55555",
+        "pauseOnAwaitingClient": {
+          "description": "55555",
+          "label": "55555",
+          "requiresTracking": "55555"
+        },
+        "responseTracking": {
+          "description": "55555",
+          "label": "55555"
+        },
+        "title": "55555"
+      },
+      "loading": "55555",
+      "messages": {
+        "globalSettingsUpdated": "55555",
+        "noChangesToSave": "55555",
+        "responseTrackingDisabled": "55555",
+        "responseTrackingEnabled": "55555",
+        "statusesUpdated_one": "55555 {{count}} 55555",
+        "statusesUpdated_other": "55555 {{count}} 55555"
+      },
+      "perStatus": {
+        "description": "55555",
+        "empty": "55555",
+        "modified": "55555",
+        "modifiedCount_one": "55555 {{count}} 55555",
+        "modifiedCount_other": "55555 {{count}} 55555",
+        "noUnsavedChanges": "55555",
+        "resetChanges": "55555",
+        "saveChanges": "55555",
+        "saving": "55555",
+        "title": "55555"
+      },
+      "retry": "55555"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "55555",
+        "create": "55555",
+        "saveChanges": "55555",
+        "saving": "55555"
+      },
+      "basics": {
+        "assignBoards": "55555",
+        "assignClients": "55555",
+        "businessHours": "55555",
+        "businessHoursPlaceholder": "55555",
+        "description": "55555",
+        "descriptionPlaceholder": "55555",
+        "noBusinessHours": "55555",
+        "policyName": "55555",
+        "policyNamePlaceholder": "55555",
+        "scheduleAlways": "55555 {{name}} 55555",
+        "searchBoards": "55555",
+        "searchClients": "55555",
+        "setAsDefault": "55555",
+        "title": "55555"
+      },
+      "errors": {
+        "loadFailed": "55555",
+        "notFound": "55555",
+        "saveFailed": "55555"
+      },
+      "loading": "55555",
+      "multiSelect": {
+        "deselectAll": "55555",
+        "deselectAllVisible": "55555",
+        "noItems": "55555",
+        "noResults": "55555",
+        "placeholder": "55555",
+        "searchPlaceholder": "55555",
+        "selectAll": "55555",
+        "selectAllVisible": "55555",
+        "selectedCount_one": "55555 {{count}} 55555",
+        "selectedCount_other": "55555 {{count}} 55555"
+      },
+      "targets": {
+        "always": "55555",
+        "description": "55555",
+        "escalationThresholds": "55555",
+        "level1": "55555",
+        "level2": "55555",
+        "level3": "55555",
+        "minutesPlaceholder": "55555",
+        "minutesUnit": "55555",
+        "noTarget": "55555",
+        "notConfigured": "55555",
+        "resolutionSummary": "55555 {{time}} 55555",
+        "resolutionTime": "55555",
+        "responseSummary": "55555 {{time}} 55555",
+        "responseTime": "55555",
+        "selectResolutionTime": "55555",
+        "selectResponseTime": "55555",
+        "title": "55555",
+        "usePreset": "55555"
+      },
+      "thresholds": {
+        "add": "55555",
+        "channelEmail": "55555",
+        "channelInApp": "55555",
+        "channelsLabel": "55555",
+        "description": "55555",
+        "empty": "55555",
+        "noChannels": "55555",
+        "noRecipients": "55555",
+        "percentLabel": "55555",
+        "recipientAssignee": "55555",
+        "recipientBoardManager": "55555",
+        "recipientBoardManagerShort": "55555",
+        "recipientEscalationManager": "55555",
+        "recipientEscalationManagerShort": "55555",
+        "recipientsLabel": "55555",
+        "remove": "55555",
+        "title": "55555",
+        "typeBreach": "55555",
+        "typeLabel": "55555",
+        "typeWarning": "55555",
+        "viaChannels": "55555 {{channels}} 55555"
+      },
+      "timeOptions": {
+        "custom": "55555",
+        "hours1": "55555",
+        "hours168": "55555",
+        "hours2": "55555",
+        "hours24": "55555",
+        "hours4": "55555",
+        "hours48": "55555",
+        "hours72": "55555",
+        "hours8": "55555",
+        "minutes15": "55555",
+        "minutes30": "55555"
+      },
+      "validation": {
+        "channelRequired": "55555",
+        "duplicateThreshold": "55555",
+        "percentRange": "55555",
+        "policyNameRequired": "55555",
+        "targetRequired": "55555"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "55555",
+        "delete": "55555",
+        "edit": "55555",
+        "openMenu": "55555",
+        "setDefault": "55555"
+      },
+      "addPolicy": "55555",
+      "columns": {
+        "actions": "55555",
+        "description": "55555",
+        "name": "55555"
+      },
+      "defaultLabel": "55555",
+      "delete": {
+        "checkingUsage": "55555",
+        "confirm": "55555 {{name}} 55555",
+        "defaultWarning": "55555",
+        "inUseTitle": "55555",
+        "title": "55555",
+        "unlinkNote": "55555",
+        "usageBoards_one": "55555 {{names}} 55555",
+        "usageBoards_other": "55555 {{names}} 55555",
+        "usageClients_one": "55555 {{names}} 55555",
+        "usageClients_other": "55555 {{names}} 55555",
+        "usageTickets_one": "55555 {{count}} 55555",
+        "usageTickets_other": "55555 {{count}} 55555"
+      },
+      "description": "55555",
+      "empty": "55555",
+      "errors": {
+        "deleteFailed": "55555",
+        "loadFailed": "55555",
+        "setDefaultFailed": "55555"
+      },
+      "loading": "55555",
+      "title": "55555"
+    },
+    "status": {
+      "atRisk": "55555",
+      "breached": "55555",
+      "onTrack": "55555",
+      "paused": "55555",
+      "resolutionBreached": "55555",
+      "responseBreached": "55555",
+      "tooltip": {
+        "resolutionBreachedBy": "55555 {{time}} 55555",
+        "resolutionRemaining": "55555 {{time}} 55555",
+        "responseBreachedBy": "55555 {{time}} 55555",
+        "responseRemaining": "55555 {{time}} 55555",
+        "statusLine": "55555 {{status}} 55555",
+        "timerPaused": "55555"
+      },
+      "unknown": "55555"
     }
   },
   "clientPortalLanguage": {

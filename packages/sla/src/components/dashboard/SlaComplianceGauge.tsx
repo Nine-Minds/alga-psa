@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SlaComplianceGaugeProps {
   overallRate: number;
@@ -22,11 +23,13 @@ export const SlaComplianceGauge: React.FC<SlaComplianceGaugeProps> = ({
   resolutionRate,
   loading
 }) => {
+  const { t } = useTranslation('msp/settings');
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>SLA Compliance</CardTitle>
+          <CardTitle>{t('sla.dashboard.gauge.title', { defaultValue: 'SLA Compliance' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse flex flex-col items-center">
@@ -55,7 +58,7 @@ export const SlaComplianceGauge: React.FC<SlaComplianceGaugeProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>SLA Compliance</CardTitle>
+        <CardTitle>{t('sla.dashboard.gauge.title', { defaultValue: 'SLA Compliance' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center">
@@ -96,13 +99,13 @@ export const SlaComplianceGauge: React.FC<SlaComplianceGaugeProps> = ({
           {/* Legend */}
           <div className="mt-4 w-full space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Response SLA</span>
+              <span className="text-sm text-gray-600">{t('sla.dashboard.labels.responseSla', { defaultValue: 'Response SLA' })}</span>
               <span className={`text-sm font-medium ${getTextColor(responseRate)}`}>
                 {responseRate}%
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Resolution SLA</span>
+              <span className="text-sm text-gray-600">{t('sla.dashboard.labels.resolutionSla', { defaultValue: 'Resolution SLA' })}</span>
               <span className={`text-sm font-medium ${getTextColor(resolutionRate)}`}>
                 {resolutionRate}%
               </span>

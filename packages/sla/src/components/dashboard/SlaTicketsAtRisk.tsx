@@ -9,6 +9,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ISlaTicketAtRisk } from '../../types';
 import Link from 'next/link';
 import { AlertTriangle, Clock } from 'lucide-react';
@@ -19,13 +20,15 @@ interface SlaTicketsAtRiskProps {
 }
 
 export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loading }) => {
+  const { t } = useTranslation('msp/settings');
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Tickets At Risk
+            {t('sla.dashboard.atRisk.title', { defaultValue: 'Tickets At Risk' })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -45,12 +48,12 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Tickets At Risk
+            {t('sla.dashboard.atRisk.title', { defaultValue: 'Tickets At Risk' })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-500">
-            No tickets currently at risk of SLA breach
+            {t('sla.dashboard.atRisk.empty', { defaultValue: 'No tickets currently at risk of SLA breach' })}
           </div>
         </CardContent>
       </Card>
@@ -60,10 +63,12 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
   const formatTimeRemaining = (minutes: number): string => {
     if (minutes < 0) {
       const absMinutes = Math.abs(minutes);
-      if (absMinutes < 60) return `${absMinutes}m overdue`;
+      if (absMinutes < 60) {
+        return t('sla.dashboard.atRisk.overdueMinutes', { defaultValue: '{{minutes}}m overdue', minutes: absMinutes });
+      }
       const hours = Math.floor(absMinutes / 60);
       const mins = absMinutes % 60;
-      return `${hours}h ${mins}m overdue`;
+      return t('sla.dashboard.atRisk.overdueHours', { defaultValue: '{{hours}}h {{minutes}}m overdue', hours, minutes: mins });
     }
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
@@ -83,7 +88,7 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
-          Tickets At Risk
+          {t('sla.dashboard.atRisk.title', { defaultValue: 'Tickets At Risk' })}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -91,12 +96,12 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">Ticket</th>
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">Client</th>
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">Priority</th>
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">SLA Type</th>
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">Time Remaining</th>
-                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">Progress</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.ticket', { defaultValue: 'Ticket' })}</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.client', { defaultValue: 'Client' })}</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.priority', { defaultValue: 'Priority' })}</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.slaType', { defaultValue: 'SLA Type' })}</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.timeRemaining', { defaultValue: 'Time Remaining' })}</th>
+                <th className="text-left py-2 px-3 text-sm font-medium text-gray-600">{t('sla.dashboard.columns.progress', { defaultValue: 'Progress' })}</th>
               </tr>
             </thead>
             <tbody>
@@ -104,6 +109,7 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
                 <tr key={`${ticket.ticketId}-${ticket.slaType}`} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-2 px-3">
                     <Link
+                      id={`sla-at-risk-ticket-link-${ticket.ticketId}-${ticket.slaType}`}
                       href={`/msp/tickets/${ticket.ticketId}`}
                       className="text-primary-600 hover:underline font-medium"
                     >
@@ -122,7 +128,9 @@ export const SlaTicketsAtRisk: React.FC<SlaTicketsAtRiskProps> = ({ data, loadin
                       variant="outline"
                       className={`text-xs ${ticket.slaType === 'response' ? 'border-blue-300 text-blue-700' : 'border-purple-300 text-purple-700'}`}
                     >
-                      {ticket.slaType === 'response' ? 'Response' : 'Resolution'}
+                      {ticket.slaType === 'response'
+                        ? t('sla.dashboard.labels.response', { defaultValue: 'Response' })
+                        : t('sla.dashboard.labels.resolution', { defaultValue: 'Resolution' })}
                     </Badge>
                   </td>
                   <td className="py-2 px-3">

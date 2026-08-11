@@ -2201,6 +2201,280 @@
       "holidayDateRequired": "Data święta jest wymagana",
       "holidayAdded": "Święto dodane pomyślnie",
       "holidayDeleted": "Święto usunięte pomyślnie"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Obecnie żadne zgłoszenie nie jest zagrożone przekroczeniem SLA",
+        "overdueHours": "Opóźnienie: {{hours}} godz. {{minutes}} min",
+        "overdueMinutes": "Opóźnienie: {{minutes}} min",
+        "title": "Zgłoszenia zagrożone"
+      },
+      "breachChart": {
+        "breachRate": "Wskaźnik przekroczeń",
+        "empty": "Brak danych o przekroczeniach SLA",
+        "title": "Przekroczenia według priorytetu"
+      },
+      "columns": {
+        "assignee": "Osoba odpowiedzialna",
+        "breachType": "Typ przekroczenia",
+        "client": "Klient",
+        "priority": "Priorytet",
+        "progress": "Postęp",
+        "slaType": "Typ SLA",
+        "ticket": "Zgłoszenie",
+        "timeRemaining": "Pozostały czas",
+        "when": "Kiedy"
+      },
+      "gauge": {
+        "title": "Zgodność z SLA"
+      },
+      "labels": {
+        "resolution": "Rozwiązanie",
+        "resolutionSla": "SLA rozwiązania",
+        "response": "Odpowiedź",
+        "responseSla": "SLA odpowiedzi"
+      },
+      "metrics": {
+        "approachingBreach": "zgłoszenia zbliżające się do przekroczenia SLA",
+        "atRisk": "Zagrożone",
+        "currentlyPaused": "Obecnie wstrzymane",
+        "metBreached": "{{met}} dotrzymano / {{breached}} przekroczono",
+        "overallCompliance": "Ogólna zgodność",
+        "pausedSla": "zgłoszenia ze wstrzymanym SLA",
+        "ticketsTracked_one": "{{count}} śledzone zgłoszenie",
+        "ticketsTracked_few": "{{count}} śledzone zgłoszenia",
+        "ticketsTracked_many": "{{count}} śledzonych zgłoszeń",
+        "ticketsTracked_other": "{{count}} śledzonego zgłoszenia"
+      },
+      "recentBreaches": {
+        "empty": "Brak przekroczeń SLA w wybranym okresie",
+        "title": "Ostatnie przekroczenia SLA",
+        "unassigned": "Nieprzypisane"
+      },
+      "trendChart": {
+        "breaches": "Przekroczenia SLA",
+        "compliance": "Zgodność",
+        "compliancePercent": "Zgodność %",
+        "empty": "Brak danych trendu dla wybranego okresu",
+        "tickets": "Zgłoszenia",
+        "title": "Trend zgodności"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Nie udało się zaktualizować globalnych ustawień SLA",
+        "loadFailed": "Nie udało się wczytać ustawień wstrzymywania SLA",
+        "responseTrackingUpdateFailed": "Nie udało się zaktualizować śledzenia stanu odpowiedzi",
+        "saveStatusesFailed": "Nie udało się zapisać konfiguracji statusów"
+      },
+      "global": {
+        "description": "Skonfiguruj globalne działanie wstrzymywania licznika SLA",
+        "pauseOnAwaitingClient": {
+          "description": "Po włączeniu tej opcji licznik SLA zostanie automatycznie wstrzymany, gdy zgłoszenie zostanie oznaczone jako oczekujące na odpowiedź klienta. Licznik zostanie wznowiony, gdy klient odpowie lub zmieni się status zgłoszenia.",
+          "label": "Automatycznie wstrzymuj SLA podczas oczekiwania na odpowiedź klienta",
+          "requiresTracking": "Aby użyć tej opcji, włącz powyżej śledzenie stanu odpowiedzi."
+        },
+        "responseTracking": {
+          "description": "Po włączeniu tej opcji zgłoszenia automatycznie śledzą, kto powinien odpowiedzieć jako następny (klient czy pracownik wewnętrzny). Opcja steruje też widocznością oznaczeń i filtrów stanu odpowiedzi.",
+          "label": "Śledź stan odpowiedzi w zgłoszeniach"
+        },
+        "title": "Globalne ustawienia SLA"
+      },
+      "loading": "Wczytywanie ustawień wstrzymywania SLA...",
+      "messages": {
+        "globalSettingsUpdated": "Globalne ustawienia SLA zostały zaktualizowane",
+        "noChangesToSave": "Brak zmian do zapisania",
+        "responseTrackingDisabled": "Wyłączono śledzenie stanu odpowiedzi",
+        "responseTrackingEnabled": "Włączono śledzenie stanu odpowiedzi",
+        "statusesUpdated_one": "Pomyślnie zaktualizowano {{count}} konfigurację statusu",
+        "statusesUpdated_few": "Pomyślnie zaktualizowano {{count}} konfiguracje statusów",
+        "statusesUpdated_many": "Pomyślnie zaktualizowano {{count}} konfiguracji statusów",
+        "statusesUpdated_other": "Pomyślnie zaktualizowano {{count}} konfiguracji statusu"
+      },
+      "perStatus": {
+        "description": "Skonfiguruj statusy zgłoszeń, które powinny wstrzymywać licznik SLA. Po przeniesieniu zgłoszenia do statusu z włączonym wstrzymywaniem licznik SLA zatrzyma się do chwili przeniesienia zgłoszenia do innego statusu.",
+        "empty": "Nie znaleziono statusów zgłoszeń.",
+        "modified": "Zmodyfikowano",
+        "modifiedCount_one": "{{count}} zmodyfikowany status",
+        "modifiedCount_few": "{{count}} zmodyfikowane statusy",
+        "modifiedCount_many": "{{count}} zmodyfikowanych statusów",
+        "modifiedCount_other": "{{count}} zmodyfikowanego statusu",
+        "noUnsavedChanges": "Brak niezapisanych zmian",
+        "resetChanges": "Zresetuj zmiany",
+        "saveChanges": "Zapisz zmiany",
+        "saving": "Zapisywanie...",
+        "title": "Konfiguracja wstrzymywania według statusu"
+      },
+      "retry": "Spróbuj ponownie"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Anuluj",
+        "create": "Utwórz politykę",
+        "saveChanges": "Zapisz zmiany",
+        "saving": "Zapisywanie..."
+      },
+      "basics": {
+        "assignBoards": "Przypisz do tablic",
+        "assignClients": "Przypisz do klientów",
+        "businessHours": "Harmonogram godzin pracy",
+        "businessHoursPlaceholder": "Wybierz harmonogram godzin pracy",
+        "description": "Opis",
+        "descriptionPlaceholder": "Opcjonalny opis tej polityki SLA",
+        "noBusinessHours": "Bez godzin pracy (całodobowo)",
+        "policyName": "Nazwa polityki",
+        "policyNamePlaceholder": "Wpisz nazwę polityki",
+        "scheduleAlways": "{{name}} (całodobowo)",
+        "searchBoards": "Szukaj tablic...",
+        "searchClients": "Szukaj klientów...",
+        "setAsDefault": "Ustaw jako politykę domyślną",
+        "title": "Informacje podstawowe"
+      },
+      "errors": {
+        "loadFailed": "Nie udało się wczytać danych",
+        "notFound": "Nie znaleziono polityki SLA",
+        "saveFailed": "Nie udało się zapisać polityki SLA"
+      },
+      "loading": "Wczytywanie...",
+      "multiSelect": {
+        "deselectAll": "Usuń całe zaznaczenie",
+        "deselectAllVisible": "Usuń zaznaczenie wszystkich widocznych elementów",
+        "noItems": "Brak dostępnych elementów",
+        "noResults": "Nie znaleziono wyników",
+        "placeholder": "Wybierz...",
+        "searchPlaceholder": "Szukaj...",
+        "selectAll": "Zaznacz wszystko",
+        "selectAllVisible": "Zaznacz wszystkie widoczne elementy",
+        "selectedCount_one": "Wybrano {{count}}",
+        "selectedCount_few": "Wybrano {{count}}",
+        "selectedCount_many": "Wybrano {{count}}",
+        "selectedCount_other": "Wybrano {{count}}"
+      },
+      "targets": {
+        "always": "Całodobowo (ignoruj godziny pracy)",
+        "description": "Ustaw maksymalny dozwolony czas na pierwszą odpowiedź i pełne rozwiązanie zgłoszeń dla każdego poziomu priorytetu.",
+        "escalationThresholds": "Progi eskalacji (% czasu, który upłynął)",
+        "level1": "Poziom 1 (%)",
+        "level2": "Poziom 2 (%)",
+        "level3": "Poziom 3 (%)",
+        "minutesPlaceholder": "Minuty",
+        "minutesUnit": "minuty",
+        "noTarget": "Brak celu",
+        "notConfigured": "Nie skonfigurowano",
+        "resolutionSummary": "Rozwiązanie: {{time}}",
+        "resolutionTime": "Czas rozwiązania",
+        "responseSummary": "Odpowiedź: {{time}}",
+        "responseTime": "Czas odpowiedzi",
+        "selectResolutionTime": "Wybierz czas rozwiązania",
+        "selectResponseTime": "Wybierz czas odpowiedzi",
+        "title": "Cele odpowiedzi i rozwiązania",
+        "usePreset": "Użyj ustawienia wstępnego"
+      },
+      "thresholds": {
+        "add": "Dodaj próg",
+        "channelEmail": "E-mail",
+        "channelInApp": "W aplikacji",
+        "channelsLabel": "Kanały powiadomień",
+        "description": "Skonfiguruj, kiedy i jak powiadamiać członków zespołu o zbliżających się lub przekroczonych terminach SLA.",
+        "empty": "Nie skonfigurowano progów powiadomień. Kliknij \"Dodaj próg\", aby utworzyć pierwszy.",
+        "noChannels": "brak",
+        "noRecipients": "Brak odbiorców",
+        "percentLabel": "Próg (%)",
+        "recipientAssignee": "Osoba odpowiedzialna",
+        "recipientBoardManager": "Menedżer tablicy",
+        "recipientBoardManagerShort": "Menedżer tabl.",
+        "recipientEscalationManager": "Menedżer eskalacji",
+        "recipientEscalationManagerShort": "Menedżer esk.",
+        "recipientsLabel": "Odbiorcy",
+        "remove": "Usuń",
+        "title": "Progi powiadomień",
+        "typeBreach": "Przekroczenie SLA",
+        "typeLabel": "Typ powiadomienia",
+        "typeWarning": "Ostrzeżenie",
+        "viaChannels": "przez {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Niestandardowy...",
+        "hours1": "1 godzina",
+        "hours168": "168 godzin (7 dni)",
+        "hours2": "2 godziny",
+        "hours24": "24 godziny (1 dzień)",
+        "hours4": "4 godziny",
+        "hours48": "48 godzin (2 dni)",
+        "hours72": "72 godziny (3 dni)",
+        "hours8": "8 godzin",
+        "minutes15": "15 minut",
+        "minutes30": "30 minut"
+      },
+      "validation": {
+        "channelRequired": "Wymagany jest co najmniej jeden kanał",
+        "duplicateThreshold": "Zduplikowana wartość procentowa progu",
+        "percentRange": "Wartość musi mieścić się w zakresie od 0 do 200",
+        "policyNameRequired": "Nazwa polityki jest wymagana",
+        "targetRequired": "Co najmniej jeden priorytet powinien mieć cel czasu odpowiedzi lub rozwiązania"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Anuluj",
+        "delete": "Usuń",
+        "edit": "Edytuj",
+        "openMenu": "Otwórz menu",
+        "setDefault": "Ustaw jako domyślną"
+      },
+      "addPolicy": "Dodaj politykę",
+      "columns": {
+        "actions": "Działania",
+        "description": "Opis",
+        "name": "Nazwa"
+      },
+      "defaultLabel": "Domyślna",
+      "delete": {
+        "checkingUsage": "Sprawdzanie użycia...",
+        "confirm": "Czy na pewno chcesz usunąć politykę {{name}}? Tej operacji nie można cofnąć.",
+        "defaultWarning": "To jest polityka domyślna. Najpierw możesz ustawić inną politykę jako domyślną.",
+        "inUseTitle": "Ta polityka jest obecnie używana",
+        "title": "Usuń politykę SLA",
+        "unlinkNote": "Te odwołania zostaną odłączone. Istniejące dane śledzenia SLA w zgłoszeniach zostaną zachowane.",
+        "usageBoards_one": "Tablica: {{names}}",
+        "usageBoards_few": "Tablice: {{names}}",
+        "usageBoards_many": "Tablice: {{names}}",
+        "usageBoards_other": "Tablice: {{names}}",
+        "usageClients_one": "Klient: {{names}}",
+        "usageClients_few": "Klienci: {{names}}",
+        "usageClients_many": "Klienci: {{names}}",
+        "usageClients_other": "Klienci: {{names}}",
+        "usageTickets_one": "{{count}} zgłoszenie",
+        "usageTickets_few": "{{count}} zgłoszenia",
+        "usageTickets_many": "{{count}} zgłoszeń",
+        "usageTickets_other": "{{count}} zgłoszenia"
+      },
+      "description": "Zarządzaj politykami umów o gwarantowanym poziomie usług, które określają cele czasu odpowiedzi i rozwiązania",
+      "empty": "Nie znaleziono polityk SLA. Kliknij \"Dodaj politykę\", aby utworzyć pierwszą.",
+      "errors": {
+        "deleteFailed": "Nie udało się usunąć polityki. Spróbuj ponownie.",
+        "loadFailed": "Nie udało się wczytać polityk SLA. Spróbuj ponownie.",
+        "setDefaultFailed": "Nie udało się ustawić polityki domyślnej. Spróbuj ponownie."
+      },
+      "loading": "Wczytywanie polityk SLA...",
+      "title": "Polityki SLA"
+    },
+    "status": {
+      "atRisk": "Zagrożone",
+      "breached": "Przekroczone",
+      "onTrack": "Zgodnie z planem",
+      "paused": "Wstrzymane",
+      "resolutionBreached": "Przekroczono SLA rozwiązania",
+      "responseBreached": "Przekroczono SLA odpowiedzi",
+      "tooltip": {
+        "resolutionBreachedBy": "Rozwiązanie: przekroczono o {{time}}",
+        "resolutionRemaining": "Rozwiązanie: pozostało {{time}}",
+        "responseBreachedBy": "Odpowiedź: przekroczono o {{time}}",
+        "responseRemaining": "Odpowiedź: pozostało {{time}}",
+        "statusLine": "Status SLA: {{status}}",
+        "timerPaused": "Licznik SLA: wstrzymany"
+      },
+      "unknown": "Nieznany"
     }
   },
   "clientPortalLanguage": {

@@ -1726,5 +1726,191 @@
       "confirm": "Cancelar entrada",
       "dismiss": "Conservar entrada"
     }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} filas",
+      "operators": {
+        "eq": "Es igual a",
+        "neq": "No es igual a",
+        "gt": "Mayor que",
+        "gte": "Mayor o igual que",
+        "lt": "Menor que",
+        "lte": "Menor o igual que",
+        "in": "En la lista"
+      },
+      "sortDirections": {
+        "asc": "Ascendente",
+        "desc": "Descendente"
+      },
+      "aggregations": {
+        "sum": "Suma",
+        "count": "Recuento",
+        "avg": "Promedio",
+        "min": "Mínimo",
+        "max": "Máximo"
+      },
+      "operations": {
+        "advancedPredicate": "Predicado avanzado",
+        "groupBy": "Agrupar por {{field}}",
+        "readOnly": "Conservado como solo lectura en V1"
+      },
+      "source": {
+        "title": "Datos de origen",
+        "description": "Elija datos de vista previa y la vinculación de colección que desea estructurar.",
+        "sampleScenario": "Escenario de muestra",
+        "selectInvoice": "Seleccionar factura",
+        "collection": "Colección de origen",
+        "outputBindingId": "ID de vinculación de salida"
+      },
+      "metadata": {
+        "title": "Metadatos de origen",
+        "binding": "Vinculación:",
+        "bindingNone": "Ninguna",
+        "resolvedPath": "Ruta resuelta:",
+        "pathNotResolved": "Sin resolver",
+        "noFields": "Elija datos de vista previa y una vinculación de colección para detectar los campos."
+      },
+      "pipeline": {
+        "title": "Secuencia de transformaciones",
+        "description": "Las operaciones se ejecutan de arriba abajo.",
+        "addFilter": "+ Filtro",
+        "addSort": "+ Orden",
+        "addGroup": "+ Grupo",
+        "addAggregate": "+ Agregación",
+        "empty": "Agregue operaciones para crear la secuencia de transformaciones.",
+        "moveUp": "Mover {{operation}} hacia arriba",
+        "moveDown": "Mover {{operation}} hacia abajo",
+        "duplicate": "Duplicar {{operation}}",
+        "delete": "Eliminar {{operation}}"
+      },
+      "inspector": {
+        "description": "Edite la operación de transformación seleccionada.",
+        "empty": "Seleccione una tarjeta de transformación para editar su configuración.",
+        "advancedPredicateNotice": "Este filtro usa una estructura de predicado avanzada. Si lo edita aquí, se convertirá en una comparación simple.",
+        "unsupportedOperation": "Este tipo de operación se conserva en el espacio de trabajo, pero el diseñador V1 solo edita operaciones de filtro, orden, agrupación y agregación.",
+        "field": "Campo",
+        "operator": "Operador",
+        "value": "Valor",
+        "valueList": "Valores (separados por comas)",
+        "sortKey": "Clave de orden {{index}}",
+        "remove": "Quitar",
+        "direction": "Dirección",
+        "addSortKey": "+ Clave de orden",
+        "groupField": "Campo de agrupación",
+        "groupLabel": "Etiqueta (opcional)",
+        "aggregation": "Agregación {{index}}",
+        "outputId": "ID de salida",
+        "operation": "Operación",
+        "addAggregation": "+ Agregación"
+      },
+      "output": {
+        "title": "Vista previa de salida",
+        "description": "Obtenga una vista previa de las filas generadas por la secuencia de transformaciones actual.",
+        "rowPaths": "Rutas de fila disponibles",
+        "groupedRows": "{{count}} filas agrupadas",
+        "binding": "Vinculación: {{binding}}",
+        "bindingNotSet": "Sin establecer",
+        "groupKey": "clave: {{value}}",
+        "groupItems": "{{count}} elementos",
+        "emptyConfigure": "Configure el origen, la vinculación de salida y las operaciones para obtener una vista previa de las filas transformadas.",
+        "emptyNoData": "Elija datos de vista previa para inspeccionar la salida transformada.",
+        "previewFailed": "Falló la vista previa de las transformaciones."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Todos los conceptos",
+        "phases": "Fases",
+        "recurringItems": "Conceptos recurrentes",
+        "onetimeItems": "Conceptos únicos",
+        "serviceItems": "Conceptos de servicio",
+        "productItems": "Conceptos de producto",
+        "items": "Elementos",
+        "transformsSource": "{{binding}} (origen de transformaciones)",
+        "transformsOutput": "{{binding}} (salida de transformaciones)"
+      },
+      "presets": {
+        "description": {
+          "label": "Descripción",
+          "hint": "Descripción del concepto"
+        },
+        "quantity": {
+          "label": "Cant.",
+          "hint": "Cantidad"
+        },
+        "unitPrice": {
+          "label": "Tarifa",
+          "hint": "Precio unitario"
+        },
+        "amount": {
+          "label": "Importe",
+          "hint": "Total de la línea"
+        }
+      },
+      "sourceBinding": {
+        "title": "Vinculación de origen",
+        "description": "Vincule esta tabla con una colección sin procesar o con la salida de transformaciones creada."
+      },
+      "columns": {
+        "title": "Columnas de la tabla",
+        "add": "+ Columna",
+        "quickAdd": "Adición rápida:",
+        "newColumnHeader": "Nueva columna",
+        "empty": "No hay columnas definidas. Agregue al menos una columna.",
+        "itemLabel": "Columna",
+        "moveUp": "Mover {{column}} hacia arriba",
+        "moveDown": "Mover {{column}} hacia abajo",
+        "remove": "Quitar {{column}}",
+        "header": "Encabezado",
+        "headerPlaceholder": "Etiqueta del encabezado",
+        "bindingKey": "Clave de vinculación",
+        "type": "Tipo",
+        "width": "Ancho"
+      },
+      "columnTypes": {
+        "text": "Texto",
+        "number": "Número",
+        "currency": "Moneda",
+        "date": "Fecha"
+      },
+      "style": {
+        "title": "Estilo de tabla",
+        "borderPreset": "Borde predefinido",
+        "headerWeight": "Grosor del encabezado",
+        "borderOuter": "Exterior",
+        "borderRows": "Filas",
+        "borderColumns": "Columnas"
+      },
+      "borderPresets": {
+        "list": "Lista simple",
+        "boxed": "Enmarcado",
+        "grid": "Cuadrícula",
+        "none": "Ninguno",
+        "custom": "Personalizado"
+      },
+      "headerWeights": {
+        "normal": "Peso normal",
+        "medium": "Medio",
+        "semibold": "Seminegrita",
+        "bold": "Negrita"
+      },
+      "reference": {
+        "title": "Referencia de claves de campo",
+        "transformAggregate": "Agregación de transformación",
+        "groupedRowKey": "Clave de fila agrupada",
+        "groupedRowItems": "Elementos de fila agrupada",
+        "availableBinding": "Vinculación disponible"
+      }
+    },
+    "imagePicker": {
+      "browse": "Explorar documentos",
+      "hiddenFromClients": "{{document}} está oculto para los clientes. No aparecerá en las cotizaciones ni en las facturas consultadas a través del portal del cliente.",
+      "updating": "Actualizando...",
+      "markVisible": "Marcar como visible para los clientes",
+      "visibleInPortal": "Visible en el portal del cliente",
+      "dialogTitle": "Seleccionar imagen",
+      "dialogDescription": "Elija una imagen de sus documentos para usarla en esta plantilla."
+    }
   }
 }

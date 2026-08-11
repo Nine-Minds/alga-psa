@@ -3,6 +3,7 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { cn } from '@alga-psa/ui';
 import {
   Clock,
@@ -13,6 +14,9 @@ import {
 } from 'lucide-react';
 import { SlaTimerStatus } from '../types';
 import { formatRemainingTime } from '../services/businessHoursCalculator';
+
+// Module-scope helpers cannot reach the hook, so they take `t` as an argument
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
 export interface SlaStatusBadgeProps {
   /**
@@ -52,11 +56,11 @@ export interface SlaStatusBadgeProps {
 /**
  * Get the configuration for a given SLA status
  */
-function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
+function getStatusConfig(t: TranslateFn, status: SlaTimerStatus, isPaused?: boolean) {
   if (isPaused || status === 'paused') {
     return {
       icon: PauseCircle,
-      label: 'Paused',
+      label: t('sla.status.paused', { defaultValue: 'Paused' }),
       variant: 'secondary' as const
     };
   }
@@ -65,26 +69,26 @@ function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
     case 'on_track':
       return {
         icon: CheckCircle,
-        label: 'On Track',
+        label: t('sla.status.onTrack', { defaultValue: 'On Track' }),
         variant: 'success' as const
       };
     case 'at_risk':
       return {
         icon: AlertTriangle,
-        label: 'At Risk',
+        label: t('sla.status.atRisk', { defaultValue: 'At Risk' }),
         variant: 'warning' as const
       };
     case 'response_breached':
     case 'resolution_breached':
       return {
         icon: XCircle,
-        label: 'Breached',
+        label: t('sla.status.breached', { defaultValue: 'Breached' }),
         variant: 'error' as const
       };
     default:
       return {
         icon: Clock,
-        label: 'Unknown',
+        label: t('sla.status.unknown', { defaultValue: 'Unknown' }),
         variant: 'secondary' as const
       };
   }
@@ -139,6 +143,8 @@ export function SlaStatusBadge({
   showIcon = true,
   className
 }: SlaStatusBadgeProps): React.ReactElement | null {
+  const { t } = useTranslation('msp/settings');
+
   // Determine which SLA type to display
   const selectedDisplayType =
     displayType === 'auto'
@@ -154,7 +160,7 @@ export function SlaStatusBadge({
       : undefined;
 
   // Get status configuration
-  const config = getStatusConfig(status, isPaused);
+  const config = getStatusConfig(t, status, isPaused);
   const Icon = config.icon;
 
   // Format the remaining time
@@ -162,6 +168,7 @@ export function SlaStatusBadge({
 
   // Build tooltip content
   const tooltipContent = buildTooltipContent(
+    t,
     status,
     isPaused,
     responseRemainingMinutes,
@@ -206,6 +213,7 @@ export function SlaStatusBadge({
  * Build tooltip content with detailed SLA information
  */
 function buildTooltipContent(
+  t: TranslateFn,
   status: SlaTimerStatus,
   isPaused?: boolean,
   responseRemainingMinutes?: number,
@@ -215,25 +223,34 @@ function buildTooltipContent(
 
   // Status line
   if (isPaused || status === 'paused') {
-    lines.push('SLA Timer: Paused');
+    lines.push(t('sla.status.tooltip.timerPaused', { defaultValue: 'SLA Timer: Paused' }));
   } else {
     const statusLabels: Record<SlaTimerStatus, string> = {
-      on_track: 'On Track',
-      at_risk: 'At Risk',
-      response_breached: 'Response SLA Breached',
-      resolution_breached: 'Resolution SLA Breached',
-      paused: 'Paused'
+      on_track: t('sla.status.onTrack', { defaultValue: 'On Track' }),
+      at_risk: t('sla.status.atRisk', { defaultValue: 'At Risk' }),
+      response_breached: t('sla.status.responseBreached', { defaultValue: 'Response SLA Breached' }),
+      resolution_breached: t('sla.status.resolutionBreached', { defaultValue: 'Resolution SLA Breached' }),
+      paused: t('sla.status.paused', { defaultValue: 'Paused' })
     };
-    lines.push(`SLA Status: ${statusLabels[status] || 'Unknown'}`);
+    lines.push(t('sla.status.tooltip.statusLine', {
+      defaultValue: 'SLA Status: {{status}}',
+      status: statusLabels[status] || t('sla.status.unknown', { defaultValue: 'Unknown' })
+    }));
   }
 
   // Response SLA line
   if (responseRemainingMinutes !== undefined) {
     const time = formatRemainingTime(responseRemainingMinutes);
     if (responseRemainingMinutes < 0) {
-      lines.push(`Response: Breached by ${time.replace('-', '')}`);
+      lines.push(t('sla.status.tooltip.responseBreachedBy', {
+        defaultValue: 'Response: Breached by {{time}}',
+        time: time.replace('-', '')
+      }));
     } else {
-      lines.push(`Response: ${time} remaining`);
+      lines.push(t('sla.status.tooltip.responseRemaining', {
+        defaultValue: 'Response: {{time}} remaining',
+        time
+      }));
     }
   }
 
@@ -241,9 +258,15 @@ function buildTooltipContent(
   if (resolutionRemainingMinutes !== undefined) {
     const time = formatRemainingTime(resolutionRemainingMinutes);
     if (resolutionRemainingMinutes < 0) {
-      lines.push(`Resolution: Breached by ${time.replace('-', '')}`);
+      lines.push(t('sla.status.tooltip.resolutionBreachedBy', {
+        defaultValue: 'Resolution: Breached by {{time}}',
+        time: time.replace('-', '')
+      }));
     } else {
-      lines.push(`Resolution: ${time} remaining`);
+      lines.push(t('sla.status.tooltip.resolutionRemaining', {
+        defaultValue: 'Resolution: {{time}} remaining',
+        time
+      }));
     }
   }
 
@@ -264,7 +287,8 @@ export function SlaIndicator({
   isPaused?: boolean;
   className?: string;
 }): React.ReactElement {
-  const config = getStatusConfig(status, isPaused);
+  const { t } = useTranslation('msp/settings');
+  const config = getStatusConfig(t, status, isPaused);
   const Icon = config.icon;
 
   return (

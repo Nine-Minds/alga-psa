@@ -1726,5 +1726,191 @@
       "confirm": "Cancelar lançamento",
       "dismiss": "Manter lançamento"
     }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} linhas",
+      "operators": {
+        "eq": "Igual a",
+        "neq": "Diferente de",
+        "gt": "Maior que",
+        "gte": "Maior ou igual a",
+        "lt": "Menor que",
+        "lte": "Menor ou igual a",
+        "in": "Na lista"
+      },
+      "sortDirections": {
+        "asc": "Crescente",
+        "desc": "Decrescente"
+      },
+      "aggregations": {
+        "sum": "Soma",
+        "count": "Contagem",
+        "avg": "Média",
+        "min": "Mínimo",
+        "max": "Máximo"
+      },
+      "operations": {
+        "advancedPredicate": "Predicado avançado",
+        "groupBy": "Agrupar por {{field}}",
+        "readOnly": "Preservado como somente leitura na V1"
+      },
+      "source": {
+        "title": "Dados de origem",
+        "description": "Escolha os dados de visualização e a vinculação da coleção que deseja estruturar.",
+        "sampleScenario": "Cenário de exemplo",
+        "selectInvoice": "Selecionar fatura",
+        "collection": "Coleção de origem",
+        "outputBindingId": "ID da vinculação de saída"
+      },
+      "metadata": {
+        "title": "Metadados de origem",
+        "binding": "Vinculação:",
+        "bindingNone": "Nenhuma",
+        "resolvedPath": "Caminho resolvido:",
+        "pathNotResolved": "Não resolvido",
+        "noFields": "Escolha os dados de visualização e uma vinculação de coleção para descobrir os campos."
+      },
+      "pipeline": {
+        "title": "Pipeline de transformação",
+        "description": "As operações são executadas de cima para baixo.",
+        "addFilter": "+ Filtro",
+        "addSort": "+ Ordenação",
+        "addGroup": "+ Grupo",
+        "addAggregate": "+ Agregação",
+        "empty": "Adicione operações para criar o pipeline de transformação.",
+        "moveUp": "Mover {{operation}} para cima",
+        "moveDown": "Mover {{operation}} para baixo",
+        "duplicate": "Duplicar {{operation}}",
+        "delete": "Excluir {{operation}}"
+      },
+      "inspector": {
+        "description": "Edite a operação de transformação selecionada.",
+        "empty": "Selecione um cartão de transformação para editar suas configurações.",
+        "advancedPredicateNotice": "Este filtro usa uma estrutura de predicado avançada. A edição aqui a converte em uma comparação simples.",
+        "unsupportedOperation": "Este tipo de operação é preservado no espaço de trabalho, mas o designer V1 edita apenas operações de filtro, ordenação, agrupamento e agregação.",
+        "field": "Campo",
+        "operator": "Operador",
+        "value": "Valor",
+        "valueList": "Valores (separados por vírgulas)",
+        "sortKey": "Chave de ordenação {{index}}",
+        "remove": "Remover",
+        "direction": "Direção",
+        "addSortKey": "+ Chave de ordenação",
+        "groupField": "Campo de agrupamento",
+        "groupLabel": "Rótulo (opcional)",
+        "aggregation": "Agregação {{index}}",
+        "outputId": "ID de saída",
+        "operation": "Operação",
+        "addAggregation": "+ Agregação"
+      },
+      "output": {
+        "title": "Visualização da saída",
+        "description": "Visualize as linhas geradas pelo pipeline de transformação atual.",
+        "rowPaths": "Caminhos de linha disponíveis",
+        "groupedRows": "{{count}} linhas agrupadas",
+        "binding": "Vinculação: {{binding}}",
+        "bindingNotSet": "Não definida",
+        "groupKey": "chave: {{value}}",
+        "groupItems": "{{count}} itens",
+        "emptyConfigure": "Configure a origem, a vinculação de saída e as operações para visualizar as linhas transformadas.",
+        "emptyNoData": "Escolha os dados de visualização para inspecionar a saída transformada.",
+        "previewFailed": "Falha na visualização das transformações."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Todos os itens de linha",
+        "phases": "Fases",
+        "recurringItems": "Itens recorrentes",
+        "onetimeItems": "Itens avulsos",
+        "serviceItems": "Itens de serviço",
+        "productItems": "Itens de produto",
+        "items": "Itens",
+        "transformsSource": "{{binding}} (origem das transformações)",
+        "transformsOutput": "{{binding}} (saída das transformações)"
+      },
+      "presets": {
+        "description": {
+          "label": "Descrição",
+          "hint": "Descrição do item de linha"
+        },
+        "quantity": {
+          "label": "Qtd.",
+          "hint": "Quantidade"
+        },
+        "unitPrice": {
+          "label": "Tarifa",
+          "hint": "Preço unitário"
+        },
+        "amount": {
+          "label": "Valor",
+          "hint": "Total da linha"
+        }
+      },
+      "sourceBinding": {
+        "title": "Vinculação de origem",
+        "description": "Vincule esta tabela a uma coleção bruta ou à saída das transformações criadas."
+      },
+      "columns": {
+        "title": "Colunas da tabela",
+        "add": "+ Coluna",
+        "quickAdd": "Adição rápida:",
+        "newColumnHeader": "Nova coluna",
+        "empty": "Nenhuma coluna definida. Adicione pelo menos uma coluna.",
+        "itemLabel": "Coluna",
+        "moveUp": "Mover {{column}} para cima",
+        "moveDown": "Mover {{column}} para baixo",
+        "remove": "Remover {{column}}",
+        "header": "Cabeçalho",
+        "headerPlaceholder": "Rótulo do cabeçalho",
+        "bindingKey": "Chave de vinculação",
+        "type": "Tipo",
+        "width": "Largura"
+      },
+      "columnTypes": {
+        "text": "Texto",
+        "number": "Número",
+        "currency": "Moeda",
+        "date": "Data"
+      },
+      "style": {
+        "title": "Estilo da tabela",
+        "borderPreset": "Predefinição de borda",
+        "headerWeight": "Espessura do cabeçalho",
+        "borderOuter": "Externa",
+        "borderRows": "Linhas",
+        "borderColumns": "Colunas"
+      },
+      "borderPresets": {
+        "list": "Lista simples",
+        "boxed": "Emoldurado",
+        "grid": "Grade",
+        "none": "Nenhuma",
+        "custom": "Personalizada"
+      },
+      "headerWeights": {
+        "normal": "Peso normal",
+        "medium": "Média",
+        "semibold": "Seminegrito",
+        "bold": "Negrito"
+      },
+      "reference": {
+        "title": "Referência das chaves de campo",
+        "transformAggregate": "Agregação da transformação",
+        "groupedRowKey": "Chave da linha agrupada",
+        "groupedRowItems": "Itens da linha agrupada",
+        "availableBinding": "Vinculação disponível"
+      }
+    },
+    "imagePicker": {
+      "browse": "Procurar documentos",
+      "hiddenFromClients": "{{document}} está oculto para os clientes. Ele não aparecerá em cotações ou faturas visualizadas pelo portal do cliente.",
+      "updating": "Atualizando...",
+      "markVisible": "Marcar como visível para os clientes",
+      "visibleInPortal": "Visível no portal do cliente",
+      "dialogTitle": "Selecionar imagem",
+      "dialogDescription": "Escolha uma imagem dos seus documentos para usar neste modelo."
+    }
   }
 }
