@@ -122,7 +122,14 @@
     "usage": "Utilisation",
     "overage": "Dépassement",
     "noContractLineTitle": "Aucune banque d'heures disponible",
-    "noContractLineDescription": "Aucun forfait d'heures actif pour votre compte."
+    "noContractLineDescription": "Aucun forfait d'heures actif pour votre compte.",
+    "remainingSummary": "Il reste {{remaining}} heures sur {{total}}",
+    "remainingSummaryWithRollover": "Il reste {{remaining}} heures sur {{total}} (dont {{rollover}} reportées)",
+    "overageSummary": "{{hours}} heures de dépassement",
+    "overBucket": "QUOTA DÉPASSÉ",
+    "usedHours": "{{hours}} h utilisées",
+    "leftHours": "{{hours}} h restantes",
+    "overHours": "{{hours}} h EN EXCÈS"
   },
   "messages": {
     "noInvoices": "Aucune facture trouvée",
@@ -335,6 +342,25 @@
     "availableCredit": "Crédit disponible",
     "appliedAutomatically": "Appliqué automatiquement à votre prochaine facture.",
     "credit": "Crédit",
-    "expires": "Expire le {{date}}"
+    "expires": "Expire le {{date}}",
+    "history": {
+      "viewHistory": "Voir l'historique",
+      "title": "Historique des crédits",
+      "empty": "Aucune activité de crédit pour le moment",
+      "issued": "Émis",
+      "issuedWithInvoice": "Émis — prépaiement n°{{invoice}}",
+      "issuedFromCreditNote": "Émis à partir d'une note de crédit",
+      "applied": "Appliqué",
+      "appliedToInvoice": "Appliqué à la facture n°{{invoice}}",
+      "adjusted": "Ajusté",
+      "expired": "Expiré",
+      "transferred": "Transféré",
+      "transaction": "Activité de crédit",
+      "balance": "solde {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Heures prépayées",
+    "viewBilling": "Voir la facturation"
   }
 }

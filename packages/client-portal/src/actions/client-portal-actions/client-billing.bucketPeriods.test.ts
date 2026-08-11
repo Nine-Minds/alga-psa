@@ -100,6 +100,9 @@ describe('client billing bucket period actions', () => {
         if (table === 'contacts') {
           return contactQuery;
         }
+        if (table === 'role_permissions as rp') {
+          return buildThenableQuery({ permission_id: 'perm-1' });
+        }
         if (table === 'client_contracts as cc') {
           return detailedBucketQuery;
         }

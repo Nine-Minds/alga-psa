@@ -384,6 +384,97 @@ export const getClientCreditSummary = withAuth(async (user, { tenant }): Promise
   }
 });
 
+export interface ClientPortalCreditHistoryEntry {
+  transaction_id: string;
+  type: string;
+  description: string | null;
+  amount: number;
+  balance_after: number | null;
+  created_at: string;
+  invoice_id: string | null;
+  invoice_number: string | null;
+  currency_code: string | null;
+}
+
+/**
+ * Recent credit transactions for the portal client, newest first (limit 20).
+ *
+ * This mirrors the MSP `getCreditHistory` query shape but runs under portal
+ * auth: the caller's client is resolved from the portal user and gated by the
+ * client billing read permission. Only a whitelist of credit-bearing types is
+ * returned, and the row shape deliberately excludes MSP-internal fields
+ * (metadata, parent/related transaction ids) — the ledger only needs the
+ * signed amount, the running balance, and an invoice reference when one exists.
+ */
+export const getClientCreditHistory = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalCreditHistoryEntry[]>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('transactions as t')
+        .where({
+          't.client_id': clientId,
+          't.tenant': tenant,
+        })
+        .whereIn('t.type', [
+          'credit_issuance',
+          'prepayment',
+          'credit_application',
+          'credit_adjustment',
+          'credit_expiration',
+          'credit_transfer',
+          'credit_issuance_from_negative_invoice',
+        ])
+        .select(
+          't.transaction_id',
+          't.type',
+          't.description',
+          't.amount',
+          't.balance_after',
+          't.created_at',
+          't.invoice_id',
+          't.currency_code',
+          { invoice_number: 'i.invoice_number' }
+        )
+        .orderBy('t.created_at', 'desc')
+        .limit(20);
+      db.tenantJoin(query, 'invoices as i', 't.invoice_id', 'i.invoice_id', { type: 'left' });
+
+      const rows = await query;
+
+      return rows.map((row: Record<string, unknown>) => ({
+        transaction_id: String(row.transaction_id),
+        type: String(row.type),
+        description: row.description ? String(row.description) : null,
+        amount: Number(row.amount ?? 0),
+        balance_after: row.balance_after != null ? Number(row.balance_after) : null,
+        created_at: String(row.created_at),
+        invoice_id: row.invoice_id ? String(row.invoice_id) : null,
+        invoice_number: row.invoice_number ? String(row.invoice_number) : null,
+        currency_code: row.currency_code ? String(row.currency_code) : null,
+      }));
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client credit history:', error);
+    throw error;
+  }
+});
+
 export const getClientQuotes = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IQuoteWithClient[]>> => {
   const knex = await getConnection(tenant);
 

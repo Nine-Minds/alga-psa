@@ -122,7 +122,14 @@
     "usage": "Usage",
     "overage": "Overage",
     "noContractLineTitle": "No bucket contract lines available",
-    "noContractLineDescription": "There are no active bucket contract lines for your account."
+    "noContractLineDescription": "There are no active bucket contract lines for your account.",
+    "remainingSummary": "{{remaining}} hours left of {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} hours left of {{total}} (incl. {{rollover}} rollover)",
+    "overageSummary": "{{hours}} hours over",
+    "overBucket": "OVER BUCKET",
+    "usedHours": "{{hours}}h used",
+    "leftHours": "{{hours}}h left",
+    "overHours": "{{hours}}h OVER"
   },
   "messages": {
     "noInvoices": "No invoices found",
@@ -335,6 +342,25 @@
     "availableCredit": "Available Credit",
     "appliedAutomatically": "Applied automatically to your next invoice.",
     "credit": "Credit",
-    "expires": "Expires {{date}}"
+    "expires": "Expires {{date}}",
+    "history": {
+      "viewHistory": "View history",
+      "title": "Credit History",
+      "empty": "No credit activity yet",
+      "issued": "Issued",
+      "issuedWithInvoice": "Issued — prepayment #{{invoice}}",
+      "issuedFromCreditNote": "Issued from credit note",
+      "applied": "Applied",
+      "appliedToInvoice": "Applied to invoice #{{invoice}}",
+      "adjusted": "Adjusted",
+      "expired": "Expired",
+      "transferred": "Transferred",
+      "transaction": "Credit activity",
+      "balance": "balance {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Prepaid hours",
+    "viewBilling": "View billing"
   }
 }

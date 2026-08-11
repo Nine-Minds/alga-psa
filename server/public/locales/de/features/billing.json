@@ -122,7 +122,14 @@
     "usage": "Nutzung",
     "overage": "Überschreitung",
     "noContractLineTitle": "Keine Stundenpläne verfügbar",
-    "noContractLineDescription": "Für Ihr Konto sind keine aktiven Stundenkontingent-Vertragslinien vorhanden."
+    "noContractLineDescription": "Für Ihr Konto sind keine aktiven Stundenkontingent-Vertragslinien vorhanden.",
+    "remainingSummary": "{{remaining}} Stunden übrig von {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} Stunden übrig von {{total}} (inkl. {{rollover}} Übertrag)",
+    "overageSummary": "{{hours}} Stunden überschritten",
+    "overBucket": "KONTINGENT ÜBERSCHRITTEN",
+    "usedHours": "{{hours}} Std. verbraucht",
+    "leftHours": "{{hours}} Std. übrig",
+    "overHours": "{{hours}} Std. ÜBERSCHRITTEN"
   },
   "messages": {
     "noInvoices": "Keine Rechnungen gefunden",
@@ -335,6 +342,25 @@
     "availableCredit": "Verfügbares Guthaben",
     "appliedAutomatically": "Wird automatisch mit Ihrer nächsten Rechnung verrechnet.",
     "credit": "Guthaben",
-    "expires": "Läuft ab am {{date}}"
+    "expires": "Läuft ab am {{date}}",
+    "history": {
+      "viewHistory": "Verlauf anzeigen",
+      "title": "Guthabenverlauf",
+      "empty": "Noch keine Guthabenaktivität",
+      "issued": "Gutschrift erteilt",
+      "issuedWithInvoice": "Gutschrift erteilt — Vorauszahlung #{{invoice}}",
+      "issuedFromCreditNote": "Gutschrift aus Kreditnota",
+      "applied": "Verrechnet",
+      "appliedToInvoice": "Mit Rechnung #{{invoice}} verrechnet",
+      "adjusted": "Angepasst",
+      "expired": "Abgelaufen",
+      "transferred": "Übertragen",
+      "transaction": "Guthabenaktivität",
+      "balance": "Saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Vorausbezahlte Stunden",
+    "viewBilling": "Zur Abrechnung"
   }
 }

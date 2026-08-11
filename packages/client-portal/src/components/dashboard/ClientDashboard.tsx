@@ -16,6 +16,7 @@ import {
 import type { Asset, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
+import { PrepaidHoursCard } from './PrepaidHoursCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Calendar,
@@ -513,6 +514,9 @@ export function ClientDashboard({
           );
         })}
       </div>
+
+      {/* Prepaid hours widget: self-gating on feature flag + billing access + bucket lines */}
+      {!isAlgaDeskPortal && <PrepaidHoursCard />}
 
       {/* Activity + side rail (Schedule + Devices) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
