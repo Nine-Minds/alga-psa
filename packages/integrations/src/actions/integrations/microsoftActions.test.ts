@@ -325,6 +325,7 @@ import {
   listMicrosoftConsumerBindings,
   listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill,
   saveMicrosoftIntegrationSettings,
   setDefaultMicrosoftProfile,
   updateMicrosoftProfile,
@@ -797,7 +798,7 @@ describe('Microsoft integration actions', () => {
     }
   });
 
-  it('T016: the email issuer backfill does not run on the shared status read path; only the email settings flow opts in', async () => {
+  it('T016: the email issuer backfill never runs on the status read path; it runs only via the explicit mutation action', async () => {
     // A legacy email provider row whose persisted client id has exactly one
     // eligible same-client profile match — the exact shape backfill would pin.
     const legacyProfileId = 'profile-backfill-1';
@@ -830,22 +831,25 @@ describe('Microsoft integration actions', () => {
     });
     const before = JSON.stringify(microsoftEmailProviderConfigs[0]);
 
-    // Teams settings path: getMicrosoftIntegrationStatus() with default options
-    // is a pure read — zero writes to microsoft_email_provider_config rows.
-    const teamsStatus = await getMicrosoftIntegrationStatus();
-    expect(teamsStatus.success).toBe(true);
-    expect(teamsStatus.issuerBackfill).toBeUndefined();
+    // Status reads (Teams picker + email settings load) are pure reads: the
+    // backfill must NOT run and no `runIssuerBackfill` surface may exist.
+    const status = await getMicrosoftIntegrationStatus();
+    expect(status.success).toBe(true);
+    expect(status).not.toHaveProperty('issuerBackfill');
     expect(JSON.stringify(microsoftEmailProviderConfigs[0])).toBe(before);
 
-    // Microsoft email settings path opts in and receives the conservative
-    // same-client backfill.
-    const emailStatus = await getMicrosoftIntegrationStatus({ runIssuerBackfill: true });
-    expect(emailStatus.success).toBe(true);
-    expect(emailStatus.issuerBackfill).toMatchObject({ backfilled: 1 });
+    // A second status read after the explicit backfill is still a pure read.
+    const backfillResult = await runMicrosoftEmailIssuerBackfill();
+    expect(backfillResult.success).toBe(true);
+    expect(backfillResult.result).toMatchObject({ backfilled: 1 });
     expect(microsoftEmailProviderConfigs[0]).toMatchObject({
       microsoft_profile_id: legacyProfileId,
       client_secret_ref: 'ref-backfill',
     });
+    const pinnedBefore = JSON.stringify(microsoftEmailProviderConfigs[0]);
+    const readAfterBackfill = await getMicrosoftIntegrationStatus();
+    expect(readAfterBackfill.success).toBe(true);
+    expect(JSON.stringify(microsoftEmailProviderConfigs[0])).toBe(pinnedBefore);
   });
 
   it('T011/T012: reset action disconnects Microsoft email and calendar providers', async () => {

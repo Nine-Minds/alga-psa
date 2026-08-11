@@ -166,7 +166,6 @@ export interface MicrosoftProfileStatusResponse {
   };
   emailSetup?: MicrosoftEmailSetupReadiness;
   profiles?: MicrosoftProfileSummary[];
-  issuerBackfill?: { backfilled: number; ambiguous: number; unchanged: number };
 }
 
 function maskSecret(value: string): string {
@@ -1617,22 +1616,19 @@ export const getMicrosoftEmailIssuerOptions = withAuth(async (
 
 export const getMicrosoftIntegrationStatus = withAuth(async (
   user,
-  { tenant },
-  params: { runIssuerBackfill?: boolean } = {}
+  { tenant }
 ): Promise<MicrosoftProfileStatusResponse> => {
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
-    // The conservative same-client issuer backfill WRITES
-    // microsoft_email_provider_config rows. It must never run on shared read
-    // paths: the Teams settings page loads this status purely to render its
-    // profile picker, so a Teams page load would otherwise mutate email
-    // provider state. Only the Microsoft email settings / inbound-email flow
-    // opts in via runIssuerBackfill: true.
-    const backfill = params.runIssuerBackfill
-      ? await backfillMicrosoftEmailProviderIssuerMetadata(tenant)
-      : undefined;
+    // STRICTLY READ-ONLY. This status powers both the Microsoft email settings
+    // page and the Teams settings profile picker, so it must never write to
+    // microsoft_email_provider_config (or any other table). The conservative
+    // same-client issuer backfill is a deliberate mutation and lives in the
+    // dedicated runMicrosoftEmailIssuerBackfill action, which the email
+    // settings surface calls only as part of a user-initiated save/reconnect —
+    // never as a side effect of loading a status page.
     const baseUrl = await getDeploymentBaseUrl();
     const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
     const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
@@ -1655,10 +1651,37 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
       },
       emailSetup,
       profiles: visibleProfiles,
-      issuerBackfill: backfill,
     };
   } catch (err: any) {
     return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft integration status') };
+  }
+});
+
+/**
+ * Explicitly run the conservative same-client email issuer backfill.
+ *
+ * This is a deliberate mutation of `microsoft_email_provider_config` rows: it
+ * pins legacy providers that have exactly one eligible same-client profile
+ * match. It must NEVER be invoked as a side effect of loading a settings or
+ * status page — the Microsoft email settings surface calls it only from an
+ * explicit user-initiated save/reconnect, and tests exercise it directly. The
+ * backfill keeps its internal secret-resolvability guard, so a profile whose
+ * secret cannot be resolved is never used as a pin.
+ */
+export const runMicrosoftEmailIssuerBackfill = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ success: boolean; error?: string; result?: { backfilled: number; ambiguous: number; unchanged: number } }> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+
+    return {
+      success: true,
+      result: await backfillMicrosoftEmailProviderIssuerMetadata(tenant),
+    };
+  } catch (err: any) {
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to backfill Microsoft email issuer metadata') };
   }
 });
 

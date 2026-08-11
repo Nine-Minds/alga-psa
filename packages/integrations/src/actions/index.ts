@@ -133,7 +133,8 @@ export {
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
-  resetMicrosoftProvidersToDisconnected
+  resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill
 } from './integrations/microsoftActions';
 export {
   getMicrosoftEmailSetupOptions,

@@ -627,7 +627,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.config.webhook_expires_at = response.data.expirationDateTime;
       this.webhookLifecycle?.onSubscriptionCreated(response.data.id);
 
-      // Persist webhook details only in microsoft vendor config
+      // Persist webhook details in the microsoft vendor config. A failure here
+      // MUST propagate: the Graph subscription has already been created and the
+      // previous one already deleted, so a swallowed write would leave the
+      // config row pointing at a subscription that no longer exists in Graph.
+      // The OAuth callback's compensation ledger then deletes the orphaned
+      // subscription and restores the prior connected/polling state.
       try {
         const knex = await getAdminConnection();
         await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
@@ -642,7 +647,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
             updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
-        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
+        this.log('error', 'Failed to persist Microsoft webhook subscription state; propagating so compensation can delete the orphaned Graph subscription', {
+          subscriptionId: response.data.id,
+          error: dbErr?.message || String(dbErr),
+        });
+        throw dbErr;
       }
 
       this.log('info', `Webhook subscription created: ${response.data.id}`);

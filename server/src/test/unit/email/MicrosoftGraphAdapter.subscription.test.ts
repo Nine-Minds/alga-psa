@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
   const tokenPost = vi.fn();
+  const dbUpdate = vi.fn().mockResolvedValue(1);
   const client = {
     interceptors: { request: { use: requestUse } },
     get: vi.fn(),
@@ -10,7 +11,7 @@ const mocks = vi.hoisted(() => {
     patch: vi.fn(),
     delete: vi.fn(),
   };
-  return { client, requestUse, tokenPost };
+  return { client, requestUse, tokenPost, dbUpdate };
 });
 
 vi.mock('axios', () => ({
@@ -24,7 +25,7 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     const query: any = {
       where: vi.fn().mockReturnThis(),
-      update: vi.fn().mockResolvedValue(1),
+      update: mocks.dbUpdate,
     };
     return vi.fn(() => query);
   }),
@@ -65,6 +66,7 @@ function jwt(claims: Record<string, unknown>): string {
 describe('MicrosoftGraphAdapter subscription hygiene', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.dbUpdate.mockResolvedValue(1);
     mocks.client.delete.mockResolvedValue({ status: 204 });
     mocks.client.post.mockResolvedValue({
       data: { id: 'new-subscription', expirationDateTime: new Date(Date.now() + 3600000).toISOString() },
@@ -160,6 +162,20 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
     await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
       .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'authentication', status: 403 });
+  });
+
+  it('propagates a subscription-id persistence failure instead of swallowing it (the callback can then compensate)', async () => {
+    const dbError = new Error('injected: UPDATE microsoft_email_provider_config failed');
+    mocks.dbUpdate.mockRejectedValue(dbError);
+
+    // The failure must leave registerWebhookSubscription as a
+    // MicrosoftSubscriptionError classified 'other' (never 'validation', which
+    // the callback would downgrade to a polling fallback), and must keep the
+    // original DB error in its cause chain for diagnostics/compensation.
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'other' });
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toSatisfy((err: any) => err?.cause?.message === dbError.message);
   });
 });
 

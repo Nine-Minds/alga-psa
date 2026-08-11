@@ -59,6 +59,10 @@ const capturedAdapterConfigs: any[] = [];
 const deletedSubscriptions: string[] = [];
 let failSetupWebhook = false;
 let failSetupWebhookMessage = 'graph subscription persistence failed';
+// When set, the mocked adapter throws a MicrosoftSubscriptionError with this
+// kind instead of a plain Error (mirrors how the real adapter classifies
+// failures — including a DB persistence failure, which classifies as 'other').
+let failSetupWebhookKind: string | null = null;
 
 function tenantTable<Row = Record<string, unknown>>(table: string) {
   return tenantDb(testDb, testTenant).table<Row>(table);
@@ -144,6 +148,9 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
         // replacement, and then failing while persisting subscription state.
         this.lifecycle?.onSubscriptionDeleted?.('old-sub');
         this.lifecycle?.onSubscriptionCreated?.('new-sub');
+        if (failSetupWebhookKind !== null) {
+          throw new MicrosoftSubscriptionError(failSetupWebhookKind, failSetupWebhookMessage);
+        }
         throw new Error(failSetupWebhookMessage);
       }
       return {};
@@ -357,6 +364,7 @@ describe('Microsoft email OAuth callback route (DB-backed behavioral)', () => {
     deletedSubscriptions.length = 0;
     failSetupWebhook = false;
     failSetupWebhookMessage = 'graph subscription persistence failed';
+    failSetupWebhookKind = null;
   });
 
   describe('success path', () => {
@@ -571,6 +579,38 @@ describe('Microsoft email OAuth callback route (DB-backed behavioral)', () => {
   });
 
   describe('blockers 4+5: post-token persistence failure reaches compensation and never marks error', () => {
+    it('a non-validation subscription error (e.g. a DB persistence failure) propagates to compensation and is NOT treated as a polling fallback', async () => {
+      const providerId = await seedProvider({});
+      const state = await signAndStoreState({ purpose: 'reconnect', providerId });
+
+      // The real adapter classifies a failed webhook_subscription_id UPDATE as
+      // kind 'other' (it has no Graph status/code). Such a failure must NOT be
+      // silently downgraded to the polling fallback — that would leave the
+      // config row pointing at a subscription deleted from Graph.
+      failSetupWebhook = true;
+      failSetupWebhookKind = 'other';
+      failSetupWebhookMessage = 'Failed to persist Microsoft webhook subscription state';
+
+      const { payload } = await invokeCallback({ code: 'auth-code-db-persist-fail', state });
+      expect(payload.success).toBe(false);
+      expect(payload.error).toBe(MICROSOFT_EMAIL_ISSUER_ERRORS.CALLBACK_PERSISTENCE_FAILED);
+
+      // Compensation ran and deleted the created Graph subscription; the row
+      // landed on coherent polling (never the new or deleted-prior id).
+      expect(deletedSubscriptions).toEqual(['new-sub']);
+      const config = await readProviderRow(providerId);
+      expect(config.webhook_subscription_id).not.toBe('new-sub');
+      expect(config.webhook_subscription_id).not.toBe('old-sub');
+      expect(config).toMatchObject({
+        delivery_mode: 'polling',
+        webhook_silent_runs: 0,
+        last_webhook_delivery_at: null,
+      });
+      const provider = await readProviderStatus(providerId);
+      expect(provider.status).toBe('connected');
+      expect(provider.error_message).toBeNull();
+    });
+
     it('when subscription persistence fails after Graph create/delete, compensation deletes the created subscription, the restored row has no stale subscription id, and the provider is NOT marked error', async () => {
       const providerId = await seedProvider({});
       const state = await signAndStoreState({ purpose: 'reconnect', providerId });

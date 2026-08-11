@@ -5,13 +5,15 @@
  * Loading it (the shared status read path) must make ZERO writes to
  * `microsoft_email_provider_config`, `microsoft_profile_consumer_bindings`, or
  * `microsoft_profiles` — including any legacy shape migration or readiness
- * logic buried in the read path. The email issuer backfill is opt-in and only
- * the Microsoft email settings flow passes `runIssuerBackfill: true`.
+ * logic buried in the read path. The email issuer backfill is an explicit
+ * mutation (runMicrosoftEmailIssuerBackfill) that the email settings surface
+ * invokes only as a deliberate write, never as a page-load side effect.
  *
  * This test seeds a fully-migrated tenant (profile + every consumer binding
- * already present, plus a legacy email provider that a non-opt-in backfill
+ * already present, plus a legacy email provider that a read-path backfill
  * would pin) and asserts the three tables are byte-identical before and after
- * the real action runs against real PostgreSQL.
+ * the real status action runs against real PostgreSQL — and that only the
+ * explicit backfill action performs the write.
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -22,7 +24,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { runWithApiKeyUser } from '@alga-psa/auth';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { getMicrosoftIntegrationStatus } from '@alga-psa/integrations/actions/integrations/microsoftActions';
+import {
+  getMicrosoftIntegrationStatus,
+  runMicrosoftEmailIssuerBackfill,
+} from '@alga-psa/integrations/actions/integrations/microsoftActions';
 
 let testDb: Knex;
 let testTenant: string;
@@ -97,6 +102,65 @@ async function snapshot(scope: { configRows: any[]; bindingRows: any[]; profileR
   });
 }
 
+// The explicit backfill mutation is guarded by canManageMicrosoftSettings
+// (hasPermission('system_settings', 'update')). Grant the session user that
+// permission through the real roles/permissions tables so the action's auth
+// guard passes in this DB-backed run.
+async function grantSystemSettingsUpdate(connection: Knex, tenant: string, userId: string) {
+  const roleId = uuidv4();
+  await tenantDb(connection, tenant).table('users').insert({
+    tenant,
+    user_id: userId,
+    username: `purity-${userId.slice(0, 8)}`,
+    hashed_password: 'unused',
+    user_type: 'internal',
+    email: `purity-${userId.slice(0, 8)}@client.com`,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  await tenantDb(connection, tenant).table('roles').insert({
+    tenant,
+    role_id: roleId,
+    role_name: `Status Read Purity Test Role ${uuidv4().slice(0, 8)}`,
+    description: 'Test role for the Microsoft status read purity test',
+    msp: true,
+    client: false,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
+
+  const existingPermission = await tenantDb(connection, tenant).table('permissions')
+    .where({ resource: 'system_settings', action: 'update' })
+    .first<{ permission_id: string }>('permission_id');
+  const permissionId = existingPermission?.permission_id ?? uuidv4();
+  if (!existingPermission) {
+    await tenantDb(connection, tenant).table('permissions').insert({
+      tenant,
+      permission_id: permissionId,
+      resource: 'system_settings',
+      action: 'update',
+      msp: true,
+      client: false,
+      created_at: new Date(),
+    });
+  }
+
+  await tenantDb(connection, tenant).table('role_permissions').insert({
+    tenant,
+    role_id: roleId,
+    permission_id: permissionId,
+    created_at: new Date(),
+  });
+
+  await tenantDb(connection, tenant).table('user_roles').insert({
+    tenant,
+    user_id: userId,
+    role_id: roleId,
+    created_at: new Date(),
+  });
+}
+
 describe('Teams status read path purity (DB-backed)', () => {
   beforeAll(async () => {
     const secretsDir = path.resolve(__dirname, '../../../../secrets');
@@ -128,6 +192,7 @@ describe('Teams status read path purity (DB-backed)', () => {
       created_at: new Date(),
       updated_at: new Date(),
     });
+    await grantSystemSettingsUpdate(testDb, testTenant, sessionUserId);
 
     // A fully-migrated tenant: one active Email-capable profile whose client id
     // is the same as a legacy email provider's persisted client id. The
@@ -219,6 +284,11 @@ describe('Teams status read path purity (DB-backed)', () => {
 
   afterAll(async () => {
     if (testTenant) {
+      await tenantTable('user_roles').where('user_id', sessionUserId).delete();
+      await tenantTable('role_permissions').delete();
+      await tenantTable('roles').delete();
+      await tenantTable('permissions').delete();
+      await tenantTable('users').where('user_id', sessionUserId).delete();
       await tenantTable('tenant_addons').delete();
       await tenantTable('microsoft_email_provider_config').delete();
       await tenantTable('email_providers').delete();
@@ -230,9 +300,9 @@ describe('Teams status read path purity (DB-backed)', () => {
   }, 30_000);
 
   it('loads Teams/status read path without writing to email config, bindings, or profiles', async () => {
-    // Order-independent: tests shuffle, so the opt-in test may have already
-    // pinned the legacy provider. Start this read from an unpinned state so the
-    // assertion below proves the read path itself never re-pins it.
+    // Order-independent: tests shuffle, so the explicit backfill test may have
+    // already pinned the legacy provider. Start this read from an unpinned
+    // state so the assertion below proves the read path itself never re-pins it.
     await tenantTable('microsoft_email_provider_config').update({
       microsoft_profile_id: null,
       client_secret_ref: null,
@@ -255,7 +325,7 @@ describe('Teams status read path purity (DB-backed)', () => {
     );
 
     expect(status.success).toBe(true);
-    expect(status.issuerBackfill).toBeUndefined();
+    expect(status).not.toHaveProperty('issuerBackfill');
 
     const after = await snapshot(await readScope());
     expect(after).toBe(before);
@@ -266,34 +336,38 @@ describe('Teams status read path purity (DB-backed)', () => {
     expect(config.client_secret_ref).toBeNull();
   });
 
-  it('the opt-in path still backfills when explicitly requested by the email settings flow', async () => {
-    const before = await snapshot(await (async () => {
+  it('the conservative issuer backfill runs only through the explicit mutation action, never on a status read', async () => {
+    const readScope = async () => {
       const [configRows, bindingRows, profileRows] = await Promise.all([
         tenantTable('microsoft_email_provider_config').select('*'),
         tenantTable('microsoft_profile_consumer_bindings').select('*'),
         tenantTable('microsoft_profiles').select('*'),
       ]);
       return { configRows, bindingRows, profileRows };
-    })());
+    };
 
-    const status = await runWithApiKeyUser(
+    const before = await snapshot(await readScope());
+
+    const result = await runWithApiKeyUser(
       { user_id: sessionUserId, tenant: testTenant },
-      () => runWithTenant(testTenant, () => getMicrosoftIntegrationStatus({ runIssuerBackfill: true }))
+      () => runWithTenant(testTenant, () => runMicrosoftEmailIssuerBackfill())
     );
 
-    expect(status.success).toBe(true);
-    expect(status.issuerBackfill).toMatchObject({ backfilled: 1 });
-    expect(before).not.toBe(await snapshot(await (async () => {
-      const [configRows, bindingRows, profileRows] = await Promise.all([
-        tenantTable('microsoft_email_provider_config').select('*'),
-        tenantTable('microsoft_profile_consumer_bindings').select('*'),
-        tenantTable('microsoft_profiles').select('*'),
-      ]);
-      return { configRows, bindingRows, profileRows };
-    })()));
+    expect(result.success).toBe(true);
+    expect(result.result).toMatchObject({ backfilled: 1 });
+    expect(before).not.toBe(await snapshot(await readScope()));
 
     const config = await tenantTable<any>('microsoft_email_provider_config').first();
     expect(config.microsoft_profile_id).toBe(legacyProfileId);
     expect(config.client_secret_ref).toBe(`microsoft_profile_${legacyProfileId}_client_secret`);
+
+    // A status read after the explicit backfill is still a pure read.
+    const pinnedBefore = await snapshot(await readScope());
+    const status = await runWithApiKeyUser(
+      { user_id: sessionUserId, tenant: testTenant },
+      () => runWithTenant(testTenant, () => getMicrosoftIntegrationStatus())
+    );
+    expect(status.success).toBe(true);
+    expect(await snapshot(await readScope())).toBe(pinnedBefore);
   });
 });

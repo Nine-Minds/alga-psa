@@ -12,7 +12,8 @@ export {
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
-  resetMicrosoftProvidersToDisconnected
+  resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill
 } from './microsoftActions';
 export {
   getMicrosoftEmailSetupOptions,
