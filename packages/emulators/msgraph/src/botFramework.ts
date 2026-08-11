@@ -44,9 +44,10 @@ export interface BotFrameworkClaims {
 }
 
 /**
- * Sign an inbound Bot Framework token. `issuedAtSeconds` comes from the host
- * clock so `algasim clock advance` ages tokens; `nbf` is backdated slightly so
- * a virtual clock nudged ahead of wall time still yields an active token.
+ * Sign an inbound Bot Framework token. `issuedAtSeconds` is wall time, because
+ * the app's jose verifier reads the real clock — the caller backdates it when a
+ * test wants an expired token. `nbf` is backdated slightly so small clock skew
+ * between emulator and app still yields an active token.
  */
 export function signBotFrameworkJwt(
   claims: BotFrameworkClaims,

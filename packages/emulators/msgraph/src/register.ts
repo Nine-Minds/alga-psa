@@ -135,7 +135,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.seeder({
     name: 'bot-activity',
     description:
-      "Sign and POST an inbound Bot Framework activity at the app's bot endpoint, returning the app's synchronous reply",
+      "Sign and POST an inbound Bot Framework activity at the app's bot endpoint, returning the app's synchronous reply (tokenAgeSeconds backdates the signed token to test expiry)",
     params: z.object({
       type: z.enum(['message', 'invoke', 'conversationUpdate']).optional(),
       text: z.string().optional(),
@@ -149,6 +149,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       value: z.record(z.unknown()).optional(),
       targetUrl: z.string().optional(),
       appId: z.string().optional(),
+      tokenAgeSeconds: z.number().int().nonnegative().optional(),
     }),
     run: (input) => deliverInboundBotActivity(core, input, core.env),
   });

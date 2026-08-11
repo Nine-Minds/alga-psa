@@ -71,9 +71,16 @@ export async function deliverInboundBotActivity(
   env: HostEnv,
 ): Promise<InboundBotActivityResult> {
   const { activity, targetUrl, serviceUrl, audience, aadObjectId, tenantId } = core.buildInboundActivity(input);
+  // The token is stamped with wall time, not env.clock: its iat/nbf/exp are
+  // consumed by the app's jose verifier, which reads the real clock with zero
+  // tolerance — and real Microsoft stamps wall time too. Emulator STATE (access
+  // token expiry, subscriptions, activity timestamps) still flows through
+  // env.clock, so `clock advance` and activity injection compose. Backdate
+  // deliberately with tokenAgeSeconds to test an expired inbound token.
+  const issuedAt = Math.floor(Date.now() / 1000) - (input.tokenAgeSeconds ?? 0);
   const token = signBotFrameworkJwt(
     { aud: audience, serviceurl: serviceUrl, oid: aadObjectId, tid: tenantId },
-    Math.floor(env.clock.now().getTime() / 1000),
+    issuedAt,
   );
 
   try {

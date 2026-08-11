@@ -610,6 +610,37 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect((await fetch(`${base}/v1.0/me`, { headers: { authorization: `Bearer ${tokens.access_token}` } })).status).toBe(401);
   });
 
+  // Runs after the clock advanced 2h above: inbound JWTs are stamped with wall
+  // time on purpose, because jose reads the real clock. Otherwise advancing the
+  // virtual clock would silently break every injected activity.
+  it('keeps injected bot tokens verifiable across a clock advance, and ages them on demand', async () => {
+    const jwks = createLocalJWKSet(await (await fetch(`${base}/v1/.well-known/keys`)).json());
+    const deliveredToken = () => inboundBotRequests.at(-1)!.authorization!.replace(/^Bearer\s+/i, '');
+
+    const fresh = await controlPost('/control/msgraph/seed/bot-activity', {
+      text: 'after the clock moved',
+      conversationId,
+    });
+    expect(fresh.result).toMatchObject({ delivered: true, status: 200 });
+    const { payload } = await jwtVerify(deliveredToken(), jwks, {
+      issuer: 'https://api.botframework.com',
+      audience: BOT_APP_ID,
+    });
+    expect(payload.exp! * 1000).toBeGreaterThan(Date.now());
+
+    // tokenAgeSeconds backdates the token past the 1h TTL so inbound-auth
+    // rejection is testable without touching the clock.
+    const stale = await controlPost('/control/msgraph/seed/bot-activity', {
+      text: 'issued two hours ago',
+      conversationId,
+      tokenAgeSeconds: 7200,
+    });
+    expect(stale.result.delivered).toBe(true);
+    await expect(
+      jwtVerify(deliveredToken(), jwks, { issuer: 'https://api.botframework.com', audience: BOT_APP_ID }),
+    ).rejects.toMatchObject({ code: 'ERR_JWT_EXPIRED' });
+  });
+
   it('revokes refresh tokens via action', async () => {
     const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);
     authorize.search = new URLSearchParams({ client_id: 'premise-app', redirect_uri: 'http://localhost/cb' }).toString();

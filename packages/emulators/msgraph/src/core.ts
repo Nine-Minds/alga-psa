@@ -149,6 +149,12 @@ export interface InboundBotActivityInput {
   value?: Record<string, unknown>;
   targetUrl?: string;
   appId?: string;
+  /**
+   * Backdate the signed inbound token by this many seconds, to test the app
+   * rejecting an expired one. Delivery-only: the activity itself is unaffected,
+   * so buildInboundActivity ignores it.
+   */
+  tokenAgeSeconds?: number;
 }
 
 export interface OperationFault {

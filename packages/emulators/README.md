@@ -170,6 +170,16 @@ algasim state msgraph activity-notifications
 activity shows up immediately (`401` with `{"error":"unauthorized"}` when the
 audience or signature does not check out).
 
+The inbound JWT is stamped with wall time, not the virtual clock, so
+`clock advance` and activity injection compose: advancing the clock to expire
+Graph tokens never invalidates the activities injected afterwards. To test the
+app rejecting an expired inbound token, backdate that token on its own with
+`tokenAgeSeconds` (past the 1h TTL):
+
+```bash
+algasim seed msgraph bot-activity -p '{"text":"stale","tokenAgeSeconds":7200}'
+```
+
 The bot answers an unlinked Teams identity with the "Teams sign-in required"
 card. Linking a Teams user to a PSA user happens through Microsoft SSO sign-in,
 which the emulator does not serve yet (no OIDC discovery document on the login
@@ -246,6 +256,11 @@ steps:
 All emulator time flows through one host clock. `algasim clock advance 2h`
 expires OAuth tokens; `32d` crosses billing periods and subscription
 expirations. Runs are reproducible: the host PRNG is seeded (`--seed`).
+
+One deliberate exception: the JWT `seed msgraph bot-activity` signs is stamped
+with wall time, because the app verifies it with jose against the real clock
+(as real Microsoft does). Emulator state stays on the virtual clock, so the two
+compose; `tokenAgeSeconds` is the knob for an intentionally expired one.
 
 ## Write an emulator
 
