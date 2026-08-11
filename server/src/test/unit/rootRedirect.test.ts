@@ -19,7 +19,7 @@ describe('resolveRootRedirect', () => {
     expect(lookupPortalDomain).not.toHaveBeenCalled();
   });
 
-  it('returns the client portal for any matching portal-domain row', async () => {
+  it('returns the client portal dashboard for any matching portal-domain row', async () => {
     const lookupPortalDomain = vi.fn().mockResolvedValue({ status: 'disabled' });
 
     await expect(resolveRootRedirect({
@@ -27,7 +27,7 @@ describe('resolveRootRedirect', () => {
       hostHeader: 'portal.example.com',
       canonicalHostname: 'app.example.com',
       lookupPortalDomain,
-    })).resolves.toBe('/client-portal');
+    })).resolves.toBe('/client-portal/dashboard');
   });
 
   it('returns the MSP dashboard for an unknown host', async () => {
@@ -62,7 +62,7 @@ describe('resolveRootRedirect', () => {
       hostHeader: 'portal.example.com',
       canonicalHostname: null,
       lookupPortalDomain,
-    })).resolves.toBe('/client-portal');
+    })).resolves.toBe('/client-portal/dashboard');
     expect(lookupPortalDomain).toHaveBeenCalledWith('portal.example.com');
   });
 
@@ -76,7 +76,7 @@ describe('resolveRootRedirect', () => {
       hostHeader: 'portal.example.com:3553',
       canonicalHostname: 'app.example.com',
       lookupPortalDomain,
-    })).resolves.toBe('/client-portal');
+    })).resolves.toBe('/client-portal/dashboard');
     expect(lookupPortalDomain.mock.calls).toEqual([
       ['portal.example.com:3553'],
       ['portal.example.com'],
