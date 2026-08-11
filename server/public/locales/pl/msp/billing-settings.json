@@ -105,7 +105,7 @@
           "label": "Stan zgłoszenia odnowienia",
           "placeholderLoading": "Ładowanie statusów...",
           "placeholderSelect": "Wybierz stan",
-          "placeholderSelectBoardFirst": "Najpierw wybierz deskę",
+          "placeholderSelectBoardFirst": "Najpierw wybierz tablicę",
           "help": "Statusy zgłoszeń odnowienia są ograniczone do wybranej tablicy."
         }
       },

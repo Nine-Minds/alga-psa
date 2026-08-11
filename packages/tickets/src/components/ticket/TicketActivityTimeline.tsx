@@ -22,7 +22,7 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -328,11 +328,11 @@ export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] 
   });
 }
 
-function formatTimestamp(value: string): string {
+function formatTimestamp(value: string, locale: string): string {
   try {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString();
+    return d.toLocaleString(locale);
   } catch {
     return value;
   }
@@ -410,6 +410,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
   const { t: tCommon } = useTranslation('common');
+  const { locale } = useFormatters();
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -490,7 +491,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
             dateTime={typeof value === 'string' ? value : undefined}
             title={typeof value === 'string' ? value : undefined}
           >
-            {formatTimestamp(String(value))}
+            {formatTimestamp(String(value), locale)}
           </time>
         ),
       },

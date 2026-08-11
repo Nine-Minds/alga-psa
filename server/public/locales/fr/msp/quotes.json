@@ -752,7 +752,7 @@
       "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel."
     },
     "pipeline": {
-      "render": "Rendre",
+      "render": "Rendu",
       "shape": "Forme",
       "renderFailed": "Échec du rendu.",
       "shapeFailed": "Échec de la mise en forme.",

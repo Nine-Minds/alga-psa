@@ -108,6 +108,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../../lib/useTaskTypeLabel';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -2134,6 +2135,7 @@ function TaskCard({
   zoomLevel = 50,
 }: TaskCardProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -2174,7 +2176,7 @@ function TaskCard({
       }`}
     >
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || taskTypeKey}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskTypeLabel(taskType, taskTypeKey)}>
         <Icon className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'} style={{ color: iconColor }} />
       </div>
 

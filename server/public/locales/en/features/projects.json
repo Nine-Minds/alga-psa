@@ -286,7 +286,8 @@
     "bulkTasksMovedSuccess": "{{count}} tasks moved",
     "bulkTasksMovedToPhase": "{{count}} tasks moved to {{phaseName}}",
     "moveTasksTitle": "Move Tasks",
-    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?"
+    "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
+    "taskTypeFallback": "Task"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -1798,5 +1799,13 @@
       "ready": "Ready: {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Task",
+    "bug": "Bug",
+    "feature": "Feature",
+    "improvement": "Improvement",
+    "epic": "Epic",
+    "story": "Story"
   }
 }

@@ -286,7 +286,8 @@
     "bulkTagsSuccess_one": "Étiquettes ajoutées à {{count}} tâche",
     "bulkTagsSuccess_other": "Étiquettes ajoutées à {{count}} tâches",
     "bulkTagsPartial": "Impossible d'ajouter des étiquettes à certaines tâches",
-    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées"
+    "bulkTagsFailure": "Échec de l'ajout d'étiquettes aux tâches sélectionnées",
+    "taskTypeFallback": "Tâche"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -1798,5 +1799,13 @@
       "ready": "Prêt : {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Tâche",
+    "bug": "Bogue",
+    "feature": "Fonctionnalité",
+    "improvement": "Amélioration",
+    "epic": "Épopée",
+    "story": "Récit"
   }
 }

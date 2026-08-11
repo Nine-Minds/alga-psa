@@ -31,7 +31,9 @@
     "skipDropped_one": "Omitir (se descartará {{count}} ticket)",
     "skipDropped_other": "Omitir (se descartarán {{count}} tickets)",
     "createdSuccess_one": "Se creó {{count}} ticket correctamente.",
-    "createdSuccess_other": "Se crearon {{count}} tickets correctamente."
+    "createdSuccess_other": "Se crearon {{count}} tickets correctamente.",
+    "rowLimitExceeded": "Se superó el límite de filas:",
+    "rowLimitDescription": "Su CSV tiene {{original}} filas, pero solo se importarán las primeras {{kept}} filas. Divida el archivo en lotes más pequeños para las filas restantes."
   },
   "title": "Tickets de soporte",
   "subtitle": "Consulte y gestione sus tickets de soporte",
@@ -228,7 +230,7 @@
     "contactNotAssociatedWithClient": "El contacto no está asociado con una empresa. Póngase en contacto con soporte.",
     "ticketNotFound": "Ticket no encontrado",
     "commentNotFound": "Comentario no encontrado o no autorizado",
-    "noDefaultBoard": "No hay un canal predeterminado configurado para los tickets",
+    "noDefaultBoard": "No hay un tablero predeterminado configurado para los tickets",
     "failedToCreateTicket": "No se pudo crear el ticket",
     "failedToFetchTicketDetails": "No se pudieron obtener los detalles del ticket",
     "failedToAddComment": "No se pudo agregar el comentario",
@@ -1350,7 +1352,9 @@
       "noChildren": "No hay tickets secundarios en este paquete.",
       "addChildMultiClientMessage": "Esto agregará {{ticket}} de un cliente diferente al paquete. Confirme que desea continuar.",
       "thisTicket": "este ticket"
-    }
+    },
+    "autoClose": "Se cerrará automáticamente el {{date}} salvo que haya nueva actividad.",
+    "autoCloseWarned": "Se ha avisado al cliente."
   },
   "invalidTicketData": "Datos del ticket no válidos",
   "timeEntries": {

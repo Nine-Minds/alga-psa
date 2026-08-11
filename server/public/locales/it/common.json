@@ -82,7 +82,8 @@
     "share": "Condividi",
     "done": "Fatto",
     "continue": "Continua",
-    "printSelected": "Stampa selezionati ({{count}})"
+    "printSelected": "Stampa selezionati ({{count}})",
+    "removeTag": "Rimuovi tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -182,7 +183,9 @@
       "downloadLimitReached": "Il limite di download è stato raggiunto."
     },
     "downloadStarted": "Download avviato con successo!",
-    "enterPassword": "Inserisci password"
+    "enterPassword": "Inserisci password",
+    "downloadsUsed": "{{used}} di {{max}} download utilizzati",
+    "expiresAt": "Scade il: {{date}}"
   },
   "tickets": {
     "responseSource": {
@@ -1115,13 +1118,24 @@
     "noUsersAvailable": "Nessun utente disponibile",
     "searchBoards": "Cerca bacheche...",
     "searchBoardsLabel": "Cerca bacheche",
-    "noBoardsFound": "Nessuna bacheca trovata"
+    "noBoardsFound": "Nessuna bacheca trovata",
+    "notAssigned": "Non assegnato",
+    "searchUsersOrTeams": "Cerca utenti o team...",
+    "unnamedUser": "Utente senza nome",
+    "unnamedTeam": "Team senza nome"
   },
   "tagFilter": {
     "placeholder": "Filtra per tag...",
     "filter": "Filtra",
     "selectedCount": "{{count}} selezionati",
     "clearAll": "Cancella tutto"
+  },
+  "timePicker": {
+    "placeholder": "Seleziona un orario",
+    "hour": "Ora",
+    "minute": "Minuto",
+    "period": "Periodo",
+    "open": "Apri il selettore dell'orario"
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleziona fuso orario...",

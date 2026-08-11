@@ -31,7 +31,9 @@
     "skipDropped_one": "Überspringen ({{count}} Ticket wird verworfen)",
     "skipDropped_other": "Überspringen ({{count}} Tickets werden verworfen)",
     "createdSuccess_one": "{{count}} Ticket erfolgreich erstellt.",
-    "createdSuccess_other": "{{count}} Tickets erfolgreich erstellt."
+    "createdSuccess_other": "{{count}} Tickets erfolgreich erstellt.",
+    "rowLimitExceeded": "Zeilenlimit überschritten:",
+    "rowLimitDescription": "Ihre CSV-Datei hat {{original}} Zeilen, aber nur die ersten {{kept}} Zeilen werden importiert. Teilen Sie Ihre Datei in kleinere Batches auf."
   },
   "title": "Support-Tickets",
   "subtitle": "Zeigen und verwalten Sie Ihre Support-Tickets",
@@ -228,7 +230,7 @@
     "contactNotAssociatedWithClient": "Der Kontakt ist keinem Unternehmen zugeordnet. Bitte wenden Sie sich an den Support.",
     "ticketNotFound": "Ticket nicht gefunden",
     "commentNotFound": "Kommentar nicht gefunden oder nicht autorisiert",
-    "noDefaultBoard": "Kein Standardkanal für Tickets konfiguriert",
+    "noDefaultBoard": "Kein Standard-Board für Tickets konfiguriert",
     "failedToCreateTicket": "Ticket konnte nicht erstellt werden",
     "failedToFetchTicketDetails": "Ticketdetails konnten nicht abgerufen werden",
     "failedToAddComment": "Kommentar konnte nicht hinzugefügt werden",
@@ -1350,7 +1352,9 @@
       "noChildren": "Keine Untertickets in diesem Bündel.",
       "addChildMultiClientMessage": "Dadurch wird {{ticket}} von einem anderen Kunden zum Bündel hinzugefügt. Bestätigen Sie, dass Sie fortfahren möchten.",
       "thisTicket": "dieses Ticket"
-    }
+    },
+    "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
+    "autoCloseWarned": "Der Kunde wurde benachrichtigt."
   },
   "invalidTicketData": "Ungültige Ticketdaten",
   "timeEntries": {

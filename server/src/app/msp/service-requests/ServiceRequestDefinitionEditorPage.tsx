@@ -43,7 +43,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
@@ -645,6 +645,7 @@ function FormFieldPreview({
 
 export default function ServiceRequestDefinitionEditorPage() {
   const { t } = useTranslation('msp/service-requests');
+  const { formatDate } = useFormatters();
   const params = useParams();
   const definitionId = String(params?.definitionId ?? '');
   const formFieldTypeOptions = useMemo(() => buildFormFieldTypeOptions(t), [t]);
@@ -1872,9 +1873,9 @@ export default function ServiceRequestDefinitionEditorPage() {
         />
         <FieldRow
           label={t('editor.publishSection.publishedAt')}
-          value={data.publish.publishedAt ? new Date(data.publish.publishedAt).toLocaleString() : '-'}
+          value={data.publish.publishedAt ? formatDate(new Date(data.publish.publishedAt), { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
         />
-        <FieldRow label={t('editor.publishSection.draftUpdatedAt')} value={new Date(data.publish.draftUpdatedAt).toLocaleString()} />
+        <FieldRow label={t('editor.publishSection.draftUpdatedAt')} value={formatDate(new Date(data.publish.draftUpdatedAt), { dateStyle: 'medium', timeStyle: 'short' })} />
         {validationErrors.length > 0 ? (
           <Alert variant="destructive">
             <AlertTitle>{t('editor.publishSection.validationTitle')}</AlertTitle>
@@ -1908,7 +1909,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                   <div className="font-medium">{submission.request_name}</div>
                   <div className="text-[rgb(var(--color-text-600))]">
                     {t('editor.submissions.submittedAtStatus', {
-                      date: new Date(submission.submitted_at).toLocaleString(),
+                      date: formatDate(new Date(submission.submitted_at), { dateStyle: 'medium', timeStyle: 'short' }),
                       status: submission.execution_status,
                     })}
                   </div>

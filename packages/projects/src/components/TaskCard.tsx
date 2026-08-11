@@ -28,6 +28,8 @@ import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTaskSelection } from './TaskSelectionContext';
 
 interface TaskCardProps {
@@ -107,6 +109,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamAvatarUrls = {},
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
   const selected = isSelected(task.task_id);
   // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
@@ -321,7 +326,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('task', 'Task')}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskTypeLabel(taskType, task.task_type_key)}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}
@@ -501,7 +506,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className={`flex items-center justify-between ${zoomScales.metaSize} text-gray-500`}>
         <div className="flex items-center gap-2">
           {task.due_date ? (
-            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{new Date(task.due_date).toLocaleDateString()}</span></>
+            <>{zoomLevel > 30 && `${t('projectDetail.dueLabel', 'Due')}: `}<span className='bg-primary-100 p-1 rounded-md'>{formatDate(new Date(task.due_date), { dateStyle: 'medium' })}</span></>
           ) : (
             zoomLevel > 30 && <>{t('projectDetail.noDueDate', 'No due date')}</>
           )}

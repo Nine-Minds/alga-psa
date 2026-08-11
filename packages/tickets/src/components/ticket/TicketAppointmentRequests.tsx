@@ -3,7 +3,7 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Loader2 } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { format } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -37,6 +37,8 @@ export default function TicketAppointmentRequests({
 }: TicketAppointmentRequestsProps) {
   const { t } = useTranslation('features/appointments');
   const { t: tCore } = useTranslation('common');
+  // Read 'en-US' outright, so it stayed American in every locale.
+  const { formatDate } = useFormatters();
 
   const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
@@ -64,7 +66,7 @@ export default function TicketAppointmentRequests({
 
       const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz || 'UTC');
       if (isNaN(dt.getTime())) return t('ticketSection.invalidDateTime');
-      return dt.toLocaleString('en-US', {
+      return formatDate(dt, {
         month: 'short', day: 'numeric', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
       });

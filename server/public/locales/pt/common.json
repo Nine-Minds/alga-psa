@@ -82,7 +82,8 @@
     "share": "Compartilhar",
     "done": "Feito",
     "continue": "Continuar",
-    "printSelected": "Imprimir selecionado ({{count}})"
+    "printSelected": "Imprimir selecionado ({{count}})",
+    "removeTag": "Remover tag"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -107,7 +108,11 @@
     "noUsersAvailable": "Nenhum usuário disponível",
     "searchBoards": "Painéis de pesquisa...",
     "searchBoardsLabel": "Quadros de pesquisa",
-    "noBoardsFound": "Nenhuma quadro encontrada"
+    "noBoardsFound": "Nenhuma quadro encontrada",
+    "notAssigned": "Não atribuído",
+    "searchUsersOrTeams": "Pesquisar usuários ou equipes...",
+    "unnamedUser": "Usuário sem nome",
+    "unnamedTeam": "Equipe sem nome"
   },
   "tagFilter": {
     "placeholder": "Filtrar por tags...",
@@ -209,7 +214,9 @@
       "downloadLimitReached": "O limite de download foi atingido."
     },
     "downloadStarted": "Download iniciado com sucesso!",
-    "enterPassword": "Digite a senha"
+    "enterPassword": "Digite a senha",
+    "downloadsUsed": "{{used}} de {{max}} downloads utilizados",
+    "expiresAt": "Expira em: {{date}}"
   },
   "tickets": {
     "origin": {
@@ -1122,6 +1129,13 @@
     "addOnDescription": {
       "ai_assistant": "Desbloqueie bate-papo de IA, assistência a documentos, ajuda da barra lateral e ferramentas de IA de fluxo de trabalho para sua equipe."
     }
+  },
+  "timePicker": {
+    "placeholder": "Selecionar hora",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "period": "Período",
+    "open": "Abrir o seletor de hora"
   },
   "timezonePicker": {
     "selectPlaceholder": "Selecione o fuso horário...",

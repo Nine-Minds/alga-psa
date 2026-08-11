@@ -40,7 +40,7 @@ import {
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -85,6 +85,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/contacts');
+  const { locale } = useFormatters();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -309,7 +310,8 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true, // Show client column in contact view
       onClientClick: handleClientClick,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick]);
+      locale,
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

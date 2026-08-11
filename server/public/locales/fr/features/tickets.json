@@ -31,7 +31,9 @@
     "skipDropped_one": "Ignorer ({{count}} ticket supprimé)",
     "skipDropped_other": "Ignorer ({{count}} tickets supprimés)",
     "createdSuccess_one": "{{count}} ticket créé avec succès.",
-    "createdSuccess_other": "{{count}} tickets créés avec succès."
+    "createdSuccess_other": "{{count}} tickets créés avec succès.",
+    "rowLimitExceeded": "Limite de lignes dépassée :",
+    "rowLimitDescription": "Votre CSV a {{original}} lignes, mais seules les premières {{kept}} lignes seront importées. Divisez votre fichier en lots plus petits pour les lignes restantes."
   },
   "title": "Tickets d'assistance",
   "subtitle": "Consultez et gérez vos tickets d'assistance",
@@ -228,7 +230,7 @@
     "contactNotAssociatedWithClient": "Contact non associé à une entreprise. Veuillez contacter le support.",
     "ticketNotFound": "Ticket introuvable",
     "commentNotFound": "Commentaire introuvable ou non autorisé",
-    "noDefaultBoard": "Aucun canal par défaut configuré pour les tickets",
+    "noDefaultBoard": "Aucun tableau par défaut configuré pour les tickets",
     "failedToCreateTicket": "Échec de la création du ticket",
     "failedToFetchTicketDetails": "Échec de la récupération des détails du ticket",
     "failedToAddComment": "Échec de l'ajout du commentaire",
@@ -499,7 +501,7 @@
     "bundleTickets": "Regrouper les tickets",
     "moveDialogTitle": "Déplacer les tickets sélectionnés",
     "moveDialogDescription": "Sélectionnez un tableau de destination et un statut, puis confirmez le déplacement des tickets sélectionnés.",
-    "destinationBoard": "Panneau de destination",
+    "destinationBoard": "Tableau de destination",
     "destinationStatus": "État de la destination",
     "selectDestinationBoard": "Sélectionnez le tableau de destination...",
     "selectDestinationStatus": "Sélectionnez le statut de la destination...",
@@ -542,7 +544,7 @@
     "move": {
       "dialogTitle": "Déplacer les tickets sélectionnés",
       "description": "Sélectionnez un tableau de destination et un statut, puis confirmez le déplacement des tickets sélectionnés.",
-      "destinationBoard": "Tableau des destinations",
+      "destinationBoard": "Tableau de destination",
       "destinationStatus": "Statut de destination",
       "selectDestinationBoard": "Sélectionnez le tableau de destination...",
       "selectDestinationStatus": "Sélectionnez le statut de destination...",
@@ -1350,7 +1352,9 @@
       "noChildren": "Aucun enfant dans ce groupe.",
       "addChildMultiClientMessage": "Cela ajoutera {{ticket}} d'un autre client au groupe. Confirmez que vous souhaitez continuer.",
       "thisTicket": "ce ticket"
-    }
+    },
+    "autoClose": "Sera fermé automatiquement le {{date}} en l'absence de nouvelle activité.",
+    "autoCloseWarned": "Le client a été prévenu."
   },
   "invalidTicketData": "Données du ticket non valides",
   "timeEntries": {

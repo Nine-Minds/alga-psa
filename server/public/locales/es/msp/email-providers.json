@@ -86,7 +86,7 @@
         "action": "Configurar Gmail"
       },
       "microsoft": {
-        "title": "microsoft 365",
+        "title": "Microsoft 365",
         "description": "Integración de Microsoft 365/Outlook",
         "features": {
           "accounts": "✓ Cuentas de Microsoft 365 y Outlook",
@@ -190,7 +190,7 @@
     },
     "types": {
       "google": "Gmail",
-      "microsoft": "microsoft 365",
+      "microsoft": "Microsoft 365",
       "imap": "IMAP"
     },
     "filters": {

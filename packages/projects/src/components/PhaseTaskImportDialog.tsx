@@ -43,6 +43,7 @@ import {
 } from '@alga-psa/types';
 import type { IProjectStatusMapping } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 interface PhaseTaskImportDialogProps {
   isOpen: boolean;
@@ -121,6 +122,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   onImportComplete,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  // Row counts followed the browser's grouping separators, not the app's.
+  const { formatNumber } = useFormatters();
   const importT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`import.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const importFieldLabel = useCallback((fieldKey: string, fallback: string) =>
@@ -976,8 +979,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <AlertDescription>
                   <strong>{importT('rowLimitExceeded', 'Row limit exceeded:')}</strong>{' '}
                   {importT('rowLimitDescription', 'Your CSV has {{original}} rows, but only the first {{kept}} rows will be imported. Please split your file into smaller batches for the remaining rows.', {
-                    original: rowsTruncated.original.toLocaleString(),
-                    kept: rowsTruncated.kept.toLocaleString(),
+                    original: formatNumber(rowsTruncated.original),
+                    kept: formatNumber(rowsTruncated.kept),
                   })}
                 </AlertDescription>
               </Alert>

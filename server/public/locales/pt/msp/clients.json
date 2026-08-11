@@ -671,16 +671,16 @@
     "months": {
       "1": "Janeiro",
       "2": "Fevereiro",
-      "3": "Marchar",
-      "4": "abril",
-      "5": "Poderia",
+      "3": "Março",
+      "4": "Abril",
+      "5": "Maio",
       "6": "Junho",
       "7": "Julho",
       "8": "Agosto",
       "9": "Setembro",
-      "10": "outubro",
-      "11": "novembro",
-      "12": "dezembro"
+      "10": "Outubro",
+      "11": "Novembro",
+      "12": "Dezembro"
     },
     "weekdays": {
       "1": "Segunda-feira",

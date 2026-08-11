@@ -63,7 +63,9 @@
     "createdSuccess_one": "Pomyślnie utworzono {{count}} zgłoszenie.",
     "createdSuccess_few": "Pomyślnie utworzono {{count}} zgłoszenia.",
     "createdSuccess_many": "Pomyślnie utworzono {{count}} zgłoszeń.",
-    "createdSuccess_other": "Pomyślnie utworzono {{count}} zgłoszenia."
+    "createdSuccess_other": "Pomyślnie utworzono {{count}} zgłoszenia.",
+    "rowLimitExceeded": "Przekroczono limit wierszy:",
+    "rowLimitDescription": "Twój CSV ma {{original}} wierszy, ale zaimportowane zostanie tylko pierwsze {{kept}}. Podziel plik na mniejsze partie dla pozostałych wierszy."
   },
   "title": "Zgłoszenia wsparcia",
   "subtitle": "Przeglądaj i zarządzaj zgłoszeniami wsparcia",
@@ -1484,7 +1486,9 @@
       "noChildren": "Brak podrzędnych w tym pakiecie.",
       "addChildMultiClientMessage": "Spowoduje to dodanie {{ticket}} od innego klienta do pakietu. Potwierdź, że chcesz kontynuować.",
       "thisTicket": "to zgłoszenie"
-    }
+    },
+    "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
+    "autoCloseWarned": "Klient został powiadomiony."
   },
   "invalidTicketData": "Nieprawidłowe dane zgłoszenia",
   "timeEntries": {

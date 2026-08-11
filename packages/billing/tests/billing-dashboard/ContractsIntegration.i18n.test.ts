@@ -334,7 +334,9 @@ describe('Contracts integration i18n coverage', () => {
     expect(contractDetailSource).toContain('return formatCurrency(majorUnits, currencyCode);');
 
     expect(reviewSource).toContain('useFormatters');
-    expect(reviewSource).toContain('const { formatCurrency } = useFormatters();');
+    // Matched loosely on purpose: the point is that formatCurrency comes from
+    // useFormatters, not that it is the only thing destructured from it.
+    expect(reviewSource).toMatch(/const \{[^}]*\bformatCurrency\b[^}]*\} = useFormatters\(\);/);
     expect(reviewSource).toContain('const formatMinorCurrency = (minorUnits: number | null | undefined) => {');
     expect(reviewSource).toContain('return formatCurrency(amount / 100, currencyCode, {');
   });

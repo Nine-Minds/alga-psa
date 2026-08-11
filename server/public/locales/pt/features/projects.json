@@ -286,7 +286,8 @@
     "bulkTasksMovedSuccess": "Tarefas {{count}} movidas",
     "bulkTasksMovedToPhase": "Tarefas {{count}} movidas para {{phaseName}}",
     "moveTasksTitle": "Mover tarefas",
-    "confirmMoveTasksMessage": "Tem certeza de que deseja mover as tarefas selecionadas de {{count}} para a fase \"{{targetPhase}}\"?"
+    "confirmMoveTasksMessage": "Tem certeza de que deseja mover as tarefas selecionadas de {{count}} para a fase \"{{targetPhase}}\"?",
+    "taskTypeFallback": "Tarefa"
   },
   "taskForm": {
     "addTitle": "Adicionar nova tarefa",
@@ -1798,5 +1799,13 @@
       "ready": "Pronto: {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Tarefa",
+    "bug": "Erro",
+    "feature": "Funcionalidade",
+    "improvement": "Melhoria",
+    "epic": "Épico",
+    "story": "História"
   }
 }

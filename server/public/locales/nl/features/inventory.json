@@ -367,7 +367,7 @@
       }
     },
     "pipeline": {
-      "title": "Verkooporderpijplijn",
+      "title": "Verkooporderpipeline",
       "openSos": "{{count}} open SO's",
       "quotes": "Offerte",
       "quotesValue": "{{count}} open",

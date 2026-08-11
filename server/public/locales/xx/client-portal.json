@@ -331,7 +331,26 @@
       }
     },
     "captchaRequired": "11111",
-    "tooManyAttempts": "11111"
+    "tooManyAttempts": "11111",
+    "tenantDiscovery": {
+      "title": "11111",
+      "description": "11111",
+      "emailLabel": "11111",
+      "emailPlaceholder": "11111",
+      "submit": "11111",
+      "submitting": "11111",
+      "invalidEmail": "11111",
+      "linksSent": "11111",
+      "sent": {
+        "title": "11111",
+        "description": "11111",
+        "noEmailReceived": "11111",
+        "checkSpam": "11111",
+        "verifyAddress": "11111",
+        "contactSupport": "11111",
+        "tryAnother": "11111"
+      }
+    }
   },
   "account": {
     "title": "11111",

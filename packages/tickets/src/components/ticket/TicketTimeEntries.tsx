@@ -2,12 +2,13 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, ChevronDown, ChevronRight, EyeOff, Pencil, Trash2 } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { useContentCardVariant } from '@alga-psa/ui/components';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { formatMinutesAsHoursAndMinutes, formatDateTime, utcToLocal, getUserTimeZone } from '@alga-psa/core';
+import { formatMinutesAsHoursAndMinutes, getUserTimeZone } from '@alga-psa/core';
+import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import type {
   TicketTimeEntriesSummary,
   TicketTimeEntrySummaryEntry,
@@ -329,13 +330,14 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const { locale } = useFormatters();
   const startLabel = useMemo(() => {
     try {
-      return formatDateTime(utcToLocal(entry.start_time, timeZone), timeZone, dateTimeFormat);
+      return formatTicketDateTime(entry.start_time, dateTimeFormat, locale, timeZone);
     } catch {
       return entry.start_time;
     }
-  }, [entry.start_time, timeZone, dateTimeFormat]);
+  }, [entry.start_time, timeZone, dateTimeFormat, locale]);
 
   const statusKey = entry.approval_status ?? 'DRAFT';
   const statusLabel = t(

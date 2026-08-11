@@ -630,7 +630,7 @@
       },
       "title": "Status",
       "description": "Os status são configurados por quadro. Selecione um quadro abaixo para definir o ciclo de vida dos tickets nesse quadro. O status aberto padrão do quadro selecionado é atribuído automaticamente aos novos tickets criados nesse quadro.",
-      "tip": "Os conselhos não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
+      "tip": "Os quadros não compartilham status. Troque de quadro aqui para revisar ou alterar o conjunto de status de cada quadro.",
       "fields": {
         "board": {
           "label": "Quadro",

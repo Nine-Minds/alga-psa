@@ -331,7 +331,26 @@
       }
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
-    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again."
+    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantDiscovery": {
+      "title": "Find Your Organization",
+      "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "your.email@company.com",
+      "submit": "Send Login Links",
+      "submitting": "Sending...",
+      "invalidEmail": "Please enter a valid email address",
+      "linksSent": "Check your email for login links",
+      "sent": {
+        "title": "Check Your Email",
+        "description": "If an account exists with that email address, we've sent you login links for each organization you have access to.",
+        "noEmailReceived": "Didn't receive an email?",
+        "checkSpam": "Check your spam folder",
+        "verifyAddress": "Verify the email address is correct",
+        "contactSupport": "Contact your organization's support team",
+        "tryAnother": "Try Another Email"
+      }
+    }
   },
   "account": {
     "title": "Account",

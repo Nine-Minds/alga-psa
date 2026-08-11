@@ -65,12 +65,20 @@ export function filterByLane<T extends TimelineNodeLike>(nodes: T[], filter: Lan
  * Short calendar-day label for a day-break separator. Uses `now` (defaults to
  * the current time) to decide whether the day is "Today". Same-year days omit
  * the year; other years include it.
+ *
+ * `locale` and `todayLabel` come from the caller: this module has no hook, and
+ * omitting the locale would format in the browser's rather than the app's.
  */
-export function dayLabel(isoOrDate: string | Date, now: Date = new Date()): string {
+export function dayLabel(
+  isoOrDate: string | Date,
+  now: Date = new Date(),
+  options: { locale?: string; todayLabel?: string } = {},
+): string {
+  const { locale, todayLabel = 'Today' } = options;
   const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
   if (Number.isNaN(d.getTime())) return String(isoOrDate);
-  if (d.toDateString() === now.toDateString()) return 'Today';
-  return d.toLocaleDateString(undefined, {
+  if (d.toDateString() === now.toDateString()) return todayLabel;
+  return d.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),

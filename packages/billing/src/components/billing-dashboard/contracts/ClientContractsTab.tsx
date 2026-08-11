@@ -48,7 +48,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface ClientContractsTabProps {
@@ -80,6 +80,7 @@ const toWidgetRenewalRows = (rows: RenewalQueueRow[]): RenewalQueueRow[] =>
 
 const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
   const { t } = useTranslation('msp/contracts');
+  const { formatDate } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
@@ -301,7 +302,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     try {
       const plainDate = toPlainDate(value as string | Date);
       const dateOnly = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-      return dateOnly.toLocaleDateString();
+      return formatDate(dateOnly);
     } catch {
       return t('contractsList.empty.dash', { defaultValue: '—' });
     }

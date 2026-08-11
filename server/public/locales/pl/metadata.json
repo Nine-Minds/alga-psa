@@ -444,6 +444,7 @@
       }
     },
     "billing": {
+      "title": "Rozliczenia",
       "credits": {
         "title": "Kredyty"
       }

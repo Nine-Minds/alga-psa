@@ -19,7 +19,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -49,12 +49,14 @@ import { toPlainDate } from '@alga-psa/core';
 // date-only/UTC-midnight value as UTC, so `.toLocaleDateString()` renders the
 // previous day in negative-offset timezones. Pin to noon UTC to stay on the
 // intended calendar day regardless of the viewer's timezone.
-const formatCalendarDate = (value: unknown): string | null => {
+// Module scope has no hook to read the locale from, so it is passed in rather
+// than omitted — omitting it silently means the browser's, not the app's.
+const formatCalendarDate = (value: unknown, locale: string): string | null => {
   if (value === null || value === undefined || value === '') return null;
   try {
     const plainDate = toPlainDate(value as string | Date);
     const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return displayDate.toLocaleDateString();
+    return displayDate.toLocaleDateString(locale);
   } catch {
     return null;
   }
@@ -62,6 +64,7 @@ const formatCalendarDate = (value: unknown): string | null => {
 
 const Contracts: React.FC = () => {
   const { t } = useTranslation('msp/contracts');
+  const { locale, formatDate } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -422,13 +425,13 @@ const Contracts: React.FC = () => {
       title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: any) =>
-        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: any) =>
-        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.status', { defaultValue: 'Status' }),
@@ -741,7 +744,7 @@ const Contracts: React.FC = () => {
                 if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
                 try {
                   const date = new Date(value);
-                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
+                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : formatDate(date);
                 } catch {
                   return t('contractsList.empty.dash', { defaultValue: '—' });
                 }
@@ -754,7 +757,7 @@ const Contracts: React.FC = () => {
                 if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
                 try {
                   const date = new Date(value);
-                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
+                  return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : formatDate(date);
                 } catch {
                   return t('contractsList.empty.dash', { defaultValue: '—' });
                 }

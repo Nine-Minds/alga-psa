@@ -270,7 +270,7 @@
       "import": {
         "title": "Tickets importieren"
       },
-      "title": "Kunden-Tickets",
+      "title": "Tickets",
       "detail": {
         "title": "Ticket #{{ticketNumber}} – {{ticketTitle}}",
         "fallbackTitle": "Ticketdetails"
@@ -462,6 +462,7 @@
       "title": "Automatisierungs-Hub"
     },
     "billing": {
+      "title": "Abrechnung",
       "credits": {
         "title": "Gutschriften"
       }

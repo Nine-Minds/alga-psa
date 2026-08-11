@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { IProjectPhase } from '@alga-psa/types';
 import { AlertTriangle, Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -90,6 +91,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onReopen,
 }) => {
   const { t } = useTranslation('features/projects');
+  // toLocaleDateString() with no locale follows the browser, not the app.
+  const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
   const isBillingView = viewMode === 'billing';
   const effectiveIsEditing = isEditing && !isBillingView;
@@ -421,7 +424,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   </Tooltip>
                 )}
                 {isCompleted && (
-                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phase.completed_at as string).toLocaleDateString() })}>
+                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: formatDate(new Date(phase.completed_at as string), { dateStyle: 'medium' }) })}>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
                 )}
@@ -448,12 +451,12 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
               <div>
                 {t('phases.startLabel')}: {phase.start_date
-                  ? new Date(phase.start_date).toLocaleDateString()
+                  ? formatDate(new Date(phase.start_date), { dateStyle: 'medium' })
                   : t('phases.notSet')}
               </div>
               <div>
                 {t('phases.dueLabel')}: {phase.end_date
-                  ? new Date(phase.end_date).toLocaleDateString()
+                  ? formatDate(new Date(phase.end_date), { dateStyle: 'medium' })
                   : t('phases.notSet')}
               </div>
             </div>

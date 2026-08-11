@@ -8,10 +8,11 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { getUserTimeZone } from '@alga-psa/core';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { resolveTicketColumnVisibility, type TicketListColumnKey } from './ticketColumnCatalog';
+import { formatTicketDateTime } from './ticketDateTimeFormat';
 import {
   statusPillHue,
   formatDuePrimary,
@@ -145,6 +146,8 @@ interface CreateTicketColumnsOptions {
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
   t?: (key: string, fallback: string) => string;
+  /** App locale. Without it the Created column formats in the browser's. */
+  locale?: string;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -165,6 +168,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     isBundleExpanded,
     onToggleBundleExpanded,
     t: _t,
+    locale = 'en',
   } = options;
 
   const t = _t ?? ((_key: string, fallback: string) => fallback);
@@ -595,7 +599,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '10%',
         render: (value: string | null) => (
           <div className="text-sm text-gray-500">
-            {value ? format(new Date(value), dateTimeFormat) : '-'}
+            {value ? formatTicketDateTime(value, dateTimeFormat, locale, getUserTimeZone()) : '-'}
           </div>
         ),
       }
