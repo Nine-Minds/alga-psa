@@ -66,6 +66,7 @@ function configureBotCredentials(): void {
 
 function configureBot(): void {
   configureBotCredentials();
+  vi.stubEnv('TEAMS_EMULATOR_MODE', 'true');
   vi.stubEnv('TEAMS_BOT_OPENID_CONFIG_URL', `${baseUrl}/v1/.well-known/openidconfiguration`);
 }
 
@@ -101,9 +102,16 @@ describe('verifyTeamsBotRequest with TEAMS_BOT_OPENID_CONFIG_URL', () => {
     expect(result.status).toBe('rejected');
   });
 
-  it('ignores the override in production', async () => {
+  it.each([
+    ['in production', 'production', 'true'],
+    // Deny by default: a host that simply never sets NODE_ENV must not decide
+    // on its own whose JWTs the bot endpoint accepts.
+    ['when NODE_ENV is unset and the gate is off', undefined, undefined],
+    ['when the gate value is not recognized', 'development', 'staging'],
+  ])('ignores the override %s', async (_label, nodeEnv, gate) => {
     configureBot();
-    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NODE_ENV', nodeEnv as string | undefined);
+    vi.stubEnv('TEAMS_EMULATOR_MODE', gate as string | undefined);
 
     const requested: string[] = [];
     const realFetch = globalThis.fetch;

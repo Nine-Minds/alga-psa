@@ -50,15 +50,19 @@ overrides:
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
-| Teams / Bot Framework | The two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
+| Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 
-Every var the Teams surface reads is off by default and ignored entirely under
-`NODE_ENV=production`, so none of them can loosen a deployed trust boundary:
-`TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus —
-for the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+`TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
+deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
+behaves exactly as it does in production. Any other value — unset, empty,
+`staging`, a typo — fails closed, so a worker or staging host that never sets
+`NODE_ENV` cannot redirect anything by accident, and `NODE_ENV=production` is a
+second lock the flag cannot unlock. The vars it gates are
+`TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus — for
+the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
 `MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
@@ -68,7 +72,9 @@ is pre-existing behavior, unchanged here.)
 an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,
 so the app's signature, issuer, and audience checks all still run.
 `TEAMS_BOT_SERVICE_URL_ALLOWLIST` takes exact origins (comma-separated, no
-wildcards) and is what lets the bot send back to the emulator.
+wildcards) and is what lets the bot send back to the emulator. Entries must
+include the scheme: `localhost:4010` is not an origin, and is rejected with a
+warning rather than quietly widening the trust list.
 
 Restarting the emulator mints a fresh keypair. While the override is set the
 app re-discovers the JWKS every 30s (instead of the 12h production cache), so
@@ -107,6 +113,7 @@ matching the port, `DB_NAME`/`DB_NAME_SERVER` pointing at the new database, and
 the emulator vars:
 
 ```
+TEAMS_EMULATOR_MODE=true
 MICROSOFT_LOGIN_BASE_URL=http://127.0.0.1:4010
 MICROSOFT_GRAPH_BASE_URL=http://127.0.0.1:4010/v1.0
 TEAMS_BOT_OPENID_CONFIG_URL=http://127.0.0.1:4010/v1/.well-known/openidconfiguration

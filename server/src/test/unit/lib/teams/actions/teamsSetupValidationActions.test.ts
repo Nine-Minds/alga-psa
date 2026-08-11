@@ -343,8 +343,9 @@ describe('validateTeamsBotConnector (T093)', () => {
     expect(body.get('scope')).toBe('https://api.botframework.com/.default');
   });
 
-  it('sends the bot token request to MICROSOFT_LOGIN_BASE_URL when it is set', async () => {
+  it('sends the bot token request to MICROSOFT_LOGIN_BASE_URL when the emulator gate is on', async () => {
     stubBotEnv();
+    vi.stubEnv('TEAMS_EMULATOR_MODE', 'true');
     vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010');
     fetchMock.mockResolvedValueOnce(tokenResponse(mintJwt({ aud: 'https://api.botframework.com' })));
 

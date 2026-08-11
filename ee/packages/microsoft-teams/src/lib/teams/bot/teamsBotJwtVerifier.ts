@@ -1,4 +1,5 @@
 import { createLocalJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { isTeamsEmulatorModeEnabled } from '../emulatorMode';
 import { readBotCredentialsFromEnv } from './teamsBotConnector';
 
 const BOT_FRAMEWORK_OPENID_URL =
@@ -6,13 +7,14 @@ const BOT_FRAMEWORK_OPENID_URL =
 const BOT_FRAMEWORK_ISSUER = 'https://api.botframework.com';
 
 /**
- * Outside production, the OpenID discovery document may be redirected at a
- * local emulator (algasim), which publishes its own JWKS and signs the
- * activities it injects. Verification itself is untouched: signature, issuer,
- * and audience are still fully checked against whatever JWKS is discovered.
+ * With the emulator gate explicitly on, the OpenID discovery document may be
+ * redirected at a local emulator (algasim), which publishes its own JWKS and
+ * signs the activities it injects. Verification itself is untouched: signature,
+ * issuer, and audience are still fully checked against whatever JWKS is
+ * discovered.
  */
 function openIdConfigUrl(): string {
-  if (process.env.NODE_ENV === 'production') {
+  if (!isTeamsEmulatorModeEnabled()) {
     return BOT_FRAMEWORK_OPENID_URL;
   }
   return process.env.TEAMS_BOT_OPENID_CONFIG_URL?.trim() || BOT_FRAMEWORK_OPENID_URL;
