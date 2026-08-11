@@ -1660,7 +1660,7 @@
             "description": "Escolha o perfil da Microsoft para e-mails recebidos e enviados do Outlook.",
             "label": "E-mail",
             "reconnect": "As conexões de e-mail existentes do Outlook precisam ser autorizadas novamente para conceder Mail.Send antes de poderem enviar e-mails.",
-            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
+            "perProviderIssuerNote": "Conexões de caixa de correio existentes mantêm seu aplicativo da Microsoft atual até serem reconectadas. Esta escolha se aplica a novas conexões de caixa de correio."
           },
           "mspSso": {
             "description": "Escolha qual perfil da Microsoft oferece suporte a domínios de login SSO do MSP, entrada da Microsoft e descoberta de locatário.",

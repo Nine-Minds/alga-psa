@@ -252,7 +252,7 @@
         "closedEarly": "Fenêtre d'autorisation fermée avant de terminer. Veuillez réessayer.",
         "authorizationFailed": "L'autorisation a échoué",
         "senderDisplayNameInvalid": "Le nom d'affichage ne peut pas contenir de guillemets, de chevrons ni de sauts de ligne",
-        "issuerRequired": "Choose a Microsoft app before signing in"
+        "issuerRequired": "Choisissez une application Microsoft avant de vous connecter"
       },
       "requiredFields": {
         "providerName": "Nom de configuration",
@@ -287,21 +287,21 @@
         "openProviders": "Ouvrir Fournisseurs"
       },
       "issuer": {
-        "title": "Microsoft app that authorizes this mailbox",
-        "description": "Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.",
-        "managedLabel": "AlgaPSA app (managed by Nine Minds)",
-        "managedDescription": "No Microsoft app registration is required on your side.",
-        "recommended": "Recommended",
-        "currentApp": "Current app: {{app}}",
-        "selectedApp": "Selected app: {{app}}",
-        "pendingReauth": "Pending reauthorization",
-        "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
-        "retry": "Try again",
-        "pendingConsentEmpty": "Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.",
-        "pendingConsentHint": "Your own Microsoft app is still waiting for Microsoft 365 administrator approval.",
-        "ownAppPrompt": "Prefer to sign in with your own Microsoft app?",
-        "ownAppSetupLink": "Set it up in Providers"
+        "title": "Application Microsoft qui autorise cette boîte aux lettres",
+        "description": "Choisissez l'application qui se connecte en tant que cette boîte aux lettres. Ce choix est enregistré avec la boîte aux lettres et n'affecte pas les autres services.",
+        "managedLabel": "Application AlgaPSA (gérée par Nine Minds)",
+        "managedDescription": "Aucun enregistrement d'application Microsoft n'est requis de votre côté.",
+        "recommended": "Recommandée",
+        "currentApp": "Application actuelle : {{app}}",
+        "selectedApp": "Application sélectionnée : {{app}}",
+        "pendingReauth": "Réautorisation en attente",
+        "switchWarning": "Changer l'application Microsoft nécessite de reconnecter cette boîte aux lettres. Connectez-vous à nouveau avec Microsoft pour terminer le changement.",
+        "noneAvailable": "Pour connecter Microsoft 365, configurez d'abord une application Microsoft dans Fournisseurs, puis revenez.",
+        "retry": "Réessayer",
+        "pendingConsentEmpty": "Votre application Microsoft attend l'approbation d'un administrateur Microsoft 365. Une fois approuvée dans Fournisseurs, revenez pour vous connecter.",
+        "pendingConsentHint": "Votre propre application Microsoft attend encore l'approbation d'un administrateur Microsoft 365.",
+        "ownAppPrompt": "Préférez-vous vous connecter avec votre propre application Microsoft ?",
+        "ownAppSetupLink": "La configurer dans Fournisseurs"
       }
     },
     "gmail": {

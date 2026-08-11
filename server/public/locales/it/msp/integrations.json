@@ -1660,7 +1660,7 @@
             "description": "Scegli il profilo Microsoft per la posta Outlook in arrivo e in uscita.",
             "label": "E-mail",
             "reconnect": "Le connessioni e-mail Outlook esistenti devono essere autorizzate nuovamente per concedere Mail.Send prima di poter inviare e-mail in uscita.",
-            "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
+            "perProviderIssuerNote": "Le connessioni esistenti della casella di posta mantengono la loro app Microsoft attuale finché non vengono ricollegate. Questa scelta si applica alle nuove connessioni della casella di posta."
           },
           "mspSso": {
             "description": "Scegli quale profilo Microsoft supporta i domini di accesso MSP SSO, l'accesso Microsoft e la discovery del tenant.",

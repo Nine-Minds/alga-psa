@@ -252,7 +252,7 @@
         "closedEarly": "Autorisatievenster gesloten vóór voltooiing. Probeer het opnieuw.",
         "authorizationFailed": "Autorisatie mislukt",
         "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten",
-        "issuerRequired": "Choose a Microsoft app before signing in"
+        "issuerRequired": "Kies een Microsoft-app voordat u zich aanmeldt"
       },
       "requiredFields": {
         "providerName": "Configuratienaam",
@@ -287,21 +287,21 @@
         "openProviders": "Aanbieders openen"
       },
       "issuer": {
-        "title": "Microsoft app that authorizes this mailbox",
-        "description": "Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.",
-        "managedLabel": "AlgaPSA app (managed by Nine Minds)",
-        "managedDescription": "No Microsoft app registration is required on your side.",
-        "recommended": "Recommended",
-        "currentApp": "Current app: {{app}}",
-        "selectedApp": "Selected app: {{app}}",
-        "pendingReauth": "Pending reauthorization",
-        "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
-        "retry": "Try again",
-        "pendingConsentEmpty": "Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.",
-        "pendingConsentHint": "Your own Microsoft app is still waiting for Microsoft 365 administrator approval.",
-        "ownAppPrompt": "Prefer to sign in with your own Microsoft app?",
-        "ownAppSetupLink": "Set it up in Providers"
+        "title": "Microsoft-app die dit postvak autoriseert",
+        "description": "Kies welke toepassing zich aanmeldt als dit postvak. Deze keuze wordt bij het postvak opgeslagen en heeft geen invloed op andere services.",
+        "managedLabel": "AlgaPSA-app (beheerd door Nine Minds)",
+        "managedDescription": "Aan uw kant is geen registratie van een Microsoft-app vereist.",
+        "recommended": "Aanbevolen",
+        "currentApp": "Huidige app: {{app}}",
+        "selectedApp": "Geselecteerde app: {{app}}",
+        "pendingReauth": "Herautorisatie in behandeling",
+        "switchWarning": "Het wijzigen van de Microsoft-app vereist dat dit postvak opnieuw wordt verbonden. Meld u opnieuw aan met Microsoft om de overstap af te ronden.",
+        "noneAvailable": "Om Microsoft 365 te verbinden, stelt u eerst een Microsoft-app in bij Aanbieders en komt u daarna terug.",
+        "retry": "Opnieuw proberen",
+        "pendingConsentEmpty": "Uw Microsoft-app wacht op goedkeuring van een Microsoft 365-beheerder. Zodra deze bij Aanbieders is goedgekeurd, komt u terug om u aan te melden.",
+        "pendingConsentHint": "Uw eigen Microsoft-app wacht nog op goedkeuring van een Microsoft 365-beheerder.",
+        "ownAppPrompt": "Liever aanmelden met uw eigen Microsoft-app?",
+        "ownAppSetupLink": "Instellen bij Aanbieders"
       }
     },
     "gmail": {
