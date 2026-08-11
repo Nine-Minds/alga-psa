@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
-    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen."
+    "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen.",
+    "tenantDiscovery": {
+      "title": "Ihre Organisation finden",
+      "description": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
+      "emailLabel": "E-Mail-Adresse",
+      "emailPlaceholder": "ihre.email@unternehmen.de",
+      "submit": "Anmeldelinks senden",
+      "sending": "Wird gesendet...",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "linksSent": "Prüfen Sie Ihre E-Mails auf Anmeldelinks",
+      "checkEmailTitle": "Prüfen Sie Ihre E-Mails",
+      "checkEmailDescription": "Wenn ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen Anmeldelinks für jede Organisation gesendet, auf die Sie Zugriff haben.",
+      "noEmailPrompt": "Keine E-Mail erhalten?",
+      "tips": {
+        "spamFolder": "Prüfen Sie Ihren Spam-Ordner",
+        "verifyEmail": "Prüfen Sie, ob die E-Mail-Adresse korrekt ist",
+        "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation"
+      },
+      "tryAnotherEmail": "Andere E-Mail-Adresse verwenden"
+    }
   },
   "account": {
     "title": "Konto",
@@ -654,6 +673,12 @@
       "clientNotFound": "Unternehmen nicht gefunden",
       "detailsLoadError": "Unternehmensdetails konnten nicht geladen werden",
       "updateError": "Unternehmensdetails konnten nicht aktualisiert werden"
+    },
+    "domain": {
+      "title": "Benutzerdefinierte Domain",
+      "description": "Pro-Mandanten können das Portal unter einer benutzerdefinierten Domain hosten. Ihre standardmäßig gehostete Adresse wird unten angezeigt.",
+      "defaultAddressLabel": "Standardadresse des Portals",
+      "upgradeHint": "Führen Sie ein Upgrade auf Pro durch, um eine gebrandete Kundenportal-Domain und automatische Zertifikate zu konfigurieren."
     }
   },
   "notifications": {
@@ -684,6 +709,24 @@
       "messages": "Nachrichten",
       "projects": "Projekte",
       "system": "System"
+    },
+    "filters": {
+      "title": "Benachrichtigungen filtern",
+      "description": "Wählen Sie Kriterien zum Filtern von Benachrichtigungsaktivitäten aus.",
+      "statusLabel": "Status",
+      "unreadOnly": "Nur ungelesene",
+      "showRead": "Gelesene anzeigen",
+      "categoryLabel": "Kategorie",
+      "allCategories": "Alle Kategorien",
+      "categoryPlaceholder": "Kategorie auswählen...",
+      "dateRangeLabel": "Datumsbereich",
+      "reset": "Zurücksetzen",
+      "cancel": "Abbrechen",
+      "apply": "Filter anwenden"
+    },
+    "card": {
+      "unread": "Ungelesen",
+      "noMessage": "Keine Nachricht"
     }
   },
   "sidebar": {
@@ -734,5 +777,122 @@
     "createTicket": "Ticket erstellen",
     "createTicketForDevice": "Ticket für dieses Gerät erstellen",
     "rowActionsLabel": "Zeilenaktionen"
+  },
+  "billing": {
+    "columns": {
+      "service": "Dienst",
+      "notAvailable": "N/V"
+    },
+    "filters": {
+      "dateRange": "Datumsbereich",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "apply": "Filter anwenden"
+    },
+    "usageMetrics": {
+      "title": "Nutzungsmetriken",
+      "bucketHistoryTitle": "Nutzungsverlauf des Stundenkontingents",
+      "columns": {
+        "unitOfMeasure": "Maßeinheit",
+        "quantity": "Menge"
+      },
+      "empty": {
+        "title": "Keine Nutzungsmetriken verfügbar",
+        "description": "Für den ausgewählten Datumsbereich wurden keine Nutzungsmetriken erfasst."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Diensttyp",
+        "hours": "Stunden"
+      },
+      "empty": {
+        "title": "Keine Stundendaten verfügbar",
+        "description": "Für den ausgewählten Datumsbereich wurden keine abrechenbaren Stunden erfasst."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Angebotsnr.",
+        "title": "Titel",
+        "amount": "Betrag",
+        "status": "Status",
+        "date": "Datum"
+      },
+      "draftQuote": "Angebotsentwurf {{count}}",
+      "empty": "Keine Angebote gefunden",
+      "errors": {
+        "loadFailed": "Angebote konnten nicht geladen werden"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Vertragslinie für Stundenkontingent",
+      "usage": "Nutzung",
+      "hoursUsed": "{{hours}} Stunden genutzt",
+      "hoursTotal": "{{hours}} Stunden insgesamt",
+      "rolloverHours": "Enthält {{hours}} Übertragsstunden"
+    },
+    "bucketHistory": {
+      "title": "Nutzungsverlauf",
+      "trendStable": "Stabil",
+      "current": "Aktuell",
+      "avgUsage": "Durchschn. Nutzung",
+      "peak": "Höchstwert",
+      "periods": "Zeiträume"
+    },
+    "invoicePreview": {
+      "loadFailed": "Rechnung konnte nicht geladen werden",
+      "unavailable": "Die Rechnungsvorschau kann nicht angezeigt werden."
+    },
+    "payment": {
+      "redirecting": "Weiterleitung zur Zahlung..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Unbekannter Beginn",
+      "unknownEnd": "Unbekanntes Ende",
+      "verifying": {
+        "title": "Zahlung wird überprüft",
+        "description": "Bitte warten Sie, während wir Ihre Zahlung bestätigen..."
+      },
+      "success": {
+        "title": "Zahlung erfolgreich!",
+        "thankYou": "Vielen Dank für Ihre Zahlung.",
+        "amountPaid": "Gezahlter Betrag: {{amount}}.",
+        "confirmationEmail": "Eine Bestätigungs-E-Mail wird an Ihre registrierte E-Mail-Adresse gesendet.",
+        "thankYouForInvoice": "Vielen Dank für Ihre Zahlung der Rechnung Nr. {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Übersicht der Dienstzeiträume",
+        "description": "Diese Übersicht basiert auf den wiederkehrenden Detailzeiträumen der Rechnung und nicht allein auf den Abrechnungsdaten im Rechnungskopf."
+      },
+      "pending": {
+        "title": "Zahlung wird verarbeitet",
+        "description": "Ihre Zahlung wird verarbeitet. Dies kann einige Augenblicke dauern. Sie erhalten eine Bestätigungs-E-Mail, sobald die Zahlung abgeschlossen ist."
+      },
+      "failed": {
+        "title": "Zahlungsüberprüfung fehlgeschlagen",
+        "description": "Wir konnten Ihre Zahlung nicht bestätigen. Bitte wenden Sie sich an den Support."
+      },
+      "errors": {
+        "verificationFailed": "Zahlungsüberprüfung fehlgeschlagen",
+        "verifyFailed": "Zahlung konnte nicht überprüft werden",
+        "unexpected": "Bei der Überprüfung Ihrer Zahlung ist ein Fehler aufgetreten"
+      },
+      "actions": {
+        "backToBilling": "Zurück zur Abrechnung",
+        "viewInvoice": "Rechnung anzeigen"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Name",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Standort",
+      "lastUpdated": "Zuletzt aktualisiert"
+    },
+    "notAvailable": "N/V",
+    "detailsTitle": "Asset-Details"
   }
 }

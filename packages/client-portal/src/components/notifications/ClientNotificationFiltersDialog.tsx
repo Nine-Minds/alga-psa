@@ -13,6 +13,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ActivityFilters, ISO8601String } from '@alga-psa/types';
 
 interface ClientNotificationFiltersDialogProps {
@@ -22,19 +23,13 @@ interface ClientNotificationFiltersDialogProps {
   onApplyFilters: (filters: Partial<ActivityFilters>) => void;
 }
 
-const NOTIFICATION_CATEGORIES = [
-  { value: 'tickets', label: 'Tickets' },
-  { value: 'projects', label: 'Projects' },
-  { value: 'invoices', label: 'Invoices' },
-  { value: 'system', label: 'System' },
-];
-
 export function ClientNotificationFiltersDialog({
   isOpen,
   onOpenChange,
   initialFilters,
   onApplyFilters,
 }: ClientNotificationFiltersDialogProps) {
+  const { t } = useTranslation('client-portal');
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => initialFilters);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters.search || 'all');
 
@@ -84,12 +79,19 @@ export function ClientNotificationFiltersDialog({
     setSelectedCategory('all');
   };
 
+  const notificationCategories = [
+    { value: 'tickets', label: t('notifications.categories.tickets', { defaultValue: 'Tickets' }) },
+    { value: 'projects', label: t('notifications.categories.projects', { defaultValue: 'Projects' }) },
+    { value: 'invoices', label: t('notifications.categories.invoices', { defaultValue: 'Invoices' }) },
+    { value: 'system', label: t('notifications.categories.system', { defaultValue: 'System' }) },
+  ];
+
   const footer = (
     <div className="flex w-full justify-between">
-      <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
+      <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>{t('notifications.filters.reset', { defaultValue: 'Reset' })}</Button>
       <div>
-        <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
-        <Button id="notification-filter-apply" onClick={handleApply}>Apply Filters</Button>
+        <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>{t('notifications.filters.cancel', { defaultValue: 'Cancel' })}</Button>
+        <Button id="notification-filter-apply" onClick={handleApply}>{t('notifications.filters.apply', { defaultValue: 'Apply Filters' })}</Button>
       </div>
     </div>
   );
@@ -98,16 +100,16 @@ export function ClientNotificationFiltersDialog({
     <Dialog isOpen={isOpen} onClose={() => onOpenChange(false)} footer={footer}>
       <DialogContent className="sm:max-w-[700]">
         <DialogHeader>
-          <DialogTitle>Filter Notifications</DialogTitle>
-          <DialogDescription>Select criteria to filter notification activities.</DialogDescription>
+          <DialogTitle>{t('notifications.filters.title', { defaultValue: 'Filter Notifications' })}</DialogTitle>
+          <DialogDescription>{t('notifications.filters.description', { defaultValue: 'Select criteria to filter notification activities.' })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1">
-            <Label className="text-base font-semibold">Status</Label>
+            <Label className="text-base font-semibold">{t('notifications.filters.statusLabel', { defaultValue: 'Status' })}</Label>
             <div className="flex items-center space-x-4 pt-1">
               <Checkbox
                 id="show-unread-only"
-                label="Unread Only"
+                label={t('notifications.filters.unreadOnly', { defaultValue: 'Unread Only' })}
                 checked={!localFilters.isClosed}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setLocalFilters((prev) => ({ ...prev, isClosed: !e.target.checked }))
@@ -115,7 +117,7 @@ export function ClientNotificationFiltersDialog({
               />
               <Checkbox
                 id="show-read-notifications"
-                label="Show Read"
+                label={t('notifications.filters.showRead', { defaultValue: 'Show Read' })}
                 checked={localFilters.isClosed === true}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setLocalFilters((prev) => ({ ...prev, isClosed: e.target.checked }))
@@ -125,18 +127,18 @@ export function ClientNotificationFiltersDialog({
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="notification-category-select" className="text-base font-semibold">Category</Label>
+            <Label htmlFor="notification-category-select" className="text-base font-semibold">{t('notifications.filters.categoryLabel', { defaultValue: 'Category' })}</Label>
             <CustomSelect
               id="notification-category-select"
               value={selectedCategory}
               onValueChange={setSelectedCategory}
-              options={[{ value: 'all', label: 'All Categories' }, ...NOTIFICATION_CATEGORIES]}
-              placeholder="Select Category..."
+              options={[{ value: 'all', label: t('notifications.filters.allCategories', { defaultValue: 'All Categories' }) }, ...notificationCategories]}
+              placeholder={t('notifications.filters.categoryPlaceholder', { defaultValue: 'Select Category...' })}
             />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="notification-date-range" className="text-base font-semibold">Date Range</Label>
+            <Label htmlFor="notification-date-range" className="text-base font-semibold">{t('notifications.filters.dateRangeLabel', { defaultValue: 'Date Range' })}</Label>
             <StringDateRangePicker
               id="notification-date-range"
               value={{

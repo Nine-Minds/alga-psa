@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
-    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert."
+    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantDiscovery": {
+      "title": "Vind uw organisatie",
+      "description": "Vul uw e-mailadres in. We sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
+      "emailLabel": "E-mailadres",
+      "emailPlaceholder": "uw.email@bedrijf.nl",
+      "submit": "Aanmeldlinks verzenden",
+      "sending": "Bezig met verzenden...",
+      "invalidEmail": "Vul een geldig e-mailadres in",
+      "linksSent": "Controleer uw e-mail op aanmeldlinks",
+      "checkEmailTitle": "Controleer uw e-mail",
+      "checkEmailDescription": "Als er een account met dat e-mailadres bestaat, hebben we u aanmeldlinks gestuurd voor elke organisatie waartoe u toegang heeft.",
+      "noEmailPrompt": "Geen e-mail ontvangen?",
+      "tips": {
+        "spamFolder": "Controleer uw spammap",
+        "verifyEmail": "Controleer of het e-mailadres juist is",
+        "contactSupport": "Neem contact op met het ondersteuningsteam van uw organisatie"
+      },
+      "tryAnotherEmail": "Een ander e-mailadres proberen"
+    }
   },
   "account": {
     "title": "Account",
@@ -654,6 +673,12 @@
       "clientNotFound": "Bedrijf niet gevonden",
       "detailsLoadError": "Bedrijfsgegevens laden is mislukt",
       "updateError": "Bijwerken van bedrijfsgegevens is mislukt"
+    },
+    "domain": {
+      "title": "Aangepast domein",
+      "description": "Klanten met het Pro-abonnement kunnen het portaal op een aangepast domein hosten. Uw standaard gehoste adres wordt hieronder weergegeven.",
+      "defaultAddressLabel": "Standaardadres van het portaal",
+      "upgradeHint": "Upgrade naar Pro om een klantenportaaldomein met uw huisstijl en automatische certificaten te configureren."
     }
   },
   "notifications": {
@@ -684,6 +709,24 @@
       "messages": "Berichten",
       "projects": "Projecten",
       "system": "Systeem"
+    },
+    "filters": {
+      "title": "Notificaties filteren",
+      "description": "Selecteer criteria om notificatieactiviteiten te filteren.",
+      "statusLabel": "Status",
+      "unreadOnly": "Alleen ongelezen",
+      "showRead": "Gelezen tonen",
+      "categoryLabel": "Categorie",
+      "allCategories": "Alle categorieën",
+      "categoryPlaceholder": "Selecteer een categorie...",
+      "dateRangeLabel": "Datumbereik",
+      "reset": "Opnieuw instellen",
+      "cancel": "Annuleren",
+      "apply": "Filters toepassen"
+    },
+    "card": {
+      "unread": "Ongelezen",
+      "noMessage": "Geen bericht"
     }
   },
   "sidebar": {
@@ -734,5 +777,122 @@
     "createTicket": "Ticket aanmaken",
     "createTicketForDevice": "Maak een ticket voor dit apparaat",
     "rowActionsLabel": "Rijacties"
+  },
+  "billing": {
+    "columns": {
+      "service": "Service",
+      "notAvailable": "N.v.t."
+    },
+    "filters": {
+      "dateRange": "Datumbereik",
+      "startDate": "Begindatum",
+      "endDate": "Einddatum",
+      "apply": "Filter toepassen"
+    },
+    "usageMetrics": {
+      "title": "Gebruiksstatistieken",
+      "bucketHistoryTitle": "Gebruiksgeschiedenis van de urenbundel",
+      "columns": {
+        "unitOfMeasure": "Maateenheid",
+        "quantity": "Hoeveelheid"
+      },
+      "empty": {
+        "title": "Geen gebruiksstatistieken beschikbaar",
+        "description": "Er zijn geen gebruiksstatistieken geregistreerd voor het geselecteerde datumbereik."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Servicetype",
+        "hours": "Uren"
+      },
+      "empty": {
+        "title": "Geen urengegevens beschikbaar",
+        "description": "Er zijn geen factureerbare uren geregistreerd voor het geselecteerde datumbereik."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Offertenummer",
+        "title": "Titel",
+        "amount": "Bedrag",
+        "status": "Status",
+        "date": "Datum"
+      },
+      "draftQuote": "Conceptofferte {{count}}",
+      "empty": "Geen offertes gevonden",
+      "errors": {
+        "loadFailed": "Offertes laden is mislukt"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Contractregel voor urenbundel",
+      "usage": "Gebruik",
+      "hoursUsed": "{{hours}} uur gebruikt",
+      "hoursTotal": "{{hours}} uur in totaal",
+      "rolloverHours": "Inclusief {{hours}} overgedragen uren"
+    },
+    "bucketHistory": {
+      "title": "Gebruiksgeschiedenis",
+      "trendStable": "Stabiel",
+      "current": "Huidig",
+      "avgUsage": "Gem. gebruik",
+      "peak": "Piek",
+      "periods": "Perioden"
+    },
+    "invoicePreview": {
+      "loadFailed": "Factuur laden is mislukt",
+      "unavailable": "Het factuurvoorbeeld kan niet worden weergegeven."
+    },
+    "payment": {
+      "redirecting": "Doorsturen naar betaling..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Onbekend begin",
+      "unknownEnd": "Onbekend einde",
+      "verifying": {
+        "title": "Betaling controleren",
+        "description": "Een ogenblik geduld terwijl we uw betaling bevestigen..."
+      },
+      "success": {
+        "title": "Betaling geslaagd!",
+        "thankYou": "Bedankt voor uw betaling.",
+        "amountPaid": "Betaald bedrag: {{amount}}.",
+        "confirmationEmail": "Er wordt een bevestigingsmail naar uw geregistreerde e-mailadres gestuurd.",
+        "thankYouForInvoice": "Bedankt voor uw betaling van factuur nr. {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Overzicht van serviceperiode",
+        "description": "Dit overzicht is gebaseerd op de terugkerende detailperioden van de factuur, niet alleen op de facturatiedatums in de factuurkop."
+      },
+      "pending": {
+        "title": "Betaling wordt verwerkt",
+        "description": "Uw betaling wordt verwerkt. Dit kan enkele ogenblikken duren. U ontvangt een bevestigingsmail zodra de betaling is voltooid."
+      },
+      "failed": {
+        "title": "Betalingscontrole mislukt",
+        "description": "We konden uw betaling niet bevestigen. Neem contact op met de ondersteuning."
+      },
+      "errors": {
+        "verificationFailed": "Betalingscontrole mislukt",
+        "verifyFailed": "Betaling controleren is mislukt",
+        "unexpected": "Er is een fout opgetreden bij het controleren van uw betaling"
+      },
+      "actions": {
+        "backToBilling": "Terug naar facturatie",
+        "viewInvoice": "Factuur bekijken"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Naam",
+      "type": "Type",
+      "status": "Status",
+      "location": "Locatie",
+      "lastUpdated": "Laatst bijgewerkt"
+    },
+    "notAvailable": "N.v.t.",
+    "detailsTitle": "Asset-details"
   }
 }

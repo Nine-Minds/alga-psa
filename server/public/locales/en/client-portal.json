@@ -331,7 +331,26 @@
       }
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
-    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again."
+    "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantDiscovery": {
+      "title": "Find Your Organization",
+      "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "your.email@company.com",
+      "submit": "Send Login Links",
+      "sending": "Sending...",
+      "invalidEmail": "Please enter a valid email address",
+      "linksSent": "Check your email for login links",
+      "checkEmailTitle": "Check Your Email",
+      "checkEmailDescription": "If an account exists with that email address, we've sent you login links for each organization you have access to.",
+      "noEmailPrompt": "Didn't receive an email?",
+      "tips": {
+        "spamFolder": "Check your spam folder",
+        "verifyEmail": "Verify the email address is correct",
+        "contactSupport": "Contact your organization's support team"
+      },
+      "tryAnotherEmail": "Try Another Email"
+    }
   },
   "account": {
     "title": "Account",
@@ -703,6 +722,12 @@
       "cancel": "Cancel",
       "assignSuccess": "Contact visibility assignment updated",
       "assignError": "Unable to assign visibility group"
+    },
+    "domain": {
+      "title": "Custom Domain",
+      "description": "Pro tenants can host the portal on a custom domain. Your default hosted address is shown below.",
+      "defaultAddressLabel": "Default portal address",
+      "upgradeHint": "Upgrade to Pro to configure a branded customer portal domain and automated certificates."
     }
   },
   "notifications": {
@@ -733,6 +758,141 @@
       "messages": "Messages",
       "projects": "Projects",
       "system": "System"
+    },
+    "filters": {
+      "title": "Filter Notifications",
+      "description": "Select criteria to filter notification activities.",
+      "statusLabel": "Status",
+      "unreadOnly": "Unread Only",
+      "showRead": "Show Read",
+      "categoryLabel": "Category",
+      "allCategories": "All Categories",
+      "categoryPlaceholder": "Select Category...",
+      "dateRangeLabel": "Date Range",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "apply": "Apply Filters"
+    },
+    "card": {
+      "unread": "Unread",
+      "noMessage": "No message"
     }
+  },
+  "billing": {
+    "columns": {
+      "service": "Service",
+      "notAvailable": "N/A"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "apply": "Apply Filter"
+    },
+    "usageMetrics": {
+      "title": "Usage Metrics",
+      "bucketHistoryTitle": "Bucket Hours Usage History",
+      "columns": {
+        "unitOfMeasure": "Unit of Measure",
+        "quantity": "Quantity"
+      },
+      "empty": {
+        "title": "No usage metrics available",
+        "description": "There are no usage metrics recorded for the selected date range."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Service Type",
+        "hours": "Hours"
+      },
+      "empty": {
+        "title": "No hours data available",
+        "description": "There are no billable hours recorded for the selected date range."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Quote #",
+        "title": "Title",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date"
+      },
+      "draftQuote": "Draft {{count}}",
+      "empty": "No quotes found",
+      "errors": {
+        "loadFailed": "Failed to load quotes"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Bucket Contract Line",
+      "usage": "Usage",
+      "hoursUsed": "{{hours}} hours used",
+      "hoursTotal": "{{hours}} hours total",
+      "rolloverHours": "Includes {{hours}} rollover hours"
+    },
+    "bucketHistory": {
+      "title": "Usage History",
+      "trendStable": "Stable",
+      "current": "Current",
+      "avgUsage": "Avg Usage",
+      "peak": "Peak",
+      "periods": "Periods"
+    },
+    "invoicePreview": {
+      "loadFailed": "Failed to load invoice",
+      "unavailable": "Unable to display invoice preview."
+    },
+    "payment": {
+      "redirecting": "Redirecting to payment..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Unknown start",
+      "unknownEnd": "Unknown end",
+      "verifying": {
+        "title": "Verifying Payment",
+        "description": "Please wait while we confirm your payment..."
+      },
+      "success": {
+        "title": "Payment Successful!",
+        "thankYou": "Thank you for your payment.",
+        "amountPaid": "Amount paid: {{amount}}.",
+        "confirmationEmail": "A confirmation email will be sent to your registered email address.",
+        "thankYouForInvoice": "Thank you for your payment for Invoice #{{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Service Period Summary",
+        "description": "This summary comes from the invoice's recurring detail periods, not from invoice-header billing dates alone."
+      },
+      "pending": {
+        "title": "Payment Processing",
+        "description": "Your payment is being processed. This may take a few moments. You will receive a confirmation email once the payment is complete."
+      },
+      "failed": {
+        "title": "Payment Verification Failed",
+        "description": "We could not confirm your payment. Please contact support."
+      },
+      "errors": {
+        "verificationFailed": "Payment verification failed",
+        "verifyFailed": "Failed to verify payment",
+        "unexpected": "An error occurred while verifying your payment"
+      },
+      "actions": {
+        "backToBilling": "Back to Billing",
+        "viewInvoice": "View Invoice"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "location": "Location",
+      "lastUpdated": "Last Updated"
+    },
+    "notAvailable": "N/A",
+    "detailsTitle": "Asset Details"
   }
 }

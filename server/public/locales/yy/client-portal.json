@@ -331,7 +331,26 @@
       }
     },
     "captchaRequired": "55555",
-    "tooManyAttempts": "55555"
+    "tooManyAttempts": "55555",
+    "tenantDiscovery": {
+      "title": "55555",
+      "description": "55555",
+      "emailLabel": "55555",
+      "emailPlaceholder": "55555",
+      "submit": "55555",
+      "sending": "55555",
+      "invalidEmail": "55555",
+      "linksSent": "55555",
+      "checkEmailTitle": "55555",
+      "checkEmailDescription": "55555",
+      "noEmailPrompt": "55555",
+      "tips": {
+        "spamFolder": "55555",
+        "verifyEmail": "55555",
+        "contactSupport": "55555"
+      },
+      "tryAnotherEmail": "55555"
+    }
   },
   "account": {
     "title": "55555",
@@ -703,6 +722,12 @@
       "cancel": "55555",
       "assignSuccess": "55555",
       "assignError": "55555"
+    },
+    "domain": {
+      "title": "55555",
+      "description": "55555",
+      "defaultAddressLabel": "55555",
+      "upgradeHint": "55555"
     }
   },
   "notifications": {
@@ -733,6 +758,141 @@
       "messages": "55555",
       "projects": "55555",
       "system": "55555"
+    },
+    "filters": {
+      "title": "55555",
+      "description": "55555",
+      "statusLabel": "55555",
+      "unreadOnly": "55555",
+      "showRead": "55555",
+      "categoryLabel": "55555",
+      "allCategories": "55555",
+      "categoryPlaceholder": "55555",
+      "dateRangeLabel": "55555",
+      "reset": "55555",
+      "cancel": "55555",
+      "apply": "55555"
+    },
+    "card": {
+      "unread": "55555",
+      "noMessage": "55555"
     }
+  },
+  "billing": {
+    "columns": {
+      "service": "55555",
+      "notAvailable": "55555"
+    },
+    "filters": {
+      "dateRange": "55555",
+      "startDate": "55555",
+      "endDate": "55555",
+      "apply": "55555"
+    },
+    "usageMetrics": {
+      "title": "55555",
+      "bucketHistoryTitle": "55555",
+      "columns": {
+        "unitOfMeasure": "55555",
+        "quantity": "55555"
+      },
+      "empty": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "55555",
+        "hours": "55555"
+      },
+      "empty": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "55555",
+        "title": "55555",
+        "amount": "55555",
+        "status": "55555",
+        "date": "55555"
+      },
+      "draftQuote": "55555 {{count}} 55555",
+      "empty": "55555",
+      "errors": {
+        "loadFailed": "55555"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "55555",
+      "usage": "55555",
+      "hoursUsed": "55555 {{hours}} 55555",
+      "hoursTotal": "55555 {{hours}} 55555",
+      "rolloverHours": "55555 {{hours}} 55555"
+    },
+    "bucketHistory": {
+      "title": "55555",
+      "trendStable": "55555",
+      "current": "55555",
+      "avgUsage": "55555",
+      "peak": "55555",
+      "periods": "55555"
+    },
+    "invoicePreview": {
+      "loadFailed": "55555",
+      "unavailable": "55555"
+    },
+    "payment": {
+      "redirecting": "55555"
+    },
+    "paymentSuccess": {
+      "unknownStart": "55555",
+      "unknownEnd": "55555",
+      "verifying": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "success": {
+        "title": "55555",
+        "thankYou": "55555",
+        "amountPaid": "55555 {{amount}} 55555",
+        "confirmationEmail": "55555",
+        "thankYouForInvoice": "55555 {{invoiceNumber}} 55555"
+      },
+      "servicePeriod": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "pending": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "failed": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "errors": {
+        "verificationFailed": "55555",
+        "verifyFailed": "55555",
+        "unexpected": "55555"
+      },
+      "actions": {
+        "backToBilling": "55555",
+        "viewInvoice": "55555"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "55555",
+      "type": "55555",
+      "status": "55555",
+      "location": "55555",
+      "lastUpdated": "55555"
+    },
+    "notAvailable": "55555",
+    "detailsTitle": "55555"
   }
 }

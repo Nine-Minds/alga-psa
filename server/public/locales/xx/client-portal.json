@@ -331,7 +331,26 @@
       }
     },
     "captchaRequired": "11111",
-    "tooManyAttempts": "11111"
+    "tooManyAttempts": "11111",
+    "tenantDiscovery": {
+      "title": "11111",
+      "description": "11111",
+      "emailLabel": "11111",
+      "emailPlaceholder": "11111",
+      "submit": "11111",
+      "sending": "11111",
+      "invalidEmail": "11111",
+      "linksSent": "11111",
+      "checkEmailTitle": "11111",
+      "checkEmailDescription": "11111",
+      "noEmailPrompt": "11111",
+      "tips": {
+        "spamFolder": "11111",
+        "verifyEmail": "11111",
+        "contactSupport": "11111"
+      },
+      "tryAnotherEmail": "11111"
+    }
   },
   "account": {
     "title": "11111",
@@ -703,6 +722,12 @@
       "cancel": "11111",
       "assignSuccess": "11111",
       "assignError": "11111"
+    },
+    "domain": {
+      "title": "11111",
+      "description": "11111",
+      "defaultAddressLabel": "11111",
+      "upgradeHint": "11111"
     }
   },
   "notifications": {
@@ -733,6 +758,141 @@
       "messages": "11111",
       "projects": "11111",
       "system": "11111"
+    },
+    "filters": {
+      "title": "11111",
+      "description": "11111",
+      "statusLabel": "11111",
+      "unreadOnly": "11111",
+      "showRead": "11111",
+      "categoryLabel": "11111",
+      "allCategories": "11111",
+      "categoryPlaceholder": "11111",
+      "dateRangeLabel": "11111",
+      "reset": "11111",
+      "cancel": "11111",
+      "apply": "11111"
+    },
+    "card": {
+      "unread": "11111",
+      "noMessage": "11111"
     }
+  },
+  "billing": {
+    "columns": {
+      "service": "11111",
+      "notAvailable": "11111"
+    },
+    "filters": {
+      "dateRange": "11111",
+      "startDate": "11111",
+      "endDate": "11111",
+      "apply": "11111"
+    },
+    "usageMetrics": {
+      "title": "11111",
+      "bucketHistoryTitle": "11111",
+      "columns": {
+        "unitOfMeasure": "11111",
+        "quantity": "11111"
+      },
+      "empty": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "11111",
+        "hours": "11111"
+      },
+      "empty": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "11111",
+        "title": "11111",
+        "amount": "11111",
+        "status": "11111",
+        "date": "11111"
+      },
+      "draftQuote": "11111 {{count}} 11111",
+      "empty": "11111",
+      "errors": {
+        "loadFailed": "11111"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "11111",
+      "usage": "11111",
+      "hoursUsed": "11111 {{hours}} 11111",
+      "hoursTotal": "11111 {{hours}} 11111",
+      "rolloverHours": "11111 {{hours}} 11111"
+    },
+    "bucketHistory": {
+      "title": "11111",
+      "trendStable": "11111",
+      "current": "11111",
+      "avgUsage": "11111",
+      "peak": "11111",
+      "periods": "11111"
+    },
+    "invoicePreview": {
+      "loadFailed": "11111",
+      "unavailable": "11111"
+    },
+    "payment": {
+      "redirecting": "11111"
+    },
+    "paymentSuccess": {
+      "unknownStart": "11111",
+      "unknownEnd": "11111",
+      "verifying": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "success": {
+        "title": "11111",
+        "thankYou": "11111",
+        "amountPaid": "11111 {{amount}} 11111",
+        "confirmationEmail": "11111",
+        "thankYouForInvoice": "11111 {{invoiceNumber}} 11111"
+      },
+      "servicePeriod": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "pending": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "failed": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "errors": {
+        "verificationFailed": "11111",
+        "verifyFailed": "11111",
+        "unexpected": "11111"
+      },
+      "actions": {
+        "backToBilling": "11111",
+        "viewInvoice": "11111"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "11111",
+      "type": "11111",
+      "status": "11111",
+      "location": "11111",
+      "lastUpdated": "11111"
+    },
+    "notAvailable": "11111",
+    "detailsTitle": "11111"
   }
 }

@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface BucketUsageHistoryData {
   period_start: string;
@@ -21,6 +22,8 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
   serviceName,
   historyData
 }) => {
+  const { t } = useTranslation('client-portal');
+
   // Sort data by period start date
   const sortedData = useMemo(() => {
     return [...historyData].sort((a, b) =>
@@ -63,7 +66,7 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
       <div className="flex justify-between items-start mb-4">
         <div>
           <h4 className="font-medium text-gray-900">{serviceName}</h4>
-          <p className="text-sm text-gray-500">Usage History</p>
+          <p className="text-sm text-gray-500">{t('billing.bucketHistory.title', { defaultValue: 'Usage History' })}</p>
         </div>
         <div className="flex items-center text-sm">
           {trend.direction === 'up' && (
@@ -81,7 +84,7 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
           {trend.direction === 'stable' && (
             <>
               <Minus className="h-4 w-4 text-gray-500 mr-1" />
-              <span className="text-gray-600">Stable</span>
+              <span className="text-gray-600">{t('billing.bucketHistory.trendStable', { defaultValue: 'Stable' })}</span>
             </>
           )}
         </div>
@@ -122,7 +125,7 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
               </div>
               {isLatest && (
                 <span className="absolute -top-1 left-20 text-[10px] text-blue-600 font-medium">
-                  Current
+                  {t('billing.bucketHistory.current', { defaultValue: 'Current' })}
                 </span>
               )}
             </div>
@@ -134,7 +137,7 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
       <div className="mt-4 pt-3 border-t">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <p className="text-xs text-gray-500">Avg Usage</p>
+            <p className="text-xs text-gray-500">{t('billing.bucketHistory.avgUsage', { defaultValue: 'Avg Usage' })}</p>
             <p className="text-sm font-medium">
               {Math.round(
                 sortedData.reduce((sum, d) => sum + d.percentage_used, 0) / sortedData.length
@@ -142,13 +145,13 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Peak</p>
+            <p className="text-xs text-gray-500">{t('billing.bucketHistory.peak', { defaultValue: 'Peak' })}</p>
             <p className="text-sm font-medium">
               {Math.round(Math.max(...sortedData.map(d => d.percentage_used)))}%
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Periods</p>
+            <p className="text-xs text-gray-500">{t('billing.bucketHistory.periods', { defaultValue: 'Periods' })}</p>
             <p className="text-sm font-medium">{sortedData.length}</p>
           </div>
         </div>

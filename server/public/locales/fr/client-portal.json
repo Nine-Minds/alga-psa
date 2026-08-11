@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Veuillez compléter la vérification ci-dessous, puis connectez-vous à nouveau.",
-    "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer."
+    "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer.",
+    "tenantDiscovery": {
+      "title": "Trouvez votre organisation",
+      "description": "Saisissez votre adresse e-mail et nous vous enverrons les liens de connexion de toutes les organisations auxquelles vous avez accès.",
+      "emailLabel": "Adresse e-mail",
+      "emailPlaceholder": "votre.email@entreprise.fr",
+      "submit": "Envoyer les liens de connexion",
+      "sending": "Envoi en cours...",
+      "invalidEmail": "Veuillez saisir une adresse e-mail valide",
+      "linksSent": "Consultez votre messagerie pour obtenir les liens de connexion",
+      "checkEmailTitle": "Consultez votre messagerie",
+      "checkEmailDescription": "Si un compte existe avec cette adresse e-mail, nous vous avons envoyé les liens de connexion de chaque organisation à laquelle vous avez accès.",
+      "noEmailPrompt": "Vous n'avez pas reçu d'e-mail ?",
+      "tips": {
+        "spamFolder": "Vérifiez votre dossier de courriers indésirables",
+        "verifyEmail": "Vérifiez que l'adresse e-mail est correcte",
+        "contactSupport": "Contactez l'équipe d'assistance de votre organisation"
+      },
+      "tryAnotherEmail": "Essayer une autre adresse e-mail"
+    }
   },
   "account": {
     "title": "Compte",
@@ -654,6 +673,12 @@
       "clientNotFound": "Entreprise introuvable",
       "detailsLoadError": "Échec du chargement des détails de l'entreprise",
       "updateError": "Échec de la mise à jour des détails de l'entreprise"
+    },
+    "domain": {
+      "title": "Domaine personnalisé",
+      "description": "Les clients disposant de l'offre Pro peuvent héberger le portail sur un domaine personnalisé. Votre adresse hébergée par défaut est affichée ci-dessous.",
+      "defaultAddressLabel": "Adresse du portail par défaut",
+      "upgradeHint": "Passez à l'offre Pro pour configurer un domaine de portail client à votre image et des certificats automatisés."
     }
   },
   "notifications": {
@@ -684,6 +709,24 @@
       "messages": "Messages",
       "projects": "Projets",
       "system": "Système"
+    },
+    "filters": {
+      "title": "Filtrer les notifications",
+      "description": "Sélectionnez des critères pour filtrer les activités de notification.",
+      "statusLabel": "Statut",
+      "unreadOnly": "Non lues uniquement",
+      "showRead": "Afficher les notifications lues",
+      "categoryLabel": "Catégorie",
+      "allCategories": "Toutes les catégories",
+      "categoryPlaceholder": "Sélectionnez une catégorie...",
+      "dateRangeLabel": "Plage de dates",
+      "reset": "Réinitialiser",
+      "cancel": "Annuler",
+      "apply": "Appliquer les filtres"
+    },
+    "card": {
+      "unread": "Non lue",
+      "noMessage": "Aucun message"
     }
   },
   "sidebar": {
@@ -734,5 +777,122 @@
     "createTicket": "Créer un ticket",
     "createTicketForDevice": "Créer un ticket pour cet appareil",
     "rowActionsLabel": "Actions de ligne"
+  },
+  "billing": {
+    "columns": {
+      "service": "Service",
+      "notAvailable": "N/D"
+    },
+    "filters": {
+      "dateRange": "Plage de dates",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "apply": "Appliquer le filtre"
+    },
+    "usageMetrics": {
+      "title": "Indicateurs d'utilisation",
+      "bucketHistoryTitle": "Historique d'utilisation du forfait d'heures",
+      "columns": {
+        "unitOfMeasure": "Unité de mesure",
+        "quantity": "Quantité"
+      },
+      "empty": {
+        "title": "Aucun indicateur d'utilisation disponible",
+        "description": "Aucun indicateur d'utilisation n'a été enregistré pour la plage de dates sélectionnée."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Type de service",
+        "hours": "Heures"
+      },
+      "empty": {
+        "title": "Aucune donnée horaire disponible",
+        "description": "Aucune heure facturable n'a été enregistrée pour la plage de dates sélectionnée."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "N° du devis",
+        "title": "Titre",
+        "amount": "Montant",
+        "status": "Statut",
+        "date": "Date"
+      },
+      "draftQuote": "Devis provisoire {{count}}",
+      "empty": "Aucun devis trouvé",
+      "errors": {
+        "loadFailed": "Échec du chargement des devis"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Ligne de contrat du forfait d'heures",
+      "usage": "Utilisation",
+      "hoursUsed": "{{hours}} heures utilisées",
+      "hoursTotal": "{{hours}} heures au total",
+      "rolloverHours": "Inclut {{hours}} heures reportées"
+    },
+    "bucketHistory": {
+      "title": "Historique d'utilisation",
+      "trendStable": "Tendance stable",
+      "current": "En cours",
+      "avgUsage": "Utilisation moy.",
+      "peak": "Pic",
+      "periods": "Périodes"
+    },
+    "invoicePreview": {
+      "loadFailed": "Échec du chargement de la facture",
+      "unavailable": "Impossible d'afficher l'aperçu de la facture."
+    },
+    "payment": {
+      "redirecting": "Redirection vers le paiement..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Début inconnu",
+      "unknownEnd": "Fin inconnue",
+      "verifying": {
+        "title": "Vérification du paiement",
+        "description": "Veuillez patienter pendant la confirmation de votre paiement..."
+      },
+      "success": {
+        "title": "Paiement réussi !",
+        "thankYou": "Merci pour votre paiement.",
+        "amountPaid": "Montant payé : {{amount}}.",
+        "confirmationEmail": "Un e-mail de confirmation sera envoyé à votre adresse e-mail enregistrée.",
+        "thankYouForInvoice": "Merci pour votre paiement de la facture n° {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Récapitulatif de la période de service",
+        "description": "Ce récapitulatif repose sur les périodes de détail récurrentes de la facture, et non uniquement sur les dates de facturation de l'en-tête de la facture."
+      },
+      "pending": {
+        "title": "Traitement du paiement",
+        "description": "Votre paiement est en cours de traitement. Cela peut prendre quelques instants. Vous recevrez un e-mail de confirmation une fois le paiement terminé."
+      },
+      "failed": {
+        "title": "Échec de la vérification du paiement",
+        "description": "Nous n'avons pas pu confirmer votre paiement. Veuillez contacter l'assistance."
+      },
+      "errors": {
+        "verificationFailed": "Échec de la vérification du paiement",
+        "verifyFailed": "Impossible de vérifier le paiement",
+        "unexpected": "Une erreur s'est produite lors de la vérification de votre paiement"
+      },
+      "actions": {
+        "backToBilling": "Retour à la facturation",
+        "viewInvoice": "Voir la facture"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Nom",
+      "type": "Type",
+      "status": "Statut",
+      "location": "Emplacement",
+      "lastUpdated": "Dernière mise à jour"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Détails de l'actif"
   }
 }
