@@ -24,6 +24,15 @@ const { loggerMock } = vi.hoisted(() => ({
   },
 }));
 
+// Shared spies injected into the real module graph via freshSubscriber({ effects: true })
+// so the DB-backed effect-timing tests can count workflow-event publishes, realtime
+// broadcasts, and post-creation-hook invocations without touching real Redis/bus/Teams.
+const { effectPublishWorkflowEventSpy, effectBroadcastNotificationSpy, effectHookSpy } = vi.hoisted(() => ({
+  effectPublishWorkflowEventSpy: vi.fn(async () => undefined),
+  effectBroadcastNotificationSpy: vi.fn(async () => undefined),
+  effectHookSpy: vi.fn(),
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
   default: loggerMock,
@@ -1087,6 +1096,7 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
   async function freshSubscriber(opts?: {
     dedupe?: {
       reserveInboundOutboxEventForConsumer?: (params: unknown) => Promise<unknown>;
+      completeInboundOutboxEventForConsumer?: (params: unknown) => Promise<unknown>;
       recordInboundOutboxDeliveryFailure?: (params: unknown) => Promise<unknown>;
       failInboundOutboxEventForConsumer?: (params: unknown) => Promise<unknown>;
     };
@@ -1094,6 +1104,7 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
       reserveInboundOutboxEventDelivery?: (params: unknown) => Promise<unknown>;
       failInboundOutboxEventDelivery?: (params: unknown) => Promise<unknown>;
     };
+    effects?: boolean;
   }): Promise<SubscriberModule> {
     vi.resetModules();
     vi.doUnmock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
@@ -1108,6 +1119,9 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
           ...actual,
           ...(opts.dedupe!.reserveInboundOutboxEventForConsumer
             ? { reserveInboundOutboxEventForConsumer: opts.dedupe!.reserveInboundOutboxEventForConsumer }
+            : {}),
+          ...(opts.dedupe!.completeInboundOutboxEventForConsumer
+            ? { completeInboundOutboxEventForConsumer: opts.dedupe!.completeInboundOutboxEventForConsumer }
             : {}),
           ...(opts.dedupe!.recordInboundOutboxDeliveryFailure
             ? { recordInboundOutboxDeliveryFailure: opts.dedupe!.recordInboundOutboxDeliveryFailure }
@@ -1129,6 +1143,25 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
           ...(opts.durableStore!.failInboundOutboxEventDelivery
             ? { failInboundOutboxEventDelivery: opts.durableStore!.failInboundOutboxEventDelivery }
             : {}),
+        };
+      });
+    }
+    if (opts?.effects) {
+      // Replace the fire-and-forget external effects (workflow publish, realtime
+      // broadcast) with countable spies so the DB-backed tests can assert external-effect
+      // timing and counts. Post-creation hooks stay REAL (registered per test).
+      vi.doMock('@alga-psa/event-bus/publishers', async (importOriginal) => {
+        const actual = await importOriginal<typeof import('@alga-psa/event-bus/publishers')>();
+        return {
+          ...actual,
+          publishWorkflowEvent: effectPublishWorkflowEventSpy,
+        };
+      });
+      vi.doMock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', async (importOriginal) => {
+        const actual = await importOriginal<typeof import('@alga-psa/notifications/realtime/internalNotificationBroadcaster')>();
+        return {
+          ...actual,
+          broadcastNotification: effectBroadcastNotificationSpy,
         };
       });
     }
@@ -1547,4 +1580,130 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
     expect(delivery?.status).toBe('delivering');
     expect(delivery?.lease_token).toBeTruthy();
   }, 60_000);
+
+  // External-effect timing and counts for the transactional delivery path. The
+  // internal-notification consumer's external effects (workflow event publish,
+  // realtime broadcast, post-creation hooks) are registered via registerAfterCommit
+  // and must fire exactly once per COMMITTED transaction — zero times when the
+  // transaction rolls back after the insert, once (after commit) on success, and
+  // zero re-fires when an already-delivered event is replayed as a skip.
+  it('external effects are emitted zero times when the ledger transaction rolls back after the notification insert', async () => {
+    const completeThrows = vi.fn(async () => {
+      throw new Error('simulated completion-mark failure after effect');
+    });
+    const subscriber = await freshSubscriber({ effects: true, dedupe: { completeInboundOutboxEventForConsumer: completeThrows } });
+    const hooksModule = await import('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks');
+    hooksModule.registerInternalNotificationHook((notification: unknown) => effectHookSpy(notification));
+    effectPublishWorkflowEventSpy.mockClear();
+    effectBroadcastNotificationSpy.mockClear();
+    effectHookSpy.mockClear();
+
+    const realUser = await tenantDb(db, tenantId).table('users')
+      .where({ tenant: tenantId, user_type: 'internal' })
+      .first<{ user_id: string }>('user_id');
+    if (!realUser) throw new Error('Expected seeded internal user');
+
+    const actorUserId = randomUUID();
+    const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType: 'TICKET_CLOSED', assigneeId: realUser.user_id, actorUserId });
+    const event = buildEvent({ eventId, eventType: 'TICKET_CLOSED', tenantId, ticketId, actorUserId, commentId });
+
+    // Full transactional delivery path: reserve -> effect (notification insert +
+    // after-commit hook registration) -> completion mark. The completion mark
+    // throws, so the owning transaction rolls the effect back and the queued
+    // after-commit hooks are dropped before any external effect can fire.
+    await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+
+    expect(effectPublishWorkflowEventSpy).not.toHaveBeenCalled();
+    expect(effectBroadcastNotificationSpy).not.toHaveBeenCalled();
+    expect(effectHookSpy).not.toHaveBeenCalled();
+    expect(await countNotificationsForTicket(ticketId)).toBe(0);
+    const delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+    expect(delivery?.status).toBe('retryable_failed');
+    expect(Number(delivery?.attempt_count)).toBeGreaterThanOrEqual(1);
+  }, 120_000);
+
+  it('successful delivery emits each external effect exactly once, after the commit', async () => {
+    const subscriber = await freshSubscriber({ effects: true });
+    const hooksModule = await import('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks');
+    const rowVisibleAtHook = { visible: false };
+    // runPostCreationHooks is fire-and-forget, so capture the hook's async body
+    // in a promise we can await after the delivery resolves.
+    let hookPromise: Promise<void> = Promise.resolve();
+    hooksModule.registerInternalNotificationHook((notification: any) => {
+      hookPromise = (async () => {
+        // A separate connection observes the notification row only because the
+        // transaction committed BEFORE the after-commit hooks flushed — proving the
+        // effects fire after the commit, never inside the open transaction.
+        const count = await tenantDb(db, tenantId).table('internal_notifications')
+          .where({ tenant: tenantId, internal_notification_id: notification.internal_notification_id })
+          .count<{ count: string }[]>('* as count')
+          .first();
+        rowVisibleAtHook.visible = Number(count?.count) > 0;
+        effectHookSpy(notification);
+      })();
+    });
+    effectPublishWorkflowEventSpy.mockClear();
+    effectBroadcastNotificationSpy.mockClear();
+    effectHookSpy.mockClear();
+
+    const realUser = await tenantDb(db, tenantId).table('users')
+      .where({ tenant: tenantId, user_type: 'internal' })
+      .first<{ user_id: string }>('user_id');
+    if (!realUser) throw new Error('Expected seeded internal user');
+
+    const actorUserId = randomUUID();
+    const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType: 'TICKET_CLOSED', assigneeId: realUser.user_id, actorUserId });
+    const event = buildEvent({ eventId, eventType: 'TICKET_CLOSED', tenantId, ticketId, actorUserId, commentId });
+
+    await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+    await hookPromise;
+
+    expect(effectPublishWorkflowEventSpy).toHaveBeenCalledTimes(1);
+    expect(effectPublishWorkflowEventSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'NOTIFICATION_SENT' })
+    );
+    expect(effectBroadcastNotificationSpy).toHaveBeenCalledTimes(1);
+    expect(effectHookSpy).toHaveBeenCalledTimes(1);
+    expect(rowVisibleAtHook.visible).toBe(true);
+    expect(await countNotificationsForTicket(ticketId)).toBe(1);
+    const delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+    expect(delivery?.status).toBe('delivered');
+  }, 120_000);
+
+  it('replay of an already-delivered outbox event re-fires zero external effects', async () => {
+    const subscriber = await freshSubscriber({ effects: true });
+    const hooksModule = await import('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks');
+    hooksModule.registerInternalNotificationHook((notification: unknown) => effectHookSpy(notification));
+    effectPublishWorkflowEventSpy.mockClear();
+    effectBroadcastNotificationSpy.mockClear();
+    effectHookSpy.mockClear();
+
+    const realUser = await tenantDb(db, tenantId).table('users')
+      .where({ tenant: tenantId, user_type: 'internal' })
+      .first<{ user_id: string }>('user_id');
+    if (!realUser) throw new Error('Expected seeded internal user');
+
+    const actorUserId = randomUUID();
+    const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType: 'TICKET_CLOSED', assigneeId: realUser.user_id, actorUserId });
+    const event = buildEvent({ eventId, eventType: 'TICKET_CLOSED', tenantId, ticketId, actorUserId, commentId });
+
+    // First delivery: committed, delivered, effects fired once.
+    await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+    const afterFirst = await listNotificationsForTicket(ticketId);
+    expect(afterFirst.length).toBe(1);
+    const delivered = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+    expect(delivered?.status).toBe('delivered');
+
+    // Two redeliveries of the same stable outbox event id: the reservation skips,
+    // the effect is NOT re-produced, and the external effects do NOT re-fire.
+    await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+    await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+
+    expect(effectPublishWorkflowEventSpy).toHaveBeenCalledTimes(1);
+    expect(effectBroadcastNotificationSpy).toHaveBeenCalledTimes(1);
+    expect(effectHookSpy).toHaveBeenCalledTimes(1);
+    expect(await listNotificationsForTicket(ticketId)).toEqual(afterFirst);
+    const stillDelivered = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+    expect(stillDelivered?.status).toBe('delivered');
+  }, 120_000);
 });

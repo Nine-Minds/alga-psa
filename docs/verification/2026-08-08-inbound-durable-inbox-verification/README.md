@@ -1,17 +1,17 @@
 # Verification bundle — durable inbound-email inbox (mitigation round)
 
-**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `2dee4084d8` (this round's
-verification run), prior bundle snapshot @ `7c5adef2ee`
-**Date:** 2026-08-08 (initial), refreshed 2026-08-10 (this round: 2026-08-10)
-**Round type:** verifier-timeout mitigation (round 3). The draft-review
-verification failed with `verifier-timeout`; no substantive defect was reported.
-A previous identical failure was resolved by refreshing the committed
-verification bundle (round 2, commit `533bc56d2e`). This round re-runs the
-verification suites and typechecks at HEAD `2dee4084d8` and refreshes the
-bundle so a time-boxed reviewer has committed, current evidence for the newest
-commits (`2dee4084d8` outbox transaction threading + fail-closed reserve, and
-`7c5adef2ee` legacy backfill cursor losslessness). Evidence for this round is
-in `runs/*-outbox-threading-round.txt`.
+**Branch/worktree:** `fix/inbound-email-durable-inbox` @ after-commit round HEAD
+(this round: defer internal-notification external effects until after commit),
+prior bundle snapshot @ `2dee4084d8`
+**Date:** 2026-08-08 (initial), refreshed 2026-08-10 (this round: 2026-08-11)
+**Round type:** draft-review mitigation (round 4). Independent PR verification
+found the internal-notification consumer still launched workflow publication,
+Redis/Teams broadcast, and post-creation hooks *before* the enclosing ledger
+transaction committed, so rollback and replay could emit orphaned or duplicate
+external effects while the new tests asserted only database rows and ledger
+state. This round closes that gap: the three external effects are deferred to
+`registerAfterCommit` and behavioral effect-timing/count tests were added.
+Evidence for this round is in `runs/*-after-commit-round.txt`.
 
 **Spec of record:** `docs/plans/2026-08-07-inbound-email-durable-inbox-plan.md`
 (commit `ce7dd8bcc8`). Every "does this truly fail?" judgment below is made
@@ -476,6 +476,94 @@ time-boxed invocation (71/71 in ~24s).
 
 ---
 
+## 5.3 After-commit round (2026-08-11): external effects deferred to `registerAfterCommit`
+
+Independent draft-review verification (round 4) reported that internal
+notifications still launched workflow publication, Redis/Teams broadcast, and
+post-creation hooks before the enclosing ledger transaction committed, so
+rollback and replay could emit orphaned or duplicate external effects while the
+new tests asserted only database rows and ledger state. This round fixes that
+and adds behavioral effect-timing/count tests. Evidence in
+`runs/*-after-commit-round.txt`.
+
+**What changed (product code):**
+
+1. `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
+   — `createNotificationFromTemplateInternal` now registers its three external
+   effects (workflow event publish, realtime broadcast, post-creation hooks)
+   via `registerAfterCommit(trx, hook, label)` instead of firing them inside the
+   open transaction. The returned `notification` value is unchanged.
+2. Same deferral applied to the sibling `createNotificationFromTemplateAction`
+   (publish + broadcast; identical pattern, its own transaction flushes right
+   after commit so observable behavior on success is unchanged).
+3. Accepted semantics documented in a code comment: **at-most-once per committed
+   transaction**. A crash after commit but before the hook flush loses the
+   fire-and-forget effect (same exposure as before deferral) — that is
+   acceptable; emitting for a rolled-back transaction or double-emitting on
+   replay is not. The `NOTIFICATION_SENT` publish still carries its
+   `idempotencyKey`.
+
+**Call-graph audit (dispatchInternalNotificationHandlers, all five
+outbox-reachable handlers + helpers):** TICKET_CREATED / ASSIGNED / UPDATED /
+CLOSED / COMMENT_ADDED and their helpers (`getAllTicketAssignees`,
+`getAllTaskAssignees`, `resolveEveryoneMention`, `findMentionedUsers`,
+`resolveNotificationLinks`, suppression helpers) perform only DB reads and
+delegate every external effect to `createNotificationFromTemplateInternal` —
+the single pre-commit external-effect site, now deferred. `internalNotificationSubscriber.ts`
+itself has zero direct publish/broadcast/http/hook calls (grep-verified). No
+other pre-commit external effect exists in the transactional call graph.
+
+**New behavioral tests (reviewer's second complaint — external-effect timing
+and counts, not just rows):**
+
+- `server/src/test/unit/internal-notifications/internalNotificationActions.afterCommit.test.ts`
+  (3 tests) — drives the REAL `withTransaction`/`registerAfterCommit` machinery
+  with a fake knex: standalone success fires each effect exactly once **after**
+  the commit; an enclosing transaction that rolls back emits nothing and never
+  commits; deferred hooks flush once per committed run.
+- `server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts`
+  (3 new DB-backed tests, suite now 29) — rollback after the notification insert
+  (completion-mark failure) emits zero publishes/broadcasts/hooks and leaves no
+  committed row and a `retryable_failed` ledger record; successful delivery
+  emits each effect exactly once **after** commit (a hook on a separate
+  connection observes the committed row at hook time); replay of an
+  already-delivered event (reservation `skip`) re-fires zero effects.
+- The existing `internalNotificationActions.test.ts` suite's `@alga-psa/db` mock
+  was updated to model after-commit flush semantics (registerAfterCommit +
+  flush-on-success/clear-on-rollback) so its broadcast/publish assertions still
+  hold — 20/20 unchanged.
+
+**Pre-fix failure evidence:** the rollback tests were run against a temporary
+revert of the fix and failed exactly as intended (publish fired once despite the
+rollback). Verbatim description in `runs/pre-fix-effect-timing-failures.txt`.
+
+**Verification at fix HEAD (this round):**
+
+- Durable inbound suite `inboundEmailDurableInbox.integration.test.ts` —
+  **45/45 passed** (unchanged). `runs/durable-suite-after-commit-round.txt`.
+- Subscriber suite `eventSubscribers.integration.test.ts` — **29/29 passed**
+  (26 pre-existing + 3 new external-effect tests). `runs/subscriber-suite-after-commit-round.txt`.
+- Combined single invocation — **74/74 passed** in ~24s.
+  `runs/combined-single-invocation-after-commit-round.txt`.
+- Unit suite `server/src/test/unit/internal-notifications/` — **146/146 passed**
+  (includes the 3 new after-commit unit tests). `runs/unit-internal-notifications-after-commit-round.txt`.
+- Related integration suites — mention-notifications 2/2, notificationCrud 6/6,
+  notificationPreferences 5/5, ticketEmailSubscriber contract suites 2/2.
+- All five typechecks (server, shared, email-service, packages/jobs,
+  ee/temporal-workflows) plus the directly-modified packages/notifications —
+  exit 0 with zero diagnostics. `runs/typechecks-after-commit-round.txt`.
+- Shared dev DB audit rows intact — the 23 pre-existing `rfc822:rfc822` inbox
+  rows untouched (inbox total 57, legacy processed messages 34, unchanged).
+  `runs/audit-rows-intact-after-commit-round.txt`.
+
+**Reviewer's short path for this round:** look first at
+`createNotificationFromTemplateInternal`'s `registerAfterCommit` usage
+(`internalNotificationActions.ts`) and the rollback-emits-nothing test
+(`eventSubscribers.integration.test.ts`, "external effects are emitted zero
+times when the ledger transaction rolls back after the notification insert").
+
+---
+
 ## 6. Bounded-duplicate statement (external-effect semantics)
 
 Postgres is the exactly-once authority for ticket/comment/effect-ledger/outbox
@@ -607,7 +695,7 @@ seeded on every run of `runs/durable-suite.txt`).
 ## 8. What this round changed
 
 Round 2 refreshed the bundle to HEAD `f4b697d6ee` (durable 39/39, subscriber
-15/15). Round 3 (this round) refreshes the bundle to HEAD `2dee4084d8`, which
+15/15). Round 3 refreshed the bundle to HEAD `2dee4084d8`, which
 is two fix commits past the round-2 head:
 
 - `7c5adef2ee` — lossless legacy-backfill keyset cursor for `timestamptz(6)`
@@ -624,6 +712,12 @@ full counts and the reviewer's short path.
 No product-code files were modified in this round — the branch's code is
 unchanged from `2dee4084d8`; this is an evidence refresh only. The working
 tree is clean and `package-lock.json` is unmodified (nothing to restore).
+
+Round 4 (this round, after-commit round) is a real fix round, not an evidence
+refresh: the internal-notification consumer's external effects were deferred to
+`registerAfterCommit` (see section 5.3) and behavioral external-effect timing
+tests were added. It is the only round with product-code changes on top of
+`2dee4084d8`.
 
 **Known-open items (not fixed in this round, listed for the reviewer):**
 
