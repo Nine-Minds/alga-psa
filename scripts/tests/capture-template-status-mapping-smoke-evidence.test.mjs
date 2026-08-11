@@ -1304,10 +1304,11 @@ test('a malformed --run-id exits 2 (usage) in xoverdict mode before any bundle o
   assert.match(result.stderr, /--run-id must be a UUID/);
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, /claim-/);
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, /invoked against/);
-  assert.doesNotMatch(result.stdout, /^XOVERDICT: FAIL/);
+  assert.match(result.stdout, /^XOVERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /--run-id must be a UUID/);
 });
 
-test('a malformed --run-id exits 2 (usage) in plain mode, not VERDICT: FAIL', () => {
+test('a malformed --run-id exits 2 (usage) in plain mode with a VERDICT: FAIL (usage) line', () => {
   const bundleDir = makeTempBundle('usage-badrunid-plain');
   const result = runVerifier([
     bundleDir, '--run-id', 'not-a-uuid', '--head-sha', HEAD_SHA,
@@ -1315,7 +1316,8 @@ test('a malformed --run-id exits 2 (usage) in plain mode, not VERDICT: FAIL', ()
   assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
   assert.match(result.stderr, /Usage:/);
   assert.match(result.stderr, /--run-id must be a UUID/);
-  assert.doesNotMatch(result.stdout, /VERDICT: FAIL/);
+  assert.match(result.stdout, /^VERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /--run-id must be a UUID/);
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, /invoked against/);
 });
 
@@ -1347,6 +1349,7 @@ test('repo-root and run-id usage validation are order-independent', () => {
   assert.equal(repoFirst.stdout, xoverdictFirst.stdout, 'stdout must be identical across flag orders');
   assert.equal(repoFirst.stderr, xoverdictFirst.stderr, 'stderr must be identical across flag orders');
   assert.match(repoFirst.stderr, /--repo-root must be an existing directory/);
+  assert.match(repoFirst.stdout, /^XOVERDICT: FAIL \(usage\)/, 'the usage verdict must be present in both flag orders');
 
   const runIdLast = runVerifier([
     bundleDir, '--xoverdict', '--head-sha', HEAD_SHA,
@@ -1361,4 +1364,91 @@ test('repo-root and run-id usage validation are order-independent', () => {
   assert.equal(runIdLast.stdout, runIdFirst.stdout, 'stdout must be identical across flag orders');
   assert.equal(runIdLast.stderr, runIdFirst.stderr, 'stderr must be identical across flag orders');
   assert.match(runIdLast.stderr, /--run-id must be a UUID/);
+  assert.match(runIdLast.stdout, /^XOVERDICT: FAIL \(usage\)/, 'the usage verdict must be present in both flag orders');
+});
+
+// ---------------------------------------------------------------------------
+// Deploy-fix round: every terminal path must emit an explicit verdict on
+// stdout (XOVERDICT:/VERDICT: pass-or-fail with reason) so the review harness
+// can never report verifier-no-verdict. Each seam is exercised by spawning the
+// verifier as a child process and asserting BOTH the exit code and the
+// presence/content of the verdict line. Exit semantics are unchanged
+// (0 pass / non-zero fail, 2 usage); only verdict emission is added.
+// ---------------------------------------------------------------------------
+
+test('no bundle-dir positional exits 2 with an XOVERDICT: FAIL (usage) verdict on stdout', () => {
+  const result = runVerifier([
+    '--xoverdict', '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 2, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^XOVERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /<bundle-dir> positional argument/);
+  assert.match(result.stderr, /Usage:/);
+  assert.doesNotMatch(result.stdout, /claim-/);
+});
+
+test('no bundle-dir positional in plain mode exits 2 with a VERDICT: FAIL (usage) verdict on stdout', () => {
+  const result = runVerifier([
+    '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA,
+  ]);
+  assert.equal(result.status, 2, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^VERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /<bundle-dir> positional argument/);
+  assert.match(result.stderr, /Usage:/);
+});
+
+test('a nonexistent --repo-root exits 2 with an XOVERDICT: FAIL (usage) verdict naming the reason', () => {
+  const bundleDir = makeTempBundle('usage-verdict-badroot');
+  const result = runVerifier([
+    '--xoverdict', bundleDir, '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', '/nonexistent/path/xyz',
+  ]);
+  assert.equal(result.status, 2, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^XOVERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /--repo-root must be an existing directory/);
+  assert.match(result.stderr, /Usage:/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /TypeError/);
+});
+
+test('a missing --run-id flag exits 2 with an XOVERDICT: FAIL (usage) verdict naming the reason', () => {
+  const bundleDir = makeTempBundle('usage-verdict-norunid');
+  const result = runVerifier([
+    bundleDir, '--xoverdict', '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 2, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^XOVERDICT: FAIL \(usage\)/);
+  assert.match(result.stdout, /xoverdict requires the --run-id flag/);
+});
+
+test('a nonexistent bundle directory exits 1 with an XOVERDICT: FAIL (verifier error) verdict, not a bare stack', () => {
+  const result = runVerifier([
+    '/nonexistent/bundle/xyz', '--xoverdict', '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 1, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^XOVERDICT: FAIL \(verifier error\)/);
+  assert.match(result.stdout, /Evidence directory not found/);
+  assert.doesNotMatch(result.stdout, /\n\s+at /, 'the stack must stay on stderr, never on stdout');
+});
+
+test('a nonexistent bundle directory in plain mode exits 1 with a VERDICT: FAIL (verifier error) verdict', () => {
+  const result = runVerifier([
+    '/nonexistent/bundle/xyz', '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA,
+  ]);
+  assert.equal(result.status, 1, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^VERDICT: FAIL \(verifier error\)/);
+  assert.match(result.stdout, /Evidence directory not found/);
+  assert.doesNotMatch(result.stdout, /\n\s+at /);
+});
+
+test('an uncaught mid-verify throw in plain mode exits 1 with a VERDICT: FAIL (verifier error) verdict', () => {
+  const bundleDir = makeTempBundle('crash-missing-screenshot-notes');
+  fs.rmSync(path.join(bundleDir, SCREENSHOT_NOTES_FILE));
+  const result = runVerifier([
+    bundleDir, '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA,
+  ]);
+  assert.equal(result.status, 1, `stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stdout, /^VERDICT: FAIL \(verifier error\)/);
+  assert.match(result.stdout, /Required evidence file is missing/);
+  assert.doesNotMatch(result.stdout, /\n\s+at /);
 });

@@ -1499,6 +1499,20 @@ export function runXoverdict(evidenceDirectory, options = {}) {
   };
 }
 
+/**
+ * Every terminal path must end in a verdict the review harness can parse, so
+ * an invocation that never reaches a claim evaluation still terminates with an
+ * explicit FAIL. Usage errors keep their exit 2 and their stderr usage text;
+ * this only adds the machine-readable verdict token (and reason) to stdout.
+ */
+function emitUsageVerdict(compact, failures) {
+  const prefix = compact ? 'XOVERDICT' : 'VERDICT';
+  process.stdout.write(`${prefix}: FAIL (usage)\n`);
+  for (const failure of failures) {
+    process.stdout.write(`  - ${failure}\n`);
+  }
+}
+
 function printXoverdict(result) {
   if (!result.claims) {
     process.stdout.write('XOVERDICT: FAIL (usage)\n');
@@ -1600,8 +1614,12 @@ function collectUsageFailures(flags) {
 
 export function main(argv) {
   const { flags, positional } = parseArgv(argv.slice(2));
+  const compact = flags.xoverdict !== undefined;
   if (positional.length !== 1) {
     process.stderr.write(USAGE_TEXT);
+    emitUsageVerdict(compact, [
+      `expected exactly one <bundle-dir> positional argument, got ${positional.length === 0 ? 'none' : positional.length}`,
+    ]);
     return 2;
   }
   const usageFailures = collectUsageFailures(flags);
@@ -1610,43 +1628,51 @@ export function main(argv) {
     for (const failure of usageFailures) {
       process.stderr.write(`  - ${failure}\n`);
     }
+    emitUsageVerdict(compact, usageFailures);
     return 2;
   }
-  if (flags.xoverdict !== undefined) {
-    const result = runXoverdict(positional[0], {
+  try {
+    if (flags.xoverdict !== undefined) {
+      const result = runXoverdict(positional[0], {
+        timeoutMs: flags.timeoutMs || undefined,
+        expectedRunId: flags['run-id'],
+        expectedHeadSha: flags['head-sha'],
+        repoRoot: flags['repo-root'],
+      });
+      printXoverdict(result);
+      if (!result.claims) {
+        return 2;
+      }
+      return result.pass ? 0 : 1;
+    }
+    const result = verifyBundle(positional[0], {
       timeoutMs: flags.timeoutMs || undefined,
       expectedRunId: flags['run-id'],
       expectedHeadSha: flags['head-sha'],
-      repoRoot: flags['repo-root'],
+      expectedWorktree: flags['expected-worktree'],
+      expectedPane: flags['expected-pane'],
+      expectedServerUrl: flags['expected-server-url'],
+      expectedDevServerSession: flags['expected-dev-server-session'],
     });
-    printXoverdict(result);
-    if (!result.claims) {
-      return 2;
+    if (!result.pass) {
+      process.stdout.write('VERDICT: FAIL\n');
+      for (const failure of result.failures) {
+        process.stdout.write(`  - ${failure}\n`);
+      }
+      process.stdout.write(`bundleDigest=${result.bundleDigest}\n`);
+      return 1;
     }
-    return result.pass ? 0 : 1;
-  }
-  const result = verifyBundle(positional[0], {
-    timeoutMs: flags.timeoutMs || undefined,
-    expectedRunId: flags['run-id'],
-    expectedHeadSha: flags['head-sha'],
-    expectedWorktree: flags['expected-worktree'],
-    expectedPane: flags['expected-pane'],
-    expectedServerUrl: flags['expected-server-url'],
-    expectedDevServerSession: flags['expected-dev-server-session'],
-  });
-  if (!result.pass) {
-    process.stdout.write('VERDICT: FAIL\n');
-    for (const failure of result.failures) {
-      process.stdout.write(`  - ${failure}\n`);
-    }
+    process.stdout.write('VERDICT: PASS\n');
+    process.stdout.write(`headSha=${result.headSha}\n`);
+    process.stdout.write(`screenshots=${result.screenshots.complete}/${result.screenshots.total} complete (${result.screenshots.pending} pending)\n`);
     process.stdout.write(`bundleDigest=${result.bundleDigest}\n`);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`verifier error: ${error instanceof Error ? (error.stack || error.message) : String(error)}\n`);
+    process.stdout.write(`${compact ? 'XOVERDICT' : 'VERDICT'}: FAIL (verifier error) ${message}\n`);
     return 1;
   }
-  process.stdout.write('VERDICT: PASS\n');
-  process.stdout.write(`headSha=${result.headSha}\n`);
-  process.stdout.write(`screenshots=${result.screenshots.complete}/${result.screenshots.total} complete (${result.screenshots.pending} pending)\n`);
-  process.stdout.write(`bundleDigest=${result.bundleDigest}\n`);
-  return 0;
 }
 
 if (import.meta.url === pathToFileUrl(process.argv[1]).href) {
