@@ -251,7 +251,8 @@
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Autorisatievenster gesloten vóór voltooiing. Probeer het opnieuw.",
         "authorizationFailed": "Autorisatie mislukt",
-        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten"
+        "senderDisplayNameInvalid": "Weergavenaam mag geen aanhalingstekens, punthaken of regeleinden bevatten",
+        "issuerRequired": "Kies een Microsoft-app voordat u zich aanmeldt"
       },
       "requiredFields": {
         "providerName": "Configuratienaam",
@@ -283,12 +284,24 @@
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
-        "checking": "Microsoft-configuratie controleren…",
-        "ready": "Microsoft is ingesteld. Meld u aan met dit postvak om de configuratie te voltooien.",
-        "pending": "Wachten op uw Microsoft 365-beheerder. De configuratie is gestart in Aanbieders, maar is nog niet goedgekeurd.",
-        "openProviders": "Aanbieders openen",
-        "notConfigured": "Microsoft is nog niet ingesteld. Stel Microsoft eenmaal in via Aanbieders en kom daarna terug.",
-        "setUpInProviders": "Instellen in Aanbieders"
+        "openProviders": "Aanbieders openen"
+      },
+      "issuer": {
+        "title": "Microsoft-app die dit postvak autoriseert",
+        "description": "Kies welke toepassing zich aanmeldt als dit postvak. Deze keuze wordt bij het postvak opgeslagen en heeft geen invloed op andere services.",
+        "managedLabel": "AlgaPSA-app (beheerd door Nine Minds)",
+        "managedDescription": "Aan uw kant is geen registratie van een Microsoft-app vereist.",
+        "recommended": "Aanbevolen",
+        "currentApp": "Huidige app: {{app}}",
+        "selectedApp": "Geselecteerde app: {{app}}",
+        "pendingReauth": "Herautorisatie in behandeling",
+        "switchWarning": "Het wijzigen van de Microsoft-app vereist dat dit postvak opnieuw wordt verbonden. Meld u opnieuw aan met Microsoft om de overstap af te ronden.",
+        "noneAvailable": "Om Microsoft 365 te verbinden, stelt u eerst een Microsoft-app in bij Aanbieders en komt u daarna terug.",
+        "retry": "Opnieuw proberen",
+        "pendingConsentEmpty": "Uw Microsoft-app wacht op goedkeuring van een Microsoft 365-beheerder. Zodra deze bij Aanbieders is goedgekeurd, komt u terug om u aan te melden.",
+        "pendingConsentHint": "Uw eigen Microsoft-app wacht nog op goedkeuring van een Microsoft 365-beheerder.",
+        "ownAppPrompt": "Liever aanmelden met uw eigen Microsoft-app?",
+        "ownAppSetupLink": "Instellen bij Aanbieders"
       }
     },
     "gmail": {

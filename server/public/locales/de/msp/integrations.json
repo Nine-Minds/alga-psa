@@ -1659,7 +1659,8 @@
           "email": {
             "description": "Wählen Sie das Microsoft-Profil für eingehende und ausgehende Outlook-E-Mails aus.",
             "label": "E-Mail",
-            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können."
+            "reconnect": "Bestehende Outlook-E-Mail-Verbindungen müssen erneut autorisiert werden, um Mail.Send zu gewähren, bevor sie ausgehende E-Mails senden können.",
+            "perProviderIssuerNote": "Bestehende Postfachverbindungen behalten ihre aktuelle Microsoft-App, bis sie neu verbunden werden. Diese Auswahl gilt für neue Postfachverbindungen."
           },
           "mspSso": {
             "description": "Wählen Sie aus, welches Microsoft-Profil die MSP-SSO-Anmeldedomänen, die Microsoft-Anmeldung und die Tenant-Erkennung unterstützt.",

@@ -54,6 +54,15 @@ const hoisted = vi.hoisted(() => {
     provider_type: string;
   };
 
+  type MicrosoftEmailProviderConfigRecord = {
+    tenant: string;
+    email_provider_id: string;
+    client_id: string | null;
+    microsoft_profile_id: string | null;
+    client_secret_ref: string | null;
+    tenant_id: string | null;
+  };
+
   type CalendarProviderRecord = {
     id: string;
     tenant: string;
@@ -76,6 +85,7 @@ const hoisted = vi.hoisted(() => {
     teamsIntegrations: [] as TeamsIntegrationRecord[],
     tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     emailProviders: [] as EmailProviderRecord[],
+    microsoftEmailProviderConfigs: [] as MicrosoftEmailProviderConfigRecord[],
     calendarProviders: [] as CalendarProviderRecord[],
     mspSsoLoginDomains: [] as MspSsoLoginDomainRecord[],
     resetUpdates: [] as Array<{ table: string; where: Record<string, unknown>; values: Record<string, unknown> }>,
@@ -100,6 +110,9 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'email_providers') {
         return state.emailProviders;
+      }
+      if (table === 'microsoft_email_provider_config') {
+        return state.microsoftEmailProviderConfigs;
       }
       if (table === 'calendar_providers') {
         return state.calendarProviders;
@@ -157,6 +170,11 @@ const hoisted = vi.hoisted(() => {
             state.emailProviders.push(clone(row) as EmailProviderRecord);
           });
         }
+        if (table === 'microsoft_email_provider_config') {
+          rows.forEach((row) => {
+            state.microsoftEmailProviderConfigs.push(clone(row) as MicrosoftEmailProviderConfigRecord);
+          });
+        }
         if (table === 'calendar_providers') {
           rows.forEach((row) => {
             state.calendarProviders.push(clone(row) as CalendarProviderRecord);
@@ -171,22 +189,18 @@ const hoisted = vi.hoisted(() => {
         return rows.length;
       },
       async update(values: Record<string, unknown>) {
-        if (
-          table === 'microsoft_profiles' ||
-          table === 'microsoft_profile_consumer_bindings' ||
-          table === 'teams_integrations'
-        ) {
-          const rows = filteredRows();
-          rows.forEach((row) => Object.assign(row, values));
-          return rows.length;
-        }
+        // Mutate in-memory rows for every backed table so backfill/status
+        // writes are observable, and always record the write so the reset
+        // contract assertions (T011/T012) keep passing.
+        const rows = filteredRows();
+        rows.forEach((row) => Object.assign(row, values));
 
         state.resetUpdates.push({
           table,
           where: Object.assign({}, ...filters),
           values: clone(values),
         });
-        return 1;
+        return rows.length || 1;
       },
       async delete() {
         const rows = filteredRows();
@@ -259,6 +273,7 @@ const {
   teamsIntegrations,
   tenantAddOns,
   emailProviders,
+  microsoftEmailProviderConfigs,
   calendarProviders,
   mspSsoLoginDomains,
 } = hoisted.state;
@@ -310,6 +325,7 @@ import {
   listMicrosoftConsumerBindings,
   listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill,
   saveMicrosoftIntegrationSettings,
   setDefaultMicrosoftProfile,
   updateMicrosoftProfile,
@@ -327,6 +343,7 @@ describe('Microsoft integration actions', () => {
     tenantAddOns.length = 0;
     tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     emailProviders.length = 0;
+    microsoftEmailProviderConfigs.length = 0;
     calendarProviders.length = 0;
     mspSsoLoginDomains.length = 0;
     resetUpdates.length = 0;
@@ -779,6 +796,60 @@ describe('Microsoft integration actions', () => {
         process.env.NEXT_PUBLIC_EDITION = originalEdition;
       }
     }
+  });
+
+  it('T016: the email issuer backfill never runs on the status read path; it runs only via the explicit mutation action', async () => {
+    // A legacy email provider row whose persisted client id has exactly one
+    // eligible same-client profile match — the exact shape backfill would pin.
+    const legacyProfileId = 'profile-backfill-1';
+    microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: legacyProfileId,
+      display_name: 'Legacy Match App',
+      display_name_normalized: 'legacy match app',
+      client_id: 'legacy-email-app',
+      tenant_id: 'tenant-guid',
+      client_secret_ref: 'ref-backfill',
+      capabilities: JSON.stringify(['email']),
+      is_default: true,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    tenantSecrets.set('tenant-1:ref-backfill', 'secret-value');
+    emailProviders.push({ id: 'provider-1', tenant: 'tenant-1', provider_type: 'microsoft' });
+    microsoftEmailProviderConfigs.push({
+      tenant: 'tenant-1',
+      email_provider_id: 'provider-1',
+      client_id: 'legacy-email-app',
+      microsoft_profile_id: null,
+      client_secret_ref: null,
+      tenant_id: 'common',
+    });
+    const before = JSON.stringify(microsoftEmailProviderConfigs[0]);
+
+    // Status reads (Teams picker + email settings load) are pure reads: the
+    // backfill must NOT run and no `runIssuerBackfill` surface may exist.
+    const status = await getMicrosoftIntegrationStatus();
+    expect(status.success).toBe(true);
+    expect(status).not.toHaveProperty('issuerBackfill');
+    expect(JSON.stringify(microsoftEmailProviderConfigs[0])).toBe(before);
+
+    // A second status read after the explicit backfill is still a pure read.
+    const backfillResult = await runMicrosoftEmailIssuerBackfill();
+    expect(backfillResult.success).toBe(true);
+    expect(backfillResult.result).toMatchObject({ backfilled: 1 });
+    expect(microsoftEmailProviderConfigs[0]).toMatchObject({
+      microsoft_profile_id: legacyProfileId,
+      client_secret_ref: 'ref-backfill',
+    });
+    const pinnedBefore = JSON.stringify(microsoftEmailProviderConfigs[0]);
+    const readAfterBackfill = await getMicrosoftIntegrationStatus();
+    expect(readAfterBackfill.success).toBe(true);
+    expect(JSON.stringify(microsoftEmailProviderConfigs[0])).toBe(pinnedBefore);
   });
 
   it('T011/T012: reset action disconnects Microsoft email and calendar providers', async () => {

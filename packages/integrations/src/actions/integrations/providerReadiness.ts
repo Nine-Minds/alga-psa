@@ -4,7 +4,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 import {
   getMicrosoftPlatformCredentialAvailability,
-  resolveMicrosoftConsumerProfileConfig,
+  resolveMicrosoftConsumerProfileConfigReadOnly,
 } from '../../lib/microsoftConsumerProfileResolution';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
@@ -61,15 +61,18 @@ export async function getMicrosoftEmailSetupReadiness(
   tenant: string
 ): Promise<MicrosoftEmailSetupReadiness> {
   const hosted = !(await isSelfHostLicensing());
+  // Read-only resolution: this helper feeds settings/status surfaces only
+  // (email setup options, consumer setup status, integration status). It must
+  // never run the legacy profile/binding migration as a page-load side effect.
   const [resolution, platform, platformResolution] = await Promise.all([
-    resolveMicrosoftConsumerProfileConfig(
+    resolveMicrosoftConsumerProfileConfigReadOnly(
       tenant,
       'email',
       { credentialPreference: 'tenant' }
     ),
     getMicrosoftPlatformCredentialAvailability(),
     hosted
-      ? resolveMicrosoftConsumerProfileConfig(tenant, 'email', { credentialPreference: 'platform' })
+      ? resolveMicrosoftConsumerProfileConfigReadOnly(tenant, 'email', { credentialPreference: 'platform' })
       : Promise.resolve(null),
   ]);
 

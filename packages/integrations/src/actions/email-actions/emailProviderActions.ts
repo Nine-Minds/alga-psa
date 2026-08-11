@@ -26,15 +26,22 @@ import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
-  resolveMicrosoftConsumerProfileConfig,
-} from '../../lib/microsoftConsumerProfileResolution';
+  MicrosoftEmailIssuerError,
+  MICROSOFT_EMAIL_ISSUER_ERRORS,
+  isSameMicrosoftClientId,
+  resolveMicrosoftEmailIssuerChoice,
+  type MicrosoftEmailIssuerChoice,
+} from '../../lib/microsoftEmailIssuerSelection';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
 
 type EmailProviderActionError = ActionMessageError;
 type MicrosoftEmailProviderConfigInput = Omit<
   MicrosoftEmailProviderConfig,
   'email_provider_id' | 'tenant' | 'created_at' | 'updated_at' | 'redirect_uri'
->;
+> & {
+  /** Explicit issuing-app selection carried through create/reconnect saves. */
+  issuer?: MicrosoftEmailIssuerChoice;
+};
 type EmailProviderSetupActionResult = EmailProviderSetupResult | EmailProviderActionError;
 type EmailProviderOperationErrorCode =
   | 'not_found'
@@ -58,6 +65,16 @@ class ExpectedEmailProviderActionError extends Error {
 
 function throwExpectedEmailProviderError(message: string): never {
   throw new ExpectedEmailProviderActionError(message);
+}
+
+function emailProviderActionError(
+  message: string,
+  errorCode?: string
+): EmailProviderActionError {
+  return {
+    actionError: message,
+    ...(errorCode ? { errorCode } : {}),
+  } as EmailProviderActionError;
 }
 
 function emailProviderOperationError(
@@ -314,31 +331,48 @@ function normalizeSenderDisplayName(value?: string | null): string | null {
 }
 
 /**
- * Persist Microsoft email provider configuration
+ * Persist Microsoft email provider configuration.
+ *
+ * The provider row's issuing app is authoritative. When a settings save carries
+ * no new token, the app that issued the stored refresh token is preserved;
+ * switching to a *different* client ID without a reauthorization is rejected
+ * with a stable reconnect-required error. Same-client secret rotation flows
+ * through the selected profile's secret reference.
  */
 async function persistMicrosoftConfig(
   trx: any,
   tenant: string,
   providerId: string,
-  config?: MicrosoftEmailProviderConfigInput
+  config?: MicrosoftEmailProviderConfigInput,
+  issuer?: MicrosoftEmailIssuerChoice
 ): Promise<MicrosoftEmailProviderConfig | undefined> {
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
-  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email', {
-    credentialPreference: 'tenant',
-  });
-  if (microsoftProfile.status !== 'ready') {
-    throwExpectedEmailProviderError(
-      microsoftProfile.message || 'Microsoft Email profile is not configured'
+  // An explicit issuer selection is mandatory on create/save. The server never
+  // silently falls back to the tenant Email binding for a new write: the
+  // binding may only inform the UI's default pre-selection and the documented
+  // legacy runtime backfill for pre-existing providers. A request without an
+  // explicit selection fails loudly instead of guessing the app.
+  if (!issuer) {
+    throw new MicrosoftEmailIssuerError(
+      MICROSOFT_EMAIL_ISSUER_ERRORS.ISSUER_REQUIRED,
+      'Choose which Microsoft application authorizes this mailbox before saving'
     );
   }
 
-  const effectiveClientId = microsoftProfile.clientId || '';
-  const effectiveClientSecret = microsoftProfile.clientSecret || '';
-  const effectiveTenantId = microsoftProfile.microsoftTenantId || 'common';
+  // Resolve the intended issuing app from the explicit selection. This is the
+  // authoritative gate: ownership, active status, Email capability, readiness,
+  // and consent are all revalidated server-side.
+  const resolution = await resolveMicrosoftEmailIssuerChoice(tenant, issuer);
+  let effectiveClientId = resolution.clientId;
+  let effectiveClientSecret = resolution.clientSecret;
+  let effectiveTenantId = resolution.microsoftTenantId || 'common';
+  let effectiveProfileId = resolution.profileId || null;
+  let effectiveClientSecretRef = resolution.clientSecretRef || null;
+
   const effectiveRedirectUri = (await getMicrosoftEmailSetupMetadataInternal()).mailboxRedirectUri;
-  
+
   // Ensure required fields are not undefined
   if (!effectiveTenantId) {
     throwExpectedEmailProviderError('Tenant ID is required for Microsoft configuration');
@@ -349,15 +383,35 @@ async function persistMicrosoftConfig(
     .where({ email_provider_id: providerId })
     .first();
   const preserveIssuingApp = Boolean(existingConfig?.refresh_token && !config.refresh_token);
-  const pinnedClientId = preserveIssuingApp ? existingConfig.client_id : effectiveClientId;
-  const pinnedClientSecret = preserveIssuingApp ? existingConfig.client_secret : effectiveClientSecret;
-  const pinnedProfileId = preserveIssuingApp
-    ? existingConfig.microsoft_profile_id
-    : microsoftProfile.profileId || null;
-  const pinnedClientSecretRef = preserveIssuingApp
-    ? existingConfig.client_secret_ref
-    : microsoftProfile.clientSecretRef || null;
-  const pinnedTenantId = preserveIssuingApp ? existingConfig.tenant_id : effectiveTenantId;
+
+  // A plain settings save must keep the app that issued the stored refresh
+  // token. When an explicit issuer is selected, a different client ID without a
+  // fresh token is a client-ID change that requires an explicit reconnect.
+  if (
+    preserveIssuingApp &&
+    issuer &&
+    existingConfig?.client_id &&
+    !isSameMicrosoftClientId(existingConfig.client_id, effectiveClientId)
+  ) {
+    throw new MicrosoftEmailIssuerError(
+      MICROSOFT_EMAIL_ISSUER_ERRORS.CLIENT_MISMATCH_RECONNECT_REQUIRED,
+      'Reconnect the mailbox to switch Microsoft applications before saving'
+    );
+  }
+
+  let pinnedClientId = preserveIssuingApp ? existingConfig.client_id : effectiveClientId;
+  let pinnedClientSecret = preserveIssuingApp ? existingConfig.client_secret : effectiveClientSecret;
+  let pinnedProfileId = preserveIssuingApp ? existingConfig.microsoft_profile_id : effectiveProfileId;
+  let pinnedClientSecretRef = preserveIssuingApp ? existingConfig.client_secret_ref : effectiveClientSecretRef;
+  let pinnedTenantId = preserveIssuingApp ? existingConfig.tenant_id : effectiveTenantId;
+
+  if (preserveIssuingApp && issuer) {
+    // Same app, explicit choice: let the selected profile's (possibly rotated)
+    // secret and secret reference flow through so rotation needs no reconnect.
+    if (effectiveClientSecretRef) pinnedClientSecretRef = effectiveClientSecretRef;
+    if (effectiveProfileId) pinnedProfileId = effectiveProfileId;
+    if (effectiveClientSecret) pinnedClientSecret = effectiveClientSecret;
+  }
 
   // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
   const msConfigRows = await tenantDb(trx, tenant)
@@ -683,6 +737,8 @@ export const getEmailProviders = withAuth(async (
             'tenant',
             'client_id',
             'client_secret',
+            'microsoft_profile_id',
+            'client_secret_ref',
             'tenant_id',
             'redirect_uri',
             'auto_process_emails',
@@ -807,6 +863,7 @@ export const upsertEmailProvider = withAuth(async (
   isActive: boolean;
   inboundTicketDefaultsId?: string;
   microsoftConfig?: MicrosoftEmailProviderConfigInput;
+  microsoftIssuer?: MicrosoftEmailIssuerChoice;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -828,7 +885,8 @@ export const upsertEmailProvider = withAuth(async (
           trx,
           tenant,
           base.id,
-          data.microsoftConfig
+          data.microsoftConfig,
+          data.microsoftIssuer
         );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
@@ -909,6 +967,9 @@ export const upsertEmailProvider = withAuth(async (
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
     }
+    if (error instanceof MicrosoftEmailIssuerError) {
+      return emailProviderActionError(error.message, error.code);
+    }
     console.error('Unexpected failure while upserting email provider:', error);
     return actionError('Failed to save email provider. Please review the settings and try again.');
   }
@@ -926,6 +987,7 @@ export const createEmailProvider = withAuth(async (
   isActive: boolean;
   inboundTicketDefaultsId?: string;
   microsoftConfig?: MicrosoftEmailProviderConfigInput;
+  microsoftIssuer?: MicrosoftEmailIssuerChoice;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
@@ -948,6 +1010,7 @@ export const updateEmailProvider = withAuth(async (
     isActive: boolean;
     inboundTicketDefaultsId?: string;
     microsoftConfig?: MicrosoftEmailProviderConfigInput;
+    microsoftIssuer?: MicrosoftEmailIssuerChoice;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
@@ -969,7 +1032,8 @@ export const updateEmailProvider = withAuth(async (
           trx,
           tenant,
           base.id,
-          data.microsoftConfig
+          data.microsoftConfig,
+          data.microsoftIssuer
         );
       } else if (data.providerType === 'google') {
         base.googleConfig = await persistGoogleConfig(trx, tenant, base.id, data.googleConfig);
@@ -1049,6 +1113,9 @@ export const updateEmailProvider = withAuth(async (
   } catch (error) {
     if (error instanceof ExpectedEmailProviderActionError) {
       return actionError(error.message);
+    }
+    if (error instanceof MicrosoftEmailIssuerError) {
+      return emailProviderActionError(error.message, error.code);
     }
     console.error('Unexpected failure while updating email provider:', error);
     return actionError('Failed to update email provider. Please review the settings and try again.');

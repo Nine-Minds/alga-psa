@@ -14,6 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CheckCircle } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
   updateEmailProvider,
   upsertEmailProvider,
   initiateEmailOAuth,
+  getMicrosoftEmailIssuerOptions,
 } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
@@ -31,6 +33,11 @@ import {
   isActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
 import type { MicrosoftEmailSetupReadiness } from '../../actions/integrations/providerReadiness';
+import type {
+  MicrosoftEmailIssuerChoice,
+  MicrosoftEmailIssuerOption,
+  MicrosoftEmailIssuerOptions,
+} from '../../lib/microsoftEmailIssuerSelection';
 
 type MicrosoftProviderFormData = {
   providerName: string;
@@ -66,9 +73,110 @@ export function MicrosoftProviderForm({
   const oauthCleanupRef = useRef<(() => void) | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
+  const [issuerOptions, setIssuerOptions] = useState<MicrosoftEmailIssuerOptions | null>(null);
+  const [issuerOptionsLoading, setIssuerOptionsLoading] = useState(false);
+  const [issuerOptionsError, setIssuerOptionsError] = useState<string | null>(null);
+  const [selectedIssuer, setSelectedIssuer] = useState<MicrosoftEmailIssuerChoice | null>(null);
 
   const isEditing = !!provider;
-  const providerSetupReady = emailSetup?.state === 'ready';
+  // A tenant profile awaiting Microsoft 365 admin approval. Only surfaced as a
+  // status note on the bring-your-own-app path — never as a global warning.
+  const ownAppPendingConsent = emailSetup?.state === 'pending_admin_consent';
+
+  // The app that issued this provider's refresh token, derived from the
+  // persisted provider row (never from the current binding).
+  const currentIssuer = React.useMemo<MicrosoftEmailIssuerChoice | null>(() => {
+    const config = provider?.microsoftConfig;
+    if (!config?.client_id) return null;
+    return {
+      kind: config.microsoft_profile_id ? 'profile' : 'managed',
+      ...(config.microsoft_profile_id ? { profileId: config.microsoft_profile_id } : {}),
+      clientId: config.client_id,
+    };
+  }, [provider]);
+
+  const resolveIssuerLabel = React.useCallback(
+    (choice: MicrosoftEmailIssuerChoice | null): string | null => {
+      if (!issuerOptions || !choice) return null;
+      const option = [...(issuerOptions.managed ? [issuerOptions.managed] : []), ...issuerOptions.profiles].find(
+        (candidate) => candidate.clientId.toLowerCase() === choice.clientId.toLowerCase()
+      );
+      return option?.label ?? null;
+    },
+    [issuerOptions]
+  );
+
+  // Label for the app currently selected in the form (pending reauthorization).
+  const selectedIssuerLabel = React.useMemo(
+    () => resolveIssuerLabel(selectedIssuer),
+    [resolveIssuerLabel, selectedIssuer]
+  );
+
+  // Label for the app that actually issued this provider's refresh token.
+  // "Current" must always come from the persisted provider config (server
+  // truth), never from the unsaved selection — selecting a different app is
+  // pending reauthorization until the callback persists it.
+  const currentIssuerLabel = React.useMemo(
+    () => resolveIssuerLabel(currentIssuer),
+    [resolveIssuerLabel, currentIssuer]
+  );
+
+  const isSwitchingIssuer = Boolean(
+    isEditing &&
+    currentIssuer &&
+    selectedIssuer &&
+    currentIssuer.clientId.toLowerCase() !== selectedIssuer.clientId.toLowerCase()
+  );
+
+  // Load the eligible Microsoft applications once and default the selection.
+  const loadIssuerOptions = React.useCallback(async () => {
+    setIssuerOptionsLoading(true);
+    setIssuerOptionsError(null);
+    try {
+      const result = await getMicrosoftEmailIssuerOptions();
+      if (!result.success || !result.issuers) {
+        setIssuerOptionsError(result.error || 'Failed to load Microsoft app options');
+        return;
+      }
+      const options = result.issuers;
+      setIssuerOptions(options);
+
+      const allOptions = [...(options.managed ? [options.managed] : []), ...options.profiles];
+      const matchesClientId = (candidate: MicrosoftEmailIssuerOption) =>
+        candidate.clientId.toLowerCase() === (provider?.microsoftConfig?.client_id || '').toLowerCase();
+
+      let defaultChoice: MicrosoftEmailIssuerChoice | null = null;
+      const current = provider?.microsoftConfig;
+      if (current?.client_id) {
+        const managedMatch = options.managed && matchesClientId(options.managed) ? options.managed : undefined;
+        const profileMatch = options.profiles.find(matchesClientId);
+        if (current.microsoft_profile_id && profileMatch) {
+          defaultChoice = { kind: 'profile', profileId: profileMatch.profileId, clientId: profileMatch.clientId };
+        } else if (managedMatch) {
+          defaultChoice = { kind: 'managed', clientId: managedMatch.clientId };
+        } else if (profileMatch) {
+          defaultChoice = { kind: 'profile', profileId: profileMatch.profileId, clientId: profileMatch.clientId };
+        }
+      }
+      if (!defaultChoice && options.recommended) defaultChoice = options.recommended;
+      if (!defaultChoice && options.managed) defaultChoice = { kind: 'managed', clientId: options.managed.clientId };
+      if (!defaultChoice && options.profiles[0]) {
+        defaultChoice = { kind: 'profile', profileId: options.profiles[0].profileId, clientId: options.profiles[0].clientId };
+      }
+      if (!defaultChoice && allOptions[0]) {
+        defaultChoice = { kind: allOptions[0].kind, ...(allOptions[0].profileId ? { profileId: allOptions[0].profileId } : {}), clientId: allOptions[0].clientId };
+      }
+      setSelectedIssuer(defaultChoice);
+    } catch (e) {
+      setIssuerOptionsError('Failed to load Microsoft app options');
+    } finally {
+      setIssuerOptionsLoading(false);
+    }
+  }, [provider]);
+
+  React.useEffect(() => {
+    void loadIssuerOptions();
+  }, [loadIssuerOptions]);
 
   const microsoftProviderSchema = z.object({
     providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Configuration name is required' })),
@@ -152,6 +260,7 @@ export function MicrosoftProviderForm({
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
+        microsoftIssuer: selectedIssuer || undefined,
         microsoftConfig: {
           client_id: '',
           client_secret: '',
@@ -196,6 +305,13 @@ export function MicrosoftProviderForm({
         return;
       }
 
+      // An explicit issuer choice is mandatory so the server never guesses the app.
+      if (!selectedIssuer) {
+        setOauthStatus('error');
+        setError(t('forms.microsoft.validation.issuerRequired', { defaultValue: 'Choose a Microsoft app before signing in' }));
+        return;
+      }
+
       // Save provider first so credentials are available for OAuth
       let providerId = provider?.id;
       if (!providerId) {
@@ -207,6 +323,7 @@ export function MicrosoftProviderForm({
           mailbox: formData.mailbox,
           isActive: formData.isActive,
           inboundTicketDefaultsId: formData.inboundTicketDefaultsId || undefined,
+          microsoftIssuer: selectedIssuer,
           microsoftConfig: {
             client_id: '',
             client_secret: '',
@@ -228,6 +345,8 @@ export function MicrosoftProviderForm({
       const oauthInit = await initiateEmailOAuth({
         provider: 'microsoft',
         providerId: providerId,
+        purpose: isEditing ? 'reconnect' : 'create',
+        issuer: selectedIssuer,
       });
       if (!oauthInit.success) {
         throw new Error((oauthInit as { success: false; error: string }).error || t('forms.microsoft.validation.oauthInitiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
@@ -421,60 +540,197 @@ export function MicrosoftProviderForm({
           <CardTitle>{t('forms.microsoft.hostedOauth.sectionTitle', { defaultValue: 'Connect Microsoft 365' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {emailSetup === undefined ? (
-            <Alert variant="info">
-              <AlertDescription>
-                {t('forms.microsoft.readiness.checking', { defaultValue: 'Checking Microsoft setup…' })}
-              </AlertDescription>
-            </Alert>
-          ) : emailSetup?.state === 'ready' ? (
-            <Alert variant="info">
-              <AlertDescription>
-                {t('forms.microsoft.readiness.ready', { defaultValue: 'Microsoft is set up. Sign in as this mailbox to finish.' })}
-              </AlertDescription>
-            </Alert>
-          ) : emailSetup?.state === 'pending_admin_consent' ? (
-            <Alert variant="warning">
-              <AlertDescription>
-                <div className="space-y-2">
-                  <div>{t('forms.microsoft.readiness.pending', { defaultValue: "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet." })}</div>
-                  <Button
-                    id="open-microsoft-providers-button"
+          {/* Explicit issuer choice: which Microsoft app authorizes this mailbox.
+              The picker is the single readiness surface — every option it lists
+              is fully authorized to sign in, so no separate setup banner. */}
+          <div className="space-y-3">
+            <div>
+              <div className="text-sm font-medium">
+                {t('forms.microsoft.issuer.title', { defaultValue: 'Microsoft app that authorizes this mailbox' })}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('forms.microsoft.issuer.description', {
+                  defaultValue: 'Choose which application signs in as this mailbox. This choice is stored with the mailbox and does not affect other services.',
+                })}
+              </p>
+            </div>
+
+            {issuerOptionsLoading ? (
+              <div className="space-y-2">
+                <div className="h-16 w-full animate-pulse rounded-lg border" />
+              </div>
+            ) : issuerOptionsError ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div>{issuerOptionsError}</div>
+                    <Button
+                      id="retry-microsoft-issuer-options-button"
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0"
+                      onClick={() => void loadIssuerOptions()}
+                    >
+                      {t('forms.microsoft.issuer.retry', { defaultValue: 'Try again' })}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : issuerOptions && (issuerOptions.managed || issuerOptions.profiles.length > 0) ? (
+              <div className="space-y-2">
+                {issuerOptions.managed && (
+                  <button
+                    id="microsoft-issuer-option-managed"
                     type="button"
-                    variant="link"
-                    className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    onClick={() => setSelectedIssuer({ kind: 'managed', clientId: issuerOptions.managed!.clientId })}
+                    className={`flex w-full items-start gap-3 rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
+                      selectedIssuer?.kind === 'managed'
+                        ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/20'
+                        : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] hover:bg-muted/30'
+                    }`}
                   >
-                    {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="warning">
-              <AlertDescription>
-                <div className="space-y-2">
-                  <div>{t('forms.microsoft.readiness.notConfigured', { defaultValue: "Microsoft isn't set up yet. Set it up once in Providers, then come back." })}</div>
-                  <Button
-                    id="set-up-microsoft-in-providers-button"
+                    <input
+                      id="microsoft-issuer-managed-radio"
+                      type="radio"
+                      name="microsoft-issuer"
+                      className="mt-1"
+                      checked={selectedIssuer?.kind === 'managed'}
+                      onChange={() => setSelectedIssuer({ kind: 'managed', clientId: issuerOptions.managed!.clientId })}
+                    />
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {t('forms.microsoft.issuer.managedLabel', { defaultValue: 'AlgaPSA app (managed by Nine Minds)' })}
+                        <Badge variant="success">{t('forms.microsoft.issuer.recommended', { defaultValue: 'Recommended' })}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t('forms.microsoft.issuer.managedDescription', { defaultValue: 'No Microsoft app registration is required on your side.' })}
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {issuerOptions.profiles.map((option) => (
+                  <button
+                    key={option.profileId}
+                    id={`microsoft-issuer-option-profile-${option.profileId}`}
                     type="button"
-                    variant="link"
-                    className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    onClick={() =>
+                      option.profileId &&
+                      setSelectedIssuer({ kind: 'profile', profileId: option.profileId, clientId: option.clientId })
+                    }
+                    className={`flex w-full items-start gap-3 rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
+                      selectedIssuer?.kind === 'profile' && selectedIssuer.profileId === option.profileId
+                        ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/20'
+                        : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] hover:bg-muted/30'
+                    }`}
                   >
-                    {t('forms.microsoft.readiness.setUpInProviders', { defaultValue: 'Set up in Providers' })}
-                  </Button>
+                    <input
+                      id={`microsoft-issuer-profile-radio-${option.profileId}`}
+                      type="radio"
+                      name="microsoft-issuer"
+                      className="mt-1"
+                      checked={selectedIssuer?.kind === 'profile' && selectedIssuer.profileId === option.profileId}
+                      onChange={() =>
+                        option.profileId &&
+                        setSelectedIssuer({ kind: 'profile', profileId: option.profileId, clientId: option.clientId })
+                      }
+                    />
+                    <div className="min-w-0 space-y-1">
+                      <div className="text-sm font-medium">{option.label}</div>
+                      <p className="break-all font-mono text-xs text-muted-foreground">{option.clientId}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <Alert variant="warning">
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div>
+                      {ownAppPendingConsent
+                        ? t('forms.microsoft.issuer.pendingConsentEmpty', { defaultValue: 'Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.' })
+                        : t('forms.microsoft.issuer.noneAvailable', { defaultValue: 'To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.' })}
+                    </div>
+                    <Button
+                      id="microsoft-issuer-none-open-providers-button"
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0"
+                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    >
+                      {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Progressive disclosure: bringing your own Microsoft app is an
+                optional path, so it is a quiet prompt — not a warning — and only
+                appears while no tenant app is usable yet. */}
+            {!issuerOptionsLoading && !issuerOptionsError && issuerOptions?.managed && issuerOptions.profiles.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                {ownAppPendingConsent
+                  ? t('forms.microsoft.issuer.pendingConsentHint', { defaultValue: 'Your own Microsoft app is still waiting for Microsoft 365 administrator approval.' })
+                  : t('forms.microsoft.issuer.ownAppPrompt', { defaultValue: 'Prefer to sign in with your own Microsoft app?' })}{' '}
+                <Button
+                  id="microsoft-issuer-own-app-providers-link"
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                >
+                  {ownAppPendingConsent
+                    ? t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })
+                    : t('forms.microsoft.issuer.ownAppSetupLink', { defaultValue: 'Set it up in Providers' })}
+                </Button>
+              </p>
+            )}
+
+            {isEditing && currentIssuer && (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {t('forms.microsoft.issuer.currentApp', {
+                    defaultValue: 'Current app: {{app}}',
+                    app: currentIssuerLabel || currentIssuer.clientId,
+                  })}
                 </div>
-              </AlertDescription>
-            </Alert>
-          )}
+
+                {isSwitchingIssuer && selectedIssuer && (
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2">
+                    <span className="text-xs font-medium">
+                      {t('forms.microsoft.issuer.selectedApp', {
+                        defaultValue: 'Selected app: {{app}}',
+                        app: selectedIssuerLabel || selectedIssuer.clientId,
+                      })}
+                    </span>
+                    <Badge variant="warning">
+                      {t('forms.microsoft.issuer.pendingReauth', {
+                        defaultValue: 'Pending reauthorization',
+                      })}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isSwitchingIssuer && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  {t('forms.microsoft.issuer.switchWarning', {
+                    defaultValue: 'Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.',
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
 
           <div className="flex justify-end">
             <Button
               id="oauth-authorize-btn"
               type="button"
               onClick={handleOAuthAuthorization}
-              disabled={!providerSetupReady || oauthStatus === 'authorizing'}
+              disabled={issuerOptionsLoading || !selectedIssuer || oauthStatus === 'authorizing'}
             >
               {oauthStatus === 'authorizing' && t('forms.microsoft.oauth.signingIn', { defaultValue: 'Signing in…' })}
               {oauthStatus === 'success' && <><CheckCircle className="mr-2 h-4 w-4" />{t('forms.common.oauth.authorized', { defaultValue: 'Connected' })}</>}

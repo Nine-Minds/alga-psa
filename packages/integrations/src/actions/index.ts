@@ -122,6 +122,7 @@ export {
 export {
   getMicrosoftIntegrationStatus,
   getMicrosoftConsumerSetupStatus,
+  getMicrosoftEmailIssuerOptions,
   listMicrosoftProfiles,
   listMicrosoftConsumerBindings,
   createMicrosoftProfile,
@@ -132,7 +133,8 @@ export {
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
-  resetMicrosoftProvidersToDisconnected
+  resetMicrosoftProvidersToDisconnected,
+  runMicrosoftEmailIssuerBackfill
 } from './integrations/microsoftActions';
 export {
   getMicrosoftEmailSetupOptions,

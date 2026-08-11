@@ -168,6 +168,12 @@ async function buildMicrosoftProviderConfig(
       access_token: config.access_token,
       refresh_token: config.refresh_token,
       token_expires_at: config.token_expires_at,
+      // The persisted profile pin is authoritative for which app issued the
+      // refresh token. Propagate it so resolveMicrosoftEmailProviderConfig
+      // resolves ONLY through the pinned profile and fails closed when the
+      // pin is unresolvable — never silently falls back to the Email binding.
+      microsoft_profile_id: config.microsoft_profile_id ?? null,
+      client_secret_ref: config.client_secret_ref ?? null,
     },
   } as any;
 }

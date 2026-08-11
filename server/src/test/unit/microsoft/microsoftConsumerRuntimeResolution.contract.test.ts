@@ -67,18 +67,33 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(sharedResolverSource).toContain('resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider, consumerType)');
     expect(sharedResolverSource).not.toContain("from '../actions/integrations/microsoftActions'");
 
-    expect(emailOauthActionSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
-    expect(emailOauthActionSource).toContain("credentialPreference: 'tenant'");
+    // Email OAuth initiation resolves an explicit issuer choice (managed or an
+    // eligible tenant profile) instead of silently following the Email binding.
+    expect(emailOauthActionSource).toContain('resolveMicrosoftEmailIssuerChoice(tenant, params.issuer)');
+    expect(emailOauthActionSource).toContain('purpose');
+    expect(emailOauthActionSource).not.toContain("credentialPreference: 'tenant'");
+    expect(emailOauthActionSource).not.toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email', {");
     expect(emailOauthActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");
     expect(emailOauthActionSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
     expect(emailProviderActionSource).toContain('preserveIssuingApp');
     expect(emailProviderActionSource).toContain('existingConfig?.refresh_token && !config.refresh_token');
+    // Explicit selection is authoritative; the binding survives only as the
+    // conservative legacy fallback inside persistence.
+    expect(emailProviderActionSource).toContain('resolveMicrosoftEmailIssuerChoice(tenant, issuer)');
+    expect(emailProviderActionSource).toContain('CLIENT_MISMATCH_RECONNECT_REQUIRED');
 
-    expect(emailCallbackSource).toContain("resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email')");
+    expect(emailCallbackSource).toContain('resolveMicrosoftEmailIssuerChoice(');
+    expect(emailCallbackSource).toContain('consumeMicrosoftEmailOAuthNonce');
     expect(emailCallbackSource).toContain('persistProviderError');
     expect(emailCallbackSource).toContain("status: 'error'");
     expect(emailCallbackSource).toContain('error_message: message');
-    expect(emailCallbackSource).toContain("error: 'token_persistence_failed'");
+    expect(emailCallbackSource).toContain('CALLBACK_PERSISTENCE_FAILED');
+    // Every callback verifies the signed state; the legacy binding resolution
+    // path is gone — no unsigned state, no automatic binding-based resolution.
+    expect(emailCallbackSource).toContain('verifySignedState');
+    expect(emailCallbackSource).not.toContain("resolveMicrosoftConsumerProfileConfig(stateContext.tenant, 'email')");
+    expect(emailCallbackSource).not.toContain('parseStateValue');
+    expect(emailCallbackSource).not.toContain('microsoftCredentialSource');
     expect(emailCallbackSource).not.toContain("getTenantSecret(stateData.tenant, 'microsoft_client_id')");
     expect(emailCallbackSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 
