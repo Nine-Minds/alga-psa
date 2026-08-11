@@ -1120,7 +1120,8 @@
       "unknownClient": "Unknown client",
       "status": "Status",
       "system": "System",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Invoice Date"
     },
     "states": {
       "empty": "No data available",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Visible in client portal",
       "dialogTitle": "Select Image",
       "dialogDescription": "Choose an image from your documents to use in this template."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Invoice Details",
+    "description": "Edit draft invoice metadata before finalizing.",
+    "actions": {
+      "saving": "Saving..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Invoice number is required.",
+      "invoiceDateRequired": "Invoice date is required."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "{{type}} Layouts",
+    "description": "Design the layouts used to render {{type}} PDFs and previews.",
+    "availableLayouts": "Available Layouts",
+    "actions": {
+      "newLayout": "New Layout"
+    },
+    "columns": {
+      "name": "Name",
+      "source": "Source"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standard)",
+      "copyName": "{{name}} (Copy)"
+    },
+    "toasts": {
+      "cloned": "Template cloned",
+      "defaultUpdated": "Default template updated",
+      "deleted": "Template deleted"
+    },
+    "errors": {
+      "loadFailed": "Failed to load {{type}} templates",
+      "cloneFailed": "Failed to clone template",
+      "setDefaultFailed": "Failed to set default template",
+      "deleteFailed": "Failed to delete template"
+    },
+    "deleteDialog": {
+      "title": "Delete {{type}} Layout",
+      "message": "Are you sure you want to delete \"{{name}}\"?"
+    },
+    "editor": {
+      "titles": {
+        "create": "New {{type}} Layout",
+        "edit": "Edit {{type}} Layout"
+      },
+      "description": "Design the {{type}} layout using the visual editor, then preview with sample data.",
+      "errorTitle": "{{type}} Layout Editor",
+      "sections": {
+        "details": "Layout Details"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "{{type}} Template"
+      },
+      "actions": {
+        "back": "Back to Layouts",
+        "save": "Save Layout"
+      },
+      "labels": {
+        "created": "Created: {{date}}",
+        "lastUpdated": "Last Updated: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Rendered against representative {{type}} sample data.",
+        "frameTitle": "{{type}} preview",
+        "empty": "Open this tab to generate an authoritative preview."
+      },
+      "errors": {
+        "nameRequired": "Template name is required.",
+        "astExportFailed": "Failed to export template from the visual workspace: {{message}}",
+        "saveFailed": "Failed to save {{type}} layout",
+        "previewFailed": "Failed to generate preview."
+      },
+      "toasts": {
+        "saved": "{{type}} layout saved"
+      }
+    },
+    "types": {
+      "salesOrder": "Sales Order",
+      "packingSlip": "Packing Slip",
+      "pickList": "Pick List"
     }
   }
 }

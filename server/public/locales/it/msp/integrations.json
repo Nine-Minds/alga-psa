@@ -1922,6 +1922,55 @@
         "saving": "Salvataggio…",
         "undepositedFunds": "Fondi non depositati (predefinito)",
         "catalogLoadError": "Impossibile caricare le opzioni di configurazione della sincronizzazione QuickBooks."
+      },
+      "itemImport": {
+        "description": "Importa i prodotti e i servizi QuickBooks nel catalogo servizi Alga per l’azienda QuickBooks collegata. QuickBooks rimane la fonte autorevole per nomi, tariffe, SKU, descrizioni e costi; il metodo di fatturazione, l’unità di misura e il tipo di servizio vengono impostati qui e in seguito gestiti da Alga. Questo passaggio è facoltativo: ignoralo con Avanti.",
+        "defaults": {
+          "title": "Valori predefiniti per gli articoli importati",
+          "serviceType": "Tipo di servizio (obbligatorio)",
+          "serviceTypePlaceholder": "Seleziona un tipo di servizio…",
+          "unitOfMeasure": "Unità di misura",
+          "serviceBillingMethod": "Metodo di fatturazione dei servizi",
+          "productBillingMethod": "Metodo di fatturazione dei prodotti",
+          "includeInactive": "Includi articoli QuickBooks inattivi (importati come inattivi)"
+        },
+        "billingMethods": {
+          "fixed": "Fisso",
+          "hourly": "A ore",
+          "usage": "A consumo"
+        },
+        "actions": {
+          "preview": "Anteprima importazione",
+          "previewing": "Caricamento anteprima…",
+          "previewRequiresServiceType": "Seleziona un tipo di servizio per abilitare l’anteprima.",
+          "execute": "Esegui importazione",
+          "executing": "Importazione…"
+        },
+        "preview": {
+          "summary": "Trovati {{total}} articoli QuickBooks per l’azienda collegata (realm {{realm}}): {{create}} da creare, {{update}} da aggiornare, {{link}} da collegare e {{skip}} da ignorare. Non è stato ancora scritto alcun dato.",
+          "groups": {
+            "create": "Da creare",
+            "update": "Da aggiornare",
+            "link": "Da collegare (già corrispondenti)",
+            "skip": "Da ignorare"
+          },
+          "qboName": "Nome QuickBooks: {{name}} (importato come «{{importedAs}}»)"
+        },
+        "flags": {
+          "inactive": "Inattivo in QuickBooks",
+          "unmappedTax": "Codice fiscale non associato",
+          "skuConflict": "Conflitto SKU",
+          "nameCollision": "Nome già associato",
+          "categorySkipped": "Categoria (non importata)"
+        },
+        "result": {
+          "summary": "Importazione completata — creati: {{created}}, aggiornati: {{updated}}, collegati: {{linked}}, ignorati: {{skipped}}.",
+          "summaryWithErrors": "Importazione completata — creati: {{created}}, aggiornati: {{updated}}, collegati: {{linked}}, ignorati: {{skipped}}, non riusciti: {{failed}}."
+        },
+        "errors": {
+          "previewFailed": "Impossibile caricare l’anteprima dell’importazione.",
+          "executeFailed": "Importazione non riuscita."
+        }
       }
     },
     "rmm": {

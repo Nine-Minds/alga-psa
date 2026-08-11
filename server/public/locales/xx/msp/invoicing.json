@@ -1120,7 +1120,8 @@
       "unknownClient": "11111",
       "status": "11111",
       "system": "11111",
-      "total": "11111"
+      "total": "11111",
+      "invoiceDate": "11111"
     },
     "states": {
       "empty": "11111",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "11111",
       "dialogTitle": "11111",
       "dialogDescription": "11111"
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "saving": "11111"
+    },
+    "errors": {
+      "invoiceNumberRequired": "11111",
+      "invoiceDateRequired": "11111"
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "11111",
+    "title": "11111 {{type}} 11111",
+    "description": "11111 {{type}} 11111",
+    "availableLayouts": "11111",
+    "actions": {
+      "newLayout": "11111"
+    },
+    "columns": {
+      "name": "11111",
+      "source": "11111"
+    },
+    "values": {
+      "nameWithStandardSuffix": "11111 {{name}} 11111",
+      "copyName": "11111 {{name}} 11111"
+    },
+    "toasts": {
+      "cloned": "11111",
+      "defaultUpdated": "11111",
+      "deleted": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111 {{type}} 11111",
+      "cloneFailed": "11111",
+      "setDefaultFailed": "11111",
+      "deleteFailed": "11111"
+    },
+    "deleteDialog": {
+      "title": "11111 {{type}} 11111",
+      "message": "11111 {{name}} 11111"
+    },
+    "editor": {
+      "titles": {
+        "create": "11111 {{type}} 11111",
+        "edit": "11111 {{type}} 11111"
+      },
+      "description": "11111 {{type}} 11111",
+      "errorTitle": "11111 {{type}} 11111",
+      "sections": {
+        "details": "11111"
+      },
+      "fields": {
+        "version": "11111"
+      },
+      "placeholders": {
+        "templateName": "11111 {{type}} 11111"
+      },
+      "actions": {
+        "back": "11111",
+        "save": "11111"
+      },
+      "labels": {
+        "created": "11111 {{date}} 11111",
+        "lastUpdated": "11111 {{date}} 11111"
+      },
+      "preview": {
+        "sampleNote": "11111 {{type}} 11111",
+        "frameTitle": "11111 {{type}} 11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "nameRequired": "11111",
+        "astExportFailed": "11111 {{message}} 11111",
+        "saveFailed": "11111 {{type}} 11111",
+        "previewFailed": "11111"
+      },
+      "toasts": {
+        "saved": "11111 {{type}} 11111"
+      }
+    },
+    "types": {
+      "salesOrder": "11111",
+      "packingSlip": "11111",
+      "pickList": "11111"
     }
   }
 }

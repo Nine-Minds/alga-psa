@@ -1120,7 +1120,8 @@
       "unknownClient": "Onbekende klant",
       "status": "Status",
       "system": "Systeem",
-      "total": "Totaal"
+      "total": "Totaal",
+      "invoiceDate": "Factuurdatum"
     },
     "states": {
       "empty": "Geen gegevens beschikbaar",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Zichtbaar in het klantenportaal",
       "dialogTitle": "Afbeelding selecteren",
       "dialogDescription": "Kies een afbeelding uit uw documenten om in deze sjabloon te gebruiken."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Factuurgegevens",
+    "description": "Bewerk de metagegevens van de conceptfactuur voordat u deze definitief maakt.",
+    "actions": {
+      "saving": "Opslaan..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Het factuurnummer is verplicht.",
+      "invoiceDateRequired": "De factuurdatum is verplicht."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "Indelingen voor {{type}}",
+    "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
+    "availableLayouts": "Beschikbare indelingen",
+    "actions": {
+      "newLayout": "Nieuwe indeling"
+    },
+    "columns": {
+      "name": "Naam",
+      "source": "Bron"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standaard)",
+      "copyName": "{{name}} (Kopie)"
+    },
+    "toasts": {
+      "cloned": "Sjabloon gedupliceerd",
+      "defaultUpdated": "Standaardsjabloon bijgewerkt",
+      "deleted": "Sjabloon verwijderd"
+    },
+    "errors": {
+      "loadFailed": "Sjablonen voor {{type}} laden mislukt",
+      "cloneFailed": "Sjabloon dupliceren mislukt",
+      "setDefaultFailed": "Standaardsjabloon instellen mislukt",
+      "deleteFailed": "Sjabloon verwijderen mislukt"
+    },
+    "deleteDialog": {
+      "title": "Indeling voor {{type}} verwijderen",
+      "message": "Weet u zeker dat u ‘{{name}}’ wilt verwijderen?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nieuwe indeling voor {{type}}",
+        "edit": "Indeling voor {{type}} bewerken"
+      },
+      "description": "Ontwerp de indeling voor {{type}} in de visuele editor en bekijk deze daarna met voorbeeldgegevens.",
+      "errorTitle": "Indelingseditor voor {{type}}",
+      "sections": {
+        "details": "Indelingsgegevens"
+      },
+      "fields": {
+        "version": "Versie"
+      },
+      "placeholders": {
+        "templateName": "Sjabloon voor {{type}}"
+      },
+      "actions": {
+        "back": "Terug naar indelingen",
+        "save": "Indeling opslaan"
+      },
+      "labels": {
+        "created": "Gemaakt: {{date}}",
+        "lastUpdated": "Laatst bijgewerkt: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
+        "frameTitle": "Voorbeeld van {{type}}",
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+      },
+      "errors": {
+        "nameRequired": "De naam van het sjabloon is verplicht.",
+        "astExportFailed": "Sjabloon exporteren uit de visuele werkruimte mislukt: {{message}}",
+        "saveFailed": "Indeling voor {{type}} opslaan mislukt",
+        "previewFailed": "Voorbeeld genereren mislukt."
+      },
+      "toasts": {
+        "saved": "Indeling voor {{type}} opgeslagen"
+      }
+    },
+    "types": {
+      "salesOrder": "Verkooporder",
+      "packingSlip": "Pakbon",
+      "pickList": "Picklijst"
     }
   }
 }

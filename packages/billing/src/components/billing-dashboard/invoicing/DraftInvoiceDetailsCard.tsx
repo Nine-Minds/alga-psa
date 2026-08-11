@@ -18,6 +18,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toPlainDate } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { DateValue, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import {
   updateDraftInvoiceProperties,
@@ -78,6 +79,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   invoice,
   onSaved,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const { money } = useCurrencyFormat();
   const initialState = useMemo(() => (invoice ? buildFormState(invoice) : null), [
     invoice?.invoice_id,
@@ -128,13 +130,17 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
     const trimmedInvoiceNumber = formState.invoiceNumber.trim();
 
     if (!trimmedInvoiceNumber) {
-      setInvoiceNumberError('Invoice number is required.');
+      setInvoiceNumberError(t('draftInvoiceDetails.errors.invoiceNumberRequired', {
+        defaultValue: 'Invoice number is required.',
+      }));
       setFormError(null);
       return;
     }
 
     if (!formState.invoiceDate) {
-      setFormError('Invoice date is required.');
+      setFormError(t('draftInvoiceDetails.errors.invoiceDateRequired', {
+        defaultValue: 'Invoice date is required.',
+      }));
       return;
     }
 
@@ -157,7 +163,9 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           message === 'Invoice number must be unique' ||
           message === 'Invoice number already exists. Choose a different number.'
         ) {
-          setInvoiceNumberError(message === 'Invoice number is required' ? 'Invoice number is required.' : message);
+          setInvoiceNumberError(message === 'Invoice number is required'
+            ? t('draftInvoiceDetails.errors.invoiceNumberRequired', { defaultValue: 'Invoice number is required.' })
+            : message);
           setFormError(null);
         } else {
           setFormError(message);
@@ -187,7 +195,9 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         message === 'Invoice number must be unique' ||
         message === 'Invoice number already exists. Choose a different number.'
       ) {
-        setInvoiceNumberError(message === 'Invoice number is required' ? 'Invoice number is required.' : message);
+        setInvoiceNumberError(message === 'Invoice number is required'
+          ? t('draftInvoiceDetails.errors.invoiceNumberRequired', { defaultValue: 'Invoice number is required.' })
+          : message);
         setFormError(null);
       } else {
         setFormError(message);
@@ -206,8 +216,10 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   return (
     <Card className="mb-4" id="draft-invoice-details-card">
       <CardHeader className="pb-4">
-        <CardTitle>Invoice Details</CardTitle>
-        <CardDescription>Edit draft invoice metadata before finalizing.</CardDescription>
+        <CardTitle>{t('draftInvoiceDetails.title', { defaultValue: 'Invoice Details' })}</CardTitle>
+        <CardDescription>
+          {t('draftInvoiceDetails.description', { defaultValue: 'Edit draft invoice metadata before finalizing.' })}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {formError ? (
@@ -219,7 +231,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         <div className="grid gap-4 md:grid-cols-2">
           <Input
             id="draft-invoice-number-input"
-            label="Invoice Number"
+            label={t('common.labels.invoiceNumber', { defaultValue: 'Invoice Number' })}
             value={formState.invoiceNumber}
             onChange={(event) => {
               setFormState((current) => ({ ...current, invoiceNumber: event.target.value }));
@@ -230,18 +242,26 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           />
 
           <div className="space-y-1">
-            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Status</span>
+            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+              {t('common.labels.status', { defaultValue: 'Status' })}
+            </span>
             <div className="h-10 flex items-center">
-              <Badge variant="warning">{invoice.status === 'draft' ? 'Draft' : invoice.status}</Badge>
+              <Badge variant="warning">
+                {invoice.status === 'draft'
+                  ? t('draftsTab.status.draft', { defaultValue: 'Draft' })
+                  : invoice.status}
+              </Badge>
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label className="block mb-1" htmlFor="draft-invoice-date-input">Invoice Date</Label>
+            <Label className="block mb-1" htmlFor="draft-invoice-date-input">
+              {t('common.labels.invoiceDate', { defaultValue: 'Invoice Date' })}
+            </Label>
             <DatePicker
               id="draft-invoice-date-input"
-              label="Invoice Date"
-              placeholder="Invoice Date"
+              label={t('common.labels.invoiceDate', { defaultValue: 'Invoice Date' })}
+              placeholder={t('common.labels.invoiceDate', { defaultValue: 'Invoice Date' })}
               clearable
               className="w-full"
               value={dateFromString(formState.invoiceDate)}
@@ -252,11 +272,13 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           </div>
 
           <div className="space-y-1">
-            <Label className="block mb-1" htmlFor="draft-due-date-input">Due Date</Label>
+            <Label className="block mb-1" htmlFor="draft-due-date-input">
+              {t('common.labels.dueDate', { defaultValue: 'Due Date' })}
+            </Label>
             <DatePicker
               id="draft-due-date-input"
-              label="Due Date"
-              placeholder="Due Date"
+              label={t('common.labels.dueDate', { defaultValue: 'Due Date' })}
+              placeholder={t('common.labels.dueDate', { defaultValue: 'Due Date' })}
               clearable
               className="w-full"
               value={dateFromString(formState.dueDate)}
@@ -268,14 +290,18 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Client</span>
+            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+              {t('common.labels.client', { defaultValue: 'Client' })}
+            </span>
             <div className="min-h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]">
-              {invoice.client?.name || 'Unknown client'}
+              {invoice.client?.name || t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
             </div>
           </div>
 
           <div className="space-y-1">
-            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Amount</span>
+            <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+              {t('common.labels.amount', { defaultValue: 'Amount' })}
+            </span>
             <div className="min-h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]">
               {money(Number(invoice.total_amount ?? 0), invoice.currencyCode || undefined)}
             </div>
@@ -289,14 +315,16 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           onClick={handleCancel}
           disabled={!hasChanges || isSaving}
         >
-          Cancel
+          {t('common.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id="draft-invoice-details-save"
           onClick={handleSave}
           disabled={!hasChanges || isSaving}
         >
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving
+            ? t('draftInvoiceDetails.actions.saving', { defaultValue: 'Saving...' })
+            : t('common.actions.save', { defaultValue: 'Save' })}
         </Button>
       </CardFooter>
     </Card>

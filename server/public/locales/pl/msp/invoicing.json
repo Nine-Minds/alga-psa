@@ -1174,7 +1174,8 @@
       "unknownClient": "Nieznany klient",
       "status": "Status",
       "system": "System",
-      "total": "Razem"
+      "total": "Razem",
+      "invoiceDate": "Data faktury"
     },
     "states": {
       "empty": "Brak danych",
@@ -1965,6 +1966,93 @@
       "visibleInPortal": "Widoczny w portalu klienta",
       "dialogTitle": "Wybierz obraz",
       "dialogDescription": "Wybierz obraz ze swoich dokumentów, którego chcesz użyć w tym szablonie."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Szczegóły faktury",
+    "description": "Przed finalizacją edytuj metadane wersji roboczej faktury.",
+    "actions": {
+      "saving": "Zapisywanie..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Numer faktury jest wymagany.",
+      "invoiceDateRequired": "Data faktury jest wymagana."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Układy dokumentu: {{type}}",
+    "description": "Projektuj układy służące do generowania plików PDF i podglądów dla dokumentów typu „{{type}}”.",
+    "availableLayouts": "Dostępne układy",
+    "actions": {
+      "newLayout": "Nowy układ"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "source": "Źródło"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (wersja standardowa)",
+      "copyName": "{{name}} (kopia)"
+    },
+    "toasts": {
+      "cloned": "Szablon zduplikowany",
+      "defaultUpdated": "Domyślny szablon zaktualizowany",
+      "deleted": "Szablon usunięty"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się wczytać szablonów dokumentu typu „{{type}}”",
+      "cloneFailed": "Nie udało się zduplikować szablonu",
+      "setDefaultFailed": "Nie udało się ustawić domyślnego szablonu",
+      "deleteFailed": "Nie udało się usunąć szablonu"
+    },
+    "deleteDialog": {
+      "title": "Usuń układ dokumentu typu „{{type}}”",
+      "message": "Czy na pewno usunąć „{{name}}”?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nowy układ dokumentu typu „{{type}}”",
+        "edit": "Edytuj układ dokumentu typu „{{type}}”"
+      },
+      "description": "Zaprojektuj układ dokumentu typu „{{type}}” w edytorze wizualnym, a następnie wyświetl podgląd z danymi przykładowymi.",
+      "errorTitle": "Edytor układu dokumentu typu „{{type}}”",
+      "sections": {
+        "details": "Szczegóły układu"
+      },
+      "fields": {
+        "version": "Wersja"
+      },
+      "placeholders": {
+        "templateName": "Szablon dokumentu typu „{{type}}”"
+      },
+      "actions": {
+        "back": "Wróć do układów",
+        "save": "Zapisz układ"
+      },
+      "labels": {
+        "created": "Utworzono: {{date}}",
+        "lastUpdated": "Ostatnia aktualizacja: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
+        "frameTitle": "Podgląd dokumentu typu „{{type}}”",
+        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny."
+      },
+      "errors": {
+        "nameRequired": "Nazwa szablonu jest wymagana.",
+        "astExportFailed": "Nie udało się wyeksportować szablonu z wizualnego obszaru roboczego: {{message}}",
+        "saveFailed": "Nie udało się zapisać układu dokumentu typu „{{type}}”",
+        "previewFailed": "Nie udało się wygenerować podglądu."
+      },
+      "toasts": {
+        "saved": "Zapisano układ dokumentu typu „{{type}}”"
+      }
+    },
+    "types": {
+      "salesOrder": "Zamówienie sprzedaży",
+      "packingSlip": "Dokument dostawy",
+      "pickList": "Lista kompletacyjna"
     }
   }
 }

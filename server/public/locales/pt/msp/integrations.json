@@ -1922,6 +1922,55 @@
         "saving": "Salvando…",
         "undepositedFunds": "Fundos não depositados (padrão)",
         "catalogLoadError": "Falha ao carregar as opções de configuração da sincronização com o QuickBooks."
+      },
+      "itemImport": {
+        "description": "Importe seus produtos e serviços do QuickBooks para o catálogo de serviços do Alga para a empresa conectada do QuickBooks. O QuickBooks continua sendo a fonte oficial para nomes, preços, SKUs, descrições e custos; o método de faturamento, a unidade de medida e o tipo de serviço são definidos aqui e depois passam a ser gerenciados no Alga. Esta etapa é opcional — pule-a com Avançar.",
+        "defaults": {
+          "title": "Padrões para os itens importados",
+          "serviceType": "Tipo de serviço (obrigatório)",
+          "serviceTypePlaceholder": "Selecione um tipo de serviço…",
+          "unitOfMeasure": "Unidade de medida",
+          "serviceBillingMethod": "Método de faturamento para serviços",
+          "productBillingMethod": "Método de faturamento para produtos",
+          "includeInactive": "Incluir itens inativos do QuickBooks (importados como inativos)"
+        },
+        "billingMethods": {
+          "fixed": "Fixo",
+          "hourly": "Por hora",
+          "usage": "Por uso"
+        },
+        "actions": {
+          "preview": "Pré-visualizar importação",
+          "previewing": "Carregando pré-visualização…",
+          "previewRequiresServiceType": "Selecione um tipo de serviço para habilitar a pré-visualização.",
+          "execute": "Executar importação",
+          "executing": "Importando…"
+        },
+        "preview": {
+          "summary": "Foram encontrados {{total}} itens do QuickBooks para a empresa conectada (realm {{realm}}): {{create}} para criar, {{update}} para atualizar, {{link}} para vincular e {{skip}} para ignorar. Nenhum dado foi gravado ainda.",
+          "groups": {
+            "create": "Para criar",
+            "update": "Para atualizar",
+            "link": "Para vincular (já correspondente)",
+            "skip": "Para ignorar"
+          },
+          "qboName": "Nome no QuickBooks: {{name}} (importado como “{{importedAs}}”)"
+        },
+        "flags": {
+          "inactive": "Inativo no QuickBooks",
+          "unmappedTax": "Código tributário não mapeado",
+          "skuConflict": "Conflito de SKU",
+          "nameCollision": "Nome já mapeado",
+          "categorySkipped": "Categoria (não importada)"
+        },
+        "result": {
+          "summary": "Importação concluída — criados: {{created}}, atualizados: {{updated}}, vinculados: {{linked}}, ignorados: {{skipped}}.",
+          "summaryWithErrors": "Importação concluída — criados: {{created}}, atualizados: {{updated}}, vinculados: {{linked}}, ignorados: {{skipped}}, falhas: {{failed}}."
+        },
+        "errors": {
+          "previewFailed": "Falha ao carregar a pré-visualização da importação.",
+          "executeFailed": "A importação falhou."
+        }
       }
     },
     "rmm": {

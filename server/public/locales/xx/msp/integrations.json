@@ -1945,6 +1945,55 @@
         "saving": "11111",
         "undepositedFunds": "11111",
         "catalogLoadError": "11111"
+      },
+      "itemImport": {
+        "description": "11111",
+        "defaults": {
+          "title": "11111",
+          "serviceType": "11111",
+          "serviceTypePlaceholder": "11111",
+          "unitOfMeasure": "11111",
+          "serviceBillingMethod": "11111",
+          "productBillingMethod": "11111",
+          "includeInactive": "11111"
+        },
+        "billingMethods": {
+          "fixed": "11111",
+          "hourly": "11111",
+          "usage": "11111"
+        },
+        "actions": {
+          "preview": "11111",
+          "previewing": "11111",
+          "previewRequiresServiceType": "11111",
+          "execute": "11111",
+          "executing": "11111"
+        },
+        "preview": {
+          "summary": "11111 {{total}} 11111 {{realm}} 11111 {{create}} 11111 {{update}} 11111 {{link}} 11111 {{skip}} 11111",
+          "groups": {
+            "create": "11111",
+            "update": "11111",
+            "link": "11111",
+            "skip": "11111"
+          },
+          "qboName": "11111 {{name}} 11111 {{importedAs}} 11111"
+        },
+        "flags": {
+          "inactive": "11111",
+          "unmappedTax": "11111",
+          "skuConflict": "11111",
+          "nameCollision": "11111",
+          "categorySkipped": "11111"
+        },
+        "result": {
+          "summary": "11111 {{created}} 11111 {{updated}} 11111 {{linked}} 11111 {{skipped}} 11111",
+          "summaryWithErrors": "11111 {{created}} 11111 {{updated}} 11111 {{linked}} 11111 {{skipped}} 11111 {{failed}} 11111"
+        },
+        "errors": {
+          "previewFailed": "11111",
+          "executeFailed": "11111"
+        }
       }
     },
     "rmm": {

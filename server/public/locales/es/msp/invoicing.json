@@ -1120,7 +1120,8 @@
       "unknownClient": "Cliente desconocido",
       "status": "Estado",
       "system": "Sistema",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Fecha de la factura"
     },
     "states": {
       "empty": "No hay datos disponibles",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Visible en el portal del cliente",
       "dialogTitle": "Seleccionar imagen",
       "dialogDescription": "Elija una imagen de sus documentos para usarla en esta plantilla."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Detalles de la factura",
+    "description": "Edite los metadatos del borrador de factura antes de finalizarlo.",
+    "actions": {
+      "saving": "Guardando..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "El número de factura es obligatorio.",
+      "invoiceDateRequired": "La fecha de la factura es obligatoria."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Documento",
+    "title": "Diseños de {{type}}",
+    "description": "Configure los diseños utilizados para generar los PDF y las vistas previas de {{type}}.",
+    "availableLayouts": "Diseños disponibles",
+    "actions": {
+      "newLayout": "Nuevo diseño"
+    },
+    "columns": {
+      "name": "Nombre",
+      "source": "Fuente"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Estándar)",
+      "copyName": "{{name}} (Copia)"
+    },
+    "toasts": {
+      "cloned": "Plantilla duplicada",
+      "defaultUpdated": "Plantilla predeterminada actualizada",
+      "deleted": "Plantilla eliminada"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las plantillas de {{type}}",
+      "cloneFailed": "No se pudo duplicar la plantilla",
+      "setDefaultFailed": "No se pudo establecer la plantilla predeterminada",
+      "deleteFailed": "No se pudo eliminar la plantilla"
+    },
+    "deleteDialog": {
+      "title": "Eliminar diseño de {{type}}",
+      "message": "¿Seguro que desea eliminar «{{name}}»?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nuevo diseño de {{type}}",
+        "edit": "Editar diseño de {{type}}"
+      },
+      "description": "Diseñe el formato de {{type}} con el editor visual y luego obtenga una vista previa con datos de ejemplo.",
+      "errorTitle": "Editor de diseños de {{type}}",
+      "sections": {
+        "details": "Detalles del diseño"
+      },
+      "fields": {
+        "version": "Versión"
+      },
+      "placeholders": {
+        "templateName": "Plantilla de {{type}}"
+      },
+      "actions": {
+        "back": "Volver a los diseños",
+        "save": "Guardar diseño"
+      },
+      "labels": {
+        "created": "Creado: {{date}}",
+        "lastUpdated": "Última actualización: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Generado con datos de ejemplo representativos de {{type}}.",
+        "frameTitle": "Vista previa de {{type}}",
+        "empty": "Abra esta pestaña para generar una vista previa fidedigna."
+      },
+      "errors": {
+        "nameRequired": "El nombre de la plantilla es obligatorio.",
+        "astExportFailed": "No se pudo exportar la plantilla desde el espacio de trabajo visual: {{message}}",
+        "saveFailed": "No se pudo guardar el diseño de {{type}}",
+        "previewFailed": "No se pudo generar la vista previa."
+      },
+      "toasts": {
+        "saved": "Diseño de {{type}} guardado"
+      }
+    },
+    "types": {
+      "salesOrder": "Orden de venta",
+      "packingSlip": "Nota de entrega",
+      "pickList": "Lista de preparación de pedidos"
     }
   }
 }

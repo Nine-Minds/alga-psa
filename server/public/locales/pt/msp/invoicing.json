@@ -1120,7 +1120,8 @@
       "unknownClient": "Cliente desconhecido",
       "status": "Status",
       "system": "Sistema",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Data da fatura"
     },
     "states": {
       "empty": "Não há dados disponíveis",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Visível no portal do cliente",
       "dialogTitle": "Selecionar imagem",
       "dialogDescription": "Escolha uma imagem dos seus documentos para usar neste modelo."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Detalhes da fatura",
+    "description": "Edite os metadados do rascunho da fatura antes de finalizá-la.",
+    "actions": {
+      "saving": "Salvando..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "O número da fatura é obrigatório.",
+      "invoiceDateRequired": "A data da fatura é obrigatória."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Documento",
+    "title": "Layouts de {{type}}",
+    "description": "Crie os layouts usados para gerar PDFs e pré-visualizações de {{type}}.",
+    "availableLayouts": "Layouts disponíveis",
+    "actions": {
+      "newLayout": "Novo layout"
+    },
+    "columns": {
+      "name": "Nome",
+      "source": "Origem"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Padrão)",
+      "copyName": "{{name}} (Cópia)"
+    },
+    "toasts": {
+      "cloned": "Modelo duplicado",
+      "defaultUpdated": "Modelo padrão atualizado",
+      "deleted": "Modelo excluído"
+    },
+    "errors": {
+      "loadFailed": "Falha ao carregar os modelos de {{type}}",
+      "cloneFailed": "Falha ao duplicar o modelo",
+      "setDefaultFailed": "Falha ao definir o modelo padrão",
+      "deleteFailed": "Falha ao excluir o modelo"
+    },
+    "deleteDialog": {
+      "title": "Excluir layout de {{type}}",
+      "message": "Tem certeza de que deseja excluir “{{name}}”?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Novo layout de {{type}}",
+        "edit": "Editar layout de {{type}}"
+      },
+      "description": "Crie o layout de {{type}} no editor visual e depois visualize-o com dados de exemplo.",
+      "errorTitle": "Editor de layout de {{type}}",
+      "sections": {
+        "details": "Detalhes do layout"
+      },
+      "fields": {
+        "version": "Versão"
+      },
+      "placeholders": {
+        "templateName": "Modelo de {{type}}"
+      },
+      "actions": {
+        "back": "Voltar aos layouts",
+        "save": "Salvar layout"
+      },
+      "labels": {
+        "created": "Criado: {{date}}",
+        "lastUpdated": "Última atualização: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",
+        "frameTitle": "Pré-visualização de {{type}}",
+        "empty": "Abra esta guia para gerar uma pré-visualização confiável."
+      },
+      "errors": {
+        "nameRequired": "O nome do modelo é obrigatório.",
+        "astExportFailed": "Falha ao exportar o modelo do espaço de trabalho visual: {{message}}",
+        "saveFailed": "Falha ao salvar o layout de {{type}}",
+        "previewFailed": "Falha ao gerar a pré-visualização."
+      },
+      "toasts": {
+        "saved": "Layout de {{type}} salvo"
+      }
+    },
+    "types": {
+      "salesOrder": "Pedido de venda",
+      "packingSlip": "Nota de entrega",
+      "pickList": "Lista de separação"
     }
   }
 }

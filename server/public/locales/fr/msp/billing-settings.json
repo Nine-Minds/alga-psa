@@ -420,6 +420,46 @@
         "update": "Échec de la mise à jour du congé fiscal.",
         "delete": "Échec de la suppression du congé fiscal."
       }
+    },
+    "delegation": {
+      "defaultProvider": "votre système comptable",
+      "actions": {
+        "applying": "Application…"
+      },
+      "errors": {
+        "enableFailed": "Impossible d’activer le calcul externe des taxes."
+      },
+      "banner": {
+        "title": "Confier le calcul des taxes à {{provider}} ?",
+        "description": "{{provider}} est connecté. La plupart des clients préfèrent confier les taxes à leur système comptable afin que les deux comptabilités restent alignées — Alga transmettra les factures sans montant de taxe, {{provider}} appliquera ses règles fiscales et le résultat sera resynchronisé avec Alga. Alga n’est pas un logiciel fiscal ; nous recommandons de déléguer ce calcul.",
+        "actions": {
+          "enable": "Utiliser {{provider}} pour les taxes",
+          "dismiss": "Pas maintenant",
+          "dismissing": "Fermeture…"
+        },
+        "toast": {
+          "enabled": "Calcul externe des taxes activé.",
+          "enabledWithProvider": "{{provider}} calculera les taxes sur les nouvelles factures."
+        },
+        "errors": {
+          "loadState": "Impossible de charger l’état de la recommandation de délégation des taxes.",
+          "dismissFailed": "Impossible de fermer la bannière."
+        }
+      },
+      "nudge": {
+        "title": "Confier à {{provider}} le calcul des taxes sur les futures factures ?",
+        "description": "Recommandé. Les nouvelles factures seront transmises à {{provider}} sans montant de taxe, {{provider}} appliquera ses règles fiscales et la taxe calculée sera resynchronisée avec Alga afin que les deux comptabilités restent alignées. Vous pouvez modifier ce choix à tout moment dans Facturation → Paramètres des taxes.",
+        "actions": {
+          "enable": "Oui, utiliser {{provider}}",
+          "keepInternal": "Laisser Alga calculer les taxes"
+        },
+        "toast": {
+          "enabled": "{{provider}} calculera les taxes sur les nouvelles factures. Vous pouvez modifier ce choix dans les paramètres de facturation."
+        },
+        "errors": {
+          "loadSettings": "Impossible de charger les paramètres actuels des taxes."
+        }
+      }
     }
   },
   "payments": {

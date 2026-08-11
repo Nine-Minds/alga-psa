@@ -1,5 +1,6 @@
 'use client';
 
+import { documentTypeLabel } from './documentTypeLabel';
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { toast } from 'react-hot-toast';
@@ -8,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
-import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -83,11 +84,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
-  const typeLabel = useMemo(
-    () => (isDocumentType(documentType) ? getDocumentTypeRegistryEntry(documentType).label : 'Document'),
-    [documentType],
-  );
+  const typeLabel = useMemo(() => documentTypeLabel(documentType, t), [documentType, t]);
 
   const [template, setTemplate] = useState<DocumentTemplateDraft>(initialTemplate);
   const isNewTemplate = !initialTemplate.template_id;
@@ -195,7 +194,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       } catch (err) {
         if (cancelled) return;
         setPreviewHtml(null);
-        setPreviewError(err instanceof Error ? err.message : 'Failed to generate preview.');
+        setPreviewError(err instanceof Error
+          ? err.message
+          : t('documentTemplates.editor.errors.previewFailed', { defaultValue: 'Failed to generate preview.' }));
       } finally {
         if (!cancelled) setPreviewLoading(false);
       }
@@ -213,12 +214,13 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     visualWorkspaceTab,
     previewNonce,
     debouncedNodes,
+    t,
   ]);
 
   const handleSave = async () => {
     const trimmedName = (template.name ?? '').trim();
     if (!trimmedName) {
-      setError('Template name is required.');
+      setError(t('documentTemplates.editor.errors.nameRequired', { defaultValue: 'Template name is required.' }));
       return;
     }
 
@@ -229,8 +231,13 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       try {
         ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
       } catch (compileErr) {
-        const message = compileErr instanceof Error ? compileErr.message : 'Unknown AST export error';
-        setError(`Failed to export template from the visual workspace: ${message}`);
+        const message = compileErr instanceof Error
+          ? compileErr.message
+          : t('templateEditor.errors.unknownAstExport', { defaultValue: 'Unknown AST export error' });
+        setError(t('documentTemplates.editor.errors.astExportFailed', {
+          defaultValue: 'Failed to export template from the visual workspace: {{message}}',
+          message,
+        }));
         return;
       }
 
@@ -250,13 +257,25 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       }
 
       if (!result.success) {
-        throw new Error(result.error ?? `Failed to save ${typeLabel} layout`);
+        // Rethrown message is surfaced to the user by the catch below, so it is translated.
+        throw new Error(result.error ?? t('documentTemplates.editor.errors.saveFailed', {
+          defaultValue: 'Failed to save {{type}} layout',
+          type: typeLabel,
+        }));
       }
 
-      toast.success(`${typeLabel} layout saved`);
+      toast.success(t('documentTemplates.editor.toasts.saved', {
+        defaultValue: '{{type}} layout saved',
+        type: typeLabel,
+      }));
       onSave(result.template_id);
     } catch (saveErr) {
-      const message = saveErr instanceof Error ? saveErr.message : `Failed to save ${typeLabel} layout`;
+      const message = saveErr instanceof Error
+        ? saveErr.message
+        : t('documentTemplates.editor.errors.saveFailed', {
+          defaultValue: 'Failed to save {{type}} layout',
+          type: typeLabel,
+        });
       setError(message);
       toast.error(message);
     } finally {
@@ -269,45 +288,59 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">
-            {isNewTemplate ? `New ${typeLabel} Layout` : `Edit ${typeLabel} Layout`}
+            {isNewTemplate
+              ? t('documentTemplates.editor.titles.create', { defaultValue: 'New {{type}} Layout', type: typeLabel })
+              : t('documentTemplates.editor.titles.edit', { defaultValue: 'Edit {{type}} Layout', type: typeLabel })}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Design the {typeLabel.toLowerCase()} layout using the visual editor, then preview with sample data.
+            {t('documentTemplates.editor.description', {
+              defaultValue: 'Design the {{type}} layout using the visual editor, then preview with sample data.',
+              type: typeLabel,
+            })}
           </p>
         </div>
         <div className="flex gap-2">
           <Button id="document-template-editor-back" variant="outline" onClick={onCancel}>
-            Back to Layouts
+            {t('documentTemplates.editor.actions.back', { defaultValue: 'Back to Layouts' })}
           </Button>
           <Button id="document-template-editor-save" onClick={() => void handleSave()} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Layout'}
+            {isSaving
+              ? t('templateEditor.actions.saving', { defaultValue: 'Saving...' })
+              : t('documentTemplates.editor.actions.save', { defaultValue: 'Save Layout' })}
           </Button>
         </div>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>{typeLabel} Layout Editor</AlertTitle>
+          <AlertTitle>
+            {t('documentTemplates.editor.errorTitle', { defaultValue: '{{type}} Layout Editor', type: typeLabel })}
+          </AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Layout Details</CardTitle>
+          <CardTitle>{t('documentTemplates.editor.sections.details', { defaultValue: 'Layout Details' })}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            Template Name
+            {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
             <Input
+              id="document-template-name-input"
               value={template.name || ''}
               onChange={(event) => setTemplate((current) => ({ ...current, name: event.target.value }))}
-              placeholder={`${typeLabel} Template`}
+              placeholder={t('documentTemplates.editor.placeholders.templateName', {
+                defaultValue: '{{type}} Template',
+                type: typeLabel,
+              })}
             />
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            Version
+            {t('documentTemplates.editor.fields.version', { defaultValue: 'Version' })}
             <Input
+              id="document-template-version-input"
               type="number"
               min="1"
               step="1"
@@ -322,8 +355,20 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
       <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="visual" data-automation-id="document-template-editor-visual-tab">Visual</TabsTrigger>
-          <TabsTrigger value="code" data-automation-id="document-template-editor-code-tab">Code</TabsTrigger>
+          <TabsTrigger
+            id="document-template-editor-visual-tab"
+            value="visual"
+            data-automation-id="document-template-editor-visual-tab"
+          >
+            {t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}
+          </TabsTrigger>
+          <TabsTrigger
+            id="document-template-editor-code-tab"
+            value="code"
+            data-automation-id="document-template-editor-code-tab"
+          >
+            {t('templateEditor.tabs.code', { defaultValue: 'Code' })}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="visual" className="pt-4 space-y-3">
@@ -334,9 +379,27 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
               data-automation-id="document-designer-visual-workspace-tabs"
             >
               <TabsList>
-                <TabsTrigger value="design" data-automation-id="document-designer-design-tab">Design</TabsTrigger>
-                <TabsTrigger value="transforms" data-automation-id="document-designer-transforms-tab">Transforms</TabsTrigger>
-                <TabsTrigger value="preview" data-automation-id="document-designer-preview-tab">Preview</TabsTrigger>
+                <TabsTrigger
+                  id="document-designer-design-tab"
+                  value="design"
+                  data-automation-id="document-designer-design-tab"
+                >
+                  {t('designer.workspace.tabs.design', { defaultValue: 'Design' })}
+                </TabsTrigger>
+                <TabsTrigger
+                  id="document-designer-transforms-tab"
+                  value="transforms"
+                  data-automation-id="document-designer-transforms-tab"
+                >
+                  {t('designer.workspace.tabs.transforms', { defaultValue: 'Transforms' })}
+                </TabsTrigger>
+                <TabsTrigger
+                  id="document-designer-preview-tab"
+                  value="preview"
+                  data-automation-id="document-designer-preview-tab"
+                >
+                  {t('designer.workspace.tabs.preview', { defaultValue: 'Preview' })}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="design" className="pt-3">
@@ -363,7 +426,10 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Rendered against representative {typeLabel.toLowerCase()} sample data.
+                      {t('documentTemplates.editor.preview.sampleNote', {
+                        defaultValue: 'Rendered against representative {{type}} sample data.',
+                        type: typeLabel,
+                      })}
                     </p>
                     <Button
                       id="document-designer-preview-rerun-button"
@@ -372,7 +438,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                       disabled={previewLoading}
                       onClick={() => setPreviewNonce((value) => value + 1)}
                     >
-                      Re-run
+                      {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
                     </Button>
                   </div>
                 </div>
@@ -385,12 +451,17 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
                 <div className="border dark:border-[rgb(var(--color-border-200))] rounded overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] min-h-[480px]">
                   {previewLoading && (
-                    <div className="p-4 text-sm text-slate-500">Shaping and rendering preview...</div>
+                    <div className="p-4 text-sm text-slate-500">
+                      {t('designer.workspace.preview.loadingPreview', { defaultValue: 'Shaping and rendering preview...' })}
+                    </div>
                   )}
 
                   {!previewLoading && !previewError && previewHtml && (
                     <iframe
-                      title={`${typeLabel} preview`}
+                      title={t('documentTemplates.editor.preview.frameTitle', {
+                        defaultValue: '{{type}} preview',
+                        type: typeLabel,
+                      })}
                       srcDoc={previewHtml}
                       className="w-full min-h-[640px] border-0 bg-white"
                       data-automation-id="document-designer-preview-frame"
@@ -399,7 +470,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
                   {!previewLoading && !previewError && !previewHtml && (
                     <div className="p-4 text-sm text-slate-500">
-                      Open this tab to generate an authoritative preview.
+                      {t('documentTemplates.editor.preview.empty', {
+                        defaultValue: 'Open this tab to generate an authoritative preview.',
+                      })}
                     </div>
                   )}
                 </div>
@@ -411,7 +484,9 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
         <TabsContent value="code" className="pt-4">
           <Alert variant="info" className="mb-3">
             <AlertDescription>
-              Code view is generated from the Visual workspace and is read-only.
+              {t('templateEditor.alerts.codeReadonly', {
+                defaultValue: 'Code view is generated from the Visual workspace and is read-only.',
+              })}
             </AlertDescription>
           </Alert>
           <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
@@ -436,10 +511,20 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       <CardFooter className="flex justify-between items-center gap-2 px-0">
         <div className="text-sm text-muted-foreground">
           {template.created_at && (
-            <p>Created: {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            <p>
+              {t('documentTemplates.editor.labels.created', {
+                defaultValue: 'Created: {{date}}',
+                date: formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' }),
+              })}
+            </p>
           )}
           {template.updated_at && (
-            <p>Last Updated: {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            <p>
+              {t('documentTemplates.editor.labels.lastUpdated', {
+                defaultValue: 'Last Updated: {{date}}',
+                date: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
+              })}
+            </p>
           )}
         </div>
       </CardFooter>

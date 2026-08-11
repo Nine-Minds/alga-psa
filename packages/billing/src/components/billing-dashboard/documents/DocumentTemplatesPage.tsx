@@ -1,5 +1,6 @@
 'use client';
 
+import { documentTypeLabel } from './documentTypeLabel';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -48,12 +50,13 @@ const isDocumentTemplateActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentType }) => {
+  const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const registryEntry = useMemo(
     () => (isDocumentType(documentType) ? getDocumentTypeRegistryEntry(documentType) : null),
     [documentType],
   );
-  const typeLabel = registryEntry?.label ?? 'Document';
+  const typeLabel = documentTypeLabel(documentType, t);
   const documentTypeOptions = useMemo(
     () => DOCUMENT_TYPES.map((type) => ({
       type,
@@ -79,9 +82,14 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       setError(null);
     } catch (loadError) {
       console.error('Error loading document templates:', loadError);
-      setError(loadError instanceof Error ? loadError.message : `Failed to load ${typeLabel} templates`);
+      setError(loadError instanceof Error
+        ? loadError.message
+        : t('documentTemplates.errors.loadFailed', {
+          defaultValue: 'Failed to load {{type}} templates',
+          type: typeLabel,
+        }));
     }
-  }, [documentType, typeLabel]);
+  }, [documentType, t, typeLabel]);
 
   useEffect(() => {
     void fetchTemplates();
@@ -101,7 +109,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       setView({
         mode: 'editor',
         draft: {
-          name: `Copy of ${record.name}`,
+          name: t('templates.values.copyOfName', { defaultValue: 'Copy of {{name}}', name: record.name }),
           version: 1,
           templateAst: record.templateAst,
           source: 'standard',
@@ -120,12 +128,12 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         source: 'custom',
       },
     });
-  }, []);
+  }, [t]);
 
   const handleCloneTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
       const result = await saveDocumentTemplate(documentType, {
-        name: `${record.name} (Copy)`,
+        name: t('documentTemplates.values.copyName', { defaultValue: '{{name}} (Copy)', name: record.name }),
         version: 1,
         templateAst: record.templateAst,
         isClone: true,
@@ -135,16 +143,16 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         return;
       }
       if (!result.success) {
-        toast.error(result.error ?? 'Failed to clone template');
+        toast.error(result.error ?? t('documentTemplates.errors.cloneFailed', { defaultValue: 'Failed to clone template' }));
         return;
       }
-      toast.success('Template cloned');
+      toast.success(t('documentTemplates.toasts.cloned', { defaultValue: 'Template cloned' }));
       await fetchTemplates();
     } catch (err) {
       console.error('Error cloning template:', err);
-      toast.error('Failed to clone template');
+      toast.error(t('documentTemplates.errors.cloneFailed', { defaultValue: 'Failed to clone template' }));
     }
-  }, [documentType, fetchTemplates]);
+  }, [documentType, fetchTemplates, t]);
 
   const handleSetDefaultTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
@@ -170,13 +178,13 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
           return;
         }
       }
-      toast.success('Default template updated');
+      toast.success(t('documentTemplates.toasts.defaultUpdated', { defaultValue: 'Default template updated' }));
       await fetchTemplates();
     } catch (err) {
       console.error('Error setting default template:', err);
-      toast.error('Failed to set default template');
+      toast.error(t('documentTemplates.errors.setDefaultFailed', { defaultValue: 'Failed to set default template' }));
     }
-  }, [documentType, fetchTemplates]);
+  }, [documentType, fetchTemplates, t]);
 
   const handleDeleteTemplate = useCallback(async (record: DocumentTemplateListItem) => {
     try {
@@ -186,17 +194,17 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         return;
       }
       if (!result.success) {
-        toast.error(result.error ?? 'Failed to delete template');
+        toast.error(result.error ?? t('documentTemplates.errors.deleteFailed', { defaultValue: 'Failed to delete template' }));
         return;
       }
-      toast.success('Template deleted');
+      toast.success(t('documentTemplates.toasts.deleted', { defaultValue: 'Template deleted' }));
       setTemplateToDelete(null);
       await fetchTemplates();
     } catch (err) {
       console.error('Error deleting template:', err);
-      toast.error('Failed to delete template');
+      toast.error(t('documentTemplates.errors.deleteFailed', { defaultValue: 'Failed to delete template' }));
     }
-  }, [documentType, fetchTemplates]);
+  }, [documentType, fetchTemplates, t]);
 
   const handleEditorSaved = useCallback(async () => {
     setView({ mode: 'list' });
@@ -211,13 +219,16 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
 
   const columns = useMemo((): ColumnDefinition<DocumentTemplateListItem>[] => [
     {
-      title: 'Name',
+      title: t('documentTemplates.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name',
       render: (value: string | null | undefined, record: DocumentTemplateListItem) => (
         <div className="flex items-center gap-2">
           {record.source === 'standard' ? (
             <>
-              <FileTextIcon className="w-4 h-4" /> {value} (Standard)
+              <FileTextIcon className="w-4 h-4" /> {t('documentTemplates.values.nameWithStandardSuffix', {
+                defaultValue: '{{name}} (Standard)',
+                name: value,
+              })}
             </>
           ) : (
             <div className="flex items-center gap-1">
@@ -229,13 +240,15 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       ),
     },
     {
-      title: 'Source',
+      title: t('documentTemplates.columns.source', { defaultValue: 'Source' }),
       dataIndex: 'source',
       render: (value: string | null | undefined, record: DocumentTemplateListItem) =>
-        record.source === 'standard' ? 'Standard' : (value || 'Custom'),
+        record.source === 'standard'
+          ? t('templates.types.standard', { defaultValue: 'Standard' })
+          : (value || t('templates.types.custom', { defaultValue: 'Custom' })),
     },
     {
-      title: 'Default',
+      title: t('templates.columns.default', { defaultValue: 'Default' }),
       dataIndex: 'is_default',
       headerClassName: 'text-center align-middle',
       cellClassName: 'text-center align-middle max-w-none',
@@ -247,7 +260,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         ) : null,
     },
     {
-      title: 'Actions',
+      title: t('templates.columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'template_id',
       width: '10%',
       render: (_: string | null | undefined, record: DocumentTemplateListItem) => (
@@ -259,7 +272,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('templates.actions.openMenu', { defaultValue: 'Open menu' })}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -271,7 +284,9 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
                 openEditTemplate(record);
               }}
             >
-              {record.source === 'standard' ? 'Edit as Copy' : 'Edit'}
+              {record.source === 'standard'
+                ? t('templates.actions.editAsCopy', { defaultValue: 'Edit as Copy' })
+                : t('templates.actions.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="clone-document-template-menu-item"
@@ -280,7 +295,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
                 void handleCloneTemplate(record);
               }}
             >
-              Clone
+              {t('templates.actions.clone', { defaultValue: 'Clone' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="set-default-document-template-menu-item"
@@ -290,7 +305,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
                 void handleSetDefaultTemplate(record);
               }}
             >
-              Set as Default
+              {t('templates.actions.setDefault', { defaultValue: 'Set as Default' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-document-template-menu-item"
@@ -301,13 +316,13 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
                 setTemplateToDelete(record);
               }}
             >
-              Delete
+              {t('templates.actions.delete', { defaultValue: 'Delete' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
     },
-  ], [handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate]);
+  ], [handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate, t]);
 
   if (view.mode === 'editor') {
     return (
@@ -324,9 +339,14 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">{typeLabel} Layouts</h2>
+          <h2 className="text-xl font-semibold text-foreground">
+            {t('documentTemplates.title', { defaultValue: '{{type}} Layouts', type: typeLabel })}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Design the layouts used to render {typeLabel.toLowerCase()} PDFs and previews.
+            {t('documentTemplates.description', {
+              defaultValue: 'Design the layouts used to render {{type}} PDFs and previews.',
+              type: typeLabel,
+            })}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -348,21 +368,21 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             </TabsList>
           </Tabs>
           <Button id="document-templates-new" onClick={openNewTemplate} disabled={!registryEntry}>
-            New Layout
+            {t('documentTemplates.actions.newLayout', { defaultValue: 'New Layout' })}
           </Button>
         </div>
       </div>
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>{typeLabel} Layouts</AlertTitle>
+          <AlertTitle>{t('documentTemplates.title', { defaultValue: '{{type}} Layouts', type: typeLabel })}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       <Card>
         <CardHeader>
-          <CardTitle>Available Layouts</CardTitle>
+          <CardTitle>{t('documentTemplates.availableLayouts', { defaultValue: 'Available Layouts' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable
@@ -384,13 +404,16 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
             void handleDeleteTemplate(templateToDelete);
           }
         }}
-        title={`Delete ${typeLabel} Layout`}
+        title={t('documentTemplates.deleteDialog.title', { defaultValue: 'Delete {{type}} Layout', type: typeLabel })}
         message={
           templateToDelete
-            ? `Are you sure you want to delete "${templateToDelete.name}"?`
+            ? t('documentTemplates.deleteDialog.message', {
+              defaultValue: 'Are you sure you want to delete "{{name}}"?',
+              name: templateToDelete.name,
+            })
             : ''
         }
-        confirmLabel="Delete"
+        confirmLabel={t('templates.actions.delete', { defaultValue: 'Delete' })}
       />
     </div>
   );

@@ -1120,7 +1120,8 @@
       "unknownClient": "Unbekannter Kunde",
       "status": "Status",
       "system": "System",
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "invoiceDate": "Rechnungsdatum"
     },
     "states": {
       "empty": "Keine Daten verfügbar",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Im Kundenportal sichtbar",
       "dialogTitle": "Bild auswählen",
       "dialogDescription": "Wählen Sie ein Bild aus Ihren Dokumenten aus, das in dieser Vorlage verwendet werden soll."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Rechnungsdetails",
+    "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
+    "actions": {
+      "saving": "Wird gespeichert..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Die Rechnungsnummer ist erforderlich.",
+      "invoiceDateRequired": "Das Rechnungsdatum ist erforderlich."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Layouts für {{type}}",
+    "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
+    "availableLayouts": "Verfügbare Layouts",
+    "actions": {
+      "newLayout": "Neues Layout"
+    },
+    "columns": {
+      "name": "Name",
+      "source": "Quelle"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standardversion)",
+      "copyName": "{{name}} (Kopie)"
+    },
+    "toasts": {
+      "cloned": "Vorlage geklont",
+      "defaultUpdated": "Standardvorlage aktualisiert",
+      "deleted": "Vorlage gelöscht"
+    },
+    "errors": {
+      "loadFailed": "Vorlagen für {{type}} konnten nicht geladen werden",
+      "cloneFailed": "Vorlage konnte nicht geklont werden",
+      "setDefaultFailed": "Standardvorlage konnte nicht festgelegt werden",
+      "deleteFailed": "Vorlage konnte nicht gelöscht werden"
+    },
+    "deleteDialog": {
+      "title": "Layout für {{type}} löschen",
+      "message": "Möchten Sie „{{name}}“ wirklich löschen?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Neues Layout für {{type}}",
+        "edit": "Layout für {{type}} bearbeiten"
+      },
+      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
+      "errorTitle": "Layout-Editor für {{type}}",
+      "sections": {
+        "details": "Layoutdetails"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Vorlage für {{type}}"
+      },
+      "actions": {
+        "back": "Zurück zu den Layouts",
+        "save": "Layout speichern"
+      },
+      "labels": {
+        "created": "Erstellt: {{date}}",
+        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
+        "frameTitle": "Vorschau für {{type}}",
+        "empty": "Öffnen Sie diese Registerkarte, um eine verbindliche Vorschau zu erzeugen."
+      },
+      "errors": {
+        "nameRequired": "Der Vorlagenname ist erforderlich.",
+        "astExportFailed": "Die Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
+        "saveFailed": "Das Layout für {{type}} konnte nicht gespeichert werden",
+        "previewFailed": "Die Vorschau konnte nicht erzeugt werden."
+      },
+      "toasts": {
+        "saved": "Layout für {{type}} gespeichert"
+      }
+    },
+    "types": {
+      "salesOrder": "Verkaufsauftrag",
+      "packingSlip": "Lieferschein",
+      "pickList": "Kommissionierliste"
     }
   }
 }

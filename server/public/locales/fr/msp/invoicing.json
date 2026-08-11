@@ -1120,7 +1120,8 @@
       "unknownClient": "Client inconnu",
       "status": "Statut",
       "system": "Système",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Date de la facture"
     },
     "states": {
       "empty": "Aucune donnée disponible",
@@ -1911,6 +1912,93 @@
       "visibleInPortal": "Visible dans le portail client",
       "dialogTitle": "Sélectionner une image",
       "dialogDescription": "Choisissez dans vos documents une image à utiliser dans ce modèle."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Détails de la facture",
+    "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
+    "actions": {
+      "saving": "Enregistrement..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Le numéro de facture est obligatoire.",
+      "invoiceDateRequired": "La date de la facture est obligatoire."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "Mises en page pour {{type}}",
+    "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
+    "availableLayouts": "Mises en page disponibles",
+    "actions": {
+      "newLayout": "Nouvelle mise en page"
+    },
+    "columns": {
+      "name": "Nom",
+      "source": "Source"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (standard)",
+      "copyName": "{{name}} (copie)"
+    },
+    "toasts": {
+      "cloned": "Modèle dupliqué",
+      "defaultUpdated": "Modèle par défaut mis à jour",
+      "deleted": "Modèle supprimé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les modèles pour {{type}}",
+      "cloneFailed": "Impossible de dupliquer le modèle",
+      "setDefaultFailed": "Impossible de définir le modèle par défaut",
+      "deleteFailed": "Impossible de supprimer le modèle"
+    },
+    "deleteDialog": {
+      "title": "Supprimer la mise en page pour {{type}}",
+      "message": "Voulez-vous vraiment supprimer « {{name}} » ?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nouvelle mise en page pour {{type}}",
+        "edit": "Modifier la mise en page pour {{type}}"
+      },
+      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
+      "errorTitle": "Éditeur de mise en page pour {{type}}",
+      "sections": {
+        "details": "Détails de la mise en page"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Modèle pour {{type}}"
+      },
+      "actions": {
+        "back": "Retour aux mises en page",
+        "save": "Enregistrer la mise en page"
+      },
+      "labels": {
+        "created": "Créée : {{date}}",
+        "lastUpdated": "Dernière mise à jour : {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
+        "frameTitle": "Aperçu pour {{type}}",
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence."
+      },
+      "errors": {
+        "nameRequired": "Le nom du modèle est obligatoire.",
+        "astExportFailed": "Impossible d’exporter le modèle depuis l’espace de travail visuel : {{message}}",
+        "saveFailed": "Impossible d’enregistrer la mise en page pour {{type}}",
+        "previewFailed": "Impossible de générer l’aperçu."
+      },
+      "toasts": {
+        "saved": "Mise en page pour {{type}} enregistrée"
+      }
+    },
+    "types": {
+      "salesOrder": "Commande client",
+      "packingSlip": "Bon de livraison",
+      "pickList": "Liste de prélèvement"
     }
   }
 }
