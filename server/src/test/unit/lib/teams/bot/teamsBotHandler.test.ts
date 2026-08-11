@@ -1730,71 +1730,36 @@ describe('teamsBotHandler', () => {
     expect(fallbackActivity.attachments?.[0]?.contentType).toBe('application/vnd.microsoft.card.hero');
   });
 
-  it('T071b: an expired connector token resends the Adaptive Card instead of downgrading to the hero fallback', async () => {
-    isBotConnectorConfiguredMock.mockReturnValue(true);
-    executeTeamsActionMock.mockResolvedValue(
-      buildActionSuccess('my_tickets', {
-        summary: { title: 'My tickets', text: 'Found 1 assigned ticket for the signed-in technician.' },
-        items: [
-          {
-            id: 'ticket-uuid-1',
-            displayId: 'ALGA-101',
-            title: 'ALGA-101',
-            summary: 'Printer offline • Open',
-            entityType: 'ticket',
-            links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-1' }],
-          },
-        ],
-      })
-    );
-    // 401 means the cached connector token expired, not that the client
-    // rejected the card; the connector already dropped the token, so the same
-    // activity must go back out with a fresh one.
-    sendBotActivityMock
-      .mockRejectedValueOnce(
-        await connectorError('Failed to send Bot Framework activity (401 Unauthorized): token expired', 401)
-      )
-      .mockResolvedValueOnce({ status: 'sent' });
-
-    const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...buildPersonalMessageActivity('my tickets'),
-        id: 'activity-1',
-        serviceUrl: 'https://smba.trafficmanager.net/amer/',
-      }),
-    });
-
-    const response = await handleTeamsBotActivityRequest(request);
-    expect(response.status).toBe(200);
-    expect(sendBotActivityMock).toHaveBeenCalledTimes(2);
-    expect(sendBotActivityMock.mock.calls[1][0].activity.attachments?.[0]?.contentType).toBe(
-      'application/vnd.microsoft.card.adaptive'
-    );
-  });
-
-  it('T071b: a card rejection on the post-401 resend still falls back to the hero rendering', async () => {
+  /**
+   * The connector replays an expired token itself (see the connector's
+   * expired-token replay suite), so a 401 reaching the handler is a real
+   * credential problem — and must still never be mistaken for the client
+   * rejecting the Adaptive Card.
+   */
+  it('T071b: a 401 that survived the connector replay is logged, never downgraded to the hero card', async () => {
     isBotConnectorConfiguredMock.mockReturnValue(true);
     executeTeamsActionMock.mockResolvedValue(buildMyTicketsSuccess());
-    sendBotActivityMock
-      .mockRejectedValueOnce(
-        await connectorError('Failed to send Bot Framework activity (401 Unauthorized): token expired', 401)
-      )
-      .mockRejectedValueOnce(
-        await connectorError('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected', 415)
-      )
-      .mockResolvedValueOnce({ status: 'sent' });
-
-    const response = await handleTeamsBotActivityRequest(
-      buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+    const expiredToken = await connectorError(
+      'Failed to send Bot Framework activity (401 Unauthorized): token expired',
+      401
     );
+    sendBotActivityMock.mockRejectedValueOnce(expiredToken);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(response.status).toBe(200);
-    expect(sendBotActivityMock).toHaveBeenCalledTimes(3);
-    expect(sendBotActivityMock.mock.calls[2][0].activity.attachments?.[0]?.contentType).toBe(
-      'application/vnd.microsoft.card.hero'
-    );
+    try {
+      const response = await handleTeamsBotActivityRequest(
+        buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+      );
+
+      expect(response.status).toBe(200);
+      expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+      expect(sendBotActivityMock.mock.calls[0][0].activity.attachments?.[0]?.contentType).toBe(
+        'application/vnd.microsoft.card.adaptive'
+      );
+      expect(consoleError).toHaveBeenCalledWith('[teams-bot] failed to send reply', expiredToken);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('T071b: a bot token acquisition failure is surfaced instead of retried or downgraded', async () => {
@@ -1904,37 +1869,12 @@ describe('teamsBotHandler', () => {
     expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
   });
 
-  it('T072: an expired connector token retries the in-place update instead of duplicating the reply', async () => {
-    isBotConnectorConfiguredMock.mockReturnValue(true);
-    executeTeamsActionMock.mockResolvedValue(
-      buildActionSuccess('assign_ticket', {
-        operation: 'mutation',
-        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
-      })
-    );
-    updateBotActivityMock.mockRejectedValueOnce(
-      await connectorError('Failed to update Bot Framework activity (401 Unauthorized): token expired', 401)
-    );
-
-    await handleTeamsBotActivityRequest(
-      buildConnectorRequest({
-        ...buildPersonalMessageActivity(''),
-        id: 'submit-activity-3',
-        replyToId: 'card-activity-3',
-        value: {
-          command: 'bot_card_action',
-          actionId: 'assign_ticket',
-          ticketId: 'ALGA-101',
-          idempotencyKey: 'card-idem-4',
-        },
-      })
-    );
-
-    expect(updateBotActivityMock).toHaveBeenCalledTimes(2);
-    expect(sendBotActivityMock).not.toHaveBeenCalled();
-  });
-
-  it('T072: an in-place update that stays unauthorized still falls back to a normal reply', async () => {
+  /**
+   * A transient 401 never reaches here — the connector replays it — so an
+   * unauthorized update means the credentials are genuinely bad, and the
+   * result still has to reach the user somehow.
+   */
+  it('T072: an in-place update that stays unauthorized falls back to a normal reply', async () => {
     isBotConnectorConfiguredMock.mockReturnValue(true);
     executeTeamsActionMock.mockResolvedValue(
       buildActionSuccess('assign_ticket', {
@@ -1960,7 +1900,7 @@ describe('teamsBotHandler', () => {
       })
     );
 
-    expect(updateBotActivityMock).toHaveBeenCalledTimes(2);
+    expect(updateBotActivityMock).toHaveBeenCalledTimes(1);
     expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
   });
 

@@ -181,20 +181,35 @@ async function dispatchBotConnectorRequest(params: {
     throw new Error('Bot Framework credentials are not configured.');
   }
 
-  const token = await getAccessToken(credentials);
-  const response = await fetch(params.url, {
-    method: params.method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params.activity),
-  });
+  const body = JSON.stringify(params.activity);
+  const attempt = async (): Promise<Response> => {
+    const token = await getAccessToken(credentials);
+    return fetch(params.url, {
+      method: params.method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    });
+  };
 
+  let response = await attempt();
+
+  // A 401 means the cached token expired between the cache check and the
+  // request, which says nothing about the activity itself. Drop the token and
+  // replay the same request once with a fresh one, here rather than at each
+  // call site so every caller — bot replies, DM notifications, the proactive
+  // welcome card, the diagnostics test send — survives an expiry identically.
+  // A second 401 is a real credential problem and is surfaced.
   if (response.status === 401) {
-    // Token likely expired between cache check and request. Clear the cache
-    // so the next send forces a fresh token, then surface the error.
     cachedToken = null;
+    // Drain the discarded body so the connection is released before the replay.
+    await response.text().catch(() => '');
+    response = await attempt();
+    if (response.status === 401) {
+      cachedToken = null;
+    }
   }
 
   if (!response.ok) {
