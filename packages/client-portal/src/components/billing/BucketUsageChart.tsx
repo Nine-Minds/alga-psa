@@ -114,8 +114,19 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
   const overHours = isOver ? -remainingHours : 0;
   const meterColors = getBucketMeterColors(remainingMinutes, totalWithRollover);
 
-  const baseFillPercent = Math.max(0, Math.min(100, percentage));
-  const overFillPercent = isOver ? percentage - 100 : 0;
+  const clampPercent = (value: number): number => Math.max(0, Math.min(100, value));
+
+  let baseFillPercent = clampPercent(percentage);
+  let overFillPercent = 0;
+  if (isOver && percentage > 100) {
+    // Overage: scale total consumption (used) onto the full track so the
+    // overage stays INSIDE the bar instead of painting a segment beyond it.
+    // With percentage_used uncapped upstream (2513% has been observed live),
+    // an unclamped `width: percentage - 100` would streak far past the track.
+    // base = 100 * total/used = 100 * 100/percentage; red = the remainder.
+    baseFillPercent = clampPercent((100 * 100) / percentage);
+    overFillPercent = clampPercent(100 - baseFillPercent);
+  }
   const hasPeriod = Boolean(bucketData.period_start && bucketData.period_end);
 
   // Parse the date-only string directly so the chip is not shifted by the
@@ -175,15 +186,15 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
             {percentage}%
           </span>
         </div>
-        <div className="relative w-full h-2.5">
+        <div className="relative w-full h-2.5 overflow-hidden rounded-full">
           <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
           <div
-            className={`absolute inset-y-0 left-0 rounded-full ${meterColors.bg}`}
+            className={`absolute inset-y-0 left-0 ${isOver ? 'rounded-l-full' : 'rounded-full'} ${meterColors.bg}`}
             style={{ width: `${baseFillPercent}%` }}
           ></div>
           {overFillPercent > 0 && (
             <div
-              className="absolute inset-y-0 bg-destructive"
+              className="absolute inset-y-0 rounded-r-full bg-destructive"
               style={{ left: `${baseFillPercent}%`, width: `${overFillPercent}%` }}
             ></div>
           )}

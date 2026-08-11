@@ -112,4 +112,58 @@ describe('BucketUsageChart remaining-first meter (release-v1.5-feature)', () => 
     expect(screen.getByText('OVER BUCKET')).toBeInTheDocument();
     expect(screen.queryByText(/-3\.0/i)).not.toBeInTheDocument();
   });
+
+  it('T162a: overage rescales the segments inside the track and clamps widths to [0, 100]', () => {
+    featureFlagState.enabled = true;
+    // used = 1500 of 1320 available -> percentage_used = 113.64
+    const data = bucket({ minutes_used: 1500, percentage_used: 113.64 });
+    const { container } = render(<BucketUsageChart bucketData={data} />);
+
+    const segments = Array.from(
+      container.querySelectorAll<HTMLElement>('.absolute.inset-y-0')
+    ).filter((el) => el.style.width !== '');
+
+    // base (used-within-total) first, overage second
+    expect(segments).toHaveLength(2);
+    const [base, over] = segments;
+
+    // Rescaled so total consumption maps to 100% of the track, using the same
+    // rounded percentage the bar/headline display:
+    // base = 100 * 100 / percentage, overage = 100 - base.
+    const rounded = Math.round(113.64);
+    expect(parseFloat(base.style.width)).toBeCloseTo((100 * 100) / rounded, 1);
+    expect(parseFloat(over.style.width)).toBeCloseTo(100 - (100 * 100) / rounded, 1);
+    for (const segment of segments) {
+      const width = parseFloat(segment.style.width);
+      expect(width).toBeGreaterThanOrEqual(0);
+      expect(width).toBeLessThanOrEqual(100);
+    }
+    // Track container clips segment edges.
+    expect(
+      container.querySelector('.relative.w-full.h-2\\.5.overflow-hidden.rounded-full')
+    ).not.toBeNull();
+  });
+
+  it('T162b: dirty overage data (2513% used) never paints a segment wider than the track', () => {
+    featureFlagState.enabled = true;
+    const data = bucket({ minutes_used: 34000, percentage_used: 2513 });
+    const { container } = render(<BucketUsageChart bucketData={data} />);
+
+    const segments = Array.from(
+      container.querySelectorAll<HTMLElement>('.absolute.inset-y-0')
+    ).filter((el) => el.style.width !== '');
+
+    expect(segments.length).toBeGreaterThanOrEqual(1);
+    for (const segment of segments) {
+      const width = parseFloat(segment.style.width);
+      expect(width).toBeGreaterThanOrEqual(0);
+      expect(width).toBeLessThanOrEqual(100);
+    }
+    // The overage is the final segment; with 2513% its rescaled width is ~96%.
+    const over = segments[segments.length - 1];
+    expect(parseFloat(over.style.width)).toBeLessThanOrEqual(100);
+    expect(parseFloat(over.style.width)).toBeGreaterThan(0);
+    // Used hours are still shown uncapped in the footer, not as a bar.
+    expect(screen.queryByText(/-25[0-9]+\.\d+h/i)).not.toBeInTheDocument();
+  });
 });
