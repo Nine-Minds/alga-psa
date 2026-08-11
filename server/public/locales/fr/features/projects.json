@@ -1799,5 +1799,13 @@
       "ready": "Prêt : {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Tâche",
+    "bug": "Bogue",
+    "feature": "Fonctionnalité",
+    "improvement": "Amélioration",
+    "epic": "Épopée",
+    "story": "Récit"
   }
 }

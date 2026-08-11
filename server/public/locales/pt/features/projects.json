@@ -1799,5 +1799,13 @@
       "ready": "Pronto: {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Tarefa",
+    "bug": "Erro",
+    "feature": "Funcionalidade",
+    "improvement": "Melhoria",
+    "epic": "Épico",
+    "story": "História"
   }
 }

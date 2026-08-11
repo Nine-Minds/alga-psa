@@ -1799,5 +1799,13 @@
       "ready": "Ready: {{amount}}",
       "total": "Total: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Task",
+    "bug": "Bug",
+    "feature": "Feature",
+    "improvement": "Improvement",
+    "epic": "Epic",
+    "story": "Story"
   }
 }

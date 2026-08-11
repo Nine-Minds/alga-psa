@@ -1799,5 +1799,13 @@
       "ready": "Gereed: {{amount}}",
       "total": "Totaal: {{amount}}"
     }
+  },
+  "taskTypes": {
+    "task": "Taak",
+    "bug": "Bug",
+    "feature": "Functie",
+    "improvement": "Verbetering",
+    "epic": "Epic",
+    "story": "Story"
   }
 }

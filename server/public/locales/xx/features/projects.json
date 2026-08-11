@@ -1799,5 +1799,13 @@
       "ready": "11111 {{amount}} 11111",
       "total": "11111 {{amount}} 11111"
     }
+  },
+  "taskTypes": {
+    "task": "11111",
+    "bug": "11111",
+    "feature": "11111",
+    "improvement": "11111",
+    "epic": "11111",
+    "story": "11111"
   }
 }

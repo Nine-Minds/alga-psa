@@ -28,6 +28,7 @@ import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTaskSelection } from './TaskSelectionContext';
 
@@ -108,6 +109,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamAvatarUrls = {},
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
@@ -324,7 +326,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('projectDetail.taskTypeFallback', 'Task')}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskTypeLabel(taskType, task.task_type_key)}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}

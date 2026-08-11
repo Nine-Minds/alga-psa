@@ -33,6 +33,7 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { createFallbackStatus, FALLBACK_STATUS_MAPPING_ID, partitionStatusScope } from '../lib/statusScopeUtils';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -286,6 +287,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const { money, symbol } = useCurrencyFormat();
@@ -1844,7 +1846,7 @@ export default function TaskListView({
                                         <td key="task_type" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
                                           <div className="flex items-center gap-1.5">
                                             <TaskTypeIcon className="h-3.5 w-3.5 shrink-0" style={{ color: taskType?.color || '#6B7280' }} />
-                                            <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate">{taskType?.type_name || task.task_type_key}</span>
+                                            <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate">{taskTypeLabel(taskType, task.task_type_key)}</span>
                                           </div>
                                         </td>
                                       );

@@ -4,6 +4,7 @@ import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ITaskType } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, GitBranch } from 'lucide-react';
 
 interface TaskTypeSelectorProps {
@@ -29,6 +30,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
   disabled = false
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const options = taskTypes.map(type => {
     const Icon = taskTypeIcons[type.type_key] || ClipboardList;
     return {
@@ -41,7 +43,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
             className="inline-block w-4 h-4 mr-1.5 align-middle shrink-0"
             style={{ color: type.color || '#6B7280' }}
           />
-          {type.type_name}
+          {taskTypeLabel(type)}
         </>
       )
     };
