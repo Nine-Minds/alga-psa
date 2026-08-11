@@ -1,6 +1,11 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
+import Knex from 'knex';
+import { randomUUID } from 'crypto';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { describeWithDb } from '../../../../test-utils/requireDb';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 
 type QueryQueue = Array<any>;
 type JoinHelpers = {
@@ -10,12 +15,14 @@ type JoinHelpers = {
 
 const eventHandlers = new Map<string, Array<{ channel: string; handler: (event: any) => Promise<void> }>>();
 
-const loggerMock = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn()
-};
+const { loggerMock } = vi.hoisted(() => ({
+  loggerMock: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,
@@ -273,6 +280,8 @@ beforeEach(() => {
   recordInboundOutboxDeliveryFailureMock.mockReset();
   recordInboundOutboxDeliveryFailureMock.mockResolvedValue('retryable');
 });
+
+const describeDb = await describeWithDb();
 
 describe('internal notification event subscriber registration', () => {
   it('subscribes to all expected event types on the internal channel', async () => {
@@ -1043,4 +1052,499 @@ describe('internal notification event handling', () => {
 
     await unregisterInternalNotificationSubscriber();
   });
+});
+
+/**
+ * Real-Postgres behavioral coverage for the transactional outbox delivery
+ * path. The stub suites above mock the ledger, the connection layer, and the
+ * notification insert; these tests drive the REAL handlers through the REAL
+ * `handleInternalNotificationEvent`/harness path against `test_database` so a
+ * rollback of the ledger transaction provably rolls back the notification
+ * writes too (the Defect-1 regression: TICKET_CLOSED / TICKET_COMMENT_ADDED
+ * used to bypass the caller-supplied transaction and commit on a separate
+ * pooled connection).
+ *
+ * Module-graph mechanics: the file's static `vi.mock` factories apply to every
+ * import, so each test that needs the real modules calls `vi.resetModules()`
+ * + `vi.doUnmock(...)` (or a targeted `vi.doMock` fault injection) and then
+ * `await import(...)`s the subscriber freshly. The stub suites have already
+ * run by then, so the registry reset cannot disturb them.
+ */
+describeDb('inbound outbox transactional delivery against Postgres', () => {
+  const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
+
+  let db: Knex;
+  let tenantId: string;
+  const createdTicketIds: string[] = [];
+  // The real handlers open the app's shared tenant pool (getConnection) against
+  // test_database. Every fresh module graph owns its own pool; these must be
+  // destroyed so the next DB-backed file in the same vitest fork can drop and
+  // recreate test_database without lingering connections.
+  const appPoolDestroyers: Array<() => Promise<void>> = [];
+
+  type SubscriberModule = typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
+
+  async function freshSubscriber(opts?: {
+    dedupe?: {
+      reserveInboundOutboxEventForConsumer?: (params: unknown) => Promise<unknown>;
+      recordInboundOutboxDeliveryFailure?: (params: unknown) => Promise<unknown>;
+      failInboundOutboxEventForConsumer?: (params: unknown) => Promise<unknown>;
+    };
+    durableStore?: {
+      reserveInboundOutboxEventDelivery?: (params: unknown) => Promise<unknown>;
+      failInboundOutboxEventDelivery?: (params: unknown) => Promise<unknown>;
+    };
+  }): Promise<SubscriberModule> {
+    vi.resetModules();
+    vi.doUnmock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    vi.doUnmock('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    vi.doUnmock('server/src/lib/db/db');
+    vi.doUnmock('@alga-psa/notifications/actions');
+    vi.doUnmock('server/src/lib/utils/notificationLinkResolver');
+    if (opts?.dedupe) {
+      vi.doMock('@alga-psa/shared/services/email/inboundEmailConsumerDedupe', async (importOriginal) => {
+        const actual = await importOriginal<typeof import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe')>();
+        return {
+          ...actual,
+          ...(opts.dedupe!.reserveInboundOutboxEventForConsumer
+            ? { reserveInboundOutboxEventForConsumer: opts.dedupe!.reserveInboundOutboxEventForConsumer }
+            : {}),
+          ...(opts.dedupe!.recordInboundOutboxDeliveryFailure
+            ? { recordInboundOutboxDeliveryFailure: opts.dedupe!.recordInboundOutboxDeliveryFailure }
+            : {}),
+          ...(opts.dedupe!.failInboundOutboxEventForConsumer
+            ? { failInboundOutboxEventForConsumer: opts.dedupe!.failInboundOutboxEventForConsumer }
+            : {}),
+        };
+      });
+    }
+    if (opts?.durableStore) {
+      vi.doMock('@alga-psa/shared/services/email/inboundEmailDurableStore', async (importOriginal) => {
+        const actual = await importOriginal<typeof import('@alga-psa/shared/services/email/inboundEmailDurableStore')>();
+        return {
+          ...actual,
+          ...(opts.durableStore!.reserveInboundOutboxEventDelivery
+            ? { reserveInboundOutboxEventDelivery: opts.durableStore!.reserveInboundOutboxEventDelivery }
+            : {}),
+          ...(opts.durableStore!.failInboundOutboxEventDelivery
+            ? { failInboundOutboxEventDelivery: opts.durableStore!.failInboundOutboxEventDelivery }
+            : {}),
+        };
+      });
+    }
+    const subscriber = await import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber');
+    const dbModule = await import('@alga-psa/db');
+    if (typeof dbModule.destroyTenantConnection === 'function') {
+      appPoolDestroyers.push(() => dbModule.destroyTenantConnection());
+    }
+    return subscriber;
+  }
+
+  async function seedOutboxScenario(params: {
+    eventType: 'TICKET_CLOSED' | 'TICKET_COMMENT_ADDED';
+    assigneeId: string;
+    actorUserId: string;
+    contactNameId?: string | null;
+  }): Promise<{ eventId: string; ticketId: string; commentId: string }> {
+    const eventId = randomUUID();
+    const inboxId = randomUUID();
+    const ingressId = randomUUID();
+    const providerId = randomUUID();
+    const ticketId = randomUUID();
+    const commentId = randomUUID();
+    const client = await tenantDb(db, tenantId).table('clients').first<{ client_id: string }>('client_id');
+    if (!client) throw new Error('Expected seeded client');
+
+    await tenantDb(db, tenantId).table('inbound_email_ingress').insert({
+      tenant: tenantId,
+      ingress_id: ingressId,
+      provider_id: providerId,
+      provider_type: 'imap',
+      ingress_key: `transactional-test:${eventId}`,
+      provider_pointer: JSON.stringify({ eventId }),
+      status: 'staged',
+      attempt_count: 0,
+      lease_version: 0,
+      received_at: db.fn.now(),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+      completed_at: db.fn.now(),
+    });
+
+    await tenantDb(db, tenantId).table('inbound_email_inbox').insert({
+      tenant: tenantId,
+      inbox_id: inboxId,
+      ingress_id: ingressId,
+      provider_id: providerId,
+      provider_type: 'imap',
+      normalized_message_id: `rfc822:${eventId}`,
+      envelope: JSON.stringify({ eventId }),
+      legacy_imported: false,
+      status: 'succeeded',
+      outcome_kind: 'created',
+      ticket_id: ticketId,
+      comment_id: commentId,
+      attempt_count: 0,
+      lease_version: 0,
+      source_object_key: `obj-${eventId}`,
+      source_sha256: `sha256-${eventId}`,
+      source_size_bytes: 1,
+      source_staged_at: new Date(),
+      received_at: db.fn.now(),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+      completed_at: db.fn.now(),
+    });
+
+    await tenantDb(db, tenantId).table('inbound_email_outbox').insert({
+      tenant: tenantId,
+      outbox_id: eventId,
+      inbox_id: inboxId,
+      event_key: `${params.eventType.toLowerCase()}:${eventId}`,
+      event_type: params.eventType,
+      payload: JSON.stringify({ tenantId, ticketId, userId: params.actorUserId }),
+      publish_options: null,
+      status: 'published',
+      attempt_count: 0,
+      lease_version: 0,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+      published_at: db.fn.now(),
+    });
+
+    await tenantDb(db, tenantId).table('tickets').insert({
+      tenant: tenantId,
+      ticket_id: ticketId,
+      ticket_number: `T-${eventId.slice(0, 8)}`,
+      title: `Transactional ${params.eventType} ${eventId.slice(0, 6)}`,
+      client_id: client.client_id,
+      assigned_to: params.assigneeId,
+      contact_name_id: params.contactNameId ?? null,
+      entered_by: params.actorUserId,
+    });
+    createdTicketIds.push(ticketId);
+
+    return { eventId, ticketId, commentId };
+  }
+
+  async function countNotificationsForTicket(ticketId: string): Promise<number> {
+    const row = await tenantDb(db, tenantId).table('internal_notifications')
+      .where({ tenant: tenantId })
+      .where('link', 'like', `%/msp/tickets/${ticketId}%`)
+      .count<{ count: string }[]>('* as count')
+      .first();
+    return Number(row?.count ?? 0);
+  }
+
+  async function listNotificationsForTicket(ticketId: string): Promise<Array<{ template_name: string; user_id: string }>> {
+    return tenantDb(db, tenantId).table('internal_notifications')
+      .where({ tenant: tenantId })
+      .where('link', 'like', `%/msp/tickets/${ticketId}%`)
+      .select('template_name', 'user_id') as unknown as Array<{ template_name: string; user_id: string }>;
+  }
+
+  async function getDelivery(eventId: string, consumer: string): Promise<Record<string, any> | undefined> {
+    return tenantDb(db, tenantId).table('inbound_email_event_deliveries')
+      .where({ tenant: tenantId, outbox_id: eventId, consumer })
+      .first();
+  }
+
+  function buildEvent(params: {
+    eventId: string;
+    eventType: 'TICKET_CLOSED' | 'TICKET_COMMENT_ADDED';
+    tenantId: string;
+    ticketId: string;
+    actorUserId: string;
+    commentId?: string;
+  }): Record<string, any> {
+    const payload: Record<string, any> = {
+      tenantId: params.tenantId,
+      ticketId: params.ticketId,
+      userId: params.actorUserId,
+    };
+    if (params.eventType === 'TICKET_COMMENT_ADDED') {
+      payload.comment = {
+        id: params.commentId,
+        content: 'Transactional comment body',
+        author: 'Test Author',
+        isInternal: false,
+        authorType: 'internal',
+      };
+    }
+    return {
+      id: params.eventId,
+      eventType: params.eventType,
+      timestamp: new Date().toISOString(),
+      payload,
+    };
+  }
+
+  beforeAll(async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+    db = await createTestDbConnection();
+    const tenant = await tenantDb(db, 'transactional').unscoped<{ tenant: string }>('tenants', 'transactional outbox suite').first('tenant');
+    if (!tenant?.tenant) throw new Error('Expected seeded tenant');
+    tenantId = tenant.tenant;
+  }, 180_000);
+
+  afterEach(async () => {
+    await tenantDb(db, tenantId).table('inbound_email_event_deliveries').where({ tenant: tenantId }).delete();
+    await tenantDb(db, tenantId).table('inbound_email_outbox').where({ tenant: tenantId }).delete();
+    await tenantDb(db, tenantId).table('inbound_email_inbox').where({ tenant: tenantId }).delete();
+    await tenantDb(db, tenantId).table('inbound_email_ingress').where({ tenant: tenantId }).delete();
+    while (createdTicketIds.length) {
+      const ticketId = createdTicketIds.pop();
+      if (!ticketId) continue;
+      try {
+        await tenantDb(db, tenantId).table('internal_notifications')
+          .where({ tenant: tenantId })
+          .where('link', 'like', `%/msp/tickets/${ticketId}%`)
+          .delete();
+        await tenantDb(db, tenantId).table('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete();
+      } catch {
+        // best effort; the seeded tickets stay untouched
+      }
+    }
+    while (appPoolDestroyers.length) {
+      const destroy = appPoolDestroyers.pop();
+      if (destroy) await destroy().catch(() => undefined);
+    }
+  });
+
+  afterAll(async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'off';
+    if (db) await db.destroy();
+  });
+
+  it.each(['TICKET_CLOSED', 'TICKET_COMMENT_ADDED'] as const)(
+    '%s rollback atomicity: a failed delivery leaves zero notification rows, no delivered mark, and a retryable failure record',
+    async (eventType) => {
+      const subscriber = await freshSubscriber();
+      const { reserveInboundOutboxEventForConsumer } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+      const realUser = await tenantDb(db, tenantId).table('users')
+        .where({ tenant: tenantId, user_type: 'internal' })
+        .first<{ user_id: string }>('user_id');
+      if (!realUser) throw new Error('Expected seeded internal user');
+
+      const actorUserId = randomUUID();
+      const { eventId, ticketId } = await seedOutboxScenario({ eventType, assigneeId: realUser.user_id, actorUserId });
+      const event = buildEvent({ eventId, eventType, tenantId, ticketId, actorUserId });
+
+      // Drive the real handler inside a real ledger transaction, then simulate
+      // a crash-after-effect before commit. Post-fix the handler must run on
+      // the caller-supplied transaction so its notification writes roll back
+      // together with the reservation.
+      await expect(withTransaction(db, async (trx) => {
+        await reserveInboundOutboxEventForConsumer({
+          event: { id: eventId, eventType, payload: event.payload },
+          consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+          db: trx,
+          owner: `owner-${randomUUID()}`,
+        });
+        if (eventType === 'TICKET_CLOSED') {
+          await subscriber.internalNotificationSubscriberTestHarness.handleTicketClosed(event, { db: trx, propagateErrors: true });
+        } else {
+          await subscriber.internalNotificationSubscriberTestHarness.handleTicketCommentAdded(event, { db: trx, propagateErrors: true });
+        }
+        throw new Error('simulated crash before commit');
+      })).rejects.toThrow('simulated crash before commit');
+
+      expect(await countNotificationsForTicket(ticketId)).toBe(0);
+      expect(await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER)).toBeUndefined();
+
+      // The transactional protocol records a retryable failure on a fresh
+      // connection after the rollback (this is what handleTransactionalOutboxDelivery
+      // does in its catch block); the sweeper re-drives it.
+      const { recordInboundOutboxDeliveryFailure } = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+      await recordInboundOutboxDeliveryFailure({
+        event: { id: eventId, eventType, payload: event.payload },
+        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+        db,
+        error: 'simulated crash before commit',
+      });
+      const failure = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(failure?.status).toBe('retryable_failed');
+      expect(Number(failure?.attempt_count)).toBeGreaterThanOrEqual(1);
+    },
+    120_000,
+  );
+
+  it.each(['TICKET_CLOSED', 'TICKET_COMMENT_ADDED'] as const)(
+    '%s retry then exactly-once: a recorded failure is re-driven to delivered with exactly one notification',
+    async (eventType) => {
+      const subscriber = await freshSubscriber();
+      const actorUserId = randomUUID();
+      const missingAssigneeId = randomUUID();
+      const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType, assigneeId: missingAssigneeId, actorUserId });
+      const event = buildEvent({ eventId, eventType, tenantId, ticketId, actorUserId, commentId });
+
+      // First delivery: the notification insert violates the users FK because
+      // the assignee does not exist yet. The effect fails, the transaction
+      // rolls back, and a retryable failure is recorded for the sweeper.
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+      expect(await countNotificationsForTicket(ticketId)).toBe(0);
+      let delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(delivery?.status).toBe('retryable_failed');
+      expect(Number(delivery?.attempt_count)).toBe(1);
+
+      // Repair the cause and make the retry due (the sweeper would do this).
+      await tenantDb(db, tenantId).table('users').insert({
+        tenant: tenantId,
+        user_id: missingAssigneeId,
+        username: `assignee-${missingAssigneeId.slice(0, 6)}`,
+        hashed_password: 'x',
+        email: `assignee-${missingAssigneeId.slice(0, 6)}@test.local`,
+        user_type: 'internal',
+      }).onConflict(['tenant', 'user_id']).ignore();
+      await tenantDb(db, tenantId).table('inbound_email_event_deliveries')
+        .where({ tenant: tenantId, outbox_id: eventId, consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER })
+        .update({ next_attempt_at: db.raw("now() - interval '1 second'") });
+
+      // Re-drive: the reservation is reclaimed (retryable -> delivering), the
+      // effect succeeds, and the ledger reaches delivered.
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+      delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(delivery?.status).toBe('delivered');
+      const notifications = await listNotificationsForTicket(ticketId);
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0].user_id).toBe(missingAssigneeId);
+      expect(notifications[0].template_name).toBe(eventType === 'TICKET_CLOSED' ? 'ticket-closed' : 'ticket-comment-added');
+    },
+    120_000,
+  );
+
+  it.each(['TICKET_CLOSED', 'TICKET_COMMENT_ADDED'] as const)(
+    '%s no duplication on replay: a delivered event redelivers as a skip with stable notification counts',
+    async (eventType) => {
+      const subscriber = await freshSubscriber();
+      const actorUserId = randomUUID();
+      const realUser = await tenantDb(db, tenantId).table('users')
+        .where({ tenant: tenantId, user_type: 'internal' })
+        .first<{ user_id: string }>('user_id');
+      if (!realUser) throw new Error('Expected seeded internal user');
+
+      const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType, assigneeId: realUser.user_id, actorUserId });
+      const event = buildEvent({ eventId, eventType, tenantId, ticketId, actorUserId, commentId });
+
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+      const afterFirst = await listNotificationsForTicket(ticketId);
+      expect(afterFirst.length).toBeGreaterThan(0);
+      const delivered = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(delivered?.status).toBe('delivered');
+
+      // Same stable outbox id redelivered (crash-after-publish / sweeper force
+      // re-publish): the gate skips, no second notification.
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+
+      expect(await listNotificationsForTicket(ticketId)).toEqual(afterFirst);
+      expect(await countNotificationsForTicket(ticketId)).toBe(afterFirst.length);
+      const stillDelivered = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(stillDelivered?.status).toBe('delivered');
+    },
+    120_000,
+  );
+
+  it.each(['TICKET_CLOSED', 'TICKET_COMMENT_ADDED'] as const)(
+    '%s failure-ledger write failure propagates: the subscriber invocation rejects instead of ACKing silently',
+    async (eventType) => {
+      const recordFailureThrows = vi.fn(async () => {
+        throw new Error('simulated failure-ledger outage');
+      });
+      const subscriber = await freshSubscriber({ dedupe: { recordInboundOutboxDeliveryFailure: recordFailureThrows } });
+      const actorUserId = randomUUID();
+      const missingAssigneeId = randomUUID();
+      const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType, assigneeId: missingAssigneeId, actorUserId });
+      const event = buildEvent({ eventId, eventType, tenantId, ticketId, actorUserId, commentId });
+
+      // Effect fails (missing assignee FK); recording the failure ALSO fails,
+      // so the invocation must reject so the event bus redelivers rather than
+      // ACKing an event with neither an effect nor a failure record.
+      await expect(
+        subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event)
+      ).rejects.toThrow('simulated failure-ledger outage');
+
+      expect(recordFailureThrows).toHaveBeenCalledTimes(1);
+      const delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(delivery).toBeUndefined();
+      expect(await countNotificationsForTicket(ticketId)).toBe(0);
+    },
+    120_000,
+  );
+
+  it.each(['TICKET_CLOSED', 'TICKET_COMMENT_ADDED'] as const)(
+    '%s reserve-ledger write failure does not fail open: the effect is not delivered and a retryable failure is recorded',
+    async (eventType) => {
+      const reserveDeliveryThrows = vi.fn(async () => {
+        throw new Error('simulated reserve-ledger outage');
+      });
+      // Inject at the durable-store level so the REAL reserve function's error
+      // path is exercised: `reserveInboundOutboxEventForConsumer` catches
+      // ledger errors and, on the transactional path, must rethrow instead of
+      // failing open to `{ decision: 'deliver' }`. Overriding the dedupe export
+      // would bypass that catch entirely.
+      const subscriber = await freshSubscriber({ durableStore: { reserveInboundOutboxEventDelivery: reserveDeliveryThrows } });
+      const actorUserId = randomUUID();
+      const realUser = await tenantDb(db, tenantId).table('users')
+        .where({ tenant: tenantId, user_type: 'internal' })
+        .first<{ user_id: string }>('user_id');
+      if (!realUser) throw new Error('Expected seeded internal user');
+
+      const { eventId, ticketId, commentId } = await seedOutboxScenario({ eventType, assigneeId: realUser.user_id, actorUserId });
+      const event = buildEvent({ eventId, eventType, tenantId, ticketId, actorUserId, commentId });
+
+      // Post-fix: the reserve error rejects inside the transaction, the whole
+      // thing rolls back (no effect, no reservation), and the transactional
+      // protocol records a retryable failure for the recovery sweeper. The
+      // invocation resolves — the ledger failure record, not fail-open, is the
+      // ACK authority. Pre-fix this would fail open, run the effect inside the
+      // transaction, and commit a notification with NO ledger row.
+      await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+
+      expect(await countNotificationsForTicket(ticketId)).toBe(0);
+      const delivery = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
+      expect(delivery?.status).toBe('retryable_failed');
+      expect(Number(delivery?.attempt_count)).toBeGreaterThanOrEqual(1);
+      expect(delivery?.last_error).toContain('simulated reserve-ledger outage');
+    },
+    120_000,
+  );
+
+  it('withInboundOutboxDelivery propagates a failure-ledger write failure (effect fails + record fails => rejection)', async () => {
+    const failRecordThrows = vi.fn(async () => {
+      throw new Error('simulated fenced failure-record outage');
+    });
+    // Inject at the durable-store level: `withInboundOutboxDelivery` calls
+    // `failInboundOutboxEventForConsumer` -> `failInboundOutboxEventDelivery`
+    // through module-internal bindings, so overriding the dedupe export would
+    // not reach it. Overriding the store function does.
+    await freshSubscriber({ durableStore: { failInboundOutboxEventDelivery: failRecordThrows } });
+    const dedupe = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+    const { withInboundOutboxDelivery } = dedupe;
+
+    const actorUserId = randomUUID();
+    const { eventId, ticketId } = await seedOutboxScenario({ eventType: 'TICKET_CLOSED', assigneeId: actorUserId, actorUserId });
+
+    const event = { id: eventId, eventType: 'TICKET_CLOSED', payload: { tenantId, ticketId, userId: actorUserId } };
+
+    // Effect throws, and recording that failure throws: the wrapper must reject
+    // (never return { status: 'failed' } to be ACKed), leaving the committed
+    // `delivering` reservation for the sweeper to reclaim.
+    await expect(
+      withInboundOutboxDelivery({
+        event,
+        consumer: 'webhook',
+        db,
+        owner: `owner-${randomUUID()}`,
+        effect: async () => {
+          throw new Error('simulated effect failure');
+        },
+      })
+    ).rejects.toThrow('simulated fenced failure-record outage');
+
+    expect(failRecordThrows).toHaveBeenCalledTimes(1);
+    const delivery = await getDelivery(eventId, 'webhook');
+    expect(delivery?.status).toBe('delivering');
+    expect(delivery?.lease_token).toBeTruthy();
+  }, 60_000);
 });

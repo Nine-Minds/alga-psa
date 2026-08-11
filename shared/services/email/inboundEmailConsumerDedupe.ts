@@ -101,6 +101,15 @@ export interface InboundOutboxEventReservation {
  * Reserve a delivery for one consumer. Fails open to `{ decision: 'deliver',
  * failOpen: true }` for non-outbox events, durable mode `off`, or a ledger
  * outage — a transient DB error must never suppress a notification.
+ *
+ * The one case that MUST NOT fail open is a ledger error on the transactional
+ * path (`failOpenOnLedgerError: false`): there the caller runs its effect in
+ * the SAME Postgres transaction as the reservation, so a fail-open reserve
+ * would let the effect commit with no durable ledger row and no retry. On that
+ * path a reserve/ledger error rejects so the outer `withTransaction` rolls back
+ * and the queue/outbox retries. Non-transactional consumers keep the default
+ * fail-open (their effects are external I/O and the ledger bounds, never
+ * gates, delivery).
  */
 export async function reserveInboundOutboxEventForConsumer(params: {
   event: InboundOutboxEventLike;
@@ -108,6 +117,7 @@ export async function reserveInboundOutboxEventForConsumer(params: {
   db: DurableDb;
   owner: string;
   leaseTtlMs?: number;
+  failOpenOnLedgerError?: boolean;
 }): Promise<InboundOutboxEventReservation> {
   if (getInboundDurableMode() === 'off') return { decision: 'deliver', failOpen: true };
   if (!INBOUND_OUTBOX_EVENT_TYPES.has(params.event.eventType)) return { decision: 'deliver', failOpen: true };
@@ -134,6 +144,12 @@ export async function reserveInboundOutboxEventForConsumer(params: {
       version: Number(claim.row.lease_version),
     };
   } catch (error) {
+    if (params.failOpenOnLedgerError === false) {
+      // Transactional path: a ledger error must never become a fail-open
+      // "deliver anyway". Rethrow so the caller's transaction rolls back and
+      // the event is retried (failure record or bus redelivery).
+      throw error;
+    }
     // Fails open: a ledger outage must never drop a notification.
     console.warn('[InboundEmailConsumerDedupe] delivery ledger unavailable; delivering normally', {
       event: 'inbound_email_outbox_delivery_gate_unavailable',
@@ -236,7 +252,11 @@ export interface InboundOutboxDeliveryOutcome<T = unknown> {
  * dead-lettered at the attempt cap) and re-driven by the recovery sweeper.
  *
  * The event-bus handler for this consumer is expected to swallow the returned
- * outcome and let the ledger be the retry authority.
+ * outcome and let the ledger be the retry authority. The one case that MUST
+ * propagate is a failure to record the failure itself: `withInboundOutboxDelivery`
+ * rethrows when `failInboundOutboxEventForConsumer` errors, so the subscriber
+ * invocation errors out to the event bus and the message is redelivered rather
+ * than ACKed with neither a delivered mark nor a failure record.
  */
 export async function withInboundOutboxDelivery<T>(params: {
   event: InboundOutboxEventLike;
@@ -294,24 +314,21 @@ export async function withInboundOutboxDelivery<T>(params: {
       consumer: params.consumer,
       error: errorMessage,
     });
-    try {
-      await failInboundOutboxEventForConsumer({
-        event: params.event,
-        consumer: params.consumer,
-        db: params.db,
-        owner: params.owner,
-        token,
-        version,
-        error: errorMessage,
-      });
-    } catch (recordError) {
-      console.warn('[InboundEmailConsumerDedupe] failed to record delivery failure', {
-        event: 'inbound_email_outbox_delivery_fail_record_error',
-        consumer: params.consumer,
-        eventId: params.event.id,
-        error: recordError instanceof Error ? recordError.message : String(recordError),
-      });
-    }
+    // If recording the failure itself fails, rethrow so the subscriber
+    // invocation errors out to the event bus and the message is redelivered.
+    // The reservation is still committed (`delivering` with a live lease), so
+    // redelivery may skip while it is in progress — the recovery sweeper then
+    // reclaims it after lease expiry. Either way the event is never ACKed
+    // with neither a delivered mark nor a failure record.
+    await failInboundOutboxEventForConsumer({
+      event: params.event,
+      consumer: params.consumer,
+      db: params.db,
+      owner: params.owner,
+      token,
+      version,
+      error: errorMessage,
+    });
     // The ledger (backoff + sweeper re-publish) is the retry authority; the
     // event-bus need not redeliver the same failed effect immediately.
     return { status: 'failed' };

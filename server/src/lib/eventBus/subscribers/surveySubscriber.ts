@@ -30,37 +30,41 @@ async function withSurveyInboundOutboxEffect(
     await effect();
     return;
   }
+  let knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'];
   try {
-    const { knex } = await createTenantKnex(tenantId);
-    const outcome = await withInboundOutboxDelivery({
-      event,
-      consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
-      db: knex,
-      owner: newInboundDeliveryOwner(),
-      effect,
-    });
-    if (outcome.status === 'skipped') {
-      logger.info('[SurveySubscriber] Skipping already-delivered inbound outbox event', {
-        eventId: event.id,
-        eventType: event.eventType,
-        tenantId,
-        consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
-      });
-    } else if (outcome.status === 'failed') {
-      logger.warn('[SurveySubscriber] Inbound outbox delivery failed; recovery will retry', {
-        eventId: event.id,
-        eventType: event.eventType,
-        tenantId,
-        consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
-      });
-    }
+    ({ knex } = await createTenantKnex(tenantId));
   } catch (error) {
+    // Ledger outage fails open: deliver normally so a transient DB error never
+    // suppresses the survey invitation.
     logger.warn('[SurveySubscriber] Delivery gate unavailable; delivering normally', {
       eventType: event.eventType,
       tenantId,
       error: error instanceof Error ? error.message : String(error),
     });
     await effect();
+    return;
+  }
+  const outcome = await withInboundOutboxDelivery({
+    event,
+    consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+    db: knex,
+    owner: newInboundDeliveryOwner(),
+    effect,
+  });
+  if (outcome.status === 'skipped') {
+    logger.info('[SurveySubscriber] Skipping already-delivered inbound outbox event', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+    });
+  } else if (outcome.status === 'failed') {
+    logger.warn('[SurveySubscriber] Inbound outbox delivery failed; recovery will retry', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      consumer: INBOUND_OUTBOX_SURVEY_CONSUMER,
+    });
   }
 }
 
@@ -183,6 +187,10 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
     logger.error('[SurveySubscriber] Failed to process ticket closed event', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
+    // An inbound outbox delivery whose failure could not be recorded must
+    // propagate so the event bus redelivers; non-outbox events keep their
+    // best-effort behavior.
+    if (INBOUND_OUTBOX_EVENT_TYPES.has((event as { eventType?: unknown }).eventType as string)) throw error;
   }
 }
 

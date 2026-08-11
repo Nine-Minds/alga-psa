@@ -62,8 +62,18 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
   };
   const isCandidate = INBOUND_OUTBOX_EVENT_TYPES.has(eventLike.eventType);
   if (isCandidate) {
+    let knex: Awaited<ReturnType<typeof getConnection>> | undefined;
     try {
-      const knex = await getConnection(tenantId);
+      knex = await getConnection(tenantId);
+    } catch (error) {
+      // Ledger outage fails open: fall through to the normal delivery path so
+      // a transient DB error never suppresses the alert reset.
+      logger.warn('[RmmAlertTicketClosedSubscriber] Delivery gate unavailable; delivering normally', {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    if (knex) {
       const outcome = await withInboundOutboxDelivery({
         event: eventLike,
         consumer: INBOUND_OUTBOX_RMM_ALERT_CONSUMER,
@@ -85,11 +95,6 @@ export async function handleTicketClosed(event: unknown): Promise<void> {
         });
       }
       return;
-    } catch (error) {
-      logger.warn('[RmmAlertTicketClosedSubscriber] Delivery gate unavailable; delivering normally', {
-        tenantId,
-        error: error instanceof Error ? error.message : String(error),
-      });
     }
   }
 

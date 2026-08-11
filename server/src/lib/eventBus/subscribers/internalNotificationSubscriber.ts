@@ -962,7 +962,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1609,7 +1609,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
   });
 
   try {
-    const db = await getConnection(tenantId);
+    const db = opts?.db ?? await getConnection(tenantId);
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -3042,6 +3042,11 @@ async function handleTransactionalOutboxDelivery(
         consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
         db: trx,
         owner,
+        // This consumer's effect runs in the same transaction as the
+        // reservation; a ledger error here must reject so the transaction
+        // rolls back and the event retries. Fail-open would commit the effect
+        // with no durable ledger row and no recovery path.
+        failOpenOnLedgerError: false,
       });
       if (reservation.decision === 'skip') {
         logger.info('[InternalNotificationSubscriber] Skipping already-delivered inbound outbox event', {
@@ -3074,7 +3079,11 @@ async function handleTransactionalOutboxDelivery(
     // The effect failed; withTransaction rolled everything back (reservation AND
     // effect, so the notification write is atomic). Record a retryable/terminal
     // failure so the recovery sweeper re-drives the delivery after backoff; a
-    // poisoned effect dead-letters at the attempt cap instead of looping.
+    // poisoned effect dead-letters at the attempt cap instead of looping. If
+    // the failure-ledger write itself fails there is NO committed reservation
+    // left (it rolled back with the effect) and no failure record — rethrow so
+    // the subscriber invocation errors out to the event bus and the message is
+    // redelivered rather than ACKed into permanent loss.
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('[InternalNotificationSubscriber] Transactional outbox delivery failed; recording for retry', {
       eventId: event.id,
@@ -3083,23 +3092,13 @@ async function handleTransactionalOutboxDelivery(
       consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
       error: errorMessage,
     });
-    try {
-      const recordDb = await getConnection(tenantId);
-      await recordInboundOutboxDeliveryFailure({
-        event: eventLike,
-        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
-        db: recordDb,
-        error: errorMessage,
-      });
-    } catch (recordError) {
-      logger.warn('[InternalNotificationSubscriber] Failed to record delivery failure', {
-        eventId: event.id,
-        eventType: event.eventType,
-        tenantId,
-        consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
-        error: recordError instanceof Error ? recordError.message : String(recordError),
-      });
-    }
+    const recordDb = await getConnection(tenantId);
+    await recordInboundOutboxDeliveryFailure({
+      event: eventLike,
+      consumer: INBOUND_OUTBOX_NOTIFICATION_CONSUMER,
+      db: recordDb,
+      error: errorMessage,
+    });
     return true;
   }
 }
@@ -3192,6 +3191,8 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
+  handleTicketCommentAdded,
+  handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
 };
 

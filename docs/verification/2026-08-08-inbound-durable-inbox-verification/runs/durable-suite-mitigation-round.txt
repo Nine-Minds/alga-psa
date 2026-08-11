@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786412605576"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10725ms 145 MB heap used
+   ✓ Inbound email durable inbox (integration) > exact replay of a succeeded message resolves the original row, returns stored IDs, and mints no legacy reconcile failure  746ms
+
+ Test Files  1 passed (1)
+      Tests  45 passed (45)
+   Start at  01:43:25
+   Duration  11.61s (transform 651ms, setup 55ms, collect 478ms, tests 10.73s, environment 0ms, prepare 31ms)
+

@@ -436,31 +436,9 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
   // consumer — at-least-once with a bounded duplicate window. Re-indexing is
   // an idempotent upsert, so a duplicate within the crash window is harmless.
   if (INBOUND_OUTBOX_EVENT_TYPES.has(event.eventType)) {
+    let knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'];
     try {
-      const { knex } = await createTenantKnex(tenant);
-      const outcome = await withInboundOutboxDelivery({
-        event: { id: event.id, eventType: event.eventType, payload: event.payload as Record<string, unknown> },
-        consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
-        db: knex,
-        owner: newInboundDeliveryOwner(),
-        effect: () => dispatchSearchIndexEvent(event, tenant, indexers),
-      });
-      if (outcome.status === 'skipped') {
-        logger.info('[SearchIndexSubscriber] Skipping already-delivered inbound outbox event', {
-          eventId: event.id,
-          eventType: event.eventType,
-          tenant,
-          consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
-        });
-      } else if (outcome.status === 'failed') {
-        logger.warn('[SearchIndexSubscriber] Inbound outbox delivery failed; recovery will retry', {
-          eventId: event.id,
-          eventType: event.eventType,
-          tenant,
-          consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
-        });
-      }
-      return;
+      ({ knex } = await createTenantKnex(tenant));
     } catch (error) {
       // Ledger outage fails open: index normally so a transient DB error never
       // suppresses search indexing.
@@ -470,7 +448,32 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         tenant,
         error: error instanceof Error ? error.message : String(error),
       });
+      await dispatchSearchIndexEvent(event, tenant, indexers);
+      return;
     }
+    const outcome = await withInboundOutboxDelivery({
+      event: { id: event.id, eventType: event.eventType, payload: event.payload as Record<string, unknown> },
+      consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+      db: knex,
+      owner: newInboundDeliveryOwner(),
+      effect: () => dispatchSearchIndexEvent(event, tenant, indexers),
+    });
+    if (outcome.status === 'skipped') {
+      logger.info('[SearchIndexSubscriber] Skipping already-delivered inbound outbox event', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenant,
+        consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+      });
+    } else if (outcome.status === 'failed') {
+      logger.warn('[SearchIndexSubscriber] Inbound outbox delivery failed; recovery will retry', {
+        eventId: event.id,
+        eventType: event.eventType,
+        tenant,
+        consumer: INBOUND_OUTBOX_SEARCH_INDEX_CONSUMER,
+      });
+    }
+    return;
   }
 
   await dispatchSearchIndexEvent(event, tenant, indexers);

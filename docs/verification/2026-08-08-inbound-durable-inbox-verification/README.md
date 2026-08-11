@@ -1,7 +1,8 @@
 # Verification bundle — durable inbound-email inbox (mitigation round)
 
-**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `f4b697d6ee`
-**Date:** 2026-08-08
+**Branch/worktree:** `fix/inbound-email-durable-inbox` @ `7c5adef2ee` (this round's
+verification run), prior bundle snapshot @ `f4b697d6ee`
+**Date:** 2026-08-08 (this round: 2026-08-10)
 **Round type:** verifier-timeout mitigation (round 2). The previous
 verifier-timeout (`e53d1420`) was recorded as an orchestration failure — the
 independent verifier subagent returned without a verdict after its terminal
@@ -387,6 +388,37 @@ inject `leaseTtlMs: 30_000` and force expiry via SQL
 production-scale intervals.
 
 ---
+
+## 5.1 Mitigation round (2026-08-10): transactional consumer honesty
+
+Independent PR verification of the prior head found the transactional outbox
+**consumer** still had two durability holes: `handleTicketClosed` /
+`handleTicketCommentAdded` bypassed the caller-supplied `opts.db` transaction,
+and failure-ledger write errors were swallowed, so effects could commit with no
+durable ledger row and no retry. This round closes those holes. Evidence in
+`runs/*-mitigation-round.txt`:
+
+- **Focused subscriber suite** (`eventSubscribers.integration.test.ts`) — now
+  26 tests (15 stub + 11 real-Postgres transactional-delivery tests),
+  **26/26 passed**. `runs/subscriber-suite-mitigation-round.txt`.
+- **Durable inbound suite** (`inboundEmailDurableInbox.integration.test.ts`) —
+  **45/45 passed** (unchanged, no regression). `runs/durable-suite-mitigation-round.txt`.
+- **Related contract suites** — `internalNotificationSubscriberTenantScoped`,
+  `ticketEmailSubscriber.contactAuthor`, `ticketEmailSubscriber.inlineImageLogging`,
+  **3/3 passed**. `runs/contract-suites-mitigation-round.txt`.
+- **Mention-notifications integration** (`handleTicketCommentAdded` real path) —
+  **2/2 passed**. `runs/mention-notifications-mitigation-round.txt`.
+- **All five typechecks** — server, shared, email-service, packages/jobs,
+  ee/temporal-workflows, all exit 0. `runs/typechecks-mitigation-round.txt`.
+
+The real-Postgres tests are behavior-level (they drive the actual handlers and
+ledger, not stubs) and were verified to fail against the pre-fix behavior by
+temporarily reverting each production change (fail-open reserve -> the effect
+commits 1 notification with no ledger row; pool-leaking `handleTicketClosed` ->
+the notification survives a simulated crash before commit).
+
+---
+
 
 ## 6. Bounded-duplicate statement (external-effect semantics)
 

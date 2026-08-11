@@ -69,30 +69,9 @@ async function withSlaInboundOutboxEffect(
     await effect();
     return;
   }
+  let knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'];
   try {
-    const { knex } = await createTenantKnex(tenantId);
-    const outcome = await withInboundOutboxDelivery({
-      event,
-      consumer: INBOUND_OUTBOX_SLA_CONSUMER,
-      db: knex,
-      owner: newInboundDeliveryOwner(),
-      effect,
-    });
-    if (outcome.status === 'skipped') {
-      logger.info('[SlaSubscriber] Skipping already-delivered inbound outbox event', {
-        eventId: event.id,
-        eventType: event.eventType,
-        tenantId,
-        consumer: INBOUND_OUTBOX_SLA_CONSUMER,
-      });
-    } else if (outcome.status === 'failed') {
-      logger.warn('[SlaSubscriber] Inbound outbox delivery failed; recovery will retry', {
-        eventId: event.id,
-        eventType: event.eventType,
-        tenantId,
-        consumer: INBOUND_OUTBOX_SLA_CONSUMER,
-      });
-    }
+    ({ knex } = await createTenantKnex(tenantId));
   } catch (error) {
     // Ledger outage fails open: deliver normally so a transient DB error never
     // suppresses the SLA effect.
@@ -102,6 +81,29 @@ async function withSlaInboundOutboxEffect(
       error: error instanceof Error ? error.message : String(error),
     });
     await effect();
+    return;
+  }
+  const outcome = await withInboundOutboxDelivery({
+    event,
+    consumer: INBOUND_OUTBOX_SLA_CONSUMER,
+    db: knex,
+    owner: newInboundDeliveryOwner(),
+    effect,
+  });
+  if (outcome.status === 'skipped') {
+    logger.info('[SlaSubscriber] Skipping already-delivered inbound outbox event', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      consumer: INBOUND_OUTBOX_SLA_CONSUMER,
+    });
+  } else if (outcome.status === 'failed') {
+    logger.warn('[SlaSubscriber] Inbound outbox delivery failed; recovery will retry', {
+      eventId: event.id,
+      eventType: event.eventType,
+      tenantId,
+      consumer: INBOUND_OUTBOX_SLA_CONSUMER,
+    });
   }
 }
 
@@ -355,6 +357,11 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
     logger.error('[SlaSubscriber] Failed to handle TICKET_UPDATED event', {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
+    // An inbound outbox delivery whose failure could not be recorded must
+    // propagate so the event bus redelivers; a committed failure record or a
+    // propagated error is the only valid ACK authority. Non-outbox events keep
+    // their best-effort behavior.
+    if (INBOUND_OUTBOX_EVENT_TYPES.has((event as { eventType?: unknown }).eventType as string)) throw error;
   }
 }
 
@@ -486,6 +493,9 @@ async function handleTicketCommentAddedEvent(event: unknown): Promise<void> {
     logger.error('[SlaSubscriber] Failed to handle TICKET_COMMENT_ADDED event', {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
+    // See handleTicketUpdatedEvent: an unrecorded inbound outbox failure must
+    // propagate for redelivery; non-outbox events keep best-effort behavior.
+    if (INBOUND_OUTBOX_EVENT_TYPES.has((event as { eventType?: unknown }).eventType as string)) throw error;
   }
 }
 

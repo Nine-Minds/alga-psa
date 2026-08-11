@@ -1,0 +1,13 @@
+All five typechecks green at the mitigation-round HEAD (commit "fix(inbound-email):
+thread the outbox transaction through subscriber handlers and stop swallowing
+failure-ledger errors").
+
+| Check | Command (from dir) | Exit |
+| --- | --- | --- |
+| server | NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit -p tsconfig.json (server/) | 0 |
+| shared | npx tsc --noEmit (shared/) | 0 |
+| services/email-service | npx tsc --noEmit -p tsconfig.json (services/email-service/) | 0 |
+| packages/jobs | npx tsc --noEmit (packages/jobs/) | 0 |
+| ee/temporal-workflows | npx tsc --noEmit (ee/temporal-workflows/) | 0 |
+
+All produced exit code 0 with zero diagnostics (empty tsc output).
