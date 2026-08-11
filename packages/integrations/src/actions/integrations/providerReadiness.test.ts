@@ -17,6 +17,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('../../lib/microsoftConsumerProfileResolution', () => ({
   resolveMicrosoftConsumerProfileConfig: (...args: unknown[]) => resolveMicrosoftConsumerProfileConfigMock(...args),
+  resolveMicrosoftConsumerProfileConfigReadOnly: (...args: unknown[]) => resolveMicrosoftConsumerProfileConfigMock(...args),
   getMicrosoftPlatformCredentialAvailability: (...args: unknown[]) => getMicrosoftPlatformCredentialAvailabilityMock(...args),
 }));
 
