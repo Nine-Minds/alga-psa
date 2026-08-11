@@ -183,6 +183,42 @@ function buildFullAvailability(overrides: Partial<Record<string, boolean>> = {})
   }));
 }
 
+/**
+ * The handler classifies connector failures with `instanceof`, so rejections
+ * have to carry the mocked class the module graph handed it — a plain Error
+ * with a status in its message is deliberately not a connector failure.
+ */
+async function connectorError(message: string, status: number): Promise<Error> {
+  const { BotConnectorRequestError } = await import(
+    '@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotConnector'
+  );
+  return new BotConnectorRequestError(message, status);
+}
+
+function buildMyTicketsSuccess() {
+  return buildActionSuccess('my_tickets', {
+    summary: { title: 'My tickets', text: 'Found 1 assigned ticket for the signed-in technician.' },
+    items: [
+      {
+        id: 'ticket-uuid-1',
+        displayId: 'ALGA-101',
+        title: 'ALGA-101',
+        summary: 'Printer offline • Open',
+        entityType: 'ticket',
+        links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-1' }],
+      },
+    ],
+  });
+}
+
+function buildConnectorRequest(body: Record<string, unknown>): Request {
+  return new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serviceUrl: 'https://smba.trafficmanager.net/amer/', ...body }),
+  });
+}
+
 function buildActionSuccess(actionId: string, overrides: Record<string, unknown> = {}) {
   return {
     success: true,
@@ -1654,7 +1690,9 @@ describe('teamsBotHandler', () => {
       })
     );
     sendBotActivityMock
-      .mockRejectedValueOnce(new Error('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected'))
+      .mockRejectedValueOnce(
+        await connectorError('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected', 415)
+      )
       .mockResolvedValueOnce({ status: 'sent' });
 
     const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
@@ -1713,7 +1751,9 @@ describe('teamsBotHandler', () => {
     // rejected the card; the connector already dropped the token, so the same
     // activity must go back out with a fresh one.
     sendBotActivityMock
-      .mockRejectedValueOnce(new Error('Failed to send Bot Framework activity (401 Unauthorized): token expired'))
+      .mockRejectedValueOnce(
+        await connectorError('Failed to send Bot Framework activity (401 Unauthorized): token expired', 401)
+      )
       .mockResolvedValueOnce({ status: 'sent' });
 
     const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
@@ -1732,6 +1772,53 @@ describe('teamsBotHandler', () => {
     expect(sendBotActivityMock.mock.calls[1][0].activity.attachments?.[0]?.contentType).toBe(
       'application/vnd.microsoft.card.adaptive'
     );
+  });
+
+  it('T071b: a card rejection on the post-401 resend still falls back to the hero rendering', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(buildMyTicketsSuccess());
+    sendBotActivityMock
+      .mockRejectedValueOnce(
+        await connectorError('Failed to send Bot Framework activity (401 Unauthorized): token expired', 401)
+      )
+      .mockRejectedValueOnce(
+        await connectorError('Failed to send Bot Framework activity (415 Unsupported Media Type): adaptive rejected', 415)
+      )
+      .mockResolvedValueOnce({ status: 'sent' });
+
+    const response = await handleTeamsBotActivityRequest(
+      buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+    );
+
+    expect(response.status).toBe(200);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(3);
+    expect(sendBotActivityMock.mock.calls[2][0].activity.attachments?.[0]?.contentType).toBe(
+      'application/vnd.microsoft.card.hero'
+    );
+  });
+
+  it('T071b: a bot token acquisition failure is surfaced instead of retried or downgraded', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(buildMyTicketsSuccess());
+    // Thrown by the connector's token grant (e.g. a bad TEAMS_BOT_APP_PASSWORD),
+    // not by the activity dispatch: neither a resend nor the hero fallback can
+    // help, so the real cause has to reach the log verbatim.
+    const acquisitionError = new Error(
+      'Failed to acquire Bot Framework token (401 Unauthorized): invalid_client'
+    );
+    sendBotActivityMock.mockRejectedValueOnce(acquisitionError);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const response = await handleTeamsBotActivityRequest(
+        buildConnectorRequest({ ...buildPersonalMessageActivity('my tickets'), id: 'activity-1' })
+      );
+      expect(response.status).toBe(200);
+      expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith('[teams-bot] failed to send reply', acquisitionError);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('T072: the "Assign to me" card action executes assign_ticket and updates the card in place', async () => {
@@ -1792,7 +1879,7 @@ describe('teamsBotHandler', () => {
       })
     );
     updateBotActivityMock.mockRejectedValueOnce(
-      new Error('Failed to update Bot Framework activity (403 Forbidden): nope')
+      await connectorError('Failed to update Bot Framework activity (403 Forbidden): nope', 403)
     );
 
     const request = new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
@@ -1814,6 +1901,66 @@ describe('teamsBotHandler', () => {
 
     await handleTeamsBotActivityRequest(request);
     expect(updateBotActivityMock).toHaveBeenCalledTimes(1);
+    expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T072: an expired connector token retries the in-place update instead of duplicating the reply', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
+      })
+    );
+    updateBotActivityMock.mockRejectedValueOnce(
+      await connectorError('Failed to update Bot Framework activity (401 Unauthorized): token expired', 401)
+    );
+
+    await handleTeamsBotActivityRequest(
+      buildConnectorRequest({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-3',
+        replyToId: 'card-activity-3',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-4',
+        },
+      })
+    );
+
+    expect(updateBotActivityMock).toHaveBeenCalledTimes(2);
+    expect(sendBotActivityMock).not.toHaveBeenCalled();
+  });
+
+  it('T072: an in-place update that stays unauthorized still falls back to a normal reply', async () => {
+    isBotConnectorConfiguredMock.mockReturnValue(true);
+    executeTeamsActionMock.mockResolvedValue(
+      buildActionSuccess('assign_ticket', {
+        operation: 'mutation',
+        summary: { title: 'Ticket assigned', text: 'Ticket ALGA-101 was reassigned successfully.' },
+      })
+    );
+    updateBotActivityMock.mockRejectedValue(
+      await connectorError('Failed to update Bot Framework activity (401 Unauthorized): token expired', 401)
+    );
+
+    await handleTeamsBotActivityRequest(
+      buildConnectorRequest({
+        ...buildPersonalMessageActivity(''),
+        id: 'submit-activity-4',
+        replyToId: 'card-activity-4',
+        value: {
+          command: 'bot_card_action',
+          actionId: 'assign_ticket',
+          ticketId: 'ALGA-101',
+          idempotencyKey: 'card-idem-5',
+        },
+      })
+    );
+
+    expect(updateBotActivityMock).toHaveBeenCalledTimes(2);
     expect(sendBotActivityMock).toHaveBeenCalledTimes(1);
   });
 

@@ -2378,17 +2378,27 @@ function isExpiredConnectorTokenError(error: unknown): boolean {
   return botConnectorErrorStatus(error) === 401;
 }
 
+// Only the connector's activity dispatch reports a status. Token-acquisition
+// failures carry a status in their message too, but retrying or downgrading the
+// card would not help a bad TEAMS_BOT_APP_PASSWORD — they classify as neither.
 function botConnectorErrorStatus(error: unknown): number | null {
-  if (error instanceof BotConnectorRequestError) {
-    return error.status;
-  }
-  if (error instanceof Error) {
-    const match = error.message.match(/\((\d{3})\s/);
-    if (match) {
-      return Number.parseInt(match[1], 10);
+  return error instanceof BotConnectorRequestError ? error.status : null;
+}
+
+/**
+ * Retry a connector call once on an expired token: the connector drops its
+ * cached token on a 401, so the retry mints a fresh one. A second 401 is a real
+ * credential problem and propagates.
+ */
+async function withExpiredTokenRetry<T>(send: () => Promise<T>): Promise<T> {
+  try {
+    return await send();
+  } catch (error) {
+    if (!isExpiredConnectorTokenError(error)) {
+      throw error;
     }
+    return send();
   }
-  return null;
 }
 
 export async function handleTeamsBotActivityRequest(
@@ -2430,44 +2440,32 @@ export async function handleTeamsBotActivityRequest(
     const fallback = buildWireActivity(response, false);
     const hasAdaptive = Boolean(response.adaptiveAttachments && response.adaptiveAttachments.length > 0);
 
+    const sendReply = async (
+      outgoing: TeamsBotResponseActivity,
+      skipLabel: string
+    ): Promise<void> => {
+      const result = await sendBotActivity({
+        serviceUrl,
+        conversationId,
+        replyToId,
+        activity: outgoing,
+      });
+      if (result.status === 'skipped' && result.reason) {
+        console.warn(skipLabel, { reason: result.reason });
+      }
+    };
+
     const sendReplyWithFallback = async (): Promise<void> => {
       try {
-        const result = await sendBotActivity({
-          serviceUrl,
-          conversationId,
-          replyToId,
-          activity: primary,
-        });
-        if (result.status === 'skipped' && result.reason) {
-          console.warn('[teams-bot] reply skipped', { reason: result.reason });
-        }
+        await withExpiredTokenRetry(() => sendReply(primary, '[teams-bot] reply skipped'));
       } catch (sendError) {
-        if (isExpiredConnectorTokenError(sendError)) {
-          // The cached token expired between the cache check and the request;
-          // the connector already dropped it, so resend the same activity.
-          const result = await sendBotActivity({
-            serviceUrl,
-            conversationId,
-            replyToId,
-            activity: primary,
-          });
-          if (result.status === 'skipped' && result.reason) {
-            console.warn('[teams-bot] reply skipped', { reason: result.reason });
-          }
-          return;
-        }
         // Some clients/channels reject Adaptive Cards with a 4xx — retry once
-        // with the hero-card fallback rendering kept on the response.
+        // with the hero-card fallback rendering kept on the response. A token
+        // expiry on the fallback itself is retried the same way.
         if (hasAdaptive && isCardRejectionError(sendError)) {
-          const result = await sendBotActivity({
-            serviceUrl,
-            conversationId,
-            replyToId,
-            activity: fallback,
-          });
-          if (result.status === 'skipped' && result.reason) {
-            console.warn('[teams-bot] fallback reply skipped', { reason: result.reason });
-          }
+          await withExpiredTokenRetry(() =>
+            sendReply(fallback, '[teams-bot] fallback reply skipped')
+          );
         } else {
           throw sendError;
         }
@@ -2477,14 +2475,18 @@ export async function handleTeamsBotActivityRequest(
     try {
       if (response.replaceActivityId) {
         // Inline card action: update the originating card in place; if the
-        // update fails, deliver the result as a normal reply instead.
+        // update fails, deliver the result as a normal reply instead. Retrying
+        // an expired token here keeps a transient 401 from duplicating the
+        // reply and leaving the stale card behind.
         try {
-          await updateBotActivity({
-            serviceUrl,
-            conversationId,
-            activityId: response.replaceActivityId,
-            activity: primary,
-          });
+          await withExpiredTokenRetry(() =>
+            updateBotActivity({
+              serviceUrl,
+              conversationId,
+              activityId: response.replaceActivityId!,
+              activity: primary,
+            })
+          );
         } catch (updateError) {
           console.warn('[teams-bot] in-place card update failed; sending reply instead', {
             error: updateError instanceof Error ? updateError.message : String(updateError),
