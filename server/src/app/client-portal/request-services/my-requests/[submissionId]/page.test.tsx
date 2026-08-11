@@ -23,8 +23,12 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// BackNav reads useRouter/useSearchParams; without them the page throws before
+// any of the copy below is rendered.
 vi.mock('next/navigation', () => ({
   notFound: () => notFound(),
+  useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock('../actions', () => ({

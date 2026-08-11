@@ -316,6 +316,9 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useI18n: () => i18nMocks.mockI18nContext,
   useOptionalI18n: () => i18nMocks.mockI18nContext,
   detectClientLocale: () => 'en',
+  // I18nWrapper renders this while it resolves the locale; without it every
+  // test that mounts a page through the wrapper throws on the missing export.
+  getBootstrapLoadingText: () => 'Loading...',
   I18nProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
