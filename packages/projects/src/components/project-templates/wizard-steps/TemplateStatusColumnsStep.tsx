@@ -123,6 +123,7 @@ export function TemplateStatusColumnsStep({
       temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       template_phase_id: selectedPhaseTempId || undefined,
       status_id: statusId || '',
+      statusSource: statusId ? 'tenant' : 'inline',
       custom_status_name: '',
       custom_status_color: status?.color || '#6B7280',
       display_order: scopedMappings.length,
@@ -175,6 +176,9 @@ export function TemplateStatusColumnsStep({
       }
 
       const nextMapping = { ...mapping, ...updates };
+      if ('status_id' in updates) {
+        nextMapping.statusSource = updates.status_id ? 'tenant' : 'inline';
+      }
       if (updates.status_id) {
         const status = availableStatuses.find((candidate) => candidate.status_id === updates.status_id);
         if (status?.color) {

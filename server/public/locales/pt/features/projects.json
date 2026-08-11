@@ -959,7 +959,17 @@
       "add_title": "Adicionar coluna de status",
       "select_placeholder": "Selecione um status...",
       "all_in_use": "Todos os status disponíveis estão em uso",
-      "create_new": "Criar novo"
+      "create_new": "Criar novo",
+      "status_no_longer_exists": "O status não existe mais",
+      "missing_status": "Status ausente",
+      "ambiguous_status": "Status histórico ambíguo",
+      "replace_placeholder": "Selecionar status de substituição...",
+      "replace_status": "Substituir status",
+      "replacing": "Substituindo...",
+      "replaced": "Coluna de status substituída",
+      "replace_failed": "Falha ao substituir a coluna de status",
+      "repair_status_columns": "Reparar colunas de status",
+      "unresolved_apply_guard": "As colunas de status precisam de reparo ({{count}})"
     },
     "list": {
       "title": "Modelos de projeto",
@@ -1047,7 +1057,8 @@
         "all": "Copiar todos os agentes (principal + adicional)"
       },
       "fixErrors": "Corrija os seguintes erros:",
-      "addStatus": "Adicionar novo status"
+      "addStatus": "Adicionar novo status",
+      "unresolved_guard": "Este modelo tem colunas de status que precisam de reparo antes de poder ser aplicado."
     },
     "detail": {
       "description": "Descrição:",

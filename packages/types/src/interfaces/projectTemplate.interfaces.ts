@@ -67,13 +67,20 @@ export interface IProjectTemplateStatusMapping extends TenantEntity {
   template_id: string;
   template_phase_id?: string;
   status_id?: string;
+  standard_status_id?: string;
+  unresolved_status_id?: string;
+  unresolved_reason?: 'missing' | 'ambiguous';
+  status_source?: 'tenant' | 'standard' | 'inline' | 'unresolved';
   custom_status_name?: string;
+  custom_status_color?: string;
   display_order: number;
   // Enriched fields from join
   status_name?: string;
   color?: string;
   is_closed?: boolean;
   icon?: string | null;
+  // Derived discriminated variant exposed by the shared resolver.
+  statusSource?: 'tenant' | 'standard' | 'inline' | 'unresolved';
 }
 
 export interface IProjectTemplateTaskAssignment extends TenantEntity {
@@ -92,4 +99,5 @@ export interface IProjectTemplateWithDetails extends IProjectTemplate {
   checklist_items?: IProjectTemplateChecklistItem[];
   status_mappings?: IProjectTemplateStatusMapping[];
   task_assignments?: IProjectTemplateTaskAssignment[];
+  unresolved_status_mapping_count?: number;
 }

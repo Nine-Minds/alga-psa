@@ -959,7 +959,17 @@
       "add_title": "Ajouter une colonne de statut",
       "select_placeholder": "Sélectionner un statut...",
       "all_in_use": "Tous les statuts disponibles sont utilisés",
-      "create_new": "Créer nouveau"
+      "create_new": "Créer nouveau",
+      "status_no_longer_exists": "Le statut n'existe plus",
+      "missing_status": "Statut manquant",
+      "ambiguous_status": "Statut historique ambigu",
+      "replace_placeholder": "Sélectionner un statut de remplacement...",
+      "replace_status": "Remplacer le statut",
+      "replacing": "Remplacement...",
+      "replaced": "Colonne de statut remplacée",
+      "replace_failed": "Échec du remplacement de la colonne de statut",
+      "repair_status_columns": "Réparer les colonnes de statut",
+      "unresolved_apply_guard": "Les colonnes de statut doivent être réparées ({{count}})"
     },
     "list": {
       "title": "Modèles de projet",
@@ -1047,7 +1057,8 @@
         "all": "Copier toutes les affectations"
       },
       "fixErrors": "Veuillez corriger les erreurs suivantes :",
-      "addStatus": "Ajouter un nouveau statut"
+      "addStatus": "Ajouter un nouveau statut",
+      "unresolved_guard": "Ce modèle a des colonnes de statut qui doivent être réparées avant de pouvoir être appliqué."
     },
     "detail": {
       "description": "Description :",

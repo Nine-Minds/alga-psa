@@ -959,7 +959,17 @@
       "add_title": "Statuskolom toevoegen",
       "select_placeholder": "Selecteer een status...",
       "all_in_use": "Alle beschikbare statussen zijn in gebruik",
-      "create_new": "Nieuw aanmaken"
+      "create_new": "Nieuw aanmaken",
+      "status_no_longer_exists": "Status bestaat niet meer",
+      "missing_status": "Ontbrekende status",
+      "ambiguous_status": "Ambigu historische status",
+      "replace_placeholder": "Vervangende status selecteren...",
+      "replace_status": "Status vervangen",
+      "replacing": "Vervangen...",
+      "replaced": "Statuskolom vervangen",
+      "replace_failed": "Statuskolom vervangen mislukt",
+      "repair_status_columns": "Statuskolommen repareren",
+      "unresolved_apply_guard": "Statuskolommen moeten worden gerepareerd ({{count}})"
     },
     "list": {
       "title": "Projectsjablonen",
@@ -1047,7 +1057,8 @@
         "all": "Kopieer alle opdrachten"
       },
       "fixErrors": "Los de volgende fouten op:",
-      "addStatus": "Nieuwe status toevoegen"
+      "addStatus": "Nieuwe status toevoegen",
+      "unresolved_guard": "Dit sjabloon heeft statuskolommen die moeten worden gerepareerd voordat het kan worden toegepast."
     },
     "detail": {
       "description": "Beschrijving:",
