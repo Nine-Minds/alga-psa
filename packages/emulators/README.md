@@ -55,8 +55,15 @@ overrides:
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 
-Both Teams vars are off by default and ignored entirely under
-`NODE_ENV=production`, so they cannot loosen a deployed trust boundary.
+Every var the Teams surface reads is off by default and ignored entirely under
+`NODE_ENV=production`, so none of them can loosen a deployed trust boundary:
+`TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus —
+for the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+`MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
+credentials, the Graph client secret, and activity-notification tokens are
+sent. (The email module honors those two Microsoft vars unconditionally; that
+is pre-existing behavior, unchanged here.)
+
 `TEAMS_BOT_OPENID_CONFIG_URL` moves *discovery only*: the emulator generates
 an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,
 so the app's signature, issuer, and audience checks all still run.

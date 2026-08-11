@@ -1,5 +1,5 @@
-const DEFAULT_GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
-const DEFAULT_LOGIN_BASE_URL = 'https://login.microsoftonline.com';
+export const DEFAULT_MICROSOFT_GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
+export const DEFAULT_MICROSOFT_LOGIN_BASE_URL = 'https://login.microsoftonline.com';
 
 export const MICROSOFT_EMAIL_OAUTH_SCOPES = [
   'https://graph.microsoft.com/Mail.Read',
@@ -17,13 +17,13 @@ function withoutTrailingSlash(value: string): string {
 
 export function getMicrosoftGraphBaseUrl(): string {
   return withoutTrailingSlash(
-    (process.env.MICROSOFT_GRAPH_BASE_URL || '').trim() || DEFAULT_GRAPH_BASE_URL
+    (process.env.MICROSOFT_GRAPH_BASE_URL || '').trim() || DEFAULT_MICROSOFT_GRAPH_BASE_URL
   );
 }
 
 export function getMicrosoftLoginBaseUrl(): string {
   return withoutTrailingSlash(
-    (process.env.MICROSOFT_LOGIN_BASE_URL || '').trim() || DEFAULT_LOGIN_BASE_URL
+    (process.env.MICROSOFT_LOGIN_BASE_URL || '').trim() || DEFAULT_MICROSOFT_LOGIN_BASE_URL
   );
 }
 
