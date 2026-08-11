@@ -237,6 +237,18 @@ describe('validateTeamsGraphCredentials (T091)', () => {
     const result = await validateTeamsGraphCredentialsImpl(USER, { tenant: TENANT });
     expect(result).toMatchObject({ status: 'failed', reason: 'network_error' });
     expect((result as { message: string }).message).toContain('fetch failed');
+    expect((result as { message: string }).message).toContain('login.microsoftonline.com');
+  });
+
+  it('names the emulator host in network_error when the login base url is redirected', async () => {
+    vi.stubEnv('TEAMS_EMULATOR_MODE', 'true');
+    vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010');
+    fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    const result = await validateTeamsGraphCredentialsImpl(USER, { tenant: TENANT });
+    const message = (result as { message: string }).message;
+    expect(message).toContain('Could not reach 127.0.0.1:4010');
+    expect(message).not.toContain('login.microsoftonline.com');
   });
 });
 
@@ -354,6 +366,43 @@ describe('validateTeamsBotConnector (T093)', () => {
       appId: 'bot-app-1',
     });
     expect(fetchMock.mock.calls[0][0]).toBe('http://127.0.0.1:4010/bot-tenant-1/oauth2/v2.0/token');
+  });
+
+  it('ignores MICROSOFT_LOGIN_BASE_URL when the emulator gate is off', async () => {
+    stubBotEnv();
+    vi.stubEnv('TEAMS_EMULATOR_MODE', undefined);
+    vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010');
+    fetchMock.mockResolvedValueOnce(tokenResponse(mintJwt({ aud: 'https://api.botframework.com' })));
+
+    await validateTeamsBotConnectorImpl(USER, { tenant: TENANT });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://login.microsoftonline.com/bot-tenant-1/oauth2/v2.0/token'
+    );
+  });
+
+  // A failed check has to name the host it actually contacted, or it sends
+  // whoever is debugging to a host the request never touched.
+  it('names the host that was actually contacted when the bot token request cannot connect', async () => {
+    stubBotEnv();
+    vi.stubEnv('TEAMS_EMULATOR_MODE', 'true');
+    vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010');
+    fetchMock.mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:4010'));
+
+    const result = await validateTeamsBotConnectorImpl(USER, { tenant: TENANT });
+    expect(result).toMatchObject({ status: 'failed', reason: 'network_error' });
+    const message = (result as { message: string }).message;
+    expect(message).toContain('127.0.0.1:4010');
+    expect(message).not.toContain('login.microsoftonline.com');
+  });
+
+  it('names login.microsoftonline.com when that is the host that was contacted', async () => {
+    stubBotEnv();
+    fetchMock.mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND'));
+
+    const result = await validateTeamsBotConnectorImpl(USER, { tenant: TENANT });
+    expect((result as { message: string }).message).toContain(
+      'Could not reach login.microsoftonline.com'
+    );
   });
 
   it('maps a wrong password (AADSTS7000215) to invalid_password naming TEAMS_BOT_APP_PASSWORD', async () => {

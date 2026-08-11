@@ -6,7 +6,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { resolveTeamsMicrosoftProviderConfigImpl } from '../../auth/teamsMicrosoftProviderResolution';
 import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
 import { readBotCredentialsFromEnv } from '../../teams/bot/teamsBotConnector';
-import { getMicrosoftTokenUrl } from '../../teams/microsoftEndpoints';
+import { getMicrosoftLoginBaseUrl, getMicrosoftTokenUrl } from '../../teams/microsoftEndpoints';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
 
 // Every Graph application permission the Teams integration actually exercises
@@ -94,6 +94,19 @@ function extractAadstsCode(text: string): string | null {
   return match ? match[0].toUpperCase() : null;
 }
 
+/**
+ * The host the token request actually went to. When the login base URL is
+ * redirected at an emulator, naming login.microsoftonline.com would send
+ * whoever is debugging a failed wizard check to the wrong host.
+ */
+function tokenHostLabel(url: string = getMicrosoftLoginBaseUrl()): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
 type GraphTokenFailureReason = Exclude<TeamsGraphCredentialFailureReason, 'addon_inactive'>;
 
 type GraphTokenAcquisition =
@@ -137,7 +150,7 @@ function classifyGraphTokenError(error: unknown): { reason: GraphTokenFailureRea
 
   return {
     reason: 'network_error',
-    message: `Could not reach login.microsoftonline.com to validate the Microsoft Graph credentials: ${raw}`,
+    message: `Could not reach ${tokenHostLabel()} to validate the Microsoft Graph credentials: ${raw}`,
   };
 }
 
@@ -288,9 +301,10 @@ async function requestBotFrameworkToken(credentials: {
   tenantId: string;
   password: string;
 }): Promise<BotTokenRequestResult> {
+  const tokenUrl = getMicrosoftTokenUrl(credentials.tenantId);
   let response: Response;
   try {
-    response = await fetch(getMicrosoftTokenUrl(credentials.tenantId), {
+    response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -306,7 +320,7 @@ async function requestBotFrameworkToken(credentials: {
     return {
       ok: false,
       reason: 'network_error',
-      message: `Could not reach login.microsoftonline.com to validate the bot credentials: ${toErrorMessage(error)}`,
+      message: `Could not reach ${tokenHostLabel(tokenUrl)} to validate the bot credentials: ${toErrorMessage(error)}`,
     };
   }
 
