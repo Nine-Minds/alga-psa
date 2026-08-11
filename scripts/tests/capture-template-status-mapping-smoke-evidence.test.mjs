@@ -1287,3 +1287,78 @@ test('xoverdict PASSES the secret scan when derived candidates are absent from t
   const integrity = result.claims.find((claim) => claim.id === 'claim-8-no-mocks-no-secrets-no-drift');
   assert.equal(integrity.pass, true, JSON.stringify(integrity, null, 2));
 });
+
+// ---------------------------------------------------------------------------
+// Deploy-fix round: malformed --run-id and nonexistent --repo-root are usage
+// errors (exit 2), never provenance/claim failures or a crash
+// ---------------------------------------------------------------------------
+
+test('a malformed --run-id exits 2 (usage) in xoverdict mode before any bundle or live work', () => {
+  const bundleDir = makeTempBundle('usage-badrunid-xov');
+  const result = runVerifier([
+    '--xoverdict', bundleDir, '--run-id', 'not-a-uuid',
+    '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Usage:/);
+  assert.match(result.stderr, /--run-id must be a UUID/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /claim-/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /invoked against/);
+  assert.doesNotMatch(result.stdout, /^XOVERDICT: FAIL/);
+});
+
+test('a malformed --run-id exits 2 (usage) in plain mode, not VERDICT: FAIL', () => {
+  const bundleDir = makeTempBundle('usage-badrunid-plain');
+  const result = runVerifier([
+    bundleDir, '--run-id', 'not-a-uuid', '--head-sha', HEAD_SHA,
+  ]);
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Usage:/);
+  assert.match(result.stderr, /--run-id must be a UUID/);
+  assert.doesNotMatch(result.stdout, /VERDICT: FAIL/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /invoked against/);
+});
+
+test('a nonexistent --repo-root exits 2 (usage) in xoverdict mode without crashing', () => {
+  const bundleDir = makeTempBundle('usage-badroot');
+  const result = runVerifier([
+    '--xoverdict', bundleDir, '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', '/nonexistent/path/xyz',
+  ]);
+  assert.equal(result.status, 2, `expected usage exit 2; got ${result.status}; stdout: ${result.stdout}; stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Usage:/);
+  assert.match(result.stderr, /--repo-root must be an existing directory/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /TypeError/);
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, /\n\s+at /);
+});
+
+test('repo-root and run-id usage validation are order-independent', () => {
+  const bundleDir = makeTempBundle('usage-badroot-order');
+  const repoFirst = runVerifier([
+    '--repo-root', '/nonexistent/path/xyz', '--xoverdict', bundleDir,
+    '--run-id', WORKFLOW_RUN_ID, '--head-sha', HEAD_SHA,
+  ]);
+  const xoverdictFirst = runVerifier([
+    '--xoverdict', bundleDir, '--run-id', WORKFLOW_RUN_ID,
+    '--head-sha', HEAD_SHA, '--repo-root', '/nonexistent/path/xyz',
+  ]);
+  assert.equal(repoFirst.status, 2, `stdout: ${repoFirst.stdout}; stderr: ${repoFirst.stderr}`);
+  assert.equal(xoverdictFirst.status, 2, `stdout: ${xoverdictFirst.stdout}; stderr: ${xoverdictFirst.stderr}`);
+  assert.equal(repoFirst.stdout, xoverdictFirst.stdout, 'stdout must be identical across flag orders');
+  assert.equal(repoFirst.stderr, xoverdictFirst.stderr, 'stderr must be identical across flag orders');
+  assert.match(repoFirst.stderr, /--repo-root must be an existing directory/);
+
+  const runIdLast = runVerifier([
+    bundleDir, '--xoverdict', '--head-sha', HEAD_SHA,
+    '--repo-root', WORKTREE, '--run-id', 'not-a-uuid',
+  ]);
+  const runIdFirst = runVerifier([
+    '--run-id', 'not-a-uuid', bundleDir, '--xoverdict',
+    '--head-sha', HEAD_SHA, '--repo-root', WORKTREE,
+  ]);
+  assert.equal(runIdLast.status, 2, `stdout: ${runIdLast.stdout}; stderr: ${runIdLast.stderr}`);
+  assert.equal(runIdFirst.status, 2, `stdout: ${runIdFirst.stdout}; stderr: ${runIdFirst.stderr}`);
+  assert.equal(runIdLast.stdout, runIdFirst.stdout, 'stdout must be identical across flag orders');
+  assert.equal(runIdLast.stderr, runIdFirst.stderr, 'stderr must be identical across flag orders');
+  assert.match(runIdLast.stderr, /--run-id must be a UUID/);
+});

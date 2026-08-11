@@ -1562,18 +1562,54 @@ export function parseArgv(args) {
   return { flags, positional };
 }
 
+const USAGE_TEXT =
+  'Usage: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
+  + ' --run-id <uuid> --head-sha <40-hex>'
+  + ' [--expected-worktree <path>] [--expected-pane <id>]'
+  + ' [--expected-server-url <url>] [--expected-dev-server-session <id>]'
+  + ' [--timeout-ms=<n>]\n'
+  + '  compact: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
+  + ' --xoverdict --run-id <uuid> --head-sha <40-hex> --repo-root <path>\n';
+
+/**
+ * CLI-only syntactic validation, run before dispatch so a malformed flag
+ * never reaches verifyBundle / runXoverdict (whose missing-flag and live
+ * fail-closed handling stay untouched). A syntactically invalid --run-id is a
+ * usage error, never a provenance claim; a --repo-root that does not exist or
+ * is not a directory must not reach defaultLiveProviders.
+ */
+function collectUsageFailures(flags) {
+  const failures = [];
+  if (typeof flags['run-id'] === 'string' && flags['run-id'] !== '' && !UUID_PATTERN.test(flags['run-id'])) {
+    failures.push(`--run-id must be a UUID, got ${describeValue(flags['run-id'])}`);
+  }
+  if (flags.xoverdict !== undefined && typeof flags['repo-root'] === 'string' && flags['repo-root'] !== '') {
+    const repoRoot = flags['repo-root'];
+    let isDirectory = false;
+    try {
+      isDirectory = fs.existsSync(repoRoot) && fs.statSync(repoRoot).isDirectory();
+    } catch {
+      isDirectory = false;
+    }
+    if (!isDirectory) {
+      failures.push(`--repo-root must be an existing directory, got ${describeValue(repoRoot)}`);
+    }
+  }
+  return failures;
+}
+
 export function main(argv) {
   const { flags, positional } = parseArgv(argv.slice(2));
   if (positional.length !== 1) {
-    process.stderr.write(
-      'Usage: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
-      + ' --run-id <uuid> --head-sha <40-hex>'
-      + ' [--expected-worktree <path>] [--expected-pane <id>]'
-      + ' [--expected-server-url <url>] [--expected-dev-server-session <id>]'
-      + ' [--timeout-ms=<n>]\n'
-      + '  compact: node verify-template-status-mapping-smoke-evidence.mjs <bundle-dir>'
-      + ' --xoverdict --run-id <uuid> --head-sha <40-hex> --repo-root <path>\n'
-    );
+    process.stderr.write(USAGE_TEXT);
+    return 2;
+  }
+  const usageFailures = collectUsageFailures(flags);
+  if (usageFailures.length > 0) {
+    process.stderr.write(USAGE_TEXT);
+    for (const failure of usageFailures) {
+      process.stderr.write(`  - ${failure}\n`);
+    }
     return 2;
   }
   if (flags.xoverdict !== undefined) {
