@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   projectKanbanHiddenStatusesKey,
   getKanbanStatusIdentity,
@@ -240,6 +241,7 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const taskTypeLabel = useTaskTypeLabel();
   const { money } = useCurrencyFormat();
   // Billing surfaces are injected from the composition layer (billing package
   // implements them); null when no provider is mounted → billing UI hidden.
@@ -3655,17 +3657,17 @@ export default function ProjectDetail({
               onValueChange={setSelectedTaskTypeFilter}
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
-                ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
+                ...taskTypes.map(taskType => {
+                  const Icon = taskTypeIcons[taskType.type_key] || ClipboardList;
                   return {
-                    value: t.type_key,
+                    value: taskType.type_key,
                     label: (
                       <div className="flex items-center gap-2">
                         <Icon
                           className="w-4 h-4"
-                          style={{ color: t.color || '#6B7280' }}
+                          style={{ color: taskType.color || '#6B7280' }}
                         />
-                        <span>{t.type_name}</span>
+                        <span>{taskTypeLabel(taskType)}</span>
                       </div>
                     )
                   };
@@ -3953,17 +3955,17 @@ export default function ProjectDetail({
               onValueChange={setSelectedTaskTypeFilter}
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
-                ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
+                ...taskTypes.map(taskType => {
+                  const Icon = taskTypeIcons[taskType.type_key] || ClipboardList;
                   return {
-                    value: t.type_key,
+                    value: taskType.type_key,
                     label: (
                       <div className="flex items-center gap-2">
                         <Icon
                           className="w-4 h-4"
-                          style={{ color: t.color || '#6B7280' }}
+                          style={{ color: taskType.color || '#6B7280' }}
                         />
-                        <span>{t.type_name}</span>
+                        <span>{taskTypeLabel(taskType)}</span>
                       </div>
                     )
                   };
