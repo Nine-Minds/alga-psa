@@ -188,7 +188,8 @@ vi.mock('../../actions/ticketDisplaySettings', () => ({
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
-  findTagsByEntityId: vi.fn().mockResolvedValue([])
+  findTagsByEntityId: vi.fn().mockResolvedValue([]),
+  isTagActionError: () => false,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -230,6 +231,7 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeamById: vi.fn().mockResolvedValue(null),
   getTeams: vi.fn().mockResolvedValue([]),
+  isTeamActionError: () => false,
 }));
 
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({
