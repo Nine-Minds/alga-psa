@@ -1744,7 +1744,7 @@
       "lastSuccessfulStep": "Laatste geslaagde stap: {{label}}"
     },
     "pipeline": {
-      "title": "Uitvoeringspijplijn",
+      "title": "Uitvoeringspipeline",
       "emptyBranch": "Geen stappen in deze vertakking.",
       "view": {
         "graph": "Grafiek",

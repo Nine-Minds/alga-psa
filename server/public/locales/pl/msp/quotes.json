@@ -752,7 +752,7 @@
       "templateGenerationFailed": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego."
     },
     "pipeline": {
-      "render": "Oddać",
+      "render": "Renderowanie",
       "shape": "Kształt",
       "renderFailed": "Renderowanie nie powiodło się.",
       "shapeFailed": "Kształtowanie nie powiodło się.",

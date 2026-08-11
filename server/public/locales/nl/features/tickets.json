@@ -230,7 +230,7 @@
     "contactNotAssociatedWithClient": "Contact is niet gekoppeld aan een bedrijf. Neem contact op met support.",
     "ticketNotFound": "Ticket niet gevonden",
     "commentNotFound": "Reactie niet gevonden of geen toestemming",
-    "noDefaultBoard": "Geen standaardkanaal geconfigureerd voor tickets",
+    "noDefaultBoard": "Geen standaardbord geconfigureerd voor tickets",
     "failedToCreateTicket": "Ticket aanmaken is mislukt",
     "failedToFetchTicketDetails": "Ticketdetails ophalen is mislukt",
     "failedToAddComment": "Reactie toevoegen is mislukt",

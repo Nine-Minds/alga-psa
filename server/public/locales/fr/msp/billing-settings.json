@@ -98,7 +98,7 @@
         },
         "ticketBoard": {
           "label": "Tableau des tickets de renouvellement",
-          "placeholderLoading": "Chargement des planches...",
+          "placeholderLoading": "Chargement des tableaux...",
           "placeholderSelect": "Sélectionner le tableau"
         },
         "ticketStatus": {
