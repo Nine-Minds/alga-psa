@@ -33,7 +33,7 @@ interface ReviewContractStepProps {
 
 export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
   const [clientName, setClientName] = useState<string>(
@@ -158,7 +158,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       return t('wizardReview.fallback.notApplicable', { defaultValue: 'N/A' });
     }
     const local = parseLocalYMD(dateString) ?? new Date(dateString);
-    return local.toLocaleDateString();
+    return formatDateInLocale(local);
   };
 
   const calculateTotalMonthly = () => data.fixed_base_rate ?? 0;

@@ -1128,6 +1128,13 @@
       "ai_assistant": "55555"
     }
   },
+  "timePicker": {
+    "placeholder": "55555",
+    "hour": "55555",
+    "minute": "55555",
+    "period": "55555",
+    "open": "55555"
+  },
   "timezonePicker": {
     "selectPlaceholder": "55555",
     "searchPlaceholder": "55555",

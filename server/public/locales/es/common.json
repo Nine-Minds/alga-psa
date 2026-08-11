@@ -1128,6 +1128,13 @@
     "selectedCount": "{{count}} seleccionados",
     "clearAll": "Borrar todo"
   },
+  "timePicker": {
+    "placeholder": "Seleccionar hora",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "period": "Periodo",
+    "open": "Abrir el selector de hora"
+  },
   "timezonePicker": {
     "selectPlaceholder": "Seleccione zona horaria...",
     "searchPlaceholder": "Buscar zonas horarias o abreviaturas (p. ej. EST)...",

@@ -1128,6 +1128,13 @@
     "selectedCount": "{{count}} sélectionné(s)",
     "clearAll": "Tout effacer"
   },
+  "timePicker": {
+    "placeholder": "Sélectionner une heure",
+    "hour": "Heure",
+    "minute": "Minute",
+    "period": "Période",
+    "open": "Ouvrir le sélecteur d'heure"
+  },
   "timezonePicker": {
     "selectPlaceholder": "Sélectionner un fuseau horaire...",
     "searchPlaceholder": "Rechercher des fuseaux horaires ou des abréviations (par ex. EST)...",

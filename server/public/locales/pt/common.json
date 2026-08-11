@@ -1128,6 +1128,13 @@
       "ai_assistant": "Desbloqueie bate-papo de IA, assistência a documentos, ajuda da barra lateral e ferramentas de IA de fluxo de trabalho para sua equipe."
     }
   },
+  "timePicker": {
+    "placeholder": "Selecionar hora",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "period": "Período",
+    "open": "Abrir o seletor de hora"
+  },
   "timezonePicker": {
     "selectPlaceholder": "Selecione o fuso horário...",
     "searchPlaceholder": "Pesquise fusos horários ou abreviações (por exemplo, EST)...",

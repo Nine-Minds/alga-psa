@@ -11,16 +11,8 @@ import { cn } from '../lib/utils';
 import { useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { getDateFnsLocale } from '../lib/dateFnsLocale';
+import { localeUses12HourClock } from '../lib/localeTimeFormat';
 import '../styles/calendar.css';
-
-function localeUses12HourClock(locale: string): boolean {
-  const normalized = locale === 'xx' || locale === 'yy' ? 'en' : locale;
-  try {
-    return new Intl.DateTimeFormat(normalized, { hour: 'numeric' }).resolvedOptions().hour12 ?? true;
-  } catch {
-    return true;
-  }
-}
 
 interface DateTimePickerBaseProps {
   value?: Date;

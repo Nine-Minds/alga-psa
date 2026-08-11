@@ -6,6 +6,9 @@ import { Clock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { TimePickerComponent } from '../ui-reflection/types';
+import { useOptionalI18n, useTranslation } from '../lib/i18n/client';
+import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { localeUses12HourClock } from '../lib/localeTimeFormat';
 
 export interface TimePickerProps {
   value?: string;
@@ -21,7 +24,7 @@ export interface TimePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
-  /** Time format preference */
+  /** Time format preference; when unset, derived from the active locale */
   timeFormat?: '12h' | '24h';
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
@@ -30,16 +33,23 @@ export interface TimePickerProps {
 export function TimePicker({
   value,
   onChange,
-  placeholder = 'Select time',
+  placeholder: placeholderProp,
   className,
   disabled,
   allowManualInput = false,
   id,
   label,
   required,
-  timeFormat = '12h',
+  timeFormat: timeFormatProp,
   ref
 }: TimePickerProps) {
+  const { t } = useTranslation('common');
+  const i18n = useOptionalI18n();
+  const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
+  // Sibling DatePicker already follows the locale, so leaving this at a fixed
+  // '12h' split the same widget in two: 23/05/2026 next to 7:05 PM.
+  const timeFormat = timeFormatProp ?? (localeUses12HourClock(locale) ? '12h' : '24h');
+  const placeholder = placeholderProp ?? t('timePicker.placeholder', 'Select time');
   const [open, setOpen] = React.useState(false);
   const hourListRef = React.useRef<HTMLDivElement>(null);
   const minuteListRef = React.useRef<HTMLDivElement>(null);
@@ -285,7 +295,7 @@ export function TimePicker({
                   }
                 }}
                 aria-label={label || placeholder}
-                placeholder={placeholder === 'Select time' ? (timeFormat === '24h' ? '09:00' : '09:00 AM') : placeholder}
+                placeholder={placeholderProp ?? (timeFormat === '24h' ? '09:00' : '09:00 AM')}
                 disabled={disabled}
                 className={cn(
                   'h-full flex-1 rounded-l-md bg-transparent px-3 py-2 text-foreground',
@@ -297,7 +307,7 @@ export function TimePicker({
                 <button
                   type="button"
                   disabled={disabled}
-                  aria-label="Open time picker"
+                  aria-label={t('timePicker.open', 'Open time picker')}
                   className={cn(
                     'flex h-full w-10 items-center justify-center rounded-r-md border-l border-border',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2',
@@ -318,7 +328,7 @@ export function TimePicker({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Hour</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">{t('timePicker.hour', 'Hour')}</label>
                   <div
                     ref={hourListRef}
                     className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
@@ -349,7 +359,7 @@ export function TimePicker({
                 </div>
 
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">Minute</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">{t('timePicker.minute', 'Minute')}</label>
                   <div
                     ref={minuteListRef}
                     className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
@@ -381,7 +391,7 @@ export function TimePicker({
 
                 {timeFormat === '12h' && (
                   <div className="w-16">
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">Period</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('timePicker.period', 'Period')}</label>
                     <div>
                       {(['AM', 'PM'] as const).map((p) => (
                         <button
@@ -440,7 +450,7 @@ export function TimePicker({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Hour</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{t('timePicker.hour', 'Hour')}</label>
                 <div
                   ref={hourListRef}
                   className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
@@ -473,7 +483,7 @@ export function TimePicker({
               </div>
 
               <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Minute</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{t('timePicker.minute', 'Minute')}</label>
                 <div
                   ref={minuteListRef}
                   className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
@@ -507,7 +517,7 @@ export function TimePicker({
 
               {timeFormat === '12h' && (
                 <div className="w-16">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{t('timePicker.period', 'Period')}</label>
                   <div>
                     {(['AM', 'PM'] as const).map((p) => (
                       <button

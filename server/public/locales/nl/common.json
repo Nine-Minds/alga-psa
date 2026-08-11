@@ -1128,6 +1128,13 @@
     "selectedCount": "{{count}} geselecteerd",
     "clearAll": "Alles wissen"
   },
+  "timePicker": {
+    "placeholder": "Tijd selecteren",
+    "hour": "Uur",
+    "minute": "Minuut",
+    "period": "Dagdeel",
+    "open": "Tijdkiezer openen"
+  },
   "timezonePicker": {
     "selectPlaceholder": "Tijdzone selecteren...",
     "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
