@@ -1,0 +1,13 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/fix-inbound-email-durable-inbox/server
+      Running tests with seed "1786414405723"
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/inboundEmailDurableInbox.integration.test.ts (45 tests) 10762ms 146 MB heap used
+   ✓ Inbound email durable inbox (integration) > retryable failure is reclaimed when due and the attempt cap dead-letters a poisoned consumer delivery  678ms
+
+ Test Files  1 passed (1)
+      Tests  45 passed (45)
+   Start at  02:13:25
+   Duration  11.60s (transform 633ms, setup 54ms, collect 463ms, tests 10.76s, environment 0ms, prepare 29ms)
+

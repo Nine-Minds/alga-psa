@@ -1,0 +1,18 @@
+Precision-cursor regression test vs the PRE-FIX cursor (HEAD b35a3eca97, lossy Date cursor).
+
+Command (from server/):
+  DB_HOST=127.0.0.1 DB_PORT=5472 DB_PASSWORD_ADMIN=$(cat ../secrets/postgres_password) \
+  DB_PASSWORD_SERVER=$(cat ../secrets/db_password_server) REQUIRE_DB=1 \
+  npx vitest run src/test/integration/inboundEmailDurableInbox.integration.test.ts -t "lossless" --coverage.enabled=false
+
+Exit code: 1. The test spins until the 15s bound and FAILS by timeout:
+
+  FAIL  ... > legacy backfill cursor is lossless: microsecond processed_at rows terminate with limit=1 and visit each row exactly once
+  Error: Test timed out in 15000ms.
+
+The stored-microsecond guard passed (PostgreSQL kept '2026-08-10 13:24:42.233090+00' verbatim),
+so the hang is purely the lossy cursor: after the first eligible row is imported and checkpointed,
+the next limit=1 sweep re-selects it forever because the truncated JS-Date cursor ('.233' vs '.233090')
+compares BEFORE the real row value. This is the exact live-repro shape from
+/tmp/alga-smoke-evidence/inbound-email-durable-inbox-backfill-20260810T190602Z/04-live-limit1-precision.txt
+(timeout_exit=124).

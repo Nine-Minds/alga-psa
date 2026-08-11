@@ -114,6 +114,11 @@ import {
   marketingSendSequenceStepsHandler,
   MarketingJobData,
 } from './handlers/marketingJobs';
+import {
+  INBOUND_EMAIL_RECOVERY_JOB,
+  inboundEmailRecoveryHandler,
+  InboundEmailRecoveryJobData,
+} from './handlers/inboundEmailRecoveryHandler';
 
 /**
  * Options for registering handlers
@@ -561,6 +566,22 @@ export async function registerAllJobHandlers(
       registerOpts
     );
   }
+
+  // ============================================================================
+  // INBOUND EMAIL RECOVERY (per-tenant durable sweep/backfill/mirror)
+  // ============================================================================
+
+  JobHandlerRegistry.register<InboundEmailRecoveryJobData & BaseJobData>(
+    {
+      name: INBOUND_EMAIL_RECOVERY_JOB,
+      handler: async (_jobId, data) => {
+        await inboundEmailRecoveryHandler(data as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
 
   // ============================================================================
   // ENTERPRISE-ONLY HANDLERS

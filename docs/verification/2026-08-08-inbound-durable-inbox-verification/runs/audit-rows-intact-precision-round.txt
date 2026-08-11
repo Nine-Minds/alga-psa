@@ -1,0 +1,3 @@
+inbox_rows_with_rfc822rfc822=23
+inbox_rows_total=52
+legacy_processed_messages_total=27

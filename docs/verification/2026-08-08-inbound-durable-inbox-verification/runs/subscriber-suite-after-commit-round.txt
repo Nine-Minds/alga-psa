@@ -1,0 +1,11 @@
+RUN of the subscriber suite at after-commit round HEAD (26 pre-existing + 3 new external-effect timing tests = 29).
+
+
+Environment file path: /home/robert/alga-copies/fix-inbound-email-durable-inbox/.env.localtest
+ ✓ src/test/integration/internal-notifications/eventSubscribers.integration.test.ts (29 tests) 12644ms 251 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  29 passed (29)
+   Start at  03:45:23
+   Duration  13.40s (transform 1.16s, setup 59ms, collect 296ms, tests 12.64s, environment 0ms, prepare 27ms)
+

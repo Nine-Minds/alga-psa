@@ -8,7 +8,9 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-schemas';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
+import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import { ContactModel } from '../../models/contactModel';
 import {
@@ -49,6 +51,27 @@ const FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS = 500_000;
 const EMPTY_FALLBACK_COMMENT =
   '[Inbound email content trimmed due to indexing limits. See attachments for full message content.]';
 
+/**
+ * Execution options for inbound-email helpers used by the durable pipeline.
+ *
+ * When `existingConnection` is a `Knex.Transaction`, the helper performs all of
+ * its writes inside that transaction instead of opening its own. Injected
+ * event/analytics adapters replace the default `WorkflowEventPublisher` /
+ * `WorkflowAnalyticsTracker`. Existing non-inbound callers retain their current
+ * self-owned-transaction behavior by omitting these options.
+ */
+export interface InboundEmailExecutionOptions {
+  existingConnection?: Knex.Transaction | Knex;
+  /** Inbox id the helper's outbox rows belong to (durable path). */
+  inboxId?: string;
+  eventPublisher?: import('@alga-psa/types').IEventPublisher;
+  analyticsTracker?: import('../../models/ticketModel').IAnalyticsTracker;
+}
+
+function isKnexTransaction(connection: Knex.Transaction | Knex | undefined): boolean {
+  return Boolean(connection && 'commit' in connection && 'rollback' in connection);
+}
+
 function buildDefaultPhoneNumbers(phone?: string) {
   const trimmedPhone = phone?.trim();
   if (!trimmedPhone) {
@@ -79,7 +102,7 @@ function isTsvectorOverflowError(error: unknown): boolean {
   return message.toLowerCase().includes(TSVECTOR_OVERFLOW_ERROR_FRAGMENT);
 }
 
-function sanitizeCommentContentForIndexRetry(content: string): string {
+export function sanitizeCommentContentForIndexRetry(content: string): string {
   const withoutDataImages = content.replace(DATA_IMAGE_BASE64_PATTERN, '[inline-image]');
   const withoutOversizedWords = withoutDataImages.replace(OVERSIZED_WORD_PATTERN, '');
   const condensed = withoutOversizedWords.replace(/\s+/g, ' ').trim();
@@ -780,6 +803,21 @@ function normalizeThreadLookupList(value: unknown): string[] {
 }
 
 /**
+ * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
+ * normalized form strips exactly one bracket pair and lowercases the domain
+ * (matching `email_metadata.messageId` written by the durable pipeline), while
+ * the raw trimmed form still matches legacy rows that stored the bracketed
+ * value verbatim. Every stored-vs-lookup comparison for a Message-ID identity
+ * must use these forms.
+ */
+function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return [];
+  const normalized = normalizeRfc822MessageId(raw);
+  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
+}
+
+/**
  * Find existing ticket by email thread information
  */
 export async function findTicketByEmailThread(
@@ -880,6 +918,11 @@ async function findTicketByThreadId(
 
 /**
  * Find ticket by original message ID from email metadata
+ *
+ * The lookup matches BOTH the canonical normalized form (how the durable
+ * pipeline writes `email_metadata.messageId` / `inReplyTo` / `references`) and
+ * the raw bracketed form (how legacy rows stored them), so a standards-
+ * compliant `<message-id@host>` reply resolves tickets created by either path.
  */
 async function findTicketByOriginalMessageId(
   trx: Knex.Transaction,
@@ -893,6 +936,11 @@ async function findTicketByOriginalMessageId(
     rootTenantColumn: 't.tenant',
   });
 
+  const forms = rfcMessageIdLookupForms(messageId);
+  if (forms.length === 0) {
+    return null;
+  }
+
   const ticket = await query
     .select(
       't.ticket_id as ticketId',
@@ -901,10 +949,12 @@ async function findTicketByOriginalMessageId(
       's.name as status',
       't.email_metadata'
     )
-    .where(function() {
-      this.whereRaw("t.email_metadata->>'messageId' = ?", [messageId])
-          .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [messageId])
-          .orWhereRaw("t.email_metadata->'references' \\? ?", [messageId]);
+    .where(function () {
+      for (const form of forms) {
+        this.orWhereRaw("t.email_metadata->>'messageId' = ?", [form])
+          .orWhereRaw("t.email_metadata->>'inReplyTo' = ?", [form]);
+      }
+      this.orWhereRaw("t.email_metadata->'references' \\?| ?", [forms]);
     })
     .first() as unknown as EmailThreadTicketRow | undefined;
 
@@ -1146,19 +1196,19 @@ export async function createTicketFromEmail(
     attributes?: Record<string, unknown> | null;
   },
   tenant: string,
-  userId?: string
+  userId?: string,
+  executionOptions?: InboundEmailExecutionOptions
 ): Promise<{ ticket_id: string; ticket_number: string }> {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
 
+  const eventPublisher = executionOptions?.eventPublisher ?? new WorkflowEventPublisher();
+  const analyticsTracker = executionOptions?.analyticsTracker ?? new WorkflowAnalyticsTracker();
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
-      // Create adapters for workflow context
-      const eventPublisher = new WorkflowEventPublisher();
-      const analyticsTracker = new WorkflowAnalyticsTracker();
-
       // Determine assigned_to: use provided value or fall back to board's default
       let assignedTo = ticketData.assigned_to;
       if (!assignedTo && ticketData.board_id) {
@@ -1203,6 +1253,11 @@ export async function createTicketFromEmail(
           });
         } catch (eventError) {
           console.error('Failed to publish TICKET_ASSIGNED event:', eventError);
+          // The transactional outbox adapter (durable path) must propagate:
+          // an outbox insert failure rolls back the whole core transaction.
+          if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+            throw eventError;
+          }
           // Continue - ticket was created successfully, event can be retried or logged
         }
       }
@@ -1286,7 +1341,7 @@ export async function createTicketFromEmail(
         ticket_id: result.ticket_id,
         ticket_number: result.ticket_number
       };
-    });
+    }, executionOptions?.existingConnection);
 }
 
 export async function findEmailProviderMailboxAddress(
@@ -1310,7 +1365,8 @@ export async function upsertTicketWatchListRecipients(
     ticketId: string;
     recipients: TicketWatchListRecipientInput[];
   },
-  tenant: string
+  tenant: string,
+  existingConnection?: Knex.Transaction | Knex
 ): Promise<{ updated: boolean; watchList: ReturnType<typeof parseTicketWatchListAttributes> }> {
   const { withAdminTransaction } = await import('@alga-psa/db');
 
@@ -1346,7 +1402,7 @@ export async function upsertTicketWatchListRecipients(
       });
 
     return { updated: true, watchList: mergedWatchList };
-  });
+  }, existingConnection);
 }
 
 const INBOUND_PROVIDER_TYPES: ReadonlySet<InboundEmailProviderType> = new Set([
@@ -1431,7 +1487,8 @@ export async function createCommentFromEmail(
     };
   },
   tenant: string,
-  userId?: string
+  userId?: string,
+  executionOptions?: InboundEmailExecutionOptions
 ): Promise<string> {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
@@ -1461,11 +1518,19 @@ export async function createCommentFromEmail(
   const createCommentInTransaction = async (content: string): Promise<string> =>
     withAdminTransaction(async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
-      // Create adapters for workflow context
-      const eventPublisher = new WorkflowEventPublisher({
-        suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
-      });
-      const analyticsTracker = new WorkflowAnalyticsTracker();
+      // Create adapters for workflow context; the durable path injects the
+      // transactional outbox publisher so outbox rows land in the same write.
+      const eventPublisher =
+        executionOptions?.eventPublisher ??
+        new WorkflowEventPublisher({
+          suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
+        });
+      // The durable outbox publisher distinguishes the initial comment (in-app
+      // only) from a reply comment; drive that from this call's flag.
+      if (eventPublisher && typeof (eventPublisher as any).setSuppressCommentEmail === 'function') {
+        (eventPublisher as any).setSuppressCommentEmail(commentData.suppressTechEmailNotification ?? false);
+      }
+      const analyticsTracker = executionOptions?.analyticsTracker ?? new WorkflowAnalyticsTracker();
 
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createComment({
@@ -1551,13 +1616,19 @@ export async function createCommentFromEmail(
       });
 
       return result.comment_id;
-    });
+    }, executionOptions?.existingConnection);
+
+  // Inside a caller-supplied transaction a failed statement aborts the whole
+  // transaction, so the tsvector retry (which needs a fresh transaction per
+  // attempt) cannot run. The durable orchestrator pre-sanitizes oversized
+  // content during preparation, so this only affects non-durable callers.
+  const canRetrySanitized = !isKnexTransaction(executionOptions?.existingConnection);
 
   let commentId: string;
   try {
     commentId = await createCommentInTransaction(commentData.content);
   } catch (error) {
-    if (!isTsvectorOverflowError(error)) {
+    if (!isTsvectorOverflowError(error) || !canRetrySanitized) {
       throw error;
     }
 
@@ -1572,7 +1643,7 @@ export async function createCommentFromEmail(
     try {
       commentId = await createCommentInTransaction(sanitizedContent);
     } catch (retryError) {
-      if (!isTsvectorOverflowError(retryError)) {
+      if (!isTsvectorOverflowError(retryError) || !canRetrySanitized) {
         throw retryError;
       }
 
@@ -1588,33 +1659,80 @@ export async function createCommentFromEmail(
   }
 
   if (commentData.inboundReplyEvent) {
-    try {
-      const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
-      const to = commentData.inboundReplyEvent.to?.length
-        ? commentData.inboundReplyEvent.to
-        : [commentData.inboundReplyEvent.from];
+    const threadId = commentData.inboundReplyEvent.threadId || commentData.inboundReplyEvent.messageId;
+    const to = commentData.inboundReplyEvent.to?.length
+      ? commentData.inboundReplyEvent.to
+      : [commentData.inboundReplyEvent.from];
+    const occurredAt = commentData.inboundReplyEvent.receivedAt ?? new Date().toISOString();
 
-      await publishWorkflowEvent({
-        eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
-        payload: buildInboundEmailReplyReceivedPayload({
-          messageId: commentData.inboundReplyEvent.messageId,
-          threadId,
-          ticketId: commentData.ticket_id,
-          from: commentData.inboundReplyEvent.from,
-          to,
-          subject: commentData.inboundReplyEvent.subject,
-          receivedAt: commentData.inboundReplyEvent.receivedAt,
-          provider: commentData.inboundReplyEvent.provider,
-          matchedBy: commentData.inboundReplyEvent.matchedBy,
-        }),
-        ctx: {
-          tenantId: tenant,
-          occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
-        },
-        idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
+    // Building/validating the event is best-effort: a reply comment is never
+    // rolled back or orphaned by an event we cannot construct or validate.
+    let payload: Record<string, unknown> | null = null;
+    try {
+      payload = buildInboundEmailReplyReceivedPayload({
+        tenantId: tenant,
+        occurredAt,
+        messageId: commentData.inboundReplyEvent.messageId,
+        threadId,
+        ticketId: commentData.ticket_id,
+        from: commentData.inboundReplyEvent.from,
+        to,
+        subject: commentData.inboundReplyEvent.subject,
+        receivedAt: commentData.inboundReplyEvent.receivedAt,
+        provider: commentData.inboundReplyEvent.provider,
+        matchedBy: commentData.inboundReplyEvent.matchedBy,
       });
-    } catch (eventError) {
-      console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+    } catch (buildError) {
+      console.warn('[createCommentFromEmail] could not build INBOUND_EMAIL_REPLY_RECEIVED payload', {
+        tenant,
+        ticketId: commentData.ticket_id,
+        messageId: commentData.inboundReplyEvent.messageId,
+        error: buildError instanceof Error ? buildError.message : String(buildError),
+      });
+    }
+
+    if (payload) {
+      if (executionOptions?.existingConnection) {
+        // Durable path: record the reply-received event in the transactional
+        // outbox so a crash cannot orphan the notification. The payload must be
+        // schema-valid before insert — an un-validatable payload would dead-letter
+        // as a doomed outbox row, so it is skipped with a logged warning instead.
+        const validated = inboundEmailReplyReceivedEventPayloadSchema.safeParse(payload);
+        if (!validated.success) {
+          console.warn(
+            '[createCommentFromEmail] skipping INBOUND_EMAIL_REPLY_RECEIVED outbox row: payload failed schema validation',
+            {
+              tenant,
+              ticketId: commentData.ticket_id,
+              messageId: commentData.inboundReplyEvent.messageId,
+              errors: validated.error.issues,
+            }
+          );
+        } else {
+          const { insertOutboxRow } = await import('../../services/email/inboundEmailDurableStore');
+          await insertOutboxRow(executionOptions.existingConnection as Knex.Transaction, {
+            tenant,
+            inbox_id: executionOptions.inboxId ?? '',
+            event_key: 'reply-received',
+            event_type: 'INBOUND_EMAIL_REPLY_RECEIVED',
+            payload: validated.data as unknown as Record<string, unknown>,
+          });
+        }
+      } else {
+        try {
+          await publishWorkflowEvent({
+            eventType: 'INBOUND_EMAIL_REPLY_RECEIVED',
+            payload,
+            ctx: {
+              tenantId: tenant,
+              occurredAt: commentData.inboundReplyEvent.receivedAt ?? new Date(),
+            },
+            idempotencyKey: `inbound-email-reply:${tenant}:${commentData.ticket_id}:${commentData.inboundReplyEvent.messageId}`,
+          });
+        } catch (eventError) {
+          console.warn('Failed to publish INBOUND_EMAIL_REPLY_RECEIVED event:', eventError);
+        }
+      }
     }
   }
 

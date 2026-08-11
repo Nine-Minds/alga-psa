@@ -5,6 +5,8 @@ import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
+import { persistIngressPointer } from './inboundEmailProducer';
+import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
@@ -519,6 +521,7 @@ export class EmailWebhookMaintenanceService {
   ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
+    const durableEnforce = getInboundDurableMode() === 'enforce';
     const reconciliationState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .first(
@@ -554,8 +557,25 @@ export class EmailWebhookMaintenanceService {
           .where({ provider_id: config.id })
           .whereIn('message_id', uncheckedMessageIds)
           .select('message_id');
+        // Durable mode: a message whose source is already durably staged
+        // (`inbound_email_ingress.status = 'staged'`) is covered even though it
+        // may not have reached the legacy audit table yet. Its deterministic
+        // ingress key is `message:<graph-id>`.
+        let stagedRows: Array<{ ingress_key: string }> = [];
+        try {
+          stagedRows = await db.table('inbound_email_ingress')
+            .where({ tenant: config.tenant, provider_id: config.id, status: 'staged' })
+            .whereIn('ingress_key', uncheckedMessageIds.map((id) => `message:${id}`))
+            .select('ingress_key');
+        } catch {
+          // Ledger not available yet (pre-durable deploy): legacy dedupe only.
+        }
         for (const messageId of uncheckedMessageIds) checkedMessageIds.add(messageId);
         for (const row of processedRows) processedMessageIds.add(String(row.message_id));
+        for (const row of stagedRows) {
+          const key = String(row.ingress_key);
+          if (key.startsWith('message:')) processedMessageIds.add(key.slice('message:'.length));
+        }
       }
 
       unprocessedMessages = messages
@@ -608,18 +628,44 @@ export class EmailWebhookMaintenanceService {
       let queuedMessages = 0;
       const silenceEvidenceMessageIds = new Set<string>();
       for (const message of unprocessedMessages) {
-        await enqueueUnifiedInboundEmailQueueJob({
-          tenantId: config.tenant,
+        // Durable path: persist the ingress pointer before the Redis handoff so
+        // reconciliation never advances its cursor past an unstaged message.
+        const durable = await persistIngressPointer({
+          tenant: config.tenant,
           providerId: config.id,
-          provider: 'microsoft',
+          providerType: 'microsoft',
           pointer: {
-            subscriptionId: config.webhook_subscription_id || 'reconcile',
-            messageId: message.id,
-            resource: 'maintenance-reconcile',
-            changeType: 'created',
+            providerType: 'microsoft',
+            providerMessageId: message.id,
+            extra: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+              // Carried into the durable pointer so the staging worker can
+              // advance `last_reconciliation_at` only after THIS message's
+              // source is durably staged.
+              reconcileReceivedAt: message.receivedDateTime ?? null,
+            },
           },
         });
-        queuedMessages += 1;
+        if (durable.mode === 'enforce' && durable.ingressId) {
+          // Enforce: the durable pipeline is authoritative; no V1 pointer.
+          queuedMessages += 1;
+        } else {
+          // Off and shadow both keep the legacy V1 enqueue authoritative.
+          await enqueueUnifiedInboundEmailQueueJob({
+            tenantId: config.tenant,
+            providerId: config.id,
+            provider: 'microsoft',
+            pointer: {
+              subscriptionId: config.webhook_subscription_id || 'reconcile',
+              messageId: message.id,
+              resource: 'maintenance-reconcile',
+              changeType: 'created',
+            },
+          });
+          queuedMessages += 1;
+        }
 
         const receivedAtMs = message.receivedDateTime
           ? new Date(message.receivedDateTime).getTime()
@@ -633,12 +679,22 @@ export class EmailWebhookMaintenanceService {
         }
       }
 
-      await transactionDb.table('microsoft_email_provider_config')
-        .where({ email_provider_id: config.id })
-        .update({
-          last_reconciliation_at: nextReconciliationAt,
-          updated_at: completedAt,
-        });
+      // The Graph reconciliation cursor only ever advances past messages whose
+      // SOURCE is durably staged, not merely queued. In enforce mode the
+      // staging worker moves `last_reconciliation_at` to each staged message's
+      // received time (GREATEST); this transaction only persists the durable
+      // ingress pointers and never advances the cursor past an unstaged message.
+      // A crash or staging failure therefore leaves the cursor untouched and
+      // the message recoverable on the next reconcile pass. Off/shadow mode
+      // keeps the legacy V1 enqueue authoritative and advances as before.
+      if (!durableEnforce) {
+        await transactionDb.table('microsoft_email_provider_config')
+          .where({ email_provider_id: config.id })
+          .update({
+            last_reconciliation_at: nextReconciliationAt,
+            updated_at: completedAt,
+          });
+      }
 
       return {
         claimed: true as const,

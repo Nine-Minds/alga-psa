@@ -11,6 +11,7 @@ import type {
   EmailMessageDetails,
   EmailIngressSkipReason,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import { stageReadyInboundSource } from '@alga-psa/shared/services/email/inboundEmailProducer';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -832,6 +833,24 @@ class ImapFolderListener {
         if (isDuplicate) {
           continue;
         }
+
+        // Durable path: stage the already-fetched raw MIME to object storage and
+        // register the inbox row BEFORE the webhook dispatch or any cursor
+        // advancement. A staging failure aborts the sync so last_uid never moves
+        // past a message whose source is not durable.
+        await stageReadyInboundSource({
+          tenant: this.provider.tenant,
+          providerId: this.provider.id,
+          providerType: 'imap',
+          pointer: {
+            providerType: 'imap',
+            mailbox: this.folder,
+            uidValidity,
+            uid: message.uid,
+            providerMessageId: emailData.id,
+          },
+          rawMime: rawMimeBuffer,
+        });
 
         await this.dispatchInboundWebhook({
           emailData,

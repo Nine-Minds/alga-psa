@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+import { persistIngressPointer } from '@alga-psa/shared/services/email/inboundEmailProducer';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -237,6 +238,67 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           if (!messageId) {
             console.error('Could not extract message ID from notification');
             return;
+          }
+
+          // Durable path: persist the ingress pointer before the Redis handoff.
+          // A failed durable handoff must surface as a retryable webhook failure
+          // so the message is not lost; the persisted row is also swept later.
+          // Only `enforce` diverts the handoff; `shadow` falls through to the
+          // legacy enqueue so legacy effects stay authoritative.
+          try {
+            const durable = await persistIngressPointer({
+              tenant: row.tenant,
+              providerId: row.id,
+              providerType: 'microsoft',
+              pointer: {
+                providerType: 'microsoft',
+                providerMessageId: messageId,
+                extra: {
+                  subscriptionId: notification.subscriptionId,
+                  resource: notification.resource,
+                  changeType: notification.changeType,
+                },
+              },
+            });
+
+            if (durable.mode === 'enforce') {
+              if (durable.ingressId) {
+                processedNotifications.push(messageId);
+                unifiedQueuedCount += 1;
+                console.log('✅ Recorded durable Microsoft ingress', {
+                  providerId: row.id,
+                  tenantId: row.tenant,
+                  subscriptionId: notification.subscriptionId,
+                  messageId,
+                  ingressId: durable.ingressId,
+                  enqueued: durable.enqueued,
+                });
+                return;
+              }
+              throw new Error('Failed to derive durable Microsoft ingress key');
+            }
+          } catch (durableError: any) {
+            const enrichedError = new Error(
+              `Failed to record durable Microsoft ingress for message ${messageId}`
+            ) as Error & {
+              code?: string;
+              details?: {
+                subscriptionId: string;
+                messageId: string;
+                providerId: string;
+                tenantId: string;
+                reason: string;
+              };
+            };
+            enrichedError.code = 'UNIFIED_INBOUND_ENQUEUE_FAILED';
+            enrichedError.details = {
+              subscriptionId: notification.subscriptionId,
+              messageId,
+              providerId: row.id,
+              tenantId: row.tenant,
+              reason: durableError?.message || String(durableError),
+            };
+            throw enrichedError;
           }
 
           let enqueueResult;

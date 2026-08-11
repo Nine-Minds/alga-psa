@@ -771,6 +771,11 @@ export class TicketModel {
         });
       } catch (error) {
         console.error('Failed to publish ticket created event:', error);
+        // The transactional outbox adapter (durable inbound path) must
+        // propagate so an outbox insert failure rolls back the core transaction.
+        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+          throw error;
+        }
         // Don't throw - event publishing failure shouldn't break ticket creation
       }
     }
@@ -998,6 +1003,9 @@ export class TicketModel {
         });
       } catch (error) {
         console.error('Failed to publish ticket updated event:', error);
+        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+          throw error;
+        }
       }
     }
 
@@ -1328,6 +1336,9 @@ export class TicketModel {
         });
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
+        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+          throw error;
+        }
       }
     }
 

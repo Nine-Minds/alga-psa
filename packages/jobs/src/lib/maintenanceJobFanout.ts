@@ -20,6 +20,7 @@ import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeSc
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob } from './handlers/cleanupWebhookDeliveriesJob';
+import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
@@ -46,6 +47,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }) },
 };
 
 export type MaintenanceJobResult = {
