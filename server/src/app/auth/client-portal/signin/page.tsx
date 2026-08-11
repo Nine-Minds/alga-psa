@@ -8,7 +8,7 @@ import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -65,14 +65,19 @@ export default async function ClientSignInPage({
           ? `/auth/client-portal/signin?${queryParams.toString()}`
           : '/auth/client-portal/signin';
 
+        // Same trap the tenant-discovery branch fell into: returned outside any
+        // provider, this interstitial rendered English at every locale.
+        const switchLocale = await getServerLocale();
         return (
-          <PortalSwitchPrompt
-            currentPortal="msp"
-            targetPortal="client"
-            currentPortalUrl="/msp/dashboard"
-            targetPortalSigninUrl={targetUrl}
-            userEmail={session.user.email}
-          />
+          <I18nWrapper portal="client" initialLocale={switchLocale}>
+            <PortalSwitchPrompt
+              currentPortal="msp"
+              targetPortal="client"
+              currentPortalUrl="/msp/dashboard"
+              targetPortalSigninUrl={targetUrl}
+              userEmail={session.user.email}
+            />
+          </I18nWrapper>
         );
       } else {
         // Valid session, not revoked, correct user type - redirect
