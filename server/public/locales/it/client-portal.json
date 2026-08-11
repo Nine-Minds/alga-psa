@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Completa la verifica qui sotto, quindi accedi di nuovo.",
-    "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare."
+    "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare.",
+    "tenantDiscovery": {
+      "title": "Trova la tua organizzazione",
+      "description": "Inserisci il tuo indirizzo email e ti invieremo i link di accesso per tutte le organizzazioni a cui hai accesso.",
+      "emailLabel": "Indirizzo email",
+      "emailPlaceholder": "tua.email@azienda.com",
+      "submit": "Invia i link di accesso",
+      "submitting": "Invio in corso...",
+      "invalidEmail": "Inserisci un indirizzo email valido",
+      "linksSent": "Controlla la tua email per i link di accesso",
+      "sent": {
+        "title": "Controlla la tua email",
+        "description": "Se esiste un account con quell’indirizzo email, ti abbiamo inviato i link di accesso per ogni organizzazione a cui hai accesso.",
+        "noEmailReceived": "Non hai ricevuto l’email?",
+        "checkSpam": "Controlla la cartella spam",
+        "verifyAddress": "Verifica che l’indirizzo email sia corretto",
+        "contactSupport": "Contatta il team di supporto della tua organizzazione",
+        "tryAnother": "Prova con un’altra email"
+      }
+    }
   },
   "account": {
     "title": "Account",

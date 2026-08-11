@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Complete la verificación a continuación y vuelva a iniciar sesión.",
-    "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo."
+    "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo.",
+    "tenantDiscovery": {
+      "title": "Encuentre su organización",
+      "description": "Ingrese su correo electrónico y le enviaremos enlaces de inicio de sesión para todas las organizaciones a las que tiene acceso.",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "su.correo@empresa.com",
+      "submit": "Enviar enlaces de inicio de sesión",
+      "submitting": "Enviando...",
+      "invalidEmail": "Ingrese un correo electrónico válido",
+      "linksSent": "Revise su correo electrónico para ver los enlaces de inicio de sesión",
+      "sent": {
+        "title": "Revise su correo electrónico",
+        "description": "Si existe una cuenta con ese correo electrónico, le hemos enviado enlaces de inicio de sesión para cada organización a la que tiene acceso.",
+        "noEmailReceived": "¿No recibió el correo electrónico?",
+        "checkSpam": "Revise su carpeta de correo no deseado",
+        "verifyAddress": "Verifique que el correo electrónico sea correcto",
+        "contactSupport": "Comuníquese con el equipo de soporte de su organización",
+        "tryAnother": "Probar con otro correo electrónico"
+      }
+    }
   },
   "account": {
     "title": "Cuenta",

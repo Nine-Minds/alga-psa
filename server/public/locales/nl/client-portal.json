@@ -282,7 +282,26 @@
       }
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
-    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert."
+    "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantDiscovery": {
+      "title": "Vind uw organisatie",
+      "description": "Voer uw e-mailadres in en wij sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
+      "emailLabel": "E-mailadres",
+      "emailPlaceholder": "uw.email@bedrijf.com",
+      "submit": "Aanmeldlinks versturen",
+      "submitting": "Bezig met verzenden...",
+      "invalidEmail": "Voer een geldig e-mailadres in",
+      "linksSent": "Controleer uw e-mail voor de aanmeldlinks",
+      "sent": {
+        "title": "Controleer uw e-mail",
+        "description": "Als er een account bestaat met dat e-mailadres, hebben wij u aanmeldlinks gestuurd voor elke organisatie waartoe u toegang heeft.",
+        "noEmailReceived": "Geen e-mail ontvangen?",
+        "checkSpam": "Controleer uw spammap",
+        "verifyAddress": "Controleer of het e-mailadres juist is",
+        "contactSupport": "Neem contact op met het supportteam van uw organisatie",
+        "tryAnother": "Ander e-mailadres proberen"
+      }
+    }
   },
   "account": {
     "title": "Account",
