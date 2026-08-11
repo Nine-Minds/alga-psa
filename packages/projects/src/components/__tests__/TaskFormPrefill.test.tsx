@@ -89,12 +89,14 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: vi.fn().mockResolvedValue([]),
-  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue([])
+  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue([]),
+  isTeamActionError: () => false,
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
   findTagsByEntityId: vi.fn().mockResolvedValue([]),
-  createTagsForEntity: vi.fn().mockResolvedValue([])
+  createTagsForEntity: vi.fn().mockResolvedValue([]),
+  isTagActionError: () => false,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
