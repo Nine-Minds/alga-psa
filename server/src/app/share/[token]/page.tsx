@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, Lock, FileText, AlertCircle, CheckCircle } from 'lucide-react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 
 interface ShareInfo {
@@ -43,6 +43,8 @@ function getFileIcon(mimeType: string): string {
 
 function ShareLandingContent() {
   const { t } = useTranslation();
+  // toLocaleString() with no locale follows the browser, not the app's.
+  const { formatDate } = useFormatters();
   const params = useParams();
   const token = params?.token as string;
 
@@ -216,7 +218,7 @@ function ShareLandingContent() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('share.enterPassword')}
+                placeholder={t('share.enterPassword', 'Enter password')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && password) {
                     handleDownload();
@@ -267,13 +269,23 @@ function ShareLandingContent() {
 
           {shareInfo.maxDownloads && (
             <p className="text-xs text-center text-muted-foreground">
-              {shareInfo.downloadCount} of {shareInfo.maxDownloads} downloads used
+              {t('share.downloadsUsed', {
+                defaultValue: '{{used}} of {{max}} downloads used',
+                used: shareInfo.downloadCount,
+                max: shareInfo.maxDownloads,
+              })}
             </p>
           )}
 
           {shareInfo.expiresAt && !isExpired && (
             <p className="text-xs text-center text-muted-foreground">
-              Expires: {new Date(shareInfo.expiresAt).toLocaleString()}
+              {t('share.expiresAt', {
+                defaultValue: 'Expires: {{date}}',
+                date: formatDate(new Date(shareInfo.expiresAt), {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                }),
+              })}
             </p>
           )}
         </CardContent>

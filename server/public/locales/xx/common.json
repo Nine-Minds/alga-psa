@@ -214,7 +214,9 @@
       "downloadLimitReached": "11111"
     },
     "downloadStarted": "11111",
-    "enterPassword": "11111"
+    "enterPassword": "11111",
+    "downloadsUsed": "11111 {{used}} 11111 {{max}} 11111",
+    "expiresAt": "11111 {{date}} 11111"
   },
   "tickets": {
     "origin": {

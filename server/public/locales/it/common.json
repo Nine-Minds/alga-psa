@@ -183,7 +183,9 @@
       "downloadLimitReached": "Il limite di download è stato raggiunto."
     },
     "downloadStarted": "Download avviato con successo!",
-    "enterPassword": "Inserisci password"
+    "enterPassword": "Inserisci password",
+    "downloadsUsed": "{{used}} di {{max}} download utilizzati",
+    "expiresAt": "Scade il: {{date}}"
   },
   "tickets": {
     "responseSource": {

@@ -657,7 +657,9 @@
       "downloadLimitReached": "De downloadlimiet is bereikt."
     },
     "downloadStarted": "Download succesvol gestart!",
-    "enterPassword": "Wachtwoord invoeren"
+    "enterPassword": "Wachtwoord invoeren",
+    "downloadsUsed": "{{used}} van {{max}} downloads gebruikt",
+    "expiresAt": "Verloopt: {{date}}"
   },
   "tickets": {
     "responseSource": {

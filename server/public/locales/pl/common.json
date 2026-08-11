@@ -197,7 +197,9 @@
       "downloadLimitReached": "Osiągnięto limit pobierań."
     },
     "downloadStarted": "Pobieranie pomyślnie rozpoczęte!",
-    "enterPassword": "Wprowadź hasło"
+    "enterPassword": "Wprowadź hasło",
+    "downloadsUsed": "Wykorzystano {{used}} z {{max}} pobrań",
+    "expiresAt": "Wygasa: {{date}}"
   },
   "tickets": {
     "responseSource": {

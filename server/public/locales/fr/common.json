@@ -657,7 +657,9 @@
       "downloadLimitReached": "La limite de téléchargements a été atteinte."
     },
     "downloadStarted": "Téléchargement démarré avec succès !",
-    "enterPassword": "Saisir le mot de passe"
+    "enterPassword": "Saisir le mot de passe",
+    "downloadsUsed": "{{used}} téléchargements sur {{max}} utilisés",
+    "expiresAt": "Expire le : {{date}}"
   },
   "tickets": {
     "responseSource": {

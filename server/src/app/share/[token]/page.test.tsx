@@ -9,8 +9,11 @@ import ShareLandingPage from './page';
 
 const mockToken = 'test-token-123';
 
+// I18nWrapper reads usePathname() to pick the portal's locale chain; without it
+// every render here throws before the page is mounted.
 vi.mock('next/navigation', () => ({
   useParams: () => ({ token: mockToken }),
+  usePathname: () => `/share/${mockToken}`,
 }));
 
 const mockShareInfo = {
@@ -134,7 +137,9 @@ describe('ShareLandingPage', () => {
     render(<ShareLandingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/expired/i)).toBeInTheDocument();
+      // The mocked Alert nests the copy, so the matcher sees the wrapper and
+      // the description; asserting on the first hit keeps the intent.
+      expect(screen.getAllByText(/expired/i)[0]).toBeInTheDocument();
     });
   });
 
