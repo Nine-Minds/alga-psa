@@ -82,6 +82,8 @@ describe('route registry filesystem inventory', () => {
   // Client-portal pages riding the portal fallback (psa: allowed,
   // algadesk: not_found) — same reporting contract as KNOWN_UNRULED_ROUTES.
   const KNOWN_UNRULED_PORTAL_ROUTES: Record<string, string> = {
+    '/client-portal':
+      'REPORTED: pure redirect alias to /client-portal/dashboard (no content); rides the fallback exactly like its ruled dashboard target (portal_helpdesk)',
     '/client-portal/account':
       'REPORTED: same class as the fixed /msp/account gap — portal account page rides the fallback (algadesk portal users get not_found)',
     '/client-portal/licenses':
