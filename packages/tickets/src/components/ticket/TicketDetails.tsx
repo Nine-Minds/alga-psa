@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { getUserTimeZone, generateUUID } from '@alga-psa/core';
+import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -312,7 +312,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 }) => {
     const { t } = useTranslation('features/tickets');
     // Hardcoded English, and a date that followed the browser's locale.
-    const { formatDate } = useFormatters();
+    const { formatDate, locale } = useFormatters();
     const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
@@ -1317,19 +1317,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const tz = getUserTimeZone();
         
         if (ticket.entered_at) {
-            const localDate = utcToLocal(ticket.entered_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.entered_at));
-            setCreatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.entered_at, locale);
+            setCreatedRelativeTime(`${formattedDate} (${distance})`);
         }
-        
+
         if (ticket.updated_at) {
-            const localDate = utcToLocal(ticket.updated_at, tz);
-            const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
-            const distance = formatDistanceToNow(new Date(ticket.updated_at));
-            setUpdatedRelativeTime(`${formattedDate} (${distance} ago)`);
+            const formattedDate = formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
+            const distance = formatTicketRelativeToNow(ticket.updated_at, locale);
+            setUpdatedRelativeTime(`${formattedDate} (${distance})`);
         }
-    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat]);
+    }, [ticket.entered_at, ticket.updated_at, dateTimeFormat, locale]);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -3414,8 +3412,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.created', 'Created')} {createdRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.entered_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}
@@ -3423,8 +3420,7 @@ const handleClose = () => {
                         <p>
                             {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
                                 const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                const localDate = utcToLocal(ticket.updated_at, tz);
-                                return formatDateTime(localDate, tz, dateTimeFormat);
+                                return formatTicketDateTime(ticket.updated_at, dateTimeFormat, locale, tz);
                             })()}
                         </p>
                     )}

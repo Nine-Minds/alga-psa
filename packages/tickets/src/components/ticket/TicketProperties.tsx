@@ -28,7 +28,8 @@ import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getUserContactId } from '@alga-psa/user-composition/actions';
-import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
+import { getUserTimeZone } from '@alga-psa/core';
+import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
@@ -216,7 +217,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   // These read 'en-US' outright, so they stayed American in every locale.
-  const { formatDate } = useFormatters();
+  const { formatDate, locale } = useFormatters();
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -820,9 +821,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               {(() => {
                 if (!ticket.entered_at) return t('properties.notAvailable', 'N/A');
                 try {
-                  const tz = getUserTimeZone();
-                  const local = utcToLocal(ticket.entered_at, tz);
-                  return formatDateTime(local, tz, dateTimeFormat);
+                  return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, getUserTimeZone());
                 } catch (e) {
                   return ticket.entered_at;
                 }

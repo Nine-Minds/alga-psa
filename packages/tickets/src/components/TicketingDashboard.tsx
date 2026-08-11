@@ -1108,6 +1108,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
+      locale,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
