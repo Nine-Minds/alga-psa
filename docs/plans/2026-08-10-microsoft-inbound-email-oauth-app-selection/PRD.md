@@ -18,6 +18,8 @@ Microsoft inbound email currently resolves the tenant `Email` binding when choos
 
 The UI presents an explicit issuer choice. It recommends the hosted/managed application when ready and also lists eligible tenant profiles. The submitted create request carries the selected choice explicitly; the server never infers the final choice solely from the `Email` binding.
 
+The choice list is the only readiness surface, and it discloses progressively: every listed application is fully authorized to start sign-in, so selecting one enables authorization with no separate setup banner. Registering a tenant-owned Microsoft app is an optional path surfaced as a quiet prompt (or a pending-admin-approval status once started), and the UI warns about missing setup only when no application can be offered at all.
+
 ### Reconnect
 
 The UI displays the current authoritative issuer and requires an explicit reconnect choice. Changing the client ID shows a warning that reconnect is required. Rotating a secret for the same client ID does not require reconnect.

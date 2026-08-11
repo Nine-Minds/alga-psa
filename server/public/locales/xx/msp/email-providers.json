@@ -276,12 +276,7 @@
         "signIn": "11111"
       },
       "readiness": {
-        "checking": "11111",
-        "ready": "11111",
-        "pending": "11111",
-        "openProviders": "11111",
-        "notConfigured": "11111",
-        "setUpInProviders": "11111"
+        "openProviders": "11111"
       },
       "issuer": {
         "title": "11111",
@@ -292,7 +287,11 @@
         "currentApp": "11111 {{app}} 11111",
         "switchWarning": "11111",
         "noneAvailable": "11111",
-        "retry": "11111"
+        "retry": "11111",
+        "pendingConsentEmpty": "11111",
+        "pendingConsentHint": "11111",
+        "ownAppPrompt": "11111",
+        "ownAppSetupLink": "11111"
       },
       "advanced": {
         "title": "11111",

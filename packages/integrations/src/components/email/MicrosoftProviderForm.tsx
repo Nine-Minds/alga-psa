@@ -79,7 +79,9 @@ export function MicrosoftProviderForm({
   const [selectedIssuer, setSelectedIssuer] = useState<MicrosoftEmailIssuerChoice | null>(null);
 
   const isEditing = !!provider;
-  const providerSetupReady = emailSetup?.state === 'ready';
+  // A tenant profile awaiting Microsoft 365 admin approval. Only surfaced as a
+  // status note on the bring-your-own-app path — never as a global warning.
+  const ownAppPendingConsent = emailSetup?.state === 'pending_admin_consent';
 
   // The app that issued this provider's refresh token, derived from the
   // persisted provider row (never from the current binding).
@@ -520,55 +522,9 @@ export function MicrosoftProviderForm({
           <CardTitle>{t('forms.microsoft.hostedOauth.sectionTitle', { defaultValue: 'Connect Microsoft 365' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {emailSetup === undefined ? (
-            <Alert variant="info">
-              <AlertDescription>
-                {t('forms.microsoft.readiness.checking', { defaultValue: 'Checking Microsoft setup…' })}
-              </AlertDescription>
-            </Alert>
-          ) : emailSetup?.state === 'ready' ? (
-            <Alert variant="info">
-              <AlertDescription>
-                {t('forms.microsoft.readiness.ready', { defaultValue: 'Microsoft is set up. Sign in as this mailbox to finish.' })}
-              </AlertDescription>
-            </Alert>
-          ) : emailSetup?.state === 'pending_admin_consent' ? (
-            <Alert variant="warning">
-              <AlertDescription>
-                <div className="space-y-2">
-                  <div>{t('forms.microsoft.readiness.pending', { defaultValue: "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet." })}</div>
-                  <Button
-                    id="open-microsoft-providers-button"
-                    type="button"
-                    variant="link"
-                    className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                  >
-                    {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert variant="warning">
-              <AlertDescription>
-                <div className="space-y-2">
-                  <div>{t('forms.microsoft.readiness.notConfigured', { defaultValue: "Microsoft isn't set up yet. Set it up once in Providers, then come back." })}</div>
-                  <Button
-                    id="set-up-microsoft-in-providers-button"
-                    type="button"
-                    variant="link"
-                    className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
-                  >
-                    {t('forms.microsoft.readiness.setUpInProviders', { defaultValue: 'Set up in Providers' })}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Explicit issuer choice: which Microsoft app authorizes this mailbox. */}
+          {/* Explicit issuer choice: which Microsoft app authorizes this mailbox.
+              The picker is the single readiness surface — every option it lists
+              is fully authorized to sign in, so no separate setup banner. */}
           <div className="space-y-3">
             <div>
               <div className="text-sm font-medium">
@@ -672,7 +628,11 @@ export function MicrosoftProviderForm({
               <Alert variant="warning">
                 <AlertDescription>
                   <div className="space-y-2">
-                    <div>{t('forms.microsoft.issuer.noneAvailable', { defaultValue: 'No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.' })}</div>
+                    <div>
+                      {ownAppPendingConsent
+                        ? t('forms.microsoft.issuer.pendingConsentEmpty', { defaultValue: 'Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.' })
+                        : t('forms.microsoft.issuer.noneAvailable', { defaultValue: 'To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.' })}
+                    </div>
                     <Button
                       id="microsoft-issuer-none-open-providers-button"
                       type="button"
@@ -685,6 +645,28 @@ export function MicrosoftProviderForm({
                   </div>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Progressive disclosure: bringing your own Microsoft app is an
+                optional path, so it is a quiet prompt — not a warning — and only
+                appears while no tenant app is usable yet. */}
+            {!issuerOptionsLoading && !issuerOptionsError && issuerOptions?.managed && issuerOptions.profiles.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                {ownAppPendingConsent
+                  ? t('forms.microsoft.issuer.pendingConsentHint', { defaultValue: 'Your own Microsoft app is still waiting for Microsoft 365 administrator approval.' })
+                  : t('forms.microsoft.issuer.ownAppPrompt', { defaultValue: 'Prefer to sign in with your own Microsoft app?' })}{' '}
+                <Button
+                  id="microsoft-issuer-own-app-providers-link"
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                >
+                  {ownAppPendingConsent
+                    ? t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })
+                    : t('forms.microsoft.issuer.ownAppSetupLink', { defaultValue: 'Set it up in Providers' })}
+                </Button>
+              </p>
             )}
 
             {isEditing && currentIssuer && (
@@ -712,7 +694,7 @@ export function MicrosoftProviderForm({
               id="oauth-authorize-btn"
               type="button"
               onClick={handleOAuthAuthorization}
-              disabled={!providerSetupReady || oauthStatus === 'authorizing'}
+              disabled={issuerOptionsLoading || !selectedIssuer || oauthStatus === 'authorizing'}
             >
               {oauthStatus === 'authorizing' && t('forms.microsoft.oauth.signingIn', { defaultValue: 'Signing in…' })}
               {oauthStatus === 'success' && <><CheckCircle className="mr-2 h-4 w-4" />{t('forms.common.oauth.authorized', { defaultValue: 'Connected' })}</>}

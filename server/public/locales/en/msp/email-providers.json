@@ -276,12 +276,7 @@
         "signIn": "Sign in with Microsoft"
       },
       "readiness": {
-        "checking": "Checking Microsoft setup…",
-        "ready": "Microsoft is set up. Sign in as this mailbox to finish.",
-        "pending": "Waiting for your Microsoft 365 administrator. Setup was started in Providers but hasn't been approved yet.",
-        "openProviders": "Open Providers",
-        "notConfigured": "Microsoft isn't set up yet. Set it up once in Providers, then come back.",
-        "setUpInProviders": "Set up in Providers"
+        "openProviders": "Open Providers"
       },
       "issuer": {
         "title": "Microsoft app that authorizes this mailbox",
@@ -291,8 +286,12 @@
         "recommended": "Recommended",
         "currentApp": "Current app: {{app}}",
         "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
-        "retry": "Try again"
+        "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
+        "retry": "Try again",
+        "pendingConsentEmpty": "Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.",
+        "pendingConsentHint": "Your own Microsoft app is still waiting for Microsoft 365 administrator approval.",
+        "ownAppPrompt": "Prefer to sign in with your own Microsoft app?",
+        "ownAppSetupLink": "Set it up in Providers"
       },
       "advanced": {
         "title": "Advanced Settings",

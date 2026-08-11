@@ -236,15 +236,57 @@ describe('MicrosoftProviderForm', () => {
     });
   });
 
-  it('shows the ready state and enables Microsoft sign-in', () => {
+  it('enables Microsoft sign-in once an app is selected, without a setup banner', async () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    expect(screen.getByText('Microsoft is set up. Sign in as this mailbox to finish.')).toBeInTheDocument();
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
     expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
-    expect(screen.queryByText(/platform-managed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Microsoft is set up. Sign in as this mailbox to finish.')).not.toBeInTheDocument();
   });
 
-  it('shows one Providers action while administrator approval is pending', () => {
+  it('offers the own-app path as a quiet prompt when only the managed app exists', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: {
+        managed: managedIssuers.issuers.managed,
+        profiles: [],
+        recommended: { kind: 'managed', clientId: 'managed-client-id' },
+      },
+    } as any);
+
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        emailSetup={{
+          state: 'not_configured',
+          source: null,
+          hosted: true,
+          platformOffered: true,
+          automatedCreationAvailable: true,
+        }}
+      />
+    );
+
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+    expect(screen.getByText('Prefer to sign in with your own Microsoft app?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Set it up in Providers/i })).toBeInTheDocument();
+    // Optional path guidance is not a warning and never blocks sign-in.
+    expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in with microsoft/i })).toBeEnabled();
+  });
+
+  it('keeps sign-in available and shows a quiet status while the own app awaits admin approval', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: {
+        managed: managedIssuers.issuers.managed,
+        profiles: [],
+        recommended: { kind: 'managed', clientId: 'managed-client-id' },
+      },
+    } as any);
+
     renderWithProviders(
       <MicrosoftProviderForm
         {...defaultProps}
@@ -259,27 +301,63 @@ describe('MicrosoftProviderForm', () => {
       />
     );
 
-    expect(screen.getByText(/Waiting for your Microsoft 365 administrator/i)).toBeInTheDocument();
+    await screen.findByText('AlgaPSA app (managed by Nine Minds)');
+    expect(
+      screen.getByText(/still waiting for Microsoft 365 administrator approval/i)
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Open Providers/i })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeEnabled();
   });
 
-  it('points an unconfigured mailbox to Providers', () => {
+  it('warns and points to Providers only when no Microsoft app can be selected', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: { managed: undefined, profiles: [], recommended: null },
+    } as any);
+
     renderWithProviders(
       <MicrosoftProviderForm
         {...defaultProps}
         emailSetup={{
           state: 'not_configured',
           source: null,
-          hosted: true,
-          platformOffered: true,
-          automatedCreationAvailable: true,
+          hosted: false,
+          platformOffered: false,
+          automatedCreationAvailable: false,
         }}
       />
     );
 
-    expect(screen.getByText(/Microsoft isn't set up yet/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Set up in Providers/i })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/first set up a Microsoft app in Providers/i)
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Open Providers/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
+  });
+
+  it('explains the pending own app in the empty state while approval is outstanding', async () => {
+    vi.mocked(emailProviderActions.getMicrosoftEmailIssuerOptions).mockResolvedValue({
+      success: true,
+      issuers: { managed: undefined, profiles: [], recommended: null },
+    } as any);
+
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        emailSetup={{
+          state: 'pending_admin_consent',
+          source: 'tenant_app',
+          hosted: false,
+          platformOffered: false,
+          automatedCreationAvailable: false,
+          profileId: 'microsoft-profile-123',
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByText(/waiting for Microsoft 365 administrator approval/i)
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in with Microsoft/i })).toBeDisabled();
   });
 

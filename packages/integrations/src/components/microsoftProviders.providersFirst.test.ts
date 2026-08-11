@@ -45,7 +45,7 @@ describe('Microsoft providers-first form contracts', () => {
   it('T019: Microsoft email form delegates app setup to Providers', () => {
     expect(emailFormSource).not.toContain('Use your own Microsoft app');
     expect(emailFormSource).not.toContain('Redirect URI');
-    expect(emailFormSource).toContain('Set up in Providers');
+    expect(emailFormSource).toContain('Set it up in Providers');
     expect(emailFormSource).toContain('Open Providers');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });
@@ -55,8 +55,13 @@ describe('Microsoft providers-first form contracts', () => {
       "@alga-psa/integrations/components/email/MicrosoftProviderForm"
     );
     expect(emailFormSource).toContain('emailSetup?: MicrosoftEmailSetupReadiness | null');
-    expect(emailFormSource).toContain('providerSetupReady');
-    expect(emailFormSource).toContain('Microsoft is set up. Sign in as this mailbox to finish.');
+    // Progressive disclosure: the issuer picker is the only readiness surface.
+    // Sign-in is gated on the selected issuer, never on a global setup banner,
+    // and pending admin consent surfaces only as own-app path status.
+    expect(emailFormSource).toContain('ownAppPendingConsent');
+    expect(emailFormSource).not.toContain('providerSetupReady');
+    expect(emailFormSource).not.toContain('Microsoft is set up. Sign in as this mailbox to finish.');
+    expect(emailFormSource).toContain("disabled={issuerOptionsLoading || !selectedIssuer || oauthStatus === 'authorizing'}");
     expect(emailFormSource).toContain('Sign in with Microsoft');
     expect(emailFormSource).toContain('/msp/settings/integrations?category=providers');
   });

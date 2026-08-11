@@ -284,12 +284,7 @@
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {
-        "checking": "Verifica della configurazione Microsoft…",
-        "ready": "Microsoft è configurato. Accedi con questa cassetta postale per terminare.",
-        "pending": "In attesa del tuo amministratore di Microsoft 365. La configurazione è stata avviata in Fornitori, ma non è ancora stata approvata.",
-        "openProviders": "Apri Fornitori",
-        "notConfigured": "Microsoft non è ancora configurato. Configuralo una volta in Fornitori, quindi torna qui.",
-        "setUpInProviders": "Configura in Fornitori"
+        "openProviders": "Apri Fornitori"
       },
       "issuer": {
         "title": "Microsoft app that authorizes this mailbox",
@@ -299,8 +294,12 @@
         "recommended": "Recommended",
         "currentApp": "Current app: {{app}}",
         "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
-        "retry": "Try again"
+        "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
+        "retry": "Try again",
+        "pendingConsentEmpty": "Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.",
+        "pendingConsentHint": "Your own Microsoft app is still waiting for Microsoft 365 administrator approval.",
+        "ownAppPrompt": "Prefer to sign in with your own Microsoft app?",
+        "ownAppSetupLink": "Set it up in Providers"
       }
     },
     "gmail": {

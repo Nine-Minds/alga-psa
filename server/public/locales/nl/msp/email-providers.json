@@ -284,12 +284,7 @@
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
-        "checking": "Microsoft-configuratie controleren…",
-        "ready": "Microsoft is ingesteld. Meld u aan met dit postvak om de configuratie te voltooien.",
-        "pending": "Wachten op uw Microsoft 365-beheerder. De configuratie is gestart in Aanbieders, maar is nog niet goedgekeurd.",
-        "openProviders": "Aanbieders openen",
-        "notConfigured": "Microsoft is nog niet ingesteld. Stel Microsoft eenmaal in via Aanbieders en kom daarna terug.",
-        "setUpInProviders": "Instellen in Aanbieders"
+        "openProviders": "Aanbieders openen"
       },
       "issuer": {
         "title": "Microsoft app that authorizes this mailbox",
@@ -299,8 +294,12 @@
         "recommended": "Recommended",
         "currentApp": "Current app: {{app}}",
         "switchWarning": "Changing the Microsoft app requires reconnecting this mailbox. Sign in with Microsoft again to finish the switch.",
-        "noneAvailable": "No Microsoft app is ready for mailbox authorization yet. Set one up in Providers, then come back.",
-        "retry": "Try again"
+        "noneAvailable": "To connect Microsoft 365, first set up a Microsoft app in Providers, then come back.",
+        "retry": "Try again",
+        "pendingConsentEmpty": "Your Microsoft app is waiting for Microsoft 365 administrator approval. Once it is approved in Providers, come back to sign in.",
+        "pendingConsentHint": "Your own Microsoft app is still waiting for Microsoft 365 administrator approval.",
+        "ownAppPrompt": "Prefer to sign in with your own Microsoft app?",
+        "ownAppSetupLink": "Set it up in Providers"
       }
     },
     "gmail": {
