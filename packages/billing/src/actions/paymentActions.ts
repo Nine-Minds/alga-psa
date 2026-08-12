@@ -99,18 +99,17 @@ async function getAuthenticatedTenantId(): Promise<string | null> {
   return currentUser.tenant;
 }
 
+// LEVERAGE: friction enabled-provider-resolution — hasEnabledPaymentProvider duplicates the
+// getConfiguredPaymentService flow (tenant -> service -> provider-check); delegate to it.
 export async function hasEnabledPaymentProvider(): Promise<boolean> {
   const tenantId = await getAuthenticatedTenantId();
   if (!tenantId) return false;
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return false;
 
-  try {
-    return await paymentService.hasEnabledProvider();
-  } catch (error) {
-    logger.warn('[billing/paymentActions] hasEnabledProvider failed', { tenantId, error });
-    return false;
-  }
+  return runPaymentServiceCall('Failed to check payment provider', () =>
+    paymentService.hasEnabledProvider()
+  );
 }
 
 export async function getOrCreateInvoicePaymentLink(
