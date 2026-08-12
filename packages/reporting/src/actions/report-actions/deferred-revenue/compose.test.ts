@@ -452,4 +452,84 @@ describe('buildDeferredRevenueReportFromData', () => {
       acme.creditDetails.reduce((sum, row) => sum + row.remainingAmount, 0),
     ).toBe(acme.credits.closing);
   });
+
+  it('restores a credit reversed by a FinancialService-shaped adjustment through the application\'s applied_credits (fix round 3)', () => {
+    // FinancialService.bulkTransactionOperation (reverse) writes a credit_adjustment
+    // with only related_transaction_id → the original credit_application and no
+    // metadata. That application carries canonical metadata.applied_credits, so
+    // the reversal must be attributed: report closing, retained detail row, and
+    // the detail-to-closing reconciliation all agree at 200000 for the month
+    // containing the reversal.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [
+          {
+            transactionId: 'txn-iss-jan',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_issuance',
+            amount: 200000,
+            createdAt: '2026-01-15T10:00:00.000Z',
+          },
+          {
+            transactionId: 'txn-app-feb',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_application',
+            amount: -200000,
+            createdAt: '2026-02-15T10:00:00.000Z',
+            metadata: {
+              applied_credits: [
+                { creditId: 'credit-rev', amount: 200000, transactionId: 'txn-iss-jan' },
+              ],
+            },
+            relatedTransactionId: 'txn-iss-jan',
+          },
+          {
+            transactionId: 'txn-rev-mar',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_adjustment',
+            amount: 200000,
+            createdAt: '2026-03-15T10:00:00.000Z',
+            relatedTransactionId: 'txn-app-feb',
+          },
+        ],
+        creditTracking: [
+          {
+            creditId: 'credit-rev',
+            transactionId: 'txn-iss-jan',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            amount: 200000,
+            remainingAmount: 0,
+            expirationDate: null,
+            isExpired: false,
+            transactionType: 'credit_issuance',
+            issuedDate: '2026-01-15T10:00:00.000Z',
+            description: 'Prepayment restored by reversal',
+            invoiceId: null,
+            metadata: null,
+          },
+        ],
+        bucketPeriods: [],
+      }),
+      '2026-03',
+    );
+
+    const usd = report.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    expect(usd!.clients).toHaveLength(1);
+    const acme = usd!.clients[0];
+    expect(acme.credits.opening).toBe(0);
+    expect(acme.credits.adjustments).toBe(200000);
+    expect(acme.credits.closing).toBe(200000);
+    expect(acme.creditDetails).toHaveLength(1);
+    const detail = acme.creditDetails[0];
+    expect(detail.creditId).toBe('credit-rev');
+    expect(detail.remainingAmount).toBe(200000);
+    expect(
+      acme.creditDetails.reduce((sum, row) => sum + row.remainingAmount, 0),
+    ).toBe(acme.credits.closing);
+  });
 });

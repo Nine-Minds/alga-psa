@@ -653,4 +653,135 @@ describe.skipIf(SKIP)('deferred revenue report — database-backed integration',
       await db.destroy().catch(() => undefined);
     }
   });
+
+  it('restores a credit reversed by a FinancialService-shaped credit_adjustment with only related_transaction_id (fix round 3)', async () => {
+    if (!dbPassword) {
+      throw new Error('Missing secrets/db_password_server — cannot reach the dev database');
+    }
+
+    const db: Knex = knex({
+      client: 'pg',
+      connection: {
+        host: dbHost,
+        port: dbPort,
+        user: dbUser,
+        password: dbPassword,
+        database: dbName,
+      },
+      pool: { min: 1, max: 2 },
+    });
+
+    try {
+      const trx = await db.transaction();
+      try {
+        const clientId = uuidv4();
+        const now = new Date().toISOString();
+        await trx('tenants').insert({
+          tenant: TENANT,
+          client_name: 'Deferred Revenue Integration',
+          email: 'deferred-revenue@example.test',
+          created_at: now,
+          updated_at: now,
+        });
+        await trx('clients').insert({
+          tenant: TENANT,
+          client_id: clientId,
+          client_name: 'Acme Corp',
+          client_type: 'company',
+          is_tax_exempt: false,
+          billing_cycle: 'monthly',
+          default_currency_code: 'USD',
+          lifecycle_status: 'active',
+          created_at: now,
+          updated_at: now,
+        });
+
+        const insertCreditTxn = async (over: {
+          amount: number;
+          type: string;
+          created_at: string;
+          description?: string;
+          related_transaction_id?: string;
+          metadata?: Record<string, unknown>;
+        }) => {
+          const [inserted] = await trx('transactions')
+            .insert({
+              tenant: TENANT,
+              client_id: clientId,
+              amount: over.amount,
+              type: over.type,
+              created_at: over.created_at,
+              status: 'completed',
+              description: over.description ?? over.type,
+              currency_code: 'USD',
+              invoice_id: null,
+              related_transaction_id: over.related_transaction_id ?? null,
+              metadata: over.metadata ?? null,
+            })
+            .returning('transaction_id');
+          return inserted.transaction_id;
+        };
+
+        // Credit issued in Jan, fully applied in Feb (canonical
+        // metadata.applied_credits), then reversed in Mar the way
+        // FinancialService.bulkTransactionOperation (reverse) writes it: a
+        // credit_adjustment with only related_transaction_id → the original
+        // application, and no metadata. Tracking is left at the stale 0 the
+        // legacy writer leaves — the reconstruction must restore 2000 from the
+        // ledger for the reversal month without trusting tracking.
+        const issuanceId = await insertCreditTxn({
+          amount: 2000,
+          type: 'credit_issuance',
+          created_at: '2026-01-15T10:00:00.000Z',
+          description: 'Credit reversed via FinancialService',
+        });
+        const creditId = uuidv4();
+        await trx('credit_tracking').insert({
+          tenant: TENANT,
+          credit_id: creditId,
+          transaction_id: issuanceId,
+          client_id: clientId,
+          amount: 2000,
+          remaining_amount: 0,
+          created_at: '2026-01-15T10:00:00.000Z',
+          is_expired: false,
+          updated_at: now,
+          currency_code: 'USD',
+        });
+        const applicationId = await insertCreditTxn({
+          amount: -2000,
+          type: 'credit_application',
+          created_at: '2026-02-10T10:00:00.000Z',
+          description: 'Full application',
+          related_transaction_id: issuanceId,
+          metadata: {
+            applied_credits: [{ creditId, amount: 2000, transactionId: issuanceId }],
+          },
+        });
+        await insertCreditTxn({
+          amount: 2000,
+          type: 'credit_adjustment',
+          created_at: '2026-03-10T10:00:00.000Z',
+          description: 'FinancialService reversal',
+          related_transaction_id: applicationId,
+        });
+
+        const mar = await buildDeferredRevenueReport(trx, TENANT, '2026-03');
+        const usdMar = mar.sections.find((section) => section.currencyCode === 'USD');
+        expect(usdMar).toBeDefined();
+        const acmeMar = clientByName(usdMar!, 'Acme Corp');
+        expect(acmeMar.credits.closing).toBe(2000);
+        expect(acmeMar.creditDetails).toHaveLength(1);
+        expect(acmeMar.creditDetails[0].creditId).toBe(creditId);
+        expect(acmeMar.creditDetails[0].remainingAmount).toBe(2000);
+        expect(
+          acmeMar.creditDetails.reduce((sum, detail) => sum + detail.remainingAmount, 0),
+        ).toBe(acmeMar.credits.closing);
+      } finally {
+        await trx.rollback().catch(() => undefined);
+      }
+    } finally {
+      await db.destroy().catch(() => undefined);
+    }
+  });
 });

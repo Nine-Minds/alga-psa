@@ -269,6 +269,80 @@ describe('reconstructCreditBalances — as-of-month-end from ledger truth (fix r
     expect(mar.get('c1')).toEqual({ remainingAsOfMonthEnd: 2000, inMonthMovement: 2000, limited: false });
   });
 
+  it('attributes a FinancialService-shaped reversal (no metadata, only related_transaction_id → the application) via the application\'s applied_credits split', () => {
+    // FinancialService.bulkTransactionOperation (reverse) writes credit_adjustment
+    // rows with only related_transaction_id pointing at the original
+    // credit_application — no metadata. When that application carries canonical
+    // metadata.applied_credits, the reversal must be attributed through the same
+    // split the metadata.reversal_of path uses, restoring the applied pool.
+    const credits = [credit({ creditId: 'c1', transactionId: 'iss-1', amount: 2000, remainingAmount: 2000 })];
+    const transactions: CreditTransactionRow[] = [
+      txn({ transactionId: 'iss-1', type: 'credit_issuance', amount: 2000, createdAt: JAN }),
+      txn({
+        transactionId: 'app-1',
+        type: 'credit_application',
+        amount: -2000,
+        createdAt: FEB,
+        metadata: { applied_credits: [{ creditId: 'c1', amount: 2000, transactionId: 'iss-1' }] },
+        relatedTransactionId: 'iss-1',
+      }),
+      txn({
+        transactionId: 'rev-1',
+        type: 'credit_adjustment',
+        amount: 2000,
+        createdAt: MAR,
+        relatedTransactionId: 'app-1',
+      }),
+    ];
+
+    const feb = reconstructFor('2026-02', credits, transactions);
+    expect(feb.get('c1')).toEqual({ remainingAsOfMonthEnd: 0, inMonthMovement: -2000, limited: false });
+
+    const mar = reconstructFor('2026-03', credits, transactions);
+    expect(mar.get('c1')).toEqual({ remainingAsOfMonthEnd: 2000, inMonthMovement: 2000, limited: false });
+  });
+
+  it('prorates a FinancialService-shaped reversal across the credits the reversed application drew from', () => {
+    // Partial reversal of a two-credit application: the adjustment amount is
+    // apportioned to each credit pro-rata to its applied share.
+    const credits = [
+      credit({ creditId: 'c1', transactionId: 'iss-1', amount: 1000, remainingAmount: 0 }),
+      credit({ creditId: 'c2', transactionId: 'iss-2', amount: 500, remainingAmount: 0 }),
+    ];
+    const transactions: CreditTransactionRow[] = [
+      txn({ transactionId: 'iss-1', type: 'credit_issuance', amount: 1000, createdAt: JAN }),
+      txn({ transactionId: 'iss-2', type: 'credit_issuance', amount: 500, createdAt: JAN }),
+      txn({
+        transactionId: 'app-1',
+        type: 'credit_application',
+        amount: -1500,
+        createdAt: FEB,
+        metadata: {
+          applied_credits: [
+            { creditId: 'c1', amount: 1000, transactionId: 'iss-1' },
+            { creditId: 'c2', amount: 500, transactionId: 'iss-2' },
+          ],
+        },
+      }),
+      txn({
+        transactionId: 'rev-1',
+        type: 'credit_adjustment',
+        amount: 750,
+        createdAt: MAR,
+        relatedTransactionId: 'app-1',
+      }),
+    ];
+
+    const feb = reconstructFor('2026-02', credits, transactions);
+    expect(feb.get('c1')).toEqual({ remainingAsOfMonthEnd: 0, inMonthMovement: -1000, limited: false });
+    expect(feb.get('c2')).toEqual({ remainingAsOfMonthEnd: 0, inMonthMovement: -500, limited: false });
+
+    // Half of each applied share is restored: c1 +500, c2 +250.
+    const mar = reconstructFor('2026-03', credits, transactions);
+    expect(mar.get('c1')).toEqual({ remainingAsOfMonthEnd: 500, inMonthMovement: 500, limited: false });
+    expect(mar.get('c2')).toEqual({ remainingAsOfMonthEnd: 250, inMonthMovement: 250, limited: false });
+  });
+
   it('attributes a clawback adjustment through metadata.credit_id', () => {
     // Credit-note-void clawback: credit_adjustment with credit_id + reversal_of
     // referencing the issuance, amount negative.

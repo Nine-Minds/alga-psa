@@ -220,6 +220,42 @@ interface AdjustmentContribution {
 }
 
 /**
+ * Apportion an adjustment across the per-credit split recorded by a
+ * `credit_application`'s `metadata.applied_credits`, prorated to the
+ * adjustment's amount. Every adjustment that reverses an application restores
+ * the exact pool the application drew from, so the split is canonical — it must
+ * always be read from `applied_credits`, never from the application row's own
+ * `related_transaction_id` (the writer loop overwrites that with only the LAST
+ * applied credit).
+ *
+ * Returns the signed per-credit amounts, or null when the application carries
+ * no usable `applied_credits` split (genuinely legacy application — the caller
+ * keeps treating the adjustment as unattributable).
+ */
+function attributeViaAppliedCredits(
+  application: CreditTransactionRow,
+  adjustment: CreditTransactionRow,
+  credits: CreditBalanceSource[],
+): Map<string, number> | null {
+  const split = appliedCreditsOf(application.metadata);
+  if (split.length === 0) return null;
+
+  const totalSplit = split.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+  const adjustmentAmount = Number(adjustment.amount) || 0;
+  const contributions = new Map<string, number>();
+  for (const entry of split) {
+    const credit = credits.find((candidate) => splitMatchesCredit(entry, candidate));
+    if (!credit) continue;
+    const share =
+      totalSplit !== 0
+        ? (Number(entry.amount) || 0) * (adjustmentAmount / totalSplit)
+        : adjustmentAmount / split.length;
+    contributions.set(credit.creditId, (contributions.get(credit.creditId) ?? 0) + share);
+  }
+  return contributions.size > 0 ? contributions : null;
+}
+
+/**
  * Attribute one credit_adjustment / credit_transfer to the credit(s) it moves,
  * following the ledger's own linkage:
  *
@@ -227,12 +263,18 @@ interface AdjustmentContribution {
  *    application's `metadata.applied_credits` split, prorated to the
  *    adjustment's amount (invoice-void reversals restore the applied pool).
  * 2. `metadata.credit_id` → the named credit (credit-note-void clawbacks).
- * 3. `related_transaction_id` pointing at a credit's issuance transaction →
+ * 3. `related_transaction_id` referencing a credit_application that carries
+ *    `metadata.applied_credits` → the same split apportionment as (1).
+ *    FinancialService-era reversals write no metadata at all — only
+ *    `related_transaction_id` pointing back at the original application — so
+ *    the dereferenced application's canonical split is honored here.
+ * 4. `related_transaction_id` pointing at a credit's issuance transaction →
  *    that credit (transfer-outs, issuance reversals).
  *
  * Returns the signed per-credit amounts, or null when the adjustment cannot be
- * tied to any credit (FinancialService-era / pre-metadata adjustments) — the
- * caller then treats it as unattributable instead of guessing.
+ * tied to any credit (genuinely legacy / pre-metadata adjustments whose
+ * referenced application carries no `applied_credits`) — the caller then treats
+ * it as unattributable instead of guessing.
  */
 function attributeAdjustment(
   txn: CreditTransactionRow,
@@ -241,39 +283,32 @@ function attributeAdjustment(
   transactionById: Map<string, CreditTransactionRow>,
 ): Map<string, number> | null {
   const meta = normalizeMetadata(txn.metadata);
-  const contributions = new Map<string, number>();
 
   const reversalOf = meta.reversal_of;
   if (typeof reversalOf === 'string') {
     const original = transactionById.get(reversalOf);
     if (original && original.type === 'credit_application') {
-      const split = appliedCreditsOf(original.metadata);
-      const totalSplit = split.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
-      const adjustmentAmount = Number(txn.amount) || 0;
-      for (const entry of split) {
-        const credit = credits.find((candidate) => splitMatchesCredit(entry, candidate));
-        if (!credit) continue;
-        const share =
-          totalSplit !== 0
-            ? (Number(entry.amount) || 0) * (adjustmentAmount / totalSplit)
-            : split.length > 0
-              ? adjustmentAmount / split.length
-              : 0;
-        contributions.set(credit.creditId, (contributions.get(credit.creditId) ?? 0) + share);
-      }
-      if (contributions.size > 0) return contributions;
+      const contributions = attributeViaAppliedCredits(original, txn, credits);
+      if (contributions) return contributions;
     }
   }
 
   const creditId = meta.credit_id;
   if (typeof creditId === 'string' && credits.some((credit) => credit.creditId === creditId)) {
+    const contributions = new Map<string, number>();
     contributions.set(creditId, Number(txn.amount) || 0);
     return contributions;
   }
 
   if (txn.relatedTransactionId) {
+    const related = transactionById.get(txn.relatedTransactionId);
+    if (related && related.type === 'credit_application') {
+      const contributions = attributeViaAppliedCredits(related, txn, credits);
+      if (contributions) return contributions;
+    }
     const credit = creditByTransactionId.get(txn.relatedTransactionId);
     if (credit) {
+      const contributions = new Map<string, number>();
       contributions.set(credit.creditId, Number(txn.amount) || 0);
       return contributions;
     }
