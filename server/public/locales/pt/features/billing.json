@@ -349,6 +349,7 @@
       "empty": "Ainda não há atividade de crédito",
       "issued": "Emitido",
       "issuedWithInvoice": "Emitido — pré-pagamento n.º {{invoice}}",
+      "issuedForInvoice": "Emitido — fatura n.º {{invoice}}",
       "issuedFromCreditNote": "Emitido a partir de nota de crédito",
       "applied": "Aplicado",
       "appliedToInvoice": "Aplicado à fatura n.º {{invoice}}",

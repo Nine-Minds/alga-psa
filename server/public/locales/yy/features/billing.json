@@ -349,6 +349,7 @@
       "empty": "55555",
       "issued": "55555",
       "issuedWithInvoice": "55555 {{invoice}} 55555",
+      "issuedForInvoice": "55555 {{invoice}} 55555",
       "issuedFromCreditNote": "55555",
       "applied": "55555",
       "appliedToInvoice": "55555 {{invoice}} 55555",

@@ -48,7 +48,12 @@ function getCreditHistoryLabel(t: TranslateFn, entry: ClientPortalCreditHistoryE
           })
         : t('credits.history.applied', 'Applied');
     case 'credit_issuance':
-      return t('credits.history.issued', 'Issued');
+      return invoiceNumber
+        ? t('credits.history.issuedForInvoice', {
+            invoice: invoiceNumber,
+            defaultValue: 'Issued — invoice #{{invoice}}',
+          })
+        : t('credits.history.issued', 'Issued');
     case 'credit_issuance_from_negative_invoice':
       return t('credits.history.issuedFromCreditNote', 'Issued from credit note');
     case 'credit_adjustment':

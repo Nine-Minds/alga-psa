@@ -349,6 +349,7 @@
       "empty": "Aucune activité de crédit pour le moment",
       "issued": "Émis",
       "issuedWithInvoice": "Émis — prépaiement n°{{invoice}}",
+      "issuedForInvoice": "Émis — facture n°{{invoice}}",
       "issuedFromCreditNote": "Émis à partir d'une note de crédit",
       "applied": "Appliqué",
       "appliedToInvoice": "Appliqué à la facture n°{{invoice}}",

@@ -349,6 +349,7 @@
       "empty": "Brak aktywności kredytu",
       "issued": "Przyznano",
       "issuedWithInvoice": "Przyznano — przedpłata #{{invoice}}",
+      "issuedForInvoice": "Przyznano — faktura #{{invoice}}",
       "issuedFromCreditNote": "Przyznano z noty kredytowej",
       "applied": "Zastosowano",
       "appliedToInvoice": "Zastosowano do faktury #{{invoice}}",

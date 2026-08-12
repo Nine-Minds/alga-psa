@@ -144,6 +144,42 @@ describe('CreditsSummaryCard credit history (release-v1.5-feature)', () => {
     expect(getClientCreditHistoryMock).toHaveBeenCalledTimes(1);
   });
 
+  it('T155a: credit_issuance rows (production prepayment finalization) keep their invoice reference', async () => {
+    featureFlagState.enabled = true;
+    getClientCreditHistoryMock.mockResolvedValue([
+      {
+        transaction_id: 'tx-real-issuance',
+        type: 'credit_issuance',
+        description: null,
+        amount: 12500,
+        balance_after: 12500,
+        created_at: '2026-07-10T10:00:00.000Z',
+        invoice_id: 'inv-3',
+        invoice_number: 'INV-003',
+        currency_code: 'USD',
+      },
+      {
+        transaction_id: 'tx-manual-issuance',
+        type: 'credit_issuance',
+        description: null,
+        amount: 2500,
+        balance_after: 15000,
+        created_at: '2026-07-12T10:00:00.000Z',
+        invoice_id: null,
+        invoice_number: null,
+        currency_code: 'USD',
+      },
+    ]);
+    render(
+      <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /view history/i }));
+
+    expect(await screen.findByText('Issued — invoice #INV-003')).toBeInTheDocument();
+    expect(screen.getByText('Issued')).toBeInTheDocument();
+  });
+
   it('T156: flag on with empty history shows the empty state', async () => {
     featureFlagState.enabled = true;
     getClientCreditHistoryMock.mockResolvedValue([]);

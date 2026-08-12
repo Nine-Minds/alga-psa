@@ -349,6 +349,7 @@
       "empty": "Nog geen kredietactiviteit",
       "issued": "Uitgegeven",
       "issuedWithInvoice": "Uitgegeven — vooruitbetaling #{{invoice}}",
+      "issuedForInvoice": "Uitgegeven — factuur #{{invoice}}",
       "issuedFromCreditNote": "Uitgegeven via creditnota",
       "applied": "Toegepast",
       "appliedToInvoice": "Toegepast op factuur #{{invoice}}",

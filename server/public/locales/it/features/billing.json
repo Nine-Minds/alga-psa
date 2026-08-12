@@ -349,6 +349,7 @@
       "empty": "Nessuna attività di credito per ora",
       "issued": "Erogato",
       "issuedWithInvoice": "Erogato — pagamento anticipato n. {{invoice}}",
+      "issuedForInvoice": "Erogato — fattura n. {{invoice}}",
       "issuedFromCreditNote": "Erogato da nota di credito",
       "applied": "Applicato",
       "appliedToInvoice": "Applicato alla fattura n. {{invoice}}",
