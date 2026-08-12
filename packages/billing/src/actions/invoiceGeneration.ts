@@ -2743,9 +2743,10 @@ export const generateInvoicePDF = withAuth(async (
 });
 
 /**
- * Bytes of the invoice's filed PDF: reuses the document already on file, refreshing
- * it when the invoice has not been issued yet. Falls back to a plain render if the
- * document store is unavailable — a download must not depend on filing succeeding.
+ * Bytes of the invoice's filed PDF: reuses the document already on file — unless a
+ * different template was asked for — and refreshes it while the invoice has not been
+ * issued yet. Falls back to a plain render if the document store is unavailable: a
+ * download must not depend on filing succeeding.
  */
 async function getStoredInvoicePdf(options: {
   tenant: string;
@@ -2761,7 +2762,6 @@ async function getStoredInvoicePdf(options: {
       invoiceId: options.invoiceId,
       invoiceNumber: options.invoiceNumber,
       templateId: options.templateId,
-      regenerate: Boolean(options.templateId),
       userId: options.userId,
     });
 
@@ -2808,7 +2808,6 @@ export const downloadInvoicePDF = withAuth(async (
     console.log('[downloadInvoicePDF] Generating PDF for invoice:', invoice.invoice_number);
     // File the PDF as a document and hand back the stored bytes, so what the
     // biller downloads is the artifact on record rather than a throwaway render.
-    // Picking a template is an explicit request for a fresh one.
     const pdfBuffer = await getStoredInvoicePdf({
       tenant,
       invoiceId,

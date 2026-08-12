@@ -173,7 +173,12 @@ import {
  * copy issued to the client and the MSP-only working copy, so the fixture answers
  * only the lookup whose visibility matches.
  */
-function filedDocument(row: { document_id: string; file_id: string; is_client_visible: boolean }) {
+function filedDocument(row: {
+  document_id: string;
+  file_id: string;
+  is_client_visible: boolean;
+  source_template_id?: string | null;
+}) {
   tableResults['document_associations as da'] = (wheres: any[][]) => {
     const visibility = wheres.find(([column]) => column === 'd.is_client_visible')?.[1];
     return visibility === row.is_client_visible ? row : undefined;
@@ -352,6 +357,50 @@ describe('generated document filing', () => {
     );
     expect(softDeleteFileMock).toHaveBeenCalledWith(expect.anything(), 'file-1', USER_ID);
     expect(result).toMatchObject({ file_id: 'file-2', document_id: 'doc-1' });
+  });
+
+  it('re-renders when a different template than the issued one is asked for', async () => {
+    filedDocument({
+      document_id: 'doc-1',
+      file_id: 'file-1',
+      is_client_visible: true,
+      source_template_id: 'a-different-template',
+    });
+    findFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/INV-100.pdf' });
+
+    const service = createPDFGenerationService(TENANT_ID);
+    await service.generateAndStore({
+      invoiceId: INVOICE_ID,
+      invoiceNumber: 'INV-100',
+      userId: USER_ID,
+      templateId: 'template-1',
+    });
+
+    // Asking for a template is asking for its output, so the copy on file does
+    // not answer the request.
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+    expect(documentInsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands back the issued copy when it is the template that was asked for', async () => {
+    filedDocument({
+      document_id: 'doc-1',
+      file_id: 'file-1',
+      is_client_visible: true,
+      source_template_id: 'template-1',
+    });
+    findFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/INV-100.pdf' });
+
+    const service = createPDFGenerationService(TENANT_ID);
+    const result = await service.generateAndStore({
+      invoiceId: INVOICE_ID,
+      invoiceNumber: 'INV-100',
+      userId: USER_ID,
+      templateId: 'template-1',
+    });
+
+    expect(result).toMatchObject({ file_id: 'file-1', document_id: 'doc-1' });
+    expect(uploadMock).not.toHaveBeenCalled();
   });
 
   it('files a new document when an already-issued invoice is deliberately re-rendered', async () => {

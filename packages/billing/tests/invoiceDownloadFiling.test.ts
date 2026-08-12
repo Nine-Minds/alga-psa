@@ -70,7 +70,6 @@ describe('downloading an invoice PDF as an MSP biller', () => {
       expect.objectContaining({
         invoiceId: 'invoice-1',
         invoiceNumber: 'INV-42',
-        regenerate: false,
         userId: 'user-1',
       })
     );
@@ -80,11 +79,11 @@ describe('downloading an invoice PDF as an MSP biller', () => {
     expect(result.invoiceNumber).toBe('INV-42');
   });
 
-  it('renders again when the biller picks a different template', async () => {
+  it('passes the picked template through, so the stored copy is only reused when it matches', async () => {
     await downloadInvoicePDF('invoice-1', 'template-9');
 
     expect(generateAndStoreMock).toHaveBeenCalledWith(
-      expect.objectContaining({ templateId: 'template-9', regenerate: true })
+      expect.objectContaining({ templateId: 'template-9' })
     );
   });
 

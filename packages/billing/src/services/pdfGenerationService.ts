@@ -63,7 +63,11 @@ interface PDFGenerationOptions {
 }
 
 /** The stored file, plus the `documents` row it was filed as (absent for the export branch). */
-export type StoredPdfResult = FileStore & { document_id?: string; is_client_visible?: boolean };
+export type StoredPdfResult = FileStore & {
+  document_id?: string;
+  is_client_visible?: boolean;
+  source_template_id?: string | null;
+};
 
 /**
  * How a generated PDF is filed against its source entity.
@@ -206,7 +210,7 @@ export class PDFGenerationService {
 
         if (target.mode === 'refresh' && !options.regenerate) {
           const issued = await this.findStoredPdf(knex, target, true);
-          if (issued) {
+          if (issued && this.matchesRequest(issued, options.templateId)) {
             return issued;
           }
         }
@@ -259,7 +263,7 @@ export class PDFGenerationService {
             fileRecord,
             rendered,
             options.userId,
-            Boolean(options.regenerate)
+            { regenerate: Boolean(options.regenerate), templateId: options.templateId }
           );
           documentId = filed.document_id;
           // Lost a filing race: the document was published while we rendered, so
@@ -395,8 +399,11 @@ export class PDFGenerationService {
       .andWhere('d.is_client_visible', clientVisible)
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
-      .select('d.document_id', 'd.file_id', 'd.is_client_visible')
-      .first<{ document_id: string; file_id: string; is_client_visible?: boolean } | undefined>();
+      .select('d.document_id', 'd.file_id', 'd.is_client_visible', 'd.source_template_id')
+      .first<
+        | { document_id: string; file_id: string; is_client_visible?: boolean; source_template_id?: string | null }
+        | undefined
+      >();
     db.tenantJoin(query, 'documents as d', 'da.document_id', 'd.document_id');
 
     const existing = await query;
@@ -410,8 +417,18 @@ export class PDFGenerationService {
           ...fileRecord,
           document_id: existing.document_id,
           is_client_visible: existing.is_client_visible === true,
+          source_template_id: existing.source_template_id ?? null,
         }
       : null;
+  }
+
+  /**
+   * Whether a stored PDF answers this request. Asking for a specific template is
+   * asking for that template's output, so the copy on file only counts if it is
+   * what it was rendered from.
+   */
+  private matchesRequest(stored: StoredPdfResult, templateId?: string): boolean {
+    return !templateId || stored.source_template_id === templateId;
   }
 
   private async fileGeneratedDocument(
@@ -420,7 +437,7 @@ export class PDFGenerationService {
     fileRecord: FileStore,
     rendered: RenderedPdf,
     userId: string,
-    regenerate: boolean
+    options: { regenerate: boolean; templateId?: string }
   ): Promise<{ document_id: string; issuedFile: StoredPdfResult | null; supersededFileId?: string }> {
     const renderedLocale = await this.resolveRenderedLocale(knex, target.clientId);
     const documentType = await this.resolvePdfDocumentType(knex);
@@ -434,9 +451,9 @@ export class PDFGenerationService {
           `${this.tenant}:${target.sourceType}:${target.entityId}:${target.documentName}`,
         ]);
 
-        if (!regenerate) {
+        if (!options.regenerate) {
           const issued = await this.findStoredPdf(trx, target, true);
-          if (issued?.document_id) {
+          if (issued?.document_id && this.matchesRequest(issued, options.templateId)) {
             // Published while we rendered. Leave the client's copy alone and retire
             // the render we just stored, so both sides see the same bytes.
             return {
