@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -1514,7 +1514,7 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
       <Dialog
         isOpen={schemaModalOpen}
         onClose={() => setSchemaModalOpen(false)}
-        title={t('automation.eventsCatalog.schemaModal.title', { defaultValue: 'Schema' })}
+        title={t('automation.eventsCatalog.schemaModal.headerTitle', { defaultValue: 'Payload schema' })}
         className="max-w-4xl"
         footer={
           <div className="flex justify-end space-x-2">
@@ -1523,9 +1523,6 @@ export default function EventsCatalogV2({ pickerActions }: { pickerActions: Work
         }
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('automation.eventsCatalog.schemaModal.headerTitle', { defaultValue: 'Payload schema' })}</DialogTitle>
-          </DialogHeader>
           {schemaLoading && <div className="text-sm text-gray-500">{t('automation.eventsCatalog.schemaModal.loading', { defaultValue: 'Loading…' })}</div>}
           {!schemaLoading && !fullSchema && <div className="text-sm text-destructive">{t('automation.eventsCatalog.schemaModal.unavailable', { defaultValue: 'Schema not available.' })}</div>}
           {!schemaLoading && fullSchema && (
@@ -1631,7 +1628,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title={t('automation.eventsCatalog.metricsDialog.title', { defaultValue: 'Metrics' })}
+      title={t('automation.eventsCatalog.metricsDialog.headerTitle', { defaultValue: 'Metrics · {{eventType}}', eventType: eventType ?? '' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
@@ -1640,9 +1637,6 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.metricsDialog.headerTitle', { defaultValue: 'Metrics · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
-        </DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
@@ -1933,7 +1927,7 @@ const SimulateDialog: React.FC<{
     <Dialog
       isOpen={open}
       onClose={onClose}
-      title={t('automation.eventsCatalog.simulateDialog.title', { defaultValue: 'Simulate event' })}
+      title={t('automation.eventsCatalog.simulateDialog.headerTitle', { defaultValue: 'Simulate · {{eventType}}', eventType: eventType ?? '' })}
       className="max-w-4xl"
       footer={
         <div className="flex justify-end space-x-2">
@@ -1947,10 +1941,6 @@ const SimulateDialog: React.FC<{
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.simulateDialog.headerTitle', { defaultValue: 'Simulate · {{eventType}}', eventType: eventType ?? '' })}</DialogTitle>
-        </DialogHeader>
-
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
@@ -2142,9 +2132,6 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
       }
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('automation.eventsCatalog.defineEventDialog.headerTitle', { defaultValue: 'Define Custom Event' })}</DialogTitle>
-        </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input label={t('automation.eventsCatalog.defineEventDialog.fields.eventType', { defaultValue: 'Event type' })} value={eventType} onChange={(e) => setEventType(e.target.value)} placeholder={t('automation.eventsCatalog.defineEventDialog.fields.eventTypePlaceholder', { defaultValue: 'e.g. ticket.created' })} />

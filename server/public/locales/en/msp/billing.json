@@ -408,7 +408,6 @@
     },
     "detailDialog": {
       "title": "Accounting Export Batch",
-      "subtitle": "Batch Details",
       "fields": {
         "batchId": "Batch ID",
         "adapter": "Adapter",

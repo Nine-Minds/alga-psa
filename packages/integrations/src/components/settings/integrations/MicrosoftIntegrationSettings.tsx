@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -1300,7 +1299,6 @@ export function MicrosoftIntegrationSettings({
       >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>
               {dialogMode === 'create'
                 ? t('integrations.microsoft.settings.dialog.descriptionCreate', { defaultValue: 'Create a Microsoft app registration, then choose which services can use it.' })

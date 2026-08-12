@@ -641,7 +641,6 @@
       "title": "Konfiguracja rozliczeń czasowych"
     },
     "loading": "Ładowanie presetów linii kontraktowych...",
-    "selectPresetsTitle": "Wybierz presety linii kontraktowych do dodania",
     "selection": {
       "deselectPreset": "Odznacz preset",
       "selectPreset": "Wybierz preset",

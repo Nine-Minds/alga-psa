@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "La quantità deve essere maggiore di zero",
         "updateFailed": "Impossibile aggiornare la quantità"
       },
-      "heading": "Regola la quantità",
       "helperText": "Lascia vuoto per utilizzare il prezzo del catalogo prodotti per la valuta di questo contratto.",
       "labels": {
         "quantity": "Quantità",

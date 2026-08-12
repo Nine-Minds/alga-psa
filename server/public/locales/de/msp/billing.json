@@ -408,7 +408,6 @@
     },
     "detailDialog": {
       "title": "Buchhaltungsexportstapel",
-      "subtitle": "Chargendetails",
       "fields": {
         "batchId": "Chargen-ID",
         "adapter": "Adapter",

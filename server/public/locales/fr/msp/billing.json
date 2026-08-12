@@ -408,7 +408,6 @@
     },
     "detailDialog": {
       "title": "Lot d'export comptable",
-      "subtitle": "Détails du lot",
       "fields": {
         "batchId": "ID de lot",
         "adapter": "Adaptateur",

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
@@ -424,10 +424,6 @@ export default function AccountingExportsTab(): React.JSX.Element {
         )}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('accountingExports.createDialog.title', { defaultValue: 'New Accounting Export' })}</DialogTitle>
-          </DialogHeader>
-
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="accounting-export-adapter">
@@ -553,10 +549,6 @@ export default function AccountingExportsTab(): React.JSX.Element {
         id="accounting-exports-detail"
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('accountingExports.detailDialog.subtitle', { defaultValue: 'Batch Details' })}</DialogTitle>
-          </DialogHeader>
-
           {detailLoading ? (
             <div className="text-sm text-muted-foreground">
               {t('accountingExports.states.loadingDetails', { defaultValue: 'Loading batch details...' })}

@@ -11,8 +11,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
-  DialogTitle
+  DialogHeader
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -1071,11 +1070,6 @@ export default function WorkflowScheduleDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'edit'
-              ? t('schedules.dialog.title.edit', { defaultValue: 'Edit Schedule' })
-              : t('schedules.dialog.title.create', { defaultValue: 'Create Schedule' })}
-          </DialogTitle>
           <DialogDescription>
             {t('schedules.dialog.description', {
               defaultValue: 'Configure timing and static payload data for a workflow schedule.',

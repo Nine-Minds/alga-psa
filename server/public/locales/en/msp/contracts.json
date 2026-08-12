@@ -641,7 +641,6 @@
       "title": "Time Billing Configuration"
     },
     "loading": "Loading contract line presets...",
-    "selectPresetsTitle": "Select Contract Line Presets to Add",
     "selection": {
       "deselectPreset": "Deselect preset",
       "selectPreset": "Select preset",

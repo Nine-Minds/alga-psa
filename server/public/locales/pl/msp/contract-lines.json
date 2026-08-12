@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "Ilość musi być większa od zera",
         "updateFailed": "Nie udało się zaktualizować ilości"
       },
-      "heading": "Dostosuj ilość",
       "helperText": "Pozostaw puste, aby użyć ceny katalogowej produktu w walucie kontraktu.",
       "labels": {
         "quantity": "Ilość",

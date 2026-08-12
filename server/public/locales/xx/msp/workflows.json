@@ -2327,7 +2327,6 @@
         }
       },
       "schemaModal": {
-        "title": "11111",
         "close": "11111",
         "headerTitle": "11111",
         "loading": "11111",
@@ -2337,7 +2336,6 @@
         "copyFailed": "11111"
       },
       "metricsDialog": {
-        "title": "11111",
         "close": "11111",
         "headerTitle": "11111 {{eventType}} 11111",
         "from": "11111",
@@ -2364,7 +2362,6 @@
         "next": "11111"
       },
       "simulateDialog": {
-        "title": "11111",
         "headerTitle": "11111 {{eventType}} 11111",
         "submit": "11111",
         "submitting": "11111",
@@ -2421,7 +2418,6 @@
       },
       "defineEventDialog": {
         "title": "11111",
-        "headerTitle": "11111",
         "cancel": "11111",
         "submit": "11111",
         "submitting": "11111",

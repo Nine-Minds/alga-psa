@@ -408,7 +408,6 @@
     },
     "detailDialog": {
       "title": "Boekhoudkundige exportbatch",
-      "subtitle": "Batchdetails",
       "fields": {
         "batchId": "Batch-ID",
         "adapter": "Adapter",
