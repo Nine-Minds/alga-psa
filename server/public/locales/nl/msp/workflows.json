@@ -2449,7 +2449,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schema",
         "close": "Sluiten",
         "headerTitle": "Payload-schema",
         "loading": "Laden…",
@@ -2459,7 +2458,6 @@
         "copyFailed": "Kopiëren mislukt"
       },
       "metricsDialog": {
-        "title": "Statistieken",
         "close": "Sluiten",
         "headerTitle": "Statistieken · {{eventType}}",
         "from": "Vanaf",
@@ -2486,7 +2484,6 @@
         "next": "Volgende"
       },
       "simulateDialog": {
-        "title": "Gebeurtenis simuleren",
         "headerTitle": "Simuleren · {{eventType}}",
         "submit": "Simuleren",
         "submitting": "Verzenden…",
@@ -2543,7 +2540,6 @@
       },
       "defineEventDialog": {
         "title": "Aangepaste gebeurtenis definiëren",
-        "headerTitle": "Aangepaste gebeurtenis definiëren",
         "cancel": "Annuleren",
         "submit": "Gebeurtenis maken",
         "submitting": "Maken…",

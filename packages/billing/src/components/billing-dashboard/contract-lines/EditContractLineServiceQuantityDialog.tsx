@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -87,9 +87,6 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
       title={t('forms.editQuantity.dialogTitle', { defaultValue: 'Edit Service Quantity' })}
     >
       <form onSubmit={handleSubmit}>
-        <DialogHeader>
-          <DialogTitle>{t('forms.editQuantity.heading', { defaultValue: 'Adjust Quantity' })}</DialogTitle>
-        </DialogHeader>
         <DialogContent className="space-y-4">
           <div>
             <p className="text-sm text-muted-foreground">{serviceName}</p>

@@ -54,7 +54,6 @@ describe('AccountingExportsTab i18n wiring contract', () => {
     expect(source).toContain("t('accountingExports.actions.creating', { defaultValue: 'Creating...' })");
     expect(source).toContain("t('accountingExports.actions.createBatch', { defaultValue: 'Create Batch' })");
     expect(source).toContain("t('accountingExports.detailDialog.title', { defaultValue: 'Accounting Export Batch' })");
-    expect(source).toContain("t('accountingExports.detailDialog.subtitle', { defaultValue: 'Batch Details' })");
     expect(source).toContain("t('accountingExports.detailDialog.fields.batchId', { defaultValue: 'Batch ID' })");
     expect(source).toContain("t('accountingExports.detailDialog.fields.adapter', { defaultValue: 'Adapter' })");
     expect(source).toContain("t('accountingExports.detailDialog.fields.lines', { defaultValue: 'Lines' })");

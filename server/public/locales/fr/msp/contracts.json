@@ -641,7 +641,6 @@
       "title": "Configuration de la facturation au temps"
     },
     "loading": "Chargement des préréglages de ligne de contrat...",
-    "selectPresetsTitle": "Sélectionnez les préréglages de ligne de contrat à ajouter",
     "selection": {
       "deselectPreset": "Désélectionner le préréglage",
       "selectPreset": "Sélectionnez un préréglage",

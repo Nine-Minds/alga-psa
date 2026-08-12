@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "A quantidade deve ser maior que zero",
         "updateFailed": "Falha ao atualizar a quantidade"
       },
-      "heading": "Ajustar quantidade",
       "helperText": "Deixe em branco para usar o preço de catálogo do produto para a moeda deste contrato.",
       "labels": {
         "quantity": "Quantidade",

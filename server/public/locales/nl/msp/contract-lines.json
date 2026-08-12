@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "De hoeveelheid moet groter zijn dan nul",
         "updateFailed": "Kan aantal niet updaten"
       },
-      "heading": "Pas de hoeveelheid aan",
       "helperText": "Laat dit veld leeg als u de productcatalogusprijs voor de valuta van dit contract wilt gebruiken.",
       "labels": {
         "quantity": "Hoeveelheid",

@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "Quantity must be greater than zero",
         "updateFailed": "Failed to update quantity"
       },
-      "heading": "Adjust Quantity",
       "helperText": "Leave blank to use the product catalog price for this contract's currency.",
       "labels": {
         "quantity": "Quantity",

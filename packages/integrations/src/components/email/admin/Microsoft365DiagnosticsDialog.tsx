@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -122,7 +122,6 @@ export function Microsoft365DiagnosticsDialog({
     <Dialog isOpen={isOpen} onClose={onClose} title={title} id="microsoft-365-diagnostics" footer={footer}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {t('microsoft365.description', {
               defaultValue: 'Runs a live Graph check (including create+delete subscription) to diagnose mailbox, folder, and permission issues.'

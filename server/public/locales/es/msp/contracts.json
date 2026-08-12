@@ -641,7 +641,6 @@
       "title": "Configuración de facturación por tiempo"
     },
     "loading": "Cargando preajustes de línea de contrato...",
-    "selectPresetsTitle": "Seleccione los preajustes de línea de contrato para agregar",
     "selection": {
       "deselectPreset": "Deseleccionar preajuste",
       "selectPreset": "Seleccionar preajuste",

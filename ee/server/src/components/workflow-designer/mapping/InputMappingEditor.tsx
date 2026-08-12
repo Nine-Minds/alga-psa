@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
 } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -1011,12 +1010,6 @@ const FixedValueEditorShell: React.FC<{
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {t('inputMappingEditor.fixedValueDialog.title', {
-                defaultValue: 'Edit {{fieldName}}',
-                fieldName: field.name,
-              })}
-            </DialogTitle>
             <DialogDescription>
               {t('inputMappingEditor.fixedValueDialog.description', {
                 defaultValue: 'Use the larger editor for longer fixed-value content.',

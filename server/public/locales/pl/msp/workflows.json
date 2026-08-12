@@ -2451,7 +2451,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schemat",
         "close": "Zamknij",
         "headerTitle": "Schemat ładunku",
         "loading": "Ładowanie…",
@@ -2461,7 +2460,6 @@
         "copyFailed": "Kopiowanie nie powiodło się"
       },
       "metricsDialog": {
-        "title": "Metryki",
         "close": "Zamknij",
         "headerTitle": "Metryki · {{eventType}}",
         "from": "Od",
@@ -2488,7 +2486,6 @@
         "next": "Dalej"
       },
       "simulateDialog": {
-        "title": "Symuluj zdarzenie",
         "headerTitle": "Symuluj · {{eventType}}",
         "submit": "Symuluj",
         "submitting": "Wysyłanie…",
@@ -2545,7 +2542,6 @@
       },
       "defineEventDialog": {
         "title": "Zdefiniuj zdarzenie niestandardowe",
-        "headerTitle": "Zdefiniuj zdarzenie niestandardowe",
         "cancel": "Anuluj",
         "submit": "Utwórz zdarzenie",
         "submitting": "Tworzenie…",

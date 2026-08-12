@@ -2327,7 +2327,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schema",
         "close": "Close",
         "headerTitle": "Payload schema",
         "loading": "Loading…",
@@ -2337,7 +2336,6 @@
         "copyFailed": "Copy failed"
       },
       "metricsDialog": {
-        "title": "Metrics",
         "close": "Close",
         "headerTitle": "Metrics · {{eventType}}",
         "from": "From",
@@ -2364,7 +2362,6 @@
         "next": "Next"
       },
       "simulateDialog": {
-        "title": "Simulate event",
         "headerTitle": "Simulate · {{eventType}}",
         "submit": "Simulate",
         "submitting": "Submitting…",
@@ -2421,7 +2418,6 @@
       },
       "defineEventDialog": {
         "title": "Define custom event",
-        "headerTitle": "Define Custom Event",
         "cancel": "Cancel",
         "submit": "Create event",
         "submitting": "Creating…",

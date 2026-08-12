@@ -641,7 +641,6 @@
       "title": "Configuratie tijdfacturatie"
     },
     "loading": "Contractregelpresets laden...",
-    "selectPresetsTitle": "Selecteer toe te voegen contractregelpresets",
     "selection": {
       "deselectPreset": "Preset deselecteren",
       "selectPreset": "Selecteer preset",
