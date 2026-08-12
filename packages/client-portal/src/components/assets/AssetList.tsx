@@ -6,6 +6,7 @@ import { AssetDetails } from './AssetDetails';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 
 interface AssetListProps {
@@ -13,6 +14,7 @@ interface AssetListProps {
 }
 
 export function AssetList({ assets }: AssetListProps) {
+  const { t } = useTranslation('client-portal');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -27,15 +29,15 @@ export function AssetList({ assets }: AssetListProps) {
 
   const columns: ColumnDefinition<Asset>[] = [
     {
-      title: 'Name',
+      title: t('assets.columns.name', { defaultValue: 'Name' }),
       dataIndex: 'name'
     },
     {
-      title: 'Type',
+      title: t('assets.columns.type', { defaultValue: 'Type' }),
       dataIndex: 'type_id'
     },
     {
-      title: 'Status',
+      title: t('assets.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (value: string) => (
         <Badge variant={
@@ -48,12 +50,12 @@ export function AssetList({ assets }: AssetListProps) {
       )
     },
     {
-      title: 'Location',
+      title: t('assets.columns.location', { defaultValue: 'Location' }),
       dataIndex: 'location',
-      render: (value: string | null) => value || 'N/A'
+      render: (value: string | null) => value || t('assets.notAvailable', { defaultValue: 'N/A' })
     },
     {
-      title: 'Last Updated',
+      title: t('assets.columns.lastUpdated', { defaultValue: 'Last Updated' }),
       dataIndex: 'updated_at',
       render: (value: string) => formatDate(value)
     }
@@ -75,7 +77,7 @@ export function AssetList({ assets }: AssetListProps) {
       <Dialog
         isOpen={!!selectedAsset}
         onClose={() => setSelectedAsset(null)}
-        title={selectedAsset?.name || 'Asset Details'}
+        title={selectedAsset?.name || t('assets.detailsTitle', { defaultValue: 'Asset Details' })}
       >
         {selectedAsset && <AssetDetails asset={selectedAsset} />}
       </Dialog>

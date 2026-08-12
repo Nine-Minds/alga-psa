@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "Standaarden geladen voor {{count}} entiteitstypes",
     "suggestedDefaultsLoadFailed": "Voorgestelde standaarden konden niet worden geladen",
     "entityTypesAllConfigured": "Alle entiteitstypes hebben al standaardmappen geconfigureerd",
-    "defaultFoldersLoadFailed": "Kan standaardmappen niet laden"
+    "defaultFoldersLoadFailed": "Kan standaardmappen niet laden",
+    "parseContentFailed": "Documentinhoud kon niet worden verwerkt"
   },
   "validation": {
-    "nameRequired": "Documentnaam is verplicht"
+    "nameRequired": "Documentnaam is verplicht",
+    "typeRequired": "Documenttype is vereist",
+    "userIdRequired": "Gebruikers-ID is vereist",
+    "orderNumberRequired": "Ordernummer is vereist",
+    "contentRequired": "Inhoud is vereist"
   },
   "bulkActions": {
     "selected_one": "{{count}} document geselecteerd",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" zichtbaar maken in het klantenportaal?",
     "cascadeMakeHidden": "Wilt u ook alle {{count}} document(en) in \"{{name}}\" verbergen in het klantenportaal?",
     "cascadeYes": "Ja, documenten bijwerken",
-    "cascadeNo": "Nee, alleen map"
+    "cascadeNo": "Nee, alleen map",
+    "visibleToClients": "Zichtbaar voor klanten",
+    "hiddenFromClients": "Verborgen voor klanten"
   },
   "empty": {
     "default": "Geen documenten gevonden"
@@ -283,5 +290,71 @@
     "pageOf": "Pagina {{current}} van {{total}}",
     "previous": "Vorige"
   },
-  "ticketDocuments": "Ticketdocumenten"
+  "ticketDocuments": "Ticketdocumenten",
+  "actions": {
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "cancel": "Annuleren"
+  },
+  "card": {
+    "noDate": "Geen datum",
+    "reflectionLabel": "Documentkaart"
+  },
+  "editor": {
+    "loading": "Laden...",
+    "initializing": "Editor initialiseren...",
+    "placeholder": "Begin met schrijven...",
+    "errorPrefix": "Fout: {{message}}",
+    "status": {
+      "offline": "Offline — wijzigingen worden na het herstellen van de verbinding gesynchroniseerd",
+      "allChangesSaved": "Alle wijzigingen zijn opgeslagen",
+      "syncing": "{{status}} (synchroniseren)"
+    },
+    "connection": {
+      "connected": "Verbonden",
+      "connecting": "Verbinding maken",
+      "disconnected": "Verbinding verbroken"
+    },
+    "presence": {
+      "unknownUser": "Gebruiker"
+    },
+    "toolbar": {
+      "bold": "Vet (Ctrl+B)",
+      "italic": "Cursief (Ctrl+I)",
+      "underline": "Onderstrepen (Ctrl+U)",
+      "strikethrough": "Doorhalen",
+      "code": "Codeblok",
+      "heading1": "Kop 1",
+      "heading2": "Kop 2",
+      "bulletList": "Lijst met opsommingstekens",
+      "orderedList": "Genummerde lijst",
+      "quote": "Blokcitaat",
+      "link": "Koppeling",
+      "linkPrompt": "URL"
+    }
+  },
+  "form": {
+    "errorsHeading": "Corrigeer de volgende fouten:",
+    "submit": "Document maken",
+    "fields": {
+      "documentName": "Documentnaam *",
+      "documentType": "Documenttype *",
+      "userId": "Gebruikers-ID *",
+      "contactNameId": "Contactnaam-ID",
+      "clientId": "Klant-ID",
+      "ticketId": "Ticket-ID",
+      "orderNumber": "Ordernummer *",
+      "content": "Inhoud *"
+    }
+  },
+  "previewPane": {
+    "loading": "Voorbeeld laden...",
+    "pdfDocument": "PDF-document",
+    "videoFile": "Videobestand",
+    "notAvailable": "Geen voorbeeld beschikbaar",
+    "altPdf": "Voorbeeld van {{name}}",
+    "altVideoThumbnail": "Miniatuur van {{name}}",
+    "pageCount_one": "{{count}} pagina",
+    "pageCount_other": "{{count}} pagina's"
+  }
 }

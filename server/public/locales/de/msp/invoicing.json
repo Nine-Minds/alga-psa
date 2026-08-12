@@ -1120,7 +1120,8 @@
       "unknownClient": "Unbekannter Kunde",
       "status": "Status",
       "system": "System",
-      "total": "Gesamt"
+      "total": "Gesamt",
+      "invoiceDate": "Rechnungsdatum"
     },
     "states": {
       "empty": "Keine Daten verfügbar",
@@ -1725,6 +1726,279 @@
       "message": "Durch das Stornieren wird dieser Zeitplaneintrag aus der Abrechnung entfernt. Dies kann nicht rückgängig gemacht werden.",
       "confirm": "Eintrag stornieren",
       "dismiss": "Eintrag behalten"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} Zeilen",
+      "operators": {
+        "eq": "Ist gleich",
+        "neq": "Ist ungleich",
+        "gt": "Größer als",
+        "gte": "Größer oder gleich",
+        "lt": "Kleiner als",
+        "lte": "Kleiner oder gleich",
+        "in": "In Liste"
+      },
+      "sortDirections": {
+        "asc": "Aufsteigend",
+        "desc": "Absteigend"
+      },
+      "aggregations": {
+        "sum": "Summe",
+        "count": "Anzahl",
+        "avg": "Durchschnitt",
+        "min": "Kleinstwert",
+        "max": "Höchstwert"
+      },
+      "operations": {
+        "advancedPredicate": "Erweiterte Bedingung",
+        "groupBy": "Nach {{field}} gruppieren",
+        "readOnly": "In V1 schreibgeschützt beibehalten"
+      },
+      "source": {
+        "title": "Quelldaten",
+        "description": "Wählen Sie Vorschaudaten und die zu formende Sammlungsbindung aus.",
+        "sampleScenario": "Beispielszenario",
+        "selectInvoice": "Rechnung auswählen",
+        "collection": "Quellsammlung",
+        "outputBindingId": "ID der Ausgabebindung"
+      },
+      "metadata": {
+        "title": "Quellmetadaten",
+        "binding": "Bindung:",
+        "bindingNone": "Keine",
+        "resolvedPath": "Aufgelöster Pfad:",
+        "pathNotResolved": "Nicht aufgelöst",
+        "noFields": "Wählen Sie Vorschaudaten und eine Sammlungsbindung aus, um Felder zu ermitteln."
+      },
+      "pipeline": {
+        "title": "Transformationspipeline",
+        "description": "Vorgänge werden von oben nach unten ausgeführt.",
+        "addFilter": "+ Filter hinzufügen",
+        "addSort": "+ Sortierung",
+        "addGroup": "+ Gruppe",
+        "addAggregate": "+ Aggregation",
+        "empty": "Fügen Sie Vorgänge hinzu, um die Transformationspipeline zu erstellen.",
+        "moveUp": "{{operation}} nach oben verschieben",
+        "moveDown": "{{operation}} nach unten verschieben",
+        "duplicate": "{{operation}} duplizieren",
+        "delete": "{{operation}} löschen"
+      },
+      "inspector": {
+        "description": "Bearbeiten Sie den ausgewählten Transformationsvorgang.",
+        "empty": "Wählen Sie eine Transformationskarte aus, um deren Einstellungen zu bearbeiten.",
+        "advancedPredicateNotice": "Dieser Filter verwendet eine erweiterte Bedingungsstruktur. Bei der Bearbeitung hier wird sie in einen einfachen Vergleich umgewandelt.",
+        "unsupportedOperation": "Dieser Vorgangstyp bleibt im Arbeitsbereich erhalten, der V1-Designer bearbeitet jedoch nur Filter-, Sortier-, Gruppierungs- und Aggregationsvorgänge.",
+        "field": "Feld",
+        "operator": "Vergleichsoperator",
+        "value": "Wert",
+        "valueList": "Werte (durch Kommas getrennt)",
+        "sortKey": "Sortierschlüssel {{index}}",
+        "remove": "Entfernen",
+        "direction": "Richtung",
+        "addSortKey": "+ Sortierschlüssel",
+        "groupField": "Gruppierungsfeld",
+        "groupLabel": "Bezeichnung (optional)",
+        "aggregation": "Aggregat {{index}}",
+        "outputId": "Ausgabe-ID",
+        "operation": "Vorgang",
+        "addAggregation": "+ Aggregat hinzufügen"
+      },
+      "output": {
+        "title": "Ausgabevorschau",
+        "description": "Vorschau der aus der aktuellen Transformationspipeline erzeugten Zeilen.",
+        "rowPaths": "Verfügbare Zeilenpfade",
+        "groupedRows": "{{count}} gruppierte Zeilen",
+        "binding": "Bindung: {{binding}}",
+        "bindingNotSet": "Nicht festgelegt",
+        "groupKey": "Schlüssel: {{value}}",
+        "groupItems": "{{count}} Elemente",
+        "emptyConfigure": "Konfigurieren Sie Quelle, Ausgabebindung und Vorgänge, um eine Vorschau der transformierten Zeilen anzuzeigen.",
+        "emptyNoData": "Wählen Sie Vorschaudaten aus, um die transformierte Ausgabe zu prüfen.",
+        "previewFailed": "Vorschau der Transformationen fehlgeschlagen."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Alle Positionen",
+        "phases": "Phasen",
+        "recurringItems": "Wiederkehrende Positionen",
+        "onetimeItems": "Einmalige Positionen",
+        "serviceItems": "Dienstpositionen",
+        "productItems": "Produktpositionen",
+        "items": "Positionen",
+        "transformsSource": "{{binding}} (Transformationsquelle)",
+        "transformsOutput": "{{binding}} (Transformationsausgabe)"
+      },
+      "presets": {
+        "description": {
+          "label": "Beschreibung",
+          "hint": "Beschreibung der Position"
+        },
+        "quantity": {
+          "label": "Menge",
+          "hint": "Anzahl"
+        },
+        "unitPrice": {
+          "label": "Satz",
+          "hint": "Stückpreis"
+        },
+        "amount": {
+          "label": "Betrag",
+          "hint": "Zeilensumme"
+        }
+      },
+      "sourceBinding": {
+        "title": "Quellbindung",
+        "description": "Binden Sie diese Tabelle an eine Rohdatensammlung oder die erstellte Transformationsausgabe."
+      },
+      "columns": {
+        "title": "Tabellenspalten",
+        "add": "+ Spalte",
+        "quickAdd": "Schnell hinzufügen:",
+        "newColumnHeader": "Neue Spalte",
+        "empty": "Keine Spalten definiert. Fügen Sie mindestens eine Spalte hinzu.",
+        "itemLabel": "Spalte",
+        "moveUp": "{{column}} nach oben verschieben",
+        "moveDown": "{{column}} nach unten verschieben",
+        "remove": "{{column}} entfernen",
+        "header": "Kopfzeile",
+        "headerPlaceholder": "Kopfzeilenbezeichnung",
+        "bindingKey": "Bindungsschlüssel",
+        "type": "Typ",
+        "width": "Breite"
+      },
+      "columnTypes": {
+        "text": "Text",
+        "number": "Zahl",
+        "currency": "Währung",
+        "date": "Datum"
+      },
+      "style": {
+        "title": "Tabellenstil",
+        "borderPreset": "Rahmenvoreinstellung",
+        "headerWeight": "Schriftstärke der Kopfzeile",
+        "borderOuter": "Außen",
+        "borderRows": "Zeilen",
+        "borderColumns": "Spalten"
+      },
+      "borderPresets": {
+        "list": "Liste",
+        "boxed": "Umrahmt",
+        "grid": "Raster",
+        "none": "Keine",
+        "custom": "Benutzerdefiniert"
+      },
+      "headerWeights": {
+        "normal": "Standard",
+        "medium": "Mittel",
+        "semibold": "Halbfett",
+        "bold": "Fett"
+      },
+      "reference": {
+        "title": "Referenz für Feldschlüssel",
+        "transformAggregate": "Transformationsaggregation",
+        "groupedRowKey": "Schlüssel der gruppierten Zeile",
+        "groupedRowItems": "Elemente der gruppierten Zeile",
+        "availableBinding": "Verfügbare Bindung"
+      }
+    },
+    "imagePicker": {
+      "browse": "Dokumente durchsuchen",
+      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet. Es wird nicht in Angeboten oder Rechnungen angezeigt, die über das Kundenportal aufgerufen werden.",
+      "updating": "Wird aktualisiert...",
+      "markVisible": "Als für Kunden sichtbar markieren",
+      "visibleInPortal": "Im Kundenportal sichtbar",
+      "dialogTitle": "Bild auswählen",
+      "dialogDescription": "Wählen Sie ein Bild aus Ihren Dokumenten aus, das in dieser Vorlage verwendet werden soll."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Rechnungsdetails",
+    "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
+    "actions": {
+      "saving": "Wird gespeichert..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Die Rechnungsnummer ist erforderlich.",
+      "invoiceDateRequired": "Das Rechnungsdatum ist erforderlich."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Layouts für {{type}}",
+    "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
+    "availableLayouts": "Verfügbare Layouts",
+    "actions": {
+      "newLayout": "Neues Layout"
+    },
+    "columns": {
+      "name": "Name",
+      "source": "Quelle"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standardversion)",
+      "copyName": "{{name}} (Kopie)"
+    },
+    "toasts": {
+      "cloned": "Vorlage geklont",
+      "defaultUpdated": "Standardvorlage aktualisiert",
+      "deleted": "Vorlage gelöscht"
+    },
+    "errors": {
+      "loadFailed": "Vorlagen für {{type}} konnten nicht geladen werden",
+      "cloneFailed": "Vorlage konnte nicht geklont werden",
+      "setDefaultFailed": "Standardvorlage konnte nicht festgelegt werden",
+      "deleteFailed": "Vorlage konnte nicht gelöscht werden"
+    },
+    "deleteDialog": {
+      "title": "Layout für {{type}} löschen",
+      "message": "Möchten Sie „{{name}}“ wirklich löschen?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Neues Layout für {{type}}",
+        "edit": "Layout für {{type}} bearbeiten"
+      },
+      "description": "Entwerfen Sie das Layout für {{type}} im visuellen Editor und zeigen Sie es anschließend mit Beispieldaten in der Vorschau an.",
+      "errorTitle": "Layout-Editor für {{type}}",
+      "sections": {
+        "details": "Layoutdetails"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Vorlage für {{type}}"
+      },
+      "actions": {
+        "back": "Zurück zu den Layouts",
+        "save": "Layout speichern"
+      },
+      "labels": {
+        "created": "Erstellt: {{date}}",
+        "lastUpdated": "Zuletzt aktualisiert: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Mit repräsentativen Beispieldaten für {{type}} gerendert.",
+        "frameTitle": "Vorschau für {{type}}",
+        "empty": "Öffnen Sie diese Registerkarte, um eine verbindliche Vorschau zu erzeugen."
+      },
+      "errors": {
+        "nameRequired": "Der Vorlagenname ist erforderlich.",
+        "astExportFailed": "Die Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
+        "saveFailed": "Das Layout für {{type}} konnte nicht gespeichert werden",
+        "previewFailed": "Die Vorschau konnte nicht erzeugt werden."
+      },
+      "toasts": {
+        "saved": "Layout für {{type}} gespeichert"
+      }
+    },
+    "types": {
+      "salesOrder": "Verkaufsauftrag",
+      "packingSlip": "Lieferschein",
+      "pickList": "Kommissionierliste"
     }
   }
 }

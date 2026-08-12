@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "Holiday date is required",
       "holidayAdded": "Holiday added successfully",
       "holidayDeleted": "Holiday deleted successfully"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "No tickets currently at risk of SLA breach",
+        "overdueHours": "{{hours}}h {{minutes}}m overdue",
+        "overdueMinutes": "{{minutes}}m overdue",
+        "title": "Tickets At Risk"
+      },
+      "breachChart": {
+        "breachRate": "Breach Rate",
+        "empty": "No breach data available",
+        "title": "Breaches by Priority"
+      },
+      "columns": {
+        "assignee": "Assignee",
+        "breachType": "Breach Type",
+        "client": "Client",
+        "priority": "Priority",
+        "progress": "Progress",
+        "slaType": "SLA Type",
+        "ticket": "Ticket",
+        "timeRemaining": "Time Remaining",
+        "when": "When"
+      },
+      "gauge": {
+        "title": "SLA Compliance"
+      },
+      "labels": {
+        "resolution": "Resolution",
+        "resolutionSla": "Resolution SLA",
+        "response": "Response",
+        "responseSla": "Response SLA"
+      },
+      "metrics": {
+        "approachingBreach": "tickets approaching breach",
+        "atRisk": "At Risk",
+        "currentlyPaused": "Currently Paused",
+        "metBreached": "{{met}} met / {{breached}} breached",
+        "overallCompliance": "Overall Compliance",
+        "pausedSla": "tickets with paused SLA",
+        "ticketsTracked_one": "{{count}} ticket tracked",
+        "ticketsTracked_other": "{{count}} tickets tracked"
+      },
+      "recentBreaches": {
+        "empty": "No SLA breaches in the selected period",
+        "title": "Recent Breaches",
+        "unassigned": "Unassigned"
+      },
+      "trendChart": {
+        "breaches": "Breaches",
+        "compliance": "Compliance",
+        "compliancePercent": "Compliance %",
+        "empty": "No trend data available for the selected period",
+        "tickets": "Tickets",
+        "title": "Compliance Trend"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Failed to update global SLA settings",
+        "loadFailed": "Failed to load SLA pause settings",
+        "responseTrackingUpdateFailed": "Failed to update response state tracking",
+        "saveStatusesFailed": "Failed to save status configurations"
+      },
+      "global": {
+        "description": "Configure global behavior for SLA timer pausing",
+        "pauseOnAwaitingClient": {
+          "description": "When enabled, the SLA timer will automatically pause when a ticket is marked as awaiting a response from the client. The timer will resume when the client responds or the ticket status changes.",
+          "label": "Automatically pause SLA when awaiting client response",
+          "requiresTracking": "Enable response state tracking above to use this option."
+        },
+        "responseTracking": {
+          "description": "When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). This also controls the visibility of response state badges and filters.",
+          "label": "Track response state on tickets"
+        },
+        "title": "Global SLA Settings"
+      },
+      "loading": "Loading SLA pause settings...",
+      "messages": {
+        "globalSettingsUpdated": "Global SLA settings updated successfully",
+        "noChangesToSave": "No changes to save",
+        "responseTrackingDisabled": "Response state tracking disabled",
+        "responseTrackingEnabled": "Response state tracking enabled",
+        "statusesUpdated_one": "Successfully updated {{count}} status configuration",
+        "statusesUpdated_other": "Successfully updated {{count}} status configurations"
+      },
+      "perStatus": {
+        "description": "Configure which ticket statuses should pause the SLA timer. When a ticket is moved to a status with pausing enabled, the SLA timer will stop until the ticket is moved to another status.",
+        "empty": "No ticket statuses found.",
+        "modified": "Modified",
+        "modifiedCount_one": "{{count}} status modified",
+        "modifiedCount_other": "{{count}} statuses modified",
+        "noUnsavedChanges": "No unsaved changes",
+        "resetChanges": "Reset Changes",
+        "saveChanges": "Save Changes",
+        "saving": "Saving...",
+        "title": "Per-Status Pause Configuration"
+      },
+      "retry": "Retry"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Policy",
+        "saveChanges": "Save Changes",
+        "saving": "Saving..."
+      },
+      "basics": {
+        "assignBoards": "Assign to Boards",
+        "assignClients": "Assign to Clients",
+        "businessHours": "Business Hours Schedule",
+        "businessHoursPlaceholder": "Select business hours schedule",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional description of this SLA policy",
+        "noBusinessHours": "No business hours (24/7)",
+        "policyName": "Policy Name",
+        "policyNamePlaceholder": "Enter policy name",
+        "scheduleAlways": "{{name}} (24/7)",
+        "searchBoards": "Search boards...",
+        "searchClients": "Search clients...",
+        "setAsDefault": "Set as default policy",
+        "title": "Basic Information"
+      },
+      "errors": {
+        "loadFailed": "Failed to load data",
+        "notFound": "SLA policy not found",
+        "saveFailed": "Failed to save SLA policy"
+      },
+      "loading": "Loading...",
+      "multiSelect": {
+        "deselectAll": "Deselect all",
+        "deselectAllVisible": "Deselect all visible",
+        "noItems": "No items available",
+        "noResults": "No results found",
+        "placeholder": "Select...",
+        "searchPlaceholder": "Search...",
+        "selectAll": "Select all",
+        "selectAllVisible": "Select all visible",
+        "selectedCount_one": "{{count}} selected",
+        "selectedCount_other": "{{count}} selected"
+      },
+      "targets": {
+        "always": "24/7 (ignore business hours)",
+        "description": "Set the maximum time allowed to first respond to and fully resolve tickets for each priority level.",
+        "escalationThresholds": "Escalation Thresholds (% of time elapsed)",
+        "level1": "Level 1 (%)",
+        "level2": "Level 2 (%)",
+        "level3": "Level 3 (%)",
+        "minutesPlaceholder": "Minutes",
+        "minutesUnit": "minutes",
+        "noTarget": "No target",
+        "notConfigured": "Not configured",
+        "resolutionSummary": "Resolution: {{time}}",
+        "resolutionTime": "Resolution Time",
+        "responseSummary": "Response: {{time}}",
+        "responseTime": "Response Time",
+        "selectResolutionTime": "Select resolution time",
+        "selectResponseTime": "Select response time",
+        "title": "Response and Resolution Targets",
+        "usePreset": "Use preset"
+      },
+      "thresholds": {
+        "add": "Add Threshold",
+        "channelEmail": "Email",
+        "channelInApp": "In-App",
+        "channelsLabel": "Notification Channels",
+        "description": "Configure when and how to notify team members as SLA deadlines approach or are breached.",
+        "empty": "No notification thresholds configured. Click \"Add Threshold\" to create one.",
+        "noChannels": "none",
+        "noRecipients": "No recipients",
+        "percentLabel": "Threshold (%)",
+        "recipientAssignee": "Assignee",
+        "recipientBoardManager": "Board Manager",
+        "recipientBoardManagerShort": "Board Mgr",
+        "recipientEscalationManager": "Escalation Manager",
+        "recipientEscalationManagerShort": "Escalation Mgr",
+        "recipientsLabel": "Recipients",
+        "remove": "Remove",
+        "title": "Notification Thresholds",
+        "typeBreach": "Breach",
+        "typeLabel": "Notification Type",
+        "typeWarning": "Warning",
+        "viaChannels": "via {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Custom...",
+        "hours1": "1 hour",
+        "hours168": "168 hours (7 days)",
+        "hours2": "2 hours",
+        "hours24": "24 hours (1 day)",
+        "hours4": "4 hours",
+        "hours48": "48 hours (2 days)",
+        "hours72": "72 hours (3 days)",
+        "hours8": "8 hours",
+        "minutes15": "15 minutes",
+        "minutes30": "30 minutes"
+      },
+      "validation": {
+        "channelRequired": "At least one channel is required",
+        "duplicateThreshold": "Duplicate threshold percentage",
+        "percentRange": "Must be between 0 and 200",
+        "policyNameRequired": "Policy name is required",
+        "targetRequired": "At least one priority should have a response or resolution time target"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "openMenu": "Open menu",
+        "setDefault": "Set as Default"
+      },
+      "addPolicy": "Add Policy",
+      "columns": {
+        "actions": "Actions",
+        "description": "Description",
+        "name": "Name"
+      },
+      "defaultLabel": "Default",
+      "delete": {
+        "checkingUsage": "Checking usage...",
+        "confirm": "Are you sure you want to delete the policy {{name}}? This action cannot be undone.",
+        "defaultWarning": "This is the default policy. You may want to set another policy as default first.",
+        "inUseTitle": "This policy is currently in use",
+        "title": "Delete SLA Policy",
+        "unlinkNote": "These references will be unlinked. Existing SLA tracking data on tickets will be preserved.",
+        "usageBoards_one": "Board: {{names}}",
+        "usageBoards_other": "Boards: {{names}}",
+        "usageClients_one": "Client: {{names}}",
+        "usageClients_other": "Clients: {{names}}",
+        "usageTickets_one": "{{count}} ticket",
+        "usageTickets_other": "{{count}} tickets"
+      },
+      "description": "Manage service level agreement policies that define response and resolution time targets",
+      "empty": "No SLA policies found. Click \"Add Policy\" to create your first policy.",
+      "errors": {
+        "deleteFailed": "Failed to delete policy. Please try again.",
+        "loadFailed": "Failed to load SLA policies. Please try again.",
+        "setDefaultFailed": "Failed to set default policy. Please try again."
+      },
+      "loading": "Loading SLA policies...",
+      "title": "SLA Policies"
+    },
+    "status": {
+      "atRisk": "At Risk",
+      "breached": "Breached",
+      "onTrack": "On Track",
+      "paused": "Paused",
+      "resolutionBreached": "Resolution SLA Breached",
+      "responseBreached": "Response SLA Breached",
+      "tooltip": {
+        "resolutionBreachedBy": "Resolution: Breached by {{time}}",
+        "resolutionRemaining": "Resolution: {{time}} remaining",
+        "responseBreachedBy": "Response: Breached by {{time}}",
+        "responseRemaining": "Response: {{time}} remaining",
+        "statusLine": "SLA Status: {{status}}",
+        "timerPaused": "SLA Timer: Paused"
+      },
+      "unknown": "Unknown"
     }
   },
   "clientPortalLanguage": {

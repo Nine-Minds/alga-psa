@@ -1120,7 +1120,8 @@
       "unknownClient": "11111",
       "status": "11111",
       "system": "11111",
-      "total": "11111"
+      "total": "11111",
+      "invoiceDate": "11111"
     },
     "states": {
       "empty": "11111",
@@ -1725,6 +1726,279 @@
       "message": "11111",
       "confirm": "11111",
       "dismiss": "11111"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "11111 {{count}} 11111",
+      "operators": {
+        "eq": "11111",
+        "neq": "11111",
+        "gt": "11111",
+        "gte": "11111",
+        "lt": "11111",
+        "lte": "11111",
+        "in": "11111"
+      },
+      "sortDirections": {
+        "asc": "11111",
+        "desc": "11111"
+      },
+      "aggregations": {
+        "sum": "11111",
+        "count": "11111",
+        "avg": "11111",
+        "min": "11111",
+        "max": "11111"
+      },
+      "operations": {
+        "advancedPredicate": "11111",
+        "groupBy": "11111 {{field}} 11111",
+        "readOnly": "11111"
+      },
+      "source": {
+        "title": "11111",
+        "description": "11111",
+        "sampleScenario": "11111",
+        "selectInvoice": "11111",
+        "collection": "11111",
+        "outputBindingId": "11111"
+      },
+      "metadata": {
+        "title": "11111",
+        "binding": "11111",
+        "bindingNone": "11111",
+        "resolvedPath": "11111",
+        "pathNotResolved": "11111",
+        "noFields": "11111"
+      },
+      "pipeline": {
+        "title": "11111",
+        "description": "11111",
+        "addFilter": "11111",
+        "addSort": "11111",
+        "addGroup": "11111",
+        "addAggregate": "11111",
+        "empty": "11111",
+        "moveUp": "11111 {{operation}} 11111",
+        "moveDown": "11111 {{operation}} 11111",
+        "duplicate": "11111 {{operation}} 11111",
+        "delete": "11111 {{operation}} 11111"
+      },
+      "inspector": {
+        "description": "11111",
+        "empty": "11111",
+        "advancedPredicateNotice": "11111",
+        "unsupportedOperation": "11111",
+        "field": "11111",
+        "operator": "11111",
+        "value": "11111",
+        "valueList": "11111",
+        "sortKey": "11111 {{index}} 11111",
+        "remove": "11111",
+        "direction": "11111",
+        "addSortKey": "11111",
+        "groupField": "11111",
+        "groupLabel": "11111",
+        "aggregation": "11111 {{index}} 11111",
+        "outputId": "11111",
+        "operation": "11111",
+        "addAggregation": "11111"
+      },
+      "output": {
+        "title": "11111",
+        "description": "11111",
+        "rowPaths": "11111",
+        "groupedRows": "11111 {{count}} 11111",
+        "binding": "11111 {{binding}} 11111",
+        "bindingNotSet": "11111",
+        "groupKey": "11111 {{value}} 11111",
+        "groupItems": "11111 {{count}} 11111",
+        "emptyConfigure": "11111",
+        "emptyNoData": "11111",
+        "previewFailed": "11111"
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "11111",
+        "phases": "11111",
+        "recurringItems": "11111",
+        "onetimeItems": "11111",
+        "serviceItems": "11111",
+        "productItems": "11111",
+        "items": "11111",
+        "transformsSource": "11111 {{binding}} 11111",
+        "transformsOutput": "11111 {{binding}} 11111"
+      },
+      "presets": {
+        "description": {
+          "label": "11111",
+          "hint": "11111"
+        },
+        "quantity": {
+          "label": "11111",
+          "hint": "11111"
+        },
+        "unitPrice": {
+          "label": "11111",
+          "hint": "11111"
+        },
+        "amount": {
+          "label": "11111",
+          "hint": "11111"
+        }
+      },
+      "sourceBinding": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "columns": {
+        "title": "11111",
+        "add": "11111",
+        "quickAdd": "11111",
+        "newColumnHeader": "11111",
+        "empty": "11111",
+        "itemLabel": "11111",
+        "moveUp": "11111 {{column}} 11111",
+        "moveDown": "11111 {{column}} 11111",
+        "remove": "11111 {{column}} 11111",
+        "header": "11111",
+        "headerPlaceholder": "11111",
+        "bindingKey": "11111",
+        "type": "11111",
+        "width": "11111"
+      },
+      "columnTypes": {
+        "text": "11111",
+        "number": "11111",
+        "currency": "11111",
+        "date": "11111"
+      },
+      "style": {
+        "title": "11111",
+        "borderPreset": "11111",
+        "headerWeight": "11111",
+        "borderOuter": "11111",
+        "borderRows": "11111",
+        "borderColumns": "11111"
+      },
+      "borderPresets": {
+        "list": "11111",
+        "boxed": "11111",
+        "grid": "11111",
+        "none": "11111",
+        "custom": "11111"
+      },
+      "headerWeights": {
+        "normal": "11111",
+        "medium": "11111",
+        "semibold": "11111",
+        "bold": "11111"
+      },
+      "reference": {
+        "title": "11111",
+        "transformAggregate": "11111",
+        "groupedRowKey": "11111",
+        "groupedRowItems": "11111",
+        "availableBinding": "11111"
+      }
+    },
+    "imagePicker": {
+      "browse": "11111",
+      "hiddenFromClients": "11111 {{document}} 11111",
+      "updating": "11111",
+      "markVisible": "11111",
+      "visibleInPortal": "11111",
+      "dialogTitle": "11111",
+      "dialogDescription": "11111"
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "saving": "11111"
+    },
+    "errors": {
+      "invoiceNumberRequired": "11111",
+      "invoiceDateRequired": "11111"
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "11111",
+    "title": "11111 {{type}} 11111",
+    "description": "11111 {{type}} 11111",
+    "availableLayouts": "11111",
+    "actions": {
+      "newLayout": "11111"
+    },
+    "columns": {
+      "name": "11111",
+      "source": "11111"
+    },
+    "values": {
+      "nameWithStandardSuffix": "11111 {{name}} 11111",
+      "copyName": "11111 {{name}} 11111"
+    },
+    "toasts": {
+      "cloned": "11111",
+      "defaultUpdated": "11111",
+      "deleted": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111 {{type}} 11111",
+      "cloneFailed": "11111",
+      "setDefaultFailed": "11111",
+      "deleteFailed": "11111"
+    },
+    "deleteDialog": {
+      "title": "11111 {{type}} 11111",
+      "message": "11111 {{name}} 11111"
+    },
+    "editor": {
+      "titles": {
+        "create": "11111 {{type}} 11111",
+        "edit": "11111 {{type}} 11111"
+      },
+      "description": "11111 {{type}} 11111",
+      "errorTitle": "11111 {{type}} 11111",
+      "sections": {
+        "details": "11111"
+      },
+      "fields": {
+        "version": "11111"
+      },
+      "placeholders": {
+        "templateName": "11111 {{type}} 11111"
+      },
+      "actions": {
+        "back": "11111",
+        "save": "11111"
+      },
+      "labels": {
+        "created": "11111 {{date}} 11111",
+        "lastUpdated": "11111 {{date}} 11111"
+      },
+      "preview": {
+        "sampleNote": "11111 {{type}} 11111",
+        "frameTitle": "11111 {{type}} 11111",
+        "empty": "11111"
+      },
+      "errors": {
+        "nameRequired": "11111",
+        "astExportFailed": "11111 {{message}} 11111",
+        "saveFailed": "11111 {{type}} 11111",
+        "previewFailed": "11111"
+      },
+      "toasts": {
+        "saved": "11111 {{type}} 11111"
+      }
+    },
+    "types": {
+      "salesOrder": "11111",
+      "packingSlip": "11111",
+      "pickList": "11111"
     }
   }
 }

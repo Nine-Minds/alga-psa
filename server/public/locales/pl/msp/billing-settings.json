@@ -420,6 +420,46 @@
         "update": "Nie udało się zaktualizować wakacji podatkowych.",
         "delete": "Nie udało się usunąć wakacji podatkowych."
       }
+    },
+    "delegation": {
+      "defaultProvider": "system księgowy",
+      "actions": {
+        "applying": "Stosowanie…"
+      },
+      "errors": {
+        "enableFailed": "Nie udało się włączyć zewnętrznego obliczania podatku."
+      },
+      "banner": {
+        "title": "Czy {{provider}} ma obliczać podatek?",
+        "description": "Połączono system {{provider}}. Większość klientów woli, aby system księgowy obsługiwał podatki, dzięki czemu oba rejestry księgowe pozostają zgodne — Alga zaksięguje faktury bez kwot podatku, system {{provider}} zastosuje swoje reguły podatkowe, a wynik zostanie zsynchronizowany z Alga. Alga nie jest pakietem podatkowym; zalecamy przekazanie tych obliczeń.",
+        "actions": {
+          "enable": "Używaj systemu {{provider}} do obliczania podatku",
+          "dismiss": "Nie teraz",
+          "dismissing": "Odrzucanie…"
+        },
+        "toast": {
+          "enabled": "Włączono zewnętrzne obliczanie podatku.",
+          "enabledWithProvider": "System {{provider}} będzie obliczać podatek na nowych fakturach."
+        },
+        "errors": {
+          "loadState": "Nie udało się wczytać stanu zalecenia dotyczącego przekazania obliczeń podatku.",
+          "dismissFailed": "Nie udało się odrzucić banera."
+        }
+      },
+      "nudge": {
+        "title": "Czy system {{provider}} ma obliczać podatek na przyszłych fakturach?",
+        "description": "Zalecane. Nowe faktury będą księgowane w systemie {{provider}} bez kwot podatku, system {{provider}} zastosuje swoje reguły podatkowe, a obliczony podatek zostanie zsynchronizowany z Alga, dzięki czemu oba rejestry księgowe pozostaną zgodne. Ustawienie można zmienić w dowolnym momencie w sekcji Rozliczenia → Ustawienia podatków.",
+        "actions": {
+          "enable": "Tak, używaj systemu {{provider}}",
+          "keepInternal": "Pozostaw obliczanie podatku w Alga"
+        },
+        "toast": {
+          "enabled": "System {{provider}} będzie obliczać podatek na nowych fakturach. Ustawienie można zmienić w ustawieniach rozliczeń."
+        },
+        "errors": {
+          "loadSettings": "Nie udało się wczytać bieżących ustawień podatków."
+        }
+      }
     }
   },
   "payments": {

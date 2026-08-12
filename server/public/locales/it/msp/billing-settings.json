@@ -420,6 +420,46 @@
         "update": "Impossibile aggiornare l'esenzione fiscale.",
         "delete": "Impossibile eliminare l'esenzione fiscale."
       }
+    },
+    "delegation": {
+      "defaultProvider": "il sistema contabile in uso",
+      "actions": {
+        "applying": "Applicazione…"
+      },
+      "errors": {
+        "enableFailed": "Impossibile abilitare il calcolo esterno delle imposte."
+      },
+      "banner": {
+        "title": "Affidare a {{provider}} il calcolo delle imposte?",
+        "description": "{{provider}} è connesso. La maggior parte dei clienti preferisce affidare le imposte al proprio sistema contabile affinché i due registri restino allineati — Alga registrerà le fatture senza importi fiscali, {{provider}} applicherà le proprie regole fiscali e il risultato verrà sincronizzato con Alga. Alga non è un software fiscale; consigliamo di delegare il calcolo.",
+        "actions": {
+          "enable": "Usa {{provider}} per le imposte",
+          "dismiss": "Non ora",
+          "dismissing": "Chiusura…"
+        },
+        "toast": {
+          "enabled": "Calcolo esterno delle imposte abilitato.",
+          "enabledWithProvider": "{{provider}} calcolerà le imposte sulle nuove fatture."
+        },
+        "errors": {
+          "loadState": "Impossibile caricare lo stato del consiglio per la delega delle imposte.",
+          "dismissFailed": "Impossibile chiudere il banner."
+        }
+      },
+      "nudge": {
+        "title": "Affidare a {{provider}} il calcolo delle imposte sulle fatture future?",
+        "description": "Consigliato. Le nuove fatture verranno registrate in {{provider}} senza importi fiscali, {{provider}} applicherà le proprie regole fiscali e l’imposta calcolata verrà sincronizzata con Alga, mantenendo allineati i due registri. Puoi modificare questa scelta in qualsiasi momento in Fatturazione → Impostazioni fiscali.",
+        "actions": {
+          "enable": "Sì, usa {{provider}}",
+          "keepInternal": "Continua a calcolare le imposte in Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calcolerà le imposte sulle nuove fatture. Puoi modificare questa scelta nelle impostazioni di fatturazione."
+        },
+        "errors": {
+          "loadSettings": "Impossibile caricare le impostazioni fiscali correnti."
+        }
+      }
     }
   },
   "payments": {

@@ -27,6 +27,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './DocumentEditor.module.css';
 
@@ -55,6 +56,7 @@ export function DocumentEditor({
   hideSaveButton = false,
   initialContent,
 }: DocumentEditorProps) {
+  const { t } = useTranslation('features/documents');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -171,12 +173,12 @@ export function DocumentEditor({
             }
           } catch (parseError) {
             console.error('Error parsing content:', parseError);
-            setError('Failed to parse document content');
+            setError(t('messages.parseContentFailed', { defaultValue: 'Failed to parse document content' }));
           }
         }
       } catch (err) {
         console.error('Failed to load document content:', err);
-        setError('Failed to load document content');
+        setError(t('messages.loadContentFailed', { defaultValue: 'Failed to load document content' }));
       } finally {
         setIsLoading(false);
         // Mark content as loaded so future edits are tracked as unsaved changes
@@ -210,7 +212,7 @@ export function DocumentEditor({
       onUnsavedChangesChange?.(false);
     } catch (err) {
       console.error('Failed to save document:', err);
-      setError('Failed to save document');
+      setError(t('messages.saveFailed', { defaultValue: 'Failed to save document' }));
     } finally {
       setIsSaving(false);
     }
@@ -236,7 +238,9 @@ export function DocumentEditor({
   if (error) {
     return (
       <Card className="p-4">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500">
+          {t('editor.errorPrefix', { defaultValue: 'Error: {{message}}', message: error })}
+        </div>
       </Card>
     );
   }
@@ -250,27 +254,29 @@ export function DocumentEditor({
             onClick={handleSave}
             disabled={isLoading || isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving
+              ? t('actions.saving', { defaultValue: 'Saving...' })
+              : t('actions.save', { defaultValue: 'Save' })}
           </Button>
         </div>
       )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          Loading...
+          {t('editor.loading', { defaultValue: 'Loading...' })}
         </div>
       ) : (
         editor && editorReady && !editor.isDestroyed ? (
           <div
             className={styles.editorContainer}
-            data-placeholder={placeholder || 'Start writing...'}
+            data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           >
             <EditorToolbar editor={editor} />
             <EditorContent editor={editor} />
           </div>
         ) : (
           <div className="flex justify-center items-center h-64">
-            Initializing editor...
+            {t('editor.initializing', { defaultValue: 'Initializing editor...' })}
           </div>
         )
       )}

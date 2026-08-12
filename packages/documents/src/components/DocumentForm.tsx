@@ -8,6 +8,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Text } from '@radix-ui/themes';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Combined type for form data
 interface DocumentFormData extends Omit<IDocument, 'document_id' | 'tenant'> {
@@ -22,8 +23,18 @@ interface DocumentFormProps {
 }
 
 const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
+    const { t } = useTranslation('features/documents');
     const { register, handleSubmit, formState: { errors } } = useForm<DocumentFormData>();
     const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+
+    // Same messages feed both the inline field errors and the summary alert.
+    const requiredMessages = {
+        documentName: t('validation.nameRequired', { defaultValue: 'Document name is required' }),
+        documentType: t('validation.typeRequired', { defaultValue: 'Document type is required' }),
+        userId: t('validation.userIdRequired', { defaultValue: 'User ID is required' }),
+        orderNumber: t('validation.orderNumberRequired', { defaultValue: 'Order number is required' }),
+        content: t('validation.contentRequired', { defaultValue: 'Content is required' }),
+    };
 
     const handleFormSubmit = (data: DocumentFormData) => {
         setHasAttemptedSubmit(true);
@@ -41,11 +52,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
     const validationErrors: string[] = [];
     if (hasAttemptedSubmit) {
-        if (errors.document_name) validationErrors.push('Document name is required');
-        if (errors.type_id) validationErrors.push('Document type is required');
-        if (errors.user_id) validationErrors.push('User ID is required');
-        if (errors.order_number) validationErrors.push('Order number is required');
-        if (errors.content) validationErrors.push('Content is required');
+        if (errors.document_name) validationErrors.push(requiredMessages.documentName);
+        if (errors.type_id) validationErrors.push(requiredMessages.documentType);
+        if (errors.user_id) validationErrors.push(requiredMessages.userId);
+        if (errors.order_number) validationErrors.push(requiredMessages.orderNumber);
+        if (errors.content) validationErrors.push(requiredMessages.content);
     }
 
     return (
@@ -53,7 +64,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
             {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
                     <AlertDescription>
-                        Please fix the following errors:
+                        {t('form.errorsHeading', { defaultValue: 'Please fix the following errors:' })}
                         <ul className="list-disc pl-5 mt-1 text-sm">
                             {validationErrors.map((err, index) => (
                                 <li key={index}>{err}</li>
@@ -64,10 +75,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
             )}
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Document Name *
+                    {t('form.fields.documentName', { defaultValue: 'Document Name *' })}
                 </Text>
                 <Input
-                    {...register('document_name', { required: 'Document name is required' })}
+                    id="document-name-input"
+                    {...register('document_name', { required: requiredMessages.documentName })}
                     className={hasAttemptedSubmit && errors.document_name ? 'border-red-500' : ''}
                 />
                 {errors.document_name && (
@@ -79,10 +91,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Document Type *
+                    {t('form.fields.documentType', { defaultValue: 'Document Type *' })}
                 </Text>
                 <Input
-                    {...register('type_id', { required: 'Document type is required' })}
+                    id="document-type-input"
+                    {...register('type_id', { required: requiredMessages.documentType })}
                     className={hasAttemptedSubmit && errors.type_id ? 'border-red-500' : ''}
                 />
                 {errors.type_id && (
@@ -94,10 +107,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    User ID *
+                    {t('form.fields.userId', { defaultValue: 'User ID *' })}
                 </Text>
                 <Input
-                    {...register('user_id', { required: 'User ID is required' })}
+                    id="user-id-input"
+                    {...register('user_id', { required: requiredMessages.userId })}
                     className={hasAttemptedSubmit && errors.user_id ? 'border-red-500' : ''}
                 />
                 {errors.user_id && (
@@ -109,38 +123,42 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Contact Name ID
+                    {t('form.fields.contactNameId', { defaultValue: 'Contact Name ID' })}
                 </Text>
                 <Input
+                    id="contact-name-id-input"
                     {...register('contact_name_id')}
                 />
             </div>
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Client ID
+                    {t('form.fields.clientId', { defaultValue: 'Client ID' })}
                 </Text>
                 <Input
+                    id="client-id-input"
                     {...register('client_id')}
                 />
             </div>
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Ticket ID
+                    {t('form.fields.ticketId', { defaultValue: 'Ticket ID' })}
                 </Text>
                 <Input
+                    id="ticket-id-input"
                     {...register('ticket_id')}
                 />
             </div>
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Order Number *
+                    {t('form.fields.orderNumber', { defaultValue: 'Order Number *' })}
                 </Text>
                 <Input
+                    id="order-number-input"
                     type="number"
-                    {...register('order_number', { required: 'Order number is required' })}
+                    {...register('order_number', { required: requiredMessages.orderNumber })}
                     className={hasAttemptedSubmit && errors.order_number ? 'border-red-500' : ''}
                 />
                 {errors.order_number && (
@@ -152,10 +170,11 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
 
             <div>
                 <Text as="label" size="2" weight="medium" className="block mb-2">
-                    Content *
+                    {t('form.fields.content', { defaultValue: 'Content *' })}
                 </Text>
                 <TextArea
-                    {...register('content', { required: 'Content is required' })}
+                    id="content-textarea"
+                    {...register('content', { required: requiredMessages.content })}
                     rows={4}
                     className={hasAttemptedSubmit && errors.content ? 'border-red-500' : ''}
                 />
@@ -172,7 +191,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
                     type="submit" 
                     className={`w-full ${errors.document_name || errors.type_id || errors.user_id || errors.order_number || errors.content ? 'opacity-50' : ''}`}
                 >
-                    Create Document
+                    {t('form.submit', { defaultValue: 'Create Document' })}
                 </Button>
             </div>
         </form>

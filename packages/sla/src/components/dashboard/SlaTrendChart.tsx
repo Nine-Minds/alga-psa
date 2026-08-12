@@ -18,6 +18,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ISlaTrendDataPoint } from '../../types';
 
 interface SlaTrendChartProps {
@@ -26,11 +27,14 @@ interface SlaTrendChartProps {
 }
 
 export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) => {
+  const { t } = useTranslation('msp/settings');
+  const { formatDate } = useFormatters();
+
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Compliance Trend</CardTitle>
+          <CardTitle>{t('sla.dashboard.trendChart.title', { defaultValue: 'Compliance Trend' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
@@ -43,20 +47,20 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Compliance Trend</CardTitle>
+          <CardTitle>{t('sla.dashboard.trendChart.title', { defaultValue: 'Compliance Trend' })}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-center justify-center text-gray-500">
-            No trend data available for the selected period
+            {t('sla.dashboard.trendChart.empty', { defaultValue: 'No trend data available for the selected period' })}
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Format data for chart
+  // Format data for chart; formatDate follows the app locale, 'en-US' did not
   const chartData = data.map(point => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatDate(new Date(point.date), { month: 'short', day: 'numeric' }),
     compliance: point.complianceRate,
     tickets: point.ticketCount,
     breaches: point.breachCount
@@ -65,7 +69,7 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Compliance Trend</CardTitle>
+        <CardTitle>{t('sla.dashboard.trendChart.title', { defaultValue: 'Compliance Trend' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64">
@@ -93,9 +97,9 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
                 formatter={(value: number, name: string) => {
-                  if (name === 'compliance') return [`${value}%`, 'Compliance'];
-                  if (name === 'tickets') return [value, 'Tickets'];
-                  if (name === 'breaches') return [value, 'Breaches'];
+                  if (name === 'compliance') return [`${value}%`, t('sla.dashboard.trendChart.compliance', { defaultValue: 'Compliance' })];
+                  if (name === 'tickets') return [value, t('sla.dashboard.trendChart.tickets', { defaultValue: 'Tickets' })];
+                  if (name === 'breaches') return [value, t('sla.dashboard.trendChart.breaches', { defaultValue: 'Breaches' })];
                   return [value, name];
                 }}
               />
@@ -107,7 +111,7 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
                 strokeWidth={2}
                 dot={{ fill: '#22c55e', strokeWidth: 2 }}
                 activeDot={{ r: 6 }}
-                name="Compliance %"
+                name={t('sla.dashboard.trendChart.compliancePercent', { defaultValue: 'Compliance %' })}
               />
               <Line
                 type="monotone"
@@ -116,7 +120,7 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
                 strokeWidth={2}
                 dot={{ fill: '#ef4444', strokeWidth: 2 }}
                 activeDot={{ r: 6 }}
-                name="Breaches"
+                name={t('sla.dashboard.trendChart.breaches', { defaultValue: 'Breaches' })}
               />
             </LineChart>
           </ResponsiveContainer>

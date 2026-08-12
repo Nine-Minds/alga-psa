@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "55555 {{count}} 55555",
     "suggestedDefaultsLoadFailed": "55555",
     "entityTypesAllConfigured": "55555",
-    "defaultFoldersLoadFailed": "55555"
+    "defaultFoldersLoadFailed": "55555",
+    "parseContentFailed": "55555"
   },
   "validation": {
-    "nameRequired": "55555"
+    "nameRequired": "55555",
+    "typeRequired": "55555",
+    "userIdRequired": "55555",
+    "orderNumberRequired": "55555",
+    "contentRequired": "55555"
   },
   "bulkActions": {
     "selected_one": "55555 {{count}} 55555",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "55555 {{count}} 55555 {{name}} 55555",
     "cascadeMakeHidden": "55555 {{count}} 55555 {{name}} 55555",
     "cascadeYes": "55555",
-    "cascadeNo": "55555"
+    "cascadeNo": "55555",
+    "visibleToClients": "55555",
+    "hiddenFromClients": "55555"
   },
   "empty": {
     "default": "55555"
@@ -283,5 +290,71 @@
     "pageOf": "55555 {{current}} 55555 {{total}} 55555",
     "previous": "55555"
   },
-  "ticketDocuments": "55555"
+  "ticketDocuments": "55555",
+  "actions": {
+    "save": "55555",
+    "saving": "55555",
+    "cancel": "55555"
+  },
+  "card": {
+    "noDate": "55555",
+    "reflectionLabel": "55555"
+  },
+  "editor": {
+    "loading": "55555",
+    "initializing": "55555",
+    "placeholder": "55555",
+    "errorPrefix": "55555 {{message}} 55555",
+    "status": {
+      "offline": "55555",
+      "allChangesSaved": "55555",
+      "syncing": "55555 {{status}} 55555"
+    },
+    "connection": {
+      "connected": "55555",
+      "connecting": "55555",
+      "disconnected": "55555"
+    },
+    "presence": {
+      "unknownUser": "55555"
+    },
+    "toolbar": {
+      "bold": "55555",
+      "italic": "55555",
+      "underline": "55555",
+      "strikethrough": "55555",
+      "code": "55555",
+      "heading1": "55555",
+      "heading2": "55555",
+      "bulletList": "55555",
+      "orderedList": "55555",
+      "quote": "55555",
+      "link": "55555",
+      "linkPrompt": "55555"
+    }
+  },
+  "form": {
+    "errorsHeading": "55555",
+    "submit": "55555",
+    "fields": {
+      "documentName": "55555",
+      "documentType": "55555",
+      "userId": "55555",
+      "contactNameId": "55555",
+      "clientId": "55555",
+      "ticketId": "55555",
+      "orderNumber": "55555",
+      "content": "55555"
+    }
+  },
+  "previewPane": {
+    "loading": "55555",
+    "pdfDocument": "55555",
+    "videoFile": "55555",
+    "notAvailable": "55555",
+    "altPdf": "55555 {{name}} 55555",
+    "altVideoThumbnail": "55555 {{name}} 55555",
+    "pageCount_one": "55555 {{count}} 55555",
+    "pageCount_other": "55555 {{count}} 55555"
+  }
 }

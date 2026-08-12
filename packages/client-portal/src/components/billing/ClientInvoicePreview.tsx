@@ -8,6 +8,7 @@ import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
 import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 
@@ -31,6 +32,7 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
   invoiceId,
   className = '',
 }) => {
+  const { t } = useTranslation('client-portal');
   const [invoiceData, setInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
   const [template, setTemplate] = useState<IInvoiceTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,14 +107,14 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
 
       } catch (err) {
         console.error('Error loading invoice preview:', err);
-        setError('Failed to load invoice');
+        setError(t('billing.invoicePreview.loadFailed', { defaultValue: 'Failed to load invoice' }));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadData();
-  }, [invoiceId]);
+  }, [invoiceId, t]);
 
   // Calculate scale based on container width
   // Standard US Letter size is 8.5" x 11" = 816px x 1056px at 96 DPI
@@ -139,7 +141,7 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
   if (!invoiceData || !template) {
     return (
       <div className={`text-gray-500 p-4 border border-gray-200 bg-gray-50 rounded ${className}`}>
-        Unable to display invoice preview.
+        {t('billing.invoicePreview.unavailable', { defaultValue: 'Unable to display invoice preview.' })}
       </div>
     );
   }

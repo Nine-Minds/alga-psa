@@ -1120,7 +1120,8 @@
       "unknownClient": "Onbekende klant",
       "status": "Status",
       "system": "Systeem",
-      "total": "Totaal"
+      "total": "Totaal",
+      "invoiceDate": "Factuurdatum"
     },
     "states": {
       "empty": "Geen gegevens beschikbaar",
@@ -1725,6 +1726,279 @@
       "message": "Door dit planningsitem te annuleren, wordt het uit de facturatie verwijderd. Dit kan niet ongedaan worden gemaakt.",
       "confirm": "Post annuleren",
       "dismiss": "Post behouden"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} rijen",
+      "operators": {
+        "eq": "Is gelijk aan",
+        "neq": "Is niet gelijk aan",
+        "gt": "Groter dan",
+        "gte": "Groter dan of gelijk aan",
+        "lt": "Kleiner dan",
+        "lte": "Kleiner dan of gelijk aan",
+        "in": "In de lijst"
+      },
+      "sortDirections": {
+        "asc": "Oplopend",
+        "desc": "Aflopend"
+      },
+      "aggregations": {
+        "sum": "Som",
+        "count": "Aantal",
+        "avg": "Gemiddelde",
+        "min": "Minimumwaarde",
+        "max": "Maximumwaarde"
+      },
+      "operations": {
+        "advancedPredicate": "Geavanceerd predicaat",
+        "groupBy": "Groeperen op {{field}}",
+        "readOnly": "In V1 alleen-lezen behouden"
+      },
+      "source": {
+        "title": "Brongegevens",
+        "description": "Kies voorbeeldgegevens en de verzamelingsbinding die u wilt structureren.",
+        "sampleScenario": "Voorbeeldscenario",
+        "selectInvoice": "Factuur selecteren",
+        "collection": "Bronverzameling",
+        "outputBindingId": "ID van uitvoerbinding"
+      },
+      "metadata": {
+        "title": "Bronmetagegevens",
+        "binding": "Gegevensbinding:",
+        "bindingNone": "Geen",
+        "resolvedPath": "Herleid pad:",
+        "pathNotResolved": "Niet herleid",
+        "noFields": "Kies voorbeeldgegevens en een verzamelingsbinding om velden te vinden."
+      },
+      "pipeline": {
+        "title": "Transformatieketen",
+        "description": "Bewerkingen worden van boven naar beneden uitgevoerd.",
+        "addFilter": "+ Filter toevoegen",
+        "addSort": "+ Sortering",
+        "addGroup": "+ Groep",
+        "addAggregate": "+ Aggregatie",
+        "empty": "Voeg bewerkingen toe om de transformatieketen op te bouwen.",
+        "moveUp": "{{operation}} omhoog verplaatsen",
+        "moveDown": "{{operation}} omlaag verplaatsen",
+        "duplicate": "{{operation}} dupliceren",
+        "delete": "{{operation}} verwijderen"
+      },
+      "inspector": {
+        "description": "Bewerk de geselecteerde transformatiebewerking.",
+        "empty": "Selecteer een transformatiekaart om de instellingen te bewerken.",
+        "advancedPredicateNotice": "Dit filter gebruikt een geavanceerde predicaatstructuur. Als u deze hier bewerkt, wordt deze omgezet in een eenvoudige vergelijking.",
+        "unsupportedOperation": "Dit bewerkingstype blijft behouden in de werkruimte, maar de V1-ontwerper bewerkt alleen filter-, sorteer-, groeperings- en aggregatiebewerkingen.",
+        "field": "Veld",
+        "operator": "Vergelijkingsoperator",
+        "value": "Waarde",
+        "valueList": "Waarden (door komma's gescheiden)",
+        "sortKey": "Sorteersleutel {{index}}",
+        "remove": "Verwijderen",
+        "direction": "Richting",
+        "addSortKey": "+ Sorteersleutel",
+        "groupField": "Groeperingsveld",
+        "groupLabel": "Label (optioneel)",
+        "aggregation": "Aggregatie {{index}}",
+        "outputId": "Uitvoer-ID",
+        "operation": "Bewerking",
+        "addAggregation": "+ Aggregatie toevoegen"
+      },
+      "output": {
+        "title": "Uitvoervoorbeeld",
+        "description": "Bekijk een voorbeeld van de rijen die door de huidige transformatieketen worden gegenereerd.",
+        "rowPaths": "Beschikbare rijpaden",
+        "groupedRows": "{{count}} gegroepeerde rijen",
+        "binding": "Gegevensbinding: {{binding}}",
+        "bindingNotSet": "Niet ingesteld",
+        "groupKey": "sleutel: {{value}}",
+        "groupItems": "{{count}} elementen",
+        "emptyConfigure": "Configureer de bron, uitvoerbinding en bewerkingen om een voorbeeld van getransformeerde rijen te bekijken.",
+        "emptyNoData": "Kies voorbeeldgegevens om de getransformeerde uitvoer te bekijken.",
+        "previewFailed": "Voorbeeld van transformaties is mislukt."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Alle regels",
+        "phases": "Fasen",
+        "recurringItems": "Terugkerende regels",
+        "onetimeItems": "Eenmalige regels",
+        "serviceItems": "Serviceregels",
+        "productItems": "Productregels",
+        "items": "Elementen",
+        "transformsSource": "{{binding}} (transformatiebron)",
+        "transformsOutput": "{{binding}} (transformatie-uitvoer)"
+      },
+      "presets": {
+        "description": {
+          "label": "Beschrijving",
+          "hint": "Beschrijving van de regel"
+        },
+        "quantity": {
+          "label": "Aant.",
+          "hint": "Aantal"
+        },
+        "unitPrice": {
+          "label": "Tarief",
+          "hint": "Eenheidsprijs"
+        },
+        "amount": {
+          "label": "Bedrag",
+          "hint": "Regeltotaal"
+        }
+      },
+      "sourceBinding": {
+        "title": "Bronbinding",
+        "description": "Bind deze tabel aan een onbewerkte verzameling of aan de gemaakte transformatie-uitvoer."
+      },
+      "columns": {
+        "title": "Tabelkolommen",
+        "add": "+ Kolom",
+        "quickAdd": "Snel toevoegen:",
+        "newColumnHeader": "Nieuwe kolom",
+        "empty": "Er zijn geen kolommen gedefinieerd. Voeg ten minste één kolom toe.",
+        "itemLabel": "Kolom",
+        "moveUp": "{{column}} omhoog verplaatsen",
+        "moveDown": "{{column}} omlaag verplaatsen",
+        "remove": "{{column}} verwijderen",
+        "header": "Koptekst",
+        "headerPlaceholder": "Koptekstlabel",
+        "bindingKey": "Bindingssleutel",
+        "type": "Type",
+        "width": "Breedte"
+      },
+      "columnTypes": {
+        "text": "Tekst",
+        "number": "Getal",
+        "currency": "Valuta",
+        "date": "Datum"
+      },
+      "style": {
+        "title": "Tabelstijl",
+        "borderPreset": "Voorinstelling voor randen",
+        "headerWeight": "Dikte van koptekst",
+        "borderOuter": "Buitenrand",
+        "borderRows": "Rijen",
+        "borderColumns": "Kolommen"
+      },
+      "borderPresets": {
+        "list": "Eenvoudige lijst",
+        "boxed": "Omlijnd",
+        "grid": "Raster",
+        "none": "Geen",
+        "custom": "Aangepast"
+      },
+      "headerWeights": {
+        "normal": "Standaard",
+        "medium": "Gemiddeld",
+        "semibold": "Halfvet",
+        "bold": "Vet"
+      },
+      "reference": {
+        "title": "Referentie voor veldsleutels",
+        "transformAggregate": "Transformatieaggregatie",
+        "groupedRowKey": "Sleutel van gegroepeerde rij",
+        "groupedRowItems": "Items van gegroepeerde rij",
+        "availableBinding": "Beschikbare binding"
+      }
+    },
+    "imagePicker": {
+      "browse": "Documenten doorzoeken",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "updating": "Bijwerken...",
+      "markVisible": "Markeren als zichtbaar voor klanten",
+      "visibleInPortal": "Zichtbaar in het klantenportaal",
+      "dialogTitle": "Afbeelding selecteren",
+      "dialogDescription": "Kies een afbeelding uit uw documenten om in deze sjabloon te gebruiken."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Factuurgegevens",
+    "description": "Bewerk de metagegevens van de conceptfactuur voordat u deze definitief maakt.",
+    "actions": {
+      "saving": "Opslaan..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Het factuurnummer is verplicht.",
+      "invoiceDateRequired": "De factuurdatum is verplicht."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "Indelingen voor {{type}}",
+    "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
+    "availableLayouts": "Beschikbare indelingen",
+    "actions": {
+      "newLayout": "Nieuwe indeling"
+    },
+    "columns": {
+      "name": "Naam",
+      "source": "Bron"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (Standaard)",
+      "copyName": "{{name}} (Kopie)"
+    },
+    "toasts": {
+      "cloned": "Sjabloon gedupliceerd",
+      "defaultUpdated": "Standaardsjabloon bijgewerkt",
+      "deleted": "Sjabloon verwijderd"
+    },
+    "errors": {
+      "loadFailed": "Sjablonen voor {{type}} laden mislukt",
+      "cloneFailed": "Sjabloon dupliceren mislukt",
+      "setDefaultFailed": "Standaardsjabloon instellen mislukt",
+      "deleteFailed": "Sjabloon verwijderen mislukt"
+    },
+    "deleteDialog": {
+      "title": "Indeling voor {{type}} verwijderen",
+      "message": "Weet u zeker dat u ‘{{name}}’ wilt verwijderen?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nieuwe indeling voor {{type}}",
+        "edit": "Indeling voor {{type}} bewerken"
+      },
+      "description": "Ontwerp de indeling voor {{type}} in de visuele editor en bekijk deze daarna met voorbeeldgegevens.",
+      "errorTitle": "Indelingseditor voor {{type}}",
+      "sections": {
+        "details": "Indelingsgegevens"
+      },
+      "fields": {
+        "version": "Versie"
+      },
+      "placeholders": {
+        "templateName": "Sjabloon voor {{type}}"
+      },
+      "actions": {
+        "back": "Terug naar indelingen",
+        "save": "Indeling opslaan"
+      },
+      "labels": {
+        "created": "Gemaakt: {{date}}",
+        "lastUpdated": "Laatst bijgewerkt: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
+        "frameTitle": "Voorbeeld van {{type}}",
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+      },
+      "errors": {
+        "nameRequired": "De naam van het sjabloon is verplicht.",
+        "astExportFailed": "Sjabloon exporteren uit de visuele werkruimte mislukt: {{message}}",
+        "saveFailed": "Indeling voor {{type}} opslaan mislukt",
+        "previewFailed": "Voorbeeld genereren mislukt."
+      },
+      "toasts": {
+        "saved": "Indeling voor {{type}} opgeslagen"
+      }
+    },
+    "types": {
+      "salesOrder": "Verkooporder",
+      "packingSlip": "Pakbon",
+      "pickList": "Picklijst"
     }
   }
 }

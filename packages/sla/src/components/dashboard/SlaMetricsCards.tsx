@@ -9,6 +9,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle, PauseCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ISlaOverview } from '../../types';
 
 interface SlaMetricsCardsProps {
@@ -17,6 +18,8 @@ interface SlaMetricsCardsProps {
 }
 
 export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading }) => {
+  const { t } = useTranslation('msp/settings');
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -49,31 +52,39 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
 
   const metrics = [
     {
-      title: 'Overall Compliance',
+      title: t('sla.dashboard.metrics.overallCompliance', { defaultValue: 'Overall Compliance' }),
       value: `${data.compliance.overallRate}%`,
-      subtitle: `${data.compliance.totalTickets} tickets tracked`,
+      subtitle: t('sla.dashboard.metrics.ticketsTracked', {
+        defaultValue_one: '{{count}} ticket tracked',
+        defaultValue_other: '{{count}} tickets tracked',
+        count: data.compliance.totalTickets
+      }),
       icon: data.compliance.overallRate >= 90 ? CheckCircle : data.compliance.overallRate >= 70 ? TrendingUp : TrendingDown,
       ...overallStatus
     },
     {
-      title: 'Response SLA',
+      title: t('sla.dashboard.labels.responseSla', { defaultValue: 'Response SLA' }),
       value: `${data.compliance.responseRate}%`,
-      subtitle: `${data.compliance.responseMetCount} met / ${data.compliance.responseBreachedCount} breached`,
+      subtitle: t('sla.dashboard.metrics.metBreached', {
+        defaultValue: '{{met}} met / {{breached}} breached',
+        met: data.compliance.responseMetCount,
+        breached: data.compliance.responseBreachedCount
+      }),
       icon: Clock,
       ...responseStatus
     },
     {
-      title: 'At Risk',
+      title: t('sla.dashboard.metrics.atRisk', { defaultValue: 'At Risk' }),
       value: data.atRiskCount.toString(),
-      subtitle: 'tickets approaching breach',
+      subtitle: t('sla.dashboard.metrics.approachingBreach', { defaultValue: 'tickets approaching breach' }),
       icon: AlertTriangle,
       color: 'text-warning',
       bgColor: 'bg-warning/10'
     },
     {
-      title: 'Currently Paused',
+      title: t('sla.dashboard.metrics.currentlyPaused', { defaultValue: 'Currently Paused' }),
       value: data.pausedCount.toString(),
-      subtitle: 'tickets with paused SLA',
+      subtitle: t('sla.dashboard.metrics.pausedSla', { defaultValue: 'tickets with paused SLA' }),
       icon: PauseCircle,
       color: 'text-primary',
       bgColor: 'bg-primary/10'

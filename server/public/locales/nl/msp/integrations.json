@@ -1922,6 +1922,55 @@
         "saving": "Opslaan…",
         "undepositedFunds": "Niet-gestorte middelen (standaard)",
         "catalogLoadError": "Configuratieopties voor QuickBooks-synchronisatie laden mislukt."
+      },
+      "itemImport": {
+        "description": "Importeer uw QuickBooks-producten en -services in de Alga-servicecatalogus voor het verbonden QuickBooks-bedrijf. QuickBooks blijft de gezaghebbende bron voor namen, tarieven, SKU’s, beschrijvingen en kosten; de facturatiemethode, maateenheid en het servicetype worden hier ingesteld en daarna door Alga beheerd. Deze stap is optioneel — sla deze over met Volgende.",
+        "defaults": {
+          "title": "Standaardwaarden voor geïmporteerde artikelen",
+          "serviceType": "Servicetype (verplicht)",
+          "serviceTypePlaceholder": "Selecteer een servicetype…",
+          "unitOfMeasure": "Maateenheid",
+          "serviceBillingMethod": "Facturatiemethode voor services",
+          "productBillingMethod": "Facturatiemethode voor producten",
+          "includeInactive": "Inactieve QuickBooks-artikelen opnemen (worden als inactief geïmporteerd)"
+        },
+        "billingMethods": {
+          "fixed": "Vast",
+          "hourly": "Per uur",
+          "usage": "Op basis van gebruik"
+        },
+        "actions": {
+          "preview": "Importvoorbeeld",
+          "previewing": "Voorbeeld laden…",
+          "previewRequiresServiceType": "Selecteer een servicetype om het voorbeeld in te schakelen.",
+          "execute": "Import uitvoeren",
+          "executing": "Importeren…"
+        },
+        "preview": {
+          "summary": "Er zijn {{total}} QuickBooks-artikelen gevonden voor het verbonden bedrijf (realm {{realm}}): {{create}} om te maken, {{update}} om bij te werken, {{link}} om te koppelen en {{skip}} om over te slaan. Er zijn nog geen gegevens geschreven.",
+          "groups": {
+            "create": "Te maken",
+            "update": "Bij te werken",
+            "link": "Te koppelen (komt al overeen)",
+            "skip": "Over te slaan"
+          },
+          "qboName": "QuickBooks-naam: {{name}} (geïmporteerd als ‘{{importedAs}}’)"
+        },
+        "flags": {
+          "inactive": "Inactief in QuickBooks",
+          "unmappedTax": "Belastingcode niet toegewezen",
+          "skuConflict": "SKU-conflict",
+          "nameCollision": "Naam al toegewezen",
+          "categorySkipped": "Categorie (niet geïmporteerd)"
+        },
+        "result": {
+          "summary": "Import voltooid: {{created}} gemaakt, {{updated}} bijgewerkt, {{linked}} gekoppeld, {{skipped}} overgeslagen.",
+          "summaryWithErrors": "Import voltooid: {{created}} gemaakt, {{updated}} bijgewerkt, {{linked}} gekoppeld, {{skipped}} overgeslagen, {{failed}} mislukt."
+        },
+        "errors": {
+          "previewFailed": "Importvoorbeeld laden mislukt.",
+          "executeFailed": "De import is mislukt."
+        }
       }
     },
     "rmm": {

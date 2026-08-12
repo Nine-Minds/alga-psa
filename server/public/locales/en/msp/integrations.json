@@ -1945,6 +1945,55 @@
         "saving": "Saving…",
         "undepositedFunds": "Undeposited Funds (default)",
         "catalogLoadError": "Failed to load QuickBooks sync configuration options."
+      },
+      "itemImport": {
+        "description": "Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.",
+        "defaults": {
+          "title": "Defaults for imported items",
+          "serviceType": "Service type (required)",
+          "serviceTypePlaceholder": "Select a service type…",
+          "unitOfMeasure": "Unit of measure",
+          "serviceBillingMethod": "Billing method for services",
+          "productBillingMethod": "Billing method for products",
+          "includeInactive": "Include inactive QuickBooks items (imported as inactive)"
+        },
+        "billingMethods": {
+          "fixed": "Fixed",
+          "hourly": "Hourly",
+          "usage": "Usage"
+        },
+        "actions": {
+          "preview": "Preview import",
+          "previewing": "Loading preview…",
+          "previewRequiresServiceType": "Choose a service type to enable the preview.",
+          "execute": "Run import",
+          "executing": "Importing…"
+        },
+        "preview": {
+          "summary": "Found {{total}} QuickBooks items for the connected company (realm {{realm}}): {{create}} to create, {{update}} to update, {{link}} to link, {{skip}} skipped. Nothing has been written yet.",
+          "groups": {
+            "create": "Will create",
+            "update": "Will update",
+            "link": "Will link (already matching)",
+            "skip": "Skipped"
+          },
+          "qboName": "QuickBooks name: {{name}} (imported as “{{importedAs}}”)"
+        },
+        "flags": {
+          "inactive": "Inactive in QuickBooks",
+          "unmappedTax": "Tax code not mapped",
+          "skuConflict": "SKU conflict",
+          "nameCollision": "Name already mapped",
+          "categorySkipped": "Category (not imported)"
+        },
+        "result": {
+          "summary": "Import complete: {{created}} created, {{updated}} updated, {{linked}} linked, {{skipped}} skipped.",
+          "summaryWithErrors": "Import complete: {{created}} created, {{updated}} updated, {{linked}} linked, {{skipped}} skipped, {{failed}} failed."
+        },
+        "errors": {
+          "previewFailed": "Failed to load the import preview.",
+          "executeFailed": "The import failed."
+        }
       }
     },
     "rmm": {

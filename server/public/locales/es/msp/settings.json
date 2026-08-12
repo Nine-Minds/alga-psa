@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "La fecha del festivo es obligatoria",
       "holidayAdded": "Festivo añadido correctamente",
       "holidayDeleted": "Festivo eliminado correctamente"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Actualmente no hay tickets en riesgo de incumplir el SLA",
+        "overdueHours": "Atrasado {{hours}} h {{minutes}} min",
+        "overdueMinutes": "Atrasado {{minutes}} min",
+        "title": "Tickets en riesgo"
+      },
+      "breachChart": {
+        "breachRate": "Tasa de incumplimiento",
+        "empty": "No hay datos de incumplimientos disponibles",
+        "title": "Incumplimientos por prioridad"
+      },
+      "columns": {
+        "assignee": "Responsable",
+        "breachType": "Tipo de incumplimiento",
+        "client": "Cliente",
+        "priority": "Prioridad",
+        "progress": "Progreso",
+        "slaType": "Tipo de SLA",
+        "ticket": "Ticket",
+        "timeRemaining": "Tiempo restante",
+        "when": "Cuándo"
+      },
+      "gauge": {
+        "title": "Cumplimiento del SLA"
+      },
+      "labels": {
+        "resolution": "Resolución",
+        "resolutionSla": "SLA de resolución",
+        "response": "Respuesta",
+        "responseSla": "SLA de respuesta"
+      },
+      "metrics": {
+        "approachingBreach": "tickets próximos a incumplir el SLA",
+        "atRisk": "En riesgo",
+        "currentlyPaused": "En pausa actualmente",
+        "metBreached": "{{met}} cumplidos / {{breached}} incumplidos",
+        "overallCompliance": "Cumplimiento general",
+        "pausedSla": "tickets con el SLA en pausa",
+        "ticketsTracked_one": "{{count}} ticket con seguimiento",
+        "ticketsTracked_other": "{{count}} tickets con seguimiento"
+      },
+      "recentBreaches": {
+        "empty": "No hay incumplimientos del SLA en el período seleccionado",
+        "title": "Incumplimientos recientes",
+        "unassigned": "Sin asignar"
+      },
+      "trendChart": {
+        "breaches": "Incumplimientos",
+        "compliance": "Cumplimiento",
+        "compliancePercent": "% de cumplimiento",
+        "empty": "No hay datos de tendencia disponibles para el período seleccionado",
+        "tickets": "Tickets",
+        "title": "Tendencia de cumplimiento"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "No se pudo actualizar la configuración global del SLA",
+        "loadFailed": "No se pudo cargar la configuración de pausa del SLA",
+        "responseTrackingUpdateFailed": "No se pudo actualizar el seguimiento del estado de respuesta",
+        "saveStatusesFailed": "No se pudieron guardar las configuraciones de estados"
+      },
+      "global": {
+        "description": "Configure el comportamiento global de las pausas del temporizador del SLA",
+        "pauseOnAwaitingClient": {
+          "description": "Cuando esta opción está habilitada, el temporizador del SLA se pausa automáticamente si un ticket se marca como pendiente de una respuesta del cliente. El temporizador se reanuda cuando el cliente responde o cambia el estado del ticket.",
+          "label": "Pausar automáticamente el SLA al esperar la respuesta del cliente",
+          "requiresTracking": "Habilite arriba el seguimiento del estado de respuesta para usar esta opción."
+        },
+        "responseTracking": {
+          "description": "Cuando esta opción está habilitada, los tickets registran automáticamente quién debe responder a continuación (el cliente o el equipo interno). También controla la visibilidad de las insignias y los filtros del estado de respuesta.",
+          "label": "Registrar el estado de respuesta de los tickets"
+        },
+        "title": "Configuración global del SLA"
+      },
+      "loading": "Cargando la configuración de pausa del SLA...",
+      "messages": {
+        "globalSettingsUpdated": "La configuración global del SLA se actualizó correctamente",
+        "noChangesToSave": "No hay cambios que guardar",
+        "responseTrackingDisabled": "Se deshabilitó el seguimiento del estado de respuesta",
+        "responseTrackingEnabled": "Se habilitó el seguimiento del estado de respuesta",
+        "statusesUpdated_one": "Se actualizó correctamente {{count}} configuración de estado",
+        "statusesUpdated_other": "Se actualizaron correctamente {{count}} configuraciones de estados"
+      },
+      "perStatus": {
+        "description": "Configure qué estados de ticket deben pausar el temporizador del SLA. Cuando un ticket pasa a un estado con la pausa habilitada, el temporizador del SLA se detiene hasta que el ticket pasa a otro estado.",
+        "empty": "No se encontraron estados de ticket.",
+        "modified": "Modificado",
+        "modifiedCount_one": "{{count}} estado modificado",
+        "modifiedCount_other": "{{count}} estados modificados",
+        "noUnsavedChanges": "No hay cambios sin guardar",
+        "resetChanges": "Restablecer cambios",
+        "saveChanges": "Guardar cambios",
+        "saving": "Guardando...",
+        "title": "Configuración de pausa por estado"
+      },
+      "retry": "Volver a intentar"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Cancelar",
+        "create": "Crear política",
+        "saveChanges": "Guardar cambios",
+        "saving": "Guardando..."
+      },
+      "basics": {
+        "assignBoards": "Asignar a tableros",
+        "assignClients": "Asignar a clientes",
+        "businessHours": "Horario de atención",
+        "businessHoursPlaceholder": "Seleccione un horario de atención",
+        "description": "Descripción",
+        "descriptionPlaceholder": "Descripción opcional de esta política de SLA",
+        "noBusinessHours": "Sin horario de atención (24/7)",
+        "policyName": "Nombre de la política",
+        "policyNamePlaceholder": "Ingrese el nombre de la política",
+        "scheduleAlways": "{{name}} (todo el día)",
+        "searchBoards": "Buscar tableros...",
+        "searchClients": "Buscar clientes...",
+        "setAsDefault": "Establecer como política predeterminada",
+        "title": "Información básica"
+      },
+      "errors": {
+        "loadFailed": "No se pudieron cargar los datos",
+        "notFound": "No se encontró la política de SLA",
+        "saveFailed": "No se pudo guardar la política de SLA"
+      },
+      "loading": "Cargando...",
+      "multiSelect": {
+        "deselectAll": "Anular toda la selección",
+        "deselectAllVisible": "Anular la selección de todos los elementos visibles",
+        "noItems": "No hay elementos disponibles",
+        "noResults": "No se encontraron resultados",
+        "placeholder": "Seleccionar...",
+        "searchPlaceholder": "Buscar...",
+        "selectAll": "Seleccionar todo",
+        "selectAllVisible": "Seleccionar todos los elementos visibles",
+        "selectedCount_one": "{{count}} seleccionado",
+        "selectedCount_other": "{{count}} seleccionados"
+      },
+      "targets": {
+        "always": "Todo el día (ignorar el horario de atención)",
+        "description": "Establezca el tiempo máximo permitido para responder por primera vez y resolver por completo los tickets de cada nivel de prioridad.",
+        "escalationThresholds": "Umbrales de escalamiento (% de tiempo transcurrido)",
+        "level1": "Nivel 1 (%)",
+        "level2": "Nivel 2 (%)",
+        "level3": "Nivel 3 (%)",
+        "minutesPlaceholder": "Minutos",
+        "minutesUnit": "minutos",
+        "noTarget": "Sin objetivo",
+        "notConfigured": "Sin configurar",
+        "resolutionSummary": "Resolución: {{time}}",
+        "resolutionTime": "Tiempo de resolución",
+        "responseSummary": "Respuesta: {{time}}",
+        "responseTime": "Tiempo de respuesta",
+        "selectResolutionTime": "Seleccione el tiempo de resolución",
+        "selectResponseTime": "Seleccione el tiempo de respuesta",
+        "title": "Objetivos de respuesta y resolución",
+        "usePreset": "Usar valor predefinido"
+      },
+      "thresholds": {
+        "add": "Agregar umbral",
+        "channelEmail": "Correo electrónico",
+        "channelInApp": "En la aplicación",
+        "channelsLabel": "Canales de notificación",
+        "description": "Configure cuándo y cómo notificar a los miembros del equipo a medida que se acercan o se incumplen los plazos del SLA.",
+        "empty": "No hay umbrales de notificación configurados. Haga clic en \"Agregar umbral\" para crear uno.",
+        "noChannels": "ninguno",
+        "noRecipients": "Sin destinatarios",
+        "percentLabel": "Umbral (%)",
+        "recipientAssignee": "Responsable",
+        "recipientBoardManager": "Administrador del tablero",
+        "recipientBoardManagerShort": "Adm. del tablero",
+        "recipientEscalationManager": "Administrador de escalamiento",
+        "recipientEscalationManagerShort": "Adm. de escalamiento",
+        "recipientsLabel": "Destinatarios",
+        "remove": "Quitar",
+        "title": "Umbrales de notificación",
+        "typeBreach": "Incumplimiento",
+        "typeLabel": "Tipo de notificación",
+        "typeWarning": "Advertencia",
+        "viaChannels": "mediante {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Personalizado...",
+        "hours1": "1 hora",
+        "hours168": "168 horas (7 días)",
+        "hours2": "2 horas",
+        "hours24": "24 horas (1 día)",
+        "hours4": "4 horas",
+        "hours48": "48 horas (2 días)",
+        "hours72": "72 horas (3 días)",
+        "hours8": "8 horas",
+        "minutes15": "15 minutos",
+        "minutes30": "30 minutos"
+      },
+      "validation": {
+        "channelRequired": "Se requiere al menos un canal",
+        "duplicateThreshold": "Porcentaje de umbral duplicado",
+        "percentRange": "Debe estar entre 0 y 200",
+        "policyNameRequired": "El nombre de la política es obligatorio",
+        "targetRequired": "Al menos una prioridad debe tener un objetivo de tiempo de respuesta o resolución"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "openMenu": "Abrir menú",
+        "setDefault": "Establecer como predeterminada"
+      },
+      "addPolicy": "Agregar política",
+      "columns": {
+        "actions": "Acciones",
+        "description": "Descripción",
+        "name": "Nombre"
+      },
+      "defaultLabel": "Predeterminada",
+      "delete": {
+        "checkingUsage": "Comprobando el uso...",
+        "confirm": "¿Confirma que desea eliminar la política {{name}}? Esta acción no se puede deshacer.",
+        "defaultWarning": "Esta es la política predeterminada. Puede establecer primero otra política como predeterminada.",
+        "inUseTitle": "Esta política está en uso actualmente",
+        "title": "Eliminar política de SLA",
+        "unlinkNote": "Estas referencias se desvincularán. Se conservarán los datos existentes de seguimiento del SLA en los tickets.",
+        "usageBoards_one": "Tablero: {{names}}",
+        "usageBoards_other": "Tableros: {{names}}",
+        "usageClients_one": "Cliente: {{names}}",
+        "usageClients_other": "Clientes: {{names}}",
+        "usageTickets_one": "{{count}} ticket",
+        "usageTickets_other": "{{count}} tickets"
+      },
+      "description": "Administre las políticas de acuerdos de nivel de servicio que definen objetivos de tiempo de respuesta y resolución",
+      "empty": "No se encontraron políticas de SLA. Haga clic en \"Agregar política\" para crear la primera.",
+      "errors": {
+        "deleteFailed": "No se pudo eliminar la política. Inténtelo de nuevo.",
+        "loadFailed": "No se pudieron cargar las políticas de SLA. Inténtelo de nuevo.",
+        "setDefaultFailed": "No se pudo establecer la política predeterminada. Inténtelo de nuevo."
+      },
+      "loading": "Cargando las políticas de SLA...",
+      "title": "Políticas de SLA"
+    },
+    "status": {
+      "atRisk": "En riesgo",
+      "breached": "Incumplido",
+      "onTrack": "En plazo",
+      "paused": "En pausa",
+      "resolutionBreached": "SLA de resolución incumplido",
+      "responseBreached": "SLA de respuesta incumplido",
+      "tooltip": {
+        "resolutionBreachedBy": "Resolución: incumplido por {{time}}",
+        "resolutionRemaining": "Resolución: quedan {{time}}",
+        "responseBreachedBy": "Respuesta: incumplido por {{time}}",
+        "responseRemaining": "Respuesta: quedan {{time}}",
+        "statusLine": "Estado del SLA: {{status}}",
+        "timerPaused": "Temporizador del SLA: en pausa"
+      },
+      "unknown": "Desconocido"
     }
   },
   "clientPortalLanguage": {

@@ -10,6 +10,7 @@ import { Clock } from 'lucide-react';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { ClientHoursByServiceResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface HoursByServiceTabProps {
   hoursByService: ClientHoursByServiceResult[];
@@ -27,44 +28,45 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
   dateRange,
   handleDateRangeChange
 }) => {
+  const { t } = useTranslation('client-portal');
   // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
-  
+
   // Memoize columns to prevent unnecessary re-creation
   const hoursColumns: ColumnDefinition<ClientHoursByServiceResult>[] = useMemo(() => [
     {
-      title: 'Service',
+      title: t('billing.columns.service', { defaultValue: 'Service' }),
       dataIndex: 'service_name'
     },
     {
-      title: 'Service Type',
+      title: t('billing.hoursByService.columns.serviceType', { defaultValue: 'Service Type' }),
       dataIndex: 'service_type_name',
-      render: (value: string | null) => value || 'N/A'
+      render: (value: string | null) => value || t('billing.columns.notAvailable', { defaultValue: 'N/A' })
     },
     {
-      title: 'Hours',
+      title: t('billing.hoursByService.columns.hours', { defaultValue: 'Hours' }),
       dataIndex: 'total_duration',
       render: (value: number) => (value / 60).toFixed(2)
     }
-  ], []);
+  ], [t]);
 
   // Memoize the date filter card to prevent unnecessary re-renders
   const dateFilterCard = useMemo(() => (
     <Card id="hours-date-filter-card" className="mb-6">
       <CardHeader>
-        <CardTitle className="text-lg font-medium">Date Range</CardTitle>
+        <CardTitle className="text-lg font-medium">{t('billing.filters.dateRange', { defaultValue: 'Date Range' })}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-col">
             <label htmlFor="hours-start-date" className="text-sm font-medium text-gray-500 mb-1">
-              Start Date
+              {t('billing.filters.startDate', { defaultValue: 'Start Date' })}
             </label>
             <DatePicker
               id="hours-start-date"
-              label="Start Date"
-              placeholder="Start Date"
+              label={t('billing.filters.startDate', { defaultValue: 'Start Date' })}
+              placeholder={t('billing.filters.startDate', { defaultValue: 'Start Date' })}
               clearable
               className="w-full"
               value={dateFromString(dateRange.startDate)}
@@ -78,12 +80,12 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
           </div>
           <div className="flex flex-col">
             <label htmlFor="hours-end-date" className="text-sm font-medium text-gray-500 mb-1">
-              End Date
+              {t('billing.filters.endDate', { defaultValue: 'End Date' })}
             </label>
             <DatePicker
               id="hours-end-date"
-              label="End Date"
-              placeholder="End Date"
+              label={t('billing.filters.endDate', { defaultValue: 'End Date' })}
+              placeholder={t('billing.filters.endDate', { defaultValue: 'End Date' })}
               clearable
               className="w-full"
               value={dateFromString(dateRange.endDate)}
@@ -101,13 +103,13 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
               variant="outline"
               className="mb-0"
             >
-              Apply Filter
+              {t('billing.filters.apply', { defaultValue: 'Apply Filter' })}
             </Button>
           </div>
         </div>
       </CardContent>
     </Card>
-  ), [dateRange, handleDateRangeChange]);
+  ), [dateRange, handleDateRangeChange, t]);
 
   return (
     <div id="hours-service-content" className="py-4">
@@ -125,9 +127,9 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <Clock className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No hours data available</h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.hoursByService.empty.title', { defaultValue: 'No hours data available' })}</h3>
               <p className="mt-1 text-sm text-gray-500">
-                There are no billable hours recorded for the selected date range.
+                {t('billing.hoursByService.empty.description', { defaultValue: 'There are no billable hours recorded for the selected date range.' })}
               </p>
             </div>
           </div>

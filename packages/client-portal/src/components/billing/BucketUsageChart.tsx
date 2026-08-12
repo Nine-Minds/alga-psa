@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Info } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 
 interface BucketUsageChartProps {
@@ -9,6 +10,7 @@ interface BucketUsageChartProps {
 }
 
 const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketData }) => {
+  const { t } = useTranslation('client-portal');
   const percentage = Math.round(bucketData.percentage_used);
   
   // Format dates consistently - memoized to prevent recalculation
@@ -57,14 +59,14 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
           </p>
         </div>
         <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-1">Bucket Contract Line</span>
+          <span className="text-sm text-gray-500 mr-1">{t('billing.bucketUsage.contractLineLabel', { defaultValue: 'Bucket Contract Line' })}</span>
           <Info className="h-4 w-4 text-gray-400" />
         </div>
       </div>
 
       <div className="mt-4">
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium">Usage</span>
+          <span className="text-sm font-medium">{t('billing.bucketUsage.usage', { defaultValue: 'Usage' })}</span>
           <span className={`text-sm font-medium ${colorClasses.text}`}>
             {percentage}%
           </span>
@@ -76,14 +78,14 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
           ></div>
         </div>
         <div className="flex justify-between mt-1 text-xs text-gray-500">
-          <span>{bucketData.hours_used.toFixed(1)} hours used</span>
-          <span>{bucketData.hours_total.toFixed(1)} hours total</span>
+          <span>{t('billing.bucketUsage.hoursUsed', { defaultValue: '{{hours}} hours used', hours: bucketData.hours_used.toFixed(1) })}</span>
+          <span>{t('billing.bucketUsage.hoursTotal', { defaultValue: '{{hours}} hours total', hours: bucketData.hours_total.toFixed(1) })}</span>
         </div>
       </div>
 
       {bucketData.rolled_over_minutes > 0 && (
         <div className="mt-3 text-xs text-gray-500 flex items-center">
-          <span className="mr-1">Includes {(bucketData.rolled_over_minutes / 60).toFixed(1)} rollover hours</span>
+          <span className="mr-1">{t('billing.bucketUsage.rolloverHours', { defaultValue: 'Includes {{hours}} rollover hours', hours: (bucketData.rolled_over_minutes / 60).toFixed(1) })}</span>
           <Info className="h-3 w-3 text-gray-400" />
         </div>
       )}

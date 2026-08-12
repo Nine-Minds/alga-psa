@@ -673,6 +673,12 @@
       "clientNotFound": "Empresa no encontrada",
       "detailsLoadError": "No se pudieron cargar los detalles de la empresa",
       "updateError": "No se pudieron actualizar los detalles de la empresa"
+    },
+    "domain": {
+      "title": "Dominio personalizado",
+      "description": "Los clientes con el plan Pro pueden alojar el portal en un dominio personalizado. Su dirección alojada predeterminada se muestra a continuación.",
+      "defaultAddressLabel": "Dirección predeterminada del portal",
+      "upgradeHint": "Actualice al plan Pro para configurar un dominio de portal del cliente con su marca y certificados automatizados."
     }
   },
   "notifications": {
@@ -703,6 +709,24 @@
       "messages": "Mensajes",
       "projects": "Proyectos",
       "system": "Sistema"
+    },
+    "filters": {
+      "title": "Filtrar notificaciones",
+      "description": "Seleccione criterios para filtrar las actividades de notificación.",
+      "statusLabel": "Estado",
+      "unreadOnly": "Solo no leídas",
+      "showRead": "Mostrar leídas",
+      "categoryLabel": "Categoría",
+      "allCategories": "Todas las categorías",
+      "categoryPlaceholder": "Seleccione una categoría...",
+      "dateRangeLabel": "Intervalo de fechas",
+      "reset": "Restablecer",
+      "cancel": "Cancelar",
+      "apply": "Aplicar filtros"
+    },
+    "card": {
+      "unread": "No leída",
+      "noMessage": "Sin mensaje"
     }
   },
   "sidebar": {
@@ -753,5 +777,122 @@
     "createTicket": "Crear ticket",
     "createTicketForDevice": "Crear ticket para este dispositivo",
     "rowActionsLabel": "Acciones de fila"
+  },
+  "billing": {
+    "columns": {
+      "service": "Servicio",
+      "notAvailable": "N/D"
+    },
+    "filters": {
+      "dateRange": "Intervalo de fechas",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de finalización",
+      "apply": "Aplicar filtro"
+    },
+    "usageMetrics": {
+      "title": "Métricas de uso",
+      "bucketHistoryTitle": "Historial de uso de la bolsa de horas",
+      "columns": {
+        "unitOfMeasure": "Unidad de medida",
+        "quantity": "Cantidad"
+      },
+      "empty": {
+        "title": "No hay métricas de uso disponibles",
+        "description": "No hay métricas de uso registradas para el intervalo de fechas seleccionado."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Tipo de servicio",
+        "hours": "Horas"
+      },
+      "empty": {
+        "title": "No hay datos de horas disponibles",
+        "description": "No hay horas facturables registradas para el intervalo de fechas seleccionado."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "N.º de cotización",
+        "title": "Título",
+        "amount": "Importe",
+        "status": "Estado",
+        "date": "Fecha"
+      },
+      "draftQuote": "Cotización en borrador {{count}}",
+      "empty": "No se encontraron cotizaciones",
+      "errors": {
+        "loadFailed": "No se pudieron cargar las cotizaciones"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Línea de contrato de la bolsa de horas",
+      "usage": "Uso",
+      "hoursUsed": "{{hours}} horas utilizadas",
+      "hoursTotal": "{{hours}} horas en total",
+      "rolloverHours": "Incluye {{hours}} horas transferidas"
+    },
+    "bucketHistory": {
+      "title": "Historial de uso",
+      "trendStable": "Estable",
+      "current": "Actual",
+      "avgUsage": "Uso prom.",
+      "peak": "Máximo",
+      "periods": "Períodos"
+    },
+    "invoicePreview": {
+      "loadFailed": "No se pudo cargar la factura",
+      "unavailable": "No se puede mostrar la vista previa de la factura."
+    },
+    "payment": {
+      "redirecting": "Redirigiendo al pago..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Inicio desconocido",
+      "unknownEnd": "Fin desconocido",
+      "verifying": {
+        "title": "Verificando el pago",
+        "description": "Espere mientras confirmamos su pago..."
+      },
+      "success": {
+        "title": "¡Pago realizado correctamente!",
+        "thankYou": "Gracias por su pago.",
+        "amountPaid": "Importe pagado: {{amount}}.",
+        "confirmationEmail": "Se enviará un correo electrónico de confirmación a su dirección de correo electrónico registrada.",
+        "thankYouForInvoice": "Gracias por su pago de la factura n.º {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Resumen del período de servicio",
+        "description": "Este resumen se basa en los períodos de detalle recurrentes de la factura, no solo en las fechas de facturación del encabezado de la factura."
+      },
+      "pending": {
+        "title": "Pago en proceso",
+        "description": "Su pago se está procesando. Esto puede tardar unos instantes. Recibirá un correo electrónico de confirmación cuando se complete el pago."
+      },
+      "failed": {
+        "title": "Error en la verificación del pago",
+        "description": "No pudimos confirmar su pago. Póngase en contacto con el equipo de soporte."
+      },
+      "errors": {
+        "verificationFailed": "Error en la verificación del pago",
+        "verifyFailed": "No se pudo verificar el pago",
+        "unexpected": "Ocurrió un error al verificar su pago"
+      },
+      "actions": {
+        "backToBilling": "Volver a facturación",
+        "viewInvoice": "Ver factura"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "status": "Estado",
+      "location": "Ubicación",
+      "lastUpdated": "Última actualización"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Detalles del activo"
   }
 }

@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "Loaded defaults for {{count}} entity types",
     "suggestedDefaultsLoadFailed": "Failed to load suggested defaults",
     "entityTypesAllConfigured": "All entity types already have default folders configured",
-    "defaultFoldersLoadFailed": "Failed to load default folders"
+    "defaultFoldersLoadFailed": "Failed to load default folders",
+    "parseContentFailed": "Failed to parse document content"
   },
   "validation": {
-    "nameRequired": "Document name is required"
+    "nameRequired": "Document name is required",
+    "typeRequired": "Document type is required",
+    "userIdRequired": "User ID is required",
+    "orderNumberRequired": "Order number is required",
+    "contentRequired": "Content is required"
   },
   "bulkActions": {
     "selected_one": "{{count}} document selected",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "Would you also like to make all {{count}} document(s) in \"{{name}}\" visible to the client portal?",
     "cascadeMakeHidden": "Would you also like to hide all {{count}} document(s) in \"{{name}}\" from the client portal?",
     "cascadeYes": "Yes, update documents",
-    "cascadeNo": "No, folder only"
+    "cascadeNo": "No, folder only",
+    "visibleToClients": "Visible to clients",
+    "hiddenFromClients": "Hidden from clients"
   },
   "empty": {
     "default": "No documents found"
@@ -283,5 +290,71 @@
     "pageOf": "Page {{current}} of {{total}}",
     "previous": "Previous"
   },
-  "ticketDocuments": "Ticket Documents"
+  "ticketDocuments": "Ticket Documents",
+  "actions": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel"
+  },
+  "card": {
+    "noDate": "No date",
+    "reflectionLabel": "Document Card"
+  },
+  "editor": {
+    "loading": "Loading...",
+    "initializing": "Initializing editor...",
+    "placeholder": "Start writing...",
+    "errorPrefix": "Error: {{message}}",
+    "status": {
+      "offline": "Offline — changes will sync when reconnected",
+      "allChangesSaved": "All changes saved",
+      "syncing": "{{status}} (syncing)"
+    },
+    "connection": {
+      "connected": "Connected",
+      "connecting": "Connecting",
+      "disconnected": "Disconnected"
+    },
+    "presence": {
+      "unknownUser": "User"
+    },
+    "toolbar": {
+      "bold": "Bold (Ctrl+B)",
+      "italic": "Italic (Ctrl+I)",
+      "underline": "Underline (Ctrl+U)",
+      "strikethrough": "Strikethrough",
+      "code": "Code",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "bulletList": "Bullet List",
+      "orderedList": "Ordered List",
+      "quote": "Quote",
+      "link": "Link",
+      "linkPrompt": "URL"
+    }
+  },
+  "form": {
+    "errorsHeading": "Please fix the following errors:",
+    "submit": "Create Document",
+    "fields": {
+      "documentName": "Document Name *",
+      "documentType": "Document Type *",
+      "userId": "User ID *",
+      "contactNameId": "Contact Name ID",
+      "clientId": "Client ID",
+      "ticketId": "Ticket ID",
+      "orderNumber": "Order Number *",
+      "content": "Content *"
+    }
+  },
+  "previewPane": {
+    "loading": "Loading preview...",
+    "pdfDocument": "PDF Document",
+    "videoFile": "Video File",
+    "notAvailable": "Preview not available",
+    "altPdf": "Preview of {{name}}",
+    "altVideoThumbnail": "Thumbnail of {{name}}",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages"
+  }
 }
