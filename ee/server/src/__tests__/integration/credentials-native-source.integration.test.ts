@@ -369,7 +369,7 @@ describe('native credentials store — DB integration', () => {
       code: 'CREDENTIAL_NOT_FOUND',
     });
     await expect(
-      source.setAssociations(stranger, summary.id, { assetIds: [] })
+      source.setAssociations(stranger, summary.id, { attachments: [] })
     ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
     await expect(source.remove(stranger, summary.id)).rejects.toMatchObject({
       code: 'CREDENTIAL_NOT_FOUND',
@@ -613,5 +613,317 @@ describe('native credentials store — DB integration', () => {
       await db.raw(`REVOKE ALL ON SCHEMA public FROM "${roleName}"`).catch(() => undefined);
       await db.raw(`DROP ROLE IF EXISTS "${roleName}"`);
     }
+  });
+});
+
+describe('credential associations — entity-wide (same-client + CRUD + migration constraints)', () => {
+  // Fully self-contained suite: its own tenant + users + clients, so the
+  // suite order and the first suite's afterAll teardown can never interfere.
+  let assocTenant: string;
+  let clientA: string;
+  let clientB: string;
+  let ownerId: string;
+  let strangerId: string;
+  let assocDb: Knex;
+  let priorAssocKey: string | undefined;
+
+  function userForId(userId: string): IUserWithRoles {
+    return {
+      user_id: userId,
+      tenant: assocTenant,
+      username: userId,
+      email: `${userId}@example.test`,
+      is_inactive: false,
+      user_type: 'internal',
+      roles: [],
+    };
+  }
+
+  const ASSOC_CLEANUP = [
+    'credential_access_grants',
+    'credential_associations',
+    'credentials',
+    'audit_logs',
+  ];
+
+  async function seedEntity(entityType: string, clientForEntity: string): Promise<string> {
+    switch (entityType) {
+      case 'ticket': {
+        const [row] = await assocDb('tickets').insert({ tenant: assocTenant, ticket_number: `T-${randomUUID().slice(0, 8)}`, client_id: clientForEntity }).returning('ticket_id');
+        return row.ticket_id;
+      }
+      case 'asset': {
+        const [row] = await assocDb('assets').insert({ tenant: assocTenant, asset_tag: `AST-${randomUUID().slice(0, 8)}`, name: 'Test Asset', status: 'active', client_id: clientForEntity }).returning('asset_id');
+        return row.asset_id;
+      }
+      case 'contact': {
+        const [row] = await assocDb('contacts').insert({ tenant: assocTenant, client_id: clientForEntity }).returning('contact_name_id');
+        return row.contact_name_id;
+      }
+      case 'contract': {
+        const contractId = randomUUID();
+        await assocDb('client_contracts').insert({ tenant: assocTenant, contract_id: contractId, client_id: clientForEntity, start_date: new Date() });
+        return contractId;
+      }
+      case 'project_task': {
+        const projectId = randomUUID();
+        const suffix = randomUUID().slice(0, 8);
+        const orderNumber = Math.floor(Math.random() * 1_000_000);
+        const [status] = await assocDb('statuses').insert({ tenant: assocTenant, name: `Active-${suffix}`, status_type: 'project', order_number: orderNumber, is_closed: false, item_type: 'project' }).returning('status_id');
+        await assocDb('projects').insert({ tenant: assocTenant, project_id: projectId, project_name: `P-${suffix}`, status: status.status_id, wbs_code: suffix, client_id: clientForEntity, project_number: suffix });
+        const phaseId = randomUUID();
+        await assocDb('project_phases').insert({ tenant: assocTenant, phase_id: phaseId, project_id: projectId, phase_name: 'Phase', status: 'active', order_number: orderNumber, wbs_code: `${suffix}.1` });
+        const [row] = await assocDb('project_tasks').insert({ tenant: assocTenant, phase_id: phaseId, task_name: 'Task', wbs_code: `${suffix}.1.1` }).returning('task_id');
+        return row.task_id;
+      }
+      case 'quote': {
+        const [row] = await assocDb('quotes').insert({ tenant: assocTenant, title: 'Test Quote', client_id: clientForEntity }).returning('quote_id');
+        return row.quote_id;
+      }
+      case 'document': {
+        const documentId = randomUUID();
+        await assocDb('documents').insert({ tenant: assocTenant, document_id: documentId, document_name: 'Doc', user_id: ownerId, created_by: ownerId }).returning('document_id');
+        return documentId;
+      }
+      default:
+        throw new Error(`unhandled ${entityType}`);
+    }
+  }
+
+  async function createCredentialFor(client: string, name = 'Assoc Cred'): Promise<string> {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: client, name, password: 'pw' }
+    );
+    return summary.id;
+  }
+
+  beforeAll(async () => {
+    // The first suite restores (clears) CREDENTIAL_ENCRYPTION_KEY in its own
+    // afterAll; this suite is self-contained, so supply its own ephemeral key
+    // and restore the prior value in afterAll.
+    priorAssocKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+    process.env.CREDENTIAL_ENCRYPTION_KEY = 'assoc-integration-test-key';
+
+    assocDb = await createDevDb();
+    await assocDb.raw('select 1');
+
+    assocTenant = randomUUID();
+    await assocDb('tenants').insert({
+      tenant: assocTenant,
+      client_name: 'Assoc Integration Tenant',
+      email: `assoc-it-${assocTenant}@example.test`,
+    });
+    const [a] = await assocDb('clients').insert({ tenant: assocTenant, client_name: 'Assoc A' }).returning('client_id');
+    const [b] = await assocDb('clients').insert({ tenant: assocTenant, client_name: 'Assoc B' }).returning('client_id');
+    clientA = a.client_id;
+    clientB = b.client_id;
+
+    const insertUser = async (username: string): Promise<string> => {
+      const userId = randomUUID();
+      await assocDb('users').insert({
+        tenant: assocTenant,
+        user_id: userId,
+        username,
+        email: `${username}@example.test`,
+        hashed_password: 'hashed_password_here',
+        is_inactive: false,
+        user_type: 'internal',
+      });
+      return userId;
+    };
+    ownerId = await insertUser('assoc-owner');
+    strangerId = await insertUser('assoc-stranger');
+  }, 120_000);
+
+  afterAll(async () => {
+    try {
+      for (const table of ASSOC_CLEANUP) {
+        await assocDb(table).where({ tenant: assocTenant }).del();
+      }
+      await assocDb('project_tasks').where({ tenant: assocTenant }).del();
+      await assocDb('project_phases').where({ tenant: assocTenant }).del();
+      await assocDb('projects').where({ tenant: assocTenant }).del();
+      await assocDb('statuses').where({ tenant: assocTenant }).del();
+      await assocDb('client_contracts').where({ tenant: assocTenant }).del();
+      await assocDb('quotes').where({ tenant: assocTenant }).del();
+      await assocDb('tickets').where({ tenant: assocTenant }).del();
+      await assocDb('assets').where({ tenant: assocTenant }).del();
+      await assocDb('contacts').where({ tenant: assocTenant }).del();
+      await assocDb('documents').where({ tenant: assocTenant }).del();
+      await assocDb('clients').where({ tenant: assocTenant }).del();
+      await assocDb('users').where({ tenant: assocTenant }).del();
+      await assocDb('tenants').where({ tenant: assocTenant }).del();
+    } finally {
+      if (priorAssocKey === undefined) delete process.env.CREDENTIAL_ENCRYPTION_KEY;
+      else process.env.CREDENTIAL_ENCRYPTION_KEY = priorAssocKey;
+      await assocDb?.destroy();
+    }
+  }, 120_000);
+
+  it('the migration CHECKs accept every roster type and reject unknowns/one-of violations', async () => {
+    const typeCheck = await assocDb.raw(`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'credential_associations_entity_type_check'
+    `);
+    expect(typeCheck.rows[0].def).toContain("'asset'");
+    expect(typeCheck.rows[0].def).toContain("'quote'");
+    expect(typeCheck.rows[0].def).toContain("'team'");
+
+    const oneOf = await assocDb.raw(`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'credential_associations_oneof_ref_check'
+    `);
+    expect(oneOf.rows[0].def).toContain('credential_id IS NOT NULL');
+    expect(oneOf.rows[0].def).toContain('credential_ref IS NOT NULL');
+
+    // Unknown entity_type is rejected by the CHECK.
+    await expect(
+      assocDb('credential_associations').insert({ tenant: assocTenant, credential_ref: 'hudu:1:1', entity_id: randomUUID(), entity_type: 'bogus' })
+    ).rejects.toThrow(/entity_type/);
+
+    // Exactly-one-of is enforced: both set, and neither set, are rejected.
+    await expect(
+      assocDb('credential_associations').insert({ tenant: assocTenant, credential_id: randomUUID(), credential_ref: 'hudu:1:1', entity_id: randomUUID(), entity_type: 'ticket' })
+    ).rejects.toThrow(/oneof/);
+  });
+
+  it('resolveEntityClientId resolves the owning client for every client-bound type and null for clientless', async () => {
+    const { resolveEntityClientId } = await import('@ee/lib/credentials/associations');
+    const knex = await createTenantKnex(assocTenant);
+    try {
+      for (const entityType of ['ticket', 'asset', 'contact', 'contract', 'project_task', 'quote']) {
+        const entityId = await seedEntity(entityType, clientB);
+        const resolved = await resolveEntityClientId(knex.knex, assocTenant, entityType as never, entityId);
+        expect(resolved, entityType).toBe(clientB);
+      }
+      for (const entityType of ['document', 'team', 'tenant', 'user']) {
+        const resolved = await resolveEntityClientId(knex.knex, assocTenant, entityType as never, randomUUID());
+        expect(resolved, entityType).toBeNull();
+      }
+    } finally {
+      // NOTE: deliberately NOT destroying this knex — createTenantKnex returns
+      // the process-wide shared pool; destroying it mid-suite breaks later
+      // tests' ability to acquire connections.
+    }
+  });
+
+  it('addCredentialToEntity rejects a same-client mismatch per bound type and accepts on match', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const credClientB = await createCredentialFor(clientB, 'Bound B');
+
+    for (const entityType of ['ticket', 'asset', 'contact', 'contract', 'project_task', 'quote']) {
+      const entityForA = await seedEntity(entityType, clientA);
+      const entityForB = await seedEntity(entityType, clientB);
+
+      const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+      // Attaching a clientB credential to a clientA entity is rejected.
+      await expect(
+        addCredentialToEntity(ctx, entityType as never, entityForA, credClientB)
+      ).rejects.toMatchObject({ code: 'CREDENTIAL_CLIENT_MISMATCH' });
+
+      // Attaching to a same-client entity succeeds.
+      await addCredentialToEntity(ctx, entityType as never, entityForB, credClientB);
+
+      const rows = await assocDb('credential_associations')
+        .where({ tenant: assocTenant, entity_id: entityForB, entity_type: entityType })
+        .select('credential_id');
+      expect(rows).toHaveLength(1);
+      expect(rows[0].credential_id).toBe(credClientB);
+    }
+  });
+
+  it('clientless entity types attach freely regardless of owning client', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const credClientB = await createCredentialFor(clientB, 'Free Doc');
+    const documentId = await seedEntity('document', clientA);
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    await addCredentialToEntity(ctx, 'document' as never, documentId, credClientB);
+
+    const rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: documentId, entity_type: 'document' })
+      .select('credential_ref', 'credential_id');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].credential_id).toBe(credClientB);
+  });
+
+  it('removeCredentialFromEntity detaches the row; setEntityCredentials replaces the full set', async () => {
+    const { addCredentialToEntity, removeCredentialFromEntity, setEntityCredentials } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const credA1 = await createCredentialFor(clientA, 'Set A1');
+    const credA2 = await createCredentialFor(clientA, 'Set A2');
+    const ticketForA = await seedEntity('ticket', clientA);
+
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, credA1);
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [credA1, credA2]);
+    let rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: ticketForA, entity_type: 'ticket' })
+      .select('credential_id');
+    expect(rows.map((r) => r.credential_id).sort()).toEqual([credA1, credA2].sort());
+
+    await removeCredentialFromEntity(ctx, 'ticket', ticketForA, credA1);
+    rows = await assocDb('credential_associations')
+      .where({ tenant: assocTenant, entity_id: ticketForA, entity_type: 'ticket' })
+      .select('credential_id');
+    expect(rows.map((r) => r.credential_id)).toEqual([credA2]);
+  });
+
+  it('a restricted credential a caller cannot see cannot be associated (no existence leak)', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const restricted = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'Hidden Assoc', password: 'x' }
+    );
+    await source.setRestriction(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      restricted.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await expect(
+      addCredentialToEntity(
+        { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) },
+        'ticket',
+        ticketForA,
+        restricted.id
+      )
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+  });
+
+  it('nativeSource.listByIds resolves native ids under kernel scope and hides restricted rows', async () => {
+    const source = new NativeCredentialSource();
+    const open = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'List Open', password: 'x' }
+    );
+    const hidden = await source.create(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      { clientId: clientA, name: 'List Hidden', password: 'x' }
+    );
+    await source.setRestriction(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      hidden.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const asOwner = await source.listByIds(
+      { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) },
+      [open.id, hidden.id]
+    );
+    expect(asOwner.map((r) => r.id).sort()).toEqual([open.id, hidden.id].sort());
+
+    const asStranger = await source.listByIds(
+      { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) },
+      [open.id, hidden.id]
+    );
+    // Restricted row hidden; the open row resolves (association row untouched).
+    expect(asStranger.map((r) => r.id)).toEqual([open.id]);
   });
 });

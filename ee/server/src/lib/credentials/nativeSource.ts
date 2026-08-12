@@ -13,6 +13,7 @@ import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type {
+  CredentialAttachment,
   CredentialDetail,
   CredentialGrant,
   CredentialListFilter,
@@ -46,7 +47,11 @@ function iso(value: Date | string | null | undefined): string | null {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 
-function toSummary(row: CredentialRowProjection, clientName: string | null, assetIds: string[]): CredentialSummary {
+function toSummary(
+  row: CredentialRowProjection,
+  clientName: string | null,
+  attachments: CredentialAttachment[]
+): CredentialSummary {
   return {
     id: row.credential_id,
     source: 'alga',
@@ -60,7 +65,7 @@ function toSummary(row: CredentialRowProjection, clientName: string | null, asse
     isRestricted: row.is_restricted === true,
     folderName: null,
     externalUrl: null,
-    attachedAssetIds: assetIds,
+    attachments,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   };
@@ -100,18 +105,17 @@ async function loadAssociations(
   trx: Knex | Knex.Transaction,
   tenant: string,
   credentialIds: string[]
-): Promise<Map<string, string[]>> {
+): Promise<Map<string, CredentialAttachment[]>> {
   const unique = Array.from(new Set(credentialIds));
-  const map = new Map<string, string[]>();
+  const map = new Map<string, CredentialAttachment[]>();
   if (unique.length === 0) return map;
   const rows = await tenantDb(trx, tenant)
-    .table<{ credential_id: string; entity_id: string }>('credential_associations')
+    .table<{ credential_id: string; entity_id: string; entity_type: string }>('credential_associations')
     .whereIn('credential_id', unique)
-    .where('entity_type', 'asset')
-    .select('credential_id', 'entity_id');
+    .select('credential_id', 'entity_id', 'entity_type');
   for (const row of rows) {
     const list = map.get(row.credential_id) ?? [];
-    list.push(row.entity_id);
+    list.push({ entityType: row.entity_type as CredentialAttachment['entityType'], entityId: row.entity_id });
     map.set(row.credential_id, list);
   }
   return map;
@@ -179,15 +183,15 @@ function applyListFilters(
   if (filter.clientId) {
     builder.andWhere('cr.client_id', filter.clientId);
   }
-  if (filter.assetId) {
-    builder.andWhere(function assetScope(this: Knex.QueryBuilder) {
-      this.whereExists(function existsAsset(this: Knex.QueryBuilder) {
+  if (filter.entityType && filter.entityId) {
+    builder.andWhere(function entityScope(this: Knex.QueryBuilder) {
+      this.whereExists(function existsEntity(this: Knex.QueryBuilder) {
         this.select(1)
           .from('credential_associations as ca')
           .whereRaw('ca.tenant = cr.tenant')
           .whereRaw('ca.credential_id = cr.credential_id')
-          .where('ca.entity_type', 'asset')
-          .where('ca.entity_id', filter.assetId);
+          .where('ca.entity_type', filter.entityType)
+          .where('ca.entity_id', filter.entityId);
       });
     });
   }
@@ -253,6 +257,71 @@ export class NativeCredentialSource implements CredentialSource {
     return rows.map((row) =>
       toSummary(row, clientNames.get(row.client_id) ?? null, associations.get(row.credential_id) ?? [])
     );
+  }
+
+  /**
+   * Authorized batch fetch by ids, preserving input order. Used by the
+   * association-driven entity lists: restricted rows the caller cannot see
+   * are omitted (the association row stays; it is only a read-time hiding).
+   */
+  async listByIds(ctx: CredentialSourceContext, ids: string[]): Promise<CredentialSummary[]> {
+    const unique = Array.from(new Set(ids));
+    if (unique.length === 0) return [];
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const rows = await withTransaction(knex, async (trx) => {
+      const authContext = await createCredentialAuthorizationContext(trx, ctx.tenant, ctx.user);
+      const query = tenantDb(trx, ctx.tenant).scoped('credentials as cr');
+      query.builder.whereIn('cr.credential_id', unique);
+      const scope = compileCredentialReadScopeSql(query, authContext);
+      if (!scope.supported) {
+        const allRows = await query.builder
+          .clone()
+          .select<CredentialRowProjection[]>('cr.*')
+          .whereIn('cr.credential_id', unique);
+        return authorizeRows(trx, ctx.tenant, ctx.user, allRows);
+      }
+      return query.builder.select<CredentialRowProjection[]>('cr.*').whereIn('cr.credential_id', unique);
+    });
+    if (rows.length === 0) return [];
+    const clientNames = await loadClientNames(
+      knex,
+      ctx.tenant,
+      rows.map((row) => row.client_id)
+    );
+    const associations = await loadAssociations(
+      knex,
+      ctx.tenant,
+      rows.map((row) => row.credential_id)
+    );
+    const byId = new Map(rows.map((row) => [row.credential_id, row]));
+    return unique.flatMap((id) => {
+      const row = byId.get(id);
+      return row
+        ? [toSummary(row, clientNames.get(row.client_id) ?? null, associations.get(row.credential_id) ?? [])]
+        : [];
+    });
+  }
+
+  /**
+   * Owning client for a native credential, exposed only to callers the kernel
+   * authorizes. Returns null (never throws) when the row is absent OR the
+   * caller cannot see it — indistinguishable to avoid an existence leak — so
+   * association writes fail closed as not-found.
+   */
+  async resolveOwnerClientId(ctx: CredentialSourceContext, id: string): Promise<string | null> {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    return withTransaction(knex, async (trx) => {
+      const row = await fetchCredentialById(trx, ctx.tenant, id);
+      if (!row) return null;
+      const grants = await fetchGrantsForCredential(trx, ctx.tenant, id);
+      const allowed = await authorizeCredentialRecord(
+        trx,
+        await createCredentialAuthorizationContext(trx, ctx.tenant, ctx.user),
+        row,
+        grants
+      );
+      return allowed ? row.client_id : null;
+    });
   }
 
   /** Metadata + grants for one native credential (RBAC checked by the action). */
@@ -367,8 +436,8 @@ export class NativeCredentialSource implements CredentialSource {
         })
         .returning('*');
 
-      if (input.assetIds?.length) {
-        await associateCredentialWithAssets(trx, ctx.tenant, row.credential_id, input.assetIds);
+      if (input.attachments?.length) {
+        await associateCredentialWithEntities(trx, ctx.tenant, row.credential_id, input.attachments);
       }
 
       await writeCredentialAudit(trx, ctx.tenant, 'credential_created', {
@@ -377,7 +446,7 @@ export class NativeCredentialSource implements CredentialSource {
         clientId: input.clientId,
       });
 
-      return toSummary(row, null, input.assetIds ?? []);
+      return toSummary(row, null, input.attachments ?? []);
     });
   }
 
@@ -510,61 +579,66 @@ export class NativeCredentialSource implements CredentialSource {
     });
   }
 
-  /** Replace the asset-attachment set. Persists an audit row. */
+  /** Replace the full attachment set for a native credential. Persists an audit row. */
   async setAssociations(
     ctx: CredentialSourceContext,
     id: string,
-    input: { assetIds: string[] }
+    input: { attachments: CredentialAttachment[] }
   ): Promise<CredentialSummary> {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
       if (!existing) notFound();
       if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
-      const assetIds = Array.from(new Set(input.assetIds ?? []));
+      const attachments = Array.from(
+        new Map(input.attachments.map((a) => [`${a.entityType}:${a.entityId}`, a])).values()
+      );
       await tenantDb(trx, ctx.tenant)
         .table('credential_associations')
         .where('credential_id', id)
-        .where('entity_type', 'asset')
         .del();
-      if (assetIds.length > 0) {
-        await associateCredentialWithAssets(trx, ctx.tenant, id, assetIds);
+      if (attachments.length > 0) {
+        await associateCredentialWithEntities(trx, ctx.tenant, id, attachments);
       }
       await writeCredentialAudit(trx, ctx.tenant, 'credential_updated', {
         userId: ctx.userId,
         credentialId: id,
         clientId: existing.client_id,
       });
-      return toSummary(existing, null, assetIds);
+      return toSummary(existing, null, attachments);
     });
   }
 }
 
-async function associateCredentialWithAssets(
+async function associateCredentialWithEntities(
   trx: Knex.Transaction,
   tenant: string,
   credentialId: string,
-  assetIds: string[]
+  attachments: CredentialAttachment[]
 ): Promise<void> {
-  const unique = Array.from(new Set(assetIds));
+  const unique = Array.from(
+    new Map(attachments.map((a) => [`${a.entityType}:${a.entityId}`, a])).values()
+  );
   if (unique.length === 0) return;
   const existing = await tenantDb(trx, tenant)
-    .table<{ entity_id: string }>('credential_associations')
+    .table<{ entity_id: string; entity_type: string }>('credential_associations')
     .where('credential_id', credentialId)
-    .where('entity_type', 'asset')
-    .whereIn('entity_id', unique)
-    .select('entity_id');
-  const existingIds = new Set(existing.map((row) => row.entity_id));
-  const toInsert = unique.filter((assetId) => !existingIds.has(assetId));
+    .whereIn(
+      'entity_type',
+      Array.from(new Set(unique.map((a) => a.entityType)))
+    )
+    .select('entity_id', 'entity_type');
+  const existingKeys = new Set(existing.map((row) => `${row.entity_type}:${row.entity_id}`));
+  const toInsert = unique.filter((a) => !existingKeys.has(`${a.entityType}:${a.entityId}`));
   if (toInsert.length > 0) {
     await tenantDb(trx, tenant)
       .table('credential_associations')
       .insert(
-        toInsert.map((assetId) => ({
+        toInsert.map((a) => ({
           tenant,
           credential_id: credentialId,
-          entity_id: assetId,
-          entity_type: 'asset',
+          entity_id: a.entityId,
+          entity_type: a.entityType,
         }))
       );
   }

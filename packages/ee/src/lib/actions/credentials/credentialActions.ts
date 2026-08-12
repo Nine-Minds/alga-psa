@@ -30,4 +30,6 @@ export async function deleteCredential(..._args: unknown[]): Promise<never> { re
 export async function revealCredential(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function revealCredentialOtpSeed(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function setCredentialRestriction(..._args: unknown[]): Promise<never> { return unavailable(); }
-export async function setCredentialAssociations(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function addCredentialToEntity(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function removeCredentialFromEntity(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function setEntityCredentials(..._args: unknown[]): Promise<never> { return unavailable(); }

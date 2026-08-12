@@ -13,9 +13,16 @@ const {
   TierAccessErrorMock,
   auditLogMock,
   nativeListMock,
+  nativeListByIdsMock,
+  nativeResolveOwnerClientIdMock,
   huduListMock,
+  huduResolveByIdsMock,
+  huduResolveOwnerClientIdMock,
   getHuduIntegrationMock,
   getHuduCompanyMappingRowsMock,
+  loadAssociationsForEntityMock,
+  pruneAssociationRefsMock,
+  resolveEntityClientIdMock,
 } = vi.hoisted(() => {
   class TierAccessErrorMock extends Error {
     readonly statusCode = 403;
@@ -27,14 +34,25 @@ const {
     TierAccessErrorMock,
     auditLogMock: vi.fn(),
     nativeListMock: vi.fn(async () => []),
+    nativeListByIdsMock: vi.fn(async () => []),
+    nativeResolveOwnerClientIdMock: vi.fn(async () => null),
     huduListMock: vi.fn(async () => []),
+    huduResolveByIdsMock: vi.fn(async () => []),
+    huduResolveOwnerClientIdMock: vi.fn(async () => null),
     getHuduIntegrationMock: vi.fn(async () => null),
     getHuduCompanyMappingRowsMock: vi.fn(async () => []),
+    loadAssociationsForEntityMock: vi.fn(async () => []),
+    pruneAssociationRefsMock: vi.fn(async () => undefined),
+    resolveEntityClientIdMock: vi.fn(async () => null),
   };
 });
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -70,12 +88,29 @@ vi.mock('@ee/lib/integrations/hudu/companyMapping', () => ({
 }));
 
 vi.mock('@ee/lib/credentials/nativeSource', () => ({
-  nativeCredentialSource: { list: nativeListMock },
+  nativeCredentialSource: {
+    list: nativeListMock,
+    listByIds: nativeListByIdsMock,
+    resolveOwnerClientId: nativeResolveOwnerClientIdMock,
+  },
 }));
 
 vi.mock('@ee/lib/credentials/huduSource', () => ({
-  huduCredentialSource: { list: huduListMock },
+  huduCredentialSource: {
+    list: huduListMock,
+    resolveByIds: huduResolveByIdsMock,
+    resolveOwnerClientId: huduResolveOwnerClientIdMock,
+  },
   isHuduCredentialId: (id: string) => id.startsWith('hudu:'),
+}));
+
+vi.mock('@ee/lib/credentials/associations', () => ({
+  loadAssociationsForEntity: loadAssociationsForEntityMock,
+  pruneAssociationRefs: pruneAssociationRefsMock,
+  resolveEntityClientId: resolveEntityClientIdMock,
+  addCredentialToEntity: vi.fn(),
+  removeCredentialFromEntity: vi.fn(),
+  setEntityCredentials: vi.fn(),
 }));
 
 const internalUser = {
@@ -99,10 +134,24 @@ beforeEach(() => {
   auditLogMock.mockResolvedValue(undefined);
   nativeListMock.mockReset();
   huduListMock.mockReset();
+  nativeListByIdsMock.mockReset();
+  nativeResolveOwnerClientIdMock.mockReset();
+  huduResolveByIdsMock.mockReset();
+  huduResolveOwnerClientIdMock.mockReset();
+  loadAssociationsForEntityMock.mockReset();
+  pruneAssociationRefsMock.mockReset();
+  resolveEntityClientIdMock.mockReset();
   getHuduIntegrationMock.mockReset();
   getHuduCompanyMappingRowsMock.mockReset();
   nativeListMock.mockResolvedValue([]);
   huduListMock.mockResolvedValue([]);
+  nativeListByIdsMock.mockResolvedValue([]);
+  nativeResolveOwnerClientIdMock.mockResolvedValue(null);
+  huduResolveByIdsMock.mockResolvedValue([]);
+  huduResolveOwnerClientIdMock.mockResolvedValue(null);
+  loadAssociationsForEntityMock.mockResolvedValue([]);
+  pruneAssociationRefsMock.mockResolvedValue(undefined);
+  resolveEntityClientIdMock.mockResolvedValue(null);
   getHuduIntegrationMock.mockResolvedValue(null);
   getHuduCompanyMappingRowsMock.mockResolvedValue([]);
 });
@@ -241,31 +290,110 @@ describe('credentials actions — tenant-wide aggregation', () => {
     // Client-scoped list does not enumerate mappings.
     expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
   });
+});
 
-  it('keeps an assetId-scoped list native-only even when Hudu is connected+mapped', async () => {
-    // Asset credentials section calls listCredentials({ assetId }) with no
-    // clientId; this must NOT fan out to mapped Hudu companies (v1 Hudu rows
-    // have no asset-attachment linkage), so only the native rows come back.
-    nativeListMock.mockResolvedValue([
-      { id: 'asset-native-1', source: 'alga', clientId: 'c1', attachedAssetIds: ['asset-1'] },
+describe('credentials actions — entity-scoped lists are association-driven (both sources)', () => {
+  const nativeRow = (id: string) => ({ id, source: 'alga', clientId: 'c1', attachments: [] });
+  const huduRow = (id: string) => ({ id, source: 'hudu', clientId: 'c1', attachments: [] });
+
+  it('merges native ids and LIVE Hudu refs from the association rows (asset section)', async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: 'native-1', credential_ref: null, entity_id: 'asset-1', entity_type: 'asset' },
+      { credential_id: null, credential_ref: 'hudu:101:1', entity_id: 'asset-1', entity_type: 'asset' },
     ]);
+    nativeListByIdsMock.mockResolvedValue([nativeRow('native-1')]);
+    huduResolveByIdsMock.mockResolvedValue([{ ref: 'hudu:101:1', summary: huduRow('hudu:101:1'), prune: false }]);
     getHuduIntegrationMock.mockResolvedValue({ is_active: true });
-    getHuduCompanyMappingRowsMock.mockResolvedValue([
-      { alga_entity_id: 'c1', client_name: 'Acme' },
-      { alga_entity_id: 'c2', client_name: 'Globex' },
-    ]);
-    huduListMock.mockResolvedValue([{ id: 'hudu:101:1', source: 'hudu', clientId: 'c1' }]);
 
     const { listCredentials } = await importActions();
-    const rows = await listCredentials({ assetId: 'asset-1' });
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1' });
 
     const ids = rows.map((row: { id: string }) => row.id).sort();
-    expect(ids).toEqual(['asset-native-1']);
-    // No Hudu mapping enumeration or per-client Hudu traffic for an
-    // asset-scoped list.
-    expect(getHuduIntegrationMock).not.toHaveBeenCalled();
+    expect(ids).toEqual(['hudu:101:1', 'native-1']);
+    // Native short-circuit is GONE: the association rows drive both sources,
+    // and no tenant-wide Hudu mapping fan-out happens.
+    expect(loadAssociationsForEntityMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'asset', 'asset-1');
+    expect(nativeListByIdsMock).toHaveBeenCalledWith(expect.anything(), ['native-1']);
+    expect(huduResolveByIdsMock).toHaveBeenCalledWith(expect.anything(), ['hudu:101:1']);
     expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
-    expect(huduListMock).not.toHaveBeenCalled();
+    expect(pruneAssociationRefsMock).not.toHaveBeenCalled();
+  });
+
+  it('omits a ref Hudu CONFIRMED gone (404) and lazily prunes its association row', async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: 'native-1', credential_ref: null, entity_id: 'asset-1', entity_type: 'asset' },
+      { credential_id: null, credential_ref: 'hudu:404:9', entity_id: 'asset-1', entity_type: 'asset' },
+    ]);
+    nativeListByIdsMock.mockResolvedValue([nativeRow('native-1')]);
+    huduResolveByIdsMock.mockResolvedValue([{ ref: 'hudu:404:9', summary: null, prune: true }]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1' });
+
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['native-1']);
+    expect(pruneAssociationRefsMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'asset', 'asset-1', ['hudu:404:9']);
+  });
+
+  it('omits a ref on TRANSPORT error but NEVER prunes its association row', async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: null, credential_ref: 'hudu:101:1', entity_id: 'asset-1', entity_type: 'asset' },
+    ]);
+    huduResolveByIdsMock.mockResolvedValue([{ ref: 'hudu:101:1', summary: null, prune: false }]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1' });
+
+    expect(rows).toEqual([]);
+    expect(pruneAssociationRefsMock).not.toHaveBeenCalled();
+  });
+
+  it('omits Hudu refs without resolving when Hudu is not connected (never prunes)', async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: null, credential_ref: 'hudu:101:1', entity_id: 'asset-1', entity_type: 'asset' },
+    ]);
+    nativeListByIdsMock.mockResolvedValue([nativeRow('native-1')]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: false });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1' });
+
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['native-1']);
+    expect(huduResolveByIdsMock).not.toHaveBeenCalled();
+    expect(pruneAssociationRefsMock).not.toHaveBeenCalled();
+  });
+
+  it("['alga'] on an entity list omits Hudu refs for that response and never resolves/prunes them", async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: 'native-1', credential_ref: null, entity_id: 'asset-1', entity_type: 'asset' },
+      { credential_id: null, credential_ref: 'hudu:101:1', entity_id: 'asset-1', entity_type: 'asset' },
+    ]);
+    nativeListByIdsMock.mockResolvedValue([nativeRow('native-1')]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1', sources: ['alga'] });
+
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['native-1']);
+    expect(huduResolveByIdsMock).not.toHaveBeenCalled();
+    expect(pruneAssociationRefsMock).not.toHaveBeenCalled();
+  });
+
+  it("['hudu'] on an entity list returns resolved refs only and never calls the native source", async () => {
+    loadAssociationsForEntityMock.mockResolvedValue([
+      { credential_id: 'native-1', credential_ref: null, entity_id: 'asset-1', entity_type: 'asset' },
+      { credential_id: null, credential_ref: 'hudu:101:1', entity_id: 'asset-1', entity_type: 'asset' },
+    ]);
+    nativeListByIdsMock.mockResolvedValue([nativeRow('native-1')]);
+    huduResolveByIdsMock.mockResolvedValue([{ ref: 'hudu:101:1', summary: huduRow('hudu:101:1'), prune: false }]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1', sources: ['hudu'] });
+
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['hudu:101:1']);
+    expect(nativeListByIdsMock).not.toHaveBeenCalled();
   });
 });
 
@@ -386,22 +514,51 @@ describe('credentials actions — sources selection is authoritative', () => {
     expect(getHuduCompanyMappingRowsMock).toHaveBeenCalledTimes(2);
   });
 
-  it('assetId precedence: a hudu-only selection still returns native and never calls Hudu', async () => {
-    // The asset-scoped native-only short-circuit wins over `sources` — Hudu
-    // must never be called with an assetId filter, and the native rows are
-    // returned even when the caller selects hudu-only.
-    nativeListMock.mockResolvedValue([
-      { id: 'asset-native-1', source: 'alga', clientId: 'c1', attachedAssetIds: ['asset-1'] },
+  it('entity-scoped lists never trigger the tenant-wide Hudu mapping fan-out', async () => {
+    // An entity-scoped list is association-driven; the aggregation must not
+    // fall through to the per-mapped-client Hudu fan-out even when Hudu is
+    // connected+mapped (the pre-expansion short-circuit's original hazard).
+    loadAssociationsForEntityMock.mockResolvedValue([]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+    getHuduCompanyMappingRowsMock.mockResolvedValue([
+      { alga_entity_id: 'c1', client_name: 'Acme' },
+      { alga_entity_id: 'c2', client_name: 'Globex' },
     ]);
-    stubActiveHuduWithMappings();
+    huduListMock.mockResolvedValue([{ id: 'hudu:101:1', source: 'hudu', clientId: 'c1' }]);
 
     const { listCredentials } = await importActions();
-    const rows = await listCredentials({ assetId: 'asset-1', sources: ['hudu'] });
+    const rows = await listCredentials({ entityType: 'asset', entityId: 'asset-1' });
 
-    expect(rows.map((row: { id: string }) => row.id)).toEqual(['asset-native-1']);
-    expect(nativeListMock).toHaveBeenCalledTimes(1);
-    expect(huduListMock).not.toHaveBeenCalled();
-    expect(getHuduIntegrationMock).not.toHaveBeenCalled();
+    expect(rows).toEqual([]);
     expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
+    expect(huduListMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('credentials actions — entity association CRUD is gated and delegates', () => {
+  it('rejects addCredentialToEntity below Pro (assertTierAccess throws)', async () => {
+    assertTierAccessMock.mockRejectedValue(new TierAccessErrorMock());
+    const { addCredentialToEntity } = await importActions();
+
+    await expect(addCredentialToEntity('ticket', 'ticket-1', 'cred-1')).rejects.toBeInstanceOf(
+      TierAccessErrorMock
+    );
+  });
+
+  it('rejects removeCredentialFromEntity without credential:update permission', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    const { removeCredentialFromEntity } = await importActions();
+
+    await expect(
+      removeCredentialFromEntity('contact', 'contact-1', 'cred-1')
+    ).rejects.toThrow(/Forbidden/);
+  });
+
+  it('delegates setEntityCredentials to the association service after gating', async () => {
+    const { setEntityCredentials } = await importActions();
+
+    await setEntityCredentials('ticket', 'ticket-1', ['cred-1', 'cred-2']);
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'credential', 'update');
   });
 });

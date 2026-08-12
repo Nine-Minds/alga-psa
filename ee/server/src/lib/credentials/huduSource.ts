@@ -33,9 +33,9 @@ import type {
   HuduAssetPasswordWriteInput,
 } from '../integrations/hudu/contracts';
 import { resolveHuduCompanyIdForClient, resolveClientIdForHuduCompany } from '../integrations/hudu/companyMapping';
-import { toHuduAssetPasswordSummary, clearCachedHuduList } from '../integrations/hudu/referenceData';
+import { toHuduAssetPasswordSummary, clearCachedHuduList, buildHuduRecordUrl } from '../integrations/hudu/referenceData';
 import { writeHuduPasswordRevealAudit } from '../integrations/hudu/revealAudit';
-import { fetchCompanyList, toErrorMessage } from '../integrations/hudu/huduDataCore';
+import { fetchCompanyList, toErrorMessage, resolveCompanyUrl } from '../integrations/hudu/huduDataCore';
 import { writeCredentialAudit } from './audit';
 import {
   authorizeCredentialRecord,
@@ -77,7 +77,7 @@ function toSummary(record: HuduAssetPasswordSummary, clientId: string, externalU
     isRestricted: false,
     folderName: record.password_folder_name ?? null,
     externalUrl,
-    attachedAssetIds: [],
+    attachments: [],
     createdAt: record.created_at ?? null,
     updatedAt: record.updated_at ?? null,
   };
@@ -193,8 +193,10 @@ export class HuduCredentialSource implements CredentialSource {
       // mapped clients itself and calls list per client.
       return [];
     }
-    if (filter.assetId) {
-      // v1 Hudu writes are company-scoped; no asset-attachment linkage.
+    if (filter.entityType && filter.entityId) {
+      // Entity-scoped lists are association-driven and resolved by the action
+      // aggregation via resolveByIds; a source-level entity filter has no Hudu
+      // equivalent (Hudu rows have no entity linkage).
       return [];
     }
 
@@ -228,6 +230,110 @@ export class HuduCredentialSource implements CredentialSource {
       result.items.map((item) => toSummary(item, filter.clientId!, item.hudu_url ?? null)),
       filter.search
     );
+  }
+
+  /**
+   * Resolve a set of association refs live against Hudu, for the
+   * association-driven entity lists. Every ref is re-fetched (never served
+   * from the cached list) so entity views reflect the current Hudu record.
+   *
+   * Returned rows carry a `prune` flag meaning "Hudu CONFIRMED this record is
+   * gone" (a 404 on the password id). Only those rows may be lazily pruned
+   * from credential_associations. Everything else — transport/API errors,
+   * `no_password_access`, unmapped companies, bundle-scope exclusions — is
+   * omitted from the response but must NEVER prune (the association may simply
+   * be temporarily unresolvable or outside the caller's scope).
+   */
+  async resolveByIds(
+    ctx: CredentialSourceContext,
+    refs: string[]
+  ): Promise<Array<{ ref: string; summary: CredentialSummary | null; prune: boolean }>> {
+    const unique = Array.from(new Set(refs));
+    if (unique.length === 0) return [];
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const client = await createHuduClient(ctx.tenant);
+
+    // Deep-link base URLs per company (list-path parity: the record's own URL
+    // resolved against the instance, falling back to the company URL).
+    const companyIds = Array.from(
+      new Set(
+        unique.flatMap((ref) => {
+          try {
+            return [parseHuduCredentialId(ref).companyId];
+          } catch {
+            return [];
+          }
+        })
+      )
+    );
+    const companyUrlsByCompany = new Map<string, { baseUrl: string | null; companyUrl: string | null }>();
+    await Promise.all(
+      companyIds.map(async (companyId) => {
+        companyUrlsByCompany.set(companyId, await resolveCompanyUrl(knex, ctx.tenant, companyId));
+      })
+    );
+
+    return Promise.all(
+      unique.map(async (ref) => {
+        let companyId: string;
+        let passwordId: string;
+        try {
+          ({ companyId, passwordId } = parseHuduCredentialId(ref));
+        } catch {
+          // Malformed ref cannot exist in Hudu; do not prune (nothing was
+          // confirmed) — the row is simply un-resolvable for this response.
+          return { ref, summary: null, prune: false };
+        }
+
+        // Bundle scope + company mapping (fail-closed: unmapped OR excluded
+        // resolves to null; indistinguishable, and never a prune signal).
+        const clientId = await resolveHuduRecordClientId(knex, ctx, companyId, ref);
+        if (!clientId) {
+          return { ref, summary: null, prune: false };
+        }
+
+        let record: HuduAssetPassword;
+        try {
+          record = await client.getAssetPassword(Number(passwordId));
+        } catch (error) {
+          if (error instanceof HuduRequestError && error.hudu.kind === 'not_found') {
+            // Confirmed gone: omit AND signal the association row for pruning.
+            return { ref, summary: null, prune: true };
+          }
+          // Transport / permission / any other API error: omit, never prune.
+          return { ref, summary: null, prune: false };
+        }
+
+        if (String(record.company_id) !== companyId) {
+          // The numeric password id resolved to a DIFFERENT company than the
+          // ref claims — the ref is dangling. Omit; do not prune (nothing was
+          // confirmed deleted, and pruning could race a mapping change).
+          return { ref, summary: null, prune: false };
+        }
+
+        const projected = toHuduAssetPasswordSummary(record);
+        const { baseUrl, companyUrl } = companyUrlsByCompany.get(companyId) ?? { baseUrl: null, companyUrl: null };
+        const externalUrl = buildHuduRecordUrl(projected, baseUrl) ?? companyUrl;
+
+        return {
+          ref,
+          summary: toSummary(projected, clientId, externalUrl),
+          prune: false,
+        };
+      })
+    );
+  }
+
+  /**
+   * Owning client for a Hudu ref, exposed only when the caller's bundle scope
+   * includes it (fail-closed). Returns null for unmapped companies AND
+   * out-of-scope clients — indistinguishable, so association writes fail
+   * closed as not-found.
+   */
+  async resolveOwnerClientId(ctx: CredentialSourceContext, id: string): Promise<string | null> {
+    const { companyId } = parseHuduCredentialId(id);
+    const { knex } = await createTenantKnex(ctx.tenant);
+    return resolveHuduRecordClientId(knex, ctx, companyId, id);
   }
 
   async reveal(ctx: CredentialSourceContext, id: string): Promise<CredentialRevealResult> {
@@ -415,4 +521,4 @@ export class HuduCredentialSource implements CredentialSource {
   }
 }
 
-export const huduCredentialSource: CredentialSource = new HuduCredentialSource();
+export const huduCredentialSource: HuduCredentialSource = new HuduCredentialSource();

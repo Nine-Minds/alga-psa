@@ -11,6 +11,31 @@
 
 export type CredentialSourceKind = 'alga' | 'hudu';
 
+/**
+ * Entity roster for credential associations, mirroring document_associations
+ * plus `document`. `client` sits in the constraint for parity with documents;
+ * no UI writes it in this card (the client Passwords tab stays
+ * ownership-driven). Client-bound types are `ticket`, `asset`, `contact`,
+ * `contract`, `project_task`, `quote`; the rest attach unconstrained.
+ */
+export type CredentialAssociationEntityType =
+  | 'asset'
+  | 'client'
+  | 'contact'
+  | 'contract'
+  | 'document'
+  | 'project_task'
+  | 'quote'
+  | 'team'
+  | 'tenant'
+  | 'ticket'
+  | 'user';
+
+export interface CredentialAttachment {
+  entityType: CredentialAssociationEntityType;
+  entityId: string;
+}
+
 /** Metadata-only projection; never carries value-bearing fields. */
 export interface CredentialSummary {
   /** Native uuid, or `hudu:{company_id}:{password_id}`. */
@@ -31,8 +56,8 @@ export interface CredentialSummary {
   folderName: string | null;
   /** Open-in-Hudu deep link. */
   externalUrl: string | null;
-  /** Native only in v1. */
-  attachedAssetIds: string[];
+  /** Entity attachments (both sources); metadata only. */
+  attachments: CredentialAttachment[];
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -58,19 +83,28 @@ export interface CredentialWriteInput {
   otpSecret?: string | null;
   url?: string | null;
   description?: string | null;
-  /** Native only in v1. */
-  assetIds?: string[];
+  /** Entity attachments to create with the credential (native side persists
+   *  them; Hudu-side creates are associated by ref after the Hudu write). */
+  attachments?: CredentialAttachment[];
 }
 
 export interface CredentialListFilter {
   clientId?: string;
-  assetId?: string;
+  /**
+   * Entity-scoped lists: filter to credentials associated with one entity.
+   * Both `entityType` and `entityId` must be set together.
+   */
+  entityType?: CredentialAssociationEntityType;
+  entityId?: string;
   search?: string;
   /**
    * Backend selection for aggregation. Undefined or empty means "all" (the
    * historical behavior); a non-empty whitelist restricts which backends the
    * credentialActions aggregation invokes. Consumed only by the aggregation —
-   * the native/hudu `list` implementations ignore this field.
+   * the native/hudu `list` implementations ignore this field. For
+   * association-driven entity lists the whitelist composes uniformly: a
+   * deselected backend's rows (including its association rows) are omitted
+   * for that response but never pruned.
    */
   sources?: CredentialSourceKind[];
 }

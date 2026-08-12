@@ -25,7 +25,16 @@ import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepos
 import { getHuduCompanyMappingRows } from '../../integrations/hudu/companyMapping';
 import { nativeCredentialSource } from '../../credentials/nativeSource';
 import { huduCredentialSource, isHuduCredentialId } from '../../credentials/huduSource';
+import {
+  addCredentialToEntity as serviceAddCredentialToEntity,
+  removeCredentialFromEntity as serviceRemoveCredentialFromEntity,
+  setEntityCredentials as serviceSetEntityCredentials,
+  loadAssociationsForEntity,
+  pruneAssociationRefs,
+  resolveEntityClientId,
+} from '../../credentials/associations';
 import type {
+  CredentialAssociationEntityType,
   CredentialDetail,
   CredentialGrant,
   CredentialListFilter,
@@ -132,19 +141,43 @@ async function aggregateList(
   // sites. Undefined or empty means "all" (the historical behavior); a
   // non-empty whitelist restricts which backends are even invoked — the
   // deselected backend's `list` is never called and no rows are appended for
-  // it.
+  // it. For entity-scoped (association-driven) lists the whitelist composes
+  // uniformly: a deselected backend's rows are omitted for that response but
+  // never pruned.
   const sourceSet = filter.sources?.length ? new Set(filter.sources) : null;
   const wantNative = sourceSet === null || sourceSet.has('alga');
   const wantHudu = sourceSet === null || sourceSet.has('hudu');
 
-  // Asset-scoped lists are ALWAYS native-only, and this short-circuit takes
-  // precedence over `sources`: v1 Hudu rows have no asset-attachment linkage,
-  // and fanning out per mapped client would append every mapped company's
-  // Hudu passwords to the asset's list. Hudu is therefore never called with
-  // an `assetId` filter — even a hudu-only selection on an asset-scoped list
-  // still returns the native rows.
-  if (filter.assetId) {
-    return nativeCredentialSource.list(ctx, filter);
+  // Entity-scoped lists are ASSOCIATION-DRIVEN for both sources (the v1
+  // "asset lists are native-only" short-circuit is gone): the association rows
+  // are loaded, native ids resolve through the native source under its kernel
+  // scope, and Hudu refs resolve LIVE through huduSource under the kernel
+  // bundle narrowing. A ref Hudu confirms gone (404) is omitted and its
+  // association row lazily pruned; transport errors omit the row for this
+  // response but never prune.
+  if (filter.entityType && filter.entityId) {
+    const { knex } = await createTenantKnex(tenant);
+    const rows = await loadAssociationsForEntity(knex, tenant, filter.entityType, filter.entityId);
+
+    const nativeIds = rows.flatMap((row) => (row.credential_id ? [row.credential_id] : []));
+    const huduRefs = rows.flatMap((row) => (row.credential_ref ? [row.credential_ref] : []));
+
+    const native = wantNative ? await nativeCredentialSource.listByIds(ctx, nativeIds) : [];
+
+    let hudu: CredentialSummary[] = [];
+    if (wantHudu && huduRefs.length > 0) {
+      const integration = await getHuduIntegration(knex, tenant);
+      if (integration?.is_active === true) {
+        const resolved = await huduCredentialSource.resolveByIds(ctx, huduRefs);
+        const pruneRefs = resolved.filter((r) => r.prune).map((r) => r.ref);
+        hudu = resolved.flatMap((r) => (r.summary ? [r.summary] : []));
+        if (pruneRefs.length > 0) {
+          await pruneAssociationRefs(knex, tenant, filter.entityType, filter.entityId, pruneRefs);
+        }
+      }
+      // Hudu inactive: refs are un-resolvable this response; omit, never prune.
+    }
+    return [...native, ...hudu];
   }
 
   if (filter.clientId) {
@@ -183,7 +216,9 @@ async function aggregateList(
 
 export interface ListCredentialsInput {
   clientId?: string;
-  assetId?: string;
+  /** Entity-scoped list: both must be set together (association-driven). */
+  entityType?: CredentialAssociationEntityType;
+  entityId?: string;
   search?: string;
   sources?: Array<'alga' | 'hudu'>;
 }
@@ -193,7 +228,8 @@ export const listCredentials = withCredentialAccess(
   async (user, { tenant }, input: ListCredentialsInput = {}): Promise<CredentialSummary[]> => {
     const filter: CredentialListFilter = {
       clientId: input.clientId,
-      assetId: input.assetId,
+      entityType: input.entityType,
+      entityId: input.entityId,
       search: input.search,
       sources: input.sources,
     };
@@ -221,10 +257,27 @@ export const createCredential = withCredentialAccess(
   'create',
   async (user, { tenant }, input: CreateCredentialInput): Promise<CredentialSummary> => {
     const { destination, ...write } = input;
+    const ctx = sourceContext(user, tenant);
+
+    // Create-preattached same-client enforcement: the new credential's owner
+    // is `clientId`; a pre-attached client-bound entity must resolve to that
+    // same client, or the write is rejected before anything is created.
+    if (write.attachments?.length) {
+      await assertAttachmentsSameClient(ctx, write.attachments, write.clientId);
+    }
+
     const summary =
       destination === 'hudu'
-        ? await huduCredentialSource.create(sourceContext(user, tenant), write)
-        : await nativeCredentialSource.create(sourceContext(user, tenant), write);
+        ? await huduCredentialSource.create(ctx, write)
+        : await nativeCredentialSource.create(ctx, write);
+
+    // Native creates persist their associations inside the source; Hudu
+    // creates know their ref only after the write, so the association rows
+    // (credential_ref) are inserted here.
+    if (destination === 'hudu' && write.attachments?.length) {
+      await attachRefAssociations(ctx, summary.id, write.attachments);
+    }
+
     revalidatePath('/msp/credentials');
     revalidatePath(`/msp/clients/${write.clientId}`);
     return summary;
@@ -305,14 +358,109 @@ export const setCredentialRestriction = withCredentialAccess(
   }
 );
 
-export const setCredentialAssociations = withCredentialAccess(
-  'update',
-  async (user, { tenant }, id: string, input: { assetIds: string[] }): Promise<CredentialSummary> => {
-    if (isHuduCredentialId(id)) {
-      throw new Error('Asset attachments are only supported for Alga-native credentials.');
+// ---------------------------------------------------------------------------
+// Entity associations (association-driven, both sources)
+//
+// Associations are managed from the ENTITY side (the credential form shows a
+// read-only associations summary). Same-client enforcement is server-side for
+// the six client-bound entity types; clientless types attach unconstrained.
+// ---------------------------------------------------------------------------
+
+/**
+ * Same-client pre-check for create-preattached attachments. The credential
+ * owner is the caller-supplied `clientId` (it does not exist yet, so no
+ * authorization lookup is needed). Throws CREDENTIAL_CLIENT_MISMATCH when a
+ * client-bound entity resolves to a different client.
+ */
+async function assertAttachmentsSameClient(
+  ctx: CredentialSourceContext,
+  attachments: { entityType: CredentialAssociationEntityType; entityId: string }[],
+  credentialClientId: string
+): Promise<void> {
+  const { knex } = await createTenantKnex(ctx.tenant);
+  const unique = Array.from(
+    new Map(attachments.map((a) => [`${a.entityType}:${a.entityId}`, a])).values()
+  );
+  for (const attachment of unique) {
+    const entityClientId = await resolveEntityClientId(knex, ctx.tenant, attachment.entityType, attachment.entityId);
+    if (entityClientId && entityClientId !== credentialClientId) {
+      throw Object.assign(
+        new Error(
+          `Credential cannot be attached to this ${attachment.entityType}: it belongs to a different client.`
+        ),
+        { code: 'CREDENTIAL_CLIENT_MISMATCH' }
+      );
     }
-    const summary = await nativeCredentialSource.setAssociations(sourceContext(user, tenant), id, input);
+  }
+}
+
+/** Insert credential_ref association rows for a freshly-created Hudu credential. */
+async function attachRefAssociations(
+  ctx: CredentialSourceContext,
+  credentialRef: string,
+  attachments: { entityType: CredentialAssociationEntityType; entityId: string }[]
+): Promise<void> {
+  const { knex } = await createTenantKnex(ctx.tenant);
+  const unique = Array.from(
+    new Map(attachments.map((a) => [`${a.entityType}:${a.entityId}`, a])).values()
+  );
+  if (unique.length === 0) return;
+  await knex.transaction(async (trx) => {
+    await trx('credential_associations')
+      .insert(
+        unique.map((a) => ({
+          tenant: ctx.tenant,
+          credential_ref: credentialRef,
+          entity_id: a.entityId,
+          entity_type: a.entityType,
+        }))
+      )
+      .onConflict()
+      .ignore();
+  });
+}
+
+/** Attach one credential (native id or Hudu ref) to an entity. */
+export const addCredentialToEntity = withCredentialAccess(
+  'update',
+  async (
+    user,
+    { tenant },
+    entityType: CredentialAssociationEntityType,
+    entityId: string,
+    credentialId: string
+  ): Promise<void> => {
+    await serviceAddCredentialToEntity(sourceContext(user, tenant), entityType, entityId, credentialId);
     revalidatePath('/msp/credentials');
-    return summary;
+  }
+);
+
+/** Detach one credential from an entity. */
+export const removeCredentialFromEntity = withCredentialAccess(
+  'update',
+  async (
+    user,
+    { tenant },
+    entityType: CredentialAssociationEntityType,
+    entityId: string,
+    credentialId: string
+  ): Promise<void> => {
+    await serviceRemoveCredentialFromEntity(sourceContext(user, tenant), entityType, entityId, credentialId);
+    revalidatePath('/msp/credentials');
+  }
+);
+
+/** Replace the credential set attached to an entity (link-existing save). */
+export const setEntityCredentials = withCredentialAccess(
+  'update',
+  async (
+    user,
+    { tenant },
+    entityType: CredentialAssociationEntityType,
+    entityId: string,
+    credentialIds: string[]
+  ): Promise<void> => {
+    await serviceSetEntityCredentials(sourceContext(user, tenant), entityType, entityId, credentialIds);
+    revalidatePath('/msp/credentials');
   }
 );

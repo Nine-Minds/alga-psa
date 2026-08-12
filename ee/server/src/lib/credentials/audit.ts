@@ -18,7 +18,9 @@ export type CredentialAuditOperation =
   | 'credential_created'
   | 'credential_updated'
   | 'credential_deleted'
-  | 'credential_grants_changed';
+  | 'credential_grants_changed'
+  | 'credential_associated'
+  | 'credential_detached';
 
 export interface CredentialAuditParams {
   userId: string;
