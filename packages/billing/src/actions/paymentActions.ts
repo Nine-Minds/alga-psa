@@ -176,3 +176,30 @@ export async function getInvoicePaymentLinkUrlForEmail(
   );
   return link?.url || null;
 }
+
+/**
+ * Best-effort retirement of active payment links for an invoice that has
+ * reached a terminal status (paid/cancelled). Real callers (the portal Pay Now
+ * action and the invoice-email link context) invoke this before returning their
+ * stable terminal-status outcome so an old Checkout session is expired at the
+ * provider. Provider failures never degrade the caller's response: they are
+ * logged and leave the links DB-blocked (`expire_pending`) for a later retry.
+ */
+export async function expireInvoicePaymentLinksForTerminalStatus(
+  tenantId: string,
+  invoiceId: string,
+  status: string
+): Promise<void> {
+  try {
+    const configured = await getConfiguredPaymentService(tenantId);
+    if (!configured) return;
+    await configured.service.expireActiveLinksForInvoice(invoiceId, 'invoice_not_payable', status);
+  } catch (error) {
+    logger.error('[billing/paymentActions] Failed to retire payment links for terminal invoice', {
+      tenantId,
+      invoiceId,
+      status,
+      error,
+    });
+  }
+}

@@ -880,12 +880,14 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(sessions).toHaveLength(1);
       expect(sessions[0].status).toBe('open');
 
-      // DB-status-first ordering: the row is expired even though the provider
-      // call failed, so it can never be reused.
+      // DB-status-first ordering: the row is blocked (`expire_pending`) even
+      // though the provider call failed, so it can never be reused — and it
+      // stays discoverable so a later attempt retries provider expiration
+      // first instead of creating a replacement.
       const links = await tenantTable(db, tenantId, 'invoice_payment_links')
         .where({ invoice_id: invoiceId });
       expect(links).toHaveLength(1);
-      expect(links[0].status).toBe('expired');
+      expect(links[0].status).toBe('expire_pending');
       expect(links[0].metadata).toMatchObject({
         stale_balance: true,
         current_balance: 24000,
@@ -977,12 +979,13 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(sessions).toHaveLength(1);
       expect(sessions[0].status).toBe('open');
 
-      // The DB row was still expired first (never reusable), and the provider
-      // cause is retained in the server log.
+      // The DB row was blocked first (`expire_pending`, never reusable) and the
+      // provider cause is retained in the server log. The row stays discoverable
+      // so a later attempt retries provider expiration before creating anything.
       const links = await tenantTable(db, tenantId, 'invoice_payment_links')
         .where({ invoice_id: invoiceId });
       expect(links).toHaveLength(1);
-      expect(links[0].status).toBe('expired');
+      expect(links[0].status).toBe('expire_pending');
 
       const expireCall = loggerError.mock.calls.find((call) =>
         String(call[0]).includes('Failed to expire provider payment link')
@@ -990,6 +993,428 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(expireCall).toBeDefined();
       const errorField = (expireCall![1] as { error?: unknown }).error;
       expect(String((errorField as Error | undefined)?.message ?? errorField)).toContain('Simulated Stripe outage');
+    }, HOOK_TIMEOUT);
+
+    it('retires the live Checkout session through the real portal action when the invoice is already paid', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `portal-paid-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      // Create the live Checkout session through the real email path.
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+
+      // The invoice is fully paid outside the Stripe webhook path while the
+      // Checkout session is still live.
+      await tenantTable(db, tenantId, 'invoice_payments').insert({
+        payment_id: uuidv4(),
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        amount: 32000,
+        payment_method: 'manual',
+        status: 'completed',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ status: 'paid', updated_at: db.fn.now() });
+
+      const contact = await tenantTable(db, tenantId, 'contacts')
+        .where({ client_id: clientId })
+        .first();
+      const contactId = String(contact?.contact_name_id);
+      setActiveActor({
+        user_id: 'journey-portal-owner',
+        tenant: tenantId,
+        contact_id: contactId,
+        roles: [],
+      });
+
+      // The actual portal action drives the cleanup: it still returns the
+      // stable already_paid outcome AND expires the provider session.
+      const { getClientPortalInvoicePaymentLink } = await import(
+        '@alga-psa/client-portal/actions/clientPaymentActions'
+      );
+      const result = await getClientPortalInvoicePaymentLink(invoiceId);
+      expect(result.success).toBe(false);
+      expect(result.error?.code).toBe('already_paid');
+      expect(result.error?.message).toBe('This invoice has already been paid');
+      expect(result.error?.retryable).toBe(false);
+
+      // The live provider session was expired and no replacement was created.
+      const sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('expired');
+
+      // The tenant-scoped DB row reached the provider-confirmed terminal state.
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expired');
+      expect(links[0].metadata).toMatchObject({
+        invoice_not_payable: true,
+        invoice_status: 'paid',
+      });
+    }, HOOK_TIMEOUT);
+
+    it('retires the live Checkout session through the real portal action when the invoice is cancelled', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `portal-cancel-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+
+      // Cancel the invoice while the Checkout session is still live.
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ status: 'cancelled', updated_at: db.fn.now() });
+
+      const contact = await tenantTable(db, tenantId, 'contacts')
+        .where({ client_id: clientId })
+        .first();
+      const contactId = String(contact?.contact_name_id);
+      setActiveActor({
+        user_id: 'journey-portal-owner',
+        tenant: tenantId,
+        contact_id: contactId,
+        roles: [],
+      });
+
+      const { getClientPortalInvoicePaymentLink } = await import(
+        '@alga-psa/client-portal/actions/clientPaymentActions'
+      );
+      const result = await getClientPortalInvoicePaymentLink(invoiceId);
+      expect(result.success).toBe(false);
+      expect(result.error?.code).toBe('invoice_cancelled');
+      expect(result.error?.message).toBe('Invoice is cancelled');
+
+      const sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('expired');
+
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expired');
+      expect(links[0].metadata).toMatchObject({
+        invoice_not_payable: true,
+        invoice_status: 'cancelled',
+      });
+    }, HOOK_TIMEOUT);
+
+    it('keeps the paid-invoice email link-free and retires the session through the real email path', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `email-paid-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+      expect(capturedEmails).toHaveLength(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+
+      // Pay the invoice outside the webhook path, then send its email again
+      // through the real direct-send action.
+      await tenantTable(db, tenantId, 'invoice_payments').insert({
+        payment_id: uuidv4(),
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        amount: 32000,
+        payment_method: 'manual',
+        status: 'completed',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ status: 'paid', updated_at: db.fn.now() });
+
+      const second = await sendInvoiceEmailAction([invoiceId], '');
+      expect(second.successCount).toBe(1);
+
+      // The email still sends (delivery must not regress) but carries no
+      // payment/checkout CTA for a paid invoice.
+      expect(capturedEmails).toHaveLength(2);
+      const html = String(capturedEmails[1].message.html);
+      expect(html).not.toContain('/checkout/sessions/');
+      expect(html).not.toContain(stripeBase);
+
+      // The live provider session was retired through the email path.
+      const sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('expired');
+
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expired');
+      expect(links[0].metadata).toMatchObject({
+        invoice_not_payable: true,
+        invoice_status: 'paid',
+      });
+    }, HOOK_TIMEOUT);
+
+    it('retries provider expiration on the next attempt instead of creating a replacement while the old session is open', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `retry-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [originalSession] = await emulatorState('checkout-sessions');
+      expect(originalSession.status).toBe('open');
+
+      // The payable balance drops below the stored link amount (credit + prior
+      // payment) while the session is still live, and provider expiration fails.
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ credit_applied: 3000, updated_at: db.fn.now() });
+      await tenantTable(db, tenantId, 'invoice_payments').insert({
+        payment_id: uuidv4(),
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        amount: 5000,
+        payment_method: 'manual',
+        status: 'completed',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+
+      await controlPost('faults/operation-fault/arm', {
+        operation: 'checkout.sessions.expire',
+        status: 500,
+        code: 'api_error',
+        message: 'Simulated Stripe outage',
+        remaining: 5,
+      });
+
+      const contact = await tenantTable(db, tenantId, 'contacts')
+        .where({ client_id: clientId })
+        .first();
+      const contactId = String(contact?.contact_name_id);
+      setActiveActor({
+        user_id: 'journey-portal-owner',
+        tenant: tenantId,
+        contact_id: contactId,
+        roles: [],
+      });
+
+      const { getClientPortalInvoicePaymentLink } = await import(
+        '@alga-psa/client-portal/actions/clientPaymentActions'
+      );
+
+      // Attempt 1: provider expiration fails; NO replacement session may be
+      // created while the old one is still open at the provider.
+      const firstAttempt = await getClientPortalInvoicePaymentLink(invoiceId);
+      expect(firstAttempt.success).toBe(false);
+      expect(firstAttempt.error?.code).toBe('payment_link_creation_failed');
+
+      let sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('open');
+
+      let links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      // The durable retry handle: blocked from reuse, but still discoverable.
+      expect(links[0].status).toBe('expire_pending');
+
+      // Clear the fault; the next attempt must retry the provider expiration
+      // first and only then create a replacement.
+      await controlPost('faults/operation-fault/disarm', {});
+
+      const secondAttempt = await getClientPortalInvoicePaymentLink(invoiceId);
+      expect(secondAttempt.success).toBe(true);
+      expect(secondAttempt.data?.paymentUrl).toBeTruthy();
+
+      sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(2);
+      const expiredSession = sessions.find((s: any) => s.id === originalSession.id);
+      const replacementSession = sessions.find((s: any) => s.id !== originalSession.id);
+      expect(expiredSession?.status).toBe('expired');
+      expect(replacementSession?.status).toBe('open');
+      expect(replacementSession?.amount_total).toBe(24000);
+      expect(secondAttempt.data?.paymentUrl).toBe(replacementSession?.url);
+
+      links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(2);
+      const staleLink = links.find((l) => l.external_link_id === originalSession.id);
+      const replacementLink = links.find((l) => l.external_link_id === replacementSession?.id);
+      expect(staleLink?.status).toBe('expired');
+      expect(staleLink?.metadata).toMatchObject({
+        stale_balance: true,
+        stored_amount: 32000,
+        current_balance: 24000,
+      });
+      expect(replacementLink?.status).toBe('active');
+      expect(Number(replacementLink?.amount)).toBe(24000);
+    }, HOOK_TIMEOUT);
+
+    it('expires only the non-settled link when a webhook transition pays the invoice', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `transition-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [settlingSession] = await emulatorState('checkout-sessions');
+      expect(settlingSession.status).toBe('open');
+
+      // A second, older email carried an older link whose session is still
+      // live. Reproduce it by creating a stale session directly at the
+      // emulator and registering its DB link row.
+      const staleSessionResponse = await fetch(`${stripeBase}/v1/checkout/sessions`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          authorization: 'Bearer sk_test_algasim',
+        },
+        body: new URLSearchParams({
+          mode: 'payment',
+          customer: String(settlingSession.customer),
+          'line_items[0][price_data][currency]': 'usd',
+          'line_items[0][price_data][unit_amount]': '32000',
+          'line_items[0][price_data][product_data][name]': 'Invoice stale',
+          'line_items[0][quantity]': '1',
+          success_url: `http://localhost:3000/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `http://localhost:3000/client-portal/billing?tab=invoices&invoiceId=${invoiceId}`,
+          'metadata[invoice_id]': invoiceId,
+          'metadata[tenant_id]': tenantId,
+          'metadata[client_id]': clientId,
+        }),
+      });
+      expect(staleSessionResponse.ok, await staleSessionResponse.clone().text()).toBe(true);
+      const staleSession = await staleSessionResponse.json();
+      expect(staleSession.status).toBe('open');
+
+      const staleLinkId = uuidv4();
+      await tenantTable(db, tenantId, 'invoice_payment_links').insert({
+        link_id: staleLinkId,
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        provider_type: 'stripe',
+        external_link_id: staleSession.id,
+        url: staleSession.url,
+        amount: 32000,
+        currency: 'USD',
+        status: 'active',
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        metadata: JSON.stringify({
+          stripe_customer_id: settlingSession.customer,
+          payment_intent: staleSession.payment_intent,
+        }),
+        created_at: db.fn.now(),
+      });
+
+      // The settling session completes at the provider (the browser-facing Pay
+      // flow in the Playwright spec does the same), then its checkout.session
+      // .completed event is processed through the real webhook-processing path.
+      // The settling link matches the settled reference and is left for the
+      // completion handler, while the stale link is retired by the
+      // terminal-status transition.
+      await controlPost('actions/complete-session', { sessionId: settlingSession.id });
+
+      const { PaymentService } = await import('@ee/lib/payments');
+      const service = await PaymentService.create(tenantId);
+      const webhookResult = await service.processWebhookEvent({
+        eventId: `evt_settle_${uuidv4().slice(0, 8)}`,
+        eventType: 'checkout.session.completed',
+        provider: 'stripe',
+        payload: {
+          id: `evt_settle_${uuidv4().slice(0, 8)}`,
+          type: 'checkout.session.completed',
+          data: { object: { id: settlingSession.id } },
+        },
+        invoiceId,
+        amount: 32000,
+        currency: 'USD',
+        status: 'succeeded',
+        paymentIntentId: settlingSession.payment_intent,
+        customerId: settlingSession.customer,
+      });
+      expect(webhookResult.success).toBe(true);
+      expect(webhookResult.paymentRecorded).toBe(true);
+
+      const invoice = await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .first();
+      expect(invoice.status).toBe('paid');
+
+      // The settling session is untouched (its closure is the webhook's own
+      // confirmation) while the stale session was expired at the provider.
+      const sessions = await emulatorState('checkout-sessions');
+      const settling = sessions.find((s: any) => s.id === settlingSession.id);
+      const stale = sessions.find((s: any) => s.id === staleSession.id);
+      expect(settling?.status).toBe('complete');
+      expect(stale?.status).toBe('expired');
+
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      const settlingLink = links.find((l) => l.external_link_id === settlingSession.id);
+      const staleLink = links.find((l) => l.external_link_id === staleSession.id);
+      expect(settlingLink?.status).toBe('completed');
+      expect(staleLink?.status).toBe('expired');
+      expect(staleLink?.metadata).toMatchObject({
+        invoice_not_payable: true,
+        invoice_status: 'paid',
+      });
     }, HOOK_TIMEOUT);
   });
 

@@ -7,7 +7,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
-import { getPaymentService } from './paymentActions';
+import { getPaymentService, expireInvoicePaymentLinksForTerminalStatus } from './paymentActions';
 
 export interface InvoiceEmailLinkContext {
   paymentUrl?: string;
@@ -90,6 +90,31 @@ export async function buildPortalInvoiceUrl(tenantId: string, invoiceId: string)
 }
 
 /**
+ * Retires still-active Checkout sessions when an invoice email is being built
+ * for an invoice that already reached a terminal status. The email never
+ * carries a payment link for a paid/cancelled invoice; this cleanup additionally
+ * closes the provider session so an earlier email's link stops working.
+ * Best-effort: failures are logged and never affect the email itself.
+ */
+async function retireLinksForTerminalInvoice(
+  tenantId: string,
+  invoice: InvoiceLinkEligibilityFields
+): Promise<void> {
+  const status = (invoice.status ?? '').toLowerCase();
+  if (status !== 'paid' && status !== 'cancelled') return;
+  try {
+    await expireInvoicePaymentLinksForTerminalStatus(tenantId, invoice.invoice_id, status);
+  } catch (error) {
+    logger.error('[billing/invoiceEmailLinkContext] Failed to retire payment links for terminal invoice', {
+      tenantId,
+      invoiceId: invoice.invoice_id,
+      status,
+      error,
+    });
+  }
+}
+
+/**
  * Central link context shared by the direct MSP send action and the scheduled
  * invoice email handler.
  *
@@ -106,6 +131,7 @@ export async function getInvoiceEmailLinkContext(
   const context: InvoiceEmailLinkContext = {};
 
   if (!isInvoiceLinkEligible(invoice)) {
+    await retireLinksForTerminalInvoice(tenantId, invoice);
     return context;
   }
 

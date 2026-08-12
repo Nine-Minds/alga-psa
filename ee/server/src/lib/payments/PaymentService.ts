@@ -31,6 +31,10 @@ import { createStripePaymentProvider } from './StripePaymentProvider';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
 import { recordExternalPayment } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
+import {
+  registerInvoiceTerminalStatusHandler,
+  listActiveInvoicePaymentLinks,
+} from '@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildPaymentAppliedPayload,
@@ -158,6 +162,14 @@ export class PaymentService {
       });
       return null;
     }
+
+    // Retire any link whose provider expiration previously failed
+    // (status='expire_pending') BEFORE deciding reuse or replacement. The
+    // provider is asked to close the session first; only once it confirms (or
+    // the session is otherwise verifiably closed) does the link become
+    // 'expired'. A failure here rethrows so no replacement session is ever
+    // created while a prior provider session may remain open.
+    await this.finalizePendingExpirations(invoiceId);
 
     // Get invoice data
     const invoice = await this.getInvoice(invoiceId);
@@ -769,6 +781,13 @@ export class PaymentService {
 
   /**
    * Updates the status of a payment link.
+   *
+   * Only `active` rows are touched. A row in `expire_pending` has a provider
+   * session whose closure is unconfirmed and possibly still open; it must stay
+   * discoverable so a later attempt retries its provider expiration instead of
+   * marking it closed prematurely. Provider-confirmed finalization of
+   * `expire_pending` rows happens in `confirmProviderExpiration` (or the
+   * `checkout.session.expired` webhook's own link is confirmed there).
    */
   private async updatePaymentLinkStatus(
     invoiceId: string,
@@ -789,11 +808,13 @@ export class PaymentService {
    * Retires an active link whose stored amount no longer matches the invoice,
    * or that was rendered unpayable by a terminal invoice status.
    *
-   * The tenant-scoped database status is changed first so the row can never be
-   * reused; provider expiration then follows. A provider expiration failure is
-   * NOT swallowed: it leaves a chargeable Checkout Session live, so it is
-   * logged with the provider cause and rethrown so no replacement session is
-   * created and the caller surfaces the standard payment-link failure.
+   * DB-status-first: the row moves to `expire_pending` so it can never be
+   * reused for checkout, yet stays discoverable. Only after the provider
+   * confirms the session is closed does the row become `expired`. A provider
+   * expiration failure is NOT swallowed: it leaves a chargeable Checkout
+   * Session live, so it is logged with the provider cause and rethrown so no
+   * replacement session is created. The row remains `expire_pending` — the
+   * durable handle a later attempt uses to retry provider expiration first.
    */
   private async expireStalePaymentLink(
     link: IInvoicePaymentLink,
@@ -802,31 +823,170 @@ export class PaymentService {
     invoiceStatus?: string
   ): Promise<void> {
     const metadata = reason === 'invoice_not_payable'
-      ? { invoice_not_payable: true, invoice_status: invoiceStatus }
-      : { stale_balance: true, stored_amount: Number(link.amount), current_balance: currentBalance };
+      ? { invoice_not_payable: true, invoice_status: invoiceStatus, expire_state: 'pending' }
+      : {
+          stale_balance: true,
+          stored_amount: Number(link.amount),
+          current_balance: currentBalance,
+          expire_state: 'pending',
+        };
 
-    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+    const retired = await this.markExpirePending(link, metadata);
+    if (!retired) {
+      // A concurrent writer already moved this row off 'active'; there is
+      // nothing left to retire here.
+      return;
+    }
+
+    await this.confirmProviderExpiration(link);
+  }
+
+  /**
+   * Best-effort retirement of every still-active payment link for an invoice
+   * that reached a terminal status. Used by the real production callers (the
+   * portal Pay Now action and the invoice-email link context) and by the
+   * terminal-status handler registered for automated settlement paths.
+   *
+   * Each link is DB-blocked first (`expire_pending`) so it can never be reused;
+   * provider expiration is then attempted. A provider failure leaves the row in
+   * `expire_pending` for a later retry (it never unblocks reuse) and is logged
+   * rather than thrown — cleanup must not degrade the paid-invoice view.
+   *
+   * `excludeSettledReference` skips the link whose `metadata.payment_intent`
+   * matches the payment reference that just settled (that session's closure is
+   * already confirmed by the provider and is handled by the webhook path).
+   */
+  async expireActiveLinksForInvoice(
+    invoiceId: string,
+    reason: 'stale_balance' | 'invoice_not_payable' = 'invoice_not_payable',
+    invoiceStatus?: string,
+    options?: { excludeSettledReference?: string }
+  ): Promise<{ retired: number; pending: number }> {
+    const query = listActiveInvoicePaymentLinks(this.knex, this.tenantId, invoiceId, {
+      excludeSettledReference: options?.excludeSettledReference,
+    });
+    const links = (await query) as unknown as IInvoicePaymentLink[];
+
+    let retired = 0;
+    let pending = 0;
+    for (const link of links) {
+      const metadata =
+        reason === 'invoice_not_payable'
+          ? { invoice_not_payable: true, invoice_status: invoiceStatus, expire_state: 'pending' }
+          : { stale_balance: true, stored_amount: Number(link.amount), expire_state: 'pending' };
+
+      const marked = await this.markExpirePending(link, metadata);
+      if (!marked) continue;
+
+      try {
+        await this.confirmProviderExpiration(link);
+        retired += 1;
+      } catch (error) {
+        pending += 1;
+        logger.error('[PaymentService] Terminal-status link expiration failed; will retry', {
+          tenantId: this.tenantId,
+          invoiceId,
+          linkId: link.link_id,
+          externalLinkId: link.external_link_id,
+          reason,
+          error,
+        });
+      }
+    }
+
+    if (links.length > 0) {
+      logger.info('[PaymentService] Retired active payment links for terminal invoice', {
+        tenantId: this.tenantId,
+        invoiceId,
+        reason,
+        invoiceStatus,
+        retired,
+        pending,
+      });
+    }
+
+    return { retired, pending };
+  }
+
+  /**
+   * Finalizes links whose provider expiration previously failed. Called before
+   * any reuse/replacement decision so the invariant holds: no new session is
+   * created while a prior provider session may remain open. Throws when a
+   * session is still open after the retry (the caller surfaces the standard
+   * payment-link failure and creates nothing).
+   */
+  private async finalizePendingExpirations(invoiceId: string): Promise<void> {
+    const pending = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({ invoice_id: invoiceId, status: 'expire_pending' })
+      .orderBy('created_at', 'asc');
+
+    for (const link of pending) {
+      await this.confirmProviderExpiration(link);
+    }
+  }
+
+  /**
+   * Moves an active row to `expire_pending` and records the retirement reason.
+   * Returns false when the row is no longer 'active' (a concurrent writer
+   * already moved it), in which case there is nothing to retire.
+   */
+  private async markExpirePending(
+    link: IInvoicePaymentLink,
+    metadata: Record<string, unknown>
+  ): Promise<boolean> {
+    const updated = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({ link_id: link.link_id, status: 'active' })
       .update({
-        status: 'expired',
+        status: 'expire_pending',
         metadata: this.knex.raw(
           `COALESCE(metadata, '{}'::jsonb) || ?::jsonb`,
           [JSON.stringify(metadata)]
         ),
       });
+    return Number(updated) > 0;
+  }
 
+  /**
+   * Asks the provider to close a session and only then flips the row to
+   * `expired`. If the provider reports an error, the session is checked: when
+   * it is verifiably closed (already expired/completed), the row is still
+   * finalized; when it may still be open, the error is rethrown so the row
+   * stays `expire_pending` for a later retry and nothing is created on top.
+   */
+  private async confirmProviderExpiration(link: IInvoicePaymentLink): Promise<void> {
     try {
       await this.provider?.expirePaymentLink?.(link.external_link_id);
     } catch (error) {
-      logger.error('[PaymentService] Failed to expire provider payment link', {
-        tenantId: this.tenantId,
-        invoiceId: link.invoice_id,
-        linkId: link.link_id,
-        externalLinkId: link.external_link_id,
-        reason,
-        error,
-      });
-      throw error;
+      const closed = await this.providerSessionVerifiablyClosed(link.external_link_id);
+      if (!closed) {
+        logger.error('[PaymentService] Failed to expire provider payment link', {
+          tenantId: this.tenantId,
+          invoiceId: link.invoice_id,
+          linkId: link.link_id,
+          externalLinkId: link.external_link_id,
+          error,
+        });
+        throw error;
+      }
+    }
+
+    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({ link_id: link.link_id, status: 'expire_pending' })
+      .update({ status: 'expired' });
+  }
+
+  /**
+   * Asks the provider whether a Checkout session is verifiably closed (already
+   * expired, completed, or refunded). Used to finalize a link whose explicit
+   * expiration failed because the provider had already closed the session.
+   */
+  private async providerSessionVerifiablyClosed(externalLinkId: string): Promise<boolean> {
+    try {
+      const details = await this.provider?.getPaymentLinkStatus?.(externalLinkId);
+      if (!details) return false;
+      return details.status === 'cancelled' || details.status === 'succeeded' || details.status === 'refunded';
+    } catch {
+      return false;
     }
   }
 
@@ -934,3 +1094,20 @@ export class PaymentService {
     return this.provider?.providerType || null;
   }
 }
+
+// Module-scope registration: whenever the EE payment stack loads, invoices that
+// reach a terminal status through `recordExternalPayment` (the Stripe webhook,
+// QBO sync, and the alternative-payments webhook) retire their still-active
+// Checkout sessions so an old email link can never charge a settled invoice.
+// The registry isolates failures, so payment settlement is never blocked by
+// link cleanup, and cleanup is tenant-scoped by construction.
+registerInvoiceTerminalStatusHandler(async (params) => {
+  if (params.newStatus !== 'paid') return;
+  const service = await PaymentService.create(params.tenantId);
+  await service.expireActiveLinksForInvoice(
+    params.invoiceId,
+    'invoice_not_payable',
+    params.newStatus,
+    { excludeSettledReference: params.settledReference }
+  );
+});

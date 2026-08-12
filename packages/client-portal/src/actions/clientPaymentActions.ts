@@ -20,6 +20,7 @@ import {
   getActiveInvoicePaymentLinkUrl,
   getInvoicePaymentStatus,
   getOrCreateInvoicePaymentLinkUrl,
+  expireInvoicePaymentLinksForTerminalStatus,
 } from '@alga-psa/billing/actions/paymentActions';
 import { PaymentLinkError } from '@alga-psa/billing/actions/paymentLinkError';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
@@ -127,11 +128,18 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
 
     // Check if invoice is already paid
     if (invoice.status === 'paid') {
+      // A Checkout session may still be live at the provider even though the
+      // invoice is already settled (manual payment, credit application, ...).
+      // Retire it before returning the stable outcome so the customer's old
+      // payment link can never charge a paid invoice. Cleanup is best-effort:
+      // a provider failure is logged and never changes the already_paid result.
+      await expireInvoicePaymentLinksForTerminalStatus(tenantId, invoiceId, 'paid');
       return actionError('already_paid', 'This invoice has already been paid');
     }
 
     // Check if invoice is cancelled
     if (invoice.status === 'cancelled') {
+      await expireInvoicePaymentLinksForTerminalStatus(tenantId, invoiceId, 'cancelled');
       return actionError('invoice_cancelled', 'Invoice is cancelled');
     }
 

@@ -98,6 +98,13 @@ export {
   reverseExternalPayment,
   computeBalanceDue
 } from './accountingSync/recordExternalPayment';
+export {
+  registerInvoiceTerminalStatusHandler,
+  notifyInvoiceTerminalStatus,
+  listActiveInvoicePaymentLinks,
+  type InvoiceTerminalStatusParams,
+  type InvoiceTerminalStatusHandler,
+} from './accountingSync/invoiceTerminalStatusHandlers';
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,

@@ -87,8 +87,14 @@ export interface PaymentLinkResult {
 
 /**
  * Status of a payment link.
+ *
+ * `expire_pending` is an intermediate, blocking state: the row is never
+ * returned or reused for checkout, but stays discoverable so a later attempt
+ * retries the provider expiration before any replacement session is created.
+ * It transitions to `expired` only after the provider confirms the session is
+ * closed.
  */
-export type PaymentLinkStatus = 'active' | 'expired' | 'completed' | 'cancelled';
+export type PaymentLinkStatus = 'active' | 'expire_pending' | 'expired' | 'completed' | 'cancelled';
 
 // =============================================================================
 // Payment Details & Status

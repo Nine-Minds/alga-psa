@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
+import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -220,6 +221,20 @@ export async function recordExternalPayment(
     provider: input.provider,
     referenceNumber: input.referenceNumber
   });
+
+  // The invoice reached a terminal status (fully paid). Registered EE handlers
+  // retire any still-active Checkout sessions so an old email link can never
+  // charge a settled invoice. Handler failures are isolated (logged, never
+  // thrown) so the payment recording itself is unaffected.
+  if (newStatus === 'paid') {
+    await notifyInvoiceTerminalStatus({
+      knex,
+      tenantId,
+      invoiceId: input.invoiceId,
+      newStatus,
+      settledReference: input.referenceNumber,
+    });
+  }
 
   return {
     success: true,
