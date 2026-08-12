@@ -42,17 +42,55 @@ export type InvoiceTerminalStatusHandler = (params: InvoiceTerminalStatusParams)
 
 const handlers: InvoiceTerminalStatusHandler[] = [];
 
+// Memoized edition-tolerant load of the EE payments module. EE registers its
+// terminal-status handler as a module side effect, so pulling the module in on
+// first use is what makes a terminal transition retire active links even when
+// the QBO sync or alternative-payments caller is the first thing in the
+// process to reach `recordExternalPayment` (no other EE import has happened).
+let terminalStatusHandlerLoad: Promise<void> | null = null;
+
+/**
+ * Lazily ensures the EE payments module that registers the terminal-status
+ * handler is loaded before handlers are invoked. Edition-tolerant (mirrors the
+ * pattern in paymentActions/paymentWebhookHelpers): a failed load — a CE build
+ * where the `@enterprise/lib/payments` alias is unresolved — is logged and
+ * never thrown, so payment recording never fails because of this. The promise
+ * is memoized so the import runs at most once per process. If an eager EE
+ * import already registered a handler (the Stripe webhook path), this is a
+ * no-op; both paths import the same specifier, so the module cache guarantees
+ * a single registration — never zero, never two.
+ */
+async function ensureTerminalStatusHandlerRegistered(): Promise<void> {
+  if (handlers.length > 0) {
+    return;
+  }
+  terminalStatusHandlerLoad ??= (async () => {
+    try {
+      await import('@enterprise/lib/payments');
+    } catch (error) {
+      logger.debug(
+        '[billing/invoiceTerminalStatusHandlers] enterprise payments module not available; terminal-status handlers stay unregistered',
+        { error }
+      );
+    }
+  })();
+  await terminalStatusHandlerLoad;
+}
+
 /** Registers a handler invoked when an invoice reaches a terminal status. */
 export function registerInvoiceTerminalStatusHandler(handler: InvoiceTerminalStatusHandler): void {
   handlers.push(handler);
 }
 
 /**
- * Invokes every registered terminal-status handler. Tenant-scoped work is the
- * handler's responsibility; failures are logged and never propagated so the
- * payment recording that triggered the transition is unaffected.
+ * Invokes every registered terminal-status handler. The EE module that owns
+ * the sole in-memory handler is pulled in first so the first-ever terminal
+ * transition in a process still retires active links. Tenant-scoped work is
+ * the handler's responsibility; failures are logged and never propagated so
+ * the payment recording that triggered the transition is unaffected.
  */
 export async function notifyInvoiceTerminalStatus(params: InvoiceTerminalStatusParams): Promise<void> {
+  await ensureTerminalStatusHandlerRegistered();
   for (const handler of [...handlers]) {
     try {
       await handler(params);
