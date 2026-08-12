@@ -1366,10 +1366,12 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       // The settling session completes at the provider (the browser-facing Pay
       // flow in the Playwright spec does the same), then its checkout.session
       // .completed event is processed through the real webhook-processing path.
-      // The settling link matches the settled reference and is left for the
-      // completion handler, while the stale link is retired by the
+      // The settling link is excluded by its Checkout Session id and left for
+      // the completion handler, while the stale link is retired by the
       // terminal-status transition.
       await controlPost('actions/complete-session', { sessionId: settlingSession.id });
+      const [completedSettlingSession] = await emulatorState('checkout-sessions');
+      expect(completedSettlingSession.payment_intent).toMatch(/^pi_/);
 
       const { PaymentService } = await import('@ee/lib/payments');
       const service = await PaymentService.create(tenantId);
@@ -1380,14 +1382,15 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
         payload: {
           id: `evt_settle_${uuidv4().slice(0, 8)}`,
           type: 'checkout.session.completed',
-          data: { object: { id: settlingSession.id } },
+          data: { object: { id: completedSettlingSession.id } },
         },
         invoiceId,
         amount: 32000,
         currency: 'USD',
         status: 'succeeded',
-        paymentIntentId: settlingSession.payment_intent,
-        customerId: settlingSession.customer,
+        paymentIntentId: completedSettlingSession.payment_intent,
+        customerId: completedSettlingSession.customer,
+        externalLinkId: completedSettlingSession.id,
       });
       expect(webhookResult.success).toBe(true);
       expect(webhookResult.paymentRecorded).toBe(true);
@@ -1415,6 +1418,86 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
         invoice_not_payable: true,
         invoice_status: 'paid',
       });
+    }, HOOK_TIMEOUT);
+
+    it('finalizes the webhook-settled link as completed even when its stored payment_intent is null (real Stripe defers PaymentIntent creation)', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `settle-null-pi-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+
+      // The emulator mirrors Stripe apiVersion 2024-12-18.acacia: an open
+      // Checkout Session carries no PaymentIntent until confirmation, so the
+      // link row stores none either. The settling-session exclusion must not
+      // rely on metadata.payment_intent.
+      expect(session.payment_intent).toBeNull();
+      const linkBefore = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId })
+        .first();
+      expect(linkBefore?.metadata?.payment_intent).toBeFalsy();
+
+      // The session completes at the provider, then its checkout.session
+      // .completed event settles the invoice through the real webhook path.
+      await controlPost('actions/complete-session', { sessionId: session.id });
+      const [completedSession] = await emulatorState('checkout-sessions');
+      expect(completedSession.payment_intent).toMatch(/^pi_/);
+
+      const { PaymentService } = await import('@ee/lib/payments');
+      const service = await PaymentService.create(tenantId);
+      const webhookResult = await service.processWebhookEvent({
+        eventId: `evt_settle_${uuidv4().slice(0, 8)}`,
+        eventType: 'checkout.session.completed',
+        provider: 'stripe',
+        payload: {
+          id: `evt_settle_${uuidv4().slice(0, 8)}`,
+          type: 'checkout.session.completed',
+          data: { object: { id: completedSession.id } },
+        },
+        invoiceId,
+        amount: 32000,
+        currency: 'USD',
+        status: 'succeeded',
+        paymentIntentId: completedSession.payment_intent,
+        customerId: completedSession.customer,
+        externalLinkId: completedSession.id,
+      });
+      expect(webhookResult.success).toBe(true);
+      expect(webhookResult.paymentRecorded).toBe(true);
+
+      const invoice = await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .first();
+      expect(invoice.status).toBe('paid');
+
+      // The settling link is never mislabeled: it ends 'completed' with a
+      // completion timestamp and no invoice_not_payable metadata (which would
+      // have been the fate of a missed exclusion).
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('completed');
+      expect(links[0].completed_at).toBeTruthy();
+      expect(links[0].metadata).not.toMatchObject({ invoice_not_payable: true });
+      expect(links[0].metadata).not.toMatchObject({ stale_balance: true });
+
+      // The provider session is untouched by the terminal-status cleanup.
+      const sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('complete');
     }, HOOK_TIMEOUT);
   });
 

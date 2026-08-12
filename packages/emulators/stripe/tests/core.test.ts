@@ -43,9 +43,15 @@ describe('stripe emulator pure core', () => {
       BASE,
     );
     expect(session.id).toMatch(/^cs_/);
-    expect(session.payment_intent).toMatch(/^pi_/);
+    // Mirrors 2024-12-18.acacia: no PaymentIntent until confirmation.
+    expect(session.payment_intent).toBeNull();
     expect(session.amount_total).toBe(5997);
     expect(session.url).toBe(`${BASE}/checkout/sessions/${session.id}`);
+
+    core.completeSession(session.id);
+    const completed = core.getCheckoutSession(session.id);
+    expect(completed.payment_intent).toMatch(/^pi_/);
+    expect(core.paymentIntents.get(completed.payment_intent!)?.status).toBe('succeeded');
   });
 
   it('completeSession is idempotent: one paid event per transition', () => {
@@ -66,7 +72,9 @@ describe('stripe emulator pure core', () => {
     const { core } = makeCore();
     const sessionId = seedSession(core);
     core.failSession(sessionId);
-    const intent = core.paymentIntents.get(core.getCheckoutSession(sessionId).payment_intent)!;
+    const session = core.getCheckoutSession(sessionId);
+    expect(session.payment_intent).toMatch(/^pi_/);
+    const intent = core.paymentIntents.get(session.payment_intent!)!;
     expect(intent.status).toBe('requires_payment_method');
     expect(intent.last_payment_error?.code).toBe('card_declined');
     core.completeSession(sessionId);

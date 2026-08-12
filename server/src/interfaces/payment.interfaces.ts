@@ -165,6 +165,13 @@ export interface PaymentWebhookEvent {
   currency?: string;
   /** Payment status derived from event */
   status: PaymentStatus;
+  /**
+   * External Checkout Session/link ID the event refers to (when the object is
+   * a Checkout Session). Always known for checkout.session.* events, unlike
+   * `paymentIntentId`, which is null on open sessions under apiVersion
+   * 2024-12-18.acacia.
+   */
+  externalLinkId?: string;
   /** External payment intent/charge ID */
   paymentIntentId?: string;
   /** External customer ID */

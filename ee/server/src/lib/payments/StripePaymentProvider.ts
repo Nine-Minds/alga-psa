@@ -425,6 +425,7 @@ export class StripePaymentProvider implements PaymentProvider {
     let amount: number | undefined;
     let currency: string | undefined;
     let status: PaymentStatus = 'pending';
+    let externalLinkId: string | undefined;
     let paymentIntentId: string | undefined;
     let customerId: string | undefined;
 
@@ -436,6 +437,9 @@ export class StripePaymentProvider implements PaymentProvider {
         amount = session.amount_total || undefined;
         currency = session.currency?.toUpperCase();
         customerId = session.customer as string;
+        // The Checkout Session id is always known (unlike payment_intent, which
+        // is null until confirmation under apiVersion 2024-12-18.acacia).
+        externalLinkId = session.id;
         paymentIntentId = session.payment_intent as string;
 
         if (session.payment_status === 'paid') {
@@ -472,6 +476,7 @@ export class StripePaymentProvider implements PaymentProvider {
         const session = event.data.object as Stripe.Checkout.Session;
         invoiceId = session.metadata?.invoice_id;
         customerId = session.customer as string;
+        externalLinkId = session.id;
         status = 'cancelled';
         break;
       }
@@ -505,6 +510,7 @@ export class StripePaymentProvider implements PaymentProvider {
       amount,
       currency,
       status,
+      externalLinkId,
       paymentIntentId,
       customerId,
     };

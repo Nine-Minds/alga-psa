@@ -707,6 +707,9 @@ export class PaymentService {
       amount: event.amount,
       provider: event.provider, // Provider is already 'stripe'
       referenceNumber: event.paymentIntentId,
+      // The settling Checkout Session id so the terminal-status cleanup never
+      // retires the very session whose completion settled the invoice.
+      externalLinkId: event.externalLinkId,
       currency: event.currency,
       notes: `Stripe payment via ${event.eventType}`,
       transactionDescription: `Payment received via Stripe - ${event.paymentIntentId}`,
@@ -852,17 +855,20 @@ export class PaymentService {
    * `expire_pending` for a later retry (it never unblocks reuse) and is logged
    * rather than thrown — cleanup must not degrade the paid-invoice view.
    *
-   * `excludeSettledReference` skips the link whose `metadata.payment_intent`
-   * matches the payment reference that just settled (that session's closure is
-   * already confirmed by the provider and is handled by the webhook path).
+   * `excludeSettledExternalId` skips the link whose `external_link_id` matches
+   * the Checkout Session that just settled (its closure is already confirmed by
+   * the provider and it is handled by the webhook completion path).
+   * `excludeSettledReference` is a secondary match on the stored
+   * `metadata.payment_intent` for events that predate the session-id threading.
    */
   async expireActiveLinksForInvoice(
     invoiceId: string,
     reason: 'stale_balance' | 'invoice_not_payable' = 'invoice_not_payable',
     invoiceStatus?: string,
-    options?: { excludeSettledReference?: string }
+    options?: { excludeSettledExternalId?: string; excludeSettledReference?: string }
   ): Promise<{ retired: number; pending: number }> {
     const query = listActiveInvoicePaymentLinks(this.knex, this.tenantId, invoiceId, {
+      excludeSettledExternalId: options?.excludeSettledExternalId,
       excludeSettledReference: options?.excludeSettledReference,
     });
     const links = (await query) as unknown as IInvoicePaymentLink[];
@@ -949,16 +955,23 @@ export class PaymentService {
   /**
    * Asks the provider to close a session and only then flips the row to
    * `expired`. If the provider reports an error, the session is checked: when
-   * it is verifiably closed (already expired/completed), the row is still
-   * finalized; when it may still be open, the error is rethrown so the row
-   * stays `expire_pending` for a later retry and nothing is created on top.
+   * it verifiably closed with a payment (`succeeded`), the row is finalized as
+   * `completed` with the completion timestamp and any non-payment metadata is
+   * stripped — a missed settlement exclusion must never mislabel a paid link;
+   * when it closed without payment, the row is finalized as `expired`. When the
+   * session may still be open, the error is rethrown so the row stays
+   * `expire_pending` for a later retry and nothing is created on top.
    */
   private async confirmProviderExpiration(link: IInvoicePaymentLink): Promise<void> {
     try {
       await this.provider?.expirePaymentLink?.(link.external_link_id);
     } catch (error) {
-      const closed = await this.providerSessionVerifiablyClosed(link.external_link_id);
-      if (!closed) {
+      const sessionStatus = await this.providerSessionStatus(link.external_link_id);
+      if (sessionStatus === 'succeeded') {
+        await this.finalizeCompleted(link);
+        return;
+      }
+      if (sessionStatus !== 'cancelled' && sessionStatus !== 'refunded') {
         logger.error('[PaymentService] Failed to expire provider payment link', {
           tenantId: this.tenantId,
           invoiceId: link.invoice_id,
@@ -970,24 +983,56 @@ export class PaymentService {
       }
     }
 
+    await this.finalizeExpired(link);
+  }
+
+  /**
+   * Asks the provider whether a Checkout session is verifiably closed and, if
+   * so, whether it closed with a payment. `succeeded` means the session was
+   * paid (a settling link that escaped the exclusion); `cancelled`/`refunded`
+   * mean it closed without a current payment; `null` means it cannot be
+   * verified or may still be open.
+   */
+  private async providerSessionStatus(
+    externalLinkId: string
+  ): Promise<'succeeded' | 'cancelled' | 'refunded' | null> {
+    try {
+      const details = await this.provider?.getPaymentLinkStatus?.(externalLinkId);
+      if (!details) return null;
+      if (details.status === 'succeeded') return 'succeeded';
+      if (details.status === 'cancelled' || details.status === 'refunded') return 'cancelled';
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Finalizes an `expire_pending` row whose provider session is confirmed closed. */
+  private async finalizeExpired(link: IInvoicePaymentLink): Promise<void> {
     await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({ link_id: link.link_id, status: 'expire_pending' })
       .update({ status: 'expired' });
   }
 
   /**
-   * Asks the provider whether a Checkout session is verifiably closed (already
-   * expired, completed, or refunded). Used to finalize a link whose explicit
-   * expiration failed because the provider had already closed the session.
+   * Finalizes an `expire_pending` row whose provider session verifiably closed
+   * with a payment. The row is marked `completed` with the completion timestamp
+   * and any non-payment metadata (invoice_not_payable / stale_balance) recorded
+   * by the blocking transition is stripped so a settled link is never mislabeled.
    */
-  private async providerSessionVerifiablyClosed(externalLinkId: string): Promise<boolean> {
-    try {
-      const details = await this.provider?.getPaymentLinkStatus?.(externalLinkId);
-      if (!details) return false;
-      return details.status === 'cancelled' || details.status === 'succeeded' || details.status === 'refunded';
-    } catch {
-      return false;
-    }
+  private async finalizeCompleted(link: IInvoicePaymentLink): Promise<void> {
+    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({ link_id: link.link_id, status: 'expire_pending' })
+      .update({
+        status: 'completed',
+        completed_at: this.knex.fn.now(),
+        metadata: this.knex.raw(
+          `COALESCE(metadata, '{}'::jsonb)
+             - 'invoice_not_payable' - 'invoice_status' - 'stale_balance'
+             - 'stored_amount' - 'current_balance'
+           || '{"expire_state": "confirmed"}'::jsonb`
+        ),
+      });
   }
 
   /**
@@ -1108,6 +1153,9 @@ registerInvoiceTerminalStatusHandler(async (params) => {
     params.invoiceId,
     'invoice_not_payable',
     params.newStatus,
-    { excludeSettledReference: params.settledReference }
+    {
+      excludeSettledExternalId: params.settledExternalId,
+      excludeSettledReference: params.settledReference,
+    }
   );
 });

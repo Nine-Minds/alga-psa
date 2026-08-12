@@ -57,7 +57,7 @@ function expandIncludes(expand: unknown, name: string): boolean {
 }
 
 function sessionResponse(core: StripeEmulatorCore, session: StripeCheckoutSession, expand: unknown): StripeCheckoutSession {
-  if (expandIncludes(expand, 'payment_intent')) {
+  if (expandIncludes(expand, 'payment_intent') && session.payment_intent) {
     const intent = core.paymentIntents.get(session.payment_intent);
     return { ...session, payment_intent: intent ?? session.payment_intent } as StripeCheckoutSession;
   }

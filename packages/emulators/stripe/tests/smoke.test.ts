@@ -151,19 +151,20 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     expect(session.amount_total).toBe(25000);
     expect(session.currency).toBe('usd');
     expect(session.metadata.invoice_id).toBe('inv-1');
-    expect(session.payment_intent).toMatch(/^pi_/);
+    // Mirrors 2024-12-18.acacia: payment-mode sessions defer the PaymentIntent.
+    expect(session.payment_intent).toBeNull();
     expect(session.url).toContain('/checkout/sessions/');
     expect(session.url).toContain(session.id);
 
     const expanded = await (
       await fetch(`${base}/v1/checkout/sessions/${session.id}?expand[]=payment_intent`, { headers: auth })
     ).json();
-    expect(expanded.payment_intent.id).toBe(session.payment_intent);
+    expect(expanded.payment_intent).toBeNull();
 
     const collapsed = await (
       await fetch(`${base}/v1/checkout/sessions/${session.id}`, { headers: auth })
     ).json();
-    expect(collapsed.payment_intent).toBe(session.payment_intent);
+    expect(collapsed.payment_intent).toBeNull();
   });
 
   it('hosted Pay completes the session, delivers a signed webhook, and 303s to success_url', async () => {

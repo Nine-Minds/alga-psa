@@ -64,7 +64,8 @@ export interface StripeCheckoutSession {
   success_url: string;
   cancel_url: string;
   expires_at: number;
-  payment_intent: string;
+  /** Null until confirmation, mirroring Stripe apiVersion 2024-12-18.acacia. */
+  payment_intent: string | null;
   url: string;
   status: 'open' | 'complete' | 'expired';
   payment_status: 'unpaid' | 'paid';
@@ -256,7 +257,6 @@ export class StripeEmulatorCore implements EmulatorCore {
     hostedBaseUrl: string,
   ): StripeCheckoutSession {
     const sessionId = this.newId('cs');
-    const paymentIntentId = this.newId('pi');
 
     const firstItem = input.line_items[0] ?? {};
     const currency = (input.currency ?? firstItem.price_data?.currency ?? 'usd').toLowerCase();
@@ -267,19 +267,6 @@ export class StripeEmulatorCore implements EmulatorCore {
 
     const defaultExpiry = this.nowUnix() + 24 * 60 * 60;
     const expiresAt = input.expires_at ?? defaultExpiry;
-
-    const paymentIntent: StripePaymentIntent = {
-      id: paymentIntentId,
-      object: 'payment_intent',
-      amount: amountTotal,
-      currency,
-      status: 'requires_payment_method',
-      customer: input.customer ?? '',
-      metadata: { ...input.metadata },
-      payment_method: null,
-      created: this.nowUnix(),
-    };
-    this.paymentIntents.set(paymentIntentId, paymentIntent);
 
     const session: StripeCheckoutSession = {
       id: sessionId,
@@ -297,7 +284,10 @@ export class StripeEmulatorCore implements EmulatorCore {
       success_url: input.success_url,
       cancel_url: input.cancel_url ?? '',
       expires_at: expiresAt,
-      payment_intent: paymentIntentId,
+      // Mirrors Stripe apiVersion 2024-12-18.acacia: payment-mode Checkout
+      // Sessions defer PaymentIntent creation until confirmation, so an open
+      // session carries no payment_intent yet.
+      payment_intent: null,
       url: `${hostedBaseUrl}/checkout/sessions/${sessionId}`,
       status: 'open',
       payment_status: 'unpaid',
@@ -317,17 +307,43 @@ export class StripeEmulatorCore implements EmulatorCore {
     return session;
   }
 
+  /**
+   * Creates the PaymentIntent for a session on first confirmation, mirroring
+   * 2024-12-18.acacia: Checkout Sessions defer PI creation until the customer
+   * submits the payment form.
+   */
+  private ensurePaymentIntent(session: StripeCheckoutSession): StripePaymentIntent {
+    if (session.payment_intent) {
+      const existing = this.paymentIntents.get(session.payment_intent);
+      if (existing) return existing;
+    }
+
+    const intentId = this.newId('pi');
+    const intent: StripePaymentIntent = {
+      id: intentId,
+      object: 'payment_intent',
+      amount: session.amount_total,
+      currency: session.currency,
+      status: 'requires_payment_method',
+      customer: session.customer,
+      metadata: { ...session.metadata },
+      payment_method: null,
+      created: this.nowUnix(),
+    };
+    this.paymentIntents.set(intentId, intent);
+    session.payment_intent = intentId;
+    return intent;
+  }
+
   /** Complete a session and its payment intent; emits checkout.session.completed. */
   completeSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
     session.status = 'complete';
     session.payment_status = 'paid';
 
-    const intent = this.paymentIntents.get(session.payment_intent);
-    if (intent) {
-      intent.status = 'succeeded';
-      intent.payment_method = 'pm_simulated';
-    }
+    const intent = this.ensurePaymentIntent(session);
+    intent.status = 'succeeded';
+    intent.payment_method = 'pm_simulated';
 
     return this.emitEvent('checkout.session.completed', session);
   }
@@ -335,27 +351,14 @@ export class StripeEmulatorCore implements EmulatorCore {
   /** Record a failed attempt; emits payment_intent.payment_failed. */
   failSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
-    const intent = this.paymentIntents.get(session.payment_intent);
-    if (intent) {
-      intent.status = 'requires_payment_method';
-      intent.last_payment_error = {
-        type: 'card_error',
-        code: 'card_declined',
-        message: 'Your card was declined.',
-      };
-    }
-    return this.emitEvent('payment_intent.payment_failed', intent ?? {
-      id: session.payment_intent,
-      object: 'payment_intent',
-      amount: session.amount_total,
-      currency: session.currency,
-      status: 'requires_payment_method',
-      customer: session.customer,
-      metadata: session.metadata,
-      payment_method: null,
-      created: session.created,
-      last_payment_error: { type: 'card_error', code: 'card_declined', message: 'Your card was declined.' },
-    });
+    const intent = this.ensurePaymentIntent(session);
+    intent.status = 'requires_payment_method';
+    intent.last_payment_error = {
+      type: 'card_error',
+      code: 'card_declined',
+      message: 'Your card was declined.',
+    };
+    return this.emitEvent('payment_intent.payment_failed', intent);
   }
 
   /**
@@ -365,9 +368,11 @@ export class StripeEmulatorCore implements EmulatorCore {
   expireSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
     session.status = 'expired';
-    const intent = this.paymentIntents.get(session.payment_intent);
-    if (intent && intent.status === 'requires_payment_method') {
-      intent.status = 'canceled';
+    if (session.payment_intent) {
+      const intent = this.paymentIntents.get(session.payment_intent);
+      if (intent && intent.status === 'requires_payment_method') {
+        intent.status = 'canceled';
+      }
     }
     return this.emitEvent('checkout.session.expired', session);
   }

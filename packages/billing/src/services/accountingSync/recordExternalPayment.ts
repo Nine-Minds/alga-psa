@@ -49,6 +49,12 @@ export interface ExternalPaymentInput {
   /** Extra metadata merged into the transaction record */
   transactionMetadata?: Record<string, unknown>;
   transactionDescription?: string;
+  /**
+   * External Checkout Session/link id that just settled (when the payment came
+   * from a hosted Checkout). Passed to the terminal-status handler so the
+   * settling session's own link is never retired alongside stale links.
+   */
+  externalLinkId?: string;
 }
 
 export interface ExternalPaymentResult {
@@ -233,6 +239,7 @@ export async function recordExternalPayment(
       invoiceId: input.invoiceId,
       newStatus,
       settledReference: input.referenceNumber,
+      settledExternalId: input.externalLinkId,
     });
   }
 
