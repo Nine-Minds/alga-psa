@@ -64,7 +64,13 @@ describe('low-risk billing tenant-scoped query contract', () => {
     // Sender-name lookup moved to the tenant_companies party adapter
     // (179f5e1da0); the adapter carries the facade scoping.
     expect(invoiceJob).toContain('const tenantParty = await fetchTenantParty(knex, tenant);');
-    expect(invoiceJob).toContain("tenantDb(knex, tenant).table<IContact>('contacts')");
+    // Billing-recipient resolution (billing contact + billing/default location
+    // reads) moved to the shared tenant-scoped resolver; every read there is
+    // scoped through a single tenantDb handle.
+    const billingRecipientService = readSource('packages/billing/src/services/invoiceBillingRecipientService.ts');
+    expect(billingRecipientService).toContain('const db = tenantDb(knexOrTrx, tenantId);');
+    expect(billingRecipientService).toContain(".table('contacts')");
+    expect(billingRecipientService).toContain(".table('client_locations')");
     const tenantPartyAdapter = readSource('packages/billing/src/lib/adapters/tenantPartyAdapter.ts');
     expect(tenantPartyAdapter).toContain("db.table('tenant_companies as tc')");
 
