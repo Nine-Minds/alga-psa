@@ -82,6 +82,7 @@ describe('bucket period fully inside a month', () => {
     expect(feb.applied).toBe(0);
     expect(feb.expired).toBe(-100000); // the whole allowance forfeits at period end
     expect(feb.closing).toBe(0);
+    expect(feb.opening + feb.issued + feb.applied + feb.expired).toBeCloseTo(feb.closing, 6);
   });
 
   it('rollover: carry opens the next month, leftover base carries, rolled-in minutes lapse', () => {
@@ -110,13 +111,19 @@ describe('bucket period fully inside a month', () => {
     const movement = computeBucketPeriodMovement('2026-02', period({
       totalMinutes: 6000,
       rolledOverMinutes: 1200,
-      minutesUsed: 6600, // 6600 of 7200 available
+      minutesUsed: 6600, // 6600 of 7200 available — burns into the carried-in minutes
       allowRollover: true,
     }));
     const rate = 100000 / 6000;
+    // The burn consumes the full base plus 600 carried-in minutes, so applied
+    // carries the value of every burned available minute (fee + carry value),
+    // keeping the movement columns closed.
+    expect(movement.opening).toBe(1200 * rate);
+    expect(movement.applied).toBe(-(6600 * rate));
     // Leftover = 600, carry = max(0, 6000-6600) = 0 → all 600 lapse.
     expect(movement.expired).toBe(-(600 * rate));
     expect(movement.closing).toBe(0);
+    expect(movement.opening + movement.issued + movement.applied + movement.expired).toBeCloseTo(movement.closing, 6);
   });
 
   it('caps applied value at the period fee (overage is billed separately)', () => {
@@ -125,10 +132,12 @@ describe('bucket period fully inside a month', () => {
       minutesUsed: 9000, // 50% over the allowance
       allowRollover: false,
     }));
-    // burn × rate = 9000 × (100000/6000) = 150000 > fee 100000 → capped.
+    // burn × rate = 9000 × (100000/6000) = 150000 > available value 100000 →
+    // applied is capped at the fee (no carry to extend the cap).
     expect(movement.applied).toBe(-100000);
     expect(movement.expired).toBe(0); // nothing left to forfeit
     expect(movement.closing).toBe(0);
+    expect(movement.opening + movement.issued + movement.applied + movement.expired).toBeCloseTo(movement.closing, 6);
   });
 });
 
@@ -150,6 +159,7 @@ describe('mid-period month boundaries (spanning periods)', () => {
     expect(feb.applied).toBe(0); // burn lands in March
     expect(feb.expired).toBe(0);
     expect(feb.closing).toBe(100000); // full allowance still on the books
+    expect(feb.opening + feb.issued + feb.applied + feb.expired).toBeCloseTo(feb.closing, 6);
 
     const mar = computeBucketPeriodMovement('2026-03', base);
     expect(mar.opening).toBe(100000); // period still active at Mar 1
@@ -157,6 +167,7 @@ describe('mid-period month boundaries (spanning periods)', () => {
     expect(mar.applied).toBe(-(2400 * rate));
     expect(mar.expired).toBe(-(3600 * rate));
     expect(mar.closing).toBe(0);
+    expect(mar.opening + mar.issued + mar.applied + mar.expired).toBeCloseTo(mar.closing, 6);
   });
 
   it('month in the middle of a spanning period carries the full allowance through', () => {
@@ -174,6 +185,7 @@ describe('mid-period month boundaries (spanning periods)', () => {
     expect(jan.applied).toBe(0);
     expect(jan.expired).toBe(0);
     expect(jan.closing).toBe(100000);
+    expect(jan.opening + jan.issued + jan.applied + jan.expired).toBeCloseTo(jan.closing, 6);
   });
 
   it('spanning rollover period: rolled-in minutes lapse at the end, base carries', () => {
@@ -189,12 +201,22 @@ describe('mid-period month boundaries (spanning periods)', () => {
 
     const feb = computeBucketPeriodMovement('2026-02', base);
     expect(feb.opening).toBe(0); // starts mid-Feb, no carry pending at Feb 1
+    expect(feb.issued).toBe(100000);
+    expect(feb.applied).toBe(0);
+    expect(feb.expired).toBe(0);
     expect(feb.closing).toBe((6000 + 1200) * rate);
+    // The received carry's value lives inside this period's closing balance —
+    // it closes arithmetically only together with the origin period (see the
+    // mid-month carry handoff aggregate test below).
 
     const mar = computeBucketPeriodMovement('2026-03', base);
     // Leftover = 4200; carry = max(0, 6000-3000) = 3000; lapsed = 1200.
+    expect(mar.opening).toBe((6000 + 1200) * rate);
+    expect(mar.issued).toBe(0);
+    expect(mar.applied).toBe(-(3000 * rate));
     expect(mar.expired).toBe(-(1200 * rate));
     expect(mar.closing).toBe(3000 * rate);
+    expect(mar.opening + mar.issued + mar.applied + mar.expired).toBeCloseTo(mar.closing, 6);
   });
 
   it('recognizes a carry that crosses a month boundary in both closing and opening', () => {
@@ -211,11 +233,15 @@ describe('mid-period month boundaries (spanning periods)', () => {
       periodFee: 60000,
     });
     const feb = computeBucketPeriodMovement('2026-02', periodOne, { successorStart: '2026-03-01' });
+    expect(feb.opening).toBe(3000 * perMinuteRate(3000, 60000)); // active at Feb 1
+    expect(feb.applied).toBe(-(2400 * perMinuteRate(3000, 60000)));
     expect(feb.expired).toBe(0); // leftover (600) all carries
     expect(feb.closing).toBe(600 * perMinuteRate(3000, 60000)); // carry still outstanding
+    expect(feb.opening + feb.issued + feb.applied + feb.expired).toBeCloseTo(feb.closing, 6);
 
     const mar = computeBucketPeriodMovement('2026-03', periodOne, { successorStart: '2026-03-01' });
     expect(mar.opening).toBe(0); // period ended Feb 14, contributes nothing in Mar
+    expect(mar.closing).toBe(0);
 
     // The successor period (period 2) opens March with the carried-in value.
     const periodTwo = period({
@@ -267,6 +293,55 @@ describe('mid-period month boundaries (spanning periods)', () => {
     const febTwo = computeBucketPeriodMovement('2026-02', periodTwo, { successorStart: '2026-03-14' });
     const rate = perMinuteRate(3000, 60000);
     expect(febTwo.closing).toBe(3600 * rate); // base + the received carry
+
+    // The carry's value flows between the two periods mid-month, so the
+    // movement columns close at the client×currency aggregate — not per period.
+    const aggregate = computeHoursRollforward('2026-02', [periodOne, periodTwo]).get('client-1\u0000USD')!;
+    expect(aggregate.opening).toBe(3000 * rate); // period 1's balance at Feb 1
+    expect(aggregate.issued).toBe(60000); // period 2's allowance
+    expect(aggregate.applied).toBe(-(2400 * rate)); // period 1's burn
+    expect(aggregate.expired).toBe(0);
+    expect(aggregate.closing).toBe(3600 * rate);
+    expect(aggregate.opening + aggregate.issued + aggregate.applied + aggregate.expired).toBeCloseTo(aggregate.closing, 6);
+  });
+
+  it('mid-month rollover carry closes arithmetically at the client aggregate', () => {
+    // Jan 15–Feb 14 burns 4800 of 6000 (carry 1200) into Feb 15–Mar 14, which
+    // burns 3000 of 7200. February is where the carry changes hands mid-month.
+    const origin = period({
+      usageId: 'u1',
+      periodStart: '2026-01-15',
+      periodEnd: '2026-02-14',
+      totalMinutes: 6000,
+      minutesUsed: 4800,
+      allowRollover: true,
+    });
+    const receiver = period({
+      usageId: 'u2',
+      periodStart: '2026-02-15',
+      periodEnd: '2026-03-14',
+      totalMinutes: 6000,
+      rolledOverMinutes: 1200,
+      minutesUsed: 3000,
+      allowRollover: true,
+    });
+    const rate = 100000 / 6000;
+
+    const feb = computeHoursRollforward('2026-02', [origin, receiver]).get('client-1\u0000USD')!;
+    expect(feb.opening).toBe(6000 * rate); // origin active at Feb 1
+    expect(feb.issued).toBe(100000); // receiver's allowance
+    expect(feb.applied).toBe(-(4800 * rate)); // origin's burn lands in Feb
+    expect(feb.expired).toBe(0); // leftover (1200) all carries
+    expect(feb.closing).toBe(7200 * rate); // receiver holds base + carry at Feb 28
+    expect(feb.opening + feb.issued + feb.applied + feb.expired).toBeCloseTo(feb.closing, 6);
+
+    const mar = computeHoursRollforward('2026-03', [origin, receiver]).get('client-1\u0000USD')!;
+    expect(mar.opening).toBe(feb.closing);
+    expect(mar.issued).toBe(0);
+    expect(mar.applied).toBe(-(3000 * rate));
+    expect(mar.expired).toBe(-(1200 * rate)); // rolled-in minutes lapse
+    expect(mar.closing).toBe(3000 * rate); // unused base carries to April
+    expect(mar.opening + mar.issued + mar.applied + mar.expired).toBeCloseTo(mar.closing, 6);
   });
 });
 
@@ -282,6 +357,7 @@ describe('configured (not yet billed) fee', () => {
     expect(movement.detail.feeSource).toBe('configured');
     expect(movement.detail.periodFee).toBe(80000);
     expect(movement.issued).toBe(80000);
+    expect(movement.opening + movement.issued + movement.applied + movement.expired).toBeCloseTo(movement.closing, 6);
   });
 });
 
@@ -295,6 +371,7 @@ describe('hours rollforward aggregation', () => {
     expect(rollforward?.issued).toBe(150000);
     expect(rollforward?.applied).toBe(-(2400 * (100000 / 6000) + 600 * (50000 / 3000)));
     expect(rollforward?.details).toHaveLength(2);
+    expect(rollforward!.opening + rollforward!.issued + rollforward!.applied + rollforward!.expired).toBeCloseTo(rollforward!.closing, 6);
   });
 
   it('groups by client and currency independently', () => {
@@ -304,9 +381,15 @@ describe('hours rollforward aggregation', () => {
       period({ clientId: 'client-2', currencyCode: 'USD', periodFee: 70000 }),
     ];
     const rollforward = computeHoursRollforward('2026-02', periods);
-    expect(rollforward.get('client-1\u0000USD')?.issued).toBe(100000);
-    expect(rollforward.get('client-1\u0000EUR')?.issued).toBe(90000);
-    expect(rollforward.get('client-2\u0000USD')?.issued).toBe(70000);
+    const usdClient1 = rollforward.get('client-1\u0000USD')!;
+    const eurClient1 = rollforward.get('client-1\u0000EUR')!;
+    const usdClient2 = rollforward.get('client-2\u0000USD')!;
+    expect(usdClient1.issued).toBe(100000);
+    expect(eurClient1.issued).toBe(90000);
+    expect(usdClient2.issued).toBe(70000);
+    for (const aggregate of [usdClient1, eurClient1, usdClient2]) {
+      expect(aggregate.opening + aggregate.issued + aggregate.applied + aggregate.expired).toBeCloseTo(aggregate.closing, 6);
+    }
   });
 
   it('closes arithmetically and carries the rollover across consecutive monthly periods', () => {

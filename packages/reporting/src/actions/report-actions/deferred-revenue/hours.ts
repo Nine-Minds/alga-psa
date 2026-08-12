@@ -16,14 +16,16 @@
  * the carry is the previous period's unused base allowance, which the next
  * bucket period persists as rolled_over_minutes.
  *
- * Movement for month M (all signed like the credits columns — issued grows the
- * liability, applied/expired reduce it):
- *   - issued   = period fee for bucket periods starting in M
- *   - applied  = −minutes burned in M × rate (capped so a period's recognized
- *                revenue never exceeds what was billed)
- *   - expired  = −forfeited minutes at period ends inside M × rate
- *   - opening  = outstanding value at the start of M × rate
- *   - closing  = outstanding value at the end of M × rate
+  * Movement for month M (all signed like the credits columns — issued grows the
+  * liability, applied/expired reduce it):
+  *   - issued   = period fee for bucket periods starting in M
+  *   - applied  = −minutes burned in M × rate, capped at the value actually
+  *                available (fee + carried-in value), so a period's recognized
+  *                revenue never exceeds what was billed — the carry's value was
+  *                billed in the prior period's fee
+  *   - expired  = −forfeited minutes at period ends inside M × rate
+  *   - opening  = outstanding value at the start of M × rate
+  *   - closing  = outstanding value at the end of M × rate
  *
  * Rollover carry accounting: a carried-in allowance is a liability the moment
  * the prior period ends and rolls, so a period that ends in M recognizes its
@@ -149,10 +151,13 @@ export function computeBucketPeriodMovement(
   }
 
   // Applied: the whole period's burn lands in its end month, signed negative,
-  // capped at the fee so a period's recognized revenue never exceeds what was
-  // billed (overage minutes are billed separately as overage).
+  // capped at the value of the minutes actually available — total allowance +
+  // carried-in rollover. Burned minutes beyond that are overage, billed
+  // separately and outside the prepaid liability. Because the carried-in value
+  // was already billed in the prior period's fee, the cap (fee + carry value)
+  // still means recognized revenue never exceeds cash received.
   const burn = endsInMonth ? used : 0;
-  const applied = -Math.min(burn * rate, fee);
+  const applied = -Math.min(burn, included + rolledOver) * rate;
 
   // Expired: forfeiture is recognized only at the month the period ends in —
   // non-rollover leftovers plus rolled-in minutes that never compound.
