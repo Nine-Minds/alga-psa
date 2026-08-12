@@ -54,6 +54,17 @@ function isNonZero(movement: MovementColumns): boolean {
   );
 }
 
+/**
+ * Credit detail retention rule (fix round 3). A credit row stays on the report
+ * when it still carries liability as of the selected month's end (reconstructed
+ * from the ledger, not from today's tracking state) or it moved during the
+ * month. Rows that fail both carry nothing and explain nothing for the month —
+ * keeping them would break the detail-to-closing reconciliation.
+ */
+function isRetainedCreditDetail(detail: CreditDetailRow): boolean {
+  return detail.remainingAmount > 0 || detail.inMonthMovement !== 0;
+}
+
 function creditDetailsByClientCurrency(
   details: CreditDetailRow[],
 ): Map<string, CreditDetailRow[]> {
@@ -80,8 +91,14 @@ export function buildDeferredRevenueReportFromData(
 
   const creditRollforward = computeCreditRollforward(month, data.creditTransactions);
   const hoursRollforward = computeHoursRollforward(month, buildBucketPeriodInputs(data));
+  const creditDetailRows = buildCreditDetailRows(
+    data.creditTracking,
+    data.creditTransactions,
+    data.creditInvoices,
+    month,
+  );
   const creditDetailsByKey = creditDetailsByClientCurrency(
-    buildCreditDetailRows(data.creditTracking, data.creditInvoices, month),
+    creditDetailRows.filter(isRetainedCreditDetail),
   );
 
   const clientRows = new Map<string, ClientRollforward>();
@@ -135,12 +152,10 @@ export function buildDeferredRevenueReportFromData(
     }
   }
 
-  // Outstanding credit balances (non-expired, still-remaining tracking rows)
-  // must surface even when the month's movement is nil.
+  // Outstanding credit balances (still-remaining or in-month-movement detail
+  // rows) must surface even when the month's movement is nil.
   for (const [key, details] of creditDetailsByKey) {
-    const hasOutstanding = details.some(
-      (detail) => detail.remainingAmount > 0 && !detail.isExpired,
-    );
+    const hasOutstanding = details.some(isRetainedCreditDetail);
     if (hasOutstanding) {
       const existing = clientRows.get(key);
       if (existing) {
@@ -174,12 +189,10 @@ export function buildDeferredRevenueReportFromData(
   const byCurrency = new Map<string, ClientRollforward[]>();
   for (const row of clientRows.values()) {
     // A zero-balance client is omitted unless it has detail that proves a
-    // balance: outstanding credits (remaining > 0) or contributing bucket
-    // periods. Detail rows for fully-consumed credits (remaining 0) or
-    // future-month credits never retain a client on their own.
-    const hasOutstandingCreditDetail = row.creditDetails.some(
-      (detail) => detail.remainingAmount > 0 && !detail.isExpired,
-    );
+    // balance: retained credit detail (reconstructed remaining > 0 or in-month
+    // movement) or contributing bucket periods. Detail rows for fully-consumed
+    // credits or future-month credits never retain a client on their own.
+    const hasOutstandingCreditDetail = row.creditDetails.some(isRetainedCreditDetail);
     if (!isNonZero(row.total) && row.bucketDetails.length === 0 && !hasOutstandingCreditDetail) {
       continue;
     }
@@ -209,6 +222,12 @@ export function buildDeferredRevenueReportFromData(
   if (hasSpanningPeriods) {
     notes.push(
       'Bucket periods spanning calendar-month boundaries attribute their burn to the month the period ends in.',
+    );
+  }
+
+  if (creditDetailRows.some((detail) => detail.reconstructionLimited)) {
+    notes.push(
+      'Credit balances affected by ledger activity that cannot be attributed to a specific credit (missing credit linkage) are reported at their current remaining balance.',
     );
   }
 

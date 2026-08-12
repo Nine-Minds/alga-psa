@@ -50,7 +50,12 @@ export interface CreditDetailRow {
   issuedDate: string;
   description: string | null;
   amount: number;
+  /** Outstanding balance reconstructed from the ledger as of the selected month's end. */
   remainingAmount: number;
+  /** Credit movement attributed to this credit and dated inside the selected month (signed). */
+  inMonthMovement: number;
+  /** True when unattributable ledger activity forced a cap at the current remaining balance. */
+  reconstructionLimited: boolean;
   expirationDate: string | null;
   isExpired: boolean;
   sourceKind: CreditSourceKind;

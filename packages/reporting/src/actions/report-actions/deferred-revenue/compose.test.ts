@@ -24,6 +24,12 @@ const creditTransactions: CreditTransactionRow[] = [
     type: 'credit_application',
     amount: -200000,
     createdAt: FEB,
+    metadata: {
+      applied_credits: [
+        { creditId: 'credit-1', amount: 200000, transactionId: 'txn-credit-1' },
+      ],
+    },
+    relatedTransactionId: 'txn-credit-1',
   },
   {
     transactionId: 'txn-credit-3',
@@ -316,6 +322,134 @@ describe('buildDeferredRevenueReportFromData', () => {
     expect(acme.creditDetails[0].remainingAmount).toBe(500000);
     expect(
       acme.creditDetails.reduce((sum, detail) => sum + detail.remainingAmount, 0),
+    ).toBe(acme.credits.closing);
+  });
+
+  it('reconstructs month-M detail for a credit issued in M-1 and fully applied in M+1 (fix round 3)', () => {
+    // Regression: the credit's current tracking remaining is 0 (fully applied
+    // today), so the old remainingAmount > 0 predicate dropped the row and the
+    // detail no longer reconciled to the February closing. The ledger
+    // reconstruction restores the M-end balance and the row.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [
+          {
+            transactionId: 'txn-iss-jan',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_issuance',
+            amount: 200000,
+            createdAt: '2026-01-15T10:00:00.000Z',
+          },
+          {
+            transactionId: 'txn-app-mar',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_application',
+            amount: -200000,
+            createdAt: '2026-03-15T10:00:00.000Z',
+            metadata: {
+              applied_credits: [
+                { creditId: 'credit-later', amount: 200000, transactionId: 'txn-iss-jan' },
+              ],
+            },
+            relatedTransactionId: 'txn-iss-jan',
+          },
+        ],
+        creditTracking: [
+          {
+            creditId: 'credit-later',
+            transactionId: 'txn-iss-jan',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            amount: 200000,
+            remainingAmount: 0,
+            expirationDate: null,
+            isExpired: false,
+            transactionType: 'credit_issuance',
+            issuedDate: '2026-01-15T10:00:00.000Z',
+            description: 'Prepayment applied later',
+            invoiceId: null,
+            metadata: null,
+          },
+        ],
+        bucketPeriods: [],
+      }),
+      '2026-02',
+    );
+
+    const usd = report.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    expect(usd!.clients).toHaveLength(1);
+    const acme = usd!.clients[0];
+    expect(acme.credits.opening).toBe(200000);
+    expect(acme.credits.closing).toBe(200000);
+    expect(acme.creditDetails).toHaveLength(1);
+    const detail = acme.creditDetails[0];
+    expect(detail.creditId).toBe('credit-later');
+    expect(detail.remainingAmount).toBe(200000);
+    expect(detail.inMonthMovement).toBe(0);
+    expect(
+      acme.creditDetails.reduce((sum, row) => sum + row.remainingAmount, 0),
+    ).toBe(acme.credits.closing);
+  });
+
+  it('keeps the fully-applied-in-M+1 credit on the month after application with a reconciling zero detail (fix round 3)', () => {
+    const data = makeData({
+      creditTransactions: [
+        {
+          transactionId: 'txn-iss-jan',
+          clientId: 'client-1',
+          currencyCode: 'USD',
+          type: 'credit_issuance',
+          amount: 200000,
+          createdAt: '2026-01-15T10:00:00.000Z',
+        },
+        {
+          transactionId: 'txn-app-mar',
+          clientId: 'client-1',
+          currencyCode: 'USD',
+          type: 'credit_application',
+          amount: -200000,
+          createdAt: '2026-03-15T10:00:00.000Z',
+          metadata: {
+            applied_credits: [
+              { creditId: 'credit-later', amount: 200000, transactionId: 'txn-iss-jan' },
+            ],
+          },
+          relatedTransactionId: 'txn-iss-jan',
+        },
+      ],
+      creditTracking: [
+        {
+          creditId: 'credit-later',
+          transactionId: 'txn-iss-jan',
+          clientId: 'client-1',
+          currencyCode: 'USD',
+          amount: 200000,
+          remainingAmount: 0,
+          expirationDate: null,
+          isExpired: false,
+          transactionType: 'credit_issuance',
+          issuedDate: '2026-01-15T10:00:00.000Z',
+          description: 'Prepayment applied later',
+          invoiceId: null,
+          metadata: null,
+        },
+      ],
+      bucketPeriods: [],
+    });
+
+    const mar = buildDeferredRevenueReportFromData(data, '2026-03');
+    const usd = mar.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    const acme = usd!.clients[0];
+    expect(acme.credits.closing).toBe(0);
+    expect(acme.creditDetails).toHaveLength(1);
+    expect(acme.creditDetails[0].remainingAmount).toBe(0);
+    expect(acme.creditDetails[0].inMonthMovement).toBe(-200000);
+    expect(
+      acme.creditDetails.reduce((sum, row) => sum + row.remainingAmount, 0),
     ).toBe(acme.credits.closing);
   });
 });

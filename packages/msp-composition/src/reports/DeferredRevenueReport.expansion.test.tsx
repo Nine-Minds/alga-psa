@@ -63,6 +63,8 @@ function creditDetail(
     description: 'Prepayment',
     amount: 5000,
     remainingAmount: 5000,
+    inMonthMovement: 0,
+    reconstructionLimited: false,
     expirationDate: null,
     isExpired: false,
     sourceKind: 'prepayment',

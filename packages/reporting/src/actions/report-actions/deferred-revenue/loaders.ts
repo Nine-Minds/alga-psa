@@ -10,7 +10,7 @@ import { tenantDb } from '@alga-psa/db';
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
 import type { BucketPeriodInput } from './hours';
-import type { CreditTransactionRow } from './credits';
+import { reconstructCreditBalances, type CreditTransactionRow } from './credits';
 import type { CreditDetailRow } from './types';
 
 /** Finalized invoice statuses (legacy 'Unpaid' etc. treated as billed). */
@@ -123,7 +123,16 @@ export async function loadCreditTransactions(
   const rows = await tenantDb(conn, tenant)
     .table('transactions')
     .whereIn('type', CREDIT_TRANSACTION_TYPES)
-    .select('transaction_id', 'client_id', 'currency_code', 'type', 'amount', 'created_at');
+    .select(
+      'transaction_id',
+      'client_id',
+      'currency_code',
+      'type',
+      'amount',
+      'created_at',
+      'metadata',
+      'related_transaction_id',
+    );
   return rows.map((row) => ({
     transactionId: row.transaction_id,
     clientId: row.client_id,
@@ -131,6 +140,8 @@ export async function loadCreditTransactions(
     type: row.type,
     amount: toNumber(row.amount),
     createdAt: toStringValue(row.created_at),
+    metadata: row.metadata ?? null,
+    relatedTransactionId: row.related_transaction_id ?? null,
   }));
 }
 
@@ -507,14 +518,23 @@ export function buildBucketPeriodInputs(
  * issued before the month's end are kept even when their current remaining
  * balance is zero: a pre-month issuance still explains opening/closing or an
  * in-month application/expiration.
+ *
+ * Each row's `remainingAmount` is reconstructed from the ledger as of the
+ * month's end (see `reconstructCreditBalances`), not read from today's
+ * `credit_tracking` — so a credit issued in M-1 and fully applied in M+1 still
+ * reports its outstanding balance for month M. Retention (whether the row
+ * keeps a client on the report) is decided in compose.ts from this value plus
+ * in-month movement.
  */
 export function buildCreditDetailRows(
   creditTracking: CreditTrackingDetailRow[],
+  creditTransactions: CreditTransactionRow[],
   creditInvoices: Map<string, CreditSourceInvoice>,
   month: string,
 ): CreditDetailRow[] {
   const [year, monthIndex] = month.split('-').map(Number);
   const monthEnd = Date.UTC(year, monthIndex, 1);
+  const reconstruction = reconstructCreditBalances(month, creditTracking, creditTransactions);
 
   return creditTracking
     .filter((credit) => {
@@ -528,6 +548,7 @@ export function buildCreditDetailRows(
         credit.metadata,
         creditInvoices,
       );
+      const reconstructed = reconstruction.get(credit.creditId);
       return {
         creditId: credit.creditId,
         transactionId: credit.transactionId,
@@ -535,7 +556,9 @@ export function buildCreditDetailRows(
         issuedDate: credit.issuedDate,
         description: credit.description,
         amount: credit.amount,
-        remainingAmount: credit.remainingAmount,
+        remainingAmount: reconstructed?.remainingAsOfMonthEnd ?? credit.remainingAmount,
+        inMonthMovement: reconstructed?.inMonthMovement ?? 0,
+        reconstructionLimited: reconstructed?.limited ?? false,
         expirationDate: credit.expirationDate,
         isExpired: credit.isExpired,
         sourceKind: classification.sourceKind,
