@@ -1432,6 +1432,9 @@ function sortActivities(
   });
 }
 
+/**
+ * Fetch notification activities
+ */
 function applyNotificationActivityFilters(
   queryBuilder: Knex.QueryBuilder,
   filters: ActivityFilters,
