@@ -9,6 +9,7 @@ import {
   FileBarChart,
   Gauge,
   Ghost,
+  HandCoins,
   Lock,
   type LucideIcon,
   Mail,
@@ -29,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -55,7 +57,7 @@ import {
 type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';
 type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'employee-utilization';
-type LinkReportId = 'contract-reports' | 'inventory-margin' | 'inventory-write-offs' | 'inventory-ghost-usage';
+type LinkReportId = 'contract-reports' | 'deferred-revenue' | 'inventory-margin' | 'inventory-write-offs' | 'inventory-ghost-usage';
 
 interface ReportDefinition {
   id: EmbeddedReportId | LinkReportId;
@@ -167,6 +169,21 @@ const REPORTS: ReportDefinition[] = [
     kind: 'link',
     href: '/msp/billing?tab=reports',
     icon: FileBarChart,
+  },
+  {
+    id: 'deferred-revenue',
+    titleKey: 'reportsPage.reportCatalog.deferredRevenue.title',
+    titleDefault: 'Deferred Revenue',
+    descriptionKey: 'reportsPage.reportCatalog.deferredRevenue.description',
+    descriptionDefault: 'Prepaid liability across clients: credit balances and unburned bucket hours by month.',
+    category: 'billing',
+    products: ['psa'],
+    minimumTier: 'pro',
+    kind: 'link',
+    href: '/msp/reports/deferred-revenue',
+    openLabelKey: 'reportsPage.actions.openReport',
+    openLabelDefault: 'Open report',
+    icon: HandCoins,
   },
   {
     id: 'inventory-margin',
@@ -1150,10 +1167,16 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const { t } = useTranslation('msp/reports');
   const [selectedReportId, setSelectedReportId] = useState<EmbeddedReportId>('ticket-workload');
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(30);
+  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
 
   const visibleReports = useMemo(
-    () => REPORTS.filter((report) => report.products.includes(productCode)),
-    [productCode],
+    () =>
+      REPORTS.filter(
+        (report) =>
+          report.products.includes(productCode) &&
+          (report.id !== 'deferred-revenue' || deferredRevenueEnabled),
+      ),
+    [productCode, deferredRevenueEnabled],
   );
 
   const selectedReport = visibleReports.find((report) => report.id === selectedReportId);
