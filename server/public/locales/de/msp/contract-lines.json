@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "Die Menge muss größer als Null sein",
         "updateFailed": "Menge konnte nicht aktualisiert werden"
       },
-      "heading": "Menge anpassen",
       "helperText": "Lassen Sie das Feld leer, um den Produktkatalogpreis für die Währung dieses Vertrags zu verwenden.",
       "labels": {
         "quantity": "Menge",

@@ -1174,7 +1174,8 @@
       "unknownClient": "Nieznany klient",
       "status": "Status",
       "system": "System",
-      "total": "Razem"
+      "total": "Razem",
+      "invoiceDate": "Data faktury"
     },
     "states": {
       "empty": "Brak danych",
@@ -1779,6 +1780,279 @@
       "message": "Anulowanie tego wpisu harmonogramu usuwa go z rozliczeń. Tej operacji nie można cofnąć.",
       "confirm": "Anuluj wpis",
       "dismiss": "Zachowaj wpis"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} wierszy",
+      "operators": {
+        "eq": "Równe",
+        "neq": "Nierówne",
+        "gt": "Większe niż",
+        "gte": "Większe lub równe",
+        "lt": "Mniejsze niż",
+        "lte": "Mniejsze lub równe",
+        "in": "Na liście"
+      },
+      "sortDirections": {
+        "asc": "Rosnąco",
+        "desc": "Malejąco"
+      },
+      "aggregations": {
+        "sum": "Suma",
+        "count": "Liczba",
+        "avg": "Średnia",
+        "min": "Wartość minimalna",
+        "max": "Wartość maksymalna"
+      },
+      "operations": {
+        "advancedPredicate": "Predykat zaawansowany",
+        "groupBy": "Grupuj według {{field}}",
+        "readOnly": "Zachowane jako tylko do odczytu w wersji V1"
+      },
+      "source": {
+        "title": "Dane źródłowe",
+        "description": "Wybierz dane podglądu i powiązanie kolekcji, której strukturę chcesz zmienić.",
+        "sampleScenario": "Przykładowy scenariusz",
+        "selectInvoice": "Wybierz fakturę",
+        "collection": "Kolekcja źródłowa",
+        "outputBindingId": "Identyfikator powiązania wyjściowego"
+      },
+      "metadata": {
+        "title": "Metadane źródłowe",
+        "binding": "Powiązanie:",
+        "bindingNone": "Brak",
+        "resolvedPath": "Rozpoznana ścieżka:",
+        "pathNotResolved": "Nie rozpoznano",
+        "noFields": "Wybierz dane podglądu i powiązanie kolekcji, aby wykryć pola."
+      },
+      "pipeline": {
+        "title": "Potok transformacji",
+        "description": "Operacje są wykonywane od góry do dołu.",
+        "addFilter": "+ Filtr",
+        "addSort": "+ Sortowanie",
+        "addGroup": "+ Grupa",
+        "addAggregate": "+ Agregacja",
+        "empty": "Dodaj operacje, aby zbudować potok transformacji.",
+        "moveUp": "Przenieś {{operation}} wyżej",
+        "moveDown": "Przenieś {{operation}} niżej",
+        "duplicate": "Powiel {{operation}}",
+        "delete": "Usuń {{operation}}"
+      },
+      "inspector": {
+        "description": "Edytuj wybraną operację transformacji.",
+        "empty": "Wybierz kartę transformacji, aby edytować jej ustawienia.",
+        "advancedPredicateNotice": "Ten filtr korzysta z zaawansowanej struktury predykatu. Edycja w tym miejscu przekształci ją w proste porównanie.",
+        "unsupportedOperation": "Ten typ operacji jest zachowywany w obszarze roboczym, ale projektant V1 edytuje tylko operacje filtrowania, sortowania, grupowania i agregacji.",
+        "field": "Pole",
+        "operator": "Operator porównania",
+        "value": "Wartość",
+        "valueList": "Wartości (oddzielone przecinkami)",
+        "sortKey": "Klucz sortowania {{index}}",
+        "remove": "Usuń",
+        "direction": "Kierunek",
+        "addSortKey": "+ Klucz sortowania",
+        "groupField": "Pole grupowania",
+        "groupLabel": "Etykieta (opcjonalna)",
+        "aggregation": "Agregacja {{index}}",
+        "outputId": "Identyfikator wyjścia",
+        "operation": "Operacja",
+        "addAggregation": "+ Agregacja"
+      },
+      "output": {
+        "title": "Podgląd danych wyjściowych",
+        "description": "Wyświetl podgląd wierszy wygenerowanych z bieżącego potoku transformacji.",
+        "rowPaths": "Dostępne ścieżki wierszy",
+        "groupedRows": "{{count}} zgrupowanych wierszy",
+        "binding": "Powiązanie: {{binding}}",
+        "bindingNotSet": "Nie ustawiono",
+        "groupKey": "klucz: {{value}}",
+        "groupItems": "{{count}} elementów",
+        "emptyConfigure": "Skonfiguruj źródło, powiązanie wyjściowe i operacje, aby wyświetlić podgląd przekształconych wierszy.",
+        "emptyNoData": "Wybierz dane podglądu, aby sprawdzić przekształcone dane wyjściowe.",
+        "previewFailed": "Podgląd transformacji nie powiódł się."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Wszystkie pozycje",
+        "phases": "Fazy",
+        "recurringItems": "Pozycje cykliczne",
+        "onetimeItems": "Pozycje jednorazowe",
+        "serviceItems": "Pozycje usług",
+        "productItems": "Pozycje produktów",
+        "items": "Elementy",
+        "transformsSource": "{{binding}} (źródło transformacji)",
+        "transformsOutput": "{{binding}} (wynik transformacji)"
+      },
+      "presets": {
+        "description": {
+          "label": "Opis",
+          "hint": "Opis pozycji"
+        },
+        "quantity": {
+          "label": "Ilość",
+          "hint": "Liczba sztuk"
+        },
+        "unitPrice": {
+          "label": "Stawka",
+          "hint": "Cena jednostkowa"
+        },
+        "amount": {
+          "label": "Kwota",
+          "hint": "Suma wiersza"
+        }
+      },
+      "sourceBinding": {
+        "title": "Powiązanie źródłowe",
+        "description": "Powiąż tę tabelę z nieprzetworzoną kolekcją lub utworzonym wynikiem transformacji."
+      },
+      "columns": {
+        "title": "Kolumny tabeli",
+        "add": "+ Kolumna",
+        "quickAdd": "Szybkie dodawanie:",
+        "newColumnHeader": "Nowa kolumna",
+        "empty": "Nie zdefiniowano kolumn. Dodaj co najmniej jedną kolumnę.",
+        "itemLabel": "Kolumna",
+        "moveUp": "Przenieś {{column}} wyżej",
+        "moveDown": "Przenieś {{column}} niżej",
+        "remove": "Usuń {{column}}",
+        "header": "Nagłówek",
+        "headerPlaceholder": "Etykieta nagłówka",
+        "bindingKey": "Klucz powiązania",
+        "type": "Typ",
+        "width": "Szerokość"
+      },
+      "columnTypes": {
+        "text": "Tekst",
+        "number": "Liczba",
+        "currency": "Waluta",
+        "date": "Data"
+      },
+      "style": {
+        "title": "Styl tabeli",
+        "borderPreset": "Ustawienie obramowania",
+        "headerWeight": "Grubość nagłówka",
+        "borderOuter": "Zewnętrzne",
+        "borderRows": "Wiersze",
+        "borderColumns": "Kolumny"
+      },
+      "borderPresets": {
+        "list": "Prosta lista",
+        "boxed": "W ramce",
+        "grid": "Siatka",
+        "none": "Brak",
+        "custom": "Niestandardowe"
+      },
+      "headerWeights": {
+        "normal": "Zwykła",
+        "medium": "Średnia",
+        "semibold": "Półgruba",
+        "bold": "Pogrubiona"
+      },
+      "reference": {
+        "title": "Informacje o kluczach pól",
+        "transformAggregate": "Agregacja transformacji",
+        "groupedRowKey": "Klucz zgrupowanego wiersza",
+        "groupedRowItems": "Elementy zgrupowanego wiersza",
+        "availableBinding": "Dostępne powiązanie"
+      }
+    },
+    "imagePicker": {
+      "browse": "Przeglądaj dokumenty",
+      "hiddenFromClients": "Dokument {{document}} jest ukryty przed klientami. Nie pojawi się w ofertach ani fakturach wyświetlanych przez portal klienta.",
+      "updating": "Aktualizowanie...",
+      "markVisible": "Oznacz jako widoczny dla klientów",
+      "visibleInPortal": "Widoczny w portalu klienta",
+      "dialogTitle": "Wybierz obraz",
+      "dialogDescription": "Wybierz obraz ze swoich dokumentów, którego chcesz użyć w tym szablonie."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Szczegóły faktury",
+    "description": "Przed finalizacją edytuj metadane wersji roboczej faktury.",
+    "actions": {
+      "saving": "Zapisywanie..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Numer faktury jest wymagany.",
+      "invoiceDateRequired": "Data faktury jest wymagana."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Dokument",
+    "title": "Układy dokumentu: {{type}}",
+    "description": "Projektuj układy służące do generowania plików PDF i podglądów dla dokumentów typu „{{type}}”.",
+    "availableLayouts": "Dostępne układy",
+    "actions": {
+      "newLayout": "Nowy układ"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "source": "Źródło"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (wersja standardowa)",
+      "copyName": "{{name}} (kopia)"
+    },
+    "toasts": {
+      "cloned": "Szablon zduplikowany",
+      "defaultUpdated": "Domyślny szablon zaktualizowany",
+      "deleted": "Szablon usunięty"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się wczytać szablonów dokumentu typu „{{type}}”",
+      "cloneFailed": "Nie udało się zduplikować szablonu",
+      "setDefaultFailed": "Nie udało się ustawić domyślnego szablonu",
+      "deleteFailed": "Nie udało się usunąć szablonu"
+    },
+    "deleteDialog": {
+      "title": "Usuń układ dokumentu typu „{{type}}”",
+      "message": "Czy na pewno usunąć „{{name}}”?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nowy układ dokumentu typu „{{type}}”",
+        "edit": "Edytuj układ dokumentu typu „{{type}}”"
+      },
+      "description": "Zaprojektuj układ dokumentu typu „{{type}}” w edytorze wizualnym, a następnie wyświetl podgląd z danymi przykładowymi.",
+      "errorTitle": "Edytor układu dokumentu typu „{{type}}”",
+      "sections": {
+        "details": "Szczegóły układu"
+      },
+      "fields": {
+        "version": "Wersja"
+      },
+      "placeholders": {
+        "templateName": "Szablon dokumentu typu „{{type}}”"
+      },
+      "actions": {
+        "back": "Wróć do układów",
+        "save": "Zapisz układ"
+      },
+      "labels": {
+        "created": "Utworzono: {{date}}",
+        "lastUpdated": "Ostatnia aktualizacja: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
+        "frameTitle": "Podgląd dokumentu typu „{{type}}”",
+        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny."
+      },
+      "errors": {
+        "nameRequired": "Nazwa szablonu jest wymagana.",
+        "astExportFailed": "Nie udało się wyeksportować szablonu z wizualnego obszaru roboczego: {{message}}",
+        "saveFailed": "Nie udało się zapisać układu dokumentu typu „{{type}}”",
+        "previewFailed": "Nie udało się wygenerować podglądu."
+      },
+      "toasts": {
+        "saved": "Zapisano układ dokumentu typu „{{type}}”"
+      }
+    },
+    "types": {
+      "salesOrder": "Zamówienie sprzedaży",
+      "packingSlip": "Dokument dostawy",
+      "pickList": "Lista kompletacyjna"
     }
   }
 }

@@ -1922,6 +1922,55 @@
         "saving": "Zapisywanie…",
         "undepositedFunds": "Środki niezdeponowane (domyślnie)",
         "catalogLoadError": "Nie udało się wczytać opcji konfiguracji synchronizacji QuickBooks."
+      },
+      "itemImport": {
+        "description": "Zaimportuj produkty i usługi z QuickBooks do katalogu usług Alga dla połączonej firmy QuickBooks. QuickBooks pozostanie źródłem danych referencyjnych dla nazw, stawek, kodów SKU, opisów i kosztów; metoda rozliczania, jednostka miary i typ usługi są ustawiane tutaj i od tej pory zarządzane przez Alga. Ten krok jest opcjonalny — można go pominąć przyciskiem Dalej.",
+        "defaults": {
+          "title": "Wartości domyślne importowanych pozycji",
+          "serviceType": "Typ usługi (wymagany)",
+          "serviceTypePlaceholder": "Wybierz typ usługi…",
+          "unitOfMeasure": "Jednostka miary",
+          "serviceBillingMethod": "Metoda rozliczania usług",
+          "productBillingMethod": "Metoda rozliczania produktów",
+          "includeInactive": "Uwzględnij nieaktywne pozycje QuickBooks (zostaną zaimportowane jako nieaktywne)"
+        },
+        "billingMethods": {
+          "fixed": "Stała",
+          "hourly": "Godzinowa",
+          "usage": "Według zużycia"
+        },
+        "actions": {
+          "preview": "Podgląd importu",
+          "previewing": "Wczytywanie podglądu…",
+          "previewRequiresServiceType": "Wybierz typ usługi, aby włączyć podgląd.",
+          "execute": "Uruchom import",
+          "executing": "Importowanie…"
+        },
+        "preview": {
+          "summary": "Znaleziono pozycje QuickBooks dla połączonej firmy (realm {{realm}}). Łącznie: {{total}}; do utworzenia: {{create}}; do aktualizacji: {{update}}; do powiązania: {{link}}; do pominięcia: {{skip}}. Nie zapisano jeszcze żadnych danych.",
+          "groups": {
+            "create": "Do utworzenia",
+            "update": "Do aktualizacji",
+            "link": "Do powiązania (już pasują)",
+            "skip": "Do pominięcia"
+          },
+          "qboName": "Nazwa w QuickBooks: {{name}} (import jako „{{importedAs}}”)"
+        },
+        "flags": {
+          "inactive": "Nieaktywna w QuickBooks",
+          "unmappedTax": "Kod podatkowy bez mapowania",
+          "skuConflict": "Konflikt kodu SKU",
+          "nameCollision": "Nazwa jest już zmapowana",
+          "categorySkipped": "Kategoria (nie zostanie zaimportowana)"
+        },
+        "result": {
+          "summary": "Import zakończony — utworzono: {{created}}, zaktualizowano: {{updated}}, powiązano: {{linked}}, pominięto: {{skipped}}.",
+          "summaryWithErrors": "Import zakończony — utworzono: {{created}}, zaktualizowano: {{updated}}, powiązano: {{linked}}, pominięto: {{skipped}}, nie udało się zaimportować: {{failed}}."
+        },
+        "errors": {
+          "previewFailed": "Nie udało się wczytać podglądu importu.",
+          "executeFailed": "Import nie powiódł się."
+        }
       }
     },
     "rmm": {

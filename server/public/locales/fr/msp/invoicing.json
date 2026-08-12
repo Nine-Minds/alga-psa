@@ -1120,7 +1120,8 @@
       "unknownClient": "Client inconnu",
       "status": "Statut",
       "system": "Système",
-      "total": "Total"
+      "total": "Total",
+      "invoiceDate": "Date de la facture"
     },
     "states": {
       "empty": "Aucune donnée disponible",
@@ -1725,6 +1726,279 @@
       "message": "L'annulation de cette entrée de calendrier la retire de la facturation. Cette action est irréversible.",
       "confirm": "Annuler l'entrée",
       "dismiss": "Conserver l'entrée"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} lignes",
+      "operators": {
+        "eq": "Égal à",
+        "neq": "Différent de",
+        "gt": "Supérieur à",
+        "gte": "Supérieur ou égal à",
+        "lt": "Inférieur à",
+        "lte": "Inférieur ou égal à",
+        "in": "Dans la liste"
+      },
+      "sortDirections": {
+        "asc": "Croissant",
+        "desc": "Décroissant"
+      },
+      "aggregations": {
+        "sum": "Somme",
+        "count": "Nombre",
+        "avg": "Moyenne",
+        "min": "Valeur minimale",
+        "max": "Valeur maximale"
+      },
+      "operations": {
+        "advancedPredicate": "Prédicat avancé",
+        "groupBy": "Regrouper par {{field}}",
+        "readOnly": "Conservé en lecture seule dans la V1"
+      },
+      "source": {
+        "title": "Données sources",
+        "description": "Choisissez les données d’aperçu et la liaison de collection à structurer.",
+        "sampleScenario": "Exemple de scénario",
+        "selectInvoice": "Sélectionner une facture",
+        "collection": "Collection source",
+        "outputBindingId": "ID de liaison de sortie"
+      },
+      "metadata": {
+        "title": "Métadonnées sources",
+        "binding": "Liaison :",
+        "bindingNone": "Aucune",
+        "resolvedPath": "Chemin résolu :",
+        "pathNotResolved": "Non résolu",
+        "noFields": "Choisissez les données d’aperçu et une liaison de collection pour découvrir les champs."
+      },
+      "pipeline": {
+        "title": "Chaîne de transformation",
+        "description": "Les opérations s’exécutent de haut en bas.",
+        "addFilter": "+ Filtre",
+        "addSort": "+ Tri",
+        "addGroup": "+ Groupe",
+        "addAggregate": "+ Agrégation",
+        "empty": "Ajoutez des opérations pour créer la chaîne de transformation.",
+        "moveUp": "Déplacer {{operation}} vers le haut",
+        "moveDown": "Déplacer {{operation}} vers le bas",
+        "duplicate": "Dupliquer {{operation}}",
+        "delete": "Supprimer {{operation}}"
+      },
+      "inspector": {
+        "description": "Modifiez l’opération de transformation sélectionnée.",
+        "empty": "Sélectionnez une carte de transformation pour modifier ses paramètres.",
+        "advancedPredicateNotice": "Ce filtre utilise une structure de prédicat avancée. Sa modification ici la convertit en comparaison simple.",
+        "unsupportedOperation": "Ce type d’opération est conservé dans l’espace de travail, mais le concepteur V1 ne modifie que les opérations de filtrage, de tri, de regroupement et d’agrégation.",
+        "field": "Champ",
+        "operator": "Opérateur",
+        "value": "Valeur",
+        "valueList": "Valeurs (séparées par des virgules)",
+        "sortKey": "Clé de tri {{index}}",
+        "remove": "Retirer",
+        "direction": "Sens",
+        "addSortKey": "+ Clé de tri",
+        "groupField": "Champ de regroupement",
+        "groupLabel": "Libellé (facultatif)",
+        "aggregation": "Agrégation {{index}}",
+        "outputId": "ID de sortie",
+        "operation": "Opération",
+        "addAggregation": "+ Agrégation"
+      },
+      "output": {
+        "title": "Aperçu de la sortie",
+        "description": "Prévisualisez les lignes générées par la chaîne de transformation actuelle.",
+        "rowPaths": "Chemins de ligne disponibles",
+        "groupedRows": "{{count}} lignes regroupées",
+        "binding": "Liaison : {{binding}}",
+        "bindingNotSet": "Non définie",
+        "groupKey": "clé : {{value}}",
+        "groupItems": "{{count}} éléments",
+        "emptyConfigure": "Configurez la source, la liaison de sortie et les opérations pour prévisualiser les lignes transformées.",
+        "emptyNoData": "Choisissez des données d’aperçu pour inspecter la sortie transformée.",
+        "previewFailed": "Échec de l’aperçu des transformations."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Tous les postes",
+        "phases": "Phases",
+        "recurringItems": "Postes récurrents",
+        "onetimeItems": "Postes ponctuels",
+        "serviceItems": "Postes de service",
+        "productItems": "Postes de produit",
+        "items": "Éléments",
+        "transformsSource": "{{binding}} (source des transformations)",
+        "transformsOutput": "{{binding}} (sortie des transformations)"
+      },
+      "presets": {
+        "description": {
+          "label": "Description",
+          "hint": "Description du poste"
+        },
+        "quantity": {
+          "label": "Qté",
+          "hint": "Quantité"
+        },
+        "unitPrice": {
+          "label": "Tarif",
+          "hint": "Prix unitaire"
+        },
+        "amount": {
+          "label": "Montant",
+          "hint": "Total de la ligne"
+        }
+      },
+      "sourceBinding": {
+        "title": "Liaison source",
+        "description": "Liez ce tableau à une collection brute ou à la sortie des transformations créées."
+      },
+      "columns": {
+        "title": "Colonnes du tableau",
+        "add": "+ Colonne",
+        "quickAdd": "Ajout rapide :",
+        "newColumnHeader": "Nouvelle colonne",
+        "empty": "Aucune colonne définie. Ajoutez au moins une colonne.",
+        "itemLabel": "Colonne",
+        "moveUp": "Déplacer {{column}} vers le haut",
+        "moveDown": "Déplacer {{column}} vers le bas",
+        "remove": "Retirer {{column}}",
+        "header": "En-tête",
+        "headerPlaceholder": "Libellé de l’en-tête",
+        "bindingKey": "Clé de liaison",
+        "type": "Type",
+        "width": "Largeur"
+      },
+      "columnTypes": {
+        "text": "Texte",
+        "number": "Nombre",
+        "currency": "Devise",
+        "date": "Date"
+      },
+      "style": {
+        "title": "Style du tableau",
+        "borderPreset": "Bordure prédéfinie",
+        "headerWeight": "Graisse de l’en-tête",
+        "borderOuter": "Extérieure",
+        "borderRows": "Lignes",
+        "borderColumns": "Colonnes"
+      },
+      "borderPresets": {
+        "list": "Liste simple",
+        "boxed": "Encadré",
+        "grid": "Grille",
+        "none": "Aucune",
+        "custom": "Personnalisée"
+      },
+      "headerWeights": {
+        "normal": "Graisse normale",
+        "medium": "Moyenne",
+        "semibold": "Demi-gras",
+        "bold": "Gras"
+      },
+      "reference": {
+        "title": "Référence des clés de champ",
+        "transformAggregate": "Agrégation de transformation",
+        "groupedRowKey": "Clé de ligne regroupée",
+        "groupedRowItems": "Éléments de ligne regroupée",
+        "availableBinding": "Liaison disponible"
+      }
+    },
+    "imagePicker": {
+      "browse": "Parcourir les documents",
+      "hiddenFromClients": "{{document}} est masqué pour les clients. Il n’apparaîtra pas sur les devis ni les factures consultés depuis le portail client.",
+      "updating": "Mise à jour...",
+      "markVisible": "Rendre visible pour les clients",
+      "visibleInPortal": "Visible dans le portail client",
+      "dialogTitle": "Sélectionner une image",
+      "dialogDescription": "Choisissez dans vos documents une image à utiliser dans ce modèle."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Détails de la facture",
+    "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
+    "actions": {
+      "saving": "Enregistrement..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Le numéro de facture est obligatoire.",
+      "invoiceDateRequired": "La date de la facture est obligatoire."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Document",
+    "title": "Mises en page pour {{type}}",
+    "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
+    "availableLayouts": "Mises en page disponibles",
+    "actions": {
+      "newLayout": "Nouvelle mise en page"
+    },
+    "columns": {
+      "name": "Nom",
+      "source": "Source"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (standard)",
+      "copyName": "{{name}} (copie)"
+    },
+    "toasts": {
+      "cloned": "Modèle dupliqué",
+      "defaultUpdated": "Modèle par défaut mis à jour",
+      "deleted": "Modèle supprimé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les modèles pour {{type}}",
+      "cloneFailed": "Impossible de dupliquer le modèle",
+      "setDefaultFailed": "Impossible de définir le modèle par défaut",
+      "deleteFailed": "Impossible de supprimer le modèle"
+    },
+    "deleteDialog": {
+      "title": "Supprimer la mise en page pour {{type}}",
+      "message": "Voulez-vous vraiment supprimer « {{name}} » ?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nouvelle mise en page pour {{type}}",
+        "edit": "Modifier la mise en page pour {{type}}"
+      },
+      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
+      "errorTitle": "Éditeur de mise en page pour {{type}}",
+      "sections": {
+        "details": "Détails de la mise en page"
+      },
+      "fields": {
+        "version": "Version"
+      },
+      "placeholders": {
+        "templateName": "Modèle pour {{type}}"
+      },
+      "actions": {
+        "back": "Retour aux mises en page",
+        "save": "Enregistrer la mise en page"
+      },
+      "labels": {
+        "created": "Créée : {{date}}",
+        "lastUpdated": "Dernière mise à jour : {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
+        "frameTitle": "Aperçu pour {{type}}",
+        "empty": "Ouvrez cet onglet pour générer un aperçu de référence."
+      },
+      "errors": {
+        "nameRequired": "Le nom du modèle est obligatoire.",
+        "astExportFailed": "Impossible d’exporter le modèle depuis l’espace de travail visuel : {{message}}",
+        "saveFailed": "Impossible d’enregistrer la mise en page pour {{type}}",
+        "previewFailed": "Impossible de générer l’aperçu."
+      },
+      "toasts": {
+        "saved": "Mise en page pour {{type}} enregistrée"
+      }
+    },
+    "types": {
+      "salesOrder": "Commande client",
+      "packingSlip": "Bon de livraison",
+      "pickList": "Liste de prélèvement"
     }
   }
 }

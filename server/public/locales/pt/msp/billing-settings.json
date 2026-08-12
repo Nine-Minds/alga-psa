@@ -420,6 +420,46 @@
         "update": "Falha ao atualizar a isenção fiscal.",
         "delete": "Falha ao excluir isenção fiscal."
       }
+    },
+    "delegation": {
+      "defaultProvider": "seu sistema contábil",
+      "actions": {
+        "applying": "Aplicando…"
+      },
+      "errors": {
+        "enableFailed": "Falha ao habilitar o cálculo externo de impostos."
+      },
+      "banner": {
+        "title": "Permitir que {{provider}} calcule os impostos?",
+        "description": "{{provider}} está conectado. A maioria dos clientes prefere que o sistema contábil cuide dos impostos para manter os dois livros contábeis alinhados — Alga enviará faturas sem valores de impostos, {{provider}} aplicará suas regras fiscais e o resultado será sincronizado de volta com Alga. Alga não é um sistema fiscal; recomendamos delegar esse cálculo.",
+        "actions": {
+          "enable": "Usar {{provider}} para calcular impostos",
+          "dismiss": "Agora não",
+          "dismissing": "Dispensando…"
+        },
+        "toast": {
+          "enabled": "Cálculo externo de impostos habilitado.",
+          "enabledWithProvider": "{{provider}} calculará os impostos nas novas faturas."
+        },
+        "errors": {
+          "loadState": "Não foi possível carregar o estado da recomendação para delegar os impostos.",
+          "dismissFailed": "Falha ao dispensar o aviso."
+        }
+      },
+      "nudge": {
+        "title": "Permitir que {{provider}} calcule os impostos nas faturas futuras?",
+        "description": "Recomendado. As novas faturas serão enviadas para {{provider}} sem valores de impostos, {{provider}} aplicará suas regras fiscais e o imposto calculado será sincronizado de volta com Alga, mantendo os dois livros contábeis alinhados. Você pode alterar essa opção a qualquer momento em Faturamento → Configurações de impostos.",
+        "actions": {
+          "enable": "Sim, usar {{provider}}",
+          "keepInternal": "Manter o cálculo de impostos no Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calculará os impostos nas novas faturas. Você pode alterar essa opção nas configurações de faturamento."
+        },
+        "errors": {
+          "loadSettings": "Não foi possível carregar as configurações atuais de impostos."
+        }
+      }
     }
   },
   "payments": {

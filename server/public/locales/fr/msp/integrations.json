@@ -1922,6 +1922,55 @@
         "saving": "Enregistrement…",
         "undepositedFunds": "Fonds non déposés (par défaut)",
         "catalogLoadError": "Échec du chargement des options de configuration de la synchronisation QuickBooks."
+      },
+      "itemImport": {
+        "description": "Importez vos produits et services QuickBooks dans le catalogue de services Alga pour l’entreprise QuickBooks connectée. QuickBooks reste la source de référence pour les noms, tarifs, SKU, descriptions et coûts ; le mode de facturation, l’unité de mesure et le type de service sont définis ici, puis gérés par Alga. Cette étape est facultative : cliquez sur Suivant pour l’ignorer.",
+        "defaults": {
+          "title": "Valeurs par défaut des articles importés",
+          "serviceType": "Type de service (obligatoire)",
+          "serviceTypePlaceholder": "Sélectionnez un type de service…",
+          "unitOfMeasure": "Unité de mesure",
+          "serviceBillingMethod": "Mode de facturation des services",
+          "productBillingMethod": "Mode de facturation des produits",
+          "includeInactive": "Inclure les articles QuickBooks inactifs (importés comme inactifs)"
+        },
+        "billingMethods": {
+          "fixed": "Forfaitaire",
+          "hourly": "Horaire",
+          "usage": "À l’usage"
+        },
+        "actions": {
+          "preview": "Aperçu de l’importation",
+          "previewing": "Chargement de l’aperçu…",
+          "previewRequiresServiceType": "Sélectionnez un type de service pour activer l’aperçu.",
+          "execute": "Lancer l’importation",
+          "executing": "Importation…"
+        },
+        "preview": {
+          "summary": "{{total}} articles QuickBooks trouvés pour l’entreprise connectée (realm {{realm}}) : {{create}} à créer, {{update}} à mettre à jour, {{link}} à lier et {{skip}} à ignorer. Aucune donnée n’a encore été écrite.",
+          "groups": {
+            "create": "À créer",
+            "update": "À mettre à jour",
+            "link": "À lier (correspondance existante)",
+            "skip": "À ignorer"
+          },
+          "qboName": "Nom QuickBooks : {{name}} (importé sous « {{importedAs}} »)"
+        },
+        "flags": {
+          "inactive": "Inactif dans QuickBooks",
+          "unmappedTax": "Code fiscal non associé",
+          "skuConflict": "Conflit de SKU",
+          "nameCollision": "Nom déjà associé",
+          "categorySkipped": "Catégorie (non importée)"
+        },
+        "result": {
+          "summary": "Importation terminée — créations : {{created}}, mises à jour : {{updated}}, liaisons : {{linked}}, éléments ignorés : {{skipped}}.",
+          "summaryWithErrors": "Importation terminée — créations : {{created}}, mises à jour : {{updated}}, liaisons : {{linked}}, éléments ignorés : {{skipped}}, échecs : {{failed}}."
+        },
+        "errors": {
+          "previewFailed": "Impossible de charger l’aperçu de l’importation.",
+          "executeFailed": "L’importation a échoué."
+        }
       }
     },
     "rmm": {

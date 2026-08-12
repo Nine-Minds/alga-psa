@@ -2327,7 +2327,6 @@
         }
       },
       "schemaModal": {
-        "title": "Esquema",
         "close": "Fechar",
         "headerTitle": "Esquema de carga útil",
         "loading": "Carregando…",
@@ -2337,7 +2336,6 @@
         "copyFailed": "Falha na cópia"
       },
       "metricsDialog": {
-        "title": "Métricas",
         "close": "Fechar",
         "headerTitle": "Métricas · {{eventType}}",
         "from": "De",
@@ -2364,7 +2362,6 @@
         "next": "Próximo"
       },
       "simulateDialog": {
-        "title": "Simular evento",
         "headerTitle": "Simular · {{eventType}}",
         "submit": "Simular",
         "submitting": "Enviando…",
@@ -2421,7 +2418,6 @@
       },
       "defineEventDialog": {
         "title": "Definir evento personalizado",
-        "headerTitle": "Definir evento personalizado",
         "cancel": "Cancelar",
         "submit": "Criar evento",
         "submitting": "Criando…",

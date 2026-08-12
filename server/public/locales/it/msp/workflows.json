@@ -2449,7 +2449,6 @@
         }
       },
       "schemaModal": {
-        "title": "Schema dati",
         "close": "Chiudi",
         "headerTitle": "Schema del payload",
         "loading": "Caricamento…",
@@ -2459,7 +2458,6 @@
         "copyFailed": "Copia non riuscita"
       },
       "metricsDialog": {
-        "title": "Metriche",
         "close": "Chiudi",
         "headerTitle": "Metriche · {{eventType}}",
         "from": "Da",
@@ -2486,7 +2484,6 @@
         "next": "Succ."
       },
       "simulateDialog": {
-        "title": "Simula evento",
         "headerTitle": "Simula · {{eventType}}",
         "submit": "Simula",
         "submitting": "Invio…",
@@ -2543,7 +2540,6 @@
       },
       "defineEventDialog": {
         "title": "Definisci evento personalizzato",
-        "headerTitle": "Definisci evento personalizzato",
         "cancel": "Annulla",
         "submit": "Crea evento",
         "submitting": "Creazione…",

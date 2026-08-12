@@ -29,6 +29,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
@@ -101,14 +102,15 @@ const getUserColor = (userId: string) => {
 
 const buildPresenceUsers = (
   states: Array<[number, { user?: PresenceUser }]>,
-  fallbackColor: string
+  fallbackColor: string,
+  fallbackName: string
 ) => {
   const users = states
     .map(([clientId, state]) => {
       if (!state.user) return null;
       return {
         id: state.user.id || `${clientId}`,
-        name: state.user.name || 'User',
+        name: state.user.name || fallbackName,
         color: state.user.color || fallbackColor,
       } as PresenceUser;
     })
@@ -136,6 +138,7 @@ export function CollaborativeEditor({
   initialContent,
   aiAssistantEnabled = false,
 }: CollaborativeEditorProps) {
+  const { t } = useTranslation('features/documents');
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
   const { provider, ydoc } = useMemo(
     () =>
@@ -279,7 +282,11 @@ export function CollaborativeEditor({
     const handleAwarenessChange = () => {
       const awarenessStates = provider.awareness?.getStates?.();
       if (!awarenessStates) return;
-      const users = buildPresenceUsers(Array.from(awarenessStates.entries()), userColor);
+      const users = buildPresenceUsers(
+        Array.from(awarenessStates.entries()),
+        userColor,
+        t('editor.presence.unknownUser', { defaultValue: 'User' })
+      );
       setConnectedUsers(users);
       onUsersChange?.(users);
     };
@@ -302,6 +309,7 @@ export function CollaborativeEditor({
       provider.destroy();
       ydoc.destroy();
     };
+    // `t` is deliberately not a dependency: re-running this would tear down the Yjs provider on a language change.
   }, [provider, ydoc, userId, userName, userColor, onConnectionStatusChange, onSyncStateChange, onUsersChange]);
 
   useEffect(() => {
@@ -396,16 +404,20 @@ export function CollaborativeEditor({
   }, [editor, editorReady, provider, ydoc, documentId]);
 
   const saveStatus = connectionStatus === 'disconnected'
-    ? 'Offline — changes will sync when reconnected'
+    ? t('editor.status.offline', { defaultValue: 'Offline — changes will sync when reconnected' })
     : hasUnsyncedChanges
-      ? 'Saving...'
-      : 'All changes saved';
+      ? t('actions.saving', { defaultValue: 'Saving...' })
+      : t('editor.status.allChangesSaved', { defaultValue: 'All changes saved' });
+
+  const saveStatusLabel = connectionStatus === 'connected' && !isSynced
+    ? t('editor.status.syncing', { defaultValue: '{{status}} (syncing)', status: saveStatus })
+    : saveStatus;
 
   const connectionLabel = connectionStatus === 'connected'
-    ? 'Connected'
+    ? t('editor.connection.connected', { defaultValue: 'Connected' })
     : connectionStatus === 'connecting'
-      ? 'Connecting'
-      : 'Disconnected';
+      ? t('editor.connection.connecting', { defaultValue: 'Connecting' })
+      : t('editor.connection.disconnected', { defaultValue: 'Disconnected' });
 
   return (
     <Card className="p-4">
@@ -420,17 +432,14 @@ export function CollaborativeEditor({
             <span className={styles.statusDot} />
             <span>{connectionLabel}</span>
           </div>
-          <div className={styles.saveStatus}>
-            {saveStatus}
-            {connectionStatus === 'connected' && !isSynced ? ' (syncing)' : ''}
-          </div>
+          <div className={styles.saveStatus}>{saveStatusLabel}</div>
         </div>
       </div>
 
       {editor && editorReady && !editor.isDestroyed ? (
         <div
           className={styles.editorContainer}
-          data-placeholder={placeholder || 'Start writing...'}
+          data-placeholder={placeholder || t('editor.placeholder', { defaultValue: 'Start writing...' })}
           style={{ position: 'relative' }}
         >
           <EditorToolbar editor={editor} />
@@ -446,7 +455,9 @@ export function CollaborativeEditor({
           )}
         </div>
       ) : (
-        <div className="flex justify-center items-center h-64">Initializing editor...</div>
+        <div className="flex justify-center items-center h-64">
+          {t('editor.initializing', { defaultValue: 'Initializing editor...' })}
+        </div>
       )}
     </Card>
   );

@@ -420,6 +420,46 @@
         "update": "Failed to update tax holiday.",
         "delete": "Failed to delete tax holiday."
       }
+    },
+    "delegation": {
+      "defaultProvider": "your accounting system",
+      "actions": {
+        "applying": "Applying…"
+      },
+      "errors": {
+        "enableFailed": "Failed to enable external tax calculation."
+      },
+      "banner": {
+        "title": "Let {{provider}} calculate tax?",
+        "description": "{{provider}} is connected. Most customers prefer to have their accounting system handle tax so the two ledgers stay aligned — Alga will post invoices without tax amounts, {{provider}} applies its tax rules, and the result syncs back to Alga. Alga is not a tax package; we recommend delegating.",
+        "actions": {
+          "enable": "Use {{provider}} for tax",
+          "dismiss": "Not now",
+          "dismissing": "Dismissing…"
+        },
+        "toast": {
+          "enabled": "External tax calculation enabled.",
+          "enabledWithProvider": "{{provider}} will calculate tax on new invoices."
+        },
+        "errors": {
+          "loadState": "Unable to load tax delegation recommendation state.",
+          "dismissFailed": "Failed to dismiss the banner."
+        }
+      },
+      "nudge": {
+        "title": "Let {{provider}} calculate tax on future invoices?",
+        "description": "Recommended. New invoices will post to {{provider}} without tax amounts, {{provider}} will apply its tax rules, and the calculated tax will sync back to Alga — keeping your two ledgers aligned. You can change this anytime in Billing → Tax Settings.",
+        "actions": {
+          "enable": "Yes, use {{provider}}",
+          "keepInternal": "Keep Alga calculating tax"
+        },
+        "toast": {
+          "enabled": "{{provider}} will calculate tax on new invoices. You can change this in Billing settings."
+        },
+        "errors": {
+          "loadSettings": "Unable to load current tax settings."
+        }
+      }
     }
   },
   "payments": {

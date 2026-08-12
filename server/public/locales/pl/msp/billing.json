@@ -408,7 +408,6 @@
     },
     "detailDialog": {
       "title": "Księgowa partia eksportowa",
-      "subtitle": "Szczegóły partii",
       "fields": {
         "batchId": "Identyfikator partii",
         "adapter": "Adapter",

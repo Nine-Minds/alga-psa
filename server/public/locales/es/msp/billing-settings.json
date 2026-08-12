@@ -420,6 +420,46 @@
         "update": "No se pudo actualizar la moratoria fiscal.",
         "delete": "No se pudo eliminar la moratoria fiscal."
       }
+    },
+    "delegation": {
+      "defaultProvider": "su sistema contable",
+      "actions": {
+        "applying": "Aplicando…"
+      },
+      "errors": {
+        "enableFailed": "No se pudo habilitar el cálculo externo de impuestos."
+      },
+      "banner": {
+        "title": "¿Desea que {{provider}} calcule los impuestos?",
+        "description": "{{provider}} está conectado. La mayoría de los clientes prefiere que su sistema contable gestione los impuestos para mantener ambos libros contables sincronizados — Alga enviará las facturas sin importes de impuestos, {{provider}} aplicará sus reglas fiscales y el resultado se sincronizará de vuelta con Alga. Alga no es un paquete fiscal; recomendamos delegar el cálculo.",
+        "actions": {
+          "enable": "Usar {{provider}} para calcular impuestos",
+          "dismiss": "Ahora no",
+          "dismissing": "Descartando…"
+        },
+        "toast": {
+          "enabled": "Cálculo externo de impuestos habilitado.",
+          "enabledWithProvider": "{{provider}} calculará los impuestos de las facturas nuevas."
+        },
+        "errors": {
+          "loadState": "No se pudo cargar el estado de la recomendación para delegar los impuestos.",
+          "dismissFailed": "No se pudo descartar el aviso."
+        }
+      },
+      "nudge": {
+        "title": "¿Desea que {{provider}} calcule los impuestos de las facturas futuras?",
+        "description": "Recomendado. Las facturas nuevas se enviarán a {{provider}} sin importes de impuestos, {{provider}} aplicará sus reglas fiscales y el impuesto calculado se sincronizará de vuelta con Alga para mantener ambos libros contables sincronizados. Puede cambiar esta opción en cualquier momento en Facturación → Configuración de impuestos.",
+        "actions": {
+          "enable": "Sí, usar {{provider}}",
+          "keepInternal": "Mantener el cálculo de impuestos en Alga"
+        },
+        "toast": {
+          "enabled": "{{provider}} calculará los impuestos de las facturas nuevas. Puede cambiar esta opción en la configuración de facturación."
+        },
+        "errors": {
+          "loadSettings": "No se pudo cargar la configuración actual de impuestos."
+        }
+      }
     }
   },
   "payments": {

@@ -420,6 +420,46 @@
         "update": "Steuerurlaub konnte nicht aktualisiert werden.",
         "delete": "Steuerurlaub konnte nicht gelöscht werden."
       }
+    },
+    "delegation": {
+      "defaultProvider": "Ihr Buchhaltungssystem",
+      "actions": {
+        "applying": "Wird angewendet…"
+      },
+      "errors": {
+        "enableFailed": "Die externe Steuerberechnung konnte nicht aktiviert werden."
+      },
+      "banner": {
+        "title": "Soll {{provider}} die Steuer berechnen?",
+        "description": "{{provider}} ist verbunden. Die meisten Kunden lassen die Steuer bevorzugt von ihrem Buchhaltungssystem verarbeiten, damit beide Hauptbücher abgestimmt bleiben — Alga übermittelt Rechnungen ohne Steuerbeträge, die in {{provider}} hinterlegten Steuerregeln werden angewendet und das Ergebnis wird mit Alga synchronisiert. Alga ist kein Steuerprogramm; wir empfehlen, die Berechnung zu delegieren.",
+        "actions": {
+          "enable": "{{provider}} für die Steuerberechnung verwenden",
+          "dismiss": "Nicht jetzt",
+          "dismissing": "Wird ausgeblendet…"
+        },
+        "toast": {
+          "enabled": "Externe Steuerberechnung aktiviert.",
+          "enabledWithProvider": "Bei neuen Rechnungen berechnet {{provider}} die Steuer."
+        },
+        "errors": {
+          "loadState": "Der Status der Empfehlung zur Steuerdelegierung konnte nicht geladen werden.",
+          "dismissFailed": "Das Banner konnte nicht ausgeblendet werden."
+        }
+      },
+      "nudge": {
+        "title": "Soll {{provider}} die Steuer auf zukünftigen Rechnungen berechnen?",
+        "description": "Empfohlen. Neue Rechnungen werden ohne Steuerbeträge an {{provider}} übermittelt, {{provider}} wendet die hinterlegten Steuerregeln an und anschließend wird die berechnete Steuer zurück an Alga synchronisiert, sodass beide Hauptbücher abgestimmt bleiben. Sie können dies jederzeit unter Abrechnung → Steuereinstellungen ändern.",
+        "actions": {
+          "enable": "Ja, {{provider}} verwenden",
+          "keepInternal": "Steuer weiterhin von Alga berechnen lassen"
+        },
+        "toast": {
+          "enabled": "Bei neuen Rechnungen berechnet {{provider}} die Steuer. Sie können dies in den Abrechnungseinstellungen ändern."
+        },
+        "errors": {
+          "loadSettings": "Die aktuellen Steuereinstellungen konnten nicht geladen werden."
+        }
+      }
     }
   },
   "payments": {

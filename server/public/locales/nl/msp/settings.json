@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "Datum van de feestdag is vereist",
       "holidayAdded": "Feestdag succesvol toegevoegd",
       "holidayDeleted": "Feestdag succesvol verwijderd"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Er zijn momenteel geen tickets met risico op een SLA-overschrijding",
+        "overdueHours": "{{hours}} u {{minutes}} min te laat",
+        "overdueMinutes": "{{minutes}} min te laat",
+        "title": "Tickets met risico"
+      },
+      "breachChart": {
+        "breachRate": "Overschrijdingspercentage",
+        "empty": "Geen gegevens over SLA-overschrijdingen beschikbaar",
+        "title": "Overschrijdingen per prioriteit"
+      },
+      "columns": {
+        "assignee": "Verantwoordelijke",
+        "breachType": "Type overschrijding",
+        "client": "Klant",
+        "priority": "Prioriteit",
+        "progress": "Voortgang",
+        "slaType": "SLA-type",
+        "ticket": "Ticket",
+        "timeRemaining": "Resterende tijd",
+        "when": "Wanneer"
+      },
+      "gauge": {
+        "title": "SLA-naleving"
+      },
+      "labels": {
+        "resolution": "Oplossing",
+        "resolutionSla": "Oplossings-SLA",
+        "response": "Reactie",
+        "responseSla": "Reactie-SLA"
+      },
+      "metrics": {
+        "approachingBreach": "tickets die een SLA-overschrijding naderen",
+        "atRisk": "Risico",
+        "currentlyPaused": "Momenteel gepauzeerd",
+        "metBreached": "{{met}} behaald / {{breached}} overschreden",
+        "overallCompliance": "Totale naleving",
+        "pausedSla": "tickets met een gepauzeerde SLA",
+        "ticketsTracked_one": "{{count}} ticket gevolgd",
+        "ticketsTracked_other": "{{count}} tickets gevolgd"
+      },
+      "recentBreaches": {
+        "empty": "Geen SLA-overschrijdingen in de geselecteerde periode",
+        "title": "Recente SLA-overschrijdingen",
+        "unassigned": "Niet toegewezen"
+      },
+      "trendChart": {
+        "breaches": "SLA-overschrijdingen",
+        "compliance": "Naleving",
+        "compliancePercent": "Naleving %",
+        "empty": "Geen trendgegevens beschikbaar voor de geselecteerde periode",
+        "tickets": "Tickets",
+        "title": "Nalevingstrend"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Algemene SLA-instellingen konden niet worden bijgewerkt",
+        "loadFailed": "Instellingen voor SLA-pauzes konden niet worden geladen",
+        "responseTrackingUpdateFailed": "Registratie van de reactiestatus kon niet worden bijgewerkt",
+        "saveStatusesFailed": "Statusconfiguraties konden niet worden opgeslagen"
+      },
+      "global": {
+        "description": "Algemeen gedrag voor het pauzeren van de SLA-timer configureren",
+        "pauseOnAwaitingClient": {
+          "description": "Als deze optie is ingeschakeld, wordt de SLA-timer automatisch gepauzeerd wanneer een ticket als wachtend op een reactie van de klant is gemarkeerd. De timer wordt hervat wanneer de klant reageert of de ticketstatus verandert.",
+          "label": "SLA automatisch pauzeren tijdens wachten op klantreactie",
+          "requiresTracking": "Schakel hierboven de registratie van de reactiestatus in om deze optie te gebruiken."
+        },
+        "responseTracking": {
+          "description": "Als deze optie is ingeschakeld, registreren tickets automatisch wie vervolgens moet reageren (de klant of een interne medewerker). Hiermee wordt ook de zichtbaarheid van badges en filters voor de reactiestatus bepaald.",
+          "label": "Reactiestatus van tickets registreren"
+        },
+        "title": "Algemene SLA-instellingen"
+      },
+      "loading": "Instellingen voor SLA-pauzes laden...",
+      "messages": {
+        "globalSettingsUpdated": "Algemene SLA-instellingen zijn bijgewerkt",
+        "noChangesToSave": "Geen wijzigingen om op te slaan",
+        "responseTrackingDisabled": "Registratie van de reactiestatus uitgeschakeld",
+        "responseTrackingEnabled": "Registratie van de reactiestatus ingeschakeld",
+        "statusesUpdated_one": "{{count}} statusconfiguratie bijgewerkt",
+        "statusesUpdated_other": "{{count}} statusconfiguraties bijgewerkt"
+      },
+      "perStatus": {
+        "description": "Configureer bij welke ticketstatussen de SLA-timer moet pauzeren. Wanneer een ticket naar een status met ingeschakelde pauze wordt verplaatst, stopt de SLA-timer totdat het ticket naar een andere status wordt verplaatst.",
+        "empty": "Geen ticketstatussen gevonden.",
+        "modified": "Gewijzigd",
+        "modifiedCount_one": "{{count}} status gewijzigd",
+        "modifiedCount_other": "{{count}} statussen gewijzigd",
+        "noUnsavedChanges": "Geen niet-opgeslagen wijzigingen",
+        "resetChanges": "Wijzigingen herstellen",
+        "saveChanges": "Wijzigingen opslaan",
+        "saving": "Opslaan...",
+        "title": "Pauzeconfiguratie per status"
+      },
+      "retry": "Opnieuw proberen"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Annuleren",
+        "create": "SLA-beleid maken",
+        "saveChanges": "Wijzigingen opslaan",
+        "saving": "Opslaan..."
+      },
+      "basics": {
+        "assignBoards": "Aan borden toewijzen",
+        "assignClients": "Aan klanten toewijzen",
+        "businessHours": "Kantoorurenschema",
+        "businessHoursPlaceholder": "Selecteer een kantoorurenschema",
+        "description": "Beschrijving",
+        "descriptionPlaceholder": "Optionele beschrijving van dit SLA-beleid",
+        "noBusinessHours": "Geen kantooruren (24/7)",
+        "policyName": "Naam van SLA-beleid",
+        "policyNamePlaceholder": "Voer een naam voor het SLA-beleid in",
+        "scheduleAlways": "{{name}} (doorlopend)",
+        "searchBoards": "Borden zoeken...",
+        "searchClients": "Klanten zoeken...",
+        "setAsDefault": "Instellen als standaardbeleid",
+        "title": "Basisgegevens"
+      },
+      "errors": {
+        "loadFailed": "Gegevens konden niet worden geladen",
+        "notFound": "SLA-beleid niet gevonden",
+        "saveFailed": "SLA-beleid kon niet worden opgeslagen"
+      },
+      "loading": "Laden...",
+      "multiSelect": {
+        "deselectAll": "Alles deselecteren",
+        "deselectAllVisible": "Alle zichtbare items deselecteren",
+        "noItems": "Geen items beschikbaar",
+        "noResults": "Geen resultaten gevonden",
+        "placeholder": "Selecteren...",
+        "searchPlaceholder": "Zoeken...",
+        "selectAll": "Alles selecteren",
+        "selectAllVisible": "Alle zichtbare items selecteren",
+        "selectedCount_one": "{{count}} geselecteerd",
+        "selectedCount_other": "{{count}} geselecteerd"
+      },
+      "targets": {
+        "always": "Doorlopend (kantooruren negeren)",
+        "description": "Stel voor elk prioriteitsniveau de maximaal toegestane tijd in voor een eerste reactie en een volledige oplossing van tickets.",
+        "escalationThresholds": "Escalatiedrempels (% verstreken tijd)",
+        "level1": "Niveau 1 (%)",
+        "level2": "Niveau 2 (%)",
+        "level3": "Niveau 3 (%)",
+        "minutesPlaceholder": "Minuten",
+        "minutesUnit": "minuten",
+        "noTarget": "Geen doel",
+        "notConfigured": "Niet geconfigureerd",
+        "resolutionSummary": "Oplossing: {{time}}",
+        "resolutionTime": "Oplossingstijd",
+        "responseSummary": "Reactie: {{time}}",
+        "responseTime": "Reactietijd",
+        "selectResolutionTime": "Selecteer de oplossingstijd",
+        "selectResponseTime": "Selecteer de reactietijd",
+        "title": "Doelen voor reactie en oplossing",
+        "usePreset": "Voorinstelling gebruiken"
+      },
+      "thresholds": {
+        "add": "Drempel toevoegen",
+        "channelEmail": "E-mail",
+        "channelInApp": "In de app",
+        "channelsLabel": "Meldingskanalen",
+        "description": "Configureer wanneer en hoe teamleden worden gewaarschuwd als SLA-deadlines naderen of worden overschreden.",
+        "empty": "Er zijn geen meldingsdrempels geconfigureerd. Klik op \"Drempel toevoegen\" om er een te maken.",
+        "noChannels": "geen",
+        "noRecipients": "Geen ontvangers",
+        "percentLabel": "Drempel (%)",
+        "recipientAssignee": "Verantwoordelijke",
+        "recipientBoardManager": "Bordbeheerder",
+        "recipientBoardManagerShort": "Bordbeh.",
+        "recipientEscalationManager": "Escalatiebeheerder",
+        "recipientEscalationManagerShort": "Escalatiebeh.",
+        "recipientsLabel": "Ontvangers",
+        "remove": "Verwijderen",
+        "title": "Meldingsdrempels",
+        "typeBreach": "SLA-overschrijding",
+        "typeLabel": "Meldingstype",
+        "typeWarning": "Waarschuwing",
+        "viaChannels": "via {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Aangepast...",
+        "hours1": "1 uur",
+        "hours168": "168 uur (7 dagen)",
+        "hours2": "2 uur",
+        "hours24": "24 uur (1 dag)",
+        "hours4": "4 uur",
+        "hours48": "48 uur (2 dagen)",
+        "hours72": "72 uur (3 dagen)",
+        "hours8": "8 uur",
+        "minutes15": "15 minuten",
+        "minutes30": "30 minuten"
+      },
+      "validation": {
+        "channelRequired": "Er is ten minste één kanaal vereist",
+        "duplicateThreshold": "Dubbel drempelpercentage",
+        "percentRange": "Moet tussen 0 en 200 liggen",
+        "policyNameRequired": "De naam van het SLA-beleid is vereist",
+        "targetRequired": "Ten minste één prioriteit moet een doel voor de reactie- of oplossingstijd hebben"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Annuleren",
+        "delete": "Verwijderen",
+        "edit": "Bewerken",
+        "openMenu": "Menu openen",
+        "setDefault": "Als standaard instellen"
+      },
+      "addPolicy": "SLA-beleid toevoegen",
+      "columns": {
+        "actions": "Acties",
+        "description": "Beschrijving",
+        "name": "Naam"
+      },
+      "defaultLabel": "Standaard",
+      "delete": {
+        "checkingUsage": "Gebruik controleren...",
+        "confirm": "Weet u zeker dat u het SLA-beleid {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "defaultWarning": "Dit is het standaardbeleid. U kunt eerst een ander SLA-beleid als standaard instellen.",
+        "inUseTitle": "Dit SLA-beleid is momenteel in gebruik",
+        "title": "SLA-beleid verwijderen",
+        "unlinkNote": "Deze verwijzingen worden losgekoppeld. Bestaande SLA-traceringsgegevens bij tickets blijven behouden.",
+        "usageBoards_one": "Bord: {{names}}",
+        "usageBoards_other": "Borden: {{names}}",
+        "usageClients_one": "Klant: {{names}}",
+        "usageClients_other": "Klanten: {{names}}",
+        "usageTickets_one": "{{count}} ticket",
+        "usageTickets_other": "{{count}} tickets"
+      },
+      "description": "Beheer SLA-beleidsregels die doelen voor reactie- en oplossingstijden vastleggen",
+      "empty": "Geen SLA-beleid gevonden. Klik op \"SLA-beleid toevoegen\" om het eerste beleid te maken.",
+      "errors": {
+        "deleteFailed": "SLA-beleid kon niet worden verwijderd. Probeer het opnieuw.",
+        "loadFailed": "SLA-beleid kon niet worden geladen. Probeer het opnieuw.",
+        "setDefaultFailed": "Standaardbeleid kon niet worden ingesteld. Probeer het opnieuw."
+      },
+      "loading": "SLA-beleid laden...",
+      "title": "SLA-beleidsregels"
+    },
+    "status": {
+      "atRisk": "Risico",
+      "breached": "Overschreden",
+      "onTrack": "Op schema",
+      "paused": "Gepauzeerd",
+      "resolutionBreached": "Oplossings-SLA overschreden",
+      "responseBreached": "Reactie-SLA overschreden",
+      "tooltip": {
+        "resolutionBreachedBy": "Oplossing: {{time}} overschreden",
+        "resolutionRemaining": "Oplossing: {{time}} resterend",
+        "responseBreachedBy": "Reactie: {{time}} overschreden",
+        "responseRemaining": "Reactie: {{time}} resterend",
+        "statusLine": "SLA-status: {{status}}",
+        "timerPaused": "SLA-timer: gepauzeerd"
+      },
+      "unknown": "Onbekend"
     }
   },
   "clientPortalLanguage": {

@@ -1,5 +1,6 @@
 import type { HostEnv } from '@alga-psa/emulator-host';
-import type { GraphMessage, GraphSubscription, MsGraphCore } from './core';
+import { signBotFrameworkJwt } from './botFramework';
+import type { GraphMessage, GraphSubscription, InboundBotActivityInput, MsGraphCore } from './core';
 
 /**
  * Webhook I/O lives here, outside the pure core: Graph's subscription
@@ -49,5 +50,61 @@ async function deliverOne(subscription: GraphSubscription, message: GraphMessage
       subscriptionId: subscription.id,
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+export interface InboundBotActivityResult {
+  targetUrl: string;
+  delivered: boolean;
+  /** Status the app's bot endpoint answered with, or null when unreachable. */
+  status: number | null;
+  /** The app's synchronous reply body, so callers see the bot's answer inline. */
+  response?: unknown;
+  error?: string;
+  activity: Record<string, unknown>;
+}
+
+/**
+ * Inbound injection: build a Bot Framework Activity, sign it with the
+ * emulator's Bot Framework key, and POST it at the app's bot endpoint the way
+ * Microsoft would. The app verifies the signature against the emulator's JWKS,
+ * so the real inbound-security path is exercised end to end.
+ */
+export async function deliverInboundBotActivity(
+  core: MsGraphCore,
+  input: InboundBotActivityInput,
+  env: HostEnv,
+): Promise<InboundBotActivityResult> {
+  const { activity, targetUrl, serviceUrl, audience, aadObjectId, tenantId } = core.buildInboundActivity(input);
+  // The token is stamped with wall time, not env.clock: its iat/nbf/exp are
+  // consumed by the app's jose verifier, which reads the real clock with zero
+  // tolerance — and real Microsoft stamps wall time too. Emulator STATE (access
+  // token expiry, subscriptions, activity timestamps) still flows through
+  // env.clock, so `clock advance` and activity injection compose. Backdate
+  // deliberately with tokenAgeSeconds to test an expired inbound token.
+  const issuedAt = Math.floor(Date.now() / 1000) - (input.tokenAgeSeconds ?? 0);
+  const token = signBotFrameworkJwt(
+    { aud: audience, serviceurl: serviceUrl, oid: aadObjectId, tid: tenantId },
+    issuedAt,
+  );
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify(activity),
+    });
+    const raw = await response.text();
+    let parsed: unknown = raw;
+    try {
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch {
+      /* non-JSON bodies pass through as text */
+    }
+    return { targetUrl, delivered: true, status: response.status, response: parsed, activity };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    env.log('msgraph inbound bot activity delivery failed', { targetUrl, error: message });
+    return { targetUrl, delivered: false, status: null, error: message, activity };
   }
 }

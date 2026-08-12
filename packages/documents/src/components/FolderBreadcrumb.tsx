@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ChevronRight, Home } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FolderBreadcrumbProps {
   folderPath: string | null;
@@ -12,11 +13,13 @@ export default function FolderBreadcrumb({
   folderPath,
   onNavigate
 }: FolderBreadcrumbProps) {
+  const { t } = useTranslation('features/documents');
+
   if (!folderPath) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <Home className="w-4 h-4" />
-        <span>All Documents</span>
+        <span>{t('folders.allDocuments', { defaultValue: 'All Documents' })}</span>
       </div>
     );
   }

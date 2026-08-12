@@ -641,7 +641,6 @@
       "title": "Configuração de cobrança por tempo"
     },
     "loading": "Carregando predefinições de linha de contrato...",
-    "selectPresetsTitle": "Selecione predefinições de linha de contrato para adicionar",
     "selection": {
       "deselectPreset": "Desmarcar predefinição",
       "selectPreset": "Selecione predefinição",

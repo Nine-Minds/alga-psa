@@ -35,6 +35,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { Plus, Trash2, ChevronDown, Search } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   type ActionMessageError,
   type ActionPermissionError,
@@ -42,6 +43,9 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+// Module-scope option builders cannot reach the hook, so they take `t`
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
 interface SlaPolicyFormProps {
   policyId?: string;  // If provided, edit mode
@@ -76,32 +80,32 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
   isActionMessageError(value) || isActionPermissionError(value);
 
 // Predefined time options
-const RESPONSE_TIME_OPTIONS: SelectOption[] = [
-  { value: '', label: 'No target' },
-  { value: '15', label: '15 minutes' },
-  { value: '30', label: '30 minutes' },
-  { value: '60', label: '1 hour' },
-  { value: '120', label: '2 hours' },
-  { value: '240', label: '4 hours' },
-  { value: '480', label: '8 hours' },
-  { value: 'custom', label: 'Custom...' }
+const getResponseTimeOptions = (t: TranslateFn): SelectOption[] => [
+  { value: '', label: t('sla.policyForm.targets.noTarget', { defaultValue: 'No target' }) },
+  { value: '15', label: t('sla.policyForm.timeOptions.minutes15', { defaultValue: '15 minutes' }) },
+  { value: '30', label: t('sla.policyForm.timeOptions.minutes30', { defaultValue: '30 minutes' }) },
+  { value: '60', label: t('sla.policyForm.timeOptions.hours1', { defaultValue: '1 hour' }) },
+  { value: '120', label: t('sla.policyForm.timeOptions.hours2', { defaultValue: '2 hours' }) },
+  { value: '240', label: t('sla.policyForm.timeOptions.hours4', { defaultValue: '4 hours' }) },
+  { value: '480', label: t('sla.policyForm.timeOptions.hours8', { defaultValue: '8 hours' }) },
+  { value: 'custom', label: t('sla.policyForm.timeOptions.custom', { defaultValue: 'Custom...' }) }
 ];
 
-const RESOLUTION_TIME_OPTIONS: SelectOption[] = [
-  { value: '', label: 'No target' },
-  { value: '60', label: '1 hour' },
-  { value: '240', label: '4 hours' },
-  { value: '480', label: '8 hours' },
-  { value: '1440', label: '24 hours (1 day)' },
-  { value: '2880', label: '48 hours (2 days)' },
-  { value: '4320', label: '72 hours (3 days)' },
-  { value: '10080', label: '168 hours (7 days)' },
-  { value: 'custom', label: 'Custom...' }
+const getResolutionTimeOptions = (t: TranslateFn): SelectOption[] => [
+  { value: '', label: t('sla.policyForm.targets.noTarget', { defaultValue: 'No target' }) },
+  { value: '60', label: t('sla.policyForm.timeOptions.hours1', { defaultValue: '1 hour' }) },
+  { value: '240', label: t('sla.policyForm.timeOptions.hours4', { defaultValue: '4 hours' }) },
+  { value: '480', label: t('sla.policyForm.timeOptions.hours8', { defaultValue: '8 hours' }) },
+  { value: '1440', label: t('sla.policyForm.timeOptions.hours24', { defaultValue: '24 hours (1 day)' }) },
+  { value: '2880', label: t('sla.policyForm.timeOptions.hours48', { defaultValue: '48 hours (2 days)' }) },
+  { value: '4320', label: t('sla.policyForm.timeOptions.hours72', { defaultValue: '72 hours (3 days)' }) },
+  { value: '10080', label: t('sla.policyForm.timeOptions.hours168', { defaultValue: '168 hours (7 days)' }) },
+  { value: 'custom', label: t('sla.policyForm.timeOptions.custom', { defaultValue: 'Custom...' }) }
 ];
 
-const NOTIFICATION_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'warning', label: 'Warning' },
-  { value: 'breach', label: 'Breach' }
+const getNotificationTypeOptions = (t: TranslateFn): SelectOption[] => [
+  { value: 'warning', label: t('sla.policyForm.thresholds.typeWarning', { defaultValue: 'Warning' }) },
+  { value: 'breach', label: t('sla.policyForm.thresholds.typeBreach', { defaultValue: 'Breach' }) }
 ];
 
 // Default escalation percentages
@@ -115,8 +119,8 @@ function generateLocalId(): string {
 }
 
 // Format minutes into human-readable time
-function formatMinutesDisplay(minutes: number | null): string {
-  if (minutes === null) return 'No target';
+function formatMinutesDisplay(t: TranslateFn, minutes: number | null): string {
+  if (minutes === null) return t('sla.policyForm.targets.noTarget', { defaultValue: 'No target' });
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -147,6 +151,7 @@ interface MultiSelectPanelProps {
 }
 
 function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, selectedIds, onSelectedIdsChange }: MultiSelectPanelProps) {
+  const { t } = useTranslation('msp/settings');
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -224,8 +229,12 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
   };
 
   const triggerLabel = selectedItems.length === 0
-    ? placeholder || 'Select...'
-    : `${selectedItems.length} selected`;
+    ? placeholder || t('sla.policyForm.multiSelect.placeholder', { defaultValue: 'Select...' })
+    : t('sla.policyForm.multiSelect.selectedCount', {
+        defaultValue_one: '{{count}} selected',
+        defaultValue_other: '{{count}} selected',
+        count: selectedItems.length
+      });
 
   const dropdownContent = (
     <div
@@ -242,7 +251,7 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
               ref={searchInputRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder || 'Search...'}
+              placeholder={searchPlaceholder || t('sla.policyForm.multiSelect.searchPlaceholder', { defaultValue: 'Search...' })}
               className="pl-8 h-8 text-sm"
               autoComplete="off"
             />
@@ -252,13 +261,23 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
 
         {/* Select all / Deselect all */}
         <div className="flex items-center gap-3 px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] text-xs text-gray-500">
-          <button type="button" onClick={handleSelectAll} className="hover:text-gray-900 underline">
-            Select all{search ? ' visible' : ''}
+          <button id={`${id}-select-all`} type="button" onClick={handleSelectAll} className="hover:text-gray-900 underline">
+            {search
+              ? t('sla.policyForm.multiSelect.selectAllVisible', { defaultValue: 'Select all visible' })
+              : t('sla.policyForm.multiSelect.selectAll', { defaultValue: 'Select all' })}
           </button>
-          <button type="button" onClick={handleDeselectAll} className="hover:text-gray-900 underline">
-            Deselect all{search ? ' visible' : ''}
+          <button id={`${id}-deselect-all`} type="button" onClick={handleDeselectAll} className="hover:text-gray-900 underline">
+            {search
+              ? t('sla.policyForm.multiSelect.deselectAllVisible', { defaultValue: 'Deselect all visible' })
+              : t('sla.policyForm.multiSelect.deselectAll', { defaultValue: 'Deselect all' })}
           </button>
-          <span className="ml-auto">{selectedIds.length} selected</span>
+          <span className="ml-auto">
+            {t('sla.policyForm.multiSelect.selectedCount', {
+              defaultValue_one: '{{count}} selected',
+              defaultValue_other: '{{count}} selected',
+              count: selectedIds.length
+            })}
+          </span>
         </div>
 
         {/* Checkbox list */}
@@ -277,12 +296,15 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
         >
           {filtered.length === 0 ? (
             <div className="px-3 py-4 text-sm text-gray-500 text-center">
-              {search ? 'No results found' : 'No items available'}
+              {search
+                ? t('sla.policyForm.multiSelect.noResults', { defaultValue: 'No results found' })
+                : t('sla.policyForm.multiSelect.noItems', { defaultValue: 'No items available' })}
             </div>
           ) : (
             filtered.map(item => (
               <div
                 key={item.id}
+                id={`${id}-option-${item.id}`}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
                   selectedIds.includes(item.id) ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''
                 }`}
@@ -325,6 +347,8 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
 }
 
 export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: SlaPolicyFormProps) {
+  const { t } = useTranslation('msp/settings');
+
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -383,7 +407,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
           getSlaPolicyUsage(policyId)
         ]);
         if (!policy) {
-          setError('SLA policy not found');
+          setError(t('sla.policyForm.errors.notFound', { defaultValue: 'SLA policy not found' }));
           return;
         }
 
@@ -422,7 +446,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
         const customResolution: Record<string, boolean> = {};
         targetFormData.forEach(target => {
           if (target.response_time_minutes !== null) {
-            const isStandardOption = RESPONSE_TIME_OPTIONS.some(
+            const isStandardOption = getResponseTimeOptions(t).some(
               opt => opt.value === String(target.response_time_minutes) && opt.value !== 'custom'
             );
             if (!isStandardOption) {
@@ -430,7 +454,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
             }
           }
           if (target.resolution_time_minutes !== null) {
-            const isStandardOption = RESOLUTION_TIME_OPTIONS.some(
+            const isStandardOption = getResolutionTimeOptions(t).some(
               opt => opt.value === String(target.resolution_time_minutes) && opt.value !== 'custom'
             );
             if (!isStandardOption) {
@@ -508,11 +532,11 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       }
     } catch (err) {
       console.error('Error loading SLA policy data:', err);
-      setError('Failed to load data');
+      setError(t('sla.policyForm.errors.loadFailed', { defaultValue: 'Failed to load data' }));
     } finally {
       setIsLoading(false);
     }
-  }, [policyId, boards, clients]);
+  }, [policyId, boards, clients, t]);
 
   useEffect(() => {
     loadData();
@@ -523,27 +547,29 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
     const errors: Record<string, string> = {};
 
     if (!policyName.trim()) {
-      errors.policyName = 'Policy name is required';
+      errors.policyName = t('sla.policyForm.validation.policyNameRequired', { defaultValue: 'Policy name is required' });
     }
 
     // Check if at least one target has values
     const hasAnyTarget = targets.some(
-      t => t.response_time_minutes !== null || t.resolution_time_minutes !== null
+      target => target.response_time_minutes !== null || target.resolution_time_minutes !== null
     );
     if (!hasAnyTarget) {
-      errors.targets = 'At least one priority should have a response or resolution time target';
+      errors.targets = t('sla.policyForm.validation.targetRequired', { defaultValue: 'At least one priority should have a response or resolution time target' });
     }
+
+    const percentRangeMessage = t('sla.policyForm.validation.percentRange', { defaultValue: 'Must be between 0 and 200' });
 
     // Validate escalation percentages
     for (const target of targets) {
       if (target.escalation_1_percent < 0 || target.escalation_1_percent > 200) {
-        errors[`escalation_1_${target.priority_id}`] = 'Must be between 0 and 200';
+        errors[`escalation_1_${target.priority_id}`] = percentRangeMessage;
       }
       if (target.escalation_2_percent < 0 || target.escalation_2_percent > 200) {
-        errors[`escalation_2_${target.priority_id}`] = 'Must be between 0 and 200';
+        errors[`escalation_2_${target.priority_id}`] = percentRangeMessage;
       }
       if (target.escalation_3_percent < 0 || target.escalation_3_percent > 200) {
-        errors[`escalation_3_${target.priority_id}`] = 'Must be between 0 and 200';
+        errors[`escalation_3_${target.priority_id}`] = percentRangeMessage;
       }
     }
 
@@ -552,14 +578,14 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
     for (let i = 0; i < thresholds.length; i++) {
       const threshold = thresholds[i];
       if (threshold.threshold_percent < 0 || threshold.threshold_percent > 200) {
-        errors[`threshold_percent_${i}`] = 'Must be between 0 and 200';
+        errors[`threshold_percent_${i}`] = percentRangeMessage;
       }
       if (seenPercents.has(threshold.threshold_percent)) {
-        errors[`threshold_percent_${i}`] = 'Duplicate threshold percentage';
+        errors[`threshold_percent_${i}`] = t('sla.policyForm.validation.duplicateThreshold', { defaultValue: 'Duplicate threshold percentage' });
       }
       seenPercents.add(threshold.threshold_percent);
       if (threshold.channels.length === 0) {
-        errors[`threshold_channels_${i}`] = 'At least one channel is required';
+        errors[`threshold_channels_${i}`] = t('sla.policyForm.validation.channelRequired', { defaultValue: 'At least one channel is required' });
       }
     }
 
@@ -657,7 +683,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       onSave?.(savedPolicy);
     } catch (err) {
       console.error('Error saving SLA policy:', err);
-      setError('Failed to save SLA policy');
+      setError(t('sla.policyForm.errors.saveFailed', { defaultValue: 'Failed to save SLA policy' }));
     } finally {
       setIsSaving(false);
     }
@@ -731,17 +757,19 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
 
   // Business hours options for dropdown
   const businessHoursOptions: SelectOption[] = [
-    { value: '', label: 'No business hours (24/7)' },
+    { value: '', label: t('sla.policyForm.basics.noBusinessHours', { defaultValue: 'No business hours (24/7)' }) },
     ...businessHoursSchedules.map(schedule => ({
       value: schedule.schedule_id,
-      label: schedule.schedule_name + (schedule.is_24x7 ? ' (24/7)' : '')
+      label: schedule.is_24x7
+        ? t('sla.policyForm.basics.scheduleAlways', { defaultValue: '{{name}} (24/7)', name: schedule.schedule_name })
+        : schedule.schedule_name
     }))
   ];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500">{t('sla.policyForm.loading', { defaultValue: 'Loading...' })}</div>
       </div>
     );
   }
@@ -757,23 +785,23 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       {/* Basic Info Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
+          <CardTitle>{t('sla.policyForm.basics.title', { defaultValue: 'Basic Information' })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Name + Default checkbox */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               id="sla-policy-name"
-              label="Policy Name"
+              label={t('sla.policyForm.basics.policyName', { defaultValue: 'Policy Name' })}
               value={policyName}
               onChange={(e) => setPolicyName(e.target.value)}
-              placeholder="Enter policy name"
+              placeholder={t('sla.policyForm.basics.policyNamePlaceholder', { defaultValue: 'Enter policy name' })}
               required
               error={validationErrors.policyName}
             />
             <Checkbox
               id="sla-policy-is-default"
-              label="Set as default policy"
+              label={t('sla.policyForm.basics.setAsDefault', { defaultValue: 'Set as default policy' })}
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
               containerClassName="flex items-center gap-2 md:mt-7"
@@ -782,20 +810,20 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
 
           <TextArea
             id="sla-policy-description"
-            label="Description"
+            label={t('sla.policyForm.basics.description', { defaultValue: 'Description' })}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description of this SLA policy"
+            placeholder={t('sla.policyForm.basics.descriptionPlaceholder', { defaultValue: 'Optional description of this SLA policy' })}
             className="max-w-none"
           />
 
           <CustomSelect
             id="sla-policy-business-hours"
-            label="Business Hours Schedule"
+            label={t('sla.policyForm.basics.businessHours', { defaultValue: 'Business Hours Schedule' })}
             options={businessHoursOptions}
             value={businessHoursScheduleId}
             onValueChange={setBusinessHoursScheduleId}
-            placeholder="Select business hours schedule"
+            placeholder={t('sla.policyForm.basics.businessHoursPlaceholder', { defaultValue: 'Select business hours schedule' })}
             allowClear
           />
 
@@ -804,8 +832,8 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
             {/* Board assignment */}
             <MultiSelectPanel
               id="sla-policy-boards"
-              label="Assign to Boards"
-              searchPlaceholder="Search boards..."
+              label={t('sla.policyForm.basics.assignBoards', { defaultValue: 'Assign to Boards' })}
+              searchPlaceholder={t('sla.policyForm.basics.searchBoards', { defaultValue: 'Search boards...' })}
               items={allBoards.map(b => ({ id: b.board_id, label: b.name }))}
               selectedIds={selectedBoardIds}
               onSelectedIdsChange={setSelectedBoardIds}
@@ -814,8 +842,8 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
             {/* Client assignment */}
             <MultiSelectPanel
               id="sla-policy-clients"
-              label="Assign to Clients"
-              searchPlaceholder="Search clients..."
+              label={t('sla.policyForm.basics.assignClients', { defaultValue: 'Assign to Clients' })}
+              searchPlaceholder={t('sla.policyForm.basics.searchClients', { defaultValue: 'Search clients...' })}
               items={allClients.map(c => ({
                 id: c.client_id,
                 label: c.client_name,
@@ -836,9 +864,9 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       {/* Response/Resolution Targets Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Response and Resolution Targets</CardTitle>
+          <CardTitle>{t('sla.policyForm.targets.title', { defaultValue: 'Response and Resolution Targets' })}</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Set the maximum time allowed to first respond to and fully resolve tickets for each priority level.
+            {t('sla.policyForm.targets.description', { defaultValue: 'Set the maximum time allowed to first respond to and fully resolve tickets for each priority level.' })}
           </p>
         </CardHeader>
         <CardContent>
@@ -865,10 +893,16 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                         {hasTargets ? (
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
-                              Response: {formatMinutesDisplay(target.response_time_minutes)}
+                              {t('sla.policyForm.targets.responseSummary', {
+                                defaultValue: 'Response: {{time}}',
+                                time: formatMinutesDisplay(t, target.response_time_minutes)
+                              })}
                             </span>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-success/10 text-success rounded text-xs font-medium">
-                              Resolution: {formatMinutesDisplay(target.resolution_time_minutes)}
+                              {t('sla.policyForm.targets.resolutionSummary', {
+                                defaultValue: 'Resolution: {{time}}',
+                                time: formatMinutesDisplay(t, target.resolution_time_minutes)
+                              })}
                             </span>
                             {target.is_24x7 && (
                               <span className="inline-flex items-center px-2 py-0.5 bg-secondary/10 text-secondary rounded text-xs font-medium">
@@ -877,7 +911,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Not configured</span>
+                          <span className="text-sm text-muted-foreground">{t('sla.policyForm.targets.notConfigured', { defaultValue: 'Not configured' })}</span>
                         )}
                       </div>
                       <ChevronDown className="chevron h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
@@ -888,7 +922,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                       <div className="flex justify-end">
                         <Checkbox
                           id={`sla-target-24x7-${target.priority_id}`}
-                          label="24/7 (ignore business hours)"
+                          label={t('sla.policyForm.targets.always', { defaultValue: '24/7 (ignore business hours)' })}
                           checked={target.is_24x7}
                           onChange={(e) => handleTargetChange(target.priority_id, 'is_24x7', e.target.checked)}
                         />
@@ -897,7 +931,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Response Time */}
                         <div>
-                          <Label className="mb-1 block">Response Time</Label>
+                          <Label className="mb-1 block">{t('sla.policyForm.targets.responseTime', { defaultValue: 'Response Time' })}</Label>
                           {customResponseInputs[target.priority_id] ? (
                             <div className="flex items-center gap-2">
                               <Input
@@ -910,33 +944,33 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                   'response_time_minutes',
                                   e.target.value === '' ? null : parseInt(e.target.value, 10)
                                 )}
-                                placeholder="Minutes"
+                                placeholder={t('sla.policyForm.targets.minutesPlaceholder', { defaultValue: 'Minutes' })}
                                 className="w-32"
                               />
-                              <span className="text-sm text-gray-500">minutes</span>
+                              <span className="text-sm text-gray-500">{t('sla.policyForm.targets.minutesUnit', { defaultValue: 'minutes' })}</span>
                               <Button
                                 id={`sla-target-response-preset-${target.priority_id}`}
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCustomResponseInputs(prev => ({ ...prev, [target.priority_id]: false }))}
                               >
-                                Use preset
+                                {t('sla.policyForm.targets.usePreset', { defaultValue: 'Use preset' })}
                               </Button>
                             </div>
                           ) : (
                             <CustomSelect
                               id={`sla-target-response-${target.priority_id}`}
-                              options={RESPONSE_TIME_OPTIONS}
+                              options={getResponseTimeOptions(t)}
                               value={target.response_time_minutes === null ? '' : String(target.response_time_minutes)}
                               onValueChange={(value) => handleResponseTimeSelect(target.priority_id, value)}
-                              placeholder="Select response time"
+                              placeholder={t('sla.policyForm.targets.selectResponseTime', { defaultValue: 'Select response time' })}
                             />
                           )}
                         </div>
 
                         {/* Resolution Time */}
                         <div>
-                          <Label className="mb-1 block">Resolution Time</Label>
+                          <Label className="mb-1 block">{t('sla.policyForm.targets.resolutionTime', { defaultValue: 'Resolution Time' })}</Label>
                           {customResolutionInputs[target.priority_id] ? (
                             <div className="flex items-center gap-2">
                               <Input
@@ -949,26 +983,26 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                   'resolution_time_minutes',
                                   e.target.value === '' ? null : parseInt(e.target.value, 10)
                                 )}
-                                placeholder="Minutes"
+                                placeholder={t('sla.policyForm.targets.minutesPlaceholder', { defaultValue: 'Minutes' })}
                                 className="w-32"
                               />
-                              <span className="text-sm text-gray-500">minutes</span>
+                              <span className="text-sm text-gray-500">{t('sla.policyForm.targets.minutesUnit', { defaultValue: 'minutes' })}</span>
                               <Button
                                 id={`sla-target-resolution-preset-${target.priority_id}`}
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setCustomResolutionInputs(prev => ({ ...prev, [target.priority_id]: false }))}
                               >
-                                Use preset
+                                {t('sla.policyForm.targets.usePreset', { defaultValue: 'Use preset' })}
                               </Button>
                             </div>
                           ) : (
                             <CustomSelect
                               id={`sla-target-resolution-${target.priority_id}`}
-                              options={RESOLUTION_TIME_OPTIONS}
+                              options={getResolutionTimeOptions(t)}
                               value={target.resolution_time_minutes === null ? '' : String(target.resolution_time_minutes)}
                               onValueChange={(value) => handleResolutionTimeSelect(target.priority_id, value)}
-                              placeholder="Select resolution time"
+                              placeholder={t('sla.policyForm.targets.selectResolutionTime', { defaultValue: 'Select resolution time' })}
                             />
                           )}
                         </div>
@@ -976,7 +1010,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
 
                       {/* Escalation Percentages */}
                       <div>
-                        <Label className="mb-2 block text-sm text-gray-600">Escalation Thresholds (% of time elapsed)</Label>
+                        <Label className="mb-2 block text-sm text-gray-600">{t('sla.policyForm.targets.escalationThresholds', { defaultValue: 'Escalation Thresholds (% of time elapsed)' })}</Label>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
                             <Input
@@ -990,7 +1024,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'escalation_1_percent',
                                 parseInt(e.target.value, 10) || 0
                               )}
-                              label="Level 1 (%)"
+                              label={t('sla.policyForm.targets.level1', { defaultValue: 'Level 1 (%)' })}
                               error={validationErrors[`escalation_1_${target.priority_id}`]}
                             />
                           </div>
@@ -1006,7 +1040,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'escalation_2_percent',
                                 parseInt(e.target.value, 10) || 0
                               )}
-                              label="Level 2 (%)"
+                              label={t('sla.policyForm.targets.level2', { defaultValue: 'Level 2 (%)' })}
                               error={validationErrors[`escalation_2_${target.priority_id}`]}
                             />
                           </div>
@@ -1022,7 +1056,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'escalation_3_percent',
                                 parseInt(e.target.value, 10) || 0
                               )}
-                              label="Level 3 (%)"
+                              label={t('sla.policyForm.targets.level3', { defaultValue: 'Level 3 (%)' })}
                               error={validationErrors[`escalation_3_${target.priority_id}`]}
                             />
                           </div>
@@ -1042,9 +1076,9 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Notification Thresholds</CardTitle>
+              <CardTitle>{t('sla.policyForm.thresholds.title', { defaultValue: 'Notification Thresholds' })}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Configure when and how to notify team members as SLA deadlines approach or are breached.
+                {t('sla.policyForm.thresholds.description', { defaultValue: 'Configure when and how to notify team members as SLA deadlines approach or are breached.' })}
               </p>
             </div>
             <Button
@@ -1054,24 +1088,26 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
               onClick={addThreshold}
             >
               <Plus className="w-4 h-4 mr-1" />
-              Add Threshold
+              {t('sla.policyForm.thresholds.add', { defaultValue: 'Add Threshold' })}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {thresholds.length === 0 ? (
             <div className="text-center text-gray-500 py-4">
-              No notification thresholds configured. Click &quot;Add Threshold&quot; to create one.
+              {t('sla.policyForm.thresholds.empty', { defaultValue: 'No notification thresholds configured. Click "Add Threshold" to create one.' })}
             </div>
           ) : (
             <Accordion.Root type="multiple" className="w-full space-y-2">
               {thresholds.map((threshold, index) => {
                 const recipients = [
-                  threshold.notify_assignee && 'Assignee',
-                  threshold.notify_board_manager && 'Board Mgr',
-                  threshold.notify_escalation_manager && 'Escalation Mgr'
+                  threshold.notify_assignee && t('sla.policyForm.thresholds.recipientAssignee', { defaultValue: 'Assignee' }),
+                  threshold.notify_board_manager && t('sla.policyForm.thresholds.recipientBoardManagerShort', { defaultValue: 'Board Mgr' }),
+                  threshold.notify_escalation_manager && t('sla.policyForm.thresholds.recipientEscalationManagerShort', { defaultValue: 'Escalation Mgr' })
                 ].filter(Boolean);
-                const channels = threshold.channels.map(c => c === 'in_app' ? 'In-App' : 'Email');
+                const channels = threshold.channels.map(c => c === 'in_app'
+                  ? t('sla.policyForm.thresholds.channelInApp', { defaultValue: 'In-App' })
+                  : t('sla.policyForm.thresholds.channelEmail', { defaultValue: 'Email' }));
 
                 return (
                   <Accordion.Item
@@ -1093,10 +1129,13 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                             {threshold.threshold_percent}% {threshold.notification_type}
                           </span>
                           <span className="text-sm text-muted-foreground">
-                            {recipients.join(', ') || 'No recipients'}
+                            {recipients.join(', ') || t('sla.policyForm.thresholds.noRecipients', { defaultValue: 'No recipients' })}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            via {channels.join(', ') || 'none'}
+                            {t('sla.policyForm.thresholds.viaChannels', {
+                              defaultValue: 'via {{channels}}',
+                              channels: channels.join(', ') || t('sla.policyForm.thresholds.noChannels', { defaultValue: 'none' })
+                            })}
                           </span>
                         </div>
                         <ChevronDown className="chevron h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
@@ -1113,7 +1152,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
-                            Remove
+                            {t('sla.policyForm.thresholds.remove', { defaultValue: 'Remove' })}
                           </Button>
                         </div>
 
@@ -1130,15 +1169,15 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                                 'threshold_percent',
                                 parseInt(e.target.value, 10) || 0
                               )}
-                              label="Threshold (%)"
+                              label={t('sla.policyForm.thresholds.percentLabel', { defaultValue: 'Threshold (%)' })}
                               error={validationErrors[`threshold_percent_${index}`]}
                             />
                           </div>
                           <div>
                             <CustomSelect
                               id={`sla-threshold-type-${index}`}
-                              label="Notification Type"
-                              options={NOTIFICATION_TYPE_OPTIONS}
+                              label={t('sla.policyForm.thresholds.typeLabel', { defaultValue: 'Notification Type' })}
+                              options={getNotificationTypeOptions(t)}
                               value={threshold.notification_type}
                               onValueChange={(value) => handleThresholdChange(
                                 threshold.id,
@@ -1150,11 +1189,11 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                         </div>
 
                         <div>
-                          <Label className="mb-2 block text-sm text-gray-600">Recipients</Label>
+                          <Label className="mb-2 block text-sm text-gray-600">{t('sla.policyForm.thresholds.recipientsLabel', { defaultValue: 'Recipients' })}</Label>
                           <div className="flex flex-wrap gap-4">
                             <Checkbox
                               id={`sla-threshold-notify-assignee-${index}`}
-                              label="Assignee"
+                              label={t('sla.policyForm.thresholds.recipientAssignee', { defaultValue: 'Assignee' })}
                               checked={threshold.notify_assignee}
                               onChange={(e) => handleThresholdChange(
                                 threshold.id,
@@ -1164,7 +1203,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                             />
                             <Checkbox
                               id={`sla-threshold-notify-board-manager-${index}`}
-                              label="Board Manager"
+                              label={t('sla.policyForm.thresholds.recipientBoardManager', { defaultValue: 'Board Manager' })}
                               checked={threshold.notify_board_manager}
                               onChange={(e) => handleThresholdChange(
                                 threshold.id,
@@ -1174,7 +1213,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                             />
                             <Checkbox
                               id={`sla-threshold-notify-escalation-manager-${index}`}
-                              label="Escalation Manager"
+                              label={t('sla.policyForm.thresholds.recipientEscalationManager', { defaultValue: 'Escalation Manager' })}
                               checked={threshold.notify_escalation_manager}
                               onChange={(e) => handleThresholdChange(
                                 threshold.id,
@@ -1187,7 +1226,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
 
                         <div>
                           <Label className="mb-2 block text-sm text-gray-600">
-                            Notification Channels
+                            {t('sla.policyForm.thresholds.channelsLabel', { defaultValue: 'Notification Channels' })}
                             {validationErrors[`threshold_channels_${index}`] && (
                               <span className="text-red-600 ml-2">{validationErrors[`threshold_channels_${index}`]}</span>
                             )}
@@ -1195,13 +1234,13 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
                           <div className="flex gap-4">
                             <Checkbox
                               id={`sla-threshold-channel-in-app-${index}`}
-                              label="In-App"
+                              label={t('sla.policyForm.thresholds.channelInApp', { defaultValue: 'In-App' })}
                               checked={threshold.channels.includes('in_app')}
                               onChange={() => toggleThresholdChannel(threshold.id, 'in_app')}
                             />
                             <Checkbox
                               id={`sla-threshold-channel-email-${index}`}
-                              label="Email"
+                              label={t('sla.policyForm.thresholds.channelEmail', { defaultValue: 'Email' })}
                               checked={threshold.channels.includes('email')}
                               onChange={() => toggleThresholdChannel(threshold.id, 'email')}
                             />
@@ -1225,14 +1264,18 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
           onClick={onCancel}
           disabled={isSaving}
         >
-          Cancel
+          {t('sla.policyForm.actions.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button
           id="sla-policy-save"
           onClick={handleSubmit}
           disabled={isSaving}
         >
-          {isSaving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Policy'}
+          {isSaving
+            ? t('sla.policyForm.actions.saving', { defaultValue: 'Saving...' })
+            : isEditMode
+              ? t('sla.policyForm.actions.saveChanges', { defaultValue: 'Save Changes' })
+              : t('sla.policyForm.actions.create', { defaultValue: 'Create Policy' })}
         </Button>
       </div>
     </div>

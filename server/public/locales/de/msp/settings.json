@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "Feiertagsdatum ist erforderlich",
       "holidayAdded": "Feiertag erfolgreich hinzugefügt",
       "holidayDeleted": "Feiertag erfolgreich gelöscht"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Derzeit besteht bei keinem Ticket die Gefahr eines SLA-Verstoßes",
+        "overdueHours": "Seit {{hours}} Std. {{minutes}} Min. überfällig",
+        "overdueMinutes": "Seit {{minutes}} Min. überfällig",
+        "title": "Gefährdete Tickets"
+      },
+      "breachChart": {
+        "breachRate": "Verstoßquote",
+        "empty": "Keine Daten zu SLA-Verstößen verfügbar",
+        "title": "Verstöße nach Priorität"
+      },
+      "columns": {
+        "assignee": "Zugewiesener Benutzer",
+        "breachType": "Verstoßart",
+        "client": "Kunde",
+        "priority": "Priorität",
+        "progress": "Fortschritt",
+        "slaType": "SLA-Typ",
+        "ticket": "Ticket",
+        "timeRemaining": "Verbleibende Zeit",
+        "when": "Zeitpunkt"
+      },
+      "gauge": {
+        "title": "SLA-Einhaltung"
+      },
+      "labels": {
+        "resolution": "Lösung",
+        "resolutionSla": "Lösungs-SLA",
+        "response": "Reaktion",
+        "responseSla": "Reaktions-SLA"
+      },
+      "metrics": {
+        "approachingBreach": "Tickets kurz vor einem SLA-Verstoß",
+        "atRisk": "Gefährdet",
+        "currentlyPaused": "Derzeit pausiert",
+        "metBreached": "{{met}} eingehalten / {{breached}} überschritten",
+        "overallCompliance": "Gesamteinhaltung",
+        "pausedSla": "Tickets mit pausiertem SLA",
+        "ticketsTracked_one": "{{count}} Ticket erfasst",
+        "ticketsTracked_other": "{{count}} Tickets erfasst"
+      },
+      "recentBreaches": {
+        "empty": "Keine SLA-Verstöße im ausgewählten Zeitraum",
+        "title": "Kürzliche SLA-Verstöße",
+        "unassigned": "Nicht zugewiesen"
+      },
+      "trendChart": {
+        "breaches": "SLA-Verstöße",
+        "compliance": "Einhaltung",
+        "compliancePercent": "Einhaltung in %",
+        "empty": "Für den ausgewählten Zeitraum sind keine Trenddaten verfügbar",
+        "tickets": "Tickets",
+        "title": "Einhaltungstrend"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Globale SLA-Einstellungen konnten nicht aktualisiert werden",
+        "loadFailed": "Einstellungen für SLA-Pausen konnten nicht geladen werden",
+        "responseTrackingUpdateFailed": "Verfolgung des Reaktionsstatus konnte nicht aktualisiert werden",
+        "saveStatusesFailed": "Statuskonfigurationen konnten nicht gespeichert werden"
+      },
+      "global": {
+        "description": "Globales Verhalten für das Pausieren von SLA-Zeitgebern konfigurieren",
+        "pauseOnAwaitingClient": {
+          "description": "Wenn diese Option aktiviert ist, wird der SLA-Zeitgeber automatisch pausiert, sobald ein Ticket als auf eine Antwort des Kunden wartend markiert wird. Der Zeitgeber wird fortgesetzt, wenn der Kunde antwortet oder sich der Ticketstatus ändert.",
+          "label": "SLA beim Warten auf eine Kundenantwort automatisch pausieren",
+          "requiresTracking": "Aktivieren Sie oben die Verfolgung des Reaktionsstatus, um diese Option zu verwenden."
+        },
+        "responseTracking": {
+          "description": "Wenn diese Option aktiviert ist, erfassen Tickets automatisch, wer als Nächstes antworten muss (Kunde oder interner Mitarbeiter). Dies steuert außerdem die Sichtbarkeit von Kennzeichnungen und Filtern für den Reaktionsstatus.",
+          "label": "Reaktionsstatus bei Tickets verfolgen"
+        },
+        "title": "Globale SLA-Einstellungen"
+      },
+      "loading": "Einstellungen für SLA-Pausen werden geladen...",
+      "messages": {
+        "globalSettingsUpdated": "Globale SLA-Einstellungen wurden erfolgreich aktualisiert",
+        "noChangesToSave": "Keine Änderungen zu speichern",
+        "responseTrackingDisabled": "Verfolgung des Reaktionsstatus deaktiviert",
+        "responseTrackingEnabled": "Verfolgung des Reaktionsstatus aktiviert",
+        "statusesUpdated_one": "{{count}} Statuskonfiguration wurde erfolgreich aktualisiert",
+        "statusesUpdated_other": "{{count}} Statuskonfigurationen wurden erfolgreich aktualisiert"
+      },
+      "perStatus": {
+        "description": "Konfigurieren Sie, bei welchen Ticketstatus der SLA-Zeitgeber pausiert werden soll. Wenn ein Ticket in einen Status mit aktivierter Pause verschoben wird, hält der SLA-Zeitgeber an, bis das Ticket in einen anderen Status verschoben wird.",
+        "empty": "Keine Ticketstatus gefunden.",
+        "modified": "Geändert",
+        "modifiedCount_one": "{{count}} Status geändert",
+        "modifiedCount_other": "{{count}} Status geändert",
+        "noUnsavedChanges": "Keine ungespeicherten Änderungen",
+        "resetChanges": "Änderungen zurücksetzen",
+        "saveChanges": "Änderungen speichern",
+        "saving": "Wird gespeichert...",
+        "title": "Pausenkonfiguration nach Status"
+      },
+      "retry": "Erneut versuchen"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Richtlinie erstellen",
+        "saveChanges": "Änderungen speichern",
+        "saving": "Wird gespeichert..."
+      },
+      "basics": {
+        "assignBoards": "Boards zuweisen",
+        "assignClients": "Kunden zuweisen",
+        "businessHours": "Geschäftszeitenplan",
+        "businessHoursPlaceholder": "Geschäftszeitenplan auswählen",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "Optionale Beschreibung dieser SLA-Richtlinie",
+        "noBusinessHours": "Keine Geschäftszeiten (24/7)",
+        "policyName": "Richtlinienname",
+        "policyNamePlaceholder": "Richtliniennamen eingeben",
+        "scheduleAlways": "{{name}} (rund um die Uhr)",
+        "searchBoards": "Boards durchsuchen...",
+        "searchClients": "Kunden durchsuchen...",
+        "setAsDefault": "Als Standardrichtlinie festlegen",
+        "title": "Grundlegende Informationen"
+      },
+      "errors": {
+        "loadFailed": "Daten konnten nicht geladen werden",
+        "notFound": "SLA-Richtlinie nicht gefunden",
+        "saveFailed": "SLA-Richtlinie konnte nicht gespeichert werden"
+      },
+      "loading": "Wird geladen...",
+      "multiSelect": {
+        "deselectAll": "Auswahl vollständig aufheben",
+        "deselectAllVisible": "Auswahl aller sichtbaren Einträge aufheben",
+        "noItems": "Keine Einträge verfügbar",
+        "noResults": "Keine Ergebnisse gefunden",
+        "placeholder": "Auswählen...",
+        "searchPlaceholder": "Suchen...",
+        "selectAll": "Alle auswählen",
+        "selectAllVisible": "Alle sichtbaren Einträge auswählen",
+        "selectedCount_one": "{{count}} ausgewählt",
+        "selectedCount_other": "{{count}} ausgewählt"
+      },
+      "targets": {
+        "always": "24/7 (Geschäftszeiten ignorieren)",
+        "description": "Legen Sie für jede Prioritätsstufe die maximal zulässige Zeit bis zur ersten Reaktion und bis zur vollständigen Lösung von Tickets fest.",
+        "escalationThresholds": "Eskalationsschwellen (% der verstrichenen Zeit)",
+        "level1": "Stufe 1 (%)",
+        "level2": "Stufe 2 (%)",
+        "level3": "Stufe 3 (%)",
+        "minutesPlaceholder": "Minuten",
+        "minutesUnit": "Minuten",
+        "noTarget": "Kein Zielwert",
+        "notConfigured": "Nicht konfiguriert",
+        "resolutionSummary": "Lösung: {{time}}",
+        "resolutionTime": "Lösungszeit",
+        "responseSummary": "Reaktion: {{time}}",
+        "responseTime": "Reaktionszeit",
+        "selectResolutionTime": "Lösungszeit auswählen",
+        "selectResponseTime": "Reaktionszeit auswählen",
+        "title": "Zielwerte für Reaktion und Lösung",
+        "usePreset": "Voreinstellung verwenden"
+      },
+      "thresholds": {
+        "add": "Schwellenwert hinzufügen",
+        "channelEmail": "E-Mail",
+        "channelInApp": "In-App-Benachrichtigung",
+        "channelsLabel": "Benachrichtigungskanäle",
+        "description": "Konfigurieren Sie, wann und wie Teammitglieder benachrichtigt werden, wenn SLA-Fristen näher rücken oder überschritten werden.",
+        "empty": "Keine Benachrichtigungsschwellen konfiguriert. Klicken Sie auf \"Schwellenwert hinzufügen\", um eine zu erstellen.",
+        "noChannels": "keine",
+        "noRecipients": "Keine Empfänger",
+        "percentLabel": "Schwellenwert (%)",
+        "recipientAssignee": "Zugewiesener Benutzer",
+        "recipientBoardManager": "Board-Manager",
+        "recipientBoardManagerShort": "Board-Mgr.",
+        "recipientEscalationManager": "Eskalationsmanager",
+        "recipientEscalationManagerShort": "Eskalations-Mgr.",
+        "recipientsLabel": "Empfänger",
+        "remove": "Entfernen",
+        "title": "Benachrichtigungsschwellen",
+        "typeBreach": "SLA-Verstoß",
+        "typeLabel": "Benachrichtigungstyp",
+        "typeWarning": "Warnung",
+        "viaChannels": "über {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Benutzerdefiniert...",
+        "hours1": "1 Stunde",
+        "hours168": "168 Stunden (7 Tage)",
+        "hours2": "2 Stunden",
+        "hours24": "24 Stunden (1 Tag)",
+        "hours4": "4 Stunden",
+        "hours48": "48 Stunden (2 Tage)",
+        "hours72": "72 Stunden (3 Tage)",
+        "hours8": "8 Stunden",
+        "minutes15": "15 Minuten",
+        "minutes30": "30 Minuten"
+      },
+      "validation": {
+        "channelRequired": "Mindestens ein Kanal ist erforderlich",
+        "duplicateThreshold": "Doppelter Schwellenwert in Prozent",
+        "percentRange": "Muss zwischen 0 und 200 liegen",
+        "policyNameRequired": "Richtlinienname ist erforderlich",
+        "targetRequired": "Mindestens eine Priorität muss einen Zielwert für die Reaktions- oder Lösungszeit haben"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "delete": "Löschen",
+        "edit": "Bearbeiten",
+        "openMenu": "Menü öffnen",
+        "setDefault": "Als Standard festlegen"
+      },
+      "addPolicy": "Richtlinie hinzufügen",
+      "columns": {
+        "actions": "Aktionen",
+        "description": "Beschreibung",
+        "name": "Name"
+      },
+      "defaultLabel": "Standard",
+      "delete": {
+        "checkingUsage": "Verwendung wird geprüft...",
+        "confirm": "Möchten Sie die Richtlinie {{name}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "defaultWarning": "Dies ist die Standardrichtlinie. Legen Sie gegebenenfalls zuerst eine andere Richtlinie als Standard fest.",
+        "inUseTitle": "Diese Richtlinie wird derzeit verwendet",
+        "title": "SLA-Richtlinie löschen",
+        "unlinkNote": "Diese Verweise werden aufgehoben. Vorhandene SLA-Verfolgungsdaten zu Tickets bleiben erhalten.",
+        "usageBoards_one": "Zugewiesenes Board: {{names}}",
+        "usageBoards_other": "Zugewiesene Boards: {{names}}",
+        "usageClients_one": "Kunde: {{names}}",
+        "usageClients_other": "Kunden: {{names}}",
+        "usageTickets_one": "{{count}} Ticket",
+        "usageTickets_other": "{{count}} Tickets"
+      },
+      "description": "SLA-Richtlinien verwalten, die Zielwerte für Reaktions- und Lösungszeiten festlegen",
+      "empty": "Keine SLA-Richtlinien gefunden. Klicken Sie auf \"Richtlinie hinzufügen\", um Ihre erste Richtlinie zu erstellen.",
+      "errors": {
+        "deleteFailed": "Richtlinie konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+        "loadFailed": "SLA-Richtlinien konnten nicht geladen werden. Versuchen Sie es erneut.",
+        "setDefaultFailed": "Standardrichtlinie konnte nicht festgelegt werden. Versuchen Sie es erneut."
+      },
+      "loading": "SLA-Richtlinien werden geladen...",
+      "title": "SLA-Richtlinien"
+    },
+    "status": {
+      "atRisk": "Gefährdet",
+      "breached": "Überschritten",
+      "onTrack": "Im Zeitplan",
+      "paused": "Pausiert",
+      "resolutionBreached": "Lösungs-SLA überschritten",
+      "responseBreached": "Reaktions-SLA überschritten",
+      "tooltip": {
+        "resolutionBreachedBy": "Lösung: seit {{time}} überschritten",
+        "resolutionRemaining": "Lösung: {{time}} verbleibend",
+        "responseBreachedBy": "Reaktion: seit {{time}} überschritten",
+        "responseRemaining": "Reaktion: {{time}} verbleibend",
+        "statusLine": "SLA-Status: {{status}}",
+        "timerPaused": "SLA-Zeitgeber: pausiert"
+      },
+      "unknown": "Unbekannt"
     }
   },
   "clientPortalLanguage": {

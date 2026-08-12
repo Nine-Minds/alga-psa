@@ -2187,6 +2187,266 @@
       "holidayDateRequired": "La date du jour férié est requise",
       "holidayAdded": "Jour férié ajouté avec succès",
       "holidayDeleted": "Jour férié supprimé avec succès"
+    },
+    "dashboard": {
+      "atRisk": {
+        "empty": "Aucun ticket ne risque actuellement de dépasser son SLA",
+        "overdueHours": "En retard de {{hours}} h {{minutes}} min",
+        "overdueMinutes": "En retard de {{minutes}} min",
+        "title": "Tickets à risque"
+      },
+      "breachChart": {
+        "breachRate": "Taux de dépassement",
+        "empty": "Aucune donnée de dépassement disponible",
+        "title": "Dépassements par priorité"
+      },
+      "columns": {
+        "assignee": "Responsable",
+        "breachType": "Type de dépassement",
+        "client": "Client",
+        "priority": "Priorité",
+        "progress": "Progression",
+        "slaType": "Type de SLA",
+        "ticket": "Ticket",
+        "timeRemaining": "Temps restant",
+        "when": "Date"
+      },
+      "gauge": {
+        "title": "Respect des SLA"
+      },
+      "labels": {
+        "resolution": "Résolution",
+        "resolutionSla": "SLA de résolution",
+        "response": "Réponse",
+        "responseSla": "SLA de réponse"
+      },
+      "metrics": {
+        "approachingBreach": "tickets proches de l’échéance SLA",
+        "atRisk": "À risque",
+        "currentlyPaused": "Actuellement en pause",
+        "metBreached": "{{met}} respectés / {{breached}} dépassés",
+        "overallCompliance": "Respect global",
+        "pausedSla": "tickets dont le SLA est en pause",
+        "ticketsTracked_one": "{{count}} ticket suivi",
+        "ticketsTracked_other": "{{count}} tickets suivis"
+      },
+      "recentBreaches": {
+        "empty": "Aucun dépassement de SLA pendant la période sélectionnée",
+        "title": "Dépassements récents",
+        "unassigned": "Non attribué"
+      },
+      "trendChart": {
+        "breaches": "Dépassements",
+        "compliance": "Respect",
+        "compliancePercent": "% de respect",
+        "empty": "Aucune donnée de tendance disponible pour la période sélectionnée",
+        "tickets": "Tickets",
+        "title": "Tendance de respect"
+      }
+    },
+    "pauseSettings": {
+      "errors": {
+        "globalSettingsUpdateFailed": "Impossible de mettre à jour les paramètres SLA globaux",
+        "loadFailed": "Impossible de charger les paramètres de pause des SLA",
+        "responseTrackingUpdateFailed": "Impossible de mettre à jour le suivi de l’état de réponse",
+        "saveStatusesFailed": "Impossible d’enregistrer les configurations de statut"
+      },
+      "global": {
+        "description": "Configurez le comportement global de mise en pause du minuteur SLA",
+        "pauseOnAwaitingClient": {
+          "description": "Lorsque cette option est activée, le minuteur SLA se met automatiquement en pause lorsqu’un ticket attend une réponse du client. Il redémarre lorsque le client répond ou que le statut du ticket change.",
+          "label": "Mettre automatiquement le SLA en pause en attendant la réponse du client",
+          "requiresTracking": "Activez ci-dessus le suivi de l’état de réponse pour utiliser cette option."
+        },
+        "responseTracking": {
+          "description": "Lorsque cette option est activée, les tickets déterminent automatiquement qui doit répondre ensuite (le client ou l’équipe interne). Elle contrôle également la visibilité des badges et des filtres d’état de réponse.",
+          "label": "Suivre l’état de réponse des tickets"
+        },
+        "title": "Paramètres SLA globaux"
+      },
+      "loading": "Chargement des paramètres de pause des SLA...",
+      "messages": {
+        "globalSettingsUpdated": "Les paramètres SLA globaux ont été mis à jour",
+        "noChangesToSave": "Aucune modification à enregistrer",
+        "responseTrackingDisabled": "Suivi de l’état de réponse désactivé",
+        "responseTrackingEnabled": "Suivi de l’état de réponse activé",
+        "statusesUpdated_one": "{{count}} configuration de statut mise à jour",
+        "statusesUpdated_other": "{{count}} configurations de statut mises à jour"
+      },
+      "perStatus": {
+        "description": "Configurez les statuts de ticket qui doivent mettre le minuteur SLA en pause. Lorsqu’un ticket passe à un statut pour lequel la pause est activée, le minuteur SLA s’arrête jusqu’à ce que le ticket passe à un autre statut.",
+        "empty": "Aucun statut de ticket trouvé.",
+        "modified": "Modifié",
+        "modifiedCount_one": "{{count}} statut modifié",
+        "modifiedCount_other": "{{count}} statuts modifiés",
+        "noUnsavedChanges": "Aucune modification non enregistrée",
+        "resetChanges": "Réinitialiser les modifications",
+        "saveChanges": "Enregistrer les modifications",
+        "saving": "Enregistrement...",
+        "title": "Configuration des pauses par statut"
+      },
+      "retry": "Réessayer"
+    },
+    "policyForm": {
+      "actions": {
+        "cancel": "Annuler",
+        "create": "Créer la politique",
+        "saveChanges": "Enregistrer les modifications",
+        "saving": "Enregistrement..."
+      },
+      "basics": {
+        "assignBoards": "Attribuer aux tableaux",
+        "assignClients": "Attribuer aux clients",
+        "businessHours": "Calendrier des heures ouvrées",
+        "businessHoursPlaceholder": "Sélectionnez un calendrier d’heures ouvrées",
+        "description": "Description",
+        "descriptionPlaceholder": "Description facultative de cette politique SLA",
+        "noBusinessHours": "Aucune heure ouvrée (24 h/24, 7 j/7)",
+        "policyName": "Nom de la politique",
+        "policyNamePlaceholder": "Saisissez le nom de la politique",
+        "scheduleAlways": "{{name}} (en permanence)",
+        "searchBoards": "Rechercher des tableaux...",
+        "searchClients": "Rechercher des clients...",
+        "setAsDefault": "Définir comme politique par défaut",
+        "title": "Informations de base"
+      },
+      "errors": {
+        "loadFailed": "Impossible de charger les données",
+        "notFound": "Politique SLA introuvable",
+        "saveFailed": "Impossible d’enregistrer la politique SLA"
+      },
+      "loading": "Chargement...",
+      "multiSelect": {
+        "deselectAll": "Tout désélectionner",
+        "deselectAllVisible": "Désélectionner tous les éléments visibles",
+        "noItems": "Aucun élément disponible",
+        "noResults": "Aucun résultat trouvé",
+        "placeholder": "Sélectionner...",
+        "searchPlaceholder": "Rechercher...",
+        "selectAll": "Tout sélectionner",
+        "selectAllVisible": "Sélectionner tous les éléments visibles",
+        "selectedCount_one": "{{count}} sélectionné",
+        "selectedCount_other": "{{count}} sélectionnés"
+      },
+      "targets": {
+        "always": "En permanence (ignorer les heures ouvrées)",
+        "description": "Définissez, pour chaque niveau de priorité, le délai maximal autorisé avant la première réponse et la résolution complète des tickets.",
+        "escalationThresholds": "Seuils d’escalade (% du temps écoulé)",
+        "level1": "Niveau 1 (%)",
+        "level2": "Niveau 2 (%)",
+        "level3": "Niveau 3 (%)",
+        "minutesPlaceholder": "Minutes",
+        "minutesUnit": "minutes",
+        "noTarget": "Aucun objectif",
+        "notConfigured": "Non configuré",
+        "resolutionSummary": "Résolution : {{time}}",
+        "resolutionTime": "Délai de résolution",
+        "responseSummary": "Réponse : {{time}}",
+        "responseTime": "Délai de réponse",
+        "selectResolutionTime": "Sélectionnez le délai de résolution",
+        "selectResponseTime": "Sélectionnez le délai de réponse",
+        "title": "Objectifs de réponse et de résolution",
+        "usePreset": "Utiliser une valeur prédéfinie"
+      },
+      "thresholds": {
+        "add": "Ajouter un seuil",
+        "channelEmail": "E-mail",
+        "channelInApp": "Dans l’application",
+        "channelsLabel": "Canaux de notification",
+        "description": "Configurez quand et comment avertir les membres de l’équipe à l’approche ou au dépassement des échéances SLA.",
+        "empty": "Aucun seuil de notification configuré. Cliquez sur \"Ajouter un seuil\" pour en créer un.",
+        "noChannels": "aucun",
+        "noRecipients": "Aucun destinataire",
+        "percentLabel": "Seuil (%)",
+        "recipientAssignee": "Responsable",
+        "recipientBoardManager": "Responsable du tableau",
+        "recipientBoardManagerShort": "Resp. du tableau",
+        "recipientEscalationManager": "Responsable d’escalade",
+        "recipientEscalationManagerShort": "Resp. d’escalade",
+        "recipientsLabel": "Destinataires",
+        "remove": "Retirer",
+        "title": "Seuils de notification",
+        "typeBreach": "Dépassement",
+        "typeLabel": "Type de notification",
+        "typeWarning": "Avertissement",
+        "viaChannels": "via {{channels}}"
+      },
+      "timeOptions": {
+        "custom": "Personnalisé...",
+        "hours1": "1 heure",
+        "hours168": "168 heures (7 jours)",
+        "hours2": "2 heures",
+        "hours24": "24 heures (1 jour)",
+        "hours4": "4 heures",
+        "hours48": "48 heures (2 jours)",
+        "hours72": "72 heures (3 jours)",
+        "hours8": "8 heures",
+        "minutes15": "15 min",
+        "minutes30": "30 min"
+      },
+      "validation": {
+        "channelRequired": "Au moins un canal est obligatoire",
+        "duplicateThreshold": "Pourcentage de seuil en double",
+        "percentRange": "La valeur doit être comprise entre 0 et 200",
+        "policyNameRequired": "Le nom de la politique est obligatoire",
+        "targetRequired": "Au moins une priorité doit avoir un objectif de délai de réponse ou de résolution"
+      }
+    },
+    "policyList": {
+      "actions": {
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "openMenu": "Ouvrir le menu",
+        "setDefault": "Définir par défaut"
+      },
+      "addPolicy": "Ajouter une politique",
+      "columns": {
+        "actions": "Actions",
+        "description": "Description",
+        "name": "Nom"
+      },
+      "defaultLabel": "Par défaut",
+      "delete": {
+        "checkingUsage": "Vérification de l’utilisation...",
+        "confirm": "Voulez-vous vraiment supprimer la politique {{name}} ? Cette action est irréversible.",
+        "defaultWarning": "Il s’agit de la politique par défaut. Vous pouvez d’abord définir une autre politique par défaut.",
+        "inUseTitle": "Cette politique est actuellement utilisée",
+        "title": "Supprimer la politique SLA",
+        "unlinkNote": "Ces références seront dissociées. Les données existantes de suivi SLA des tickets seront conservées.",
+        "usageBoards_one": "Tableau : {{names}}",
+        "usageBoards_other": "Tableaux : {{names}}",
+        "usageClients_one": "Client : {{names}}",
+        "usageClients_other": "Clients : {{names}}",
+        "usageTickets_one": "{{count}} ticket",
+        "usageTickets_other": "{{count}} tickets"
+      },
+      "description": "Gérez les politiques d’accord de niveau de service qui définissent les objectifs de délai de réponse et de résolution",
+      "empty": "Aucune politique SLA trouvée. Cliquez sur \"Ajouter une politique\" pour créer la première.",
+      "errors": {
+        "deleteFailed": "Impossible de supprimer la politique. Réessayez.",
+        "loadFailed": "Impossible de charger les politiques SLA. Réessayez.",
+        "setDefaultFailed": "Impossible de définir la politique par défaut. Réessayez."
+      },
+      "loading": "Chargement des politiques SLA...",
+      "title": "Politiques SLA"
+    },
+    "status": {
+      "atRisk": "À risque",
+      "breached": "Non respecté",
+      "onTrack": "Dans les délais",
+      "paused": "En pause",
+      "resolutionBreached": "SLA de résolution non respecté",
+      "responseBreached": "SLA de réponse non respecté",
+      "tooltip": {
+        "resolutionBreachedBy": "Résolution : délai dépassé de {{time}}",
+        "resolutionRemaining": "Résolution : {{time}} restantes",
+        "responseBreachedBy": "Réponse : délai dépassé de {{time}}",
+        "responseRemaining": "Réponse : {{time}} restantes",
+        "statusLine": "Statut du SLA : {{status}}",
+        "timerPaused": "Minuteur SLA : en pause"
+      },
+      "unknown": "Inconnu"
     }
   },
   "clientPortalLanguage": {

@@ -641,7 +641,6 @@
       "title": "Konfiguration der Zeitabrechnung"
     },
     "loading": "Vertragslinien-Vorlagenbausteine werden geladen...",
-    "selectPresetsTitle": "Vertragslinien-Vorlagenbausteine zum Hinzufügen auswählen",
     "selection": {
       "deselectPreset": "Vorlagenbaustein abwählen",
       "selectPreset": "Vorlagenbaustein auswählen",

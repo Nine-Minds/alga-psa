@@ -420,6 +420,46 @@
         "update": "11111",
         "delete": "11111"
       }
+    },
+    "delegation": {
+      "defaultProvider": "11111",
+      "actions": {
+        "applying": "11111"
+      },
+      "errors": {
+        "enableFailed": "11111"
+      },
+      "banner": {
+        "title": "11111 {{provider}} 11111",
+        "description": "11111 {{provider}} 11111 {{provider}} 11111",
+        "actions": {
+          "enable": "11111 {{provider}} 11111",
+          "dismiss": "11111",
+          "dismissing": "11111"
+        },
+        "toast": {
+          "enabled": "11111",
+          "enabledWithProvider": "11111 {{provider}} 11111"
+        },
+        "errors": {
+          "loadState": "11111",
+          "dismissFailed": "11111"
+        }
+      },
+      "nudge": {
+        "title": "11111 {{provider}} 11111",
+        "description": "11111 {{provider}} 11111 {{provider}} 11111",
+        "actions": {
+          "enable": "11111 {{provider}} 11111",
+          "keepInternal": "11111"
+        },
+        "toast": {
+          "enabled": "11111 {{provider}} 11111"
+        },
+        "errors": {
+          "loadSettings": "11111"
+        }
+      }
     }
   },
   "payments": {

@@ -27,6 +27,21 @@ function containsDialogDescription(node: ReactNode): boolean {
   return containsDialogDescription((node.props as { children?: ReactNode } | null | undefined)?.children);
 }
 
+function containsDialogTitle(node: ReactNode): boolean {
+  if (node === null || node === undefined || typeof node === 'boolean') return false;
+
+  if (Array.isArray(node)) {
+    return node.some(containsDialogTitle);
+  }
+
+  if (!React.isValidElement(node)) return false;
+
+  if (node.type === DialogTitle || node.type === RadixDialog.Title) return true;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  return containsDialogTitle((node.props as { children?: ReactNode } | null | undefined)?.children);
+}
+
 function findFirstFocusable(root: HTMLElement | null): HTMLElement | null {
   if (!root) return null;
 
@@ -150,6 +165,16 @@ export function Dialog({
   useEffect(() => {
     updateMetadata({ open: isOpen, title });
   }, [ isOpen, title, updateMetadata, id ]);
+
+  // Guard against the duplicated-heading pattern: a `title` prop plus a child DialogTitle
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development' || !isOpen || !title) return;
+    if (!containsDialogTitle(children)) return;
+
+    console.warn(
+      `[Dialog:${id}] renders both a "title" prop and a child DialogTitle — the heading will appear twice. Drop one of them.`
+    );
+  }, [isOpen, title, children, id]);
 
   // Reset position when dialog opens
   useEffect(() => {

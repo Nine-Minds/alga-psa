@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle, Bell, CheckCircle, Info } from 'lucide-react';
 import { markAsReadAction } from '@alga-psa/notifications/actions';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { NotificationActivity } from '@alga-psa/types';
 
 interface ClientNotificationCardProps {
@@ -47,6 +48,8 @@ export function ClientNotificationCard({
   onActionComplete,
   onOpen,
 }: ClientNotificationCardProps) {
+  const { t } = useTranslation('client-portal');
+
   const handleClick = async () => {
     if (!activity.isRead) {
       try {
@@ -79,13 +82,13 @@ export function ClientNotificationCard({
           {getNotificationIcon(activity.status)}
           <h3 className="truncate font-medium text-gray-900">{activity.title}</h3>
           {!activity.isRead ? (
-            <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" title="Unread" />
+            <div className="h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" title={t('notifications.card.unread', { defaultValue: 'Unread' })} />
           ) : null}
         </div>
       </div>
 
       <div className="mb-3 line-clamp-2 text-sm text-gray-500">
-        {activity.message || activity.description || 'No message'}
+        {activity.message || activity.description || t('notifications.card.noMessage', { defaultValue: 'No message' })}
       </div>
 
       <div className="flex items-center justify-between text-xs">

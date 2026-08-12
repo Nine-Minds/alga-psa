@@ -1922,6 +1922,55 @@
         "saving": "Speichern…",
         "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
         "catalogLoadError": "Die Konfigurationsoptionen für die QuickBooks-Synchronisierung konnten nicht geladen werden."
+      },
+      "itemImport": {
+        "description": "Importieren Sie Ihre QuickBooks-Produkte und -Dienste für das verbundene QuickBooks-Unternehmen in den Alga-Servicekatalog. QuickBooks bleibt die maßgebliche Quelle für Namen, Sätze, SKUs, Beschreibungen und Kosten; Abrechnungsmethode, Maßeinheit und Diensttyp werden hier festgelegt und anschließend von Alga verwaltet. Dieser Schritt ist optional — überspringen Sie ihn mit „Weiter“.",
+        "defaults": {
+          "title": "Vorgaben für importierte Artikel",
+          "serviceType": "Diensttyp (erforderlich)",
+          "serviceTypePlaceholder": "Wählen Sie einen Diensttyp aus…",
+          "unitOfMeasure": "Maßeinheit",
+          "serviceBillingMethod": "Abrechnungsmethode für Dienste",
+          "productBillingMethod": "Abrechnungsmethode für Produkte",
+          "includeInactive": "Inaktive QuickBooks-Artikel einbeziehen (werden als inaktiv importiert)"
+        },
+        "billingMethods": {
+          "fixed": "Festpreis",
+          "hourly": "Stündlich",
+          "usage": "Nutzungsbasiert"
+        },
+        "actions": {
+          "preview": "Importvorschau",
+          "previewing": "Vorschau wird geladen…",
+          "previewRequiresServiceType": "Wählen Sie einen Diensttyp aus, um die Vorschau zu aktivieren.",
+          "execute": "Import ausführen",
+          "executing": "Wird importiert…"
+        },
+        "preview": {
+          "summary": "Für das verbundene Unternehmen wurden {{total}} QuickBooks-Artikel gefunden (Realm {{realm}}): {{create}} werden erstellt, {{update}} aktualisiert, {{link}} verknüpft und {{skip}} übersprungen. Es wurden noch keine Daten geschrieben.",
+          "groups": {
+            "create": "Werden erstellt",
+            "update": "Werden aktualisiert",
+            "link": "Werden verknüpft (bereits übereinstimmend)",
+            "skip": "Werden übersprungen"
+          },
+          "qboName": "QuickBooks-Name: {{name}} (importiert als „{{importedAs}}“)"
+        },
+        "flags": {
+          "inactive": "In QuickBooks inaktiv",
+          "unmappedTax": "Steuercode nicht zugeordnet",
+          "skuConflict": "SKU-Konflikt",
+          "nameCollision": "Name bereits zugeordnet",
+          "categorySkipped": "Kategorie (nicht importiert)"
+        },
+        "result": {
+          "summary": "Import abgeschlossen: {{created}} erstellt, {{updated}} aktualisiert, {{linked}} verknüpft, {{skipped}} übersprungen.",
+          "summaryWithErrors": "Import abgeschlossen: {{created}} erstellt, {{updated}} aktualisiert, {{linked}} verknüpft, {{skipped}} übersprungen, {{failed}} fehlgeschlagen."
+        },
+        "errors": {
+          "previewFailed": "Die Importvorschau konnte nicht geladen werden.",
+          "executeFailed": "Der Import ist fehlgeschlagen."
+        }
       }
     },
     "rmm": {

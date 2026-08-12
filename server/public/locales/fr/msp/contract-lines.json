@@ -363,7 +363,6 @@
         "quantityGreaterThanZero": "La quantité doit être supérieure à zéro",
         "updateFailed": "Échec de la mise à jour de la quantité"
       },
-      "heading": "Ajuster la quantité",
       "helperText": "Laissez ce champ vide pour utiliser le prix du catalogue de produits dans la devise de ce contrat.",
       "labels": {
         "quantity": "Quantité",

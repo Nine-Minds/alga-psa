@@ -1120,7 +1120,8 @@
       "unknownClient": "Cliente sconosciuto",
       "status": "Stato",
       "system": "Sistema",
-      "total": "Totale"
+      "total": "Totale",
+      "invoiceDate": "Data della fattura"
     },
     "states": {
       "empty": "Nessun dato disponibile",
@@ -1725,6 +1726,279 @@
       "message": "L'annullamento di questo elemento della pianificazione lo rimuove dalla fatturazione. L'operazione non può essere annullata.",
       "confirm": "Annulla elemento",
       "dismiss": "Mantieni elemento"
+    }
+  },
+  "invoiceDesigner": {
+    "transforms": {
+      "rowCount": "{{count}} righe",
+      "operators": {
+        "eq": "Uguale a",
+        "neq": "Diverso da",
+        "gt": "Maggiore di",
+        "gte": "Maggiore o uguale a",
+        "lt": "Minore di",
+        "lte": "Minore o uguale a",
+        "in": "Nell'elenco"
+      },
+      "sortDirections": {
+        "asc": "Crescente",
+        "desc": "Decrescente"
+      },
+      "aggregations": {
+        "sum": "Somma",
+        "count": "Conteggio",
+        "avg": "Media",
+        "min": "Minimo",
+        "max": "Massimo"
+      },
+      "operations": {
+        "advancedPredicate": "Predicato avanzato",
+        "groupBy": "Raggruppa per {{field}}",
+        "readOnly": "Mantenuto in sola lettura nella V1"
+      },
+      "source": {
+        "title": "Dati di origine",
+        "description": "Scegli i dati di anteprima e l'associazione della raccolta da strutturare.",
+        "sampleScenario": "Scenario di esempio",
+        "selectInvoice": "Seleziona fattura",
+        "collection": "Raccolta di origine",
+        "outputBindingId": "ID associazione di output"
+      },
+      "metadata": {
+        "title": "Metadati di origine",
+        "binding": "Associazione:",
+        "bindingNone": "Nessuna",
+        "resolvedPath": "Percorso risolto:",
+        "pathNotResolved": "Non risolto",
+        "noFields": "Scegli i dati di anteprima e un'associazione della raccolta per individuare i campi."
+      },
+      "pipeline": {
+        "title": "Pipeline di trasformazione",
+        "description": "Le operazioni vengono eseguite dall'alto verso il basso.",
+        "addFilter": "+ Filtro",
+        "addSort": "+ Ordinamento",
+        "addGroup": "+ Gruppo",
+        "addAggregate": "+ Aggregazione",
+        "empty": "Aggiungi operazioni per creare la pipeline di trasformazione.",
+        "moveUp": "Sposta {{operation}} verso l'alto",
+        "moveDown": "Sposta {{operation}} verso il basso",
+        "duplicate": "Duplica {{operation}}",
+        "delete": "Elimina {{operation}}"
+      },
+      "inspector": {
+        "description": "Modifica l'operazione di trasformazione selezionata.",
+        "empty": "Seleziona una scheda di trasformazione per modificarne le impostazioni.",
+        "advancedPredicateNotice": "Questo filtro usa una struttura di predicato avanzata. La modifica qui la converte in un confronto semplice.",
+        "unsupportedOperation": "Questo tipo di operazione viene conservato nell'area di lavoro, ma il designer V1 modifica solo le operazioni di filtro, ordinamento, raggruppamento e aggregazione.",
+        "field": "Campo",
+        "operator": "Operatore",
+        "value": "Valore",
+        "valueList": "Valori (separati da virgole)",
+        "sortKey": "Chiave di ordinamento {{index}}",
+        "remove": "Rimuovi",
+        "direction": "Direzione",
+        "addSortKey": "+ Chiave di ordinamento",
+        "groupField": "Campo di raggruppamento",
+        "groupLabel": "Etichetta (facoltativa)",
+        "aggregation": "Aggregazione {{index}}",
+        "outputId": "ID output",
+        "operation": "Operazione",
+        "addAggregation": "+ Aggregazione"
+      },
+      "output": {
+        "title": "Anteprima output",
+        "description": "Visualizza l'anteprima delle righe generate dalla pipeline di trasformazione corrente.",
+        "rowPaths": "Percorsi di riga disponibili",
+        "groupedRows": "{{count}} righe raggruppate",
+        "binding": "Associazione: {{binding}}",
+        "bindingNotSet": "Non impostata",
+        "groupKey": "chiave: {{value}}",
+        "groupItems": "{{count}} elementi",
+        "emptyConfigure": "Configura l'origine, l'associazione di output e le operazioni per visualizzare l'anteprima delle righe trasformate.",
+        "emptyNoData": "Scegli i dati di anteprima per esaminare l'output trasformato.",
+        "previewFailed": "Anteprima delle trasformazioni non riuscita."
+      }
+    },
+    "tableEditor": {
+      "bindings": {
+        "lineItems": "Tutte le voci",
+        "phases": "Fasi",
+        "recurringItems": "Voci ricorrenti",
+        "onetimeItems": "Voci una tantum",
+        "serviceItems": "Voci di servizio",
+        "productItems": "Voci di prodotto",
+        "items": "Elementi",
+        "transformsSource": "{{binding}} (origine trasformazioni)",
+        "transformsOutput": "{{binding}} (output trasformazioni)"
+      },
+      "presets": {
+        "description": {
+          "label": "Descrizione",
+          "hint": "Descrizione della voce"
+        },
+        "quantity": {
+          "label": "Qtà",
+          "hint": "Quantità"
+        },
+        "unitPrice": {
+          "label": "Tariffa",
+          "hint": "Prezzo unitario"
+        },
+        "amount": {
+          "label": "Importo",
+          "hint": "Totale riga"
+        }
+      },
+      "sourceBinding": {
+        "title": "Associazione di origine",
+        "description": "Associa questa tabella a una raccolta non elaborata o all'output delle trasformazioni create."
+      },
+      "columns": {
+        "title": "Colonne della tabella",
+        "add": "+ Colonna",
+        "quickAdd": "Aggiunta rapida:",
+        "newColumnHeader": "Nuova colonna",
+        "empty": "Nessuna colonna definita. Aggiungi almeno una colonna.",
+        "itemLabel": "Colonna",
+        "moveUp": "Sposta {{column}} verso l'alto",
+        "moveDown": "Sposta {{column}} verso il basso",
+        "remove": "Rimuovi {{column}}",
+        "header": "Intestazione",
+        "headerPlaceholder": "Etichetta intestazione",
+        "bindingKey": "Chiave di associazione",
+        "type": "Tipo",
+        "width": "Larghezza"
+      },
+      "columnTypes": {
+        "text": "Testo",
+        "number": "Numero",
+        "currency": "Valuta",
+        "date": "Data"
+      },
+      "style": {
+        "title": "Stile tabella",
+        "borderPreset": "Bordo predefinito",
+        "headerWeight": "Spessore intestazione",
+        "borderOuter": "Esterno",
+        "borderRows": "Righe",
+        "borderColumns": "Colonne"
+      },
+      "borderPresets": {
+        "list": "Elenco semplice",
+        "boxed": "Riquadrato",
+        "grid": "Griglia",
+        "none": "Nessuno",
+        "custom": "Personalizzato"
+      },
+      "headerWeights": {
+        "normal": "Regolare",
+        "medium": "Medio",
+        "semibold": "Semigrassetto",
+        "bold": "Grassetto"
+      },
+      "reference": {
+        "title": "Riferimento chiavi dei campi",
+        "transformAggregate": "Aggregazione della trasformazione",
+        "groupedRowKey": "Chiave della riga raggruppata",
+        "groupedRowItems": "Elementi della riga raggruppata",
+        "availableBinding": "Associazione disponibile"
+      }
+    },
+    "imagePicker": {
+      "browse": "Sfoglia documenti",
+      "hiddenFromClients": "{{document}} è nascosto ai clienti. Non comparirà nei preventivi o nelle fatture visualizzati tramite il portale clienti.",
+      "updating": "Aggiornamento...",
+      "markVisible": "Contrassegna come visibile ai clienti",
+      "visibleInPortal": "Visibile nel portale clienti",
+      "dialogTitle": "Seleziona immagine",
+      "dialogDescription": "Scegli un'immagine dai tuoi documenti da usare in questo modello."
+    }
+  },
+  "draftInvoiceDetails": {
+    "title": "Dettagli della fattura",
+    "description": "Modifica i metadati della bozza di fattura prima di finalizzarla.",
+    "actions": {
+      "saving": "Salvataggio..."
+    },
+    "errors": {
+      "invoiceNumberRequired": "Il numero della fattura è obbligatorio.",
+      "invoiceDateRequired": "La data della fattura è obbligatoria."
+    }
+  },
+  "documentTemplates": {
+    "defaultTypeLabel": "Documento",
+    "title": "Layout per {{type}}",
+    "description": "Progetta i layout usati per generare i PDF e le anteprime di {{type}}.",
+    "availableLayouts": "Layout disponibili",
+    "actions": {
+      "newLayout": "Nuovo layout"
+    },
+    "columns": {
+      "name": "Nome",
+      "source": "Origine"
+    },
+    "values": {
+      "nameWithStandardSuffix": "{{name}} (standard)",
+      "copyName": "{{name}} (copia)"
+    },
+    "toasts": {
+      "cloned": "Modello duplicato",
+      "defaultUpdated": "Modello predefinito aggiornato",
+      "deleted": "Modello eliminato"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare i modelli per {{type}}",
+      "cloneFailed": "Impossibile duplicare il modello",
+      "setDefaultFailed": "Impossibile impostare il modello predefinito",
+      "deleteFailed": "Impossibile eliminare il modello"
+    },
+    "deleteDialog": {
+      "title": "Elimina il layout per {{type}}",
+      "message": "Eliminare davvero «{{name}}»?"
+    },
+    "editor": {
+      "titles": {
+        "create": "Nuovo layout per {{type}}",
+        "edit": "Modifica layout per {{type}}"
+      },
+      "description": "Progetta il layout per {{type}} usando l’editor visuale, quindi visualizzane l’anteprima con dati di esempio.",
+      "errorTitle": "Editor di layout per {{type}}",
+      "sections": {
+        "details": "Dettagli del layout"
+      },
+      "fields": {
+        "version": "Versione"
+      },
+      "placeholders": {
+        "templateName": "Modello per {{type}}"
+      },
+      "actions": {
+        "back": "Torna ai layout",
+        "save": "Salva layout"
+      },
+      "labels": {
+        "created": "Creato: {{date}}",
+        "lastUpdated": "Ultimo aggiornamento: {{date}}"
+      },
+      "preview": {
+        "sampleNote": "Generato usando dati di esempio rappresentativi per {{type}}.",
+        "frameTitle": "Anteprima di {{type}}",
+        "empty": "Apri questa scheda per generare un’anteprima attendibile."
+      },
+      "errors": {
+        "nameRequired": "Il nome del modello è obbligatorio.",
+        "astExportFailed": "Impossibile esportare il modello dall’area di lavoro visuale: {{message}}",
+        "saveFailed": "Impossibile salvare il layout per {{type}}",
+        "previewFailed": "Impossibile generare l’anteprima."
+      },
+      "toasts": {
+        "saved": "Layout per {{type}} salvato"
+      }
+    },
+    "types": {
+      "salesOrder": "Ordine di vendita",
+      "packingSlip": "Documento di trasporto",
+      "pickList": "Lista di prelievo"
     }
   }
 }

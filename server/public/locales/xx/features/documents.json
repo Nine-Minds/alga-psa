@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "11111 {{count}} 11111",
     "suggestedDefaultsLoadFailed": "11111",
     "entityTypesAllConfigured": "11111",
-    "defaultFoldersLoadFailed": "11111"
+    "defaultFoldersLoadFailed": "11111",
+    "parseContentFailed": "11111"
   },
   "validation": {
-    "nameRequired": "11111"
+    "nameRequired": "11111",
+    "typeRequired": "11111",
+    "userIdRequired": "11111",
+    "orderNumberRequired": "11111",
+    "contentRequired": "11111"
   },
   "bulkActions": {
     "selected_one": "11111 {{count}} 11111",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "11111 {{count}} 11111 {{name}} 11111",
     "cascadeMakeHidden": "11111 {{count}} 11111 {{name}} 11111",
     "cascadeYes": "11111",
-    "cascadeNo": "11111"
+    "cascadeNo": "11111",
+    "visibleToClients": "11111",
+    "hiddenFromClients": "11111"
   },
   "empty": {
     "default": "11111"
@@ -283,5 +290,71 @@
     "pageOf": "11111 {{current}} 11111 {{total}} 11111",
     "previous": "11111"
   },
-  "ticketDocuments": "11111"
+  "ticketDocuments": "11111",
+  "actions": {
+    "save": "11111",
+    "saving": "11111",
+    "cancel": "11111"
+  },
+  "card": {
+    "noDate": "11111",
+    "reflectionLabel": "11111"
+  },
+  "editor": {
+    "loading": "11111",
+    "initializing": "11111",
+    "placeholder": "11111",
+    "errorPrefix": "11111 {{message}} 11111",
+    "status": {
+      "offline": "11111",
+      "allChangesSaved": "11111",
+      "syncing": "11111 {{status}} 11111"
+    },
+    "connection": {
+      "connected": "11111",
+      "connecting": "11111",
+      "disconnected": "11111"
+    },
+    "presence": {
+      "unknownUser": "11111"
+    },
+    "toolbar": {
+      "bold": "11111",
+      "italic": "11111",
+      "underline": "11111",
+      "strikethrough": "11111",
+      "code": "11111",
+      "heading1": "11111",
+      "heading2": "11111",
+      "bulletList": "11111",
+      "orderedList": "11111",
+      "quote": "11111",
+      "link": "11111",
+      "linkPrompt": "11111"
+    }
+  },
+  "form": {
+    "errorsHeading": "11111",
+    "submit": "11111",
+    "fields": {
+      "documentName": "11111",
+      "documentType": "11111",
+      "userId": "11111",
+      "contactNameId": "11111",
+      "clientId": "11111",
+      "ticketId": "11111",
+      "orderNumber": "11111",
+      "content": "11111"
+    }
+  },
+  "previewPane": {
+    "loading": "11111",
+    "pdfDocument": "11111",
+    "videoFile": "11111",
+    "notAvailable": "11111",
+    "altPdf": "11111 {{name}} 11111",
+    "altVideoThumbnail": "11111 {{name}} 11111",
+    "pageCount_one": "11111 {{count}} 11111",
+    "pageCount_other": "11111 {{count}} 11111"
+  }
 }

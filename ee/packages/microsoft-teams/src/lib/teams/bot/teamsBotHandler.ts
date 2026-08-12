@@ -2363,18 +2363,21 @@ function buildWireActivity(
   return wire;
 }
 
+// 401/403 mean the connector token was rejected and 429 means throttling —
+// none of them say anything about the card content, so downgrading the reply
+// to the hero rendering on those would silently lose the Adaptive Card.
+const NON_CARD_REJECTION_STATUSES = new Set([401, 403, 429]);
+
 function isCardRejectionError(error: unknown): boolean {
-  if (error instanceof BotConnectorRequestError) {
-    return error.status >= 400 && error.status < 500;
-  }
-  if (error instanceof Error) {
-    const match = error.message.match(/\((\d{3})\s/);
-    if (match) {
-      const status = Number.parseInt(match[1], 10);
-      return status >= 400 && status < 500;
-    }
-  }
-  return false;
+  const status = botConnectorErrorStatus(error);
+  return status !== null && status >= 400 && status < 500 && !NON_CARD_REJECTION_STATUSES.has(status);
+}
+
+// Only the connector's activity dispatch reports a status. Token-acquisition
+// failures carry a status in their message too, but downgrading the card would
+// not help a bad TEAMS_BOT_APP_PASSWORD — they classify as neither.
+function botConnectorErrorStatus(error: unknown): number | null {
+  return error instanceof BotConnectorRequestError ? error.status : null;
 }
 
 export async function handleTeamsBotActivityRequest(
@@ -2416,30 +2419,32 @@ export async function handleTeamsBotActivityRequest(
     const fallback = buildWireActivity(response, false);
     const hasAdaptive = Boolean(response.adaptiveAttachments && response.adaptiveAttachments.length > 0);
 
+    const sendReply = async (
+      outgoing: TeamsBotResponseActivity,
+      skipLabel: string
+    ): Promise<void> => {
+      const result = await sendBotActivity({
+        serviceUrl,
+        conversationId,
+        replyToId,
+        activity: outgoing,
+      });
+      if (result.status === 'skipped' && result.reason) {
+        console.warn(skipLabel, { reason: result.reason });
+      }
+    };
+
     const sendReplyWithFallback = async (): Promise<void> => {
       try {
-        const result = await sendBotActivity({
-          serviceUrl,
-          conversationId,
-          replyToId,
-          activity: primary,
-        });
-        if (result.status === 'skipped' && result.reason) {
-          console.warn('[teams-bot] reply skipped', { reason: result.reason });
-        }
+        await sendReply(primary, '[teams-bot] reply skipped');
       } catch (sendError) {
         // Some clients/channels reject Adaptive Cards with a 4xx — retry once
-        // with the hero-card fallback rendering kept on the response.
+        // with the hero-card fallback rendering kept on the response. Token
+        // expiry is not one of those: the connector already replays the send
+        // with a fresh token, so a 401 that reaches here is a real credential
+        // problem and must not downgrade the card.
         if (hasAdaptive && isCardRejectionError(sendError)) {
-          const result = await sendBotActivity({
-            serviceUrl,
-            conversationId,
-            replyToId,
-            activity: fallback,
-          });
-          if (result.status === 'skipped' && result.reason) {
-            console.warn('[teams-bot] fallback reply skipped', { reason: result.reason });
-          }
+          await sendReply(fallback, '[teams-bot] fallback reply skipped');
         } else {
           throw sendError;
         }
@@ -2449,12 +2454,14 @@ export async function handleTeamsBotActivityRequest(
     try {
       if (response.replaceActivityId) {
         // Inline card action: update the originating card in place; if the
-        // update fails, deliver the result as a normal reply instead.
+        // update fails, deliver the result as a normal reply instead. The
+        // connector replays an expired token on its own, so a transient 401
+        // refreshes the card rather than duplicating the reply.
         try {
           await updateBotActivity({
             serviceUrl,
             conversationId,
-            activityId: response.replaceActivityId,
+            activityId: response.replaceActivityId!,
             activity: primary,
           });
         } catch (updateError) {

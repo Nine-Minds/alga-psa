@@ -17,6 +17,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   type ActionMessageError,
   type ActionPermissionError,
@@ -38,6 +39,7 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
   isActionMessageError(value) || isActionPermissionError(value);
 
 export function SlaPauseSettings() {
+  const { t } = useTranslation('msp/settings');
   const [slaSettings, setSlaSettings] = useState<ISlaSettings | null>(null);
   const [statusPauseStates, setStatusPauseStates] = useState<StatusPauseState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,26 +90,29 @@ export function SlaPauseSettings() {
 
         setStatusPauseStates(states);
       } catch (err) {
-        handleError(err, 'Failed to load SLA pause settings');
-        setError('Failed to load SLA pause settings');
+        const message = t('sla.pauseSettings.errors.loadFailed', { defaultValue: 'Failed to load SLA pause settings' });
+        handleError(err, message);
+        setError(message);
       } finally {
         setIsLoading(false);
       }
     }
 
     loadData();
-  }, []);
+  }, [t]);
 
   // Handle response state tracking toggle
   const handleResponseStateTrackingChange = useCallback(async (checked: boolean) => {
     try {
       await updateResponseStateTrackingSetting(checked);
       setResponseStateTrackingEnabled(checked);
-      toast.success(checked ? 'Response state tracking enabled' : 'Response state tracking disabled');
+      toast.success(checked
+        ? t('sla.pauseSettings.messages.responseTrackingEnabled', { defaultValue: 'Response state tracking enabled' })
+        : t('sla.pauseSettings.messages.responseTrackingDisabled', { defaultValue: 'Response state tracking disabled' }));
     } catch (err) {
-      handleError(err, 'Failed to update response state tracking');
+      handleError(err, t('sla.pauseSettings.errors.responseTrackingUpdateFailed', { defaultValue: 'Failed to update response state tracking' }));
     }
-  }, []);
+  }, [t]);
 
   // Handle global setting toggle
   const handleGlobalSettingChange = useCallback(async (checked: boolean) => {
@@ -123,11 +128,11 @@ export function SlaPauseSettings() {
       }
 
       setSlaSettings(updatedSettings);
-      toast.success('Global SLA settings updated successfully');
+      toast.success(t('sla.pauseSettings.messages.globalSettingsUpdated', { defaultValue: 'Global SLA settings updated successfully' }));
     } catch (err) {
-      handleError(err, 'Failed to update global SLA settings');
+      handleError(err, t('sla.pauseSettings.errors.globalSettingsUpdateFailed', { defaultValue: 'Failed to update global SLA settings' }));
     }
-  }, [slaSettings]);
+  }, [slaSettings, t]);
 
   // Handle status pause checkbox change
   const handleStatusPauseChange = useCallback((statusId: string, checked: boolean) => {
@@ -156,7 +161,7 @@ export function SlaPauseSettings() {
   // Save status pause configurations
   const handleSaveStatusConfigs = useCallback(async () => {
     if (changedItems.length === 0) {
-      toast.success('No changes to save');
+      toast.success(t('sla.pauseSettings.messages.noChangesToSave', { defaultValue: 'No changes to save' }));
       return;
     }
 
@@ -176,13 +181,17 @@ export function SlaPauseSettings() {
         }))
       );
 
-      toast.success(`Successfully updated ${changedItems.length} status configuration(s)`);
+      toast.success(t('sla.pauseSettings.messages.statusesUpdated', {
+        defaultValue_one: 'Successfully updated {{count}} status configuration',
+        defaultValue_other: 'Successfully updated {{count}} status configurations',
+        count: changedItems.length
+      }));
     } catch (err) {
-      handleError(err, 'Failed to save status configurations');
+      handleError(err, t('sla.pauseSettings.errors.saveStatusesFailed', { defaultValue: 'Failed to save status configurations' }));
     } finally {
       setIsSaving(false);
     }
-  }, [changedItems]);
+  }, [changedItems, t]);
 
   // Reset changes
   const handleResetChanges = useCallback(() => {
@@ -199,7 +208,7 @@ export function SlaPauseSettings() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text="Loading SLA pause settings..."
+          text={t('sla.pauseSettings.loading', { defaultValue: 'Loading SLA pause settings...' })}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -216,7 +225,7 @@ export function SlaPauseSettings() {
           className="mt-2"
           onClick={() => window.location.reload()}
         >
-          Retry
+          {t('sla.pauseSettings.retry', { defaultValue: 'Retry' })}
         </Button>
       </div>
     );
@@ -227,9 +236,9 @@ export function SlaPauseSettings() {
       {/* Global SLA Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Global SLA Settings</CardTitle>
+          <CardTitle>{t('sla.pauseSettings.global.title', { defaultValue: 'Global SLA Settings' })}</CardTitle>
           <CardDescription>
-            Configure global behavior for SLA timer pausing
+            {t('sla.pauseSettings.global.description', { defaultValue: 'Configure global behavior for SLA timer pausing' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -242,12 +251,10 @@ export function SlaPauseSettings() {
             />
             <div className="space-y-1">
               <Label htmlFor="response-state-tracking" className="text-base font-medium">
-                Track response state on tickets
+                {t('sla.pauseSettings.global.responseTracking.label', { defaultValue: 'Track response state on tickets' })}
               </Label>
               <p className="text-sm text-muted-foreground">
-                When enabled, tickets automatically track who needs to respond next
-                (awaiting client or awaiting internal response).
-                This also controls the visibility of response state badges and filters.
+                {t('sla.pauseSettings.global.responseTracking.description', { defaultValue: 'When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). This also controls the visibility of response state badges and filters.' })}
               </p>
             </div>
           </div>
@@ -262,16 +269,14 @@ export function SlaPauseSettings() {
             />
             <div className="space-y-1">
               <Label htmlFor="pause-on-awaiting-client" className="text-base font-medium">
-                Automatically pause SLA when awaiting client response
+                {t('sla.pauseSettings.global.pauseOnAwaitingClient.label', { defaultValue: 'Automatically pause SLA when awaiting client response' })}
               </Label>
               <p className="text-sm text-muted-foreground">
-                When enabled, the SLA timer will automatically pause when a ticket is marked as
-                awaiting a response from the client. The timer will resume when the client responds
-                or the ticket status changes.
+                {t('sla.pauseSettings.global.pauseOnAwaitingClient.description', { defaultValue: 'When enabled, the SLA timer will automatically pause when a ticket is marked as awaiting a response from the client. The timer will resume when the client responds or the ticket status changes.' })}
               </p>
               {!responseStateTrackingEnabled && (
                 <p className="text-sm text-amber-600">
-                  Enable response state tracking above to use this option.
+                  {t('sla.pauseSettings.global.pauseOnAwaitingClient.requiresTracking', { defaultValue: 'Enable response state tracking above to use this option.' })}
                 </p>
               )}
             </div>
@@ -282,16 +287,14 @@ export function SlaPauseSettings() {
       {/* Per-Status Pause Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Per-Status Pause Configuration</CardTitle>
+          <CardTitle>{t('sla.pauseSettings.perStatus.title', { defaultValue: 'Per-Status Pause Configuration' })}</CardTitle>
           <CardDescription>
-            Configure which ticket statuses should pause the SLA timer. When a ticket is moved to a
-            status with pausing enabled, the SLA timer will stop until the ticket is moved to
-            another status.
+            {t('sla.pauseSettings.perStatus.description', { defaultValue: 'Configure which ticket statuses should pause the SLA timer. When a ticket is moved to a status with pausing enabled, the SLA timer will stop until the ticket is moved to another status.' })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {statusPauseStates.length === 0 ? (
-            <p className="text-muted-foreground">No ticket statuses found.</p>
+            <p className="text-muted-foreground">{t('sla.pauseSettings.perStatus.empty', { defaultValue: 'No ticket statuses found.' })}</p>
           ) : (
             <>
               <div className="space-y-3">
@@ -313,7 +316,7 @@ export function SlaPauseSettings() {
                       <span className="block text-xs text-muted-foreground">{state.boardName}</span>
                     </Label>
                     {state.pausesSla !== state.originalPausesSla && (
-                      <span className="text-xs text-amber-600 font-medium">Modified</span>
+                      <span className="text-xs text-amber-600 font-medium">{t('sla.pauseSettings.perStatus.modified', { defaultValue: 'Modified' })}</span>
                     )}
                   </div>
                 ))}
@@ -322,8 +325,12 @@ export function SlaPauseSettings() {
               <div className="flex items-center justify-between mt-6 pt-4 border-t">
                 <div className="text-sm text-muted-foreground">
                   {hasUnsavedChanges
-                    ? `${changedItems.length} status(es) modified`
-                    : 'No unsaved changes'}
+                    ? t('sla.pauseSettings.perStatus.modifiedCount', {
+                        defaultValue_one: '{{count}} status modified',
+                        defaultValue_other: '{{count}} statuses modified',
+                        count: changedItems.length
+                      })
+                    : t('sla.pauseSettings.perStatus.noUnsavedChanges', { defaultValue: 'No unsaved changes' })}
                 </div>
                 <div className="flex items-center space-x-2">
                   {hasUnsavedChanges && (
@@ -333,7 +340,7 @@ export function SlaPauseSettings() {
                       onClick={handleResetChanges}
                       disabled={isSaving}
                     >
-                      Reset Changes
+                      {t('sla.pauseSettings.perStatus.resetChanges', { defaultValue: 'Reset Changes' })}
                     </Button>
                   )}
                   <Button
@@ -341,7 +348,9 @@ export function SlaPauseSettings() {
                     onClick={handleSaveStatusConfigs}
                     disabled={!hasUnsavedChanges || isSaving}
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving
+                      ? t('sla.pauseSettings.perStatus.saving', { defaultValue: 'Saving...' })
+                      : t('sla.pauseSettings.perStatus.saveChanges', { defaultValue: 'Save Changes' })}
                   </Button>
                 </div>
               </div>

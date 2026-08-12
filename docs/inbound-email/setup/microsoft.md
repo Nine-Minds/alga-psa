@@ -222,6 +222,15 @@ created. This network handshake is separate from mailbox authorization. A
 validation failure means Microsoft cannot use the webhook delivery path; it
 does not by itself mean the mail permissions are wrong.
 
+Microsoft Graph never follows HTTP redirects during this handshake. If your
+server's public base URL (derived from `APPLICATION_URL`, `NEXTAUTH_URL`, or
+`NEXT_PUBLIC_BASE_URL`, checked in that order) resolves through a redirect
+chain — for example a `www.` subdomain that 301s to an apex domain — every
+subscription registration will fail with a 400 ValidationError, and AlgaPSA
+will silently degrade the provider to polling. Set the environment variable to
+the final redirect destination so Graph receives a URL it can validate without
+following any redirect.
+
 At runtime:
 
 * New subscriptions are created for about 60 hours.
@@ -264,7 +273,7 @@ provider after adding or changing delegated permissions.
 | OAuth reports a redirect error | Compare the displayed redirect URI with the Entra **Web** redirect URI character for character. Confirm the app supports accounts in any organizational directory. |
 | OAuth succeeds, but the shared mailbox returns 403 | Confirm Exchange Full Access for the authorizing user, then confirm and re-consent `Mail.Read.Shared`. Graph consent does not grant mailbox membership. |
 | Shared-mailbox authorization reports a subscription access error | Microsoft does not support delegated change notifications for shared folders. Do not add application permissions. Leave the provider enabled and check polling delivery and last-ingested time after the next cycle. |
-| Subscription creation or validation fails | Confirm public DNS, valid TLS, and inbound access to `/api/email/webhooks/microsoft`. The provider can remain connected in polling mode while you fix reachability. Shared mailboxes are expected to poll. |
+| Subscription creation or validation fails | Confirm public DNS, valid TLS, and inbound access to `/api/email/webhooks/microsoft`. Also verify that `APPLICATION_URL`, `NEXTAUTH_URL`, or `NEXT_PUBLIC_BASE_URL` (whichever is set) resolves directly without an HTTP redirect: Graph never follows redirects during webhook validation, so a base URL that 301-redirects produces a 400 ValidationError that silently degrades the provider to polling — set the variable to the final resolved address. Shared mailboxes are expected to poll. |
 | New mail does not create tickets | Check delivery mode and last-ingested time. Polling needs outbound access to Microsoft. Webhook mode also needs public inbound access. Use **Test Connection** to check Graph access and retry webhook registration. |
 | Token refresh fails after working previously | The refresh token or consent may have expired or been revoked, or the bound app's client ID/secret changed. Restore the issuing app credentials if appropriate, then reauthorize the mailbox. |
 | Mail from a custom folder is missing | Set **Folder Filters** to `Inbox` and reauthorize. Multiple/custom Microsoft folders are not currently reliable across subscription maintenance and reconciliation. |

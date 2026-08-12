@@ -13,6 +13,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Cloud } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getTenantTaxSettings, updateTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
 
 type SupportedAdapter = { key: 'xero' | 'qbo'; label: string; statusParam: string };
@@ -38,6 +39,7 @@ function detectJustConnectedAdapter(searchParams: URLSearchParams | null): Suppo
 }
 
 export function TaxDelegationNudge(): React.JSX.Element | null {
+  const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -63,12 +65,12 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
         const settings = await getTenantTaxSettings();
         if (cancelled) return;
         if (isReturnedActionError(settings)) {
-          handleError(settings, 'Unable to load current tax settings.');
+          handleError(settings, t('tax.delegation.nudge.errors.loadSettings', { defaultValue: 'Unable to load current tax settings.' }));
           return;
         }
         setCurrentSource(settings?.default_tax_source ?? 'internal');
       } catch (err) {
-        handleError(err, 'Unable to load current tax settings.');
+        handleError(err, t('tax.delegation.nudge.errors.loadSettings', { defaultValue: 'Unable to load current tax settings.' }));
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -99,12 +101,15 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
         return;
       }
       toast.success(
-        `${justConnected.label} will calculate tax on new invoices. You can change this in Billing settings.`,
+        t('tax.delegation.nudge.toast.enabled', {
+          defaultValue: '{{provider}} will calculate tax on new invoices. You can change this in Billing settings.',
+          provider: justConnected.label,
+        }),
       );
       setDismissed(true);
       stripStatusParam();
     } catch (err) {
-      handleError(err, 'Failed to enable external tax calculation.');
+      handleError(err, t('tax.delegation.errors.enableFailed', { defaultValue: 'Failed to enable external tax calculation.' }));
     } finally {
       setApplying(false);
     }
@@ -121,12 +126,19 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
   return (
     <Alert variant="info" id="tax-delegation-nudge" className="mb-4">
       <Cloud className="h-4 w-4" />
-      <AlertTitle>Let {justConnected.label} calculate tax on future invoices?</AlertTitle>
+      <AlertTitle>
+        {t('tax.delegation.nudge.title', {
+          defaultValue: 'Let {{provider}} calculate tax on future invoices?',
+          provider: justConnected.label,
+        })}
+      </AlertTitle>
       <AlertDescription className="space-y-3">
         <p>
-          Recommended. New invoices will post to {justConnected.label} without tax amounts,
-          {' '}{justConnected.label} will apply its tax rules, and the calculated tax will sync back to Alga —
-          keeping your two ledgers aligned. You can change this anytime in Billing → Tax Settings.
+          {t('tax.delegation.nudge.description', {
+            defaultValue:
+              'Recommended. New invoices will post to {{provider}} without tax amounts, {{provider}} will apply its tax rules, and the calculated tax will sync back to Alga — keeping your two ledgers aligned. You can change this anytime in Billing → Tax Settings.',
+            provider: justConnected.label,
+          })}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -135,7 +147,12 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
             onClick={() => void handleEnable()}
             disabled={applying}
           >
-            {applying ? 'Applying…' : `Yes, use ${justConnected.label}`}
+            {applying
+              ? t('tax.delegation.actions.applying', { defaultValue: 'Applying…' })
+              : t('tax.delegation.nudge.actions.enable', {
+                  defaultValue: 'Yes, use {{provider}}',
+                  provider: justConnected.label,
+                })}
           </Button>
           <Button
             id="tax-delegation-nudge-dismiss"
@@ -144,7 +161,7 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
             onClick={handleKeepInternal}
             disabled={applying}
           >
-            Keep Alga calculating tax
+            {t('tax.delegation.nudge.actions.keepInternal', { defaultValue: 'Keep Alga calculating tax' })}
           </Button>
         </div>
       </AlertDescription>

@@ -675,6 +675,12 @@
       "clientNotFound": "Nie znaleziono klienta",
       "detailsLoadError": "Nie udało się wczytać danych klienta",
       "updateError": "Nie udało się zaktualizować danych klienta"
+    },
+    "domain": {
+      "title": "Domena niestandardowa",
+      "description": "Klienci planu Pro mogą hostować portal w domenie niestandardowej. Domyślny hostowany adres jest widoczny poniżej.",
+      "defaultAddressLabel": "Domyślny adres portalu",
+      "upgradeHint": "Przejdź na plan Pro, aby skonfigurować domenę portalu klienta ze swoim brandingiem oraz automatyczne certyfikaty."
     }
   },
   "notifications": {
@@ -705,6 +711,24 @@
       "messages": "Wiadomości",
       "projects": "Projekty",
       "system": "System"
+    },
+    "filters": {
+      "title": "Filtruj powiadomienia",
+      "description": "Wybierz kryteria filtrowania aktywności powiadomień.",
+      "statusLabel": "Status",
+      "unreadOnly": "Tylko nieprzeczytane",
+      "showRead": "Pokaż przeczytane",
+      "categoryLabel": "Kategoria",
+      "allCategories": "Wszystkie kategorie",
+      "categoryPlaceholder": "Wybierz kategorię...",
+      "dateRangeLabel": "Zakres dat",
+      "reset": "Resetuj",
+      "cancel": "Anuluj",
+      "apply": "Zastosuj filtry"
+    },
+    "card": {
+      "unread": "Nieprzeczytane",
+      "noMessage": "Brak wiadomości"
     }
   },
   "sidebar": {
@@ -755,5 +779,122 @@
     "createTicket": "Utwórz zgłoszenie",
     "createTicketForDevice": "Utwórz zgłoszenie dla tego urządzenia",
     "rowActionsLabel": "Akcje wiersza"
+  },
+  "billing": {
+    "columns": {
+      "service": "Usługa",
+      "notAvailable": "Brak"
+    },
+    "filters": {
+      "dateRange": "Zakres dat",
+      "startDate": "Data początkowa",
+      "endDate": "Data końcowa",
+      "apply": "Zastosuj filtr"
+    },
+    "usageMetrics": {
+      "title": "Wskaźniki wykorzystania",
+      "bucketHistoryTitle": "Historia wykorzystania pakietu godzin",
+      "columns": {
+        "unitOfMeasure": "Jednostka miary",
+        "quantity": "Ilość"
+      },
+      "empty": {
+        "title": "Brak dostępnych wskaźników wykorzystania",
+        "description": "W wybranym zakresie dat nie zarejestrowano wskaźników wykorzystania."
+      }
+    },
+    "hoursByService": {
+      "columns": {
+        "serviceType": "Typ usługi",
+        "hours": "Godziny"
+      },
+      "empty": {
+        "title": "Brak dostępnych danych o godzinach",
+        "description": "W wybranym zakresie dat nie zarejestrowano godzin podlegających rozliczeniu."
+      }
+    },
+    "quotes": {
+      "columns": {
+        "quoteNumber": "Nr oferty",
+        "title": "Tytuł",
+        "amount": "Kwota",
+        "status": "Status",
+        "date": "Data"
+      },
+      "draftQuote": "Wersja robocza oferty {{count}}",
+      "empty": "Nie znaleziono ofert",
+      "errors": {
+        "loadFailed": "Nie udało się wczytać ofert"
+      }
+    },
+    "bucketUsage": {
+      "contractLineLabel": "Linia umowy dla pakietu godzin",
+      "usage": "Wykorzystanie",
+      "hoursUsed": "Wykorzystane godziny: {{hours}}",
+      "hoursTotal": "Łączna liczba godzin: {{hours}}",
+      "rolloverHours": "Uwzględnia przeniesione godziny: {{hours}}"
+    },
+    "bucketHistory": {
+      "title": "Historia wykorzystania",
+      "trendStable": "Stabilne",
+      "current": "Bieżące",
+      "avgUsage": "Śr. wykorzystanie",
+      "peak": "Szczyt",
+      "periods": "Okresy"
+    },
+    "invoicePreview": {
+      "loadFailed": "Nie udało się wczytać faktury",
+      "unavailable": "Nie można wyświetlić podglądu faktury."
+    },
+    "payment": {
+      "redirecting": "Przekierowywanie do płatności..."
+    },
+    "paymentSuccess": {
+      "unknownStart": "Nieznany początek",
+      "unknownEnd": "Nieznany koniec",
+      "verifying": {
+        "title": "Weryfikowanie płatności",
+        "description": "Poczekaj, aż potwierdzimy płatność..."
+      },
+      "success": {
+        "title": "Płatność zakończona pomyślnie!",
+        "thankYou": "Dziękujemy za płatność.",
+        "amountPaid": "Zapłacona kwota: {{amount}}.",
+        "confirmationEmail": "Wiadomość e-mail z potwierdzeniem zostanie wysłana na zarejestrowany adres e-mail.",
+        "thankYouForInvoice": "Dziękujemy za płatność za fakturę nr {{invoiceNumber}}."
+      },
+      "servicePeriod": {
+        "title": "Podsumowanie okresu świadczenia usługi",
+        "description": "To podsumowanie opiera się na cyklicznych okresach szczegółowych faktury, a nie wyłącznie na datach rozliczeń w nagłówku faktury."
+      },
+      "pending": {
+        "title": "Przetwarzanie płatności",
+        "description": "Płatność jest przetwarzana. Może to potrwać kilka chwil. Po zakończeniu płatności otrzymasz wiadomość e-mail z potwierdzeniem."
+      },
+      "failed": {
+        "title": "Weryfikacja płatności nie powiodła się",
+        "description": "Nie udało się potwierdzić płatności. Skontaktuj się z pomocą techniczną."
+      },
+      "errors": {
+        "verificationFailed": "Weryfikacja płatności nie powiodła się",
+        "verifyFailed": "Nie udało się zweryfikować płatności",
+        "unexpected": "Podczas weryfikacji płatności wystąpił błąd"
+      },
+      "actions": {
+        "backToBilling": "Wróć do rozliczeń",
+        "viewInvoice": "Wyświetl fakturę"
+      }
+    }
+  },
+  "assets": {
+    "columns": {
+      "name": "Nazwa",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Lokalizacja",
+      "lastUpdated": "Ostatnia aktualizacja"
+    },
+    "notAvailable": "Brak",
+    "detailsTitle": "Szczegóły zasobu"
   }
 }

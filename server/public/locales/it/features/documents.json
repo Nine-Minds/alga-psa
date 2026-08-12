@@ -69,10 +69,15 @@
     "suggestedDefaultsLoaded_other": "Caricati i valori predefiniti per {{count}} tipi di entità",
     "suggestedDefaultsLoadFailed": "Impossibile caricare i valori predefiniti suggeriti",
     "entityTypesAllConfigured": "Tutti i tipi di entità hanno già cartelle predefinite configurate",
-    "defaultFoldersLoadFailed": "Impossibile caricare le cartelle predefinite"
+    "defaultFoldersLoadFailed": "Impossibile caricare le cartelle predefinite",
+    "parseContentFailed": "Impossibile analizzare il contenuto del documento"
   },
   "validation": {
-    "nameRequired": "Il nome del documento è obbligatorio"
+    "nameRequired": "Il nome del documento è obbligatorio",
+    "typeRequired": "Il tipo di documento è obbligatorio",
+    "userIdRequired": "L'ID utente è obbligatorio",
+    "orderNumberRequired": "Il numero d'ordine è obbligatorio",
+    "contentRequired": "Il contenuto è obbligatorio"
   },
   "bulkActions": {
     "selected_one": "{{count}} documento selezionato",
@@ -239,7 +244,9 @@
     "cascadeMakeVisible": "Vuoi anche rendere visibili tutti i {{count}} documento/i in \"{{name}}\" nel portale clienti?",
     "cascadeMakeHidden": "Vuoi anche nascondere tutti i {{count}} documento/i in \"{{name}}\" dal portale clienti?",
     "cascadeYes": "Sì, aggiorna documenti",
-    "cascadeNo": "No, solo cartella"
+    "cascadeNo": "No, solo cartella",
+    "visibleToClients": "Visibile ai clienti",
+    "hiddenFromClients": "Nascosto ai clienti"
   },
   "empty": {
     "default": "Nessun documento trovato"
@@ -283,5 +290,71 @@
     "pageOf": "Pagina {{current}} di {{total}}",
     "previous": "Precedente"
   },
-  "ticketDocuments": "Documenti del ticket"
+  "ticketDocuments": "Documenti del ticket",
+  "actions": {
+    "save": "Salva",
+    "saving": "Salvataggio...",
+    "cancel": "Annulla"
+  },
+  "card": {
+    "noDate": "Nessuna data",
+    "reflectionLabel": "Scheda documento"
+  },
+  "editor": {
+    "loading": "Caricamento...",
+    "initializing": "Inizializzazione dell'editor...",
+    "placeholder": "Inizia a scrivere...",
+    "errorPrefix": "Errore: {{message}}",
+    "status": {
+      "offline": "Offline — le modifiche verranno sincronizzate alla riconnessione",
+      "allChangesSaved": "Tutte le modifiche sono state salvate",
+      "syncing": "{{status}} (sincronizzazione)"
+    },
+    "connection": {
+      "connected": "Connesso",
+      "connecting": "Connessione in corso",
+      "disconnected": "Disconnesso"
+    },
+    "presence": {
+      "unknownUser": "Utente"
+    },
+    "toolbar": {
+      "bold": "Grassetto (Ctrl+B)",
+      "italic": "Corsivo (Ctrl+I)",
+      "underline": "Sottolineato (Ctrl+U)",
+      "strikethrough": "Barrato",
+      "code": "Codice",
+      "heading1": "Titolo 1",
+      "heading2": "Titolo 2",
+      "bulletList": "Elenco puntato",
+      "orderedList": "Elenco numerato",
+      "quote": "Testo riportato",
+      "link": "Collegamento",
+      "linkPrompt": "URL"
+    }
+  },
+  "form": {
+    "errorsHeading": "Correggi i seguenti errori:",
+    "submit": "Crea documento",
+    "fields": {
+      "documentName": "Nome documento *",
+      "documentType": "Tipo di documento *",
+      "userId": "ID utente *",
+      "contactNameId": "ID nome contatto",
+      "clientId": "ID cliente",
+      "ticketId": "ID ticket",
+      "orderNumber": "Numero d'ordine *",
+      "content": "Contenuto *"
+    }
+  },
+  "previewPane": {
+    "loading": "Caricamento anteprima...",
+    "pdfDocument": "Documento PDF",
+    "videoFile": "File video",
+    "notAvailable": "Anteprima non disponibile",
+    "altPdf": "Anteprima di {{name}}",
+    "altVideoThumbnail": "Miniatura di {{name}}",
+    "pageCount_one": "{{count}} pagina",
+    "pageCount_other": "{{count}} pagine"
+  }
 }
