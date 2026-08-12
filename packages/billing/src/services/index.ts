@@ -7,7 +7,12 @@
 export { TaxService } from './taxService';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials } from './quoteCalculationService';
-export { PDFGenerationService, createPDFGenerationService } from './pdfGenerationService';
+export {
+  PDFGenerationService,
+  createPDFGenerationService,
+  publishGeneratedDocumentsToClient,
+  type StoredPdfResult,
+} from './pdfGenerationService';
 export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,

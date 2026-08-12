@@ -745,7 +745,8 @@ export interface DownloadPdfResult {
 }
 
 /**
- * Download invoice PDF - schedules job, waits for completion, returns file ID
+ * Download invoice PDF - returns the stored PDF when one exists, otherwise
+ * schedules generation, waits for completion, and returns the file ID.
  */
 export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<DownloadPdfResult>> => {
   const knex = await getConnection(tenant);
@@ -758,6 +759,25 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
 
     if (accessError) {
       return accessError;
+    }
+
+    // Serve the document that was issued rather than re-rendering it. Invoices
+    // generated before documents were filed fall through to the job below.
+    const scopedDb = tenantDb(knex, tenant);
+    const docQuery = scopedDb.table('document_associations as da')
+      .where({
+        'da.entity_id': invoiceId,
+        'da.entity_type': 'invoice',
+      })
+      .whereNotNull('d.file_id')
+      .orderBy('da.created_at', 'desc')
+      .select('d.file_id')
+      .first<{ file_id: string } | undefined>();
+    scopedDb.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
+    const storedDoc = await docQuery;
+
+    if (storedDoc?.file_id) {
+      return { success: true, fileId: storedDoc.file_id };
     }
 
     // Schedule PDF generation

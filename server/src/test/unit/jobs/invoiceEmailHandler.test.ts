@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   // PDF generation
   generateAndStore: vi.fn(),
   createPDFGenerationService: vi.fn(),
+  publishGeneratedDocumentsToClient: vi.fn(),
   // Storage
   downloadFile: vi.fn(),
   // Clients
@@ -39,6 +40,7 @@ vi.mock('server/src/services/job.service', () => ({
 
 vi.mock('@alga-psa/billing/services', () => ({
   createPDFGenerationService: mocks.createPDFGenerationService,
+  publishGeneratedDocumentsToClient: mocks.publishGeneratedDocumentsToClient,
   PDFGenerationService: class {},
 }));
 
@@ -145,7 +147,8 @@ describe('InvoiceEmailHandler', () => {
     mocks.sendInvoiceEmail.mockResolvedValue(true);
 
     mocks.createPDFGenerationService.mockReturnValue({ generateAndStore: mocks.generateAndStore });
-    mocks.generateAndStore.mockResolvedValue({ file_id: 'file-1' });
+    mocks.generateAndStore.mockResolvedValue({ file_id: 'file-1', document_id: 'doc-1' });
+    mocks.publishGeneratedDocumentsToClient.mockResolvedValue(1);
 
     mocks.downloadFile.mockResolvedValue({ buffer: Buffer.from('%PDF-1.4 test') });
     mocks.writeFile.mockResolvedValue(undefined);
@@ -231,6 +234,30 @@ describe('InvoiceEmailHandler', () => {
       expect(finalStatusCall[0]).toBe('job-service-1');
       expect(finalStatusCall[1]).toBe(JobStatus.Completed);
       expect(mocks.updateJobStatus).not.toHaveBeenCalledWith('job-service-1', JobStatus.Failed, expect.anything());
+    });
+
+    it('should attach the stored document and publish it to the client only after a successful send', async () => {
+      await InvoiceEmailHandler.handle('pg-1', buildJobData());
+
+      // One render per send: generateAndStore reuses the filed document.
+      expect(mocks.generateAndStore).toHaveBeenCalledTimes(1);
+      expect(mocks.generateAndStore.mock.calls[0][0]).not.toHaveProperty('regenerate', true);
+      expect(mocks.downloadFile).toHaveBeenCalledWith('file-1');
+
+      expect(mocks.publishGeneratedDocumentsToClient).toHaveBeenCalledWith(TENANT, 'invoice', 'invoice-1');
+      const publishOrder = mocks.publishGeneratedDocumentsToClient.mock.invocationCallOrder[0];
+      const sendOrder = mocks.sendInvoiceEmail.mock.invocationCallOrder[0];
+      expect(publishOrder).toBeGreaterThan(sendOrder);
+    });
+
+    it('should leave the generated document MSP-only when the send fails', async () => {
+      mocks.sendInvoiceEmail.mockResolvedValue(false);
+
+      await expect(InvoiceEmailHandler.handle('pg-1', buildJobData())).rejects.toThrow(
+        'Failed to send invoice email',
+      );
+
+      expect(mocks.publishGeneratedDocumentsToClient).not.toHaveBeenCalled();
     });
 
     it('should prefer the billing contact email over location and billing emails', async () => {
