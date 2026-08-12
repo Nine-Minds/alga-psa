@@ -20,20 +20,10 @@ import {
   type CurrencySection,
   type MovementColumns,
 } from '@alga-psa/reporting/actions/report-actions/getDeferredRevenueReport';
+import { defaultReportMonth } from '@alga-psa/reporting/actions/report-actions/deferred-revenue/month';
 
 const isReportActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
-
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth()).padStart(2, '0')}`;
-}
-
-function previousMonth(month: string): string {
-  const [year, monthIndex] = month.split('-').map(Number);
-  const previous = new Date(Date.UTC(year, monthIndex - 2, 1));
-  return previous.toISOString().slice(0, 7);
-}
 
 function formatCents(cents: number, currency: string, formatCurrency: (value: number, currency: string) => string): string {
   return formatCurrency(cents / 100, currency);
@@ -415,7 +405,7 @@ function ClientRow({
 export default function DeferredRevenueReport() {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency } = useFormatters();
-  const [month, setMonth] = useState<string>(() => previousMonth(currentMonth()));
+  const [month, setMonth] = useState<string>(() => defaultReportMonth());
   const [report, setReport] = useState<DeferredRevenueReportPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
