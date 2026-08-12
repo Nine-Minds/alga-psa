@@ -201,4 +201,30 @@ describe('credentials actions — tenant-wide aggregation', () => {
     // Client-scoped list does not enumerate mappings.
     expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
   });
+
+  it('keeps an assetId-scoped list native-only even when Hudu is connected+mapped', async () => {
+    // Asset credentials section calls listCredentials({ assetId }) with no
+    // clientId; this must NOT fan out to mapped Hudu companies (v1 Hudu rows
+    // have no asset-attachment linkage), so only the native rows come back.
+    nativeListMock.mockResolvedValue([
+      { id: 'asset-native-1', source: 'alga', clientId: 'c1', attachedAssetIds: ['asset-1'] },
+    ]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+    getHuduCompanyMappingRowsMock.mockResolvedValue([
+      { alga_entity_id: 'c1', client_name: 'Acme' },
+      { alga_entity_id: 'c2', client_name: 'Globex' },
+    ]);
+    huduListMock.mockResolvedValue([{ id: 'hudu:101:1', source: 'hudu', clientId: 'c1' }]);
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ assetId: 'asset-1' });
+
+    const ids = rows.map((row: { id: string }) => row.id).sort();
+    expect(ids).toEqual(['asset-native-1']);
+    // No Hudu mapping enumeration or per-client Hudu traffic for an
+    // asset-scoped list.
+    expect(getHuduIntegrationMock).not.toHaveBeenCalled();
+    expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
+    expect(huduListMock).not.toHaveBeenCalled();
+  });
 });

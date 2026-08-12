@@ -106,6 +106,13 @@ async function aggregateList(
     return [...native, ...huduRows];
   }
 
+  if (filter.assetId) {
+    // Asset-scoped lists are native-only: v1 Hudu rows have no
+    // asset-attachment linkage, and fanning out per mapped client would
+    // append every mapped company's Hudu passwords to the asset's list.
+    return native;
+  }
+
   // Tenant-wide listing: aggregate every selected source. Hudu rows are
   // company-scoped, so fetch each mapped client's Hudu passwords (bundle
   // scope is enforced per client inside huduSource.list). Only touch Hudu
