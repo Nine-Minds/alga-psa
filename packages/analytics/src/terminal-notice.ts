@@ -42,7 +42,7 @@ export function showUsageStatsNotice(): void {
 ║                                                                ║
 ║  To opt out, set ALGA_USAGE_STATS=false in your .env file    ║
 ║                                                                ║
-║  Learn more: https://docs.algapsa.com/privacy                  ║
+║  Learn more: https://algapsa.com/static/privacy_policy         ║
 ╚════════════════════════════════════════════════════════════════╝
 `);
   

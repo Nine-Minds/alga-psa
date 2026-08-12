@@ -5,7 +5,7 @@
  * Keep them in sync with that runbook; T095 asserts they match the headings.
  */
 
-export const TEAMS_SETUP_RUNBOOK_URL = 'https://docs.algapsa.com/integrations/teams-setup';
+export const TEAMS_SETUP_RUNBOOK_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/docs/integrations/teams-setup.md';
 
 export type TeamsRunbookSection =
   | 'entraApp'

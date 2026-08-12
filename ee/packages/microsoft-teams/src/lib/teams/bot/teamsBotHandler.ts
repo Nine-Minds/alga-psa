@@ -158,7 +158,7 @@ interface HandleTeamsBotActivityOptions {
 
 const BOT_SURFACE: TeamsActionSurface = 'bot';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const TEAMS_SCOPE_DOCS_URL = 'https://docs.algapsa.com/integrations/teams-setup#supported-scopes';
+const TEAMS_SCOPE_DOCS_URL = 'https://www.nineminds.com/documentation/microsoft-teams-integration';
 const ORDINAL_MAX = 20;
 
 function normalizeOptionalString(value: string | null | undefined): string | null {
