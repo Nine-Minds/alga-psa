@@ -41,12 +41,12 @@ describe('root route', () => {
     getAdminConnectionMock.mockResolvedValue({ connection: 'admin' });
   });
 
-  it('redirects a registered portal-domain host to the client portal', async () => {
+  it('redirects a registered portal-domain host to the client portal dashboard', async () => {
     getPortalDomainByHostnameMock.mockResolvedValue({ id: 'portal-domain-1' });
 
     await GET();
 
-    expect(redirectMock).toHaveBeenCalledWith('/client-portal');
+    expect(redirectMock).toHaveBeenCalledWith('/client-portal/dashboard');
     expect(getAdminConnectionMock).toHaveBeenCalledOnce();
     expect(getPortalDomainByHostnameMock).toHaveBeenCalledWith(
       { connection: 'admin' },

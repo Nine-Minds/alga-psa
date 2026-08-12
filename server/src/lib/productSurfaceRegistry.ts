@@ -89,6 +89,11 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
 
 export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
   {
+    group: 'portal_helpdesk_root_alias',
+    dynamicPatterns: [/^\/client-portal$/],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+  },
+  {
     group: 'portal_helpdesk',
     staticPrefixes: ['/client-portal/dashboard', '/client-portal/tickets', '/client-portal/knowledge-base', '/client-portal/profile', '/client-portal/client-settings'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
@@ -256,7 +261,8 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
     return getAllowedSettingsTabIds(productCode).has(settingsSegment) ? 'allowed' : 'not_found';
   }
 
-  const rules = pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
+  const rules =
+    pathname === '/client-portal' || pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
   const matched = rules.find((rule) => matchesRule(pathname, rule));
   if (!matched) {
     return productCode === 'algadesk' ? 'not_found' : 'allowed';
