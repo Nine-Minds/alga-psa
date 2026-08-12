@@ -24,10 +24,13 @@ const repoRoot = path.resolve(process.cwd(), '..', '..');
 // Load the wired-in dev DB connection (server/.env.local) into the test env.
 loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: true });
 
-// The native store encrypts with AES-256-GCM unless Vault Transit is configured;
-// supply a test key (never NEXTAUTH_SECRET — that fallback deliberately does
-// not exist).
-process.env.CREDENTIAL_ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || 'integration-test-credential-key';
+// Snapshot the prior value BEFORE this suite sets it, so teardown can restore
+// exactly: delete when it was previously unset, otherwise restore the string.
+// The key is deliberately NOT persisted to server/.env.local — this suite
+// supplies its own ephemeral value, in-process only.
+const priorCredentialEncryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+// Force the AES-256-GCM scheme unless Vault Transit is configured (the
+// scheme-transition test re-sets these in-process and clears them again).
 delete process.env.ALGA_VAULT_ADDR;
 delete process.env.VAULT_ADDR;
 
@@ -147,6 +150,12 @@ describe('native credentials store — DB integration', () => {
   const HOOK_TIMEOUT = 120_000;
 
   beforeAll(async () => {
+    // The native store encrypts with AES-256-GCM unless Vault Transit is
+    // configured; supply a test key ephemerally (never NEXTAUTH_SECRET — that
+    // fallback deliberately does not exist). Set here, not at module load, so
+    // the process env is only touched when this suite actually runs.
+    process.env.CREDENTIAL_ENCRYPTION_KEY =
+      priorCredentialEncryptionKey ?? 'integration-test-credential-key';
     db = await createDevDb();
     await db.raw('select 1');
 
@@ -169,6 +178,13 @@ describe('native credentials store — DB integration', () => {
         await removeTestTenantFixtures(tenantId);
       }
     } finally {
+      // Restore the encryption-key env exactly as it was before this suite —
+      // runs even when the suite fails (unset ⇒ delete, set ⇒ restore string).
+      if (priorCredentialEncryptionKey === undefined) {
+        delete process.env.CREDENTIAL_ENCRYPTION_KEY;
+      } else {
+        process.env.CREDENTIAL_ENCRYPTION_KEY = priorCredentialEncryptionKey;
+      }
       await db?.destroy();
     }
   }, HOOK_TIMEOUT);

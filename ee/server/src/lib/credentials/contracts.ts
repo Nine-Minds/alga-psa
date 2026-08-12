@@ -66,6 +66,13 @@ export interface CredentialListFilter {
   clientId?: string;
   assetId?: string;
   search?: string;
+  /**
+   * Backend selection for aggregation. Undefined or empty means "all" (the
+   * historical behavior); a non-empty whitelist restricts which backends the
+   * credentialActions aggregation invokes. Consumed only by the aggregation —
+   * the native/hudu `list` implementations ignore this field.
+   */
+  sources?: CredentialSourceKind[];
 }
 
 export interface CredentialGrant {

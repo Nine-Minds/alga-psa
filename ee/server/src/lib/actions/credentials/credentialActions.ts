@@ -99,24 +99,42 @@ async function aggregateList(
   filter: CredentialListFilter
 ): Promise<CredentialSummary[]> {
   const ctx = sourceContext(user, tenant);
-  const native = await nativeCredentialSource.list(ctx, filter);
 
-  if (filter.clientId) {
-    const huduRows = await huduCredentialSource.list(ctx, filter);
-    return [...native, ...huduRows];
+  // `sources` is authoritative and lives in the aggregation, not at the call
+  // sites. Undefined or empty means "all" (the historical behavior); a
+  // non-empty whitelist restricts which backends are even invoked — the
+  // deselected backend's `list` is never called and no rows are appended for
+  // it.
+  const sourceSet = filter.sources?.length ? new Set(filter.sources) : null;
+  const wantNative = sourceSet === null || sourceSet.has('alga');
+  const wantHudu = sourceSet === null || sourceSet.has('hudu');
+
+  // Asset-scoped lists are ALWAYS native-only, and this short-circuit takes
+  // precedence over `sources`: v1 Hudu rows have no asset-attachment linkage,
+  // and fanning out per mapped client would append every mapped company's
+  // Hudu passwords to the asset's list. Hudu is therefore never called with
+  // an `assetId` filter — even a hudu-only selection on an asset-scoped list
+  // still returns the native rows.
+  if (filter.assetId) {
+    return nativeCredentialSource.list(ctx, filter);
   }
 
-  if (filter.assetId) {
-    // Asset-scoped lists are native-only: v1 Hudu rows have no
-    // asset-attachment linkage, and fanning out per mapped client would
-    // append every mapped company's Hudu passwords to the asset's list.
-    return native;
+  if (filter.clientId) {
+    // Client-scoped list merges the selected sources for that one client.
+    const native = wantNative ? await nativeCredentialSource.list(ctx, filter) : [];
+    const hudu = wantHudu ? await huduCredentialSource.list(ctx, filter) : [];
+    return [...native, ...hudu];
   }
 
   // Tenant-wide listing: aggregate every selected source. Hudu rows are
   // company-scoped, so fetch each mapped client's Hudu passwords (bundle
   // scope is enforced per client inside huduSource.list). Only touch Hudu
   // when the integration is actually connected for this tenant.
+  const native = wantNative ? await nativeCredentialSource.list(ctx, filter) : [];
+  if (!wantHudu) {
+    return native;
+  }
+
   const { knex } = await createTenantKnex(tenant);
   const integration = await getHuduIntegration(knex, tenant);
   if (integration?.is_active !== true) {
@@ -149,6 +167,7 @@ export const listCredentials = withCredentialAccess(
       clientId: input.clientId,
       assetId: input.assetId,
       search: input.search,
+      sources: input.sources,
     };
     return aggregateList(user, tenant, filter);
   }
