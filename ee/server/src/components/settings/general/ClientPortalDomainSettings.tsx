@@ -29,8 +29,7 @@ import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenan
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
 // Operator-facing reverse-proxy setup guide for appliance ("direct") deployments.
-// TODO(appliance-portal-domains): point at the published docs URL once it lands.
-const PROXY_SETUP_DOC_URL = 'https://docs.algapsa.com/client-portal/appliance-custom-portal-domain';
+const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/ee/docs/guides/appliance-custom-portal-domain-proxy.md';
 
 interface StatusBadgeConfig {
   label: string;
