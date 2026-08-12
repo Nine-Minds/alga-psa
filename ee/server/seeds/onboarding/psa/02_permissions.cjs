@@ -47,6 +47,14 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'interaction', action: 'update', msp: true, client: false, description: 'Update interactions' },
         { resource: 'interaction', action: 'delete', msp: true, client: false, description: 'Delete interactions' },
 
+        // Opportunity permissions (MSP-only; mirrors migration 20260712105000_add_opportunity_permissions).
+        // Without these the Opportunities page fails the RBAC check even for Admin
+        // ("Permission denied: opportunities read required").
+        { resource: 'opportunities', action: 'create', msp: true, client: false, description: 'Create opportunities' },
+        { resource: 'opportunities', action: 'read', msp: true, client: false, description: 'View opportunities' },
+        { resource: 'opportunities', action: 'update', msp: true, client: false, description: 'Update opportunities' },
+        { resource: 'opportunities', action: 'delete', msp: true, client: false, description: 'Delete opportunities' },
+
         // Inventory module permissions (MSP-only; granted to the MSP Admin role,
         // mirrors migration 20260626100600_add_inventory_permissions). Without these
         // the Add Sales Order / stock-location / inventory server actions fail the
