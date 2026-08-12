@@ -926,4 +926,121 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     // Restricted row hidden; the open row resolves (association row untouched).
     expect(asStranger.map((r) => r.id)).toEqual([open.id]);
   });
+
+  it('update rejects reassigning a credential with a client-bound association to another client (ticket); row and associations unchanged, no audit', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Reassign Ticket');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Reassigning a clientA credential that is attached to a clientA ticket
+    // to client B is rejected (same-client invariant that create/setAssociations
+    // enforce).
+    await expect(source.update(ctx, cred, { clientId: clientB })).rejects.toMatchObject({
+      code: 'CREDENTIAL_CLIENT_MISMATCH',
+    });
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientA);
+    expect(row.name).toBe('Reassign Ticket');
+    const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+    expect(associations).toHaveLength(1);
+    expect(associations[0].entity_type).toBe('ticket');
+    // No audit row for a rejected write (the update never committed).
+    const audits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_updated', record_id: cred });
+    expect(audits).toHaveLength(0);
+  });
+
+  it('update rejects reassignment for every other client-bound type via the shared resolver', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    for (const entityType of ['asset', 'contact', 'contract', 'project_task', 'quote']) {
+      const cred = await createCredentialFor(clientA, `Reassign ${entityType}`);
+      const entityForA = await seedEntity(entityType, clientA);
+      await assocDb('credential_associations').insert({
+        tenant: assocTenant,
+        credential_id: cred,
+        entity_id: entityForA,
+        entity_type: entityType,
+      });
+
+      await expect(source.update(ctx, cred, { clientId: clientB })).rejects.toMatchObject({
+        code: 'CREDENTIAL_CLIENT_MISMATCH',
+      });
+
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+      expect(row.client_id).toBe(clientA);
+    }
+  });
+
+  it('update succeeds when the clientId is unchanged or omitted even with client-bound associations', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'No-op Client');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Explicitly passing the SAME client is not a reassignment and succeeds.
+    const updated = await source.update(ctx, cred, { clientId: clientA, name: 'No-op Client (touched)' });
+    expect(updated.name).toBe('No-op Client (touched)');
+
+    // Omitting clientId entirely also succeeds.
+    const renamed = await source.update(ctx, cred, { name: 'No-op Client (renamed)' });
+    expect(renamed.name).toBe('No-op Client (renamed)');
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientA);
+  });
+
+  it('update allows reassignment for a credential with only clientless associations (document, user)', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Clientless Reassign');
+    const documentId = await seedEntity('document', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: documentId,
+      entity_type: 'document',
+    });
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: cred,
+      entity_id: ownerId,
+      entity_type: 'user',
+    });
+
+    const updated = await source.update(ctx, cred, { clientId: clientB, name: 'Clientless Reassign (moved)' });
+    expect(updated.name).toBe('Clientless Reassign (moved)');
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientB);
+    // Both clientless association rows survive the reassignment untouched.
+    const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+    expect(associations.map((a) => a.entity_type).sort()).toEqual(['document', 'user']);
+  });
+
+  it('update allows reassignment for a credential with no associations', async () => {
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Unattached Reassign');
+
+    const updated = await source.update(ctx, cred, { clientId: clientB });
+    expect(updated.clientId).toBe(clientB);
+
+    const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+    expect(row.client_id).toBe(clientB);
+  });
 });

@@ -39,6 +39,7 @@ import {
 } from './encryption';
 import { generateTotp, normalizeOtpSecret } from './totp';
 import { writeCredentialAudit } from './audit';
+import { assertAttachmentsMatchClient } from './associations';
 
 type CredentialRowProjection = CredentialRow;
 
@@ -492,7 +493,16 @@ export class NativeCredentialSource implements CredentialSource {
         patch.encryption_scheme = encrypted.scheme;
       }
 
-      if (input.clientId !== undefined) patch.client_id = input.clientId;
+      if (input.clientId !== undefined && input.clientId !== existing.client_id) {
+        // Ownership reassignment: the same-client invariant create and
+        // setAssociations already enforce must hold here too. Reject before any
+        // patch is applied (inside the transaction) when a client-bound
+        // association resolves to a different client than the proposed one —
+        // otherwise this path would silently orphan associations across clients.
+        const associations = await loadAssociations(trx, ctx.tenant, [id]);
+        await assertAttachmentsMatchClient(trx, ctx.tenant, associations.get(id) ?? [], input.clientId);
+        patch.client_id = input.clientId;
+      }
       patch.updated_at = knex.fn.now() as unknown as string;
 
       const [row] = await tenantDb(trx, ctx.tenant)

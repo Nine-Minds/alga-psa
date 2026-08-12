@@ -23,7 +23,7 @@
  */
 
 import type { Knex } from 'knex';
-import type { CredentialAssociationEntityType, CredentialSourceContext } from './contracts';
+import type { CredentialAssociationEntityType, CredentialAttachment, CredentialSourceContext } from './contracts';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { isHuduCredentialId, huduCredentialSource } from './huduSource';
@@ -149,6 +149,29 @@ function assertSameClient(
       clientMismatch(entityType);
     }
   });
+}
+
+/**
+ * Enforce the same-client rule for EXISTING association rows against a
+ * proposed owning client. Ownership reassignment (nativeSource.update) must
+ * hold to the same invariant create and setAssociations enforce: every
+ * client-bound attachment must resolve to the proposed client, else the write
+ * is rejected. Clientless types never block. The entity->owning-client
+ * resolution is the shared `resolveEntityClientId`, not a re-derivation.
+ */
+export async function assertAttachmentsMatchClient(
+  trx: Knex.Transaction,
+  tenant: string,
+  attachments: CredentialAttachment[],
+  proposedClientId: string
+): Promise<void> {
+  for (const attachment of attachments) {
+    if (!CLIENT_BOUND_ENTITY_TYPES.has(attachment.entityType)) continue;
+    const entityClientId = await resolveEntityClientId(trx, tenant, attachment.entityType, attachment.entityId);
+    if (entityClientId && entityClientId !== proposedClientId) {
+      clientMismatch(attachment.entityType);
+    }
+  }
 }
 
 async function insertAssociation(

@@ -20,6 +20,21 @@
  *
  * Mirrors the document_associations CHECK-widening pattern
  * (20251020000001_add_document_folders_preview_and_contract_association.cjs).
+ *
+ * DOWN STRATEGY — preflight-abort (this migration never runs in a
+ * transaction). `exports.config.transaction = false` below is required for
+ * Citus DDL compatibility, and it applies to `down` as well as `up`: knex
+ * invokes both directions outside any transaction, so a mid-DDL failure would
+ * leave a half-reverted schema. `down` therefore refuses to start unless every
+ * row is representable by the pre-expansion schema — it counts
+ * (`credential_ref IS NOT NULL` OR `entity_type <> 'asset'`) rows as its FIRST
+ * statement, before ANY DDL, and throws (naming the counts and the operator
+ * remedy) if any exist. Once that preflight passes, every subsequent statement
+ * is guaranteed to succeed against the data (all credential_ids are set, every
+ * entity_type is 'asset'), so a refused or failed down always leaves the
+ * database byte-for-byte in the fully-migrated state. The "delete Hudu-ref
+ * rows during down" alternative was rejected because, with no transaction, the
+ * data deletion would not be atomic with the DDL that follows it.
  */
 
 // Citus rejects ALTER TABLE ... on distributed tables inside a transaction.
@@ -89,6 +104,33 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
+  // Preflight-abort: FIRST statement, before ANY DDL. Count rows the
+  // pre-expansion schema cannot represent. Refusing here means no schema or
+  // data change happens at all — see the DOWN STRATEGY header note for why a
+  // mid-DDL failure must be impossible.
+  const refCountResult = await knex.raw(`
+    SELECT count(*) AS ref_count
+    FROM credential_associations
+    WHERE credential_ref IS NOT NULL;
+  `);
+  const nonAssetCountResult = await knex.raw(`
+    SELECT count(*) AS non_asset_count
+    FROM credential_associations
+    WHERE entity_type <> 'asset';
+  `);
+  const refRows = Number(refCountResult.rows?.[0]?.ref_count ?? 0);
+  const nonAssetRows = Number(nonAssetCountResult.rows?.[0]?.non_asset_count ?? 0);
+  if (refRows > 0 || nonAssetRows > 0) {
+    throw new Error(
+      `Refusing to roll back 20260812110000_expand_credential_associations_entity_types: ` +
+        `credential_associations holds ${refRows} row(s) with credential_ref set and ` +
+        `${nonAssetRows} row(s) with entity_type <> 'asset', which the pre-expansion ` +
+        `schema (credential_id NOT NULL, entity_type IN ('asset')) cannot represent. ` +
+        `Resolve or delete those rows first (e.g. detach the affected Hudu refs and ` +
+        `non-asset attachments), then re-run the rollback. No schema or data was changed.`
+    );
+  }
+
   await knex.raw('DROP INDEX IF EXISTS credential_associations_ref_entity_unique;');
   await knex.raw('DROP INDEX IF EXISTS credential_associations_credential_entity_unique;');
   await knex.raw('ALTER TABLE credential_associations DROP CONSTRAINT IF EXISTS credential_associations_ref_shape_check;');
