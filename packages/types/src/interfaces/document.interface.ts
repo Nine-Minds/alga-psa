@@ -27,6 +27,11 @@ export interface IDocument extends TenantEntity {
     folder_path?: string;
     is_client_visible?: boolean;
 
+    // Render provenance (generated documents only)
+    source_template_id?: string | null;
+    source_template_version?: number | null;
+    rendered_locale?: string | null;
+
     // Preview/thumbnail system
     thumbnail_file_id?: string;
     preview_file_id?: string;
