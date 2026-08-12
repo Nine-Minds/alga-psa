@@ -297,6 +297,25 @@ describe('generated document filing', () => {
     expect(result.document_id).not.toBe('doc-1');
   });
 
+  it('still returns the stored file when filing fails, and announces nothing', async () => {
+    documentInsertMock.mockRejectedValue(new Error('documents_created_by_fkey'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const service = createPDFGenerationService(TENANT_ID);
+    const result = await service.generateAndStore({
+      invoiceId: INVOICE_ID,
+      invoiceNumber: 'INV-100',
+      userId: USER_ID,
+    });
+
+    // The bytes are what gets emailed and downloaded — filing must not take the
+    // caller down with it.
+    expect(result.file_id).toBe('file-1');
+    expect(result.document_id).toBeUndefined();
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it('files a sales order confirmation under /Clients/Sales Orders', async () => {
     const service = createPDFGenerationService(TENANT_ID);
     await service.generateAndStore({ salesOrderId: SALES_ORDER_ID, userId: USER_ID });

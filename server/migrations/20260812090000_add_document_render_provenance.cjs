@@ -16,6 +16,7 @@ exports.up = async function up(knex) {
 
   const columns = ['source_template_id', 'source_template_version', 'rendered_locale'];
   const existing = await Promise.all(columns.map((c) => knex.schema.hasColumn('documents', c)));
+  if (existing.every(Boolean)) return;
 
   await knex.schema.alterTable('documents', (table) => {
     if (!existing[0]) table.text('source_template_id').nullable();
@@ -33,6 +34,7 @@ exports.down = async function down(knex) {
 
   const columns = ['source_template_id', 'source_template_version', 'rendered_locale'];
   const existing = await Promise.all(columns.map((c) => knex.schema.hasColumn('documents', c)));
+  if (!existing.some(Boolean)) return;
 
   await knex.schema.alterTable('documents', (table) => {
     columns.forEach((column, index) => {

@@ -9,6 +9,7 @@ import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@al
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentGeneratedPayload } from '@alga-psa/workflow-streams';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- filing a generated PDF is a documents write; direct model access, as quoteActions did before this moved here
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 import {
   getTenantDefaultLocale,
@@ -237,31 +238,41 @@ export class PDFGenerationService {
       let result: StoredPdfResult = { ...fileRecord };
 
       if (target) {
-        const filed = await this.fileGeneratedDocument(knex, target, fileRecord, rendered, options.userId, reuse);
-        documentId = filed.document_id;
-        // Lost a filing race: an equivalent document already existed, so return it
-        // rather than handing back a second copy of the same artifact.
-        result = filed.reusedFile ?? { ...fileRecord, document_id: filed.document_id };
+        try {
+          const filed = await this.fileGeneratedDocument(knex, target, fileRecord, rendered, options.userId, reuse);
+          documentId = filed.document_id;
+          // Lost a filing race: an equivalent document already existed, so return it
+          // rather than handing back a second copy of the same artifact.
+          result = filed.reusedFile ?? { ...fileRecord, document_id: filed.document_id };
+        } catch (filingError) {
+          // Best-effort: the stored file is still usable (it is what gets emailed
+          // and downloaded), so a filing failure must not take the caller down
+          // with it. Without a document row there is nothing to announce, so the
+          // generated-document event is skipped too.
+          console.error(`Failed to file generated ${target.sourceType} document:`, filingError);
+        }
       }
 
-      try {
-        await publishWorkflowEvent({
-          eventType: 'DOCUMENT_GENERATED',
-          ctx: {
-            tenantId: this.tenant,
-            actor: { actorType: 'USER', actorUserId: options.userId },
-          },
-          payload: buildDocumentGeneratedPayload({
-            documentId: documentId!,
-            sourceType,
-            sourceId,
-            generatedByUserId: options.userId,
-            generatedAt: new Date().toISOString(),
-            fileName: `${fileName}.pdf`,
-          }),
-        });
-      } catch {
-        // Non-blocking
+      if (documentId) {
+        try {
+          await publishWorkflowEvent({
+            eventType: 'DOCUMENT_GENERATED',
+            ctx: {
+              tenantId: this.tenant,
+              actor: { actorType: 'USER', actorUserId: options.userId },
+            },
+            payload: buildDocumentGeneratedPayload({
+              documentId,
+              sourceType,
+              sourceId,
+              generatedByUserId: options.userId,
+              generatedAt: new Date().toISOString(),
+              fileName: `${fileName}.pdf`,
+            }),
+          });
+        } catch {
+          // Non-blocking
+        }
       }
 
       return result;
