@@ -166,6 +166,16 @@ export class PaymentService {
     }
 
     if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+      // A Checkout Session can outlive the invoice reaching a terminal status
+      // through a path other than the Stripe webhook (manual payment recording,
+      // credit application, ...). Retire any active, unexpired link for this
+      // invoice before refusing to hand out a link so the customer's old email
+      // link can never charge an already-settled invoice.
+      const activeLink = await this.findActivePaymentLink(invoiceId);
+      if (activeLink) {
+        await this.expireStalePaymentLink(activeLink, 0, 'invoice_not_payable', invoice.status);
+      }
+
       logger.debug('[PaymentService] Invoice not payable', {
         tenantId: this.tenantId,
         invoiceId,
@@ -203,16 +213,7 @@ export class PaymentService {
     // Reuse is safe only after the current payable balance has been computed.
     // Credits and prior payments can make an otherwise active Checkout Session
     // stale while its expiration time is still in the future.
-    const existingLink = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
-      .where({
-        invoice_id: invoiceId,
-        provider_type: this.provider.providerType,
-        status: 'active',
-      })
-      .where('expires_at', '>', new Date().toISOString())
-      .orderBy('created_at', 'desc')
-      .orderBy('link_id', 'asc')
-      .first();
+    const existingLink = await this.findActivePaymentLink(invoiceId);
 
     if (balanceDue <= 0) {
       if (existingLink) {
@@ -785,40 +786,65 @@ export class PaymentService {
   }
 
   /**
-   * Retires an active link whose stored amount no longer matches the invoice.
-   * The tenant-scoped database status is changed first so it cannot be reused;
-   * provider expiration is best-effort so a Stripe cleanup failure does not
-   * change the existing payment-link creation error behavior.
+   * Retires an active link whose stored amount no longer matches the invoice,
+   * or that was rendered unpayable by a terminal invoice status.
+   *
+   * The tenant-scoped database status is changed first so the row can never be
+   * reused; provider expiration then follows. A provider expiration failure is
+   * NOT swallowed: it leaves a chargeable Checkout Session live, so it is
+   * logged with the provider cause and rethrown so no replacement session is
+   * created and the caller surfaces the standard payment-link failure.
    */
   private async expireStalePaymentLink(
     link: IInvoicePaymentLink,
-    currentBalance: number
+    currentBalance: number,
+    reason: 'stale_balance' | 'invoice_not_payable' = 'stale_balance',
+    invoiceStatus?: string
   ): Promise<void> {
+    const metadata = reason === 'invoice_not_payable'
+      ? { invoice_not_payable: true, invoice_status: invoiceStatus }
+      : { stale_balance: true, stored_amount: Number(link.amount), current_balance: currentBalance };
+
     await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({ link_id: link.link_id, status: 'active' })
       .update({
         status: 'expired',
         metadata: this.knex.raw(
           `COALESCE(metadata, '{}'::jsonb) || ?::jsonb`,
-          [JSON.stringify({
-            stale_balance: true,
-            stored_amount: Number(link.amount),
-            current_balance: currentBalance,
-          })]
+          [JSON.stringify(metadata)]
         ),
       });
 
     try {
       await this.provider?.expirePaymentLink?.(link.external_link_id);
     } catch (error) {
-      logger.warn('[PaymentService] Failed to expire stale provider payment link', {
+      logger.error('[PaymentService] Failed to expire provider payment link', {
         tenantId: this.tenantId,
         invoiceId: link.invoice_id,
         linkId: link.link_id,
         externalLinkId: link.external_link_id,
+        reason,
         error,
       });
+      throw error;
     }
+  }
+
+  /**
+   * Finds the newest active, unexpired payment link for an invoice on the
+   * configured provider. Tenant-scoped: it never reads another tenant's rows.
+   */
+  private async findActivePaymentLink(invoiceId: string): Promise<IInvoicePaymentLink | null> {
+    return this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({
+        invoice_id: invoiceId,
+        provider_type: this.provider?.providerType,
+        status: 'active',
+      })
+      .where('expires_at', '>', new Date().toISOString())
+      .orderBy('created_at', 'desc')
+      .orderBy('link_id', 'asc')
+      .first();
   }
 
   /**
