@@ -51,9 +51,39 @@ describe('expoPushService', () => {
         data: {
           ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
           url: 'alga://ticket/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+          // Payload metadata only (task 29.8.46): defaults to 'normal' when the
+          // caller does not supply the configured priority.
+          priority: 'normal',
         },
         priority: 'high',
       });
+    });
+
+    it('carries the configured priority as payload metadata (task 29.8.46)', () => {
+      const msg = buildTicketPushMessage({
+        expoPushToken: 'ExponentPushToken[abc]',
+        title: 'Ticket Assigned',
+        body: 'You were assigned ticket #42',
+        ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        tenant: 'tenant-1',
+        priority: 'high',
+      });
+
+      // The in-app priority rides in data as metadata; Expo/OS delivery priority
+      // stays 'high' regardless.
+      expect(msg.data.priority).toBe('high');
+      expect(msg.priority).toBe('high');
+
+      const low = buildTicketPushMessage({
+        expoPushToken: 'ExponentPushToken[abc]',
+        title: 'Ticket Assigned',
+        body: 'You were assigned ticket #42',
+        ticketId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        tenant: 'tenant-1',
+        priority: 'low',
+      });
+      expect(low.data.priority).toBe('low');
+      expect(low.priority).toBe('high');
     });
   });
 

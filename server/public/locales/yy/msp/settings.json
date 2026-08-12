@@ -1494,7 +1494,8 @@
         "description": "55555",
         "enabled": "55555",
         "defaultForUsers": "55555",
-        "actions": "55555"
+        "actions": "55555",
+        "priority": "55555"
       },
       "actions": {
         "enableAllSubtypes": "55555",
@@ -1506,7 +1507,8 @@
         "discardChanges": "55555",
         "saving": "55555",
         "saveChanges": "55555",
-        "cancel": "55555"
+        "cancel": "55555",
+        "resetToDefault": "55555"
       },
       "intro": "55555",
       "enabledLabel": "55555",
@@ -1517,6 +1519,11 @@
       "discardDialog": {
         "title": "55555",
         "message": "55555"
+      },
+      "priority": {
+        "high": "55555",
+        "normal": "55555",
+        "low": "55555"
       }
     }
   },

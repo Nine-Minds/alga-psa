@@ -10,6 +10,12 @@ export interface TicketPushParams {
   body: string;
   ticketId: string;
   tenant: string;
+  /**
+   * Configured in-app notification priority (high|normal|low), carried to the
+   * mobile app as payload metadata only (task 29.8.46). This does NOT change
+   * Expo/OS delivery priority — that stays 'high' below.
+   */
+  priority?: 'high' | 'normal' | 'low';
 }
 
 export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessage {
@@ -21,7 +27,10 @@ export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessag
     data: {
       ticketId: params.ticketId,
       url: `alga://ticket/${params.ticketId}`,
+      // Payload metadata so the mobile app can render/sort by priority.
+      priority: params.priority ?? 'normal',
     },
+    // Expo/OS delivery priority is intentionally unchanged (out of scope).
     priority: 'high' as const,
   };
 }

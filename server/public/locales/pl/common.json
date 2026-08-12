@@ -1360,5 +1360,9 @@
       "description": "Ta strona nie jest dostępna w bieżącej wersji produktu.",
       "cta": "Przejdź do pulpitu"
     }
+  },
+  "notifications": {
+    "needsAttention": "Wymaga uwagi ({{count}})",
+    "lowPriority": "Niski priorytet ({{count}})"
   }
 }

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useSession } from 'next-auth/react';
 import { useInternalNotifications } from '../hooks/useInternalNotifications';
@@ -16,10 +17,15 @@ interface NotificationBellProps {
 function NotificationBellInner({ tenant, userId, className = '' }: { tenant: string; userId: string; className?: string }) {
   const [open, setOpen] = useState(false);
 
+  // Configurable notification priorities (task 29.8.46) — every user-visible
+  // change is gated behind this flag. Flag off reproduces today's markup exactly.
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+
   // Use the internal notifications hook
   const {
     notifications,
     unreadCount,
+    highUnreadCount,
     isConnected,
     isLoading,
     error,
@@ -33,6 +39,13 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
     enablePolling: true
   });
 
+  // Flag on: the badge counts unread *high* only (attention-red); when no high
+  // items are unread but normal/low unread exist, a subtle neutral dot renders
+  // instead of a number. Flag off: today's total-count badge.
+  const showHighBadge = priorityEnabled && highUnreadCount > 0;
+  const showNeutralDot = priorityEnabled && highUnreadCount === 0 && unreadCount > 0;
+  const ariaUnread = priorityEnabled ? highUnreadCount : unreadCount;
+
   return (
     <DropdownMenu.Root open={open} onOpenChange={setOpen}>
       <DropdownMenu.Trigger asChild>
@@ -41,13 +54,26 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
           variant="ghost"
           size="icon"
           className={`relative h-9 w-9 ${className}`}
-          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+          aria-label={`Notifications${ariaUnread > 0 ? ` (${ariaUnread} unread)` : ''}`}
         >
           <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-white bg-red-500 rounded-full border-2 border-[rgb(var(--color-card))]">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
+          {priorityEnabled ? (
+            <>
+              {showHighBadge && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-white bg-rose-600 rounded-full border-2 border-[rgb(var(--color-card))]">
+                  {highUnreadCount > 99 ? '99+' : highUnreadCount}
+                </span>
+              )}
+              {showNeutralDot && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[rgb(var(--color-text-400))] rounded-full border border-[rgb(var(--color-card))]" title="Unread notifications" />
+              )}
+            </>
+          ) : (
+            unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-white bg-red-500 rounded-full border-2 border-[rgb(var(--color-card))]">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )
           )}
           {!isConnected && (
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-[rgb(var(--color-card))]" title="Reconnecting..." />
@@ -64,6 +90,7 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
           <NotificationDropdown
             notifications={notifications}
             unreadCount={unreadCount}
+            priorityEnabled={priorityEnabled}
             isLoading={isLoading}
             error={error}
             isConnected={isConnected}

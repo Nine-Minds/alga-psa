@@ -750,7 +750,13 @@
       "saveError": "55555",
       "noCategories": "55555",
       "emailPreferences": "55555",
-      "internalPreferences": "55555"
+      "internalPreferences": "55555",
+      "priority": {
+        "high": "55555",
+        "normal": "55555",
+        "low": "55555"
+      },
+      "resetPriority": "55555"
     },
     "categories": {
       "tickets": "55555",
@@ -759,6 +765,8 @@
       "projects": "55555",
       "system": "55555"
     },
+    "needsAttention": "55555 {{count}} 55555",
+    "lowPriority": "55555 {{count}} 55555",
     "filters": {
       "title": "55555",
       "description": "55555",
@@ -769,6 +777,9 @@
       "allCategories": "55555",
       "categoryPlaceholder": "55555",
       "dateRangeLabel": "55555",
+      "priorityLabel": "55555",
+      "allPriorities": "55555",
+      "priorityPlaceholder": "55555",
       "reset": "55555",
       "cancel": "55555",
       "apply": "55555"

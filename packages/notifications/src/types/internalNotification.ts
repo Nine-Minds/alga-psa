@@ -25,6 +25,12 @@ export interface InternalNotificationSubtype {
   is_default_enabled: boolean;
   available_for_client_portal: boolean;
   display_title?: string;
+  /** System default priority for this subtype (from internal_notification_subtypes). */
+  default_priority?: InternalNotificationPriority;
+  /** Tenant admin override, if any (from tenant_internal_notification_subtype_settings). NULL = inherit default. */
+  tenant_priority?: InternalNotificationPriority | null;
+  /** Effective priority to display: tenant override ?? default. */
+  effective_priority?: InternalNotificationPriority;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +48,13 @@ export interface InternalNotificationTemplate {
 
 export type InternalNotificationType = 'info' | 'success' | 'warning' | 'error';
 
+/**
+ * Configurable priority tier for an in-app notification.
+ * Resolved from user override ?? tenant override ?? subtype default ?? 'normal'
+ * and stamped onto each notification at creation (task 29.8.46).
+ */
+export type InternalNotificationPriority = 'high' | 'normal' | 'low';
+
 export type InternalNotificationDeliveryStatus = 'pending' | 'delivered' | 'failed';
 
 export interface InternalNotification {
@@ -53,6 +66,7 @@ export interface InternalNotification {
   title: string;
   message: string;
   type: InternalNotificationType;
+  priority: InternalNotificationPriority;
   category: string | null;
   link: string | null;
   metadata: Record<string, any> | null;
@@ -106,12 +120,21 @@ export interface InternalNotificationListResponse {
   notifications: InternalNotification[];
   total: number;
   unread_count: number;
+  /** Unread count of `high`-priority notifications, so the bell badge can render high-only. */
+  unread_high?: number;
   has_more: boolean;
 }
 
 export interface UnreadCountResponse {
   unread_count: number;
   by_category?: Record<string, number>;
+  /**
+   * Unread count split by priority tier so the bell can render a high-only
+   * badge without a second round-trip. `high` is the unread-high count;
+   * `total` mirrors `unread_count` for a symmetric `{ total, high }` shape.
+   */
+  total?: number;
+  high?: number;
 }
 
 export interface TemplateRenderContext {
@@ -134,6 +157,11 @@ export interface UserInternalNotificationPreference {
   category_id: number | null;
   subtype_id: number | null;
   is_enabled: boolean;
+  /**
+   * Per-user priority override. Meaningful on subtype rows only (subtype_id set);
+   * category rows keep this NULL. NULL = inherit tenant override / subtype default.
+   */
+  priority?: InternalNotificationPriority | null;
   created_at: string;
   updated_at: string;
 }
@@ -144,5 +172,11 @@ export interface UpdateUserInternalNotificationPreferenceRequest {
   category_id?: number | null;
   subtype_id?: number | null;
   is_enabled: boolean;
+  /**
+   * When present, sets the per-user priority override on a subtype row.
+   * Pass `null` to clear the override (reset to tenant/default). `undefined`
+   * leaves any existing override untouched.
+   */
+  priority?: InternalNotificationPriority | null;
 }
 

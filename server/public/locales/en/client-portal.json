@@ -750,7 +750,13 @@
       "saveError": "Failed to save preference",
       "noCategories": "No notification categories available",
       "emailPreferences": "Email preferences",
-      "internalPreferences": "Internal preferences"
+      "internalPreferences": "Internal preferences",
+      "priority": {
+        "high": "High",
+        "normal": "Normal",
+        "low": "Low"
+      },
+      "resetPriority": "Reset"
     },
     "categories": {
       "tickets": "Tickets",
@@ -759,6 +765,8 @@
       "projects": "Projects",
       "system": "System"
     },
+    "needsAttention": "Needs attention ({{count}})",
+    "lowPriority": "Low priority ({{count}})",
     "filters": {
       "title": "Filter Notifications",
       "description": "Select criteria to filter notification activities.",
@@ -769,6 +777,9 @@
       "allCategories": "All Categories",
       "categoryPlaceholder": "Select Category...",
       "dateRangeLabel": "Date Range",
+      "priorityLabel": "Priority",
+      "allPriorities": "All Priorities",
+      "priorityPlaceholder": "Select Priority...",
       "reset": "Reset",
       "cancel": "Cancel",
       "apply": "Apply Filters"
