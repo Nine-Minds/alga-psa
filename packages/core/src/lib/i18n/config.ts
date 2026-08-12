@@ -217,6 +217,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities'],
+  '/msp/credentials': ['common', 'msp/core', 'msp/credentials'],
 } as const;
 
 /**

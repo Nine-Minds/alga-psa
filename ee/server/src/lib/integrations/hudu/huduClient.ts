@@ -23,6 +23,7 @@ import type {
   HuduAssetLayoutDetail,
   HuduArticle,
   HuduAssetPassword,
+  HuduAssetPasswordWriteInput,
 } from './contracts';
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
@@ -179,6 +180,37 @@ export class HuduClient {
     return data.asset_password;
   }
 
+  /**
+   * Create an asset_password (write-through). The value-bearing fields
+   * (`password`, `otp_secret`) are only ever sent over the wire and are never
+   * logged or cached. Returns the created record (metadata + echo of inputs).
+   */
+  async createAssetPassword(input: HuduAssetPasswordWriteInput): Promise<HuduAssetPassword> {
+    const data = await this.request<{ asset_password: HuduAssetPassword }>(
+      'post',
+      '/asset_passwords',
+      undefined,
+      { asset_password: input }
+    );
+    return data.asset_password;
+  }
+
+  /** Update an asset_password in place. Same wire contract as create. */
+  async updateAssetPassword(id: number, input: Partial<HuduAssetPasswordWriteInput>): Promise<HuduAssetPassword> {
+    const data = await this.request<{ asset_password: HuduAssetPassword }>(
+      'put',
+      `/asset_passwords/${id}`,
+      undefined,
+      { asset_password: input }
+    );
+    return data.asset_password;
+  }
+
+  /** Delete an asset_password. Errors map to the usual typed Hudu kinds. */
+  async deleteAssetPassword(id: number): Promise<void> {
+    await this.request<Record<string, never>>('delete', `/asset_passwords/${id}`);
+  }
+
   /** Asset layouts as minimal {id, name} reference entries (single request). */
   async listAssetLayouts(): Promise<HuduAssetLayout[]> {
     const data = await this.request<{ asset_layouts: HuduAssetLayout[] }>('get', '/asset_layouts');
@@ -280,16 +312,17 @@ export class HuduClient {
    * Throws HuduRequestError (carrying a redacted HuduError) on failure.
    */
   private async request<T>(
-    method: 'get',
+    method: 'get' | 'post' | 'put' | 'delete',
     url: string,
-    params?: Record<string, string | number>
+    params?: Record<string, string | number>,
+    data?: unknown
   ): Promise<T> {
     let attempt = 0;
 
     for (;;) {
       attempt += 1;
       try {
-        const response = await this.axiosInstance.request<T>({ method, url, params });
+        const response = await this.axiosInstance.request<T>({ method, url, params, data });
         return response.data;
       } catch (error) {
         const huduError = toHuduError(error);

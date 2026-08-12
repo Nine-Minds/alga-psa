@@ -360,6 +360,55 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
    documented for CE/appliance (K8s secret on appliance); rollout note to
    create the transit key before enabling the flag in hosted.
 
+## Rollout / ops notes (step 7)
+
+### Vault Transit (hosted EE)
+
+- The credentials vault uses a **dedicated** transit key
+  `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` (default `alga-credentials`), separate
+  from the extension/installConfig transit usage so vault rows never share a
+  key with arbitrary extension secrets.
+- **Hosted values wiring:** add `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` to
+  `hosted.values.yaml` (the value is only referenced by name; the key's
+  material lives in Vault). Before enabling the `release-v1.5-feature` flag in
+  hosted, create the transit key with key-derivation allowed:
+
+  ```sh
+  vault write -f transit/keys/alga-credentials \
+    deletion_allowed=false \
+    allow_plaintext_backup=false \
+    derived=true
+  ```
+
+- The mount (`ALGA_VAULT_TRANSIT_MOUNT`, default `transit`), address
+  (`ALGA_VAULT_ADDR`/`VAULT_ADDR`) and token (`ALGA_VAULT_TOKEN`/`VAULT_TOKEN`)
+  follow the existing `installConfig.ts` precedent.
+- Rows written while transit is configured are tagged `vault-transit:v1`.
+  Decryption dispatches on the stored tag, so rows written before transit was
+  wired (tagged `aes-256-gcm:v1`) keep decrypting.
+
+### AES-256-GCM (CE / appliance / self-host)
+
+- The AES fallback derives a 32-byte key (SHA-256) from
+  `getSecret('credential_encryption_key', 'CREDENTIAL_ENCRYPTION_KEY')`.
+  **There is deliberately no fallback to `NEXTAUTH_SECRET`.** If neither
+  transit is configured nor this key is present, credential writes fail with a
+  clear operator error (`credential_encryption_key` / `CREDENTIAL_ENCRYPTION_KEY`).
+- **CE docker:** provide the key as a Docker secret file
+  (`secrets/credential_encryption_key`) or env var `CREDENTIAL_ENCRYPTION_KEY`.
+- **Appliance (K8s):** ship the key as a Kubernetes secret
+  `credential_encryption_key` surfaced to the pod through the existing
+  secret-provider plumbing (mounted as a file resolved by `getSecret`).
+
+### Rollout order (hosted)
+
+1. Apply the migrations (tables + permission seed).
+2. Create the transit key in Vault (above) and add the env name to
+   `hosted.values.yaml`.
+3. Enable the `release-v1.5-feature` flag in PostHog.
+4. The nav item / client tab / asset section appear automatically (EE + Pro
+   tier + flag).
+
 ## Explicitly out of scope (future cards)
 
 - Password folders (Hudu folder names shown as display metadata only) and

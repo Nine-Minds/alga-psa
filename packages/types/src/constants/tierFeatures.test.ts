@@ -52,6 +52,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
         TIER_FEATURES.OPPORTUNITY_MANAGEMENT,
         TIER_FEATURES.CONTRACT_SIMULATOR,
+        TIER_FEATURES.CREDENTIALS,
       ]);
     });
   });
@@ -88,6 +89,12 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
       expect(tierHasFeature('pro', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(true);
     });
+
+    it('credentials requires pro; essentials and solo are locked out', () => {
+      expect(tierHasFeature('essentials', TIER_FEATURES.CREDENTIALS)).toBe(false);
+      expect(tierHasFeature('solo', TIER_FEATURES.CREDENTIALS)).toBe(false);
+      expect(tierHasFeature('pro', TIER_FEATURES.CREDENTIALS)).toBe(true);
+    });
   });
 
   describe('FEATURE_MINIMUM_TIER', () => {
@@ -112,6 +119,7 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]).toBe('pro');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CREDENTIALS]).toBe('pro');
     });
   });
 });

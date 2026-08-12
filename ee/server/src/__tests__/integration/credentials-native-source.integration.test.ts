@@ -1,0 +1,343 @@
+/**
+ * Native credentials store integration tests against the REAL dev DB:
+ * CRUD round-trip, tenant isolation, restricted-row hiding in list for
+ * non-granted users, reveal writes a fail-closed audit, and the permission
+ * seed migration is idempotent. Follows the hudu-company-mappings direct-DB
+ * pattern: random tenant + cleanup, admin connection (RLS enforced by the
+ * scoped queries' tenant predicates).
+ */
+
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import knexFactory, { type Knex } from 'knex';
+import fs from 'node:fs';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { config as loadDotEnv } from 'dotenv';
+import type { IUserWithRoles } from '@alga-psa/types';
+
+import { tenantDb } from '@alga-psa/db';
+
+const require = createRequire(import.meta.url);
+const repoRoot = path.resolve(process.cwd(), '..', '..');
+
+// Load the wired-in dev DB connection (server/.env.local) into the test env.
+loadDotEnv({ path: path.join(repoRoot, 'server', '.env.local'), override: true });
+
+// The native store encrypts with AES-256-GCM unless Vault Transit is configured;
+// supply a test key (never NEXTAUTH_SECRET — that fallback deliberately does
+// not exist).
+process.env.CREDENTIAL_ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY || 'integration-test-credential-key';
+delete process.env.ALGA_VAULT_ADDR;
+delete process.env.VAULT_ADDR;
+
+function readPostgresPassword(): string {
+  try {
+    return fs.readFileSync(path.join(repoRoot, 'secrets', 'postgres_password'), 'utf8').trim();
+  } catch {
+    return process.env.DB_PASSWORD_ADMIN || 'postpass123';
+  }
+}
+
+/** Connect to the dev DB the same way the other direct-DB integration tests do. */
+async function createDevDb(): Promise<Knex> {
+  return knexFactory({
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: readPostgresPassword(),
+      database: process.env.DB_NAME_SERVER || 'server',
+    },
+    pool: { min: 1, max: 1 },
+  });
+}
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+let db: Knex;
+let tenantId: string;
+let clientId: string;
+let ownerUser: string;
+let grantedUser: string;
+let strangerUser: string;
+
+const TEST_TABLES = ['credentials', 'credential_associations', 'credential_access_grants', 'audit_logs'];
+
+async function seedUsers(tenant: string): Promise<void> {
+  const insert = (username: string): Promise<string> => {
+    const userId = randomUUID();
+    return db('users')
+      .insert({
+        tenant,
+        user_id: userId,
+        username,
+        email: `${username}@example.test`,
+        hashed_password: 'hashed_password_here',
+        is_inactive: false,
+        user_type: 'internal',
+      })
+      .returning('user_id')
+      .then((rows: Array<{ user_id: string }>) => rows[0].user_id);
+  };
+  ownerUser = await insert('owner-user');
+  grantedUser = await insert('granted-user');
+  strangerUser = await insert('stranger-user');
+}
+
+async function cleanCredentialTables(): Promise<void> {
+  for (const table of TEST_TABLES) {
+    await db(table).where({ tenant: tenantId }).del().catch(() => undefined);
+  }
+}
+
+function userFor(userId: string): IUserWithRoles {
+  return {
+    user_id: userId,
+    tenant: tenantId,
+    username: userId,
+    email: `${userId}@example.test`,
+    is_inactive: false,
+    user_type: 'internal',
+    roles: [],
+  };
+}
+
+import {
+  NativeCredentialSource,
+  nativeCredentialSource,
+} from '../../lib/credentials/nativeSource';
+
+describe('native credentials store — DB integration', () => {
+  const HOOK_TIMEOUT = 120_000;
+
+  beforeAll(async () => {
+    db = await createDevDb();
+    await db.raw('select 1');
+
+    tenantId = randomUUID();
+    await db('tenants').insert({
+      tenant: tenantId,
+      client_name: 'Credentials Integration Tenant',
+      email: `credentials-it-${tenantId}@example.test`,
+    });
+    const [client] = await db('clients')
+      .insert({ tenant: tenantId, client_name: 'Acme Corp' })
+      .returning('client_id');
+    clientId = client.client_id;
+    await seedUsers(tenantId);
+  }, HOOK_TIMEOUT);
+
+  afterAll(async () => {
+    if (db && tenantId) {
+      await cleanCredentialTables();
+      await db('clients').where({ tenant: tenantId }).del().catch(() => undefined);
+      await db('users').where({ tenant: tenantId }).del().catch(() => undefined);
+      await db('tenants').where({ tenant: tenantId }).del().catch(() => undefined);
+    }
+    await db?.destroy().catch(() => undefined);
+  }, HOOK_TIMEOUT);
+
+  beforeEach(async () => {
+    await cleanCredentialTables();
+  });
+
+  it('creates an encrypted row and lists only rows the user may see', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Domain Admin', username: 'admin@example.com', password: 'P@ssw0rd!', url: 'https://portal.example.com' }
+    );
+
+    expect(summary).toMatchObject({
+      source: 'alga',
+      clientId,
+      name: 'Domain Admin',
+      username: 'admin@example.com',
+      isRestricted: false,
+    });
+    // The summary never carries the plaintext.
+    expect(JSON.stringify(summary)).not.toContain('P@ssw0rd!');
+
+    const rows = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+    expect(rows).toHaveLength(1);
+    // Ciphertext only — never plaintext in the DB.
+    expect(String(rows[0].password_ciphertext)).not.toContain('P@ssw0rd!');
+    expect(['vault-transit:v1', 'aes-256-gcm:v1']).toContain(rows[0].encryption_scheme);
+  });
+
+  it('hides restricted rows from non-granted users in list/search', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Secret Router Admin', password: 'hunter2' }
+    );
+
+    // Restrict to the granted user.
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [{ subjectType: 'user', subjectId: grantedUser }] }
+    );
+
+    // Owner sees it.
+    const ownerList = await source.list(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { search: 'Router' }
+    );
+    expect(ownerList.map((row) => row.id)).toContain(summary.id);
+
+    // Granted user sees it.
+    const grantedList = await source.list(
+      { tenant: tenantId, userId: grantedUser, user: userFor(grantedUser) },
+      { search: 'Router' }
+    );
+    expect(grantedList.map((row) => row.id)).toContain(summary.id);
+
+    // Stranger sees nothing — hidden entirely, not shown-but-locked.
+    const strangerList = await source.list(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      { search: 'Router' }
+    );
+    expect(strangerList).toHaveLength(0);
+
+    // And an unrestricted credential is visible to everyone.
+    const open = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Public Printer Login', password: 'open' }
+    );
+    const openList = await source.list(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      { search: 'Printer' }
+    );
+    expect(openList.map((row) => row.id)).toContain(open.id);
+  });
+
+  it('reveals only to an authorized user and writes a fail-closed audit row', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'VPN Gateway', password: 'vpn-secret' }
+    );
+
+    // Owner reveal succeeds and writes an audit row.
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    expect(reveal.state).toBe('ok');
+    expect(reveal.password).toBe('vpn-secret');
+
+    const audits = await db('audit_logs')
+      .where({ tenant: tenantId })
+      .where('operation', 'credential_reveal');
+    expect(audits.length).toBeGreaterThan(0);
+    // Audit details never contain the value.
+    for (const audit of audits) {
+      expect(JSON.stringify(audit)).not.toContain('vpn-secret');
+    }
+  });
+
+  it('rejects reveal to a user with no grant on a restricted row', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Root Password', password: 'root-secret' }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      summary.id
+    );
+    expect(reveal.state).toBe('no_access');
+    expect(reveal.password).toBeUndefined();
+  });
+
+  it('update re-encrypts values and delete removes the row + audit trails', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Backup Account', password: 'old-password' }
+    );
+
+    const updated = await source.update(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { password: 'new-password', name: 'Backup Account (rotated)' }
+    );
+    expect(updated.name).toBe('Backup Account (rotated)');
+
+    const reveal = await source.reveal(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    expect(reveal.password).toBe('new-password');
+
+    await source.remove(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id
+    );
+    const rows = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+    expect(rows).toHaveLength(0);
+  });
+
+  it('isolates rows across tenants (no cross-tenant leakage)', async () => {
+    const otherTenant = randomUUID();
+    const otherClient = randomUUID();
+    await db('tenants').insert({
+      tenant: otherTenant,
+      client_name: 'Other Tenant',
+      email: `other-${otherTenant}@example.test`,
+    });
+    await db('clients').insert({ tenant: otherTenant, client_id: otherClient, client_name: 'Other Client' });
+    const otherUserId = randomUUID();
+    await db('users').insert({
+      tenant: otherTenant,
+      user_id: otherUserId,
+      username: 'other-tenant-user',
+      email: `other-user-${otherTenant}@example.test`,
+      hashed_password: 'hashed_password_here',
+      is_inactive: false,
+      user_type: 'internal',
+    });
+
+    try {
+      const otherSource = new NativeCredentialSource();
+      const otherSummary = await otherSource.create(
+        { tenant: otherTenant, userId: otherUserId, user: userFor(otherUserId) },
+        { clientId: otherClient, name: 'Other Tenant Secret', password: 'other-secret' }
+      );
+
+      // Listing from the primary tenant never surfaces the other tenant's row.
+      const primaryList = await nativeCredentialSource.list(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        {}
+      );
+      expect(primaryList.map((row) => row.id)).not.toContain(otherSummary.id);
+    } finally {
+      await db('credentials').where({ tenant: otherTenant }).del().catch(() => undefined);
+      await db('clients').where({ tenant: otherTenant }).del().catch(() => undefined);
+      await db('users').where({ tenant: otherTenant }).del().catch(() => undefined);
+      await db('tenants').where({ tenant: otherTenant }).del().catch(() => undefined);
+    }
+  });
+
+  it('the permission seed migration is idempotent', async () => {
+    const migration = require(
+      path.resolve(repoRoot, 'server', 'migrations', '20260811110000_add_credential_permissions.cjs')
+    );
+    await migration.up(db);
+    await migration.up(db);
+
+    const count = await db('permissions').where({ tenant: tenantId, resource: 'credential' }).count('* as c').first();
+    expect(Number(count?.c)).toBe(5);
+  });
+});
