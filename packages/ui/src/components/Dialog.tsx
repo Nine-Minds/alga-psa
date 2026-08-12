@@ -168,7 +168,7 @@ export function Dialog({
 
   // Guard against the duplicated-heading pattern: a `title` prop plus a child DialogTitle
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production' || !isOpen || !title) return;
+    if (process.env.NODE_ENV !== 'development' || !isOpen || !title) return;
     if (!containsDialogTitle(children)) return;
 
     console.warn(
