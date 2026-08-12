@@ -728,6 +728,9 @@
       "allCategories": "Todas las categorías",
       "categoryPlaceholder": "Seleccione una categoría...",
       "dateRangeLabel": "Intervalo de fechas",
+      "priorityLabel": "Prioridad",
+      "allPriorities": "Todas las prioridades",
+      "priorityPlaceholder": "Seleccione una prioridad...",
       "reset": "Restablecer",
       "cancel": "Cancelar",
       "apply": "Aplicar filtros"

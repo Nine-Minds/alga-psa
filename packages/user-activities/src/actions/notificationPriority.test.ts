@@ -20,4 +20,10 @@ describe('mapStoredNotificationPriority (task 29.8.46 activities mapper)', () =>
   it('falls back to legacy when the stored value is not a recognized tier', () => {
     expect(mapStoredNotificationPriority('bogus', 'warning')).toBe(ActivityPriority.MEDIUM);
   });
+
+  it('preserves legacy type mapping while the feature flag is off', () => {
+    expect(mapStoredNotificationPriority('low', 'error', false)).toBe(ActivityPriority.HIGH);
+    expect(mapStoredNotificationPriority('high', 'warning', false)).toBe(ActivityPriority.MEDIUM);
+    expect(mapStoredNotificationPriority('high', 'info', false)).toBe(ActivityPriority.LOW);
+  });
 });

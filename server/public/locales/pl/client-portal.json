@@ -730,6 +730,9 @@
       "allCategories": "Wszystkie kategorie",
       "categoryPlaceholder": "Wybierz kategorię...",
       "dateRangeLabel": "Zakres dat",
+      "priorityLabel": "Priorytet",
+      "allPriorities": "Wszystkie priorytety",
+      "priorityPlaceholder": "Wybierz priorytet...",
       "reset": "Resetuj",
       "cancel": "Anuluj",
       "apply": "Zastosuj filtry"

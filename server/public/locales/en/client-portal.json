@@ -777,6 +777,9 @@
       "allCategories": "All Categories",
       "categoryPlaceholder": "Select Category...",
       "dateRangeLabel": "Date Range",
+      "priorityLabel": "Priority",
+      "allPriorities": "All Priorities",
+      "priorityPlaceholder": "Select Priority...",
       "reset": "Reset",
       "cancel": "Cancel",
       "apply": "Apply Filters"

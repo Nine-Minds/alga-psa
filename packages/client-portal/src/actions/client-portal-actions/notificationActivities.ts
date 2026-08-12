@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
@@ -20,15 +21,18 @@ import {
 // is absent (rows created before the backfill).
 function getNotificationPriority(
   storedPriority: string | null | undefined,
-  type: string | null | undefined
+  type: string | null | undefined,
+  priorityFeatureEnabled: boolean
 ): ActivityPriority {
-  switch (storedPriority) {
-    case 'high':
-      return ActivityPriority.HIGH;
-    case 'normal':
-      return ActivityPriority.MEDIUM;
-    case 'low':
-      return ActivityPriority.LOW;
+  if (priorityFeatureEnabled) {
+    switch (storedPriority) {
+      case 'high':
+        return ActivityPriority.HIGH;
+      case 'normal':
+        return ActivityPriority.MEDIUM;
+      case 'low':
+        return ActivityPriority.LOW;
+    }
   }
   switch (type) {
     case 'error':
@@ -51,6 +55,10 @@ export const fetchNotificationActivities = withAuth(async (
   filters: ActivityFilters = {},
 ): Promise<NotificationActivity[]> => {
   const { knex } = await createTenantKnex();
+  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+    tenantId: tenant,
+    userId: user.user_id,
+  });
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const notifications = await tenantDb(trx, tenant).table('internal_notifications')
@@ -83,7 +91,7 @@ export const fetchNotificationActivities = withAuth(async (
       description: notification.message,
       type: ActivityType.NOTIFICATION,
       status: notification.type || 'info',
-      priority: getNotificationPriority(notification.priority, notification.type),
+      priority: getNotificationPriority(notification.priority, notification.type, priorityFeatureEnabled),
       assignedTo: notification.user_id ? [notification.user_id] : [],
       sourceId: String(notification.internal_notification_id),
       sourceType: ActivityType.NOTIFICATION,

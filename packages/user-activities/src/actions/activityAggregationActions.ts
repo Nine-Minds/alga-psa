@@ -1432,145 +1432,144 @@ function sortActivities(
   });
 }
 
-/**
- * Fetch notification activities for a user
- */
+function applyNotificationActivityFilters(
+  queryBuilder: Knex.QueryBuilder,
+  filters: ActivityFilters,
+  priorityFeatureEnabled: boolean
+): void {
+  if (filters.isClosed === false) {
+    queryBuilder.where('internal_notifications.is_read', false);
+  } else if (filters.isClosed === true) {
+    queryBuilder.where('internal_notifications.is_read', true);
+  }
+
+  if (filters.search) {
+    queryBuilder.where('internal_notifications.category', filters.search);
+  }
+  if (filters.dateRangeStart) {
+    queryBuilder.where('internal_notifications.created_at', '>=', filters.dateRangeStart);
+  }
+  if (filters.dateRangeEnd) {
+    queryBuilder.where('internal_notifications.created_at', '<=', filters.dateRangeEnd);
+  }
+
+  if (!filters.priority?.length) return;
+
+  if (priorityFeatureEnabled) {
+    const storedPriorities = filters.priority.map((priority) =>
+      priority === ActivityPriority.MEDIUM ? 'normal' : priority
+    );
+    queryBuilder.whereIn('internal_notifications.priority', storedPriorities);
+    return;
+  }
+
+  const legacyTypes: string[] = [];
+  if (filters.priority.includes(ActivityPriority.HIGH)) legacyTypes.push('error');
+  if (filters.priority.includes(ActivityPriority.MEDIUM)) legacyTypes.push('warning');
+  const includesLegacyLow = filters.priority.includes(ActivityPriority.LOW);
+
+  queryBuilder.where(function legacyPriorityFilter() {
+    if (legacyTypes.length > 0) {
+      this.whereIn('internal_notifications.type', legacyTypes);
+    }
+    if (includesLegacyLow) {
+      const addLowClause = legacyTypes.length > 0 ? this.orWhere.bind(this) : this.where.bind(this);
+      addLowClause(function legacyLowPriority() {
+        this.whereNull('internal_notifications.type')
+          .orWhereNotIn('internal_notifications.type', ['error', 'warning']);
+      });
+    }
+  });
+}
+
+function mapNotificationActivity(
+  notification: any,
+  priorityFeatureEnabled: boolean
+): NotificationActivity {
+  const priority = mapStoredNotificationPriority(
+    notification.priority,
+    notification.type,
+    priorityFeatureEnabled
+  );
+  const toIsoString = (value: unknown): string => {
+    const parsed = value ? new Date(value as string | number | Date) : new Date();
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+  };
+
+  return {
+    id: notification.internal_notification_id.toString(),
+    title: notification.title,
+    description: notification.message,
+    type: ActivityType.NOTIFICATION,
+    status: notification.type || 'info',
+    priority,
+    assignedTo: [notification.user_id],
+    sourceId: notification.internal_notification_id.toString(),
+    sourceType: ActivityType.NOTIFICATION,
+    notificationId: notification.internal_notification_id,
+    templateName: notification.template_name,
+    message: notification.message,
+    isRead: notification.is_read,
+    readAt: notification.read_at,
+    link: notification.link,
+    metadata: notification.metadata,
+    category: notification.category,
+    actions: [
+      { id: 'view', label: 'View Details' },
+      { id: 'mark-read', label: notification.is_read ? 'Mark Unread' : 'Mark Read' }
+    ],
+    tenant: notification.tenant,
+    createdAt: toIsoString(notification.created_at),
+    updatedAt: toIsoString(notification.updated_at)
+  };
+}
+
+function buildNotificationActivitiesQuery(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  filters: ActivityFilters,
+  priorityFeatureEnabled: boolean
+): Knex.QueryBuilder {
+  return tenantDb(trx, tenant).table('internal_notifications')
+    .where('internal_notifications.user_id', userId)
+    .whereNull('internal_notifications.deleted_at')
+    .modify((queryBuilder) => {
+      applyNotificationActivityFilters(queryBuilder, filters, priorityFeatureEnabled);
+    });
+}
+
+/** Fetch notification activities for a user. */
 export async function fetchNotificationActivities(
   userId: string,
   tenantId: string,
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
-    if (filters.clientId) {
-      return [];
-    }
+    if (filters.clientId) return [];
 
     const { knex: db, tenant } = await createTenantKnex(tenantId);
-    if (!tenant) {
-      throw new Error("Tenant is required");
-    }
-
-    // Query for notifications for the user
-    const notifications = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, tenant).table("internal_notifications")
-        .where("internal_notifications.user_id", userId)
-        .whereNull("internal_notifications.deleted_at")
-        .modify(function(queryBuilder) {
-          // Apply read/unread filter
-          if (filters.isClosed === false) {
-            // Show unread only (default)
-            queryBuilder.where("internal_notifications.is_read", false);
-          } else if (filters.isClosed === true) {
-            // Show read only
-            queryBuilder.where("internal_notifications.is_read", true);
-          }
-          // If isClosed is undefined, show all
-
-          // Apply category filter (using search field as category)
-          if (filters.search) {
-            queryBuilder.where("internal_notifications.category", filters.search);
-          }
-
-          // Apply date range filter
-          if (filters.dateRangeStart) {
-            queryBuilder.where("internal_notifications.created_at", ">=", filters.dateRangeStart);
-          }
-          if (filters.dateRangeEnd) {
-            queryBuilder.where("internal_notifications.created_at", "<=", filters.dateRangeEnd);
-          }
-        })
-        .orderBy("internal_notifications.created_at", "desc");
+    if (!tenant) throw new Error('Tenant is required');
+    const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+      tenantId: tenant,
+      userId,
     });
 
-    // Convert to activities
-    const activities: NotificationActivity[] = notifications.map((notification: any) => {
-      // Use the stored, configuration-resolved priority (task 29.8.46), falling
-      // back to the legacy type→priority derivation only when it is absent.
-      const priority: ActivityPriority = mapStoredNotificationPriority(
-        notification.priority,
-        notification.type
-      );
+    const notifications = await withTransaction(db, async (trx: Knex.Transaction) =>
+      buildNotificationActivitiesQuery(trx, tenant, userId, filters, priorityFeatureEnabled)
+        .orderBy('internal_notifications.created_at', 'desc')
+    );
+    const activities = notifications.map((notification: any) =>
+      mapNotificationActivity(notification, priorityFeatureEnabled)
+    );
 
-      // Ensure dates are properly formatted
-      let createdAtISO: string;
-      let updatedAtISO: string;
-
-      try {
-        if (notification.created_at) {
-          const createdDate = new Date(notification.created_at);
-          if (isNaN(createdDate.getTime())) {
-            console.warn('Invalid created_at date for notification:', notification.internal_notification_id, notification.created_at);
-            createdAtISO = new Date().toISOString();
-          } else {
-            createdAtISO = createdDate.toISOString();
-          }
-        } else {
-          createdAtISO = new Date().toISOString();
-        }
-
-        if (notification.updated_at) {
-          const updatedDate = new Date(notification.updated_at);
-          if (isNaN(updatedDate.getTime())) {
-            console.warn('Invalid updated_at date for notification:', notification.internal_notification_id, notification.updated_at);
-            updatedAtISO = new Date().toISOString();
-          } else {
-            updatedAtISO = updatedDate.toISOString();
-          }
-        } else {
-          updatedAtISO = new Date().toISOString();
-        }
-      } catch (error) {
-        console.error('Error parsing notification dates:', error, notification);
-        createdAtISO = new Date().toISOString();
-        updatedAtISO = new Date().toISOString();
-      }
-
-      return {
-        id: notification.internal_notification_id.toString(),
-        title: notification.title,
-        description: notification.message,
-        type: ActivityType.NOTIFICATION,
-        status: notification.type || 'info',
-        priority,
-        assignedTo: [notification.user_id],
-        sourceId: notification.internal_notification_id.toString(),
-        sourceType: ActivityType.NOTIFICATION,
-        notificationId: notification.internal_notification_id,
-        templateName: notification.template_name,
-        message: notification.message,
-        isRead: notification.is_read,
-        readAt: notification.read_at,
-        link: notification.link,
-        metadata: notification.metadata,
-        category: notification.category,
-        actions: [
-          { id: 'view', label: 'View Details' },
-          { id: 'mark-read', label: notification.is_read ? 'Mark Unread' : 'Mark Read' }
-        ],
-        tenant: notification.tenant,
-        createdAt: createdAtISO,
-        updatedAt: updatedAtISO
-      };
-    });
-
-    // Apply priority filter post-mapping (priority is derived from notification type)
-    let filteredActivities: NotificationActivity[] = activities;
-    if (filters.priority && filters.priority.length > 0) {
-      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
-      filteredActivities = activities.filter(activity =>
-        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
-      );
-    }
-
-    // Cache individual activity type results
-    if (filteredActivities.length > 0) {
+    if (activities.length > 0) {
       const cacheKey = `notification-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
+      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
     }
-
-    return filteredActivities;
+    return activities;
   } catch (error) {
-    console.error("Error fetching notification activities:", error);
+    console.error('Error fetching notification activities:', error);
     return [];
   }
 }
@@ -1585,13 +1584,9 @@ export interface PagedNotificationActivities {
 }
 
 /**
- * Paged variant of {@link fetchNotificationActivities} (task 29.8.46). Reuses the
- * exact same query + priority-mapping + priority-filter logic — the underlying
- * fetch already orders by created_at desc (chronological, newest first) — then
- * returns a single offset/limit window plus the total matching count so the User
- * Activities card view can render numbered server-side pagination instead of
- * slicing a full client-side fetch. The unpaged fetchNotificationActivities is
- * intentionally left untouched.
+ * Paged variant of {@link fetchNotificationActivities} (task 29.8.46). The
+ * database applies the shared filters, count, offset, and limit before rows are
+ * mapped, so the focused view does not load the entire notification history.
  */
 export async function fetchNotificationActivitiesPagedInternal(
   userId: string,
@@ -1600,11 +1595,36 @@ export async function fetchNotificationActivitiesPagedInternal(
   offset: number = 0,
   limit: number = 20
 ): Promise<PagedNotificationActivities> {
-  const all = await fetchNotificationActivities(userId, tenantId, filters) as NotificationActivity[];
-  const total = all.length;
-  const start = Math.max(0, offset);
-  const end = start + Math.max(0, limit);
-  return { activities: all.slice(start, end), total };
+  if (filters.clientId) return { activities: [], total: 0 };
+
+  const { knex: db, tenant } = await createTenantKnex(tenantId);
+  if (!tenant) throw new Error('Tenant is required');
+  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+    tenantId: tenant,
+    userId,
+  });
+  const safeOffset = Math.max(0, Math.floor(offset));
+  const safeLimit = Math.max(0, Math.min(100, Math.floor(limit)));
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const baseQuery = buildNotificationActivitiesQuery(
+      trx,
+      tenant,
+      userId,
+      filters,
+      priorityFeatureEnabled
+    );
+    const [{ count }] = await baseQuery.clone().count('* as count');
+    const rows = await baseQuery.clone()
+      .orderBy('internal_notifications.created_at', 'desc')
+      .offset(safeOffset)
+      .limit(safeLimit);
+
+    return {
+      activities: rows.map((row: any) => mapNotificationActivity(row, priorityFeatureEnabled)),
+      total: Number(count),
+    };
+  });
 }
 
 /**

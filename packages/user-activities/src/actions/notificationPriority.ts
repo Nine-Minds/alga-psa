@@ -15,15 +15,18 @@ import { ActivityPriority } from '@alga-psa/types';
  */
 export function mapStoredNotificationPriority(
   storedPriority: string | null | undefined,
-  type: string | null | undefined
+  type: string | null | undefined,
+  priorityFeatureEnabled: boolean = true
 ): ActivityPriority {
-  switch (storedPriority) {
-    case 'high':
-      return ActivityPriority.HIGH;
-    case 'normal':
-      return ActivityPriority.MEDIUM;
-    case 'low':
-      return ActivityPriority.LOW;
+  if (priorityFeatureEnabled) {
+    switch (storedPriority) {
+      case 'high':
+        return ActivityPriority.HIGH;
+      case 'normal':
+        return ActivityPriority.MEDIUM;
+      case 'low':
+        return ActivityPriority.LOW;
+    }
   }
   switch (type) {
     case 'error':

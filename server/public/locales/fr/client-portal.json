@@ -728,6 +728,9 @@
       "allCategories": "Toutes les catégories",
       "categoryPlaceholder": "Sélectionnez une catégorie...",
       "dateRangeLabel": "Plage de dates",
+      "priorityLabel": "Priorité",
+      "allPriorities": "Toutes les priorités",
+      "priorityPlaceholder": "Sélectionnez une priorité...",
       "reset": "Réinitialiser",
       "cancel": "Annuler",
       "apply": "Appliquer les filtres"

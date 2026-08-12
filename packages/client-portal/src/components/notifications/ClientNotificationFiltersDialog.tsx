@@ -13,8 +13,18 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { ActivityFilters, ISO8601String } from '@alga-psa/types';
+import { ActivityPriority, type ActivityFilters, type ISO8601String } from '@alga-psa/types';
+
+type PriorityFilterKey = 'all' | 'high' | 'normal' | 'low';
+
+function priorityKeyFromFilters(filters: Partial<ActivityFilters>): PriorityFilterKey {
+  if (filters.priority?.includes(ActivityPriority.HIGH)) return 'high';
+  if (filters.priority?.includes(ActivityPriority.MEDIUM)) return 'normal';
+  if (filters.priority?.includes(ActivityPriority.LOW)) return 'low';
+  return 'all';
+}
 
 interface ClientNotificationFiltersDialogProps {
   isOpen: boolean;
@@ -30,12 +40,15 @@ export function ClientNotificationFiltersDialog({
   onApplyFilters,
 }: ClientNotificationFiltersDialogProps) {
   const { t } = useTranslation('client-portal');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => initialFilters);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters.search || 'all');
+  const [selectedPriority, setSelectedPriority] = useState<PriorityFilterKey>(() => priorityKeyFromFilters(initialFilters));
 
   useEffect(() => {
     setLocalFilters(initialFilters);
     setSelectedCategory(initialFilters.search || 'all');
+    setSelectedPriority(priorityKeyFromFilters(initialFilters));
   }, [initialFilters]);
 
   const handleDateChange = (range: { from: string; to: string }) => {
@@ -64,6 +77,16 @@ export function ClientNotificationFiltersDialog({
       delete filtersToApply.search;
     }
 
+    if (priorityEnabled && selectedPriority !== 'all') {
+      filtersToApply.priority = [
+        selectedPriority === 'normal'
+          ? ActivityPriority.MEDIUM
+          : selectedPriority as ActivityPriority,
+      ];
+    } else {
+      delete filtersToApply.priority;
+    }
+
     onApplyFilters(filtersToApply);
     onOpenChange(false);
   };
@@ -77,6 +100,7 @@ export function ClientNotificationFiltersDialog({
     };
     setLocalFilters(clearedFilters);
     setSelectedCategory('all');
+    setSelectedPriority('all');
   };
 
   const notificationCategories = [
@@ -136,6 +160,24 @@ export function ClientNotificationFiltersDialog({
               placeholder={t('notifications.filters.categoryPlaceholder', { defaultValue: 'Select Category...' })}
             />
           </div>
+
+          {priorityEnabled ? (
+            <div className="space-y-1">
+              <Label htmlFor="notification-priority-select" className="text-base font-semibold">{t('notifications.filters.priorityLabel', { defaultValue: 'Priority' })}</Label>
+              <CustomSelect
+                id="notification-priority-select"
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value as PriorityFilterKey)}
+                options={[
+                  { value: 'all', label: t('notifications.filters.allPriorities', { defaultValue: 'All Priorities' }) },
+                  { value: 'high', label: t('notifications.preferences.priority.high', { defaultValue: 'High' }) },
+                  { value: 'normal', label: t('notifications.preferences.priority.normal', { defaultValue: 'Normal' }) },
+                  { value: 'low', label: t('notifications.preferences.priority.low', { defaultValue: 'Low' }) },
+                ]}
+                placeholder={t('notifications.filters.priorityPlaceholder', { defaultValue: 'Select Priority...' })}
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-1">
             <Label htmlFor="notification-date-range" className="text-base font-semibold">{t('notifications.filters.dateRangeLabel', { defaultValue: 'Date Range' })}</Label>

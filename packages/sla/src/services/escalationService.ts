@@ -13,6 +13,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { IEscalationManagerWithUser } from '../types';
 import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 
 /**
  * Result of escalating a ticket
@@ -356,28 +357,28 @@ async function sendEscalationInAppNotification(
   level: number
 ): Promise<boolean> {
   try {
-    // Insert notification directly into internal_notifications table
-    await tenantDb(trx, tenant).table('internal_notifications').insert({
+    // Use the central template creation path so enablement, locale, configured
+    // priority resolution, broadcasts, and post-creation delivery hooks all run.
+    const notification = await createNotificationFromTemplateInternal(trx, {
       tenant,
       user_id: userId,
       template_name: 'sla-escalation',
-      language_code: 'en',
       type: 'warning',
-      title: `Ticket Escalated to Level ${level}`,
-      message: `Ticket #${ticketNumber}: "${ticketTitle}" has been escalated to level ${level} and requires your attention.`,
+      data: {
+        ticketNumber,
+        ticketTitle,
+        escalationLevel: level,
+      },
       category: 'sla',
       link: `/msp/tickets/${ticketId}`,
-      metadata: JSON.stringify({
+      metadata: {
         ticket_id: ticketId,
         escalation_level: level,
         subtype: 'sla-escalation'
-      }),
-      is_read: false,
-      delivery_status: 'pending',
-      delivery_attempts: 0
+      },
     });
 
-    return true;
+    return notification !== null;
   } catch (error) {
     console.error('Error sending escalation in-app notification:', error);
     return false;

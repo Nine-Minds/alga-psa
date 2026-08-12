@@ -728,6 +728,9 @@
       "allCategories": "Alle categorieën",
       "categoryPlaceholder": "Selecteer een categorie...",
       "dateRangeLabel": "Datumbereik",
+      "priorityLabel": "Prioriteit",
+      "allPriorities": "Alle prioriteiten",
+      "priorityPlaceholder": "Selecteer een prioriteit...",
       "reset": "Opnieuw instellen",
       "cancel": "Annuleren",
       "apply": "Filters toepassen"

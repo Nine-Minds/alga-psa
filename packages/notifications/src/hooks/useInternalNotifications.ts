@@ -84,6 +84,7 @@ export function useInternalNotifications(
     if (!tenant || !userId) {
       setNotifications([]);
       setUnreadCount(0);
+      setHighUnreadCount(0);
       setError(null);
       setIsLoading(false);
       return;
@@ -112,6 +113,9 @@ export function useInternalNotifications(
 
         notificationsMap.set('data', response.notifications);
         unreadCountMap.set('count', response.unread_count);
+        if (typeof response.unread_high === 'number') {
+          unreadCountMap.set('high', response.unread_high);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -201,15 +205,23 @@ export function useInternalNotifications(
       if (notifData) {
         const list = notifData as InternalNotification[];
         setNotifications(list);
-        // Keep the high-priority badge count in sync with realtime updates.
-        setHighUnreadCount(list.filter((n) => !n.is_read && n.priority === 'high').length);
+        // A shared Yjs document can contain only another consumer's limited
+        // notification window. Recount against the database instead of deriving
+        // the bell badge from that incomplete page.
+        void fetchUnreadCount();
       }
     });
 
-    unreadCountMap.observe(() => {
+    unreadCountMap.observe((event) => {
       const count = unreadCountMap.get('count');
       if (typeof count === 'number') {
         setUnreadCount(count);
+      }
+      const high = unreadCountMap.get('high');
+      if (event.keysChanged.has('high') && typeof high === 'number') {
+        setHighUnreadCount(high);
+      } else if (event.keysChanged.has('count')) {
+        void fetchUnreadCount();
       }
     });
 
@@ -217,7 +229,7 @@ export function useInternalNotifications(
       provider.destroy();
       ydoc.destroy();
     };
-  }, [pollNotificationsNow, tenant, userId]);
+  }, [fetchUnreadCount, pollNotificationsNow, tenant, userId]);
 
   useEffect(() => {
     setIsLoading(true);

@@ -13,6 +13,13 @@ import {
   EscalationResult,
 } from '../escalationService';
 import { Knex } from 'knex';
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+
+vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions', () => ({
+  createNotificationFromTemplateInternal: vi.fn().mockResolvedValue({
+    internal_notification_id: 'notification-1',
+  }),
+}));
 
 // =============================================================================
 // Mock Database Transaction Builder
@@ -696,6 +703,19 @@ describe('escalateTicket', () => {
 
       expect(result.success).toBe(true);
       expect(result.notificationsSent.inApp).toBe(true);
+      expect(createNotificationFromTemplateInternal).toHaveBeenCalledWith(
+        mockTrx.trx,
+        expect.objectContaining({
+          tenant: TENANT,
+          user_id: MANAGER_USER_ID,
+          template_name: 'sla-escalation',
+          data: expect.objectContaining({
+            ticketNumber: 'T-001',
+            ticketTitle: 'Test Ticket',
+            escalationLevel: 1,
+          }),
+        })
+      );
     });
   });
 
