@@ -287,6 +287,7 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
       )
     ).json();
 
+    const before = received.length;
     const response = await fetch(`${base}/v1/checkout/sessions/${session.id}/expire`, {
       method: 'POST',
       headers: auth,
@@ -294,10 +295,50 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     expect(response.status).toBe(200);
     expect((await response.json()).status).toBe('expired');
 
+    // API expiration delivers a signed checkout.session.expired webhook, just
+    // like real Stripe (the lifecycle reconciliation path depends on it).
+    expect(received.length).toBe(before + 1);
+    const event = JSON.parse(received[before].payload);
+    expect(event.type).toBe('checkout.session.expired');
+    expect(event.data.object.id).toBe(session.id);
+    expect(event.data.object.status).toBe('expired');
+    expect(verifyStripeSignature(received[before].payload, received[before].signature, WEBHOOK_SECRET)).toBe(true);
+
     const stored = await (
       await fetch(`${base}/v1/checkout/sessions/${session.id}`, { headers: auth })
     ).json();
     expect(stored.status).toBe('expired');
+  });
+
+  it('an expired session can no longer be paid', async () => {
+    const session = await (
+      await fetch(
+        `${base}/v1/checkout/sessions`,
+        form({
+          mode: 'payment',
+          'line_items[0][price_data][currency]': 'usd',
+          'line_items[0][price_data][unit_amount]': '1200',
+          'line_items[0][quantity]': '1',
+          success_url: 'http://localhost:3000/success',
+          cancel_url: 'http://localhost:3000/billing',
+          'metadata[invoice_id]': 'inv-expire-pay',
+        }, auth),
+      )
+    ).json();
+
+    await fetch(`${base}/v1/checkout/sessions/${session.id}/expire`, {
+      method: 'POST',
+      headers: auth,
+    });
+
+    const pay = await fetch(`${base}/checkout/sessions/${session.id}/pay`, { method: 'POST' });
+    expect(pay.status).toBe(400);
+
+    const stored = await (
+      await fetch(`${base}/v1/checkout/sessions/${session.id}`, { headers: auth })
+    ).json();
+    expect(stored.status).toBe('expired');
+    expect(stored.payment_status).toBe('unpaid');
   });
 
   it('injects Stripe-shaped operation faults that expire after N uses', async () => {

@@ -102,6 +102,7 @@ export {
   registerInvoiceTerminalStatusHandler,
   notifyInvoiceTerminalStatus,
   listActiveInvoicePaymentLinks,
+  listPendingInvoicePaymentLinks,
   type InvoiceTerminalStatusParams,
   type InvoiceTerminalStatusHandler,
 } from './accountingSync/invoiceTerminalStatusHandlers';

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
+import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 
 // Exported for testing
 export async function reverseCreditApplicationsForInvoice(
@@ -239,6 +240,16 @@ export const voidInvoice = withAuth(async (
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
   const { knex: syncKnex } = await createTenantKnex();
   void enqueueInvoiceVoid(syncKnex, tenant, invoiceId);
+
+  // Reconcile any still-active Checkout sessions: a voided invoice must never
+  // be chargeable through an old email link. Best-effort (isolated handlers),
+  // so the void response is unaffected.
+  await notifyInvoiceTerminalStatus({
+    knex,
+    tenantId: tenant,
+    invoiceId,
+    newStatus: 'cancelled',
+  });
 
   return { success: true };
 });

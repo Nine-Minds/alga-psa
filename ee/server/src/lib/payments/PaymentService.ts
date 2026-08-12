@@ -34,6 +34,7 @@ import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import {
   registerInvoiceTerminalStatusHandler,
   listActiveInvoicePaymentLinks,
+  listPendingInvoicePaymentLinks,
 } from '@alga-psa/billing/services/accountingSync/invoiceTerminalStatusHandlers';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -521,9 +522,19 @@ export class PaymentService {
 
   /**
    * Handles checkout.session.expired event.
+   *
+   * Lifecycle updates target the exact external session that produced the
+   * webhook, never the whole invoice: a delayed old-session webhook must not
+   * expire a newer replacement row while its provider session is still open.
    */
   private async handleCheckoutExpired(event: PaymentWebhookEvent): Promise<WebhookProcessingResult> {
-    if (event.invoiceId) {
+    if (event.externalLinkId) {
+      // The provider-confirmed expiration of this exact session closes both a
+      // still-active row and any row already blocked for retry.
+      await this.finalizeExpiredByExternalId(event.externalLinkId);
+    } else if (event.invoiceId) {
+      // Legacy events that predate session-id threading: fall back to the
+      // invoice-scoped update so those links still retire.
       await this.updatePaymentLinkStatus(event.invoiceId, 'expired');
     }
     return { success: true, paymentRecorded: false };
@@ -669,7 +680,7 @@ export class PaymentService {
     }
 
     // Validate invoice status - reject payments for non-payable invoices
-    const nonPayableStatuses = ['cancelled', 'draft', 'void'];
+    const nonPayableStatuses = ['cancelled', 'draft', 'void', 'paid'];
     if (nonPayableStatuses.includes(invoice.status)) {
       return {
         success: false,
@@ -689,14 +700,22 @@ export class PaymentService {
       };
     }
 
-    // Validate amount - warn if significantly different from expected
-    // For now, we allow partial payments but log a warning for mismatches
-    if (event.amount > (invoice.total_amount - (invoice.credit_applied ?? 0)) * 1.01) { // Allow 1% tolerance for rounding
-      logger.warn('[PaymentService] Payment amount exceeds invoice total', {
+    // Validate amount against the remaining balance (gross minus credits minus
+    // prior payments), not the gross total. For now, we allow partial payments
+    // but log a warning for mismatches.
+    const priorPaymentsRow = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
+      .where({ invoice_id: event.invoiceId })
+      .sum('amount as total')
+      .first();
+    const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
+    const remainingBalance = invoice.total_amount - (invoice.credit_applied ?? 0) - priorPayments;
+
+    if (event.amount > remainingBalance * 1.01) { // Allow 1% tolerance for rounding
+      logger.warn('[PaymentService] Payment amount exceeds remaining balance', {
         tenantId: this.tenantId,
         invoiceId: event.invoiceId,
         paymentAmount: event.amount,
-        invoiceTotal: invoice.total_amount,
+        remainingBalance,
       });
     }
 
@@ -867,6 +886,13 @@ export class PaymentService {
     invoiceStatus?: string,
     options?: { excludeSettledExternalId?: string; excludeSettledReference?: string }
   ): Promise<{ retired: number; pending: number }> {
+    // A terminal cleanup must also retry any provider expiration that
+    // previously failed. Paid/cancelled callers never create links, so without
+    // this retry a row stuck in `expire_pending` would stay chargeable at the
+    // provider forever. Best-effort: a still-open session stays blocked for a
+    // later attempt.
+    await this.retryPendingExpirations(invoiceId);
+
     const query = listActiveInvoicePaymentLinks(this.knex, this.tenantId, invoiceId, {
       excludeSettledExternalId: options?.excludeSettledExternalId,
       excludeSettledReference: options?.excludeSettledReference,
@@ -912,6 +938,97 @@ export class PaymentService {
     }
 
     return { retired, pending };
+  }
+
+  /**
+   * Retires only the active links whose stored amount no longer matches the
+   * remaining payable balance. Used by non-terminal balance mutations (partial
+   * payments, credit applications): the invoice is still payable, but any
+   * already-issued Checkout session for a different amount is stale and must be
+   * closed now rather than deferred to the next Pay Now/email demand.
+   */
+  async expireStaleLinksForBalance(
+    invoiceId: string,
+    balanceDue: number,
+    options?: { excludeSettledExternalId?: string; excludeSettledReference?: string }
+  ): Promise<{ retired: number; pending: number }> {
+    await this.retryPendingExpirations(invoiceId);
+
+    const query = listActiveInvoicePaymentLinks(this.knex, this.tenantId, invoiceId, {
+      excludeSettledExternalId: options?.excludeSettledExternalId,
+      excludeSettledReference: options?.excludeSettledReference,
+    });
+    const links = (await query) as unknown as IInvoicePaymentLink[];
+    const stale = links.filter((link) => Number(link.amount) !== balanceDue);
+
+    let retired = 0;
+    let pending = 0;
+    for (const link of stale) {
+      const metadata = {
+        stale_balance: true,
+        stored_amount: Number(link.amount),
+        current_balance: balanceDue,
+        expire_state: 'pending',
+      };
+
+      const marked = await this.markExpirePending(link, metadata);
+      if (!marked) continue;
+
+      try {
+        await this.confirmProviderExpiration(link);
+        retired += 1;
+      } catch (error) {
+        pending += 1;
+        logger.error('[PaymentService] Balance-change link expiration failed; will retry', {
+          tenantId: this.tenantId,
+          invoiceId,
+          linkId: link.link_id,
+          externalLinkId: link.external_link_id,
+          balanceDue,
+          error,
+        });
+      }
+    }
+
+    if (stale.length > 0) {
+      logger.info('[PaymentService] Retired stale-balance payment links', {
+        tenantId: this.tenantId,
+        invoiceId,
+        balanceDue,
+        retired,
+        pending,
+      });
+    }
+
+    return { retired, pending };
+  }
+
+  /**
+   * Retries provider expiration for every `expire_pending` row (best-effort).
+   * A row in this state was DB-blocked from reuse but its provider session may
+   * still be open; retrying is the only way it becomes `expired`. Failures are
+   * logged and left in `expire_pending` for the next attempt.
+   */
+  private async retryPendingExpirations(invoiceId: string): Promise<void> {
+    const pending = (await listPendingInvoicePaymentLinks(
+      this.knex,
+      this.tenantId,
+      invoiceId
+    )) as unknown as IInvoicePaymentLink[];
+
+    for (const link of pending) {
+      try {
+        await this.confirmProviderExpiration(link);
+      } catch (error) {
+        logger.error('[PaymentService] Pending provider expiration retry failed; will retry', {
+          tenantId: this.tenantId,
+          invoiceId,
+          linkId: link.link_id,
+          externalLinkId: link.external_link_id,
+          error,
+        });
+      }
+    }
   }
 
   /**
@@ -1011,6 +1128,20 @@ export class PaymentService {
   private async finalizeExpired(link: IInvoicePaymentLink): Promise<void> {
     await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
       .where({ link_id: link.link_id, status: 'expire_pending' })
+      .update({ status: 'expired' });
+  }
+
+  /**
+   * Marks the exact external session closed (`expired`) whether its row is
+   * still `active` or already blocked as `expire_pending`. A
+   * `checkout.session.expired` webhook is the provider's own confirmation that
+   * this session closed, so both states finalize to `expired` — and only this
+   * session is touched, never a newer replacement row.
+   */
+  private async finalizeExpiredByExternalId(externalLinkId: string): Promise<void> {
+    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({ external_link_id: externalLinkId })
+      .whereIn('status', ['active', 'expire_pending'])
       .update({ status: 'expired' });
   }
 
@@ -1144,18 +1275,32 @@ export class PaymentService {
 // reach a terminal status through `recordExternalPayment` (the Stripe webhook,
 // QBO sync, and the alternative-payments webhook) retire their still-active
 // Checkout sessions so an old email link can never charge a settled invoice.
+// Non-terminal balance mutations (partial payments, credit applications) retire
+// only the links whose stored amount no longer matches the remaining balance.
 // The registry isolates failures, so payment settlement is never blocked by
 // link cleanup, and cleanup is tenant-scoped by construction.
 registerInvoiceTerminalStatusHandler(async (params) => {
-  if (params.newStatus !== 'paid') return;
   const service = await PaymentService.create(params.tenantId);
-  await service.expireActiveLinksForInvoice(
-    params.invoiceId,
-    'invoice_not_payable',
-    params.newStatus,
-    {
+  const terminal =
+    params.newStatus === 'paid' || params.newStatus === 'cancelled' || params.newStatus === 'void';
+
+  if (terminal) {
+    await service.expireActiveLinksForInvoice(
+      params.invoiceId,
+      'invoice_not_payable',
+      params.newStatus,
+      {
+        excludeSettledExternalId: params.settledExternalId,
+        excludeSettledReference: params.settledReference,
+      }
+    );
+    return;
+  }
+
+  if (params.balanceDue !== undefined) {
+    await service.expireStaleLinksForBalance(params.invoiceId, params.balanceDue, {
       excludeSettledExternalId: params.settledExternalId,
       excludeSettledReference: params.settledReference,
-    }
-  );
+    });
+  }
 });

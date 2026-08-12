@@ -89,6 +89,42 @@ describe('stripe emulator pure core', () => {
     expect(core.consumeOperationFault('checkout.sessions.create')).toBeNull();
   });
 
+  it('an expired session cannot be completed (pay rejects an invalid state)', () => {
+    const { core } = makeCore();
+    const sessionId = seedSession(core);
+    core.expireSession(sessionId);
+    expect(core.getCheckoutSession(sessionId).status).toBe('expired');
+    expect(() => core.completeSession(sessionId)).toThrow(/expired/i);
+    // The session stays expired, never payable again.
+    expect(core.getCheckoutSession(sessionId).payment_status).toBe('unpaid');
+  });
+
+  it('a completed session cannot be expired (expire rejects an invalid state)', () => {
+    const { core } = makeCore();
+    const sessionId = seedSession(core);
+    core.completeSession(sessionId);
+    expect(core.getCheckoutSession(sessionId).status).toBe('complete');
+    expect(() => core.expireSession(sessionId)).toThrow(/completed/i);
+  });
+
+  it('expireSession is idempotent for an already-expired session', () => {
+    const { core } = makeCore();
+    const sessionId = seedSession(core);
+    core.expireSession(sessionId);
+    const events = core.listEvents().length;
+    const again = core.expireSession(sessionId);
+    expect(again.type).toBe('checkout.session.expired');
+    expect(core.getCheckoutSession(sessionId).status).toBe('expired');
+    expect(core.listEvents()).toHaveLength(events + 1);
+  });
+
+  it('failSession rejects a session that is no longer open', () => {
+    const { core } = makeCore();
+    const sessionId = seedSession(core);
+    core.expireSession(sessionId);
+    expect(() => core.failSession(sessionId)).toThrow(/open/i);
+  });
+
   it('reset returns to the deterministic default credentials', () => {
     const { core } = makeCore();
     core.configure({ secretKey: 'sk_test_custom', webhookSecret: 'whsec_custom', webhookTargets: ['http://x/webhook'] });

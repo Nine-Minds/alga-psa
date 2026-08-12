@@ -23,6 +23,13 @@ export interface InvoiceTerminalStatusParams {
   invoiceId: string;
   newStatus: string;
   /**
+   * The remaining payable balance (cents) after the mutation. When the invoice
+   * did not reach a terminal status, EE handlers use this to retire only the
+   * active links whose stored amount no longer matches — a partial payment or
+   * credit application must not leave a full-balance Checkout session live.
+   */
+  balanceDue?: number;
+  /**
    * The payment reference that just settled. EE handlers use it as a secondary
    * match for the settling Stripe session's own link (its
    * `metadata.payment_intent`); it is not authoritative because payment-mode
@@ -139,4 +146,23 @@ export function listActiveInvoicePaymentLinks(
   }
 
   return query.orderBy('created_at', 'asc');
+}
+
+/**
+ * Tenant-scoped query of an invoice's links whose provider expiration
+ * previously failed (`expire_pending`). These rows are the durable handle a
+ * terminal/balance cleanup uses to retry the provider closure before anything
+ * else — a link blocked from reuse but whose Checkout Session may still be
+ * open must never be abandoned. Kept here so the query shape is owned
+ * alongside the registry.
+ */
+export function listPendingInvoicePaymentLinks(
+  knex: Knex,
+  tenantId: string,
+  invoiceId: string
+): Knex.QueryBuilder<Record<string, unknown>, Record<string, unknown>[]> {
+  return tenantDb(knex, tenantId)
+    .table<Record<string, unknown>>('invoice_payment_links')
+    .where({ invoice_id: invoiceId, status: 'expire_pending' })
+    .orderBy('created_at', 'asc');
 }

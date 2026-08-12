@@ -228,20 +228,29 @@ export async function recordExternalPayment(
     referenceNumber: input.referenceNumber
   });
 
-  // The invoice reached a terminal status (fully paid). Registered EE handlers
-  // retire any still-active Checkout sessions so an old email link can never
-  // charge a settled invoice. Handler failures are isolated (logged, never
-  // thrown) so the payment recording itself is unaffected.
-  if (newStatus === 'paid') {
-    await notifyInvoiceTerminalStatus({
-      knex,
-      tenantId,
-      invoiceId: input.invoiceId,
-      newStatus,
-      settledReference: input.referenceNumber,
-      settledExternalId: input.externalLinkId,
-    });
-  }
+  // Every balance mutation is reconciled immediately, not just terminal ones.
+  // A partial payment or credit application leaves the invoice below the
+  // amount its Checkout session was created for, so any still-active link
+  // whose stored amount no longer matches the remaining balance must be
+  // retired now — not deferred until the next Pay Now/email demand. Registered
+  // EE handlers retire terminal links outright and retire stale-balance links
+  // when `balanceDue` is provided. Handler failures are isolated (logged,
+  // never thrown) so the payment recording itself is unaffected.
+  const balanceDue = computeBalanceDue({
+    totalAmount: Number(invoice.total_amount),
+    creditApplied: Number(invoice.credit_applied ?? 0),
+    totalPaid,
+  });
+
+  await notifyInvoiceTerminalStatus({
+    knex,
+    tenantId,
+    invoiceId: input.invoiceId,
+    newStatus,
+    balanceDue,
+    settledReference: input.referenceNumber,
+    settledExternalId: input.externalLinkId,
+  });
 
   return {
     success: true,

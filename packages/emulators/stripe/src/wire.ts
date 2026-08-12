@@ -171,10 +171,14 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.json(sessionResponse(core, session, req.query.expand ?? (req.query as Record<string, unknown>)['expand[]']));
   }));
 
-  v1.post('/checkout/sessions/:id/expire', route((req, res) => {
+  v1.post('/checkout/sessions/:id/expire', route(async (req, res) => {
     checkFault(core, 'checkout.sessions.expire');
     const sessionId = String(req.params.id);
-    core.expireSession(sessionId);
+    const event = core.expireSession(sessionId);
+    // Real Stripe delivers a signed checkout.session.expired webhook when a
+    // session is expired through the API; the emulator must too, or lifecycle
+    // reconciliation on the application side never learns of the expiry.
+    await deliverEvent(core, event, env);
     res.json(core.getCheckoutSession(sessionId));
   }));
 

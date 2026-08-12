@@ -338,6 +338,11 @@ export class StripeEmulatorCore implements EmulatorCore {
   /** Complete a session and its payment intent; emits checkout.session.completed. */
   completeSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
+    if (session.status === 'expired') {
+      // Stripe rejects completion of an expired Checkout Session; an expired
+      // session must never become payable again.
+      throw new StripeWireError(400, 'This Checkout Session has expired and cannot be completed.');
+    }
     session.status = 'complete';
     session.payment_status = 'paid';
 
@@ -351,6 +356,9 @@ export class StripeEmulatorCore implements EmulatorCore {
   /** Record a failed attempt; emits payment_intent.payment_failed. */
   failSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
+    if (session.status !== 'open') {
+      throw new StripeWireError(400, 'This Checkout Session is no longer open.');
+    }
     const intent = this.ensurePaymentIntent(session);
     intent.status = 'requires_payment_method';
     intent.last_payment_error = {
@@ -363,15 +371,21 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   /**
    * Checkout expiry (session open but past expires_at) without payment.
-   * Emits checkout.session.expired and returns the event.
+   * Emits checkout.session.expired and returns the event. A completed session
+   * cannot be expired; an already-expired session is idempotent.
    */
   expireSession(sessionId: string): StripeEvent {
     const session = this.getCheckoutSession(sessionId);
-    session.status = 'expired';
-    if (session.payment_intent) {
-      const intent = this.paymentIntents.get(session.payment_intent);
-      if (intent && intent.status === 'requires_payment_method') {
-        intent.status = 'canceled';
+    if (session.status === 'complete') {
+      throw new StripeWireError(400, 'A completed Checkout Session cannot be expired.');
+    }
+    if (session.status === 'open') {
+      session.status = 'expired';
+      if (session.payment_intent) {
+        const intent = this.paymentIntents.get(session.payment_intent);
+        if (intent && intent.status === 'requires_payment_method') {
+          intent.status = 'canceled';
+        }
       }
     }
     return this.emitEvent('checkout.session.expired', session);
