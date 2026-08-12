@@ -6,13 +6,20 @@ export class StripeWireError extends Error {
     public readonly status: number,
     message: string,
     public readonly errorType: 'invalid_request_error' | 'authentication_error' | 'api_error' | 'card_error' = 'invalid_request_error',
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'StripeWireError';
   }
 
-  toEnvelope(): { error: { type: string; message: string } } {
-    return { error: { type: this.errorType, message: this.message } };
+  toEnvelope(): { error: { type: string; code?: string; message: string } } {
+    return {
+      error: {
+        type: this.errorType,
+        ...(this.code ? { code: this.code } : {}),
+        message: this.message,
+      },
+    };
   }
 }
 

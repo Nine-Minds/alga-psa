@@ -32,6 +32,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import stripeEmulator from '@alga-psa/emulator-stripe';
+import { PaymentLinkError } from '@alga-psa/billing/actions/paymentLinkError';
 import { getSecret } from '../../../lib/utils/getSecret';
 
 let db: Knex;
@@ -97,6 +98,17 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 // persona is therefore driven by overriding that mock per test, exactly like
 // the other journey tests do.
 import { getCurrentUser } from '@alga-psa/auth';
+
+// The billing payment-action layer resolves the actor through the separate
+// `@alga-psa/auth/getCurrentUser` specifier (see billing authHelpers), so it
+// needs its own persona-driving mock that reads the same activeActor.
+vi.mock('@alga-psa/auth/getCurrentUser', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/auth/getCurrentUser')>('@alga-psa/auth/getCurrentUser');
+  return {
+    ...actual,
+    getCurrentUser: vi.fn(async () => activeActor),
+  };
+});
 
 function setActiveActor(user: any): void {
   activeActor = user;
@@ -448,6 +460,64 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const logged = paymentCall![1];
       const errorField = (logged as any).error;
       expect(String(errorField?.message ?? errorField)).toContain('Simulated Stripe outage');
+    }, HOOK_TIMEOUT);
+
+    it('surfaces a portal provider failure as PaymentLinkError with the cause retained', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `portal-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 15000);
+      await upsertProviderConfig(db, tenantId);
+
+      const contact = await tenantTable(db, tenantId, 'contacts')
+        .where({ client_id: clientId })
+        .first();
+      const contactId = String(contact?.contact_name_id);
+
+      // The emulator's checkout.sessions.create fails; the SDK retries 5xx
+      // responses, so arm the fault across enough attempts to exhaust every retry.
+      await controlPost('faults/operation-fault/arm', {
+        operation: 'checkout.sessions.create',
+        status: 500,
+        code: 'api_error',
+        message: 'Simulated Stripe outage',
+        remaining: 5,
+      });
+
+      setActiveActor({
+        user_id: 'journey-portal-owner',
+        tenant: tenantId,
+        contact_id: contactId,
+        roles: [],
+      });
+
+      loggerError.mockClear();
+      const { getClientPortalInvoicePaymentLink } = await import(
+        '@alga-psa/client-portal/actions/clientPaymentActions'
+      );
+      const result = await getClientPortalInvoicePaymentLink(invoiceId);
+      expect(result.success).toBe(false);
+      expect(result.error?.code).toBe('payment_link_creation_failed');
+      expect(result.error?.retryable).toBe(true);
+      // The browser receives only the stable safe message, never provider internals.
+      expect(result.error?.message).toBe('We could not start the payment. Please try again.');
+
+      // The billing-action boundary rethrew the provider failure as a typed
+      // `PaymentLinkError` whose native `cause` is the original exception. It is
+      // logged server-side as an error object and never serialized to the client.
+      const portalCall = loggerError.mock.calls.find((call) =>
+        String(call[0]).includes('[ClientPayment] Failed to get payment link')
+      );
+      expect(portalCall).toBeDefined();
+      const thrown = (portalCall![1] as { error?: unknown }).error;
+      expect(thrown).toBeInstanceOf(PaymentLinkError);
+      expect((thrown as PaymentLinkError).code).toBe('payment_link_creation_failed');
+      expect((thrown as PaymentLinkError).cause).toBeTruthy();
+      const causeMessage =
+        ((thrown as PaymentLinkError).cause as Error | undefined)?.message ??
+        String((thrown as PaymentLinkError).cause);
+      expect(causeMessage).toContain('Simulated Stripe outage');
     }, HOOK_TIMEOUT);
 
     it('does not create a payment link or call the provider for a foreign client, and discloses no invoice data', async () => {

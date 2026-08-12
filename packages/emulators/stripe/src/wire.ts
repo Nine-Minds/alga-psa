@@ -14,10 +14,20 @@ const OPERATIONS = [
   'checkout.sessions.retrieve',
 ] as const;
 
+const KNOWN_ERROR_TYPES = new Set([
+  'invalid_request_error',
+  'authentication_error',
+  'api_error',
+  'card_error',
+]);
+
 function checkFault(core: StripeEmulatorCore, operation: string): void {
   const fault = core.consumeOperationFault(operation);
   if (fault) {
-    throw new StripeWireError(fault.status, fault.message, 'api_error');
+    const errorType = KNOWN_ERROR_TYPES.has(fault.code)
+      ? (fault.code as 'invalid_request_error' | 'authentication_error' | 'api_error' | 'card_error')
+      : 'api_error';
+    throw new StripeWireError(fault.status, fault.message, errorType, fault.code);
   }
 }
 

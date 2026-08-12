@@ -55,6 +55,25 @@ export async function getPaymentService(tenantId: string): Promise<any | null> {
 }
 
 /**
+ * Runs a payment-service call through the billing action boundary. Any
+ * non-`PaymentLinkError` failure (provider, link-creation, or status) is
+ * rethrown as a `PaymentLinkError` with the original exception preserved as
+ * `cause` for server logs and tests; existing `PaymentLinkError`s pass through
+ * untouched. The cause is never serialized to the browser.
+ */
+async function runPaymentServiceCall(operation: string, fn: () => Promise<any>): Promise<any> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof PaymentLinkError) {
+      throw error;
+    }
+    logger.error(`[billing/paymentActions] ${operation}`, { error });
+    throw new PaymentLinkError('payment_link_creation_failed', operation, { cause: error });
+  }
+}
+
+/**
  * Returns the payment service when a provider is enabled for the tenant,
  * or null when payments are intentionally absent (CE build or no enabled
  * provider). EE initialization/link-creation failures surface as a
@@ -64,7 +83,9 @@ async function getConfiguredPaymentService(tenantId: string): Promise<{ service:
   const paymentService = await getPaymentService(tenantId);
   if (!paymentService) return null;
 
-  const hasProvider = await paymentService.hasEnabledProvider();
+  const hasProvider = await runPaymentServiceCall('Failed to check payment provider', () =>
+    paymentService.hasEnabledProvider()
+  );
   if (!hasProvider) return null;
 
   return { service: paymentService };
@@ -100,7 +121,9 @@ export async function getOrCreateInvoicePaymentLink(
   const configured = await getConfiguredPaymentService(tenantId);
   if (!configured) return null;
 
-  return configured.service.getOrCreatePaymentLink(invoiceId);
+  return runPaymentServiceCall('Failed to create payment link', () =>
+    configured.service.getOrCreatePaymentLink(invoiceId)
+  );
 }
 
 export async function getOrCreateInvoicePaymentLinkUrl(
@@ -118,7 +141,9 @@ export async function getInvoicePaymentStatus(
   const configured = await getConfiguredPaymentService(tenantId);
   if (!configured) return null;
 
-  return configured.service.getInvoicePaymentStatus(invoiceId);
+  return runPaymentServiceCall('Failed to get payment status', () =>
+    configured.service.getInvoicePaymentStatus(invoiceId)
+  );
 }
 
 export async function getActiveInvoicePaymentLinkUrl(
@@ -129,7 +154,9 @@ export async function getActiveInvoicePaymentLinkUrl(
   const configured = await getConfiguredPaymentService(tenantId);
   if (!configured) return null;
 
-  const link = await configured.service.getActivePaymentLink(invoiceId);
+  const link = await runPaymentServiceCall('Failed to get active payment link', () =>
+    configured.service.getActivePaymentLink(invoiceId)
+  );
   return link?.url || null;
 }
 
@@ -140,9 +167,13 @@ export async function getInvoicePaymentLinkUrlForEmail(
   const configured = await getConfiguredPaymentService(tenantId);
   if (!configured) return null;
 
-  const settings = await configured.service.getPaymentSettings();
+  const settings = await runPaymentServiceCall('Failed to get payment settings', () =>
+    configured.service.getPaymentSettings()
+  );
   if (!settings?.paymentLinksInEmails) return null;
 
-  const link = await configured.service.getOrCreatePaymentLink(invoiceId);
+  const link = await runPaymentServiceCall('Failed to create payment link', () =>
+    configured.service.getOrCreatePaymentLink(invoiceId)
+  );
   return link?.url || null;
 }

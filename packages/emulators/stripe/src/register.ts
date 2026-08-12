@@ -1,7 +1,25 @@
 import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
-import type { StripeEmulatorCore } from './core';
+import type { StripeEmulatorConfig, StripeEmulatorCore } from './core';
 import { deliverEvent } from './notifier';
+
+/**
+ * Masks a credential for control-plane responses. The raw value stays internal
+ * to the core (auth checks, webhook signing); only masked forms round-trip.
+ */
+function redactCredential(value: string): string {
+  if (!value) return '';
+  return value.length <= 8 ? '••••' : `${value.slice(0, 5)}…${value.slice(-4)}`;
+}
+
+/** Control-plane view of the configuration with credentials masked. */
+function redactedConfig(config: StripeEmulatorConfig) {
+  return {
+    ...config,
+    secretKey: redactCredential(config.secretKey),
+    webhookSecret: redactCredential(config.webhookSecret),
+  };
+}
 
 export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
   reg.seeder({
@@ -19,12 +37,14 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
         const targets = core.webhookTargets;
         if (!targets.includes(webhookTarget)) targets.push(webhookTarget);
       }
-      return core.configure({
-        secretKey,
-        webhookSecret,
-        publishableKey,
-        hostedBaseUrl: hostedBaseUrl ?? null,
-      });
+      return redactedConfig(
+        core.configure({
+          secretKey,
+          webhookSecret,
+          publishableKey,
+          hostedBaseUrl: hostedBaseUrl ?? null,
+        })
+      );
     },
   });
 
@@ -103,8 +123,8 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
 
   reg.stateView({
     name: 'config',
-    description: 'Test credentials, webhook targets, and hosted base URL',
-    get: () => core.config(),
+    description: 'Test credentials (masked), webhook targets, and hosted base URL',
+    get: () => redactedConfig(core.config()),
   });
 
   reg.stateView({

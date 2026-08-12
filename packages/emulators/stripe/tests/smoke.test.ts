@@ -305,6 +305,32 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     expect(ok.status).toBe(200);
   });
 
+  it('surfaces a fault-armed custom code in the Stripe error envelope', async () => {
+    await controlPost('/control/stripe/faults/operation-fault/arm', {
+      operation: 'checkout.sessions.create',
+      status: 402,
+      code: 'card_declined',
+      message: 'Your card was declined.',
+      remaining: 1,
+    });
+
+    const failed = await fetch(
+      `${base}/v1/checkout/sessions`,
+      form({
+        mode: 'payment',
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][unit_amount]': '1000',
+        'line_items[0][quantity]': '1',
+        success_url: 'http://localhost:3000/success',
+      }, auth),
+    );
+    expect(failed.status).toBe(402);
+    const body = await failed.json();
+    expect(body.error.type).toBe('api_error');
+    expect(body.error.code).toBe('card_declined');
+    expect(body.error.message).toBe('Your card was declined.');
+  });
+
   it('supports the complete-session control action for non-browser tests', async () => {
     const session = await (
       await fetch(
@@ -336,8 +362,15 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     const sessions = await (await fetch(`${control}/control/stripe/state/checkout-sessions`)).json();
     expect(customers.result).toHaveLength(0);
     expect(sessions.result).toHaveLength(0);
-    // Credentials revert to the defaults after reset.
+    // Credentials revert to the defaults after reset; the control plane never
+    // round-trips raw `sk_*`/`whsec_*` values, and the public publishable key
+    // stays visible.
     const config = await (await fetch(`${control}/control/stripe/state/config`)).json();
-    expect(config.result.secretKey).toBe('sk_test_algasim');
+    expect(config.result.publishableKey).toBe('pk_test_algasim');
+    expect(config.result.secretKey).not.toContain('sk_test_algasim');
+    expect(config.result.webhookSecret).not.toContain('whsec_algasim');
+    // The emulator still authenticates with the fixture despite the redaction.
+    const authed = await fetch(`${base}/v1/customers`, { headers: auth });
+    expect(authed.status).toBe(200);
   });
 });
