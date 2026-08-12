@@ -28,6 +28,15 @@ import { internalNotificationSubscriberTestHarness } from '../../../lib/eventBus
 // The handler only reads the ticket row, so the suite creates its own
 // throwaway ticket (assigned to the target user) and deletes it afterwards.
 
+// Opt-in: this repro drives the REAL server actions and event bus against a
+// live, seeded database (the Glinda tenant fixtures below only exist in the
+// local dev DB). The DB-less unit CI job has neither a database nor those
+// rows, so — following the repo convention for DB-backed suites — it is gated
+// behind RUN_DB_TESTS=1 and skipped at collection time otherwise (so beforeAll
+// never attempts a connection there). The priority-resolution logic itself is
+// covered in CI by priorityResolution.test.ts and the publisher-recipient test.
+const RUN_DB_TESTS = process.env.RUN_DB_TESTS === '1';
+
 const TENANT = 'dd8cb218-d46d-47f3-be27-8aa50aad5fce';
 const USER = '6684ee32-8f0a-46fb-b84c-4563337b2766'; // glinda
 const ASSIGNER = '00000000-0000-4000-8000-000000000001'; // smoke actor
@@ -121,38 +130,41 @@ async function newestStampedNotification() {
   return row;
 }
 
-beforeAll(async () => {
-  knex = (await createTenantKnex()).knex;
+// Hooks live inside the gated describe so that, when RUN_DB_TESTS is unset,
+// skipIf skips the whole block at collection time and beforeAll never runs
+// (no connection attempt, no throw) in the DB-less unit CI job.
+describe.skipIf(!RUN_DB_TESTS)('behavioral: per-user priority override honored on the ticket-assigned creation path', () => {
+  beforeAll(async () => {
+    knex = (await createTenantKnex()).knex;
 
-  // Throwaway ticket assigned to the target user (the handler reads it only).
-  fixtureTicketId = randomUUID();
-  fixtureTicketNumber = `PRIORITY-REPRO-${Date.now()}`;
-  await knex('tickets').insert({
-    tenant: TENANT,
-    ticket_id: fixtureTicketId,
-    ticket_number: fixtureTicketNumber,
-    title: 'behavioral priority repro',
-    client_id: FIXTURE_REFERENCE.client_id,
-    status_id: FIXTURE_REFERENCE.status_id,
-    priority_id: FIXTURE_REFERENCE.priority_id,
-    board_id: FIXTURE_REFERENCE.board_id,
-    assigned_to: USER,
-    source: 'api',
-    ticket_origin: 'internal',
-    entered_at: new Date().toISOString(),
+    // Throwaway ticket assigned to the target user (the handler reads it only).
+    fixtureTicketId = randomUUID();
+    fixtureTicketNumber = `PRIORITY-REPRO-${Date.now()}`;
+    await knex('tickets').insert({
+      tenant: TENANT,
+      ticket_id: fixtureTicketId,
+      ticket_number: fixtureTicketNumber,
+      title: 'behavioral priority repro',
+      client_id: FIXTURE_REFERENCE.client_id,
+      status_id: FIXTURE_REFERENCE.status_id,
+      priority_id: FIXTURE_REFERENCE.priority_id,
+      board_id: FIXTURE_REFERENCE.board_id,
+      assigned_to: USER,
+      source: 'api',
+      ticket_origin: 'internal',
+      entered_at: new Date().toISOString(),
+    });
+
+    await setTenantPriority(null);
+    await setUserPriority(null);
   });
 
-  await setTenantPriority(null);
-  await setUserPriority(null);
-});
+  afterAll(async () => {
+    await knex('tickets').where({ tenant: TENANT, ticket_id: fixtureTicketId }).delete();
+    await setTenantPriority(null);
+    await setUserPriority(null);
+  });
 
-afterAll(async () => {
-  await knex('tickets').where({ tenant: TENANT, ticket_id: fixtureTicketId }).delete();
-  await setTenantPriority(null);
-  await setUserPriority(null);
-});
-
-describe('behavioral: per-user priority override honored on the ticket-assigned creation path', () => {
   it('user=high, tenant=none -> stamps high (the reported defect case)', async () => {
     await setTenantPriority(null);
     await setUserPriority('high');

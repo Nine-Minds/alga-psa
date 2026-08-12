@@ -49,11 +49,28 @@ const LOW_SUBTYPES = [
 
 async function addPriorityColumn(knex, table, column, { notNull }) {
   const nullClause = notNull ? "NOT NULL DEFAULT 'normal'" : 'NULL';
+  // Citus rejects an inline CHECK on ADD COLUMN ("cannot execute ADD COLUMN
+  // command with ... CHECK constraints" / "all constraints in Citus must have
+  // explicit names"), so the column and its CHECK must be separate statements
+  // and the constraint must be named. Add the column first, then the named
+  // CHECK in its own statement — idempotent via a pg_constraint probe because
+  // Postgres has no ADD CONSTRAINT IF NOT EXISTS. This works identically on
+  // Citus (distributed/reference tables) and plain Postgres.
   await knex.raw(
-    `ALTER TABLE ?? ADD COLUMN IF NOT EXISTS ?? text ${nullClause} ` +
-    `CHECK (?? ${PRIORITY_CHECK})`,
-    [table, column, column]
+    `ALTER TABLE ?? ADD COLUMN IF NOT EXISTS ?? text ${nullClause}`,
+    [table, column]
   );
+  const constraintName = `${column}_priority_ck`;
+  const existing = await knex.raw(
+    `SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass`,
+    [constraintName, table]
+  );
+  if (existing.rows.length === 0) {
+    await knex.raw(
+      `ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (?? ${PRIORITY_CHECK})`,
+      [table, constraintName, column]
+    );
+  }
 }
 
 async function dropPriorityColumn(knex, table, column) {
