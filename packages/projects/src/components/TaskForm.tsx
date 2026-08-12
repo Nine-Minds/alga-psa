@@ -61,6 +61,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
+import { TaskCredentialsSection } from './TaskCredentialsSection';
 import TaskCommentThread from './TaskCommentThread';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
@@ -2260,6 +2261,13 @@ export default function TaskForm({
               onDocumentAdded={mode === 'edit' ? (doc) => setSessionAddedDocuments(prev => [...prev, doc]) : undefined}
             />
           </div>
+
+          {/* Full width Passwords section (flag-gated; task attach point) */}
+          {mode === 'edit' && task && (
+            <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+              <TaskCredentialsSection taskId={task.task_id} />
+            </div>
+          )}
 
           {/* Full width Comments section */}
           {mode === 'edit' && task && (

@@ -30,6 +30,7 @@ import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatu
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
 import { ContactPortalTab } from '../ContactPortalTab';
+import { ContactCredentialsSection } from '../ContactCredentialsSection';
 import ContactDetailsEdit from '../ContactDetailsEdit';
 import type {
   ContactPortalSummary,
@@ -853,6 +854,10 @@ export function ContactBentoLayout({
             documents,
             onDocumentCreated,
           } as any)}
+          <ContactCredentialsSection
+            contactId={contact.contact_name_id}
+            clientId={contact.client_id ?? null}
+          />
         </DialogContent>
       </Dialog>
       <QuickAddInteraction

@@ -22,6 +22,9 @@ const {
   getHuduClientContextMock,
   useFeatureFlagMock,
   hasTierFeatureMock,
+  addCredentialToEntityMock,
+  removeCredentialFromEntityMock,
+  setEntityCredentialsMock,
 } = vi.hoisted(() => ({
   getCredentialsContextMock: vi.fn(),
   listCredentialsMock: vi.fn(),
@@ -33,6 +36,9 @@ const {
   getHuduClientContextMock: vi.fn(),
   useFeatureFlagMock: vi.fn(),
   hasTierFeatureMock: vi.fn(),
+  addCredentialToEntityMock: vi.fn(),
+  removeCredentialFromEntityMock: vi.fn(),
+  setEntityCredentialsMock: vi.fn(),
 }));
 
 vi.mock('server/src/context/TierContext', () => ({
@@ -47,10 +53,23 @@ vi.mock('@ee/lib/actions/credentials/credentialActions', () => ({
   updateCredential: updateCredentialMock,
   deleteCredential: deleteCredentialMock,
   setCredentialRestriction: vi.fn(),
+  addCredentialToEntity: addCredentialToEntityMock,
+  removeCredentialFromEntity: removeCredentialFromEntityMock,
+  setEntityCredentials: setEntityCredentialsMock,
 }));
 
 vi.mock('@enterprise/lib/actions/integrations/huduDataActions', () => ({
   getHuduClientContext: getHuduClientContextMock,
+}));
+
+// The surface wrappers dynamic-import the section through the `@enterprise`
+// alias, which in the ee/server test env resolves to the CE stub (render
+// null). Mock it to a recognizable stub so the flag-on wrapper path can be
+// asserted without pulling the real EE component through next/dynamic.
+vi.mock('@enterprise/components/credentials/EntityCredentialsSection', () => ({
+  EntityCredentialsSection: ({ entityType, entityId }: { entityType: string; entityId: string }) => (
+    <div id={`ee-entity-section-${entityType}`}>{entityId}</div>
+  ),
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -84,6 +103,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
       'credentials.table.revealNoAccess': 'you do not have permission to reveal this password',
       'credentials.table.revealNotFound': 'this password no longer exists',
       'credentials.table.revealFailed': 'could not reveal the value',
+      'credentials.form.entity.asset': 'Asset',
+      'credentials.form.entity.ticket': 'Ticket',
+      'credentials.form.entity.contact': 'Contact',
+      'credentials.form.entity.document': 'Document',
+      'credentials.form.entity.project_task': 'Project task',
     };
     return friendly[key] ?? key;
   };
@@ -159,7 +183,12 @@ vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
 import { AssetCredentialsSection as EeAssetCredentialsSection } from '@ee/components/credentials/AssetCredentialsSection';
+import { EntityCredentialsSection as EeEntityCredentialsSection } from '@ee/components/credentials/EntityCredentialsSection';
 import { AssetCredentialsSection as AssetsWrapperAssetCredentialsSection } from '@alga-psa/assets/components/tabs/AssetCredentialsSection';
+import { TicketCredentialsSection } from '@alga-psa/tickets/components/ticket/TicketCredentialsSection';
+import { ContactCredentialsSection } from '@alga-psa/clients/components/contacts/ContactCredentialsSection';
+import { DocumentCredentialsSection } from '@alga-psa/documents/components/DocumentCredentialsSection';
+import { TaskCredentialsSection } from '@alga-psa/projects/components/TaskCredentialsSection';
 
 const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 const SECRET_VALUE = 'S3cr3t-V@ult-V4lue';
@@ -179,14 +208,19 @@ function credential(overrides: Record<string, unknown> = {}) {
     isRestricted: false,
     folderName: null,
     externalUrl: null,
-    attachedAssetIds: [],
+    attachments: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: null,
     ...overrides,
   };
 }
 
-async function renderScreen(props: { clientId?: string; assetId?: string } = {}) {
+async function renderScreen(props: {
+  clientId?: string;
+  entityType?: 'asset' | 'ticket' | 'contact' | 'document' | 'project_task';
+  entityId?: string;
+  defaultClientId?: string | null;
+} = {}) {
   render(<CredentialsScreen {...props} />);
   await waitFor(() => {
     expect(document.getElementById('credentials-screen-list')).toBeTruthy();
@@ -443,12 +477,12 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     expect(document.getElementById('credential-form-destination-alga')).toBeNull();
   });
 
-  it('pre-attaches the asset when created from the asset section', async () => {
+  it('pre-attaches the entity when created from an entity section', async () => {
     getHuduClientContextMock.mockResolvedValue({ connected: false, mapped: false });
     createCredentialMock.mockResolvedValue({ id: 'new-credential' });
     listCredentialsMock.mockResolvedValue([credential()]);
 
-    render(<CredentialsScreen assetId="asset-1" defaultClientId={CLIENT_ID} />);
+    render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
     await waitFor(() => {
       expect(document.getElementById('credentials-screen-new')).toBeTruthy();
     });
@@ -468,7 +502,7 @@ describe('CredentialsScreen — create dialog destination picker', () => {
         expect.objectContaining({
           clientId: CLIENT_ID,
           name: 'Router Admin',
-          assetIds: ['asset-1'],
+          attachments: [{ entityType: 'asset', entityId: 'asset-1' }],
         })
       );
     });
@@ -573,3 +607,233 @@ describe('AssetCredentialsSection — flag-off regression (no empty vault card)'
   });
 });
 
+
+describe('CredentialsScreen — entity-scoped (association-driven) lists', () => {
+  it('scopes listCredentials to the entity (both sources)', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(<CredentialsScreen entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-list')).toBeTruthy();
+    });
+
+    expect(listCredentialsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'ticket', entityId: 'ticket-1' })
+    );
+  });
+
+  it('offers Link existing + detach on entity-scoped rows (no edit/delete/restrict)', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(<CredentialsScreen entityType="contact" entityId="contact-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-list')).toBeTruthy();
+    });
+
+    const id = '22222222-2222-2222-2222-222222222222';
+    expect(document.getElementById('credentials-screen-link')).toBeTruthy();
+    expect(document.getElementById(`credentials-row-detach-${id}`)).toBeTruthy();
+    expect(document.getElementById(`credentials-row-edit-${id}`)).toBeNull();
+    expect(document.getElementById(`credentials-row-delete-${id}`)).toBeNull();
+    expect(document.getElementById(`credentials-row-restrict-${id}`)).toBeNull();
+  });
+});
+
+describe('CredentialsScreen — link existing (entity side)', () => {
+  it('lists same-client candidates and calls addCredentialToEntity on link', async () => {
+    window.confirm = vi.fn(() => true);
+    listCredentialsMock.mockImplementation(async (input: Record<string, unknown>) => {
+      if (input?.entityType) return [];
+      return [credential()];
+    });
+
+    render(<CredentialsScreen entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-link')).toBeTruthy();
+    });
+
+    fireEvent.click(document.getElementById('credentials-screen-link')!);
+    await waitFor(() => {
+      expect(document.getElementById('credential-link-name-22222222-2222-2222-2222-222222222222')).toBeTruthy();
+    });
+
+    // The picker is filtered to the entity's owning client.
+    expect(listCredentialsMock).toHaveBeenLastCalledWith({ clientId: CLIENT_ID });
+
+    fireEvent.click(document.getElementById('credential-link-select-22222222-2222-2222-2222-222222222222')!);
+
+    await waitFor(() => {
+      expect(addCredentialToEntityMock).toHaveBeenCalledWith('ticket', 'ticket-1', '22222222-2222-2222-2222-222222222222');
+    });
+  });
+
+  it('detaches a row via removeCredentialFromEntity', async () => {
+    window.confirm = vi.fn(() => true);
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-list')).toBeTruthy();
+    });
+
+    fireEvent.click(document.getElementById('credentials-row-detach-22222222-2222-2222-2222-222222222222')!);
+
+    await waitFor(() => {
+      expect(removeCredentialFromEntityMock).toHaveBeenCalledWith('asset', 'asset-1', '22222222-2222-2222-2222-222222222222');
+    });
+  });
+});
+
+describe('CredentialFormDialog — read-only associations summary on edit', () => {
+  it('shows the attachment summary instead of the asset picker when editing', async () => {
+    getHuduClientContextMock.mockResolvedValue({ connected: false, mapped: false });
+    listCredentialsMock.mockResolvedValue([credential()]);
+    const editing = credential({
+      id: 'edit-cred',
+      name: 'Edit Me',
+      attachments: [
+        { entityType: 'ticket', entityId: 'ticket-1' },
+        { entityType: 'ticket', entityId: 'ticket-2' },
+        { entityType: 'asset', entityId: 'asset-9' },
+      ],
+    });
+
+    render(
+      <CredentialsScreen
+        defaultClientId={CLIENT_ID}
+      />
+    );
+    // The global list (no entity scope) shows the edit affordance so the edit
+    // dialog can be reached; the summary assertion below drives the dialog
+    // directly.
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-list')).toBeTruthy();
+    });
+
+    // Show that the edit dialog renders a read-only summary (not a picker)
+    // when editing a credential with attachments.
+    const { CredentialFormDialog } = await import('@ee/components/credentials/CredentialFormDialog');
+    render(
+      <CredentialFormDialog
+        isOpen
+        onClose={() => undefined}
+        onSubmit={async () => undefined}
+        editing={editing as never}
+        defaultClientId={CLIENT_ID}
+        context={{ tierOk: true, huduConnected: false, flagIrrelevantHere: true } as never}
+      />
+    );
+
+    await waitFor(() => {
+      expect(document.getElementById('credential-form-associations-summary')?.textContent).toContain('Ticket · 2');
+      expect(document.getElementById('credential-form-associations-summary')?.textContent).toContain('Asset');
+    });
+    // No asset-attach picker anywhere in the edit dialog.
+    expect(document.getElementById('credential-form-assets')).toBeNull();
+  });
+});
+
+describe('EntityCredentialsSection — generic entity section gating', () => {
+  it('renders nothing when the release flag is off', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(
+      <EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />
+    );
+
+    expect(container.firstChild).toBeNull();
+    expect(document.getElementById('ticket-credentials-section')).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('renders the tier teaser (not the vault) below Pro', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    hasTierFeatureMock.mockReturnValue(false);
+
+    render(<EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />);
+
+    expect(document.getElementById('ticket-credentials-tier-teaser')).toBeTruthy();
+    expect(document.getElementById('ticket-credentials-view-plans')).toBeTruthy();
+    expect(document.getElementById('ticket-credentials-section')).toBeNull();
+  });
+
+  it('renders the vault scoped to the entity when the flag is on and tier is met', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    hasTierFeatureMock.mockReturnValue(true);
+    getCredentialsContextMock.mockResolvedValue({
+      tierOk: true,
+      huduConnected: false,
+      flagIrrelevantHere: true,
+    });
+    listCredentialsMock.mockResolvedValue([]);
+
+    render(<EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} />);
+
+    await waitFor(() => {
+      expect(document.getElementById('ticket-credentials-section')).toBeTruthy();
+    });
+    expect(listCredentialsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'ticket', entityId: 'ticket-1' })
+    );
+  });
+});
+
+describe('per-entity section wrappers — flag-off regression (legacy surface preserved)', () => {
+  it('ticket section renders nothing when the flag is off', () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(<TicketCredentialsSection ticketId="ticket-1" clientId={CLIENT_ID} />);
+
+    expect(container.firstChild).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('contact section renders nothing when the flag is off', () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(<ContactCredentialsSection contactId="contact-1" clientId={CLIENT_ID} />);
+
+    expect(container.firstChild).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('document section renders nothing when the flag is off', () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(<DocumentCredentialsSection documentId="doc-1" />);
+
+    expect(container.firstChild).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('project task section renders nothing when the flag is off', () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(<TaskCredentialsSection taskId="task-1" />);
+
+    expect(container.firstChild).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('ticket section mounts the EE vault scoped to the ticket when the flag is on', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+
+    render(<TicketCredentialsSection ticketId="ticket-1" clientId={CLIENT_ID} />);
+
+    await waitFor(() => {
+      const section = document.getElementById('ee-entity-section-ticket');
+      expect(section?.textContent).toBe('ticket-1');
+    });
+  });
+
+  it('project task section mounts the EE vault scoped to the task when the flag is on', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+
+    render(<TaskCredentialsSection taskId="task-1" />);
+
+    await waitFor(() => {
+      const section = document.getElementById('ee-entity-section-project_task');
+      expect(section?.textContent).toBe('task-1');
+    });
+  });
+});

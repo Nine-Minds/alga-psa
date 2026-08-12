@@ -12,7 +12,7 @@
  * secret or an `otpauth://` URI and is normalized server-side.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -24,9 +24,8 @@ import { Dice5, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
-import { listAssets } from '@alga-psa/assets/actions';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
-import type { CredentialSummary } from '../../lib/credentials/contracts';
+import type { CredentialAttachment, CredentialAssociationEntityType, CredentialSummary } from '../../lib/credentials/contracts';
 
 // Client-safe TOTP seed validation. The server-side RFC 6238 util lives in
 // totp.ts and depends on node:crypto (server-only); this copy only validates
@@ -44,17 +43,20 @@ export interface CredentialFormValue {
   url: string;
   description: string;
   destination: 'alga' | 'hudu';
-  assetIds: string[];
+  /** Entity attachments for the new credential (create only; see below). */
+  attachments: CredentialAttachment[];
 }
 
 interface CredentialFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (value: CredentialFormValue) => Promise<void>;
-  /** When set, prefill client (unified client tab / asset section). */
+  /** When set, prefill client (unified client tab / entity sections). */
   defaultClientId?: string | null;
-  /** When set, this is an asset-scoped create (asset pre-attached). */
-  assetId?: string | null;
+  /** When set with `entityId`, this is an entity-scoped create (the entity is
+   *  pre-attached, generalizing the v1 asset seeding). */
+  entityType?: CredentialAssociationEntityType | null;
+  entityId?: string | null;
   editing?: CredentialSummary | null;
   clients?: IClient[];
   context: CredentialsContext | null;
@@ -93,12 +95,29 @@ function isValidOtpSeed(value: string): boolean {
   return BASE32_REGEX.test(secret.replace(/[=\s-]/g, ''));
 }
 
+/** Read-only edit-dialog summary of the credential's entity attachments. */
+function associationSummaryLabel(
+  attachments: CredentialAttachment[],
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const counts = new Map<string, number>();
+  for (const attachment of attachments) {
+    counts.set(attachment.entityType, (counts.get(attachment.entityType) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([entityType, count]) =>
+      `${t(`credentials.form.entity.${entityType}`)}${count > 1 ? ` · ${count}` : ''}`
+    )
+    .join(', ');
+}
+
 export function CredentialFormDialog({
   isOpen,
   onClose,
   onSubmit,
   defaultClientId,
-  assetId,
+  entityType,
+  entityId,
   editing,
   clients: clientsProp,
   onError,
@@ -114,8 +133,7 @@ export function CredentialFormDialog({
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [destination, setDestination] = useState<'alga' | 'hudu'>('alga');
-  const [assetIds, setAssetIds] = useState<string[]>([]);
-  const [assetOptions, setAssetOptions] = useState<{ asset_id: string; name: string }[]>([]);
+  const [attachments, setAttachments] = useState<CredentialAttachment[]>([]);
 
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [genLength, setGenLength] = useState(16);
@@ -171,7 +189,10 @@ export function CredentialFormDialog({
         setUrl(editing.url ?? '');
         setDescription(editing.description ?? '');
         setDestination('alga');
-        setAssetIds(editing.attachedAssetIds ?? []);
+        // Edit is metadata-only: the entity attachments are shown as a
+        // read-only summary, never edited from the credential form
+        // (associations are managed from the entity side).
+        setAttachments(editing.attachments ?? []);
       } else {
         setClientId(defaultClientId ?? '');
         setName('');
@@ -181,35 +202,12 @@ export function CredentialFormDialog({
         setUrl('');
         setDescription('');
         setDestination('alga');
-        // Asset-section create is pre-attached: the new credential must carry
-        // the asset it was created from so it appears in the section's list.
-        setAssetIds(assetId ? [assetId] : []);
+        // Entity-section create is pre-attached: the new credential must carry
+        // the entity it was created from so it appears in the section's list.
+        setAttachments(entityType && entityId ? [{ entityType, entityId }] : []);
       }
     }
-  }, [isOpen, editing, defaultClientId, assetId]);
-
-  useEffect(() => {
-    if (!isOpen || destination !== 'alga' || !clientId) {
-      setAssetOptions([]);
-      return;
-    }
-    let cancelled = false;
-    listAssets({ client_id: clientId, limit: 200 })
-      .then((result) => {
-        if (cancelled) return;
-        if (result && !('error' in result)) {
-          const rows = result.assets ?? [];
-          setAssetOptions(rows.map((asset: { asset_id: string; name: string }) => ({
-            asset_id: asset.asset_id,
-            name: asset.name,
-          })));
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, destination, clientId]);
+  }, [isOpen, editing, defaultClientId, entityType, entityId]);
 
   const canUseHudu = huduClientMapped === true;
 
@@ -241,7 +239,7 @@ export function CredentialFormDialog({
         url: url.trim() || '',
         description: description.trim(),
         destination,
-        assetIds: destination === 'alga' ? assetIds : [],
+        attachments: editing ? [] : attachments,
       });
     } catch {
       setError(t('credentials.form.createFailed'));
@@ -251,15 +249,7 @@ export function CredentialFormDialog({
     }
   };
 
-  const selectedClient = clients.find((client) => client.client_id === clientId);
-
-  const assetsLabel = useMemo(
-    () => (assetIds.length > 0 ? assetIds.join(', ') : t('credentials.form.attachAsset')),
-    [assetIds, t]
-  );
-
-  return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+  return (    <Dialog isOpen={isOpen} onClose={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
@@ -428,40 +418,26 @@ export function CredentialFormDialog({
             </div>
           )}
 
-          {!editing && destination === 'alga' && (
+          {editing ? (
             <div className="space-y-1">
-              <Label htmlFor="credential-form-assets">{t('credentials.form.assets')}</Label>
-              {selectedClient ? (
-                <select
-                  id="credential-form-assets"
-                  className="h-9 w-full rounded-md border border-gray-200 px-2 text-sm"
-                  value=""
-                  onChange={(event) => {
-                    if (event.target.value) {
-                      setAssetIds((current) =>
-                        current.includes(event.target.value)
-                          ? current
-                          : [...current, event.target.value]
-                      );
-                    }
-                  }}
-                >
-                  <option value="">{t('credentials.form.attachAsset')}</option>
-                  {assetOptions.map((asset) => (
-                    <option key={asset.asset_id} value={asset.asset_id}>
-                      {asset.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-xs text-gray-500">{t('credentials.form.assetsHelp')}</p>
-              )}
-              {assetIds.length > 0 && (
-                <p id="credential-form-assets-list" className="text-xs text-gray-600">
-                  {assetsLabel}
-                </p>
-              )}
+              <Label>{t('credentials.form.associations')}</Label>
+              <p id="credential-form-associations-summary" className="text-xs text-gray-600">
+                {attachments.length > 0
+                  ? associationSummaryLabel(attachments, t)
+                  : t('credentials.form.associationsNone')}
+              </p>
+              <p className="text-xs text-gray-500">{t('credentials.form.associationsHelp')}</p>
             </div>
+          ) : (
+            entityType &&
+            entityId && (
+              <div className="space-y-1">
+                <Label>{t('credentials.form.preAttached')}</Label>
+                <p id="credential-form-pre-attach" className="text-xs text-gray-600">
+                  {t('credentials.form.preAttachedHelp', { entity: t(`credentials.form.entity.${entityType}`) })}
+                </p>
+              </div>
+            )
           )}
 
           {error && (

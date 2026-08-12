@@ -28,10 +28,12 @@ import {
   EyeOff,
   ExternalLink,
   KeyRound,
+  Link2,
   Lock,
   RefreshCw,
   Timer,
   Trash2,
+  Unlink,
   Pencil,
   Plus,
   Users,
@@ -43,25 +45,41 @@ import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
 import { FEATURE_MINIMUM_TIER, TIER_FEATURES } from '@alga-psa/types';
 import {
+  addCredentialToEntity,
   createCredential,
   deleteCredential,
   getCredentialsContext,
   listCredentials,
+  removeCredentialFromEntity,
   revealCredential,
   updateCredential,
 } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
-import type { CredentialRevealResult, CredentialSummary } from '../../lib/credentials/contracts';
+import type {
+  CredentialAssociationEntityType,
+  CredentialRevealResult,
+  CredentialSummary,
+} from '../../lib/credentials/contracts';
 import { CredentialFormDialog, type CredentialFormValue } from './CredentialFormDialog';
+import { CredentialLinkDialog } from './CredentialLinkDialog';
 import { CredentialRestrictDialog } from './CredentialRestrictDialog';
 import { TotpCountdown } from './TotpCountdown';
 
 export interface CredentialsScreenProps {
   /** When set, scope the list to one client (unified client Passwords tab). */
   clientId?: string;
-  /** When set, scope the list to an asset's attached credentials. */
-  assetId?: string;
-  /** When set with `assetId`, prefill the create dialog's owning client. */
+  /**
+   * When set with `entityId`, scope the list to an entity's attached
+   * credentials (association-driven, both sources). Generalized from the v1
+   * asset-only scoping.
+   */
+  entityType?: CredentialAssociationEntityType;
+  entityId?: string;
+  /**
+   * When set with `entityType`/`entityId`, prefill the create dialog's owning
+   * client AND filter the link-existing picker to credentials compatible with
+   * the same-client rule (the entity's owning client for client-bound types).
+   */
   defaultClientId?: string | null;
 }
 
@@ -72,10 +90,12 @@ type RevealState = {
 
 type RevealErrorKey = 'failed' | 'noAccess' | 'notFound';
 
-export function CredentialsScreen({ clientId, assetId, defaultClientId }: CredentialsScreenProps) {
+export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
   const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
+
+  const entityScoped = Boolean(entityType && entityId);
 
   const [context, setContext] = useState<CredentialsContext | null>(null);
   const [credentials, setCredentials] = useState<CredentialSummary[] | null>(null);
@@ -96,6 +116,7 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const load = useCallback(
     async (refresh: boolean) => {
@@ -110,13 +131,13 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
           return;
         }
         setCredentials(
-          await listCredentials({ clientId, assetId, search: refresh ? undefined : undefined })
+          await listCredentials({ clientId, entityType, entityId, search: refresh ? undefined : undefined })
         );
       } catch {
         setLoadError(true);
       }
     },
-    [clientId, assetId]
+    [clientId, entityType, entityId]
   );
 
   const applyFilters = useCallback(
@@ -242,12 +263,32 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
         otpSecret: value.otpSecret ?? null,
         url: value.url,
         description: value.description,
-        assetIds: value.assetIds,
+        attachments: value.attachments,
       });
     }
     setFormOpen(false);
     setEditing(null);
     await load(true);
+  };
+
+  const handleLink = async (credential: CredentialSummary) => {
+    if (!entityType || !entityId) return;
+    await addCredentialToEntity(entityType, entityId, credential.id);
+    setLinkOpen(false);
+    await load(true);
+  };
+
+  const handleDetach = async (credential: CredentialSummary) => {
+    if (!entityType || !entityId) return;
+    if (!window.confirm(t('credentials.screen.confirmDetach', { name: credential.name }))) {
+      return;
+    }
+    try {
+      await removeCredentialFromEntity(entityType, entityId, credential.id);
+      await load(true);
+    } catch {
+      setLoadError(true);
+    }
   };
 
   const handleDelete = async (credential: CredentialSummary) => {
@@ -340,6 +381,17 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
             <Plus className="mr-2 h-4 w-4" />
             {t('credentials.screen.newPassword')}
           </Button>
+          {entityScoped && (
+            <Button
+              id="credentials-screen-link"
+              variant="outline"
+              size="sm"
+              onClick={() => setLinkOpen(true)}
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              {t('credentials.screen.linkExisting')}
+            </Button>
+          )}
           <Button
             id="credentials-screen-refresh"
             variant="outline"
@@ -533,7 +585,7 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
                           {t('credentials.table.copy')}
                         </Button>
                       )}
-                      {!assetId && (
+                      {!entityScoped && (
                         <Button
                           id={`credentials-row-edit-${id}`}
                           variant="ghost"
@@ -546,7 +598,7 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!assetId && item.source === 'alga' && (
+                      {!entityScoped && item.source === 'alga' && (
                         <Button
                           id={`credentials-row-restrict-${id}`}
                           variant="ghost"
@@ -556,7 +608,7 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
                           <Users className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!assetId && (
+                      {!entityScoped && (
                         <Button
                           id={`credentials-row-delete-${id}`}
                           variant="ghost"
@@ -564,6 +616,16 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
                           onClick={() => handleDelete(item)}
                         >
                           <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                        </Button>
+                      )}
+                      {entityScoped && (
+                        <Button
+                          id={`credentials-row-detach-${id}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDetach(item)}
+                        >
+                          <Unlink className="h-3.5 w-3.5 text-red-600" />
                         </Button>
                       )}
                     </div>
@@ -585,9 +647,18 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
         editing={editing}
         defaultClientId={defaultClientId ?? clientId ?? null}
         clients={clients}
-        assetId={assetId ?? null}
+        entityType={entityType ?? null}
+        entityId={entityId ?? null}
         context={context}
         onError={() => setLoadError(true)}
+      />
+
+      <CredentialLinkDialog
+        isOpen={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        clientId={entityScoped ? (defaultClientId ?? clientId ?? null) : null}
+        excludeCredentialIds={credentials?.map((c) => c.id) ?? []}
+        onSelect={handleLink}
       />
 
       <CredentialRestrictDialog

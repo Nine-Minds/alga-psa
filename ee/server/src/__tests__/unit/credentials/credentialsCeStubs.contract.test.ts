@@ -14,8 +14,10 @@ describe('credentials vault — CE stub contracts', () => {
       'packages/ee/src/components/credentials/CredentialsScreen.tsx',
       'packages/ee/src/components/credentials/CredentialFormDialog.tsx',
       'packages/ee/src/components/credentials/CredentialRestrictDialog.tsx',
+      'packages/ee/src/components/credentials/CredentialLinkDialog.tsx',
       'packages/ee/src/components/credentials/ClientCredentialsTab.tsx',
       'packages/ee/src/components/credentials/AssetCredentialsSection.tsx',
+      'packages/ee/src/components/credentials/EntityCredentialsSection.tsx',
     ];
     for (const stub of stubs) {
       const source = readRepoFile(stub);
@@ -40,7 +42,9 @@ describe('credentials vault — CE stub contracts', () => {
       'revealCredential',
       'revealCredentialOtpSeed',
       'setCredentialRestriction',
-      'setCredentialAssociations',
+      'addCredentialToEntity',
+      'removeCredentialFromEntity',
+      'setEntityCredentials',
     ]) {
       expect(stub).toContain(`export async function ${action}`);
     }
@@ -104,6 +108,9 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     const eeSection = readRepoFile(
       'ee/server/src/components/credentials/AssetCredentialsSection.tsx'
     );
+    const eeGenericSection = readRepoFile(
+      'ee/server/src/components/credentials/EntityCredentialsSection.tsx'
+    );
 
     // Shared wrapper: flag-gated. Flag off => the legacy placeholder card
     // renders in both EE and CE builds; flag on => the vault section loads via
@@ -123,12 +130,16 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     expect(tab).not.toContain('coming soon');
     expect(tab).not.toContain('Secure password management coming soon');
 
-    // The EE section gates its Card + header on the flag (flag off => null,
-    // never an empty title-only card).
-    expect(eeSection).toContain("useFeatureFlag('release-v1.5-feature'");
-    expect(eeSection).toContain('if (!flagEnabled) {');
-    expect(eeSection).toContain('return null;');
-    expect(eeSection).toContain('id="asset-credentials-section"');
+    // The EE asset section is the generic entity section scoped to the asset;
+    // the GENERIC section gates its Card + header on the flag (flag off =>
+    // null, never an empty title-only card) and derives the asset ids.
+    expect(eeSection).toContain('EntityCredentialsSection');
+    expect(eeSection).toContain('entityType="asset"');
+    expect(eeGenericSection).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(eeGenericSection).toContain('if (!flagEnabled) {');
+    expect(eeGenericSection).toContain('return null;');
+    expect(eeGenericSection).toContain('id={cardId}');
+    expect(eeGenericSection).toContain('`${entityType}-credentials-section`');
   });
 
   it('the client gate requires the release flag, EE, and the tier probe (useCredentialsVaultTab)', () => {

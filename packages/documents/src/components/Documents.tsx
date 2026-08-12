@@ -11,6 +11,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
 import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
+import { DocumentCredentialsSection } from './DocumentCredentialsSection';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import Drawer from '@alga-psa/ui/components/Drawer';
@@ -1495,6 +1496,10 @@ const Documents = ({
             className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
           />
         </div>
+
+        {selectedDocument && !isCreatingNew && (
+          <DocumentCredentialsSection documentId={selectedDocument.document_id} />
+        )}
 
         <div className="flex-1 overflow-y-auto mb-4 p-2">
           <div className="h-full w-full">
