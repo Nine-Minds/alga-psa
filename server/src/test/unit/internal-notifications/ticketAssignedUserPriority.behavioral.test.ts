@@ -1,19 +1,25 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { createTenantKnex } from '@alga-psa/db';
+import { runWithApiKeyUser } from '@alga-psa/auth';
 import { internalNotificationSubscriberTestHarness } from '../../../lib/eventBus/subscribers/internalNotificationSubscriber';
 
 // Behavioral regression test for the ticket-assigned creation path
-// (task 29.8.46). It drives the REAL subscriber handler (handleTicketAssigned,
-// the function the event bus invokes for TICKET_ASSIGNED) through the REAL
-// creation function (createNotificationFromTemplateInternal) against the live
-// dev DB — not the pure precedence helper. The per-user override on the
-// ticket-assigned subtype (subtype 1) is written straight to the DB exactly as
-// the profile UI writes it, so the whole chain is exercised end to end:
+// (task 29.8.46). It drives the REAL server action the settings UI invokes
+// (updateUserInternalNotificationPreferenceAction) to persist the per-user
+// override, then emits TICKET_ASSIGNED through the REAL event-bus entry point
+// (handleInternalNotificationEvent — schema validation + dispatch, exactly
+// what the Redis consumer calls) so the whole chain is exercised end to end:
 //
-//   handleTicketAssigned -> createNotificationFromTemplateInternal
+//   updateUserInternalNotificationPreferenceAction  (the writer the UI calls)
+//     -> handleInternalNotificationEvent -> handleTicketAssigned
+//     -> createNotificationFromTemplateInternal
 //     -> resolveNotificationPriority(user ?? tenant ?? subtype default ?? 'normal')
 //     -> stamped internal_notifications.priority
+//
+// The override is persisted THROUGH THE WRITER ACTION — not inserted into the
+// table directly — so the test cannot accidentally seed a row in the exact
+// shape the reader expects while the product writes something different.
 //
 // If the resolution is removed from the creation path (the pre-draft / base
 // branch behavior), every case below collapses to the column default 'normal'
@@ -26,6 +32,7 @@ const TENANT = 'dd8cb218-d46d-47f3-be27-8aa50aad5fce';
 const USER = '6684ee32-8f0a-46fb-b84c-4563337b2766'; // glinda
 const ASSIGNER = '00000000-0000-4000-8000-000000000001'; // smoke actor
 const SUBTYPE_TICKET_ASSIGNED = 1; // ticket-assigned
+const CATEGORY_TICKETS = 1;
 
 // Real reference values for a valid ticket row in the Glinda tenant.
 const FIXTURE_REFERENCE = {
@@ -39,56 +46,62 @@ let knex: any;
 let fixtureTicketId: string;
 let fixtureTicketNumber: string;
 
+// The session identity the withAuth-wrapped actions see. Mirrors the profile
+// page session for glinda in the Glinda tenant.
+const sessionUser = {
+  user_id: USER,
+  user_type: 'internal',
+  tenant: TENANT,
+  roles: [] as any[],
+};
+
+/** Persist a per-user subtype override through the real server action the UI calls. */
 async function setUserPriority(priority: string | null) {
-  const existing = await knex('user_internal_notification_preferences')
-    .where({ tenant: TENANT, user_id: USER, subtype_id: SUBTYPE_TICKET_ASSIGNED })
-    .first();
-  if (existing) {
-    await knex('user_internal_notification_preferences')
-      .where({ preference_id: existing.preference_id })
-      .update({ priority, is_enabled: true });
-  } else {
-    await knex('user_internal_notification_preferences').insert({
+  await runWithApiKeyUser(sessionUser, async () => {
+    const { updateUserInternalNotificationPreferenceAction } = await import(
+      '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
+    );
+    await updateUserInternalNotificationPreferenceAction({
       tenant: TENANT,
       user_id: USER,
-      category_id: 1,
+      category_id: CATEGORY_TICKETS,
       subtype_id: SUBTYPE_TICKET_ASSIGNED,
       is_enabled: true,
       priority,
     });
-  }
+  });
 }
 
+/** Persist a tenant-level subtype override through the real server action the admin settings UI calls. */
 async function setTenantPriority(priority: string | null) {
-  const existing = await knex('tenant_internal_notification_subtype_settings')
-    .where({ tenant: TENANT, subtype_id: SUBTYPE_TICKET_ASSIGNED })
-    .first();
-  if (existing) {
-    await knex('tenant_internal_notification_subtype_settings')
-      .where({ tenant: TENANT, subtype_id: SUBTYPE_TICKET_ASSIGNED })
-      .update({ priority });
-  } else {
-    await knex('tenant_internal_notification_subtype_settings').insert({
-      tenant: TENANT,
-      subtype_id: SUBTYPE_TICKET_ASSIGNED,
+  await runWithApiKeyUser(sessionUser, async () => {
+    const { updateInternalSubtypeAction } = await import(
+      '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
+    );
+    await updateInternalSubtypeAction(SUBTYPE_TICKET_ASSIGNED, {
       is_enabled: true,
       is_default_enabled: true,
       priority,
     });
-  }
+  });
 }
 
-/** Drive the real subscriber handler exactly as the event bus does for TICKET_ASSIGNED. */
+/**
+ * Emit TICKET_ASSIGNED through the REAL bus entry point — the same function the
+ * Redis consumer invokes (schema validation + dispatch to handleTicketAssigned).
+ */
 async function driveTicketAssigned() {
-  await internalNotificationSubscriberTestHarness.handleTicketAssigned({
+  await internalNotificationSubscriberTestHarness.handleInternalNotificationEvent({
     eventType: 'TICKET_ASSIGNED',
+    id: randomUUID(),
+    timestamp: new Date().toISOString(),
     payload: {
       tenantId: TENANT,
       ticketId: fixtureTicketId,
       userId: USER, // the assignee (recipient), as every publisher emits it
       assignedByUserId: ASSIGNER,
     },
-  });
+  } as any);
 }
 
 /**
