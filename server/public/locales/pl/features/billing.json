@@ -122,7 +122,14 @@
     "usage": "Wykorzystanie",
     "overage": "Nadwyżka",
     "noContractLineTitle": "Brak dostępnych linii umowy z pakietem godzin",
-    "noContractLineDescription": "Brak aktywnych linii umowy z pakietem godzin dla tego konta."
+    "noContractLineDescription": "Brak aktywnych linii umowy z pakietem godzin dla tego konta.",
+    "remainingSummary": "Pozostało {{remaining}} z {{total}} godzin",
+    "remainingSummaryWithRollover": "Pozostało {{remaining}} z {{total}} godzin (w tym {{rollover}} przeniesionych)",
+    "overageSummary": "{{hours}} godzin ponad limit",
+    "overBucket": "LIMIT PRZEKROCZONY",
+    "usedHours": "{{hours}} h wykorzystano",
+    "leftHours": "{{hours}} h pozostało",
+    "overHours": "{{hours}} h PONAD LIMIT"
   },
   "messages": {
     "noInvoices": "Brak faktur",
@@ -335,6 +342,26 @@
     "availableCredit": "Dostępny kredyt",
     "appliedAutomatically": "Zostanie automatycznie zastosowany do następnej faktury.",
     "credit": "Kredyt",
-    "expires": "Wygasa {{date}}"
+    "expires": "Wygasa {{date}}",
+    "history": {
+      "viewHistory": "Zobacz historię",
+      "title": "Historia kredytu",
+      "empty": "Brak aktywności kredytu",
+      "issued": "Przyznano",
+      "issuedWithInvoice": "Przyznano — przedpłata #{{invoice}}",
+      "issuedForInvoice": "Przyznano — faktura #{{invoice}}",
+      "issuedFromCreditNote": "Przyznano z noty kredytowej",
+      "applied": "Zastosowano",
+      "appliedToInvoice": "Zastosowano do faktury #{{invoice}}",
+      "adjusted": "Skorygowano",
+      "expired": "Wygasło",
+      "transferred": "Przeniesiono",
+      "transaction": "Aktywność kredytu",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Godziny przedpłacone",
+    "viewBilling": "Przejdź do rozliczeń"
   }
 }

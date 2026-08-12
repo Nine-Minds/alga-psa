@@ -58,4 +58,9 @@ describe('ClientDashboard quick-action distribution contract', () => {
   it('removes the duplicate Request Appointment button from the side rail', () => {
     expect(source).not.toContain('dashboard-request-appointment-quick');
   });
+
+  it('wires the PrepaidHoursCard widget below the KPI row, only for the PSA portal', () => {
+    expect(source).toContain("import { PrepaidHoursCard } from './PrepaidHoursCard';");
+    expect(source).toMatch(/!isAlgaDeskPortal && <PrepaidHoursCard \/>/);
+  });
 });

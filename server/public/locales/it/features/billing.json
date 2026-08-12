@@ -122,7 +122,14 @@
     "usage": "Utilizzo",
     "overage": "Eccedenza",
     "noContractLineTitle": "Nessun piano ore disponibile",
-    "noContractLineDescription": "Non ci sono piani ore attivi per il tuo account."
+    "noContractLineDescription": "Non ci sono piani ore attivi per il tuo account.",
+    "remainingSummary": "Restano {{remaining}} ore su {{total}}",
+    "remainingSummaryWithRollover": "Restano {{remaining}} ore su {{total}} (incl. {{rollover}} di riporto)",
+    "overageSummary": "{{hours}} ore di eccedenza",
+    "overBucket": "QUOTA SUPERATA",
+    "usedHours": "{{hours}} h usate",
+    "leftHours": "{{hours}} h rimanenti",
+    "overHours": "{{hours}} h IN ECCESSO"
   },
   "messages": {
     "noInvoices": "Nessuna fattura trovata",
@@ -335,6 +342,26 @@
     "availableCredit": "Credito disponibile",
     "appliedAutomatically": "Applicato automaticamente alla prossima fattura.",
     "credit": "Credito",
-    "expires": "Scade il {{date}}"
+    "expires": "Scade il {{date}}",
+    "history": {
+      "viewHistory": "Visualizza cronologia",
+      "title": "Cronologia crediti",
+      "empty": "Nessuna attività di credito per ora",
+      "issued": "Erogato",
+      "issuedWithInvoice": "Erogato — pagamento anticipato n. {{invoice}}",
+      "issuedForInvoice": "Erogato — fattura n. {{invoice}}",
+      "issuedFromCreditNote": "Erogato da nota di credito",
+      "applied": "Applicato",
+      "appliedToInvoice": "Applicato alla fattura n. {{invoice}}",
+      "adjusted": "Modificato",
+      "expired": "Scaduto",
+      "transferred": "Trasferito",
+      "transaction": "Attività di credito",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Ore prepagate",
+    "viewBilling": "Vai alla fatturazione"
   }
 }

@@ -12,6 +12,8 @@ import { IProjectTask } from '@alga-psa/types';
 import { IUsageRecord } from '@alga-psa/types';
 import { toPlainDate, formatDateOnly } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { hasClientBillingReadPermission } from './clientBillingPermissions';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 // Define the schema for the hours by service input parameters
@@ -82,6 +84,11 @@ export const getClientHoursByService = withAuth(async (
       }
 
       const clientId = contact.client_id;
+
+      const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
 
       console.log(`Fetching hours by service for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
@@ -228,7 +235,10 @@ export const getClientUsageMetrics = withAuth(async (
 
       const clientId = contact.client_id;
 
-      // No permission check needed for usage metrics - all users can access
+      const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
 
       console.log(`Fetching usage metrics for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
@@ -325,6 +335,11 @@ export const getClientBucketUsageHistory = withAuth(async (
       if (!contact?.client_id) throw new Error('Contact not associated with a client');
 
       const clientId = contact.client_id;
+
+      const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
 
       let query: any = scopedDb.table('bucket_usage as bu')
         .where('bu.client_id', clientId)
@@ -432,7 +447,10 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
 
       const clientId = contact.client_id;
 
-      // No permission check needed for bucket usage - all users can access
+      const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
 
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
