@@ -1297,6 +1297,106 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(Number(replacementLink?.amount)).toBe(24000);
     }, HOOK_TIMEOUT);
 
+    it('retries provider expiration on a later email send instead of creating a replacement while the old session is open', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `email-retry-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [originalSession] = await emulatorState('checkout-sessions');
+      expect(originalSession.status).toBe('open');
+
+      // The payable balance drops below the stored link amount (credit + prior
+      // payment) while the session is still live, and provider expiration fails
+      // on the next email send.
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ credit_applied: 3000, updated_at: db.fn.now() });
+      await tenantTable(db, tenantId, 'invoice_payments').insert({
+        payment_id: uuidv4(),
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        amount: 5000,
+        payment_method: 'manual',
+        status: 'completed',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+
+      await controlPost('faults/operation-fault/arm', {
+        operation: 'checkout.sessions.expire',
+        status: 500,
+        code: 'api_error',
+        message: 'Simulated Stripe outage',
+        remaining: 5,
+      });
+
+      const second = await sendInvoiceEmailAction([invoiceId], '');
+      expect(second.successCount).toBe(1);
+
+      // Still blocked: no replacement session, the stale one stays open at the
+      // provider, the row is `expire_pending`, and the email is portal-only.
+      let sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].status).toBe('open');
+
+      let links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expire_pending');
+
+      expect(capturedEmails).toHaveLength(2);
+      const blockedHtml = String(capturedEmails[1].message.html);
+      expect(blockedHtml).not.toContain('/checkout/sessions/');
+      expect(blockedHtml).toContain('client-portal/billing');
+
+      // Clear the fault; the next send must retry the provider expiration first
+      // and only then create a replacement whose URL the email carries.
+      await controlPost('faults/operation-fault/disarm', {});
+
+      const third = await sendInvoiceEmailAction([invoiceId], '');
+      expect(third.successCount).toBe(1);
+
+      sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(2);
+      const expiredSession = sessions.find((s: any) => s.id === originalSession.id);
+      const replacementSession = sessions.find((s: any) => s.id !== originalSession.id);
+      expect(expiredSession?.status).toBe('expired');
+      expect(replacementSession?.status).toBe('open');
+      expect(replacementSession?.amount_total).toBe(24000);
+
+      links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(2);
+      const staleLink = links.find((l) => l.external_link_id === originalSession.id);
+      const replacementLink = links.find((l) => l.external_link_id === replacementSession?.id);
+      expect(staleLink?.status).toBe('expired');
+      expect(staleLink?.metadata).toMatchObject({
+        stale_balance: true,
+        stored_amount: 32000,
+        current_balance: 24000,
+      });
+      expect(replacementLink?.status).toBe('active');
+      expect(Number(replacementLink?.amount)).toBe(24000);
+
+      // The third email carries the replacement session's URL and never the stale one's.
+      const thirdHtml = String(capturedEmails[2].message.html);
+      expect(thirdHtml).toContain(replacementSession?.url);
+      expect(thirdHtml).not.toContain(originalSession.url);
+    }, HOOK_TIMEOUT);
+
     it('expires only the non-settled link when a webhook transition pays the invoice', async () => {
       await resetSharedState();
       const clientId = uuidv4();
