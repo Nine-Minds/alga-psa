@@ -217,4 +217,105 @@ describe('buildDeferredRevenueReportFromData', () => {
     expect(acme!.hours.opening).toBe(1200 * (100000 / 6000));
     expect(acme!.bucketDetails).toHaveLength(1);
   });
+
+  it('omits a client whose only credit activity is after the selected month (Defect 2)', () => {
+    // client-1's only credit is issued in April; February sees zero opening,
+    // zero movement, zero closing. The credit did not exist in February, so no
+    // detail row may surface the client for that month.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [
+          {
+            transactionId: 'txn-future',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_issuance',
+            amount: 500000,
+            createdAt: '2026-04-15T10:00:00.000Z',
+          },
+        ],
+        creditTracking: [
+          {
+            creditId: 'credit-future',
+            transactionId: 'txn-future',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            amount: 500000,
+            remainingAmount: 500000,
+            expirationDate: null,
+            isExpired: false,
+            transactionType: 'credit_issuance',
+            issuedDate: '2026-04-15T10:00:00.000Z',
+            description: 'Future-dated credit',
+            invoiceId: null,
+            metadata: null,
+          },
+        ],
+        bucketPeriods: [],
+      }),
+      '2026-02',
+    );
+    expect(report.sections).toHaveLength(0);
+  });
+
+  it('retains a client with a pre-month credit issuance whose application lands in a future month (Defect 2)', () => {
+    // client-1's credit was issued in January and is applied in April; for
+    // February it contributes opening and closing liability of 5000. The
+    // client must appear with the February closing balance and a detail row
+    // that reconciles to it.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [
+          {
+            transactionId: 'txn-pre',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_issuance',
+            amount: 500000,
+            createdAt: '2026-01-15T10:00:00.000Z',
+          },
+          {
+            transactionId: 'txn-app-future',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            type: 'credit_application',
+            amount: -500000,
+            createdAt: '2026-04-15T10:00:00.000Z',
+          },
+        ],
+        creditTracking: [
+          {
+            creditId: 'credit-pre',
+            transactionId: 'txn-pre',
+            clientId: 'client-1',
+            currencyCode: 'USD',
+            amount: 500000,
+            remainingAmount: 500000,
+            expirationDate: null,
+            isExpired: false,
+            transactionType: 'credit_issuance',
+            issuedDate: '2026-01-15T10:00:00.000Z',
+            description: 'Pre-month prepayment',
+            invoiceId: 'inv-prepay',
+            metadata: null,
+          },
+        ],
+        bucketPeriods: [],
+      }),
+      '2026-02',
+    );
+
+    const usd = report.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    expect(usd!.clients).toHaveLength(1);
+    const acme = usd!.clients[0];
+    expect(acme.credits.opening).toBe(500000);
+    expect(acme.credits.closing).toBe(500000);
+    expect(acme.creditDetails).toHaveLength(1);
+    expect(acme.creditDetails[0].creditId).toBe('credit-pre');
+    expect(acme.creditDetails[0].remainingAmount).toBe(500000);
+    expect(
+      acme.creditDetails.reduce((sum, detail) => sum + detail.remainingAmount, 0),
+    ).toBe(acme.credits.closing);
+  });
 });

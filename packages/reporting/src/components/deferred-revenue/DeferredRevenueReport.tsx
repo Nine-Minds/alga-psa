@@ -39,6 +39,17 @@ function formatCents(cents: number, currency: string, formatCurrency: (value: nu
   return formatCurrency(cents / 100, currency);
 }
 
+/**
+ * Single source of truth for the expansion key. A client may appear in more
+ * than one currency section, so the key must be the client×currency composite
+ * — and it must be derived in exactly one place so the toggle and the render
+ * check can never drift. The NUL separator cannot appear in a client UUID or
+ * a currency code.
+ */
+function clientExpansionKey(client: { clientId: string; currencyCode: string }): string {
+  return `${client.clientId}\u0000${client.currencyCode}`;
+}
+
 interface CsvColumn {
   key: string;
   header: string;
@@ -325,14 +336,15 @@ function DeferredRevenueTable({
             </tr>
           ) : (
             section.clients.map((client) => {
-              const expanded = expandedClients.has(client.clientId);
+              const key = clientExpansionKey(client);
+              const expanded = expandedClients.has(key);
               return (
                 <ClientRow
-                  key={`${client.clientId}-${client.currencyCode}`}
+                  key={key}
                   client={client}
                   currency={currency}
                   expanded={expanded}
-                  onToggle={() => toggleClient(`${client.clientId}-${client.currencyCode}`)}
+                  onToggle={() => toggleClient(key)}
                   formatCurrency={formatCurrency}
                 />
               );

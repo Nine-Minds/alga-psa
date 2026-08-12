@@ -81,7 +81,7 @@ export function buildDeferredRevenueReportFromData(
   const creditRollforward = computeCreditRollforward(month, data.creditTransactions);
   const hoursRollforward = computeHoursRollforward(month, buildBucketPeriodInputs(data));
   const creditDetailsByKey = creditDetailsByClientCurrency(
-    buildCreditDetailRows(data.creditTracking, data.creditInvoices),
+    buildCreditDetailRows(data.creditTracking, data.creditInvoices, month),
   );
 
   const clientRows = new Map<string, ClientRollforward>();
@@ -173,7 +173,14 @@ export function buildDeferredRevenueReportFromData(
 
   const byCurrency = new Map<string, ClientRollforward[]>();
   for (const row of clientRows.values()) {
-    if (!isNonZero(row.total) && row.creditDetails.length === 0 && row.bucketDetails.length === 0) {
+    // A zero-balance client is omitted unless it has detail that proves a
+    // balance: outstanding credits (remaining > 0) or contributing bucket
+    // periods. Detail rows for fully-consumed credits (remaining 0) or
+    // future-month credits never retain a client on their own.
+    const hasOutstandingCreditDetail = row.creditDetails.some(
+      (detail) => detail.remainingAmount > 0 && !detail.isExpired,
+    );
+    if (!isNonZero(row.total) && row.bucketDetails.length === 0 && !hasOutstandingCreditDetail) {
       continue;
     }
     const currencyRows = byCurrency.get(row.currencyCode) ?? [];

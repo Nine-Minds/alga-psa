@@ -499,32 +499,49 @@ export function buildBucketPeriodInputs(
   });
 }
 
-/** Build the credit detail rows for the report payload. */
+/**
+ * Build the credit detail rows for the report payload, grounded in the
+ * selected month. A credit issued at or after the month's end did not exist
+ * during the month — it can contribute nothing to opening, movement, or
+ * closing, so it must not surface a detail row (or retain its client). Rows
+ * issued before the month's end are kept even when their current remaining
+ * balance is zero: a pre-month issuance still explains opening/closing or an
+ * in-month application/expiration.
+ */
 export function buildCreditDetailRows(
   creditTracking: CreditTrackingDetailRow[],
   creditInvoices: Map<string, CreditSourceInvoice>,
+  month: string,
 ): CreditDetailRow[] {
-  return creditTracking.map((credit) => {
-    const classification = classifyCreditSource(
-      credit.transactionType,
-      credit.invoiceId,
-      credit.metadata,
-      creditInvoices,
-    );
-    return {
-      creditId: credit.creditId,
-      transactionId: credit.transactionId,
-      clientId: credit.clientId,
-      issuedDate: credit.issuedDate,
-      description: credit.description,
-      amount: credit.amount,
-      remainingAmount: credit.remainingAmount,
-      expirationDate: credit.expirationDate,
-      isExpired: credit.isExpired,
-      sourceKind: classification.sourceKind,
-      qboReachable: classification.qboReachable,
-      invoiceNumber: classification.invoiceNumber,
-      currencyCode: credit.currencyCode,
-    };
-  });
+  const [year, monthIndex] = month.split('-').map(Number);
+  const monthEnd = Date.UTC(year, monthIndex, 1);
+
+  return creditTracking
+    .filter((credit) => {
+      const issuedMs = Date.parse(credit.issuedDate);
+      return Number.isFinite(issuedMs) && issuedMs < monthEnd;
+    })
+    .map((credit) => {
+      const classification = classifyCreditSource(
+        credit.transactionType,
+        credit.invoiceId,
+        credit.metadata,
+        creditInvoices,
+      );
+      return {
+        creditId: credit.creditId,
+        transactionId: credit.transactionId,
+        clientId: credit.clientId,
+        issuedDate: credit.issuedDate,
+        description: credit.description,
+        amount: credit.amount,
+        remainingAmount: credit.remainingAmount,
+        expirationDate: credit.expirationDate,
+        isExpired: credit.isExpired,
+        sourceKind: classification.sourceKind,
+        qboReachable: classification.qboReachable,
+        invoiceNumber: classification.invoiceNumber,
+        currencyCode: credit.currencyCode,
+      };
+    });
 }
