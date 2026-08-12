@@ -1901,6 +1901,114 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
     }, HOOK_TIMEOUT);
   });
 
+  describe('credit application reconciles active Checkout links through the real UI action', () => {
+    it('retires the active Checkout link when credit pays the invoice off through applyCreditToInvoice', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `credit-full-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+      await seedClientCredit(db, tenantId, clientId, 32000);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+
+      // Real email-send path: creates the provider-active Checkout session and
+      // link row for the full 32,000-cent balance.
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const send = await sendInvoiceEmailAction([invoiceId], '');
+      expect(send.successCount).toBe(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+      const linksBefore = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(linksBefore).toHaveLength(1);
+      expect(linksBefore[0].status).toBe('active');
+      expect(Number(linksBefore[0].amount)).toBe(32000);
+
+      // Apply the full balance through the REAL withAuth-wrapped UI action,
+      // never the internal engine directly.
+      const { applyCreditToInvoice } = await import('@alga-psa/billing/actions/creditActions');
+      const result = await applyCreditToInvoice(clientId, invoiceId, 32000);
+      expect(result, JSON.stringify(result)).toBeUndefined();
+
+      const invoice = await tenantTable(db, tenantId, 'invoices').where({ invoice_id: invoiceId }).first();
+      expect(Number(invoice.credit_applied)).toBe(32000);
+
+      // The link leaves active and the provider session is expired/uncompletable:
+      // a fully credited invoice must not keep a chargeable full-balance session.
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expired');
+      expect(links[0].metadata).toMatchObject({
+        stale_balance: true,
+        stored_amount: 32000,
+        current_balance: 0,
+      });
+
+      const sessionsAfter = await emulatorState('checkout-sessions');
+      expect(sessionsAfter).toHaveLength(1);
+      expect(sessionsAfter[0].id).toBe(session.id);
+      expect(sessionsAfter[0].status).toBe('expired');
+    }, HOOK_TIMEOUT);
+
+    it('retires the stale full-balance link when a partial credit reduces the balance through applyCreditToInvoice', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `credit-partial-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+      await seedClientCredit(db, tenantId, clientId, 12000);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const send = await sendInvoiceEmailAction([invoiceId], '');
+      expect(send.successCount).toBe(1);
+
+      const [session] = await emulatorState('checkout-sessions');
+      expect(session.status).toBe('open');
+
+      const { applyCreditToInvoice } = await import('@alga-psa/billing/actions/creditActions');
+      const result = await applyCreditToInvoice(clientId, invoiceId, 12000);
+      expect(result, JSON.stringify(result)).toBeUndefined();
+
+      const invoice = await tenantTable(db, tenantId, 'invoices').where({ invoice_id: invoiceId }).first();
+      expect(Number(invoice.credit_applied)).toBe(12000);
+      // The UI action never derives a terminal status (that is the REST
+      // endpoint's contract), so the invoice stays payable at 20,000 cents and
+      // the stale-amount link is retired for the reduced balance — not as a
+      // terminal invoice_not_payable retirement.
+      expect(invoice.status).toBe('sent');
+
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(1);
+      expect(links[0].status).toBe('expired');
+      expect(links[0].metadata).toMatchObject({
+        stale_balance: true,
+        stored_amount: 32000,
+        current_balance: 20000,
+      });
+
+      const sessionsAfter = await emulatorState('checkout-sessions');
+      expect(sessionsAfter).toHaveLength(1);
+      expect(sessionsAfter[0].id).toBe(session.id);
+      expect(sessionsAfter[0].status).toBe('expired');
+    }, HOOK_TIMEOUT);
+  });
+
   async function emulatorState(view: string): Promise<any[]> {
     const response = await fetch(`${stripeControlUrl}/control/stripe/state/${view}`);
     const body = await response.json();
@@ -2056,6 +2164,48 @@ async function seedFinalizedInvoice(
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
+}
+
+/**
+ * Seeds a client credit the way issueCreditToClient does: a completed
+ * credit_issuance transaction plus its credit_tracking draw-down row (the
+ * derived available-credit source for the apply-credit engine).
+ */
+async function seedClientCredit(
+  db: Knex,
+  tenantId: string,
+  clientId: string,
+  amountCents: number
+): Promise<{ creditId: string; transactionId: string }> {
+  const transactionId = uuidv4();
+  const creditId = uuidv4();
+  const now = new Date().toISOString();
+  await tenantTable(db, tenantId, 'transactions').insert({
+    transaction_id: transactionId,
+    tenant: tenantId,
+    client_id: clientId,
+    amount: amountCents,
+    type: 'credit_issuance',
+    status: 'completed',
+    description: 'Seeded credit for payment-link reconciliation',
+    created_at: now,
+    balance_after: amountCents,
+    currency_code: 'USD',
+  });
+  await tenantTable(db, tenantId, 'credit_tracking').insert({
+    credit_id: creditId,
+    tenant: tenantId,
+    client_id: clientId,
+    transaction_id: transactionId,
+    amount: amountCents,
+    remaining_amount: amountCents,
+    created_at: now,
+    expiration_date: null,
+    is_expired: false,
+    updated_at: now,
+    currency_code: 'USD',
+  });
+  return { creditId, transactionId };
 }
 
 /**
