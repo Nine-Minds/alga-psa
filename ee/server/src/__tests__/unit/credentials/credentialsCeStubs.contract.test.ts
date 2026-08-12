@@ -94,18 +94,39 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     expect(huduPasswordsSection).toContain('<HuduClientPasswordsTab clientId={client.client_id} />');
   });
 
-  it('the asset detail section resolves through @enterprise and is flag-gated at the screen', () => {
+  it('the asset section preserves the legacy placeholder when the flag is off and the vault card when on', () => {
     const wrapper = readRepoFile(
       'packages/assets/src/components/tabs/AssetCredentialsSection.tsx'
     );
     const tab = readRepoFile('packages/assets/src/components/tabs/DocumentsPasswordsTab.tsx');
+    const eeSection = readRepoFile(
+      'ee/server/src/components/credentials/AssetCredentialsSection.tsx'
+    );
 
+    // Shared wrapper: flag-gated. Flag off => the legacy placeholder card
+    // renders in both EE and CE builds; flag on => the vault section loads via
+    // @enterprise (EE renders the card, CE renders nothing).
+    expect(wrapper).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(wrapper).toContain('if (!flagEnabled) {');
+    expect(wrapper).toContain("t('documentsPasswordsTab.passwords.title'");
+    expect(wrapper).toContain("t('documentsPasswordsTab.passwords.comingSoon'");
+    expect(wrapper).toContain('Secure password management coming soon.');
     expect(wrapper).toContain(
       "import('@enterprise/components/credentials/AssetCredentialsSection')"
     );
+    expect(wrapper).toContain('<VaultAssetCredentialsSection assetId={assetId} clientId={clientId} />');
+
+    // The tab wires the section; no placeholder text lives in the tab itself.
     expect(tab).toContain('<AssetCredentialsSection assetId={asset.asset_id} clientId={asset.client_id} />');
     expect(tab).not.toContain('coming soon');
     expect(tab).not.toContain('Secure password management coming soon');
+
+    // The EE section gates its Card + header on the flag (flag off => null,
+    // never an empty title-only card).
+    expect(eeSection).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(eeSection).toContain('if (!flagEnabled) {');
+    expect(eeSection).toContain('return null;');
+    expect(eeSection).toContain('id="asset-credentials-section"');
   });
 
   it('the client gate requires the release flag, EE, and the tier probe (useCredentialsVaultTab)', () => {

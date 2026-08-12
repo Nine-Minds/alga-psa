@@ -110,6 +110,7 @@ import {
   NativeCredentialSource,
   nativeCredentialSource,
 } from '../../lib/credentials/nativeSource';
+import { resetCredentialAesKeyCache } from '../../lib/credentials/encryption';
 
 describe('native credentials store — DB integration', () => {
   const HOOK_TIMEOUT = 120_000;
@@ -259,6 +260,148 @@ describe('native credentials store — DB integration', () => {
     );
     expect(reveal.state).toBe('no_access');
     expect(reveal.password).toBeUndefined();
+  });
+
+  it('getDetail hides restricted rows from non-granted users (no metadata or grant-list leak)', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      {
+        clientId,
+        name: 'Hidden Detail',
+        username: 'root@hidden',
+        url: 'https://hidden.local',
+        description: 'classified notes',
+        password: 'x',
+      }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [{ subjectType: 'user', subjectId: grantedUser }] }
+    );
+
+    // Granted user sees metadata + the grant list.
+    const grantedDetail = await source.getDetail(
+      { tenant: tenantId, userId: grantedUser, user: userFor(grantedUser) },
+      summary.id
+    );
+    expect(grantedDetail).not.toBeNull();
+    expect(grantedDetail?.name).toBe('Hidden Detail');
+    expect(grantedDetail?.grants).toEqual([{ subjectType: 'user', subjectId: grantedUser }]);
+
+    // Stranger gets null — existence is never confirmed, no metadata/grant leak.
+    const strangerDetail = await source.getDetail(
+      { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) },
+      summary.id
+    );
+    expect(strangerDetail).toBeNull();
+  });
+
+  it('restricted rows cannot be un-restricted or mutated by users without a grant', async () => {
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Escalation Target', password: 'root-secret' }
+    );
+    await source.setRestriction(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      summary.id,
+      { isRestricted: true, grants: [] }
+    );
+
+    const stranger = { tenant: tenantId, userId: strangerUser, user: userFor(strangerUser) };
+
+    // Un-restrict escalation attempt behaves as not_found (no existence leak).
+    await expect(
+      source.setRestriction(stranger, summary.id, { isRestricted: false, grants: [] })
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+
+    // update / remove / setAssociations on a row the caller cannot see also fail.
+    await expect(source.update(stranger, summary.id, { name: 'Renamed' })).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+    await expect(
+      source.setAssociations(stranger, summary.id, { assetIds: [] })
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+    await expect(source.remove(stranger, summary.id)).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+
+    // The row is untouched and still restricted.
+    const row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+    expect(row.is_restricted).toBe(true);
+    expect(row.name).toBe('Escalation Target');
+  });
+
+  it('re-encrypts BOTH value fields under the new scheme on a single-field edit (scheme transition safe)', async () => {
+    // Create under the AES scheme (no Vault Transit configured).
+    delete process.env.ALGA_VAULT_ADDR;
+    delete process.env.VAULT_ADDR;
+    resetCredentialAesKeyCache();
+
+    const source = new NativeCredentialSource();
+    const summary = await source.create(
+      { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+      { clientId, name: 'Scheme Transition Row', password: 'old-password', otpSecret: 'JBSWY3DPEHPK3PXP' }
+    );
+
+    let row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+    expect(row.encryption_scheme).toBe('aes-256-gcm:v1');
+
+    // Switch the ambient write scheme to Vault Transit (mocked HTTP round-trip).
+    process.env.ALGA_VAULT_ADDR = 'https://vault.example.test';
+    process.env.ALGA_VAULT_TOKEN = 'vault-token';
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, string>;
+      if (String(url).includes('/encrypt/')) {
+        const plaintext = Buffer.from(body.plaintext as string, 'base64').toString('utf8');
+        return new Response(
+          JSON.stringify({
+            data: { ciphertext: `vault:v1:${Buffer.from(plaintext, 'utf8').toString('base64')}` },
+          }),
+          { status: 200 }
+        );
+      }
+      if (String(url).includes('/decrypt/')) {
+        const plaintext = Buffer.from(String(body.ciphertext ?? '').replace(/^vault:v1:/, ''), 'base64').toString('utf8');
+        return new Response(
+          JSON.stringify({ data: { plaintext: Buffer.from(plaintext, 'utf8').toString('base64') } }),
+          { status: 200 }
+        );
+      }
+      return new Response('{}', { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      // Edit ONLY the password; the OTP seed is left unchanged.
+      await source.update(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id,
+        { password: 'rotated-password' }
+      );
+
+      row = await db('credentials').where({ tenant: tenantId, credential_id: summary.id }).first();
+      expect(row.encryption_scheme).toBe('vault-transit:v1');
+      expect(String(row.password_ciphertext)).toMatch(/^vault:v1:/);
+      // The unchanged OTP seed was re-encrypted under the NEW scheme too.
+      expect(String(row.otp_secret_ciphertext)).toMatch(/^vault:v1:/);
+
+      // Both fields still decrypt under the new scheme (no silent loss).
+      const reveal = await source.reveal(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      expect(reveal.state).toBe('ok');
+      expect(reveal.password).toBe('rotated-password');
+      expect(reveal.otpCode?.code).toMatch(/^\d{6}$/);
+    } finally {
+      delete process.env.ALGA_VAULT_ADDR;
+      delete process.env.VAULT_ADDR;
+      vi.unstubAllGlobals();
+      resetCredentialAesKeyCache();
+    }
   });
 
   it('update re-encrypts values and delete removes the row + audit trails', async () => {

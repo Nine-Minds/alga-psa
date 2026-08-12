@@ -5,13 +5,15 @@
  *
  * Lists native credentials attached to the asset and offers create-preattached
  * (new credentials are created with `assetId` so they appear in the section
- * immediately). Reuses the shared CredentialsScreen list body scoped to the
- * asset; the screen re-checks the `release-v1.5-feature` flag and tier, so
- * this section renders nothing when the feature is off.
+ * immediately). The ENTIRE section — Card and header included — is gated on
+ * the `release-v1.5-feature` flag: flag off renders nothing (the shared
+ * packages/assets wrapper shows the legacy placeholder card in its place), so
+ * flag-off asset pages never show an empty title-only vault card.
  */
 
 import React from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { KeyRound } from 'lucide-react';
 import { CredentialsScreen } from './CredentialsScreen';
@@ -23,6 +25,12 @@ interface AssetCredentialsSectionProps {
 
 export function AssetCredentialsSection({ assetId, clientId }: AssetCredentialsSectionProps) {
   const { t } = useTranslation('msp/credentials');
+  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
+
+  if (!flagEnabled) {
+    return null;
+  }
 
   return (
     <Card id="asset-credentials-section">

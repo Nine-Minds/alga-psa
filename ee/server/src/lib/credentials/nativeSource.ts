@@ -139,6 +139,30 @@ function requireScheme(row: CredentialRowProjection): CredentialEncryptionScheme
   return row.encryption_scheme;
 }
 
+/**
+ * Per-item ACL decision for a single native credential (the correctness path
+ * for single-record operations — list uses the SQL scope path instead).
+ *
+ * Restricted rows are visible only to the owner / explicitly granted users or
+ * teams; an unauthorized restricted row must behave as absent (the caller
+ * throws CREDENTIAL_NOT_FOUND / returns null) so existence is never
+ * confirmed — otherwise any credential:update holder could un-restrict a
+ * credential they cannot see and then reveal it.
+ */
+async function isCredentialAuthorizedForUser(
+  trx: Knex.Transaction,
+  ctx: CredentialSourceContext,
+  row: CredentialRowProjection
+): Promise<boolean> {
+  const grants = await fetchGrantsForCredential(trx, ctx.tenant, row.credential_id);
+  const authContext = await createCredentialAuthorizationContext(trx, ctx.tenant, ctx.user);
+  return authorizeCredentialRecord(trx, authContext, row, grants);
+}
+
+function notFound(): never {
+  throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+}
+
 function applyListFilters(
   builder: Knex.QueryBuilder,
   filter: CredentialListFilter,
@@ -237,8 +261,17 @@ export class NativeCredentialSource implements CredentialSource {
     return withTransaction(knex, async (trx) => {
       const row = await fetchCredentialById(trx, ctx.tenant, id);
       if (!row) return null;
-      const [grants, associations, clientName] = await Promise.all([
-        fetchGrantsForCredential(trx, ctx.tenant, id),
+      const grants = await fetchGrantsForCredential(trx, ctx.tenant, id);
+      const allowed = await authorizeCredentialRecord(
+        trx,
+        await createCredentialAuthorizationContext(trx, ctx.tenant, ctx.user),
+        row,
+        grants
+      );
+      // Restricted rows are hidden entirely: an unauthorized caller must not
+      // learn the row exists, its metadata, or its grant list.
+      if (!allowed) return null;
+      const [associations, clientName] = await Promise.all([
         loadAssociations(trx, ctx.tenant, [id]),
         (async () => {
           const names = await loadClientNames(trx, ctx.tenant, [row.client_id]);
@@ -356,9 +389,8 @@ export class NativeCredentialSource implements CredentialSource {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
-      if (!existing) {
-        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
-      }
+      if (!existing) notFound();
+      if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
 
       const patch: Partial<CredentialRowProjection> = {};
       if (input.name !== undefined) patch.name = input.name.trim();
@@ -366,7 +398,12 @@ export class NativeCredentialSource implements CredentialSource {
       if (input.url !== undefined) patch.url = input.url || null;
       if (input.description !== undefined) patch.description = input.description || null;
 
-      // Value-bearing fields: re-encrypt under the current write scheme.
+      // Value-bearing fields: re-encrypt under the current write scheme. When
+      // either field changes, BOTH ciphertexts are re-encrypted together and
+      // BOTH are written back — the unchanged field's fresh ciphertext must
+      // not be discarded, or it would keep old-scheme bytes under the new
+      // scheme tag and become undecryptable (e.g. transit configured after the
+      // row was written with aes-256-gcm:v1).
       const reencryptPassword = input.password !== undefined;
       const reencryptOtp = input.otpSecret !== undefined;
       if (reencryptPassword || reencryptOtp) {
@@ -381,8 +418,8 @@ export class NativeCredentialSource implements CredentialSource {
           password: reencryptPassword ? (input.password ?? null) : (existing.password_ciphertext ? await decryptCredentialValue(existing.password_ciphertext, requireScheme(existing)) : null),
           otpSecret: nextOtpSecret,
         });
-        if (reencryptPassword) patch.password_ciphertext = encrypted.passwordCiphertext;
-        if (reencryptOtp) patch.otp_secret_ciphertext = encrypted.otpSecretCiphertext;
+        patch.password_ciphertext = encrypted.passwordCiphertext;
+        patch.otp_secret_ciphertext = encrypted.otpSecretCiphertext;
         patch.encryption_scheme = encrypted.scheme;
       }
 
@@ -410,9 +447,8 @@ export class NativeCredentialSource implements CredentialSource {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
-      if (!existing) {
-        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
-      }
+      if (!existing) notFound();
+      if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
       await tenantDb(trx, ctx.tenant).table('credentials').where('credential_id', id).del();
       await writeCredentialAudit(trx, ctx.tenant, 'credential_deleted', {
         userId: ctx.userId,
@@ -431,9 +467,10 @@ export class NativeCredentialSource implements CredentialSource {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
-      if (!existing) {
-        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
-      }
+      if (!existing) notFound();
+      // Item-level ACL first: a caller who cannot see this restricted row must
+      // not be able to un-restrict it (which would defeat the restriction).
+      if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
       await tenantDb(trx, ctx.tenant)
         .table('credentials')
         .where('credential_id', id)
@@ -482,9 +519,8 @@ export class NativeCredentialSource implements CredentialSource {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
       const existing = await fetchCredentialById(trx, ctx.tenant, id);
-      if (!existing) {
-        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
-      }
+      if (!existing) notFound();
+      if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
       const assetIds = Array.from(new Set(input.assetIds ?? []));
       await tenantDb(trx, ctx.tenant)
         .table('credential_associations')

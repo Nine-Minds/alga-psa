@@ -146,6 +146,8 @@ vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
 
 import { CredentialsScreen } from '@ee/components/credentials/CredentialsScreen';
 import { TotpCountdown } from '@ee/components/credentials/TotpCountdown';
+import { AssetCredentialsSection as EeAssetCredentialsSection } from '@ee/components/credentials/AssetCredentialsSection';
+import { AssetCredentialsSection as AssetsWrapperAssetCredentialsSection } from '@alga-psa/assets/components/tabs/AssetCredentialsSection';
 
 const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 const SECRET_VALUE = 'S3cr3t-V@ult-V4lue';
@@ -411,6 +413,51 @@ describe('TotpCountdown — countdown re-request', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('AssetCredentialsSection — flag-off regression (no empty vault card)', () => {
+  it('EE section renders nothing when the release flag is off (Card gated, not just the list)', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(
+      <EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
+    );
+
+    expect(container.firstChild).toBeNull();
+    expect(document.getElementById('asset-credentials-section')).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('EE section renders the vault card when the release flag is on', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    getCredentialsContextMock.mockResolvedValue({
+      tierOk: true,
+      huduConnected: false,
+      flagIrrelevantHere: true,
+    });
+    listCredentialsMock.mockResolvedValue([]);
+
+    render(<EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />);
+
+    await waitFor(() => {
+      expect(document.getElementById('asset-credentials-section')).toBeTruthy();
+    });
+  });
+
+  it('shared assets wrapper renders the legacy placeholder (and no vault card) when the flag is off', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+
+    const { container } = render(
+      <AssetsWrapperAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />
+    );
+
+    // Legacy pre-vault placeholder is preserved exactly.
+    expect(document.body.textContent).toContain('Passwords & Secrets');
+    expect(document.body.textContent).toContain('Secure password management coming soon.');
+    // No vault card anywhere.
+    expect(document.getElementById('asset-credentials-section')).toBeNull();
+    expect(container.querySelector('code')).toBeNull();
   });
 });
 
