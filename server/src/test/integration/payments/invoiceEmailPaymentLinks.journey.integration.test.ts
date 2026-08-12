@@ -404,6 +404,137 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(customer?.email).toBe(billingEmail);
     }, HOOK_TIMEOUT);
 
+    it('deterministically sends to the chosen active billing location when multiple billing locations and a default exist', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      const chosenBillingEmail = `chosen-billing-${uuidv4().slice(0, 8)}@acme.test`;
+      const otherBillingEmail = `other-billing-${uuidv4().slice(0, 8)}@acme.test`;
+      const defaultEmail = `default-${uuidv4().slice(0, 8)}@acme.test`;
+      const tiedCreatedAt = new Date('2025-01-01T00:00:00.000Z');
+
+      await seedClientRow(db, tenantId, clientId, 'Duplicate Locations');
+      await tenantTable(db, tenantId, 'client_locations')
+        .where({ client_id: clientId })
+        .update({
+          is_billing_address: false,
+          is_default: true,
+          email: defaultEmail,
+          created_at: new Date('2024-01-01T00:00:00.000Z'),
+        });
+
+      // All billing rows have the same creation time. The first ordered row is
+      // invalid and is skipped; location_id then chooses the first valid row,
+      // while billing precedence keeps it ahead of the older default location.
+      await seedClientLocation(db, tenantId, clientId, {
+        locationId: '00000000-0000-4000-8000-000000000000',
+        email: 'not-an-email',
+        isBilling: true,
+        isDefault: false,
+        createdAt: tiedCreatedAt,
+      });
+      await seedClientLocation(db, tenantId, clientId, {
+        locationId: '00000000-0000-4000-8000-000000000002',
+        email: otherBillingEmail,
+        isBilling: true,
+        isDefault: false,
+        createdAt: tiedCreatedAt,
+      });
+      await seedClientLocation(db, tenantId, clientId, {
+        locationId: '00000000-0000-4000-8000-000000000001',
+        email: chosenBillingEmail,
+        isBilling: true,
+        isDefault: false,
+        createdAt: tiedCreatedAt,
+      });
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 18000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const result = await sendInvoiceEmailAction([invoiceId], '');
+      expect(result.successCount).toBe(1);
+      expect(result.results[0].recipientEmail).toBe(chosenBillingEmail);
+      expect(capturedEmails[0].message.to).toEqual([{ email: chosenBillingEmail, name: expect.any(String) }]);
+
+      const customers = await emulatorState('customers');
+      expect(customers).toHaveLength(1);
+      expect(customers[0].email).toBe(chosenBillingEmail);
+    }, HOOK_TIMEOUT);
+
+    it('expires and replaces an active Checkout session when credits and prior payments reduce the balance', async () => {
+      await resetSharedState();
+      const clientId = uuidv4();
+      const invoiceId = uuidv4();
+      await seedClientWithBillingContact(db, tenantId, clientId, `balance-${uuidv4().slice(0, 8)}@acme.test`);
+      await seedFinalizedInvoice(db, tenantId, clientId, invoiceId, 32000);
+      await upsertProviderConfig(db, tenantId);
+
+      setActiveActor({
+        user_id: 'journey-msp-user',
+        tenant: tenantId,
+        roles: [{ role_name: 'Admin' }],
+      });
+
+      const { sendInvoiceEmailAction } = await import('@alga-psa/billing/actions/invoiceJobActions');
+      const first = await sendInvoiceEmailAction([invoiceId], '');
+      expect(first.successCount).toBe(1);
+
+      const [originalSession] = await emulatorState('checkout-sessions');
+      expect(originalSession.amount_total).toBe(32000);
+      expect(originalSession.status).toBe('open');
+
+      // The current payable amount becomes 32,000 - 3,000 credit - 5,000
+      // prior payment = 24,000 cents while the first link is still active.
+      await tenantTable(db, tenantId, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .update({ credit_applied: 3000, updated_at: db.fn.now() });
+      await tenantTable(db, tenantId, 'invoice_payments').insert({
+        payment_id: uuidv4(),
+        tenant: tenantId,
+        invoice_id: invoiceId,
+        amount: 5000,
+        payment_method: 'manual',
+        status: 'completed',
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+
+      const second = await sendInvoiceEmailAction([invoiceId], '');
+      expect(second.successCount).toBe(1);
+
+      const sessions = await emulatorState('checkout-sessions');
+      expect(sessions).toHaveLength(2);
+      const expiredSession = sessions.find((session) => session.id === originalSession.id);
+      const replacementSession = sessions.find((session) => session.id !== originalSession.id);
+      expect(expiredSession?.status).toBe('expired');
+      expect(replacementSession?.status).toBe('open');
+      expect(replacementSession?.amount_total).toBe(24000);
+
+      const links = await tenantTable(db, tenantId, 'invoice_payment_links')
+        .where({ invoice_id: invoiceId });
+      expect(links).toHaveLength(2);
+      const staleLink = links.find((link) => link.external_link_id === originalSession.id);
+      const replacementLink = links.find((link) => link.external_link_id === replacementSession?.id);
+      expect(staleLink?.status).toBe('expired');
+      expect(staleLink?.metadata).toMatchObject({
+        stale_balance: true,
+        stored_amount: 32000,
+        current_balance: 24000,
+      });
+      expect(replacementLink?.status).toBe('active');
+      expect(Number(replacementLink?.amount)).toBe(24000);
+
+      const secondEmailHtml = String(capturedEmails[1].message.html);
+      expect(secondEmailHtml).toContain(replacementSession?.url);
+      expect(secondEmailHtml).not.toContain(originalSession.url);
+    }, HOOK_TIMEOUT);
+
     it('degrades to a portal-only email with the cause retained when Checkout creation fails', async () => {
       await resetSharedState();
       const clientId = uuidv4();
@@ -758,6 +889,36 @@ async function seedClientWithBillingContact(
   await tenantTable(db, tenantId, 'clients')
     .where({ client_id: clientId })
     .update({ billing_contact_id: contactId });
+}
+
+async function seedClientLocation(
+  db: Knex,
+  tenantId: string,
+  clientId: string,
+  input: {
+    locationId: string;
+    email: string;
+    isBilling: boolean;
+    isDefault: boolean;
+    createdAt: Date;
+  }
+): Promise<void> {
+  await tenantTable(db, tenantId, 'client_locations').insert({
+    location_id: input.locationId,
+    tenant: tenantId,
+    client_id: clientId,
+    location_name: `Location ${input.locationId.slice(-4)}`,
+    address_line1: '1 Billing Way',
+    city: 'Testville',
+    country_code: 'US',
+    country_name: 'United States',
+    is_billing_address: input.isBilling,
+    is_default: input.isDefault,
+    is_active: true,
+    email: input.email,
+    created_at: input.createdAt,
+    updated_at: input.createdAt,
+  });
 }
 
 async function seedFinalizedInvoice(

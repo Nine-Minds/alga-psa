@@ -240,6 +240,12 @@ export interface PaymentProvider {
   createPaymentLink(request: CreatePaymentLinkRequest): Promise<PaymentLinkResult>;
 
   /**
+   * Expires an existing hosted payment link when the provider supports it.
+   * Used before replacing a link whose payable amount is no longer current.
+   */
+  expirePaymentLink?(externalLinkId: string): Promise<void>;
+
+  /**
    * Verifies the signature of a webhook payload.
    *
    * @param payload - Raw webhook payload as string

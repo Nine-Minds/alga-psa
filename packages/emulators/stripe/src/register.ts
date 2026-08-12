@@ -95,7 +95,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
   reg.fault({
     name: 'operation-fault',
     description:
-      'Fail a specific operation ("customers.list", "customers.create", "customers.retrieve", "checkout.sessions.create", "checkout.sessions.retrieve") with a Stripe error envelope, optionally only N times',
+      'Fail a specific operation ("customers.list", "customers.create", "customers.retrieve", "checkout.sessions.create", "checkout.sessions.retrieve", "checkout.sessions.expire") with a Stripe error envelope, optionally only N times',
     params: z.object({
       operation: z.enum([
         'customers.list',
@@ -103,6 +103,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
         'customers.retrieve',
         'checkout.sessions.create',
         'checkout.sessions.retrieve',
+        'checkout.sessions.expire',
       ]),
       status: z.number().int().min(400).max(599).default(500),
       code: z.string().default('api_error'),

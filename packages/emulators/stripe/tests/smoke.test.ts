@@ -270,6 +270,35 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     expect(received.length).toBe(eventsBefore);
   });
 
+  it('expires an open Checkout session through the Stripe API surface', async () => {
+    const session = await (
+      await fetch(
+        `${base}/v1/checkout/sessions`,
+        form({
+          mode: 'payment',
+          'line_items[0][price_data][currency]': 'usd',
+          'line_items[0][price_data][unit_amount]': '4200',
+          'line_items[0][quantity]': '1',
+          success_url: 'http://localhost:3000/success',
+          cancel_url: 'http://localhost:3000/billing',
+          'metadata[invoice_id]': 'inv-expire',
+        }, auth),
+      )
+    ).json();
+
+    const response = await fetch(`${base}/v1/checkout/sessions/${session.id}/expire`, {
+      method: 'POST',
+      headers: auth,
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).status).toBe('expired');
+
+    const stored = await (
+      await fetch(`${base}/v1/checkout/sessions/${session.id}`, { headers: auth })
+    ).json();
+    expect(stored.status).toBe('expired');
+  });
+
   it('injects Stripe-shaped operation faults that expire after N uses', async () => {
     await controlPost('/control/stripe/faults/operation-fault/arm', {
       operation: 'checkout.sessions.create',

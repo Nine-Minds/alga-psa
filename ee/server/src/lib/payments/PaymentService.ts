@@ -159,33 +159,7 @@ export class PaymentService {
       return null;
     }
 
-    // Check for existing active payment link
-    const existingLink = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
-      .where({
-        invoice_id: invoiceId,
-        provider_type: this.provider.providerType,
-        status: 'active',
-      })
-      .where('expires_at', '>', new Date().toISOString())
-      .first();
-
-    if (existingLink) {
-      logger.debug('[PaymentService] Using existing payment link', {
-        tenantId: this.tenantId,
-        invoiceId,
-        linkId: existingLink.link_id,
-      });
-
-      return {
-        paymentLinkId: existingLink.link_id,
-        externalLinkId: existingLink.external_link_id,
-        url: existingLink.url,
-        expiresAt: existingLink.expires_at ? new Date(existingLink.expires_at) : undefined,
-        provider: existingLink.provider_type,
-      };
-    }
-
-    // Get invoice and client data
+    // Get invoice data
     const invoice = await this.getInvoice(invoiceId);
     if (!invoice) {
       throw new Error(`Invoice not found: ${invoiceId}`);
@@ -218,6 +192,61 @@ export class PaymentService {
       return null;
     }
 
+    // Compute balance due: gross total minus credits already applied minus prior payments
+    const priorPaymentsRow = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
+      .where({ invoice_id: invoiceId })
+      .sum('amount as total')
+      .first();
+    const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
+    const balanceDue = invoice.total_amount - (invoice.credit_applied ?? 0) - priorPayments;
+
+    // Reuse is safe only after the current payable balance has been computed.
+    // Credits and prior payments can make an otherwise active Checkout Session
+    // stale while its expiration time is still in the future.
+    const existingLink = await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({
+        invoice_id: invoiceId,
+        provider_type: this.provider.providerType,
+        status: 'active',
+      })
+      .where('expires_at', '>', new Date().toISOString())
+      .orderBy('created_at', 'desc')
+      .orderBy('link_id', 'asc')
+      .first();
+
+    if (balanceDue <= 0) {
+      if (existingLink) {
+        await this.expireStalePaymentLink(existingLink, balanceDue);
+      }
+      logger.debug('[PaymentService] Invoice balance already satisfied', {
+        tenantId: this.tenantId,
+        invoiceId,
+        balanceDue,
+      });
+      return null;
+    }
+
+    if (existingLink && Number(existingLink.amount) === balanceDue) {
+      logger.debug('[PaymentService] Using existing payment link', {
+        tenantId: this.tenantId,
+        invoiceId,
+        linkId: existingLink.link_id,
+        balanceDue,
+      });
+
+      return {
+        paymentLinkId: existingLink.link_id,
+        externalLinkId: existingLink.external_link_id,
+        url: existingLink.url,
+        expiresAt: existingLink.expires_at ? new Date(existingLink.expires_at) : undefined,
+        provider: existingLink.provider_type,
+      };
+    }
+
+    if (existingLink) {
+      await this.expireStalePaymentLink(existingLink, balanceDue);
+    }
+
     const client = await this.getClient(invoice.client_id);
     if (!client) {
       throw new Error(`Client not found: ${invoice.client_id}`);
@@ -239,22 +268,6 @@ export class PaymentService {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const successUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/client-portal/billing?tab=invoices&invoiceId=${encodeURIComponent(invoiceId)}`;
-
-    // Compute balance due: gross total minus credits already applied minus prior payments
-    const priorPaymentsRow = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
-      .where({ invoice_id: invoiceId })
-      .sum('amount as total')
-      .first();
-    const priorPayments = parseInt(priorPaymentsRow?.total || '0', 10);
-    const balanceDue = invoice.total_amount - (invoice.credit_applied ?? 0) - priorPayments;
-    if (balanceDue <= 0) {
-      logger.debug('[PaymentService] Invoice balance already satisfied', {
-        tenantId: this.tenantId,
-        invoiceId,
-        balanceDue,
-      });
-      return null;
-    }
 
     // Create payment link
     const request: CreatePaymentLinkRequest = {
@@ -769,6 +782,43 @@ export class PaymentService {
         status,
         completed_at: status === 'completed' ? this.knex.fn.now() : undefined,
       });
+  }
+
+  /**
+   * Retires an active link whose stored amount no longer matches the invoice.
+   * The tenant-scoped database status is changed first so it cannot be reused;
+   * provider expiration is best-effort so a Stripe cleanup failure does not
+   * change the existing payment-link creation error behavior.
+   */
+  private async expireStalePaymentLink(
+    link: IInvoicePaymentLink,
+    currentBalance: number
+  ): Promise<void> {
+    await this.tenantTable<IInvoicePaymentLink>('invoice_payment_links')
+      .where({ link_id: link.link_id, status: 'active' })
+      .update({
+        status: 'expired',
+        metadata: this.knex.raw(
+          `COALESCE(metadata, '{}'::jsonb) || ?::jsonb`,
+          [JSON.stringify({
+            stale_balance: true,
+            stored_amount: Number(link.amount),
+            current_balance: currentBalance,
+          })]
+        ),
+      });
+
+    try {
+      await this.provider?.expirePaymentLink?.(link.external_link_id);
+    } catch (error) {
+      logger.warn('[PaymentService] Failed to expire stale provider payment link', {
+        tenantId: this.tenantId,
+        invoiceId: link.invoice_id,
+        linkId: link.link_id,
+        externalLinkId: link.external_link_id,
+        error,
+      });
+    }
   }
 
   /**

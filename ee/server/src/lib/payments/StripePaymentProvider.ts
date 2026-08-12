@@ -385,6 +385,14 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   /**
+   * Expires a Checkout Session that no longer matches the invoice balance.
+   */
+  async expirePaymentLink(externalLinkId: string): Promise<void> {
+    const stripe = await this.getStripe();
+    await stripe.checkout.sessions.expire(externalLinkId);
+  }
+
+  /**
    * Verifies the signature of a Stripe webhook payload.
    */
   verifyWebhookSignature(payload: string, signature: string): boolean {

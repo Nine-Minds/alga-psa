@@ -171,6 +171,13 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.json(sessionResponse(core, session, req.query.expand ?? (req.query as Record<string, unknown>)['expand[]']));
   }));
 
+  v1.post('/checkout/sessions/:id/expire', route((req, res) => {
+    checkFault(core, 'checkout.sessions.expire');
+    const sessionId = String(req.params.id);
+    core.expireSession(sessionId);
+    res.json(core.getCheckoutSession(sessionId));
+  }));
+
   // ── Browser-facing simulated Checkout ────────────────────────────────────
 
   router.get('/checkout/sessions/:id', route((req, res) => {

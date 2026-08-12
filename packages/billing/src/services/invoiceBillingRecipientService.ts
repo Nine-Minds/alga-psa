@@ -30,8 +30,10 @@ export interface ResolveInvoiceBillingRecipientInput {
  *
  *   1. Valid email on the billing contact (clients.billing_contact_id).
  *   2. Valid clients.billing_email.
- *   3. Valid active billing-location email (is_billing_address = true).
- *   4. Valid active default-location email (is_default = true).
+ *   3. Valid active billing-location email (is_billing_address = true),
+ *      oldest created_at first with location_id as the stable tiebreaker.
+ *   4. Valid active default-location email (is_default = true), using the
+ *      same stable location ordering.
  *   5. No recipient.
  *
  * A billing contact row with a blank/invalid email never blocks the next
@@ -46,6 +48,16 @@ export async function resolveInvoiceBillingRecipient(
   const trimmedIfValid = (email: string | null | undefined): string | null => {
     if (!isValidEmail(email)) return null;
     return (email as string).trim();
+  };
+
+  const firstValidLocationEmail = (
+    locations: Array<{ email?: string | null }>
+  ): string | null => {
+    for (const location of locations) {
+      const email = trimmedIfValid(location.email);
+      if (email) return email;
+    }
+    return null;
   };
 
   const client = await db
@@ -98,12 +110,14 @@ export async function resolveInvoiceBillingRecipient(
     };
   }
 
-  const billingLocation = await db
+  const billingLocations = await db
     .table('client_locations')
     .where({ client_id: clientId, is_billing_address: true, is_active: true })
-    .first<{ email?: string | null }>();
+    .select<{ email?: string | null }[]>('email')
+    .orderBy('created_at', 'asc')
+    .orderBy('location_id', 'asc');
 
-  const billingLocationEmail = trimmedIfValid(billingLocation?.email);
+  const billingLocationEmail = firstValidLocationEmail(billingLocations);
   if (billingLocationEmail) {
     return {
       clientId: client.client_id,
@@ -114,12 +128,14 @@ export async function resolveInvoiceBillingRecipient(
     };
   }
 
-  const defaultLocation = await db
+  const defaultLocations = await db
     .table('client_locations')
     .where({ client_id: clientId, is_default: true, is_active: true })
-    .first<{ email?: string | null }>();
+    .select<{ email?: string | null }[]>('email')
+    .orderBy('created_at', 'asc')
+    .orderBy('location_id', 'asc');
 
-  const defaultLocationEmail = trimmedIfValid(defaultLocation?.email);
+  const defaultLocationEmail = firstValidLocationEmail(defaultLocations);
   if (defaultLocationEmail) {
     return {
       clientId: client.client_id,
