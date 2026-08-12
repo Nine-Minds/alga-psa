@@ -32,7 +32,8 @@ Feature posture:
    entity detail screens. Entity set v1: **assets** (plus the owning-client
    surface). The association model is built polymorphic so later cards can add
    entity types by extending a CHECK constraint, as `document_associations`
-   does.
+   does. *The assets-only entity set is superseded — see "Scope expansion —
+   entity-wide associations (2026-08-12)" below.*
 2. **Client-owned.** Every credential has a required owning client. MSP-internal
    credentials are owned by the tenant's default company
    (`tenant_companies.is_default = TRUE` partial unique index — one per
@@ -62,6 +63,99 @@ Feature posture:
    client is mapped to a Hudu company, the create dialog offers a destination
    choice (Alga native default / Hudu). Rows edit and delete in place at their
    source.
+
+## Scope expansion — entity-wide associations (2026-08-12)
+
+Credentials attach across the app the way documents do, instead of to assets
+only. This supersedes the entity set in product decision 1 and moves two former
+out-of-scope items (additional entity types; attaching Hudu rows to entities)
+into scope. Everything else above stands: tier/flag posture, encryption,
+ownership, ACLs, reveal auditing.
+
+### Decisions
+
+1. **Full entity roster.** The `credential_associations.entity_type` CHECK
+   expands to the `document_associations` roster plus `document`: `asset`,
+   `client`, `contact`, `contract`, `document`, `project_task`, `quote`,
+   `team`, `tenant`, `ticket`, `user`. The client Passwords tab remains
+   **ownership-driven** (the credential's owning client), not
+   association-driven; `client` sits in the constraint for parity but no UI
+   writes it in this card.
+
+2. **Mirror the documents pattern; no shared engine in this card.** The
+   association stack stays credential-specific, shaped like
+   `document_associations` + `Documents.tsx` (`entityType`/`entityId` props).
+   Drop `// LEVERAGE: pattern entity-attachments — <note>` markers at each
+   mirrored site (association actions, per-entity section embed, link-existing
+   dialog). Extracting a shared entity-attachments engine and re-basing
+   documents onto it is a dedicated follow-up card — re-basing stable CE
+   documents code inside a flag-gated EE branch couples two risk domains that
+   review better separately.
+
+3. **Hudu rows attach to entities.** The association row gains an external-ref
+   path so both sources attach:
+   - `credential_id` becomes nullable; new nullable `credential_ref text`
+     holds the composite Hudu id (`hudu:{company_id}:{password_id}`); a CHECK
+     requires exactly one of the two. The native FK with `ON DELETE CASCADE`
+     is retained.
+   - Uniqueness per ref kind: partial unique on
+     `(tenant, credential_id, entity_id, entity_type)` where `credential_id`
+     is set, and `(tenant, credential_ref, entity_id, entity_type)` where
+     `credential_ref` is set.
+   - **Entity-scoped lists become association-driven for both sources**,
+     replacing the "asset lists are native-only" short-circuit (the `sources`
+     filter then composes uniformly). Hudu refs resolve live through
+     `huduSource` under the existing kernel bundle narrowing. A ref Hudu
+     confirms gone (404) is omitted from results and its association row
+     lazily pruned; transport errors omit the row for that response but never
+     prune.
+
+4. **Same-client enforcement, server-side.** For client-bound entity types —
+   `ticket`, `asset`, `contact`, `contract`, `project_task`, `quote` — the
+   association write resolves the entity's owning client and rejects a
+   mismatch with the credential's owning client (for Hudu refs, the mapped
+   client must match). Clientless types (`document`, `team`, `tenant`, `user`)
+   attach unconstrained. Documents' anything-attaches-to-anything model is
+   deliberately not copied: a credential attached across clients is almost
+   always a miswire.
+
+5. **UI surfaces.** `CredentialsScreen`'s `assetId` scoping generalizes to
+   `(entityType, entityId)`. Passwords sections land on **ticket detail,
+   contact detail, the document drawer/viewer, and project task detail**, in
+   addition to the existing asset section and the ownership-driven client tab.
+   Every section offers: list attached rows (both sources), **create
+   pre-attached** (the create dialog seeds the section's entity, generalizing
+   the asset seeding), **link existing** (picker over credentials compatible
+   with the same-client rule), and detach. Associations are managed from the
+   entity side; the credential form's asset-only picker is replaced by a
+   read-only associations summary on the edit dialog.
+
+### Migration (new step 1b)
+
+One migration widens the table in place: expand the `entity_type` CHECK to the
+roster above; make `credential_id` nullable; add `credential_ref` with the
+one-of CHECK and the two partial unique keys. The entity lookup index
+`(tenant, entity_id, entity_type)` already serves association-driven lists.
+No Citus change (same distributed table).
+
+### Implementation-order delta
+
+- Step 3/5 actions gain association CRUD (`set`/`add`/`remove` with
+  same-client checks, Hudu-ref resolution, lazy pruning) and the
+  association-driven entity list path.
+- Step 6 becomes: shared `(entityType, entityId)` generalization first, then
+  sections in value order — ticket → contact → document → project task — each
+  flag-gated with component tests.
+
+### Testing delta
+
+- Migration: roster CHECK accepts every listed type and rejects unknowns;
+  exactly-one-of `credential_id`/`credential_ref` holds.
+- Same-client rejection per client-bound type; clientless types attach freely.
+- Hudu refs: entity list resolves live rows under bundle scope; confirmed-404
+  pruning removes the association; transport errors hide but never prune.
+- Create-pre-attached and link-existing from each new section; detach.
+- Flag-off regression: every touched surface renders its legacy state.
 
 ## Architecture
 
@@ -415,9 +509,12 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
   folder-level ACLs.
 - Client-portal exposure of credentials.
 - Hudu → Alga import/migration tooling.
-- Additional entity types beyond assets (constraint is extensible).
+- Shared entity-attachments engine (extracting the documents/credentials
+  association pattern into one layer and re-basing both) — follow-up leverage
+  card; the mirrored sites carry `LEVERAGE` markers.
 - Additional sources (IT Glue, etc.).
 - Per-item ACL enforcement on Hudu-sourced rows.
-- Asset-level linking of Hudu passwords (`passwordable_*` fields) — v1 Hudu
-  writes are company-scoped.
+- Writing Hudu's own `passwordable_*` link fields via the Hudu API — Hudu
+  writes stay company-scoped. (Attaching Hudu rows to Alga entities is in
+  scope via `credential_ref` associations, which live only on the Alga side.)
 - Re-encryption/key-rotation tooling (scheme tags make this a clean follow-up).

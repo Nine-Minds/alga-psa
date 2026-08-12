@@ -29,7 +29,9 @@ describe('credentials vault — CE stub contracts', () => {
 
     expect(stub).toContain("code: 'ENTERPRISE_EDITION_REQUIRED'");
     expect(stub).toContain('getCredentialsContext');
-    expect(stub).toContain('return { tierOk: false, huduConnected: false, flagIrrelevantHere: true };');
+    expect(stub).toContain(
+      "return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true };"
+    );
     for (const action of [
       'listCredentials',
       'createCredential',

@@ -38,8 +38,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
+import { FEATURE_MINIMUM_TIER, TIER_FEATURES } from '@alga-psa/types';
 import {
   createCredential,
   deleteCredential,
@@ -292,10 +294,30 @@ export function CredentialsScreen({ clientId, assetId, defaultClientId }: Creden
   }
 
   if (context && !context.tierOk) {
+    if (context.state === 'forbidden') {
+      return (
+        <Alert id="credentials-screen-forbidden">
+          <AlertDescription>{t('credentials.screen.noPermission')}</AlertDescription>
+        </Alert>
+      );
+    }
+    if (context.state === 'unavailable') {
+      return (
+        <Alert id="credentials-screen-unavailable" variant="destructive">
+          <AlertDescription>{t('credentials.screen.unavailable')}</AlertDescription>
+        </Alert>
+      );
+    }
+    // 'tier' (and any legacy context without a state): the standard upgrade
+    // boundary, same as every other tier-gated surface.
     return (
-      <Alert id="credentials-screen-tier">
-        <AlertDescription>{t('credentials.screen.tierRequired')}</AlertDescription>
-      </Alert>
+      <div id="credentials-screen-tier">
+        <FeatureUpgradeNotice
+          featureName={t('credentials.screen.tierFeatureName')}
+          requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.CREDENTIALS]}
+          description={t('credentials.screen.tierDescription')}
+        />
+      </div>
     );
   }
 

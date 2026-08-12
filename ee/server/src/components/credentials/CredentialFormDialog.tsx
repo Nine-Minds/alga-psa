@@ -181,10 +181,12 @@ export function CredentialFormDialog({
         setUrl('');
         setDescription('');
         setDestination('alga');
-        setAssetIds([]);
+        // Asset-section create is pre-attached: the new credential must carry
+        // the asset it was created from so it appears in the section's list.
+        setAssetIds(assetId ? [assetId] : []);
       }
     }
-  }, [isOpen, editing, defaultClientId]);
+  }, [isOpen, editing, defaultClientId, assetId]);
 
   useEffect(() => {
     if (!isOpen || destination !== 'alga' || !clientId) {

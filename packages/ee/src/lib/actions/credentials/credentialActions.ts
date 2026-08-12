@@ -14,11 +14,12 @@ function unavailable(): never {
 export interface CredentialsContext {
   tierOk: boolean;
   huduConnected: boolean;
+  state: 'ok' | 'tier' | 'forbidden' | 'unavailable';
   flagIrrelevantHere: true;
 }
 
 export async function getCredentialsContext(..._args: unknown[]): Promise<CredentialsContext> {
-  return { tierOk: false, huduConnected: false, flagIrrelevantHere: true };
+  return { tierOk: false, huduConnected: false, state: 'unavailable', flagIrrelevantHere: true };
 }
 
 export async function listCredentials(..._args: unknown[]): Promise<never> { return unavailable(); }

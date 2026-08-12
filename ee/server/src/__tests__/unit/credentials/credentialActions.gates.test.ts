@@ -122,6 +122,7 @@ describe('credentials actions — tier gate', () => {
 
     expect(assertTierAccessMock).toHaveBeenCalledWith('CREDENTIALS');
     expect(result.tierOk).toBe(true);
+    expect(result.state).toBe('ok');
   });
 
   it('rejects users without the credential:read permission', async () => {
@@ -129,6 +130,45 @@ describe('credentials actions — tier gate', () => {
     const { listCredentials } = await importActions();
 
     await expect(listCredentials({})).rejects.toThrow(/Forbidden/);
+  });
+});
+
+describe('getCredentialsContext — non-throwing probe', () => {
+  it("resolves { tierOk: false, state: 'tier' } below Pro instead of throwing", async () => {
+    assertTierAccessMock.mockRejectedValue(new TierAccessErrorMock());
+    const { getCredentialsContext } = await importActions();
+
+    const result = await getCredentialsContext();
+
+    expect(result).toMatchObject({ tierOk: false, state: 'tier', huduConnected: false });
+  });
+
+  it("resolves { tierOk: false, state: 'forbidden' } without credential:read", async () => {
+    hasPermissionMock.mockResolvedValue(false);
+    const { getCredentialsContext } = await importActions();
+
+    const result = await getCredentialsContext();
+
+    expect(result).toMatchObject({ tierOk: false, state: 'forbidden' });
+    expect(assertTierAccessMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves { tierOk: false, state: 'unavailable' } when the probe itself fails", async () => {
+    getHuduIntegrationMock.mockRejectedValue(new Error('db down'));
+    const { getCredentialsContext } = await importActions();
+
+    const result = await getCredentialsContext();
+
+    expect(result).toMatchObject({ tierOk: false, state: 'unavailable' });
+  });
+
+  it('does not mistake a non-tier failure from assertTierAccess for a tier denial', async () => {
+    assertTierAccessMock.mockRejectedValue(new Error('session backend down'));
+    const { getCredentialsContext } = await importActions();
+
+    const result = await getCredentialsContext();
+
+    expect(result).toMatchObject({ tierOk: false, state: 'unavailable' });
   });
 });
 

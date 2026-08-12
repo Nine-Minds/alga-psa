@@ -21,6 +21,7 @@ const {
   getAllClientsMock,
   getHuduClientContextMock,
   useFeatureFlagMock,
+  hasTierFeatureMock,
 } = vi.hoisted(() => ({
   getCredentialsContextMock: vi.fn(),
   listCredentialsMock: vi.fn(),
@@ -31,6 +32,11 @@ const {
   getAllClientsMock: vi.fn(),
   getHuduClientContextMock: vi.fn(),
   useFeatureFlagMock: vi.fn(),
+  hasTierFeatureMock: vi.fn(),
+}));
+
+vi.mock('server/src/context/TierContext', () => ({
+  useTier: () => ({ hasFeature: hasTierFeatureMock }),
 }));
 
 vi.mock('@ee/lib/actions/credentials/credentialActions', () => ({
@@ -192,6 +198,7 @@ const consoleSpies: Array<ReturnType<typeof vi.spyOn>> = [];
 beforeEach(() => {
   vi.clearAllMocks();
   useFeatureFlagMock.mockReturnValue({ enabled: true });
+  hasTierFeatureMock.mockReturnValue(true);
   getCredentialsContextMock.mockResolvedValue({
     tierOk: true,
     huduConnected: false,
@@ -294,7 +301,23 @@ describe('CredentialsScreen — filters and flags', () => {
     expect(getCredentialsContextMock).not.toHaveBeenCalled();
   });
 
-  it('shows the tier-required message when the tier gate is closed', async () => {
+  it('shows the tier upgrade notice when the tier gate is closed', async () => {
+    getCredentialsContextMock.mockResolvedValue({
+      tierOk: false,
+      huduConnected: false,
+      state: 'tier',
+      flagIrrelevantHere: true,
+    });
+
+    render(<CredentialsScreen />);
+
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-tier')).toBeTruthy();
+    });
+    expect(listCredentialsMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the tier upgrade notice for a legacy context without a state', async () => {
     getCredentialsContextMock.mockResolvedValue({
       tierOk: false,
       huduConnected: false,
@@ -306,7 +329,39 @@ describe('CredentialsScreen — filters and flags', () => {
     await waitFor(() => {
       expect(document.getElementById('credentials-screen-tier')).toBeTruthy();
     });
+  });
+
+  it('shows the permission message instead of an upsell when credential:read is missing', async () => {
+    getCredentialsContextMock.mockResolvedValue({
+      tierOk: false,
+      huduConnected: false,
+      state: 'forbidden',
+      flagIrrelevantHere: true,
+    });
+
+    render(<CredentialsScreen />);
+
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-forbidden')).toBeTruthy();
+    });
+    expect(document.getElementById('credentials-screen-tier')).toBeNull();
     expect(listCredentialsMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the unavailable alert when the context probe failed', async () => {
+    getCredentialsContextMock.mockResolvedValue({
+      tierOk: false,
+      huduConnected: false,
+      state: 'unavailable',
+      flagIrrelevantHere: true,
+    });
+
+    render(<CredentialsScreen />);
+
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-unavailable')).toBeTruthy();
+    });
+    expect(document.getElementById('credentials-screen-tier')).toBeNull();
   });
 
   it('filters rows by source', async () => {
@@ -387,6 +442,37 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     expect(document.getElementById('credential-form-destination-hudu')).toBeNull();
     expect(document.getElementById('credential-form-destination-alga')).toBeNull();
   });
+
+  it('pre-attaches the asset when created from the asset section', async () => {
+    getHuduClientContextMock.mockResolvedValue({ connected: false, mapped: false });
+    createCredentialMock.mockResolvedValue({ id: 'new-credential' });
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(<CredentialsScreen assetId="asset-1" defaultClientId={CLIENT_ID} />);
+    await waitFor(() => {
+      expect(document.getElementById('credentials-screen-new')).toBeTruthy();
+    });
+
+    fireEvent.click(document.getElementById('credentials-screen-new')!);
+    await waitFor(() => {
+      expect(document.getElementById('credential-form-name')).toBeTruthy();
+    });
+
+    fireEvent.change(document.getElementById('credential-form-name')!, {
+      target: { value: 'Router Admin' },
+    });
+    fireEvent.click(document.getElementById('credential-form-submit')!);
+
+    await waitFor(() => {
+      expect(createCredentialMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: CLIENT_ID,
+          name: 'Router Admin',
+          assetIds: ['asset-1'],
+        })
+      );
+    });
+  });
 });
 
 describe('TotpCountdown — countdown re-request', () => {
@@ -439,6 +525,18 @@ describe('AssetCredentialsSection — flag-off regression (no empty vault card)'
     );
 
     expect(container.firstChild).toBeNull();
+    expect(document.getElementById('asset-credentials-section')).toBeNull();
+    expect(getCredentialsContextMock).not.toHaveBeenCalled();
+  });
+
+  it('EE section renders the upgrade teaser (not the vault) below the Pro tier', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: true });
+    hasTierFeatureMock.mockReturnValue(false);
+
+    render(<EeAssetCredentialsSection assetId="asset-1" clientId={CLIENT_ID} />);
+
+    expect(document.getElementById('asset-credentials-tier-teaser')).toBeTruthy();
+    expect(document.getElementById('asset-credentials-view-plans')).toBeTruthy();
     expect(document.getElementById('asset-credentials-section')).toBeNull();
     expect(getCredentialsContextMock).not.toHaveBeenCalled();
   });

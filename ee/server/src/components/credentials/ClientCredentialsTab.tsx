@@ -11,7 +11,6 @@
  */
 
 import React from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CredentialsScreen } from './CredentialsScreen';
 
 interface ClientCredentialsTabProps {
@@ -19,13 +18,8 @@ interface ClientCredentialsTabProps {
 }
 
 export function ClientCredentialsTab({ clientId }: ClientCredentialsTabProps) {
-  const { t } = useTranslation('msp/credentials');
-
   return (
     <div id="client-credentials-tab" className="space-y-4">
-      <p id="client-credentials-tab-subtitle" className="text-sm text-gray-500">
-        {t('credentials.clientTab.subtitle')}
-      </p>
       <CredentialsScreen clientId={clientId} />
     </div>
   );

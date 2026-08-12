@@ -61,26 +61,54 @@ function sourceContext(user: IUserWithRoles, tenant: string): CredentialSourceCo
   return { tenant, userId: user.user_id, user };
 }
 
+export type CredentialsContextState = 'ok' | 'tier' | 'forbidden' | 'unavailable';
+
 export interface CredentialsContext {
   tierOk: boolean;
   huduConnected: boolean;
+  /** Why the vault is hidden when `tierOk` is false. */
+  state: CredentialsContextState;
   /** Kept for symmetry with getHuduClientContext; the release flag is a client concern. */
   flagIrrelevantHere: true;
 }
 
+function hiddenContext(state: Exclude<CredentialsContextState, 'ok'>): CredentialsContext {
+  return { tierOk: false, huduConnected: false, state, flagIrrelevantHere: true };
+}
+
 /**
  * Cheap UI gate for the Passwords nav item / tabs (pattern:
- * getHuduClientContext). Non-throwing: any failure resolves to a hidden state.
+ * getHuduClientContext). Non-throwing: every failure resolves to a hidden
+ * state, with `state` saying why so the screen can explain in human terms
+ * (tier ⇒ upgrade notice, forbidden ⇒ permission message, unavailable ⇒
+ * try-again alert). Deliberately NOT withCredentialAccess: that wrapper
+ * throws on tier/permission failures — right for the real actions, but a
+ * throw from this probe reaches the client as a generic load error.
  */
-export const getCredentialsContext = withCredentialAccess(
-  'read',
-  async (_user, { tenant }): Promise<CredentialsContext> => {
+export const getCredentialsContext = withAuth(
+  async (user, context): Promise<CredentialsContext> => {
+    const { tenant } = context as { tenant: string };
     try {
+      if (user.user_type === 'client') {
+        return hiddenContext('forbidden');
+      }
+      if (!(await hasPermission(user, 'credential', 'read'))) {
+        return hiddenContext('forbidden');
+      }
+      try {
+        await assertTierAccess(TIER_FEATURES.CREDENTIALS);
+      } catch (error) {
+        if ((error as { code?: string } | null)?.code === 'TIER_ACCESS_DENIED') {
+          return hiddenContext('tier');
+        }
+        throw error;
+      }
       const { knex } = await createTenantKnex(tenant);
       const row = await getHuduIntegration(knex, tenant);
       return {
         tierOk: true,
         huduConnected: row?.is_active === true,
+        state: 'ok',
         flagIrrelevantHere: true,
       };
     } catch (error) {
@@ -88,7 +116,7 @@ export const getCredentialsContext = withCredentialAccess(
         tenant,
         error: error instanceof Error ? error.message : String(error),
       });
-      return { tierOk: false, huduConnected: false, flagIrrelevantHere: true };
+      return hiddenContext('unavailable');
     }
   }
 );
