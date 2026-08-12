@@ -71,14 +71,27 @@ async function renderStoredSalesOrderPdf(
   documentType: SalesOrderDocumentType,
   userId: string,
 ): Promise<Buffer> {
-  const stored = await createPDFGenerationService(tenant).generateAndStore({
-    salesOrderId: soId,
-    salesOrderDocumentType: documentType,
-    userId,
-  });
+  const pdfGenerationService = createPDFGenerationService(tenant);
 
-  const { buffer } = await StorageService.downloadFile(stored.file_id);
-  return Buffer.from(buffer);
+  try {
+    const stored = await pdfGenerationService.generateAndStore({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+
+    const { buffer } = await StorageService.downloadFile(stored.file_id);
+    return Buffer.from(buffer);
+  } catch (error) {
+    // Filing is what makes the document findable, but it is not what the caller
+    // asked for: an unavailable document store must not cost them the PDF.
+    console.error('[salesOrderDocument] Falling back to an unfiled render:', error);
+    return pdfGenerationService.generatePDF({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+  }
 }
 
 /**
