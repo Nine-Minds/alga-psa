@@ -34,6 +34,7 @@ export * from './invoiceModification';
 export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+export * from './invoiceEmailLinkContext';
 export {
   createSeparateProjectProductInvoices,
   getSeparateProjectProductInvoiceReview,

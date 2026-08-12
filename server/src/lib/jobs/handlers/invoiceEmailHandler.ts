@@ -1,13 +1,14 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
-import { getInvoicePaymentLinkUrlForEmail } from '@alga-psa/billing/actions/paymentActions';
+import { getInvoiceEmailLinkContext } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
 import { fetchTenantParty } from '@alga-psa/billing/lib/adapters/tenantPartyAdapter';
 import logger from '@alga-psa/core/logger';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -85,19 +86,18 @@ export class InvoiceEmailHandler {
             throw new Error(`Client not found for Invoice #${invoice.invoice_number}`);
           }
 
-          // Determine recipient email with priority order first
-          let recipientEmail = client.location_email || '';
-          let recipientName = client.client_name;
+          const knex = await getConnection();
 
-          if (client.billing_contact_id) {
-            const contact = await getContactByContactNameId(client.billing_contact_id);
-            if (contact) {
-              recipientEmail = contact.email || recipientEmail;
-              recipientName = contact.full_name;
-            }
-          } else if (client.billing_email) {
-            recipientEmail = client.billing_email;
-          }
+          // Resolve the billing recipient with the shared precedence used by
+          // the direct MSP send action and Stripe customer creation.
+          const resolved = await resolveInvoiceBillingRecipient({
+            knexOrTrx: knex,
+            tenantId,
+            clientId: invoice.client_id,
+          });
+
+          let recipientEmail = resolved.recipientEmail;
+          let recipientName = resolved.recipientName || client.client_name;
 
           if (!recipientEmail) {
             throw new Error(`No valid email address found for ${client.client_name} (Invoice #${invoice.invoice_number})`);
@@ -212,26 +212,30 @@ export class InvoiceEmailHandler {
           await fs.writeFile(tempPath, buffer);
 
           try {
-            // Try to generate a payment link if PaymentService is available
-            let paymentLinkUrl: string | undefined;
-            if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
-              try {
-                const paymentUrl = await getInvoicePaymentLinkUrlForEmail(tenantId, invoiceId);
-                if (paymentUrl) {
-                  paymentLinkUrl = paymentUrl;
-                  logger.info('[InvoiceEmailHandler] Generated payment link', {
-                    tenantId,
-                    invoiceId,
-                  });
-                }
-              } catch (paymentError) {
-                // Don't fail the email if payment link generation fails
-                logger.warn('[InvoiceEmailHandler] Failed to generate payment link', {
-                  tenantId,
-                  invoiceId,
-                  error: paymentError instanceof Error ? paymentError.message : 'Unknown error',
-                });
-              }
+            // Build the shared invoice-email link context (payment + portal
+            // URLs). Link failures never fail the email; the retained error is
+            // logged and the email falls back to the portal CTA.
+            const linkContext = await getInvoiceEmailLinkContext(tenantId, {
+              invoice_id: invoice.invoice_id,
+              status: invoice.status,
+              finalized_at: invoice.finalized_at,
+              invoice_type: invoice.invoice_type,
+              total_amount: invoice.total_amount,
+              credit_applied: invoice.credit_applied,
+            });
+
+            if (linkContext.paymentError) {
+              logger.warn('[InvoiceEmailHandler] Failed to generate payment link', {
+                tenantId,
+                invoiceId,
+                error: linkContext.paymentError,
+              });
+            }
+            if (linkContext.paymentUrl) {
+              logger.info('[InvoiceEmailHandler] Generated payment link', {
+                tenantId,
+                invoiceId,
+              });
             }
 
             // Get tenant company name for email template
@@ -251,7 +255,8 @@ export class InvoiceEmailHandler {
               },
               tempPath,
               {
-                paymentLink: paymentLinkUrl,
+                paymentLink: linkContext.paymentUrl,
+                portalLink: linkContext.portalUrl,
                 companyName,
               }
             );

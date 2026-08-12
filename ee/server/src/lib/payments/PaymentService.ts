@@ -30,6 +30,7 @@ import { PaymentProviderRegistry, PAYMENT_PROVIDER_TYPES } from './PaymentProvid
 import { createStripePaymentProvider } from './StripePaymentProvider';
 import { recordTransaction } from 'server/src/lib/utils/transactionUtils';
 import { recordExternalPayment } from '@alga-psa/billing/services';
+import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
   buildPaymentAppliedPayload,
@@ -49,6 +50,8 @@ interface InvoiceData {
   credit_applied: number;
   currency_code: string;
   status: string;
+  finalized_at?: unknown | null;
+  invoice_type?: string | null;
 }
 
 /**
@@ -197,6 +200,24 @@ export class PaymentService {
       return null;
     }
 
+    // Unfinalized invoices and credit notes carry no payable link.
+    if (!invoice.finalized_at) {
+      logger.debug('[PaymentService] Invoice not finalized', {
+        tenantId: this.tenantId,
+        invoiceId,
+        status: invoice.status,
+      });
+      return null;
+    }
+
+    if (invoice.invoice_type === 'credit_note') {
+      logger.debug('[PaymentService] Credit notes are not payable', {
+        tenantId: this.tenantId,
+        invoiceId,
+      });
+      return null;
+    }
+
     const client = await this.getClient(invoice.client_id);
     if (!client) {
       throw new Error(`Client not found: ${invoice.client_id}`);
@@ -204,7 +225,7 @@ export class PaymentService {
 
     const clientEmail = client.billing_location_email;
     if (!clientEmail) {
-      throw new Error(`No billing email address for client: ${client.client_name}. Please set an email on the billing location.`);
+      throw new Error(`No billing email address for client: ${client.client_name}. Please set a billing contact, billing email, or a billing/default location email.`);
     }
 
     // Get payment settings for expiration
@@ -217,7 +238,7 @@ export class PaymentService {
     // Build success URL - must match client portal routes
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const successUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${baseUrl}/client-portal/billing/invoices/${invoiceId}`;
+    const cancelUrl = `${baseUrl}/client-portal/billing?tab=invoices&invoiceId=${encodeURIComponent(invoiceId)}`;
 
     // Compute balance due: gross total minus credits already applied minus prior payments
     const priorPaymentsRow = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
@@ -761,9 +782,12 @@ export class PaymentService {
   }
 
   /**
-   * Gets a client by ID with billing location email.
-   * Email is fetched from the billing location (is_billing_address=true) or
-   * falls back to the default location (is_default=true).
+   * Gets a client by ID with the billing-recipient email.
+   *
+   * The email uses the same shared precedence as invoice delivery: billing
+   * contact, clients.billing_email, active billing location, then active
+   * default location. Stripe customer creation retains the client company
+   * name as the customer name.
    */
   private async getClient(clientId: string): Promise<ClientData | null> {
     // Get client basic info
@@ -777,21 +801,16 @@ export class PaymentService {
       return null;
     }
 
-    // Get email from billing location or default location
-    const location = await db.table('client_locations')
-      .where('client_id', clientId)
-      .where(function() {
-        this.where('is_billing_address', true)
-            .orWhere('is_default', true);
-      })
-      .orderByRaw('is_billing_address DESC, is_default DESC')
-      .select('email')
-      .first();
+    const resolved = await resolveInvoiceBillingRecipient({
+      knexOrTrx: this.knex,
+      tenantId: this.tenantId,
+      clientId,
+    });
 
     return {
       client_id: client.client_id,
       client_name: client.client_name,
-      billing_location_email: location?.email || undefined,
+      billing_location_email: resolved.recipientEmail || undefined,
     };
   }
 

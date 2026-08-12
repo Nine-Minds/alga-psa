@@ -114,10 +114,40 @@ export class StripePaymentProvider implements PaymentProvider {
       throw new Error('Stripe payment configuration not found for tenant');
     }
 
-    this.stripe = new Stripe(this.config.secretKey, {
+    const clientOptions: Stripe.StripeConfig = {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
-    });
+    };
+
+    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
+    // Stripe SDK at a local emulator. With the variable absent, construction is
+    // byte-for-byte equivalent to the production path and uses Stripe's normal
+    // API endpoint.
+    const apiBaseUrl = process.env.STRIPE_API_BASE_URL;
+    if (apiBaseUrl) {
+      let parsed: URL;
+      try {
+        parsed = new URL(apiBaseUrl);
+      } catch {
+        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
+      }
+      clientOptions.host = parsed.hostname;
+      if (parsed.port) {
+        clientOptions.port = Number(parsed.port);
+      }
+      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
+      logger.info('[StripePaymentProvider] Using STRIPE_API_BASE_URL override', {
+        tenantId: this.tenantId,
+        host: parsed.hostname,
+        port: parsed.port,
+        protocol: clientOptions.protocol,
+      });
+    }
+
+    this.stripe = new Stripe(this.config.secretKey, clientOptions);
   }
 
   /**

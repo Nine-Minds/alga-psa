@@ -307,13 +307,32 @@ export async function setupClientAuthSession(
   userId: string,
   email: string,
   tenantId: string,
-  baseUrl: string
+  baseUrl: string,
+  db?: Knex
 ): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
   // Align with app runtime cookie naming (includes dev port suffix).
   const cookieName = getSessionCookieName();
   const maxAge = 60 * 60 * 24; // 24 hours
   const now = Math.floor(Date.now() / 1000);
+  const sessionId = uuidv4();
+
+  // The session-revocation gate (packages/auth getSession) rejects JWTs that
+  // carry no durable session identifier, so create the tracked session row
+  // and stamp the JWT with it exactly like the internal setupAuthSession does.
+  if (db) {
+    await tenantTable(db, tenantId, 'sessions').insert({
+      tenant: tenantId,
+      session_id: sessionId,
+      user_id: userId,
+      token: '',
+      login_method: 'credentials',
+      last_activity_at: new Date(),
+      expires_at: new Date((now + maxAge) * 1000),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  }
 
   const payload = {
     sub: userId,
@@ -323,6 +342,8 @@ export async function setupClientAuthSession(
     user_type: 'client',
     name: 'Test Client',
     proToken: 'playwright-mock-token',
+    session_id: sessionId,
+    login_method: 'credentials',
     iat: now,
     exp: now + maxAge,
   };

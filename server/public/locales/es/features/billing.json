@@ -130,6 +130,19 @@
     "paymentSuccessful": "Pago procesado correctamente",
     "paymentFailed": "El pago falló. Inténtelo de nuevo."
   },
+  "paymentUnavailable": {
+    "title": "Pago no disponible",
+    "notConfigured": "El pago en línea no está disponible para esta factura.",
+    "creationFailed": "No pudimos iniciar el pago. Inténtelo de nuevo.",
+    "alreadyPaid": "Esta factura ya ha sido pagada.",
+    "invoiceUnavailable": "Esta factura no está disponible para el pago.",
+    "accessDenied": "No tiene acceso para pagar esta factura.",
+    "generic": "No se pudo iniciar el pago en línea.",
+    "tryAgain": "Intentar de nuevo",
+    "backToBilling": "Volver a facturación",
+    "retryFailed": "Aún no pudimos iniciar el pago. Inténtelo de nuevo en un momento.",
+    "loading": "Cargando..."
+  },
   "quotes": {
     "pendingQuotes": "Cotizaciones pendientes",
     "awaitingResponse": "{{count}} cotización(es) en espera de su respuesta",

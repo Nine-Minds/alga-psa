@@ -40,6 +40,10 @@ const COPY = {
     dueDateLabel: 'Due Date',
     customMessageLabel: 'Note from {{company.name}}',
     attachmentNote: 'The invoice is attached to this email as a PDF. If you have any questions, please don\'t hesitate to contact us.',
+    payNowLabel: 'Pay now',
+    viewInvoiceLabel: 'View invoice in client portal',
+    textPayNow: 'Pay your invoice online:',
+    textViewInvoice: 'View your invoice in the client portal:',
     thankYou: 'Thank you for your business!',
     bestRegards: 'Best regards,',
     footer: 'Powered by AlgaPSA',
@@ -58,6 +62,10 @@ const COPY = {
     dueDateLabel: 'Date d\'\u00e9ch\u00e9ance',
     customMessageLabel: 'Message de {{company.name}}',
     attachmentNote: 'La facture est jointe \u00e0 cet e-mail au format PDF. Si vous avez des questions, n\'h\u00e9sitez pas \u00e0 nous contacter.',
+    payNowLabel: 'Payer maintenant',
+    viewInvoiceLabel: 'Voir la facture dans le portail client',
+    textPayNow: 'Payez votre facture en ligne\u00a0:',
+    textViewInvoice: 'Consultez votre facture dans le portail client\u00a0:',
     thankYou: 'Merci pour votre confiance\u00a0!',
     bestRegards: 'Cordialement,',
     footer: 'Powered by AlgaPSA &middot; Gardons les \u00e9quipes align\u00e9es',
@@ -76,6 +84,10 @@ const COPY = {
     dueDateLabel: 'Fecha de vencimiento',
     customMessageLabel: 'Mensaje de {{company.name}}',
     attachmentNote: 'La factura est\u00e1 adjunta a este correo en formato PDF. Si tiene alguna pregunta, no dude en contactarnos.',
+    payNowLabel: 'Pagar ahora',
+    viewInvoiceLabel: 'Ver la factura en el portal del cliente',
+    textPayNow: 'Pague su factura en l\u00ednea:',
+    textViewInvoice: 'Consulte su factura en el portal del cliente:',
     thankYou: '\u00a1Gracias por su confianza!',
     bestRegards: 'Atentamente,',
     footer: 'Powered by AlgaPSA &middot; Manteniendo a los equipos alineados',
@@ -94,6 +106,10 @@ const COPY = {
     dueDateLabel: 'F\u00e4lligkeitsdatum',
     customMessageLabel: 'Nachricht von {{company.name}}',
     attachmentNote: 'Die Rechnung ist dieser E-Mail als PDF beigef\u00fcgt. Bei Fragen k\u00f6nnen Sie uns gerne kontaktieren.',
+    payNowLabel: 'Jetzt bezahlen',
+    viewInvoiceLabel: 'Rechnung im Kundenportal ansehen',
+    textPayNow: 'Bezahlen Sie Ihre Rechnung online:',
+    textViewInvoice: 'Sehen Sie Ihre Rechnung im Kundenportal ein:',
     thankYou: 'Vielen Dank f\u00fcr Ihr Vertrauen!',
     bestRegards: 'Mit freundlichen Gr\u00fc\u00dfen,',
     footer: 'Powered by AlgaPSA &middot; Teams auf Kurs halten',
@@ -112,6 +128,10 @@ const COPY = {
     dueDateLabel: 'Vervaldatum',
     customMessageLabel: 'Bericht van {{company.name}}',
     attachmentNote: 'De factuur is als PDF bij deze e-mail gevoegd. Mocht u vragen hebben, aarzel dan niet om contact met ons op te nemen.',
+    payNowLabel: 'Nu betalen',
+    viewInvoiceLabel: 'Factuur bekijken in het klantportaal',
+    textPayNow: 'Betaal uw factuur online:',
+    textViewInvoice: 'Bekijk uw factuur in het klantportaal:',
     thankYou: 'Hartelijk dank voor uw vertrouwen!',
     bestRegards: 'Met vriendelijke groet,',
     footer: 'Powered by AlgaPSA &middot; Teams op \u00e9\u00e9n lijn houden',
@@ -130,6 +150,10 @@ const COPY = {
     dueDateLabel: 'Data di scadenza',
     customMessageLabel: 'Messaggio da {{company.name}}',
     attachmentNote: 'La fattura \u00e8 allegata a questa email in formato PDF. Per qualsiasi domanda, non esiti a contattarci.',
+    payNowLabel: 'Paga ora',
+    viewInvoiceLabel: 'Visualizza la fattura nel portale clienti',
+    textPayNow: 'Paga la fattura online:',
+    textViewInvoice: 'Visualizza la fattura nel portale clienti:',
     thankYou: 'Grazie per la sua fiducia!',
     bestRegards: 'Cordiali saluti,',
     footer: 'Powered by AlgaPSA &middot; Manteniamo i team allineati',
@@ -148,6 +172,10 @@ const COPY = {
     dueDateLabel: 'Termin p\u0142atno\u015bci',
     customMessageLabel: 'Wiadomo\u015b\u0107 od {{company.name}}',
     attachmentNote: 'Faktura jest za\u0142\u0105czona do tej wiadomo\u015bci w formacie PDF. W razie pyta\u0144 prosimy o kontakt.',
+    payNowLabel: 'Zap\u0142a\u0107 teraz',
+    viewInvoiceLabel: 'Zobacz faktur\u0119 w portalu klienta',
+    textPayNow: 'Zap\u0142a\u0107 faktur\u0119 online:',
+    textViewInvoice: 'Zobacz faktur\u0119 w portalu klienta:',
     thankYou: 'Dzi\u0119kujemy za wsp\u00f3\u0142prac\u0119!',
     bestRegards: 'Z powa\u017caniem,',
     footer: 'Powered by AlgaPSA',
@@ -168,6 +196,10 @@ COPY.pt = {
   dueDateLabel: 'Data de vencimento',
   customMessageLabel: 'Observação de {{company.name}}',
   attachmentNote: 'A fatura está anexada a este email como PDF. Se tiver alguma dúvida, entre em contato conosco.',
+  payNowLabel: 'Pagar agora',
+  viewInvoiceLabel: 'Ver fatura no portal do cliente',
+  textPayNow: 'Pague sua fatura online:',
+  textViewInvoice: 'Veja sua fatura no portal do cliente:',
   thankYou: 'Agradecemos pela preferência!',
   bestRegards: 'Atenciosamente,',
   footer: 'Powered by AlgaPSA',
@@ -210,6 +242,16 @@ function buildBodyHtml(c) {
                   <div style="color:#475467;line-height:1.5;">{{customMessage}}</div>
                 </div>
                 {{/if}}
+                {{#if invoice.paymentUrl}}
+                <div style="margin:24px 0 0 0;text-align:center;">
+                  <a href="{{invoice.paymentUrl}}" style="background-color:#4f46e5;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">${c.payNowLabel}</a>
+                </div>
+                {{/if}}
+                {{#if invoice.portalUrl}}
+                <div style="margin:16px 0;text-align:center;">
+                  <a href="{{invoice.portalUrl}}" style="background-color:#ffffff;color:#4f46e5;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;border:1px solid #4f46e5;">${c.viewInvoiceLabel}</a>
+                </div>
+                {{/if}}
                 <p style="margin:24px 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.attachmentNote}</p>
                 <p style="margin:16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.thankYou}</p>
                 <p style="margin:16px 0 0 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.bestRegards}<br><strong>{{company.name}}</strong></p>`;
@@ -230,6 +272,13 @@ ${c.textDetailsHeader}
 
 {{#if customMessage}}
 Note: {{customMessage}}
+{{/if}}
+
+{{#if invoice.paymentUrl}}
+${c.textPayNow} {{invoice.paymentUrl}}
+{{/if}}
+{{#if invoice.portalUrl}}
+${c.textViewInvoice} {{invoice.portalUrl}}
 {{/if}}
 
 ${c.attachmentNote}

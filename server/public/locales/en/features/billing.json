@@ -130,6 +130,19 @@
     "paymentSuccessful": "Payment processed successfully",
     "paymentFailed": "Payment failed. Please try again."
   },
+  "paymentUnavailable": {
+    "title": "Payment Unavailable",
+    "notConfigured": "Online payment is not available for this invoice.",
+    "creationFailed": "We could not start the payment. Please try again.",
+    "alreadyPaid": "This invoice has already been paid.",
+    "invoiceUnavailable": "This invoice is not available for payment.",
+    "accessDenied": "You do not have access to pay this invoice.",
+    "generic": "Online payment could not be started.",
+    "tryAgain": "Try again",
+    "backToBilling": "Back to billing",
+    "retryFailed": "We still could not start the payment. Please try again in a moment.",
+    "loading": "Loading..."
+  },
   "quotes": {
     "pendingQuotes": "Pending Quotes",
     "awaitingResponse": "{{count}} quote(s) awaiting your response",

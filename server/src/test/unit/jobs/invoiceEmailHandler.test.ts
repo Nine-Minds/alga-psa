@@ -23,7 +23,9 @@ const mocks = vi.hoisted(() => ({
   fetchTenantParty: vi.fn(),
   // Billing actions
   getInvoiceForRendering: vi.fn(),
-  getInvoicePaymentLinkUrlForEmail: vi.fn(),
+  // Shared billing-recipient resolver and invoice-email link context
+  resolveInvoiceBillingRecipient: vi.fn(),
+  getInvoiceEmailLinkContext: vi.fn(),
   // fs
   writeFile: vi.fn(),
   unlink: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock('server/src/services/job.service', () => ({
 vi.mock('@alga-psa/billing/services', () => ({
   createPDFGenerationService: mocks.createPDFGenerationService,
   PDFGenerationService: class {},
+  resolveInvoiceBillingRecipient: mocks.resolveInvoiceBillingRecipient,
 }));
 
 vi.mock('server/src/services/emailService', () => ({
@@ -68,8 +71,8 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getInvoiceForRendering: mocks.getInvoiceForRendering,
 }));
 
-vi.mock('@alga-psa/billing/actions/paymentActions', () => ({
-  getInvoicePaymentLinkUrlForEmail: mocks.getInvoicePaymentLinkUrlForEmail,
+vi.mock('@alga-psa/billing/actions/invoiceEmailLinkContext', () => ({
+  getInvoiceEmailLinkContext: mocks.getInvoiceEmailLinkContext,
 }));
 
 vi.mock('@alga-psa/billing/lib/adapters/tenantPartyAdapter', () => ({
@@ -154,7 +157,17 @@ describe('InvoiceEmailHandler', () => {
     mocks.getInvoiceForRendering.mockResolvedValue(buildInvoice());
     mocks.getClientById.mockResolvedValue(buildClient());
     mocks.getContactByContactNameId.mockResolvedValue(null);
-    mocks.getInvoicePaymentLinkUrlForEmail.mockResolvedValue('https://pay.example/invoice-1');
+    mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
+      clientId: 'client-1',
+      clientName: 'Acme Corp',
+      recipientEmail: 'location@acme.test',
+      recipientName: 'Acme Corp',
+      recipientSource: 'billing_location',
+    });
+    mocks.getInvoiceEmailLinkContext.mockResolvedValue({
+      paymentUrl: 'https://pay.example/invoice-1',
+      portalUrl: 'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
+    });
 
     // Sender company name comes from the tenant party adapter
     mocks.getConnection.mockResolvedValue(vi.fn());
@@ -208,7 +221,7 @@ describe('InvoiceEmailHandler', () => {
       const tempPath = mocks.writeFile.mock.calls[0][0] as string;
       expect(tempPath).toContain('INV-100');
 
-      // Email sent exactly once with recipient + payment link + tenant company name
+      // Email sent exactly once with recipient + payment/portal links + tenant company name
       expect(mocks.sendInvoiceEmail).toHaveBeenCalledTimes(1);
       const [emailInvoice, emailPath, emailOptions] = mocks.sendInvoiceEmail.mock.calls[0];
       expect(emailInvoice.recipientEmail).toBe('location@acme.test');
@@ -217,6 +230,7 @@ describe('InvoiceEmailHandler', () => {
       expect(emailPath).toBe(tempPath);
       expect(emailOptions).toEqual({
         paymentLink: 'https://pay.example/invoice-1',
+        portalLink: 'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
         companyName: 'MSP Co',
       });
 
@@ -233,56 +247,79 @@ describe('InvoiceEmailHandler', () => {
       expect(mocks.updateJobStatus).not.toHaveBeenCalledWith('job-service-1', JobStatus.Failed, expect.anything());
     });
 
-    it('should prefer the billing contact email over location and billing emails', async () => {
-      mocks.getClientById.mockResolvedValue(buildClient({
-        billing_contact_id: 'contact-1',
-        billing_email: 'billing@acme.test',
-      }));
-      mocks.getContactByContactNameId.mockResolvedValue({
-        email: 'contact@acme.test',
-        full_name: 'Jane Contact',
+    it('should use the shared billing-recipient resolver result (billing contact preferred)', async () => {
+      mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        recipientEmail: 'contact@acme.test',
+        recipientName: 'Jane Contact',
+        recipientSource: 'billing_contact',
       });
 
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
 
-      expect(mocks.getContactByContactNameId).toHaveBeenCalledWith('contact-1');
+      expect(mocks.resolveInvoiceBillingRecipient).toHaveBeenCalledWith({
+        knexOrTrx: expect.anything(),
+        tenantId: TENANT,
+        clientId: 'client-1',
+      });
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('contact@acme.test');
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].contact).toEqual({ name: 'Jane Contact', address: '1 Main St' });
     });
 
-    it('should fall back to billing_email when there is no billing contact', async () => {
-      mocks.getClientById.mockResolvedValue(buildClient({
-        billing_email: 'billing@acme.test',
-      }));
+    it('should pass through the billing_email fallback from the shared resolver', async () => {
+      mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        recipientEmail: 'billing@acme.test',
+        recipientName: 'Acme Corp',
+        recipientSource: 'billing_email',
+      });
 
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
 
+      expect(mocks.getContactByContactNameId).not.toHaveBeenCalled();
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].recipientEmail).toBe('billing@acme.test');
     });
 
     it('should not request a payment link for paid invoices', async () => {
       mocks.getInvoiceForRendering.mockResolvedValue(buildInvoice({ status: 'paid' }));
+      mocks.getInvoiceEmailLinkContext.mockResolvedValue({});
 
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
 
-      expect(mocks.getInvoicePaymentLinkUrlForEmail).not.toHaveBeenCalled();
+      // The handler passes the invoice's eligibility fields through so the
+      // shared link-context helper can gate on status; the helper returns no
+      // URLs for a paid invoice and the email is sent without any CTA links.
+      expect(mocks.getInvoiceEmailLinkContext).toHaveBeenCalledWith(
+        TENANT,
+        expect.objectContaining({ status: 'paid' }),
+      );
       expect(mocks.sendInvoiceEmail.mock.calls[0][2]).toEqual({
         paymentLink: undefined,
+        portalLink: undefined,
         companyName: 'MSP Co',
       });
     });
 
     it('should still send the email when payment link generation fails', async () => {
-      mocks.getInvoicePaymentLinkUrlForEmail.mockRejectedValue(new Error('payment provider down'));
+      mocks.getInvoiceEmailLinkContext.mockResolvedValue({
+        paymentError: new Error('payment provider down'),
+        portalUrl: 'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
+      });
 
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
 
       expect(mocks.loggerWarn).toHaveBeenCalledWith(
         '[InvoiceEmailHandler] Failed to generate payment link',
-        expect.objectContaining({ error: 'payment provider down' }),
+        expect.objectContaining({ error: expect.any(Error) }),
       );
       expect(mocks.sendInvoiceEmail).toHaveBeenCalledTimes(1);
       expect(mocks.sendInvoiceEmail.mock.calls[0][2].paymentLink).toBeUndefined();
+      // The portal fallback is still forwarded on creation failure.
+      expect(mocks.sendInvoiceEmail.mock.calls[0][2].portalLink).toBe(
+        'https://portal.example/client-portal/billing?tab=invoices&invoiceId=invoice-1',
+      );
       const finalStatusCall = mocks.updateJobStatus.mock.calls.at(-1)!;
       expect(finalStatusCall[1]).toBe(JobStatus.Completed);
     });
@@ -290,7 +327,13 @@ describe('InvoiceEmailHandler', () => {
 
   describe('error paths', () => {
     it('should mark the job failed and re-throw when no recipient email can be resolved', async () => {
-      mocks.getClientById.mockResolvedValue(buildClient({ location_email: '' }));
+      mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
+        clientId: 'client-1',
+        clientName: 'Acme Corp',
+        recipientEmail: '',
+        recipientName: 'Acme Corp',
+        recipientSource: 'none',
+      });
 
       await expect(
         InvoiceEmailHandler.handle('pg-1', buildJobData()),

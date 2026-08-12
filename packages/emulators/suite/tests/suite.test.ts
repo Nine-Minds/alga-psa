@@ -27,6 +27,7 @@ describe('emulator suite', () => {
       'msgraph',
       'qbo',
       'smtp-sink',
+      'stripe',
       'webhook-sink',
     ]);
     const ports = catalog.emulators.map((emu: any) => emu.port);

@@ -7,6 +7,10 @@
  *
  * Server actions for client portal payment functionality.
  * These actions allow portal users to get payment links and verify payments.
+ *
+ * Failures return a stable, non-sensitive error code plus a safe display
+ * message; the original server/provider exception is preserved in server logs
+ * (including its native `cause`) and is never serialized to the browser.
  */
 
 import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -17,16 +21,47 @@ import {
   getInvoicePaymentStatus,
   getOrCreateInvoicePaymentLinkUrl,
 } from '@alga-psa/billing/actions/paymentActions';
+import { PaymentLinkError } from '@alga-psa/billing/actions/paymentLinkError';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+export type ClientPaymentErrorCode =
+  | 'contact_missing'
+  | 'client_missing'
+  | 'invoice_not_found'
+  | 'access_denied'
+  | 'invoice_unavailable'
+  | 'already_paid'
+  | 'invoice_cancelled'
+  | 'no_amount_due'
+  | 'payment_not_configured'
+  | 'payment_link_creation_failed'
+  | 'invalid_session';
+
+export interface ClientPaymentActionError {
+  /** Stable code the UI can reason about; never a provider message. */
+  code: ClientPaymentErrorCode;
+  /** Safe display message shown to the portal user. */
+  message: string;
+  /** Whether the user can retry from the failure screen. */
+  retryable: boolean;
+}
 
 /**
  * Result of a payment action.
  */
-interface PaymentActionResult<T = void> {
+export interface PaymentActionResult<T = void> {
   success: boolean;
   data?: T;
-  error?: string;
+  error?: ClientPaymentActionError;
+}
+
+function actionError<T = void>(
+  code: ClientPaymentErrorCode,
+  message: string,
+  retryable = false
+): PaymentActionResult<T> {
+  return { success: false, error: { code, message, retryable } };
 }
 
 type InvoiceRecurringSummary = {
@@ -46,7 +81,7 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
   try {
     // Client portal users must have a contact_id
     if (!user.contact_id) {
-      return { success: false, error: 'User not associated with a contact' };
+      return actionError('contact_missing', 'User not associated with a contact');
     }
 
     const tenantId = tenant;
@@ -73,42 +108,64 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
     });
 
     if (!contact?.client_id) {
-      return { success: false, error: 'Contact not associated with a client' };
+      return actionError('client_missing', 'Contact not associated with a client');
     }
 
     if (!invoice) {
-      return { success: false, error: 'Invoice not found' };
+      return actionError('invoice_not_found', 'Invoice not found');
     }
 
     // Verify the invoice belongs to the user's client
     if (invoice.client_id !== contact.client_id) {
-      return { success: false, error: 'Access denied' };
+      return actionError('access_denied', 'Access denied');
     }
 
-    // Check if invoice is a draft (not finalized)
-    if (invoice.status === 'draft') {
-      return { success: false, error: 'Invoice not available' };
+    // Check if invoice is a draft or otherwise not finalized
+    if (!invoice.finalized_at || invoice.status === 'draft') {
+      return actionError('invoice_unavailable', 'Invoice not available for payment');
     }
 
     // Check if invoice is already paid
     if (invoice.status === 'paid') {
-      return { success: false, error: 'already_paid' };
+      return actionError('already_paid', 'This invoice has already been paid');
     }
 
     // Check if invoice is cancelled
     if (invoice.status === 'cancelled') {
-      return { success: false, error: 'Invoice is cancelled' };
+      return actionError('invoice_cancelled', 'Invoice is cancelled');
     }
 
     // Credit notes and fully-covered invoices carry no payable amount.
     const amountDue = Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0);
     if (invoice.invoice_type === 'credit_note' || amountDue <= 0) {
-      return { success: false, error: 'Invoice has no amount due' };
+      return actionError('no_amount_due', 'Invoice has no amount due');
     }
 
-    const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(invoiceId);
+    let paymentUrl: string | null;
+    try {
+      paymentUrl = await getOrCreateInvoicePaymentLinkUrl(invoiceId);
+    } catch (error) {
+      const code: ClientPaymentErrorCode =
+        error instanceof PaymentLinkError ? error.code : 'payment_link_creation_failed';
+      logger.error('[ClientPayment] Failed to get payment link', {
+        error,
+        invoiceId,
+        tenantId,
+      });
+      return actionError(
+        code,
+        code === 'payment_not_configured'
+          ? 'Online payment is not available for this invoice.'
+          : 'We could not start the payment. Please try again.',
+        code === 'payment_link_creation_failed'
+      );
+    }
+
     if (!paymentUrl) {
-      return { success: false, error: 'payment_not_configured' };
+      return actionError(
+        'payment_not_configured',
+        'Online payment is not available for this invoice.'
+      );
     }
 
     logger.info('[ClientPayment] Payment link retrieved', {
@@ -122,14 +179,15 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
       data: { paymentUrl },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error('[ClientPayment] Failed to get payment link', {
-      errorMessage,
-      errorStack,
+      error,
       invoiceId,
     });
-    return { success: false, error: 'Failed to get payment link' };
+    return actionError(
+      'payment_link_creation_failed',
+      'We could not start the payment. Please try again.',
+      true
+    );
   }
 });
 
@@ -156,7 +214,7 @@ export const verifyClientPortalPayment = withAuth(async (
   try {
     // Client portal users must have a contact_id
     if (!user.contact_id) {
-      return { success: false, error: 'User not associated with a contact' };
+      return actionError('contact_missing', 'User not associated with a contact');
     }
 
     const tenantId = tenant;
@@ -198,16 +256,16 @@ export const verifyClientPortalPayment = withAuth(async (
     });
 
     if (!contact?.client_id) {
-      return { success: false, error: 'Contact not associated with a client' };
+      return actionError('client_missing', 'Contact not associated with a client');
     }
 
     if (!invoice) {
-      return { success: false, error: 'Invoice not found' };
+      return actionError('invoice_not_found', 'Invoice not found');
     }
 
     // Verify user has access via their client
     if (invoice.client_id !== contact.client_id) {
-      return { success: false, error: 'Access denied' };
+      return actionError('access_denied', 'Access denied');
     }
 
     // Check if invoice is already marked as paid
@@ -243,7 +301,7 @@ export const verifyClientPortalPayment = withAuth(async (
           invoiceId,
           sessionId,
         });
-        return { success: false, error: 'Invalid session' };
+        return actionError('invalid_session', 'Invalid session');
       }
     }
 
@@ -326,14 +384,15 @@ export const verifyClientPortalPayment = withAuth(async (
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error('[ClientPayment] Failed to verify payment', {
-      errorMessage,
-      errorStack,
+      error,
       invoiceId,
       sessionId,
     });
-    return { success: false, error: 'Failed to verify payment' };
+    return actionError(
+      'payment_link_creation_failed',
+      'We could not verify your payment. Please try again.',
+      true
+    );
   }
 });

@@ -130,6 +130,19 @@
     "paymentSuccessful": "Płatność przetworzona pomyślnie",
     "paymentFailed": "Płatność nie powiodła się. Spróbuj ponownie."
   },
+  "paymentUnavailable": {
+    "title": "Płatność niedostępna",
+    "notConfigured": "Płatność online nie jest dostępna dla tej faktury.",
+    "creationFailed": "Nie udało się rozpocząć płatności. Spróbuj ponownie.",
+    "alreadyPaid": "Ta faktura została już opłacona.",
+    "invoiceUnavailable": "Ta faktura nie jest dostępna do płatności.",
+    "accessDenied": "Nie masz dostępu do opłacenia tej faktury.",
+    "generic": "Nie udało się rozpocząć płatności online.",
+    "tryAgain": "Spróbuj ponownie",
+    "backToBilling": "Wróć do rozliczeń",
+    "retryFailed": "Nadal nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę.",
+    "loading": "Ładowanie..."
+  },
   "quotes": {
     "pendingQuotes": "Oczekujące oferty",
     "awaitingResponse": "{{count}} ofert(a) oczekuje na Twoją odpowiedź",

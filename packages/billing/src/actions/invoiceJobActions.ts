@@ -10,12 +10,14 @@ import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
 import { formatCurrency, dateValueToDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import type { IContact } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import fs from 'fs/promises';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getClientById } from '@alga-psa/shared/billingClients/clients';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
+import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
+import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -210,7 +212,7 @@ export interface InvoiceEmailRecipientInfo {
 
   recipientEmail: string;
   recipientName: string;
-  recipientSource: 'billing_contact' | 'billing_email' | 'client_email' | 'none';
+  recipientSource: 'billing_contact' | 'billing_email' | 'billing_location' | 'default_location' | 'client_email' | 'none';
 
   totalAmount: string;
   currencyCode: string;
@@ -266,30 +268,15 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         continue;
       }
 
-      let recipientEmail = '';
-      let recipientName = client.client_name;
-      let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = 'none';
+      const resolved = await resolveInvoiceBillingRecipient({
+        knexOrTrx: knex,
+        tenantId: tenant,
+        clientId: invoice.client_id,
+      });
 
-      if (client.billing_contact_id) {
-        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
-          .where({ contact_name_id: client.billing_contact_id })
-          .first();
-        if (contact && contact.email) {
-          recipientEmail = contact.email;
-          recipientName = contact.full_name;
-          recipientSource = 'billing_contact';
-        }
-      }
-
-      if (!recipientEmail && (client as any).billing_email) {
-        recipientEmail = (client as any).billing_email;
-        recipientSource = 'billing_email';
-      }
-
-      if (!recipientEmail && (client as any).location_email) {
-        recipientEmail = (client as any).location_email;
-        recipientSource = 'client_email';
-      }
+      let recipientEmail = resolved.recipientEmail;
+      let recipientName = resolved.recipientName || client.client_name;
+      let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = resolved.recipientSource;
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
       const amountLocale = await getTenantDefaultLocale(tenant, 'client');
@@ -493,20 +480,14 @@ export const sendInvoiceEmailAction = withAuth(async (
         continue;
       }
 
-      let recipientEmail = (client as any).location_email || '';
-      let recipientName = client.client_name;
+      const resolved = await resolveInvoiceBillingRecipient({
+        knexOrTrx: knex,
+        tenantId: tenant,
+        clientId: invoice.client_id,
+      });
 
-      if (client.billing_contact_id) {
-        const contact = await tenantDb(knex, tenant).table<IContact>('contacts')
-          .where({ contact_name_id: client.billing_contact_id })
-          .first();
-        if (contact) {
-          recipientEmail = contact.email;
-          recipientName = contact.full_name;
-        }
-      } else if ((client as any).billing_email) {
-        recipientEmail = (client as any).billing_email;
-      }
+      let recipientEmail = resolved.recipientEmail;
+      let recipientName = resolved.recipientName || client.client_name;
 
       if (!isValidEmail(recipientEmail)) {
         results.push({
@@ -561,6 +542,15 @@ export const sendInvoiceEmailAction = withAuth(async (
         clientId: client.client_id,
       });
 
+      const linkContext = await getInvoiceEmailLinkContext(tenant, {
+        invoice_id: invoice.invoice_id,
+        status: invoice.status,
+        finalized_at: invoice.finalized_at,
+        invoice_type: invoice.invoice_type,
+        total_amount: invoice.total_amount,
+        credit_applied: invoice.credit_applied,
+      });
+
       const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
       const templateContext = {
         invoice: {
@@ -568,6 +558,8 @@ export const sendInvoiceEmailAction = withAuth(async (
           amount: totalAmount,
           invoiceDate,
           dueDate,
+          paymentUrl: linkContext.paymentUrl || '',
+          portalUrl: linkContext.portalUrl || '',
         },
         client: {
           name: client.client_name,
@@ -585,8 +577,17 @@ export const sendInvoiceEmailAction = withAuth(async (
       // Subject and plain-text are not HTML — disable Handlebars' HTML escape
       // so characters like `"` in client/invoice names don't render as `&quot;`.
       const subject = Handlebars.compile(emailTemplate.subject, { noEscape: true })(templateContext);
-      const html = Handlebars.compile(emailTemplate.html_content)(templateContext);
-      const text = Handlebars.compile(emailTemplate.text_content, { noEscape: true })(templateContext);
+      const renderedHtml = Handlebars.compile(emailTemplate.html_content)(templateContext);
+      const renderedText = Handlebars.compile(emailTemplate.text_content, { noEscape: true })(templateContext);
+
+      // Tenant-authored templates may not reference the new variables. Append
+      // missing CTAs so the email still carries the payment/portal links.
+      const { html, text } = ensureInvoiceEmailLinks({
+        html: renderedHtml,
+        text: renderedText,
+        paymentUrl: linkContext.paymentUrl,
+        portalUrl: linkContext.portalUrl,
+      });
 
       const from: EmailAddress = { email: fromEmail, name: companyName };
       const to: EmailAddress[] = [{ email: recipientEmail, name: recipientName }];

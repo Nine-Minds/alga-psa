@@ -1,10 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = process.env.PORT || "3000";
+const paymentLinksEnabled = process.env.PLAYWRIGHT_PAYMENT_LINKS === "1";
+const stripeEnv = (key: string, fallback: string): string => {
+  // Emulator fixtures are wired only for the explicit invoice-payment-links
+  // configuration; otherwise the app keeps its production Stripe defaults.
+  // webServer.env must never carry `undefined` values (the nx/Playwright
+  // config loader rejects them), so use the empty string when unset.
+  if (!paymentLinksEnabled) return "";
+  return process.env[key] || fallback;
+};
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SERVER_READY_URL = process.env.PLAYWRIGHT_SERVER_READY_URL || BASE_URL;
 
 export default defineConfig({
+  globalSetup: "./src/test/e2e/globalSetup.ts",
   testDir: "./src/test/e2e",
   testMatch: ["**/*.playwright.test.ts"],
   fullyParallel: false,
@@ -81,9 +91,22 @@ export default defineConfig({
             APP_ENV: "test",
             NODE_ENV: "development",
             PORT: PORT,
+            // PaymentService builds the Checkout success/cancel URLs from this.
+            NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
             // Feature-flag overrides for e2e, forwarded from the environment when set.
             NEXT_PUBLIC_FORCE_FEATURE_FLAGS:
-              process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS || "",
+              process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ||
+              (paymentLinksEnabled ? "release-v1.5-feature:true" : ""),
+            STRIPE_API_BASE_URL: stripeEnv("STRIPE_API_BASE_URL", "http://127.0.0.1:4050"),
+            STRIPE_SECRET_KEY: stripeEnv("STRIPE_SECRET_KEY", "sk_test_algasim"),
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: stripeEnv(
+              "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+              "pk_test_algasim",
+            ),
+            stripe_payment_webhook_secret: stripeEnv(
+              "STRIPE_PAYMENT_WEBHOOK_SECRET",
+              "whsec_algasim",
+            ),
           },
         },
 });
