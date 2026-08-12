@@ -3,7 +3,7 @@ import type { Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
-import type { DocumentAssociationEntityType, TemplateAst } from '@alga-psa/types';
+import type { DocumentAssociationEntityType, IDocument, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
@@ -54,6 +54,7 @@ interface PDFGenerationOptions {
   invoiceNumber?: string;
   quoteNumber?: string;
   salesOrderNumber?: string;
+  templateId?: string;
   version?: number;
   cacheKey?: string;
   userId: string;
@@ -62,7 +63,20 @@ interface PDFGenerationOptions {
 }
 
 /** The stored file, plus the `documents` row it was filed as (absent for the export branch). */
-export type StoredPdfResult = FileStore & { document_id?: string };
+export type StoredPdfResult = FileStore & { document_id?: string; is_client_visible?: boolean };
+
+/**
+ * How a generated PDF is filed against its source entity.
+ *
+ * `refresh` keeps one document per entity: while it is still MSP-only the filed
+ * copy is re-rendered in place, so a draft invoice's document always matches the
+ * invoice. Once the document has been published to the client it is the artifact
+ * they received, so it is frozen and reused, and a deliberate re-render files a
+ * new document rather than mutating it.
+ *
+ * `append` files every render as its own document (quotes: each send is its own copy).
+ */
+type FilingMode = 'refresh' | 'append';
 
 /** Where a generated PDF is filed, and what it is filed against. */
 interface FilingTarget {
@@ -74,7 +88,7 @@ interface FilingTarget {
   documentName: string;
   /** Base name for the stored file — preserved from the pre-filing behaviour. */
   fileBaseName: string;
-  reuseExisting: boolean;
+  mode: FilingMode;
 }
 
 interface RenderedPdf {
@@ -170,11 +184,11 @@ export class PDFGenerationService {
 
   /**
    * Render (or reuse) a PDF, store the bytes, and file the result as a `documents`
-   * row associated with its source entity and client. Invoice and sales-order
-   * documents are reused when one is already on file: `generateAndStore` is called
-   * from download paths too, and re-rendering there both drifts from the artifact
-   * that was sent and grows storage on every click. Pass `regenerate` for a
-   * deliberate new render.
+   * row associated with its source entity and client. Once an invoice or
+   * sales-order document has been published to the client it is handed straight
+   * back rather than re-rendered: `generateAndStore` is called from download paths
+   * too, and re-rendering there drifts from the artifact the client received.
+   * Pass `regenerate` to render again anyway.
    */
   async generateAndStore(options: PDFGenerationOptions): Promise<StoredPdfResult> {
     return runWithTenant(this.tenant, async () => {
@@ -184,17 +198,16 @@ export class PDFGenerationService {
       let fileName: string;
       let sourceType: string;
       let sourceId: string;
-      const reuse = Boolean(target?.reuseExisting) && !options.regenerate;
 
       if (target) {
         fileName = target.fileBaseName;
         sourceType = target.sourceType;
         sourceId = target.entityId;
 
-        if (reuse) {
-          const reused = await this.findStoredPdf(knex, target);
-          if (reused) {
-            return reused;
+        if (target.mode === 'refresh' && !options.regenerate) {
+          const issued = await this.findStoredPdf(knex, target, true);
+          if (issued) {
+            return issued;
           }
         }
       } else {
@@ -213,6 +226,7 @@ export class PDFGenerationService {
         salesOrderId: options.salesOrderId,
         salesOrderDocumentType: options.salesOrderDocumentType,
         documentId: options.documentId,
+        templateId: options.templateId,
         userId: options.userId,
       });
 
@@ -239,11 +253,21 @@ export class PDFGenerationService {
 
       if (target) {
         try {
-          const filed = await this.fileGeneratedDocument(knex, target, fileRecord, rendered, options.userId, reuse);
+          const filed = await this.fileGeneratedDocument(
+            knex,
+            target,
+            fileRecord,
+            rendered,
+            options.userId,
+            Boolean(options.regenerate)
+          );
           documentId = filed.document_id;
-          // Lost a filing race: an equivalent document already existed, so return it
-          // rather than handing back a second copy of the same artifact.
-          result = filed.reusedFile ?? { ...fileRecord, document_id: filed.document_id };
+          // Lost a filing race: the document was published while we rendered, so
+          // return the issued artifact rather than a second copy of it.
+          result = filed.issuedFile ?? { ...fileRecord, document_id: filed.document_id };
+          // Outside the filing transaction on purpose: retiring the superseded PDF
+          // is housekeeping, and a failure here must not roll the filing back.
+          await this.discardStoredFile(knex, filed.supersededFileId, options.userId);
         } catch (filingError) {
           // Best-effort: the stored file is still usable (it is what gets emailed
           // and downloaded), so a filing failure must not take the caller down
@@ -304,7 +328,7 @@ export class PDFGenerationService {
         isClientVisible: false,
         documentName: `Invoice_${invoiceNumber}.pdf`,
         fileBaseName: options.invoiceNumber || options.invoiceId,
-        reuseExisting: true,
+        mode: 'refresh',
       };
     }
 
@@ -323,7 +347,7 @@ export class PDFGenerationService {
         isClientVisible: false,
         documentName: `${SALES_ORDER_DOCUMENT_PREFIX[documentType]}_${soNumber}.pdf`,
         fileBaseName: options.salesOrderNumber || salesOrder?.so_number || options.salesOrderId,
-        reuseExisting: true,
+        mode: 'refresh',
       };
     }
 
@@ -339,7 +363,7 @@ export class PDFGenerationService {
         documentName: `Quote_${quoteNumber}.pdf`,
         fileBaseName: quoteNumber,
         // A quote is re-rendered on every send, and each send is its own artifact.
-        reuseExisting: false,
+        mode: 'append',
       };
     }
 
@@ -350,10 +374,16 @@ export class PDFGenerationService {
     throw new Error('One of invoiceId, quoteId, salesOrderId, or documentId must be provided');
   }
 
-  /** The most recently filed PDF for this target, or null when none exists. */
+  /**
+   * The most recently filed PDF for this target, or null when none exists.
+   * `clientVisible` picks between the copy the client was issued and the MSP-only
+   * working copy, which are governed by different rules: the issued one is frozen,
+   * the working one is refreshed in place.
+   */
   private async findStoredPdf(
     knexOrTrx: Knex | Knex.Transaction,
-    target: FilingTarget
+    target: FilingTarget,
+    clientVisible: boolean
   ): Promise<StoredPdfResult | null> {
     const db = tenantDb(knexOrTrx, this.tenant);
     const query = db.table('document_associations as da')
@@ -362,10 +392,11 @@ export class PDFGenerationService {
         'da.entity_type': target.sourceType,
       })
       .andWhere('d.document_name', target.documentName)
+      .andWhere('d.is_client_visible', clientVisible)
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
-      .select('d.document_id', 'd.file_id')
-      .first<{ document_id: string; file_id: string } | undefined>();
+      .select('d.document_id', 'd.file_id', 'd.is_client_visible')
+      .first<{ document_id: string; file_id: string; is_client_visible?: boolean } | undefined>();
     db.tenantJoin(query, 'documents as d', 'da.document_id', 'd.document_id');
 
     const existing = await query;
@@ -374,7 +405,13 @@ export class PDFGenerationService {
     }
 
     const fileRecord = await FileStoreModel.findById(knexOrTrx, existing.file_id);
-    return fileRecord ? { ...fileRecord, document_id: existing.document_id } : null;
+    return fileRecord
+      ? {
+          ...fileRecord,
+          document_id: existing.document_id,
+          is_client_visible: existing.is_client_visible === true,
+        }
+      : null;
   }
 
   private async fileGeneratedDocument(
@@ -383,12 +420,13 @@ export class PDFGenerationService {
     fileRecord: FileStore,
     rendered: RenderedPdf,
     userId: string,
-    reuse: boolean
-  ): Promise<{ document_id: string; reusedFile: StoredPdfResult | null }> {
+    regenerate: boolean
+  ): Promise<{ document_id: string; issuedFile: StoredPdfResult | null; supersededFileId?: string }> {
     const renderedLocale = await this.resolveRenderedLocale(knex, target.clientId);
+    const documentType = await this.resolvePdfDocumentType(knex);
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      if (reuse) {
+      if (target.mode === 'refresh') {
         // Serialize filing per source entity so two concurrent generations do not
         // both file the same artifact.
         await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
@@ -396,17 +434,49 @@ export class PDFGenerationService {
           `${this.tenant}:${target.sourceType}:${target.entityId}:${target.documentName}`,
         ]);
 
-        const raced = await this.findStoredPdf(trx, target);
-        if (raced?.document_id) {
-          return { document_id: raced.document_id, reusedFile: raced };
+        if (!regenerate) {
+          const issued = await this.findStoredPdf(trx, target, true);
+          if (issued?.document_id) {
+            // Published while we rendered. Leave the client's copy alone and retire
+            // the render we just stored, so both sides see the same bytes.
+            return {
+              document_id: issued.document_id,
+              issuedFile: issued,
+              supersededFileId: fileRecord.file_id,
+            };
+          }
+        }
+
+        const working = await this.findStoredPdf(trx, target, false);
+        if (working?.document_id) {
+          // Not issued yet: keep one document per entity and point it at the fresh
+          // render, so a draft invoice's filed PDF never goes stale behind the invoice.
+          await DocumentModel.update(trx, working.document_id, {
+            ...(documentType ?? {}),
+            file_id: fileRecord.file_id,
+            storage_path: fileRecord.storage_path,
+            mime_type: 'application/pdf',
+            file_size: fileRecord.file_size,
+            folder_path: target.folderPath,
+            edited_by: userId,
+            updated_at: new Date(),
+            source_template_id: rendered.templateId,
+            source_template_version: rendered.templateVersion,
+            rendered_locale: renderedLocale,
+          });
+          return {
+            document_id: working.document_id,
+            issuedFile: null,
+            supersededFileId: working.file_id,
+          };
         }
       }
 
       const documentId = uuidv4();
       await DocumentModel.insert(trx, {
+        ...(documentType ?? { type_id: null }),
         document_id: documentId,
         document_name: target.documentName,
-        type_id: null,
         user_id: userId,
         created_by: userId,
         order_number: 0,
@@ -438,8 +508,52 @@ export class PDFGenerationService {
         });
       }
 
-      return { document_id: documentId, reusedFile: null };
+      return { document_id: documentId, issuedFile: null };
     });
+  }
+
+  /**
+   * The PDF document type, so a filed invoice carries the same type/icon as an
+   * uploaded PDF and answers the Documents page's type filter.
+   */
+  private async resolvePdfDocumentType(
+    knex: Knex
+  ): Promise<(Pick<IDocument, 'type_id'> & Partial<Pick<IDocument, 'shared_type_id'>>) | null> {
+    try {
+      const db = tenantDb(knex, this.tenant);
+
+      const tenantType = await db.table('document_types')
+        .where({ type_name: 'application/pdf' })
+        .first<{ type_id: string } | undefined>('type_id');
+      if (tenantType?.type_id) {
+        return { type_id: tenantType.type_id };
+      }
+
+      const sharedType = await db.table('shared_document_types')
+        .where({ type_name: 'application/pdf' })
+        .first<{ type_id: string } | undefined>('type_id');
+      if (sharedType?.type_id) {
+        return { type_id: null, shared_type_id: sharedType.type_id };
+      }
+    } catch (error) {
+      console.error('Failed to resolve the PDF document type:', error);
+    }
+
+    return null;
+  }
+
+  /** Retire a stored PDF that is no longer any document's file, so repeat renders do not pile up. */
+  private async discardStoredFile(
+    knex: Knex,
+    fileId: string | undefined,
+    userId: string
+  ): Promise<void> {
+    if (!fileId) return;
+    try {
+      await FileStoreModel.softDelete(knex, fileId, userId);
+    } catch (error) {
+      console.error('Failed to retire superseded generated PDF:', error);
+    }
   }
 
   /**

@@ -761,8 +761,10 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       return accessError;
     }
 
-    // Serve the document that was issued rather than re-rendering it. Invoices
-    // generated before documents were filed fall through to the job below.
+    // Serve the document that was issued rather than re-rendering it — the copy
+    // published to the client first, so a later MSP-side re-render cannot change
+    // what they download. Invoices generated before documents were filed fall
+    // through to the job below.
     const scopedDb = tenantDb(knex, tenant);
     const docQuery = scopedDb.table('document_associations as da')
       .where({
@@ -770,6 +772,7 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
         'da.entity_type': 'invoice',
       })
       .whereNotNull('d.file_id')
+      .orderBy('d.is_client_visible', 'desc')
       .orderBy('da.created_at', 'desc')
       .select('d.file_id')
       .first<{ file_id: string } | undefined>();

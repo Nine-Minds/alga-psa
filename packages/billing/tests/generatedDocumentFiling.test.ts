@@ -16,17 +16,27 @@ function makeChain(result: ChainResult) {
   const passthrough = ['where', 'andWhere', 'whereNotNull', 'whereIn', 'orderBy', 'select'];
   for (const method of passthrough) {
     chain[method] = vi.fn((...args: any[]) => {
-      if (method === 'where') chain.calls.where.push(args[0]);
+      if (method === 'where' || method === 'andWhere') chain.calls.where.push(args);
       return chain;
     });
   }
-  chain.first = vi.fn(async () => (Array.isArray(result) ? result[0] : result));
-  chain.pluck = vi.fn(async () => (Array.isArray(result) ? result : []));
+  // A table fixture may be a function so a test can answer differently depending on
+  // what was filtered on — the filing lookups differ only by client visibility.
+  const resolve = () => (typeof result === 'function' ? result(chain.calls.where) : result);
+  chain.first = vi.fn(async () => {
+    const value = resolve();
+    return Array.isArray(value) ? value[0] : value;
+  });
+  chain.pluck = vi.fn(async () => {
+    const value = resolve();
+    return Array.isArray(value) ? value : [];
+  });
   chain.update = vi.fn(async (values: any) => {
     chain.calls.update.push(values);
-    return Array.isArray(result) ? result.length : 1;
+    const value = resolve();
+    return Array.isArray(value) ? value.length : 1;
   });
-  chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(result).then(onFulfilled, onRejected);
+  chain.then = (onFulfilled: any, onRejected: any) => Promise.resolve(resolve()).then(onFulfilled, onRejected);
   return chain;
 }
 
@@ -48,7 +58,9 @@ const uploadMock = vi.fn();
 const createFileStoreMock = vi.fn();
 const findFileStoreMock = vi.fn();
 const documentInsertMock = vi.fn();
+const documentUpdateMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
+const softDeleteFileMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
 const getBrowserMock = vi.fn();
 const releaseBrowserMock = vi.fn();
@@ -72,11 +84,15 @@ vi.mock('@alga-psa/storage', () => ({
   FileStoreModel: {
     create: (...args: any[]) => createFileStoreMock(...args),
     findById: (...args: any[]) => findFileStoreMock(...args),
+    softDelete: (...args: any[]) => softDeleteFileMock(...args),
   },
 }));
 
 vi.mock('@alga-psa/documents/models', () => ({
-  Document: { insert: (...args: any[]) => documentInsertMock(...args) },
+  Document: {
+    insert: (...args: any[]) => documentInsertMock(...args),
+    update: (...args: any[]) => documentUpdateMock(...args),
+  },
   DocumentAssociation: { create: (...args: any[]) => documentAssociationCreateMock(...args) },
 }));
 
@@ -152,6 +168,18 @@ import {
   publishGeneratedDocumentsToClient,
 } from '../src/services/pdfGenerationService';
 
+/**
+ * Put one already-filed document on record. The filing path asks separately for the
+ * copy issued to the client and the MSP-only working copy, so the fixture answers
+ * only the lookup whose visibility matches.
+ */
+function filedDocument(row: { document_id: string; file_id: string; is_client_visible: boolean }) {
+  tableResults['document_associations as da'] = (wheres: any[][]) => {
+    const visibility = wheres.find(([column]) => column === 'd.is_client_visible')?.[1];
+    return visibility === row.is_client_visible ? row : undefined;
+  };
+}
+
 describe('generated document filing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -174,7 +202,9 @@ describe('generated document filing', () => {
       file_size: 16,
     });
     findFileStoreMock.mockResolvedValue(null);
+    softDeleteFileMock.mockResolvedValue({});
     documentInsertMock.mockResolvedValue({ document_id: 'doc-1' });
+    documentUpdateMock.mockResolvedValue(undefined);
     documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' });
     publishWorkflowEventMock.mockResolvedValue(undefined);
     resolveSalesOrderTemplateAstMock.mockResolvedValue({
@@ -185,6 +215,7 @@ describe('generated document filing', () => {
       templateVersion: 3,
     });
 
+    tableResults.shared_document_types = { type_id: 'shared-pdf-type' };
     tableResults.invoices = { invoice_number: 'INV-100', client_id: CLIENT_ID };
     tableResults.sales_orders = { so_number: 'SO-9', client_id: CLIENT_ID };
     tableResults.clients = { billing_contact_id: null, billing_email: 'billing@client.test' };
@@ -223,6 +254,27 @@ describe('generated document filing', () => {
     expect(result.document_id).toBeDefined();
   });
 
+  it('files it as a PDF, so it carries a type in the Documents list like any upload', async () => {
+    const service = createPDFGenerationService(TENANT_ID);
+    await service.generateAndStore({ invoiceId: INVOICE_ID, invoiceNumber: 'INV-100', userId: USER_ID });
+
+    expect(documentInsertMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type_id: null, shared_type_id: 'shared-pdf-type' })
+    );
+  });
+
+  it('prefers the tenant PDF type over the shared one', async () => {
+    tableResults.document_types = { type_id: 'tenant-pdf-type' };
+
+    const service = createPDFGenerationService(TENANT_ID);
+    await service.generateAndStore({ invoiceId: INVOICE_ID, invoiceNumber: 'INV-100', userId: USER_ID });
+
+    const [, inserted] = documentInsertMock.mock.calls[0];
+    expect(inserted.type_id).toBe('tenant-pdf-type');
+    expect(inserted.shared_type_id).toBeUndefined();
+  });
+
   it('records the template and locale the invoice was rendered from', async () => {
     const service = createPDFGenerationService(TENANT_ID);
     await service.generateAndStore({ invoiceId: INVOICE_ID, invoiceNumber: 'INV-100', userId: USER_ID });
@@ -256,8 +308,8 @@ describe('generated document filing', () => {
     expect(event.payload.documentId).not.toBe('file-1');
   });
 
-  it('reuses the stored invoice PDF instead of rendering a second artifact', async () => {
-    tableResults['document_associations as da'] = { document_id: 'doc-1', file_id: 'file-1' };
+  it('hands back an issued invoice PDF instead of rendering a second artifact', async () => {
+    filedDocument({ document_id: 'doc-1', file_id: 'file-1', is_client_visible: true });
     findFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/INV-100.pdf' });
 
     const service = createPDFGenerationService(TENANT_ID);
@@ -274,9 +326,40 @@ describe('generated document filing', () => {
     expect(publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 
-  it('renders and files afresh when regeneration is explicitly requested', async () => {
-    tableResults['document_associations as da'] = { document_id: 'doc-1', file_id: 'file-1' };
+  it('refreshes the filed document in place while the invoice is still MSP-only', async () => {
+    filedDocument({ document_id: 'doc-1', file_id: 'file-1', is_client_visible: false });
     findFileStoreMock.mockResolvedValue({ file_id: 'file-1', storage_path: 'stored/pdfs/INV-100.pdf' });
+    createFileStoreMock.mockResolvedValue({
+      file_id: 'file-2',
+      storage_path: 'stored/pdfs/INV-100-2.pdf',
+      file_size: 16,
+    });
+
+    const service = createPDFGenerationService(TENANT_ID);
+    const result = await service.generateAndStore({
+      invoiceId: INVOICE_ID,
+      invoiceNumber: 'INV-100',
+      userId: USER_ID,
+    });
+
+    // One document per invoice: the same row now points at the fresh render, so a
+    // draft's filed PDF cannot fall behind the invoice and downloads cannot pile up.
+    expect(documentInsertMock).not.toHaveBeenCalled();
+    expect(documentUpdateMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'doc-1',
+      expect.objectContaining({ file_id: 'file-2', storage_path: 'stored/pdfs/INV-100-2.pdf' })
+    );
+    expect(softDeleteFileMock).toHaveBeenCalledWith(expect.anything(), 'file-1', USER_ID);
+    expect(result).toMatchObject({ file_id: 'file-2', document_id: 'doc-1' });
+  });
+
+  it('files a new document when an already-issued invoice is deliberately re-rendered', async () => {
+    filedDocument({ document_id: 'doc-1', file_id: 'file-1', is_client_visible: true });
+    findFileStoreMock.mockResolvedValue({
+      file_id: 'file-1',
+      storage_path: 'stored/pdfs/INV-100.pdf',
+    });
     createFileStoreMock.mockResolvedValue({
       file_id: 'file-2',
       storage_path: 'stored/pdfs/INV-100-2.pdf',
@@ -291,8 +374,14 @@ describe('generated document filing', () => {
       regenerate: true,
     });
 
+    // The copy the client received is never mutated: the re-render is its own,
+    // still MSP-only, document.
     expect(uploadMock).toHaveBeenCalledTimes(1);
-    expect(documentInsertMock).toHaveBeenCalledTimes(1);
+    expect(documentUpdateMock).not.toHaveBeenCalled();
+    expect(documentInsertMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ file_id: 'file-2', is_client_visible: false })
+    );
     expect(result.file_id).toBe('file-2');
     expect(result.document_id).not.toBe('doc-1');
   });
