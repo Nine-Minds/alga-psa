@@ -1,16 +1,36 @@
 import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { MsGraphCore } from './core';
-import { deliverNotifications } from './notifier';
+import { deliverInboundBotActivity, deliverNotifications } from './notifier';
+
+const directoryUserParams = {
+  id: z.string().optional(),
+  displayName: z.string().optional(),
+  givenName: z.string().nullable().optional(),
+  surname: z.string().nullable().optional(),
+  mail: z.string().nullable().optional(),
+  userPrincipalName: z.string().optional(),
+  accountEnabled: z.boolean().optional(),
+  jobTitle: z.string().nullable().optional(),
+  mobilePhone: z.string().nullable().optional(),
+  businessPhones: z.array(z.string()).optional(),
+  userType: z.enum(['Member', 'Guest']).optional(),
+  externalUserState: z.string().nullable().optional(),
+};
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.seeder({
     name: 'client',
-    description: 'Register an OAuth client id/secret pair',
-    params: z.object({ clientId: z.string(), clientSecret: z.string() }),
-    run: ({ clientId, clientSecret }) => {
-      core.registerClient(clientId, clientSecret);
-      return { clientId };
+    description:
+      'Register an OAuth client id/secret pair, optionally with the admin-consented application permissions its app-only tokens carry in "roles"',
+    params: z.object({
+      clientId: z.string(),
+      clientSecret: z.string(),
+      appRoles: z.array(z.string()).optional(),
+    }),
+    run: ({ clientId, clientSecret, appRoles }) => {
+      core.registerClient(clientId, clientSecret, appRoles ?? []);
+      return { clientId, appRoles: appRoles ?? [] };
     },
   });
 
@@ -46,19 +66,98 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.seeder({
     name: 'directory-user',
     description: 'Add an Entra directory user returned by Graph /users',
+    params: z.object(directoryUserParams),
+    run: (input) => core.addDirectoryUser(input),
+  });
+
+  reg.seeder({
+    name: 'teams-user',
+    description:
+      'Add a Teams-addressable directory user (userType "Guest" seeds an external/guest identity) and return the bot identity fields to feed into "bot-activity"',
+    params: z.object(directoryUserParams),
+    run: (input) => {
+      const user = core.addDirectoryUser({
+        ...input,
+        externalUserState:
+          input.externalUserState ?? (input.userType === 'Guest' ? 'PendingAcceptance' : null),
+      });
+      return {
+        ...user,
+        botIdentity: { id: `29:${user.id}`, aadObjectId: user.id, name: user.displayName },
+      };
+    },
+  });
+
+  reg.seeder({
+    name: 'teams-channel',
+    description: 'Add a channel to a team (creating the team when teamId is new)',
     params: z.object({
+      teamId: z.string().optional(),
+      teamDisplayName: z.string().optional(),
       id: z.string().optional(),
       displayName: z.string().optional(),
-      givenName: z.string().nullable().optional(),
-      surname: z.string().nullable().optional(),
-      mail: z.string().nullable().optional(),
-      userPrincipalName: z.string().optional(),
-      accountEnabled: z.boolean().optional(),
-      jobTitle: z.string().nullable().optional(),
-      mobilePhone: z.string().nullable().optional(),
-      businessPhones: z.array(z.string()).optional(),
+      description: z.string().nullable().optional(),
+      membershipType: z.enum(['standard', 'private', 'shared']).optional(),
     }),
-    run: (input) => core.addDirectoryUser(input),
+    run: (input) => core.addTeamChannel(input),
+  });
+
+  reg.seeder({
+    name: 'teams-chat',
+    description: 'Add a Teams chat (with optional members and messages) served by Graph /chats',
+    params: z.object({
+      id: z.string().optional(),
+      topic: z.string().nullable().optional(),
+      chatType: z.enum(['oneOnOne', 'group', 'meeting']).optional(),
+      members: z
+        .array(
+          z.object({
+            id: z.string().optional(),
+            displayName: z.string().optional(),
+            userId: z.string().nullable().optional(),
+          }),
+        )
+        .optional(),
+      messages: z
+        .array(
+          z.object({
+            id: z.string().optional(),
+            from: z.string().optional(),
+            fromName: z.string().optional(),
+            content: z.string().optional(),
+          }),
+        )
+        .optional(),
+    }),
+    run: (input) => core.addChat(input),
+  });
+
+  reg.seeder({
+    name: 'bot-activity',
+    description:
+      "Sign and POST an inbound Bot Framework activity at the app's bot endpoint, returning the app's synchronous reply (tokenAgeSeconds backdates the signed token to test expiry)",
+    params: z.object({
+      type: z.enum(['message', 'invoke', 'conversationUpdate']).optional(),
+      text: z.string().optional(),
+      fromId: z.string().optional(),
+      fromAadObjectId: z.string().optional(),
+      fromName: z.string().optional(),
+      conversationId: z.string().optional(),
+      conversationType: z.enum(['personal', 'groupChat', 'channel']).optional(),
+      tenantId: z.string().optional(),
+      serviceUrl: z.string().optional(),
+      value: z.record(z.unknown()).optional(),
+      targetUrl: z.string().optional(),
+      appId: z.string().optional(),
+      tokenAgeSeconds: z.number().int().nonnegative().optional(),
+    }),
+    run: (input) => deliverInboundBotActivity(core, input, core.env),
+  });
+
+  reg.action({
+    name: 'clear-bot-activities',
+    description: 'Drop every captured outbound Bot Framework activity',
+    run: () => ({ cleared: core.clearBotActivities() }),
   });
 
   reg.action({
@@ -76,17 +175,25 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.action({
     name: 'configure',
-    description: 'Tune token behavior: access token TTL and refresh-token rotation',
+    description:
+      'Tune token behavior (access token TTL, refresh-token rotation) and the inbound bot activity defaults',
     params: z.object({
       accessTokenTtlSeconds: z.number().int().positive().optional(),
       rotateRefreshTokens: z.boolean().optional(),
+      botTargetUrl: z.string().optional(),
+      botServiceUrl: z.string().optional(),
+      botAppId: z.string().optional(),
     }),
-    run: ({ accessTokenTtlSeconds, rotateRefreshTokens }) => {
+    run: ({ accessTokenTtlSeconds, rotateRefreshTokens, botTargetUrl, botServiceUrl, botAppId }) => {
       if (accessTokenTtlSeconds !== undefined) core.accessTokenTtlSeconds = accessTokenTtlSeconds;
       if (rotateRefreshTokens !== undefined) core.rotateRefreshTokens = rotateRefreshTokens;
+      if (botTargetUrl !== undefined) core.botConfig.targetUrl = botTargetUrl;
+      if (botServiceUrl !== undefined) core.botConfig.serviceUrl = botServiceUrl;
+      if (botAppId !== undefined) core.botConfig.appId = botAppId;
       return {
         accessTokenTtlSeconds: core.accessTokenTtlSeconds,
         rotateRefreshTokens: core.rotateRefreshTokens,
+        bot: { ...core.botConfig },
       };
     },
   });
@@ -94,7 +201,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.fault({
     name: 'operation-fault',
     description:
-      'Fail a specific operation ("token", or "<METHOD> <graph path>" like "GET /me") with a fixed response, optionally only N times',
+      'Fail a specific operation ("token", "<METHOD> <graph path>" like "GET /me", or "<METHOD> <connector path>" like "POST /v3/conversations") with a fixed response, optionally only N times',
     params: z.object({
       operation: z.string(),
       status: z.number().int().min(400).max(599).default(500),
@@ -144,6 +251,31 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.stateView({
+    name: 'bot-activities',
+    description: 'Outbound Bot Framework activities the bot pushed at the connector, newest last',
+    get: () => [...core.capturedBotActivities],
+  });
+
+  reg.stateView({
+    name: 'activity-notifications',
+    description: 'Graph teamwork/sendActivityNotification calls',
+    get: () => [...core.activityNotifications],
+  });
+
+  reg.stateView({
+    name: 'teams',
+    description: 'Teams and their channels',
+    get: () => [...core.teams.values()],
+  });
+
+  reg.stateView({
+    name: 'chats',
+    description: 'Teams chats with their messages',
+    get: () =>
+      [...core.chats.values()].map((chat) => ({ ...chat, messages: core.chatMessages.get(chat.id) ?? [] })),
+  });
+
+  reg.stateView({
     name: 'faults',
     description: 'Armed operation faults',
     get: () => Object.fromEntries(core.faults),
@@ -151,10 +283,11 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
 
   reg.stateView({
     name: 'config',
-    description: 'Token behavior configuration',
+    description: 'Token behavior and inbound bot activity configuration',
     get: () => ({
       accessTokenTtlSeconds: core.accessTokenTtlSeconds,
       rotateRefreshTokens: core.rotateRefreshTokens,
+      bot: { ...core.botConfig },
     }),
   });
 }

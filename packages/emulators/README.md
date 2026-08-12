@@ -16,7 +16,7 @@ This starts every emulator on its default port and the console at
 
 | Emulator | Package | Port | Emulates |
 | --- | --- | --- | --- |
-| `msgraph` | `@alga-psa/emulator-msgraph` | 4010 | Microsoft login (OAuth2) + Graph v1.0 mail, subscriptions, change notifications |
+| `msgraph` | `@alga-psa/emulator-msgraph` | 4010 | Microsoft login (OAuth2) + Graph v1.0 mail, subscriptions, change notifications, Teams; Bot Framework connector + its OpenID/JWKS |
 | `qbo` | `@alga-psa/emulator-qbo` | 4020 | Intuit OAuth + QBO v3 company API (query, CDC, void/delete, SyncTokens, credits) |
 | `webhook-sink` | `@alga-psa/emulator-webhook-sink` | 4030 | Any webhook receiver; records requests, echoes Graph validation tokens |
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
@@ -50,9 +50,155 @@ overrides:
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
+| Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
+
+`TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
+deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
+behaves exactly as it does in production. Any other value — unset, empty,
+`staging`, a typo — fails closed, so a worker or staging host that never sets
+`NODE_ENV` cannot redirect anything by accident, and `NODE_ENV=production` is a
+second lock the flag cannot unlock. The vars it gates are
+`TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus — for
+the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+`MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
+credentials, the Graph client secret, and activity-notification tokens are
+sent. (The email module honors those two Microsoft vars unconditionally; that
+is pre-existing behavior, unchanged here.)
+
+`TEAMS_BOT_OPENID_CONFIG_URL` moves *discovery only*: the emulator generates
+an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,
+so the app's signature, issuer, and audience checks all still run.
+`TEAMS_BOT_SERVICE_URL_ALLOWLIST` takes exact origins (comma-separated, no
+wildcards) and is what lets the bot send back to the emulator. Entries must
+include the scheme: `localhost:4010` is not an origin, and is rejected with a
+warning rather than quietly widening the trust list.
+
+Restarting the emulator mints a fresh keypair. While the override is set the
+app re-discovers the JWKS every 30s (instead of the 12h production cache), so
+a restart heals on its own — no need to restart the app.
+
+### Teams round trip
+
+The whole walkthrough below was run end to end against a real EE dev server;
+every step is reproducible from a clean worktree.
+
+**1. A server to point at.** Teams is EE, so the app has to run enterprise.
+Give the worktree its own database rather than sharing the dev one:
+
+```bash
+PW=$(cat secrets/postgres_password)
+docker exec -e PGPASSWORD=$PW alga_psa_postgres psql -U postgres \
+  -c 'CREATE DATABASE server_mine'
+# Clone an existing dev database (pg_dump, because CREATE DATABASE ... TEMPLATE
+# refuses to run while the source has open connections), or migrate from empty.
+docker exec -e PGPASSWORD=$PW alga_psa_postgres bash -lc \
+  'pg_dump -U postgres -d server --no-owner --no-acl -Fc -f /tmp/s.dump &&
+   pg_restore -U postgres -d server_mine --no-owner --no-acl -j4 /tmp/s.dump'
+
+# CE and EE migrations share one knex_migrations table, so `knex migrate:latest`
+# on ./migrations alone reports the EE rows as a "corrupt migration directory".
+# Always use the merged runner:
+cd server && DB_HOST=127.0.0.1 DB_PORT=5432 DB_USER_ADMIN=postgres \
+  DB_NAME_SERVER=server_mine node scripts/run-ee-migrations.js latest
+
+cd .. && npx nx build-deps server
+cd server && npx next dev -p 3210
+```
+
+`server/.env.local` needs `NEXT_PUBLIC_EDITION=enterprise`, `NEXTAUTH_URL`
+matching the port, `DB_NAME`/`DB_NAME_SERVER` pointing at the new database, and
+the emulator vars:
+
+```
+TEAMS_EMULATOR_MODE=true
+MICROSOFT_LOGIN_BASE_URL=http://127.0.0.1:4010
+MICROSOFT_GRAPH_BASE_URL=http://127.0.0.1:4010/v1.0
+TEAMS_BOT_OPENID_CONFIG_URL=http://127.0.0.1:4010/v1/.well-known/openidconfiguration
+TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://127.0.0.1:4010
+TEAMS_BOT_APP_ID=11111111-2222-4333-8444-999999999999
+TEAMS_BOT_APP_PASSWORD=algasim-bot-secret
+TEAMS_BOT_APP_TENANT_ID=11111111-2222-4333-8444-555555555555
+```
+
+Use one host spelling everywhere: the allowlist matches origins exactly, so a
+`serviceUrl` of `http://localhost:4010` is *not* covered by an allowlist entry
+of `http://127.0.0.1:4010`.
+
+**2. Seed the Microsoft side.** The Graph client is the one you will enter as a
+Microsoft profile; `appRoles` are the admin-consented application permissions
+its app-only tokens carry, which is what the setup wizard's permission probe
+reads:
+
+```bash
+algasim seed msgraph client -p '{
+  "clientId": "alga-teams-graph-client",
+  "clientSecret": "alga-teams-graph-secret",
+  "appRoles": ["Calendars.ReadWrite","OnlineMeetings.ReadWrite.All",
+               "OnlineMeetingRecording.Read.All","OnlineMeetingTranscript.Read.All",
+               "TeamsActivity.Send","User.Read.All"]
+}'
+# The bot's own credentials, so its client_credentials token grant succeeds.
+algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
+```
+
+**3. Set the tenant up through the product.** The Teams add-on has to be
+granted (`POST /api/v1/tenant-management/tenants/<tenant>/addons` with
+`{"action":"grant","addonKey":"teams"}`, from the master billing tenant), then
+in **Settings → Integrations**:
+
+- *Providers → Microsoft → Add profile*: client id, tenant id
+  (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
+- *Communication → Teams*: pick that profile, save the draft, then run the
+  wizard's three checks — validate the Microsoft profile, probe Graph
+  permissions, validate the Bot Framework connector — and Activate. All three
+  hit the emulator.
+
+**4. Drive a conversation.**
+
+```bash
+# Point the emulator at your app, and match TEAMS_BOT_APP_ID.
+algasim action msgraph configure -p '{
+  "botTargetUrl": "http://localhost:3210/api/teams/bot/messages",
+  "botServiceUrl": "http://127.0.0.1:4010",
+  "botAppId": "11111111-2222-4333-8444-999999999999"
+}'
+
+# An external/guest client identity, then an inbound message from them.
+algasim seed msgraph teams-user -p '{"id":"guest-1","displayName":"Wanda","userType":"Guest"}'
+algasim seed msgraph bot-activity -p '{
+  "text": "My printer is on fire",
+  "fromAadObjectId": "guest-1",
+  "conversationId": "a:conversation-1",
+  "conversationType": "personal"
+}'
+
+# Read back what the bot sent, adaptive cards and all.
+algasim state msgraph bot-activities
+algasim state msgraph activity-notifications
+```
+
+`seed bot-activity` returns the app's HTTP status and body, so a rejected
+activity shows up immediately (`401` with `{"error":"unauthorized"}` when the
+audience or signature does not check out).
+
+The inbound JWT is stamped with wall time, not the virtual clock, so
+`clock advance` and activity injection compose: advancing the clock to expire
+Graph tokens never invalidates the activities injected afterwards. To test the
+app rejecting an expired inbound token, backdate that token on its own with
+`tokenAgeSeconds` (past the 1h TTL):
+
+```bash
+algasim seed msgraph bot-activity -p '{"text":"stale","tokenAgeSeconds":7200}'
+```
+
+The bot answers an unlinked Teams identity with the "Teams sign-in required"
+card. Linking a Teams user to a PSA user happens through Microsoft SSO sign-in,
+which the emulator does not serve yet (no OIDC discovery document on the login
+surface), so richer command replies still need a tenant whose users are already
+linked.
 
 ## Drive them
 
@@ -97,8 +243,9 @@ Three tiers, so most failure modes cost nothing to support:
   come free with every HTTP emulator via host middleware.
 - **Protocol** — token expiry and revocation actions on `msgraph` and `qbo`.
 - **Domain** — emulator-specific, e.g. `msgraph` `operation-fault` (fail
-  `"GET /me"` N times), QBO stale SyncTokens produced by out-of-band
-  `receive-payment`/`apply-credit` actions.
+  `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
+  Graph throttling and bot-connector failures), QBO stale SyncTokens
+  produced by out-of-band `receive-payment`/`apply-credit` actions.
 
 ### Scenarios
 
@@ -123,6 +270,11 @@ steps:
 All emulator time flows through one host clock. `algasim clock advance 2h`
 expires OAuth tokens; `32d` crosses billing periods and subscription
 expirations. Runs are reproducible: the host PRNG is seeded (`--seed`).
+
+One deliberate exception: the JWT `seed msgraph bot-activity` signs is stamped
+with wall time, because the app verifies it with jose against the real clock
+(as real Microsoft does). Emulator state stays on the virtual clock, so the two
+compose; `tokenAgeSeconds` is the knob for an intentionally expired one.
 
 ## Write an emulator
 

@@ -1,3 +1,5 @@
+import { isTeamsEmulatorModeEnabled } from '../emulatorMode';
+import { getMicrosoftTokenUrl } from '../microsoftEndpoints';
 import type { TeamsBotResponseActivity } from './teamsBotHandler';
 
 interface CachedToken {
@@ -41,9 +43,76 @@ export function isBotConnectorConfigured(): boolean {
   return readBotCredentialsFromEnv() !== null;
 }
 
+const EMPTY_ALLOWLIST: ReadonlySet<string> = new Set();
+
+let allowlistCache: { raw: string; origins: ReadonlySet<string> } | null = null;
+
+/**
+ * A scheme-less entry such as `localhost:4010` still parses — as protocol
+ * `localhost:` with the opaque origin "null". Admitting "null" to the trust set
+ * would trust every opaque-origin serviceUrl, so only real http(s) origins are
+ * accepted and anything else is rejected loudly.
+ */
+function parseAllowlistOrigin(entry: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(entry);
+  } catch {
+    return null;
+  }
+  if (parsed.origin === 'null' || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+    return null;
+  }
+  return parsed.origin.toLowerCase();
+}
+
+/**
+ * Extra serviceUrl origins trusted when the emulator gate is explicitly on, for
+ * pointing the bot at a local emulator (algasim). Exact origins only,
+ * comma-separated, no wildcards. Unset — the default — leaves the trust list
+ * byte-identical to the Microsoft-only allowlist above.
+ */
+function developmentServiceUrlAllowlist(): ReadonlySet<string> {
+  if (!isTeamsEmulatorModeEnabled()) {
+    return EMPTY_ALLOWLIST;
+  }
+  const raw = process.env.TEAMS_BOT_SERVICE_URL_ALLOWLIST?.trim();
+  if (!raw) {
+    return EMPTY_ALLOWLIST;
+  }
+  // Parsed once per distinct value so a rejected entry is not re-logged on
+  // every send.
+  if (allowlistCache?.raw === raw) {
+    return allowlistCache.origins;
+  }
+  const origins = new Set<string>();
+  for (const entry of raw.split(',')) {
+    const trimmed = entry.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const origin = parseAllowlistOrigin(trimmed);
+    if (!origin) {
+      console.warn(
+        '[teams-bot] ignoring TEAMS_BOT_SERVICE_URL_ALLOWLIST entry that is not an exact http(s) origin',
+        { entry: trimmed }
+      );
+      continue;
+    }
+    origins.add(origin);
+  }
+  allowlistCache = { raw, origins };
+  return origins;
+}
+
 export function isTrustedServiceUrl(serviceUrl: string): boolean {
   try {
     const url = new URL(serviceUrl);
+    // An opaque origin can never match an allowlist entry, and must not be
+    // compared as the literal string "null".
+    if (url.origin !== 'null' && developmentServiceUrlAllowlist().has(url.origin.toLowerCase())) {
+      return true;
+    }
     if (url.protocol !== 'https:') {
       return false;
     }
@@ -55,9 +124,7 @@ export function isTrustedServiceUrl(serviceUrl: string): boolean {
 }
 
 async function fetchAccessToken(credentials: BotCredentials): Promise<string> {
-  const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(
-    credentials.tenantId
-  )}/oauth2/v2.0/token`;
+  const tokenUrl = getMicrosoftTokenUrl(credentials.tenantId);
 
   const body = new URLSearchParams({
     grant_type: 'client_credentials',
@@ -153,20 +220,35 @@ async function dispatchBotConnectorRequest(params: {
     throw new Error('Bot Framework credentials are not configured.');
   }
 
-  const token = await getAccessToken(credentials);
-  const response = await fetch(params.url, {
-    method: params.method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params.activity),
-  });
+  const body = JSON.stringify(params.activity);
+  const attempt = async (): Promise<Response> => {
+    const token = await getAccessToken(credentials);
+    return fetch(params.url, {
+      method: params.method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body,
+    });
+  };
 
+  let response = await attempt();
+
+  // A 401 means the cached token expired between the cache check and the
+  // request, which says nothing about the activity itself. Drop the token and
+  // replay the same request once with a fresh one, here rather than at each
+  // call site so every caller — bot replies, DM notifications, the proactive
+  // welcome card, the diagnostics test send — survives an expiry identically.
+  // A second 401 is a real credential problem and is surfaced.
   if (response.status === 401) {
-    // Token likely expired between cache check and request. Clear the cache
-    // so the next send forces a fresh token, then surface the error.
     cachedToken = null;
+    // Drain the discarded body so the connection is released before the replay.
+    await response.text().catch(() => '');
+    response = await attempt();
+    if (response.status === 401) {
+      cachedToken = null;
+    }
   }
 
   if (!response.ok) {
