@@ -25,6 +25,27 @@ describe('product surface registry', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/billing')).toBe('upgrade_boundary');
   });
 
+  it('T003: exact /client-portal root resolves allowed like its dashboard target, never not_found', () => {
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/client-portal')).toBe('allowed');
+  });
+
+  it('T003: exact /client-portal rule matches the root only and leaves child routes and boundaries untouched', () => {
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/dashboard')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/tickets')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/billing')).toBe('upgrade_boundary');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/appointments')).toBe('upgrade_boundary');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/settings')).toBe('not_found');
+    expect(resolveProductRouteBehavior('psa', '/client-portal/billing')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/client-portal/settings')).toBe('allowed');
+
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/')).toBe('not_found');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portalx')).toBe('not_found');
+
+    expect(resolveProductRouteBehavior('algadesk', '/msp/billing')).toBe('upgrade_boundary');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/test/ui-kit')).toBe('not_found');
+  });
+
   it('T003: classifies representative API paths and fails closed for unknown API groups', () => {
     expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/clients')).toBe('allowed');
