@@ -186,13 +186,16 @@ export function computeBucketPeriodMovement(
 
   const remainingMinutes = Math.max(0, included + rolledOver - used);
   const valueRemaining = remainingMinutes * rate;
-
-  return {
+  const signed = {
     opening: signedZero(opening),
     issued: signedZero(issued),
     applied: signedZero(applied),
     expired: signedZero(expired),
     closing: signedZero(closing),
+  };
+
+  return {
+    ...signed,
     detail: {
       usageId: input.usageId,
       contractLineId: input.contractLineId,
@@ -211,8 +214,26 @@ export function computeBucketPeriodMovement(
       valueRemaining,
       feeSource: input.feeSource,
       notYetBilled: input.feeSource === 'configured',
+      movement: { ...signed, adjustments: 0 },
     },
   };
+}
+
+/**
+ * Whether a bucket period contributes any nonzero figure to the selected
+ * month. A period fully before or after the month lands with all movement
+ * columns zero — it carries no liability into the month and must not produce a
+ * detail row or surface the client. A carried-in period (nonzero opening or
+ * closing, even with no in-month activity) is a contributor and keeps its row.
+ */
+export function contributesToMonth(movement: BucketPeriodMovement): boolean {
+  return (
+    movement.opening !== 0 ||
+    movement.issued !== 0 ||
+    movement.applied !== 0 ||
+    movement.expired !== 0 ||
+    movement.closing !== 0
+  );
 }
 
 /**
@@ -230,14 +251,6 @@ export function computeHoursRollforward(
   for (const period of periodList) {
     const currencyCode = period.currencyCode ?? 'USD';
     const key = `${period.clientId}\u0000${currencyCode}`;
-    const aggregate = byClientCurrency.get(key) ?? {
-      opening: 0,
-      issued: 0,
-      applied: 0,
-      expired: 0,
-      closing: 0,
-      details: [],
-    };
 
     const successorStart = periodList
       .filter(
@@ -255,6 +268,19 @@ export function computeHoursRollforward(
       );
 
     const movement = computeBucketPeriodMovement(month, period, { successorStart });
+    // A period with no opening/issued/applied/expired/closing figure for the
+    // month contributes nothing — skip it entirely so the client does not
+    // surface (compose retains clients only via nonzero rows or detail rows).
+    if (!contributesToMonth(movement)) continue;
+
+    const aggregate = byClientCurrency.get(key) ?? {
+      opening: 0,
+      issued: 0,
+      applied: 0,
+      expired: 0,
+      closing: 0,
+      details: [],
+    };
     aggregate.opening += movement.opening;
     aggregate.issued += movement.issued;
     aggregate.applied += movement.applied;

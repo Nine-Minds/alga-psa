@@ -14,6 +14,7 @@ import type { FeeSource } from './types';
 
 export interface BilledFeeCandidate {
   contractLineId: string;
+  serviceId: string;
   servicePeriodStart: string;
   servicePeriodEnd: string;
   feeCents: number;
@@ -49,17 +50,19 @@ function overlapDays(
 /**
  * Resolve the period fee for one bucket period, preferring the billed fee.
  *
- * The billing engine prorates first/last service periods (e.g. a Jul 8–31
- * invoice window for a Jul 1–31 bucket allowance), so the billed detail is
- * matched by period overlap rather than exact equality: the candidate with the
- * longest inclusive overlap wins, and the reported fee is what was actually
- * billed (prorated amounts included). No overlap at all falls back to the
- * configured fee.
+ * The billed detail is matched by contract line AND service (a line can carry
+ * multiple Fixed configs, one per service) and by period overlap. The billing
+ * engine prorates first/last service periods (e.g. a Jul 8–31 invoice window
+ * for a Jul 1–31 bucket allowance), so the billed detail is matched by overlap
+ * rather than exact equality: the candidate with the longest inclusive overlap
+ * wins, and the reported fee is what was actually billed (prorated amounts
+ * included). No overlap at all falls back to the configured fee.
  */
 export function resolvePeriodFee(
   periodStart: string,
   periodEnd: string,
   contractLineId: string,
+  serviceId: string,
   billedCandidates: BilledFeeCandidate[],
   configuredFee: number | null,
 ): ResolvedFee {
@@ -68,6 +71,7 @@ export function resolvePeriodFee(
 
   for (const candidate of billedCandidates) {
     if (candidate.contractLineId !== contractLineId) continue;
+    if (candidate.serviceId !== serviceId) continue;
     const overlap = overlapDays(periodStart, periodEnd, candidate.servicePeriodStart, candidate.servicePeriodEnd);
     if (overlap > bestOverlap) {
       bestOverlap = overlap;

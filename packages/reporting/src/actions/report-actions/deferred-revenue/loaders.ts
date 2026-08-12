@@ -487,6 +487,7 @@ export function buildBucketPeriodInputs(
       period.periodStart,
       period.periodEnd,
       period.contractLineId,
+      period.serviceId,
       data.billedFees,
       configuredFee,
     );

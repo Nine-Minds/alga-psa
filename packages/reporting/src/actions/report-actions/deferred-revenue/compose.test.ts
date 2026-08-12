@@ -177,4 +177,44 @@ describe('buildDeferredRevenueReportFromData', () => {
     );
     expect(report.sections).toHaveLength(0);
   });
+
+  it('omits a client whose only bucket periods do not contribute to the selected month (Defect 1)', () => {
+    // Both of client-1's periods sit outside February: one fully burned in the
+    // past, one starting in the future. Neither carries liability into the
+    // month, so no detail rows are emitted and the client is absent from the
+    // report even though its only periods would previously have surfaced rows.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [],
+        creditTracking: [],
+        bucketPeriods: [
+          { ...bucketPeriods[0], usageId: 'usage-past', periodStart: '2025-12-01', periodEnd: '2025-12-31', minutesUsed: 6000 },
+          { ...bucketPeriods[0], usageId: 'usage-future', periodStart: '2026-03-01', periodEnd: '2026-03-31', minutesUsed: 0 },
+        ],
+      }),
+      '2026-02',
+    );
+    expect(report.sections).toHaveLength(0);
+  });
+
+  it('retains a client whose carried-in bucket opens the selected month even with no movement (Defect 1)', () => {
+    // client-1 holds a February period that opens carrying a January rollover
+    // (nonzero opening) with no in-month burn — a contributor that must stay.
+    const report = buildDeferredRevenueReportFromData(
+      makeData({
+        creditTransactions: [],
+        creditTracking: [],
+        bucketPeriods: [
+          { ...bucketPeriods[0], rolledOverMinutes: 1200, minutesUsed: 0, allowRollover: true },
+        ],
+      }),
+      '2026-02',
+    );
+    const usd = report.sections.find((section) => section.currencyCode === 'USD');
+    expect(usd).toBeDefined();
+    const acme = usd!.clients.find((client) => client.clientName === 'Acme');
+    expect(acme).toBeDefined();
+    expect(acme!.hours.opening).toBe(1200 * (100000 / 6000));
+    expect(acme!.bucketDetails).toHaveLength(1);
+  });
 });

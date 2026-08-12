@@ -437,3 +437,117 @@ describe('hours rollforward aggregation', () => {
     expect(feb.opening + feb.issued + feb.applied + feb.expired).toBeCloseTo(feb.closing, 6);
   });
 });
+
+describe('detail emission for selected-month contribution (Defect 1)', () => {
+  it('emits no detail rows for a period entirely in the past', () => {
+    // Dec 1–31, fully burned before February, no carry.
+    const past = period({
+      usageId: 'u-past',
+      periodStart: '2025-12-01',
+      periodEnd: '2025-12-31',
+      totalMinutes: 6000,
+      minutesUsed: 6000,
+      allowRollover: false,
+    });
+    const rollforward = computeHoursRollforward('2026-02', [past]);
+    expect(rollforward.size).toBe(0); // no client×currency surfaces at all
+  });
+
+  it('emits no detail rows for a period entirely in the future', () => {
+    const future = period({
+      usageId: 'u-future',
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-31',
+    });
+    const rollforward = computeHoursRollforward('2026-02', [future]);
+    expect(rollforward.size).toBe(0);
+  });
+
+  it('still emits a detail row for a carried-in period with no in-month activity', () => {
+    // Allowance opens February with a 1200-minute rollover from January; zero
+    // burn in February. The carried-in liability has nonzero opening/closing so
+    // the period must stay in the report.
+    const carried = period({
+      usageId: 'u-carry',
+      periodStart: '2026-02-01',
+      periodEnd: '2026-02-28',
+      totalMinutes: 6000,
+      rolledOverMinutes: 1200,
+      minutesUsed: 0,
+      allowRollover: true,
+    });
+    const aggregate = computeHoursRollforward('2026-02', [carried]).get('client-1\u0000USD')!;
+    expect(aggregate.opening).toBe(1200 * perMinuteRate(6000, 100000));
+    expect(aggregate.closing).toBe(6000 * perMinuteRate(6000, 100000)); // unused base carries out
+    expect(aggregate.details).toHaveLength(1);
+    expect(aggregate.details[0].usageId).toBe('u-carry');
+  });
+
+  it('emits detail rows only for contributing periods and reconciles to the rollforward', () => {
+    const past = period({
+      usageId: 'u-past',
+      periodStart: '2025-12-01',
+      periodEnd: '2025-12-31',
+      totalMinutes: 6000,
+      minutesUsed: 6000,
+    });
+    const future = period({
+      usageId: 'u-future',
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-31',
+    });
+    const current = period({
+      usageId: 'u-current',
+      totalMinutes: 6000,
+      minutesUsed: 2400,
+      periodFee: 100000,
+    });
+    const aggregate = computeHoursRollforward('2026-02', [past, future, current]).get('client-1\u0000USD')!;
+
+    expect(aggregate.details.map((detail) => detail.usageId)).toEqual(['u-current']);
+
+    // Every emitted detail reconciles: its movement columns close arithmetically
+    // and its opening/issued/applied/expired/closing sum to the client rollforward.
+    for (const detail of aggregate.details) {
+      const { opening, issued, applied, expired, closing } = detail.movement;
+      expect(opening + issued + applied + expired + 0).toBeCloseTo(closing, 6);
+    }
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.opening, 0)).toBe(aggregate.opening);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.issued, 0)).toBe(aggregate.issued);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.applied, 0)).toBe(aggregate.applied);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.expired, 0)).toBe(aggregate.expired);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.closing, 0)).toBe(aggregate.closing);
+    expect(aggregate.opening + aggregate.issued + aggregate.applied + aggregate.expired).toBeCloseTo(aggregate.closing, 6);
+  });
+
+  it('keeps contributing and carried-in periods while dropping non-contributors in one mix', () => {
+    // Jan 15–Feb 14 rollover period (active at Feb 1, carry hands off) plus a
+    // December period that is gone by February.
+    const origin = period({
+      usageId: 'u-origin',
+      periodStart: '2026-01-15',
+      periodEnd: '2026-02-14',
+      totalMinutes: 6000,
+      minutesUsed: 4800,
+      allowRollover: true,
+    });
+    const stale = period({
+      usageId: 'u-stale',
+      periodStart: '2025-12-01',
+      periodEnd: '2025-12-31',
+      totalMinutes: 6000,
+      minutesUsed: 6000,
+      allowRollover: true,
+    });
+    const aggregate = computeHoursRollforward('2026-02', [origin, stale]).get('client-1\u0000USD')!;
+    expect(aggregate.details.map((detail) => detail.usageId)).toEqual(['u-origin']);
+    // The origin period carries the full value: 1200-minute carry recognized in
+    // closing only via a successor, so closing here is zero but opening/applied
+    // keep it in the report. Sum of details still equals the rollforward.
+    expect(aggregate.opening).toBe(6000 * perMinuteRate(6000, 100000));
+    expect(aggregate.applied).toBe(-(4800 * perMinuteRate(6000, 100000)));
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.opening, 0)).toBe(aggregate.opening);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.applied, 0)).toBe(aggregate.applied);
+    expect(aggregate.details.reduce((sum, detail) => sum + detail.movement.closing, 0)).toBe(aggregate.closing);
+  });
+});

@@ -79,6 +79,9 @@ export interface BucketDetailRow {
   valueRemaining: number;
   feeSource: FeeSource;
   notYetBilled: boolean;
+  /** This period's contribution to the selected month — lets each emitted
+   *  detail reconcile to the client rollforward (adjustments always 0). */
+  movement: MovementColumns;
 }
 
 export interface ClientRollforward {
