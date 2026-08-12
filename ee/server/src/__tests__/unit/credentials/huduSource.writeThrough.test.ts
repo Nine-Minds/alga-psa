@@ -16,6 +16,8 @@ const {
   writeHuduPasswordRevealAuditMock,
   writeCredentialAuditMock,
   toHuduAssetPasswordSummaryMock,
+  createCredentialAuthorizationContextMock,
+  authorizeCredentialRecordMock,
   HuduRequestErrorStub,
 } = vi.hoisted(() => {
   class HuduRequestErrorStub extends Error {
@@ -43,6 +45,8 @@ const {
       created_at: record.created_at ?? null,
       updated_at: record.updated_at ?? null,
     })),
+    createCredentialAuthorizationContextMock: vi.fn(async () => ({ bundleNarrowingRules: [], requestCache: {} })),
+    authorizeCredentialRecordMock: vi.fn(async () => true),
     HuduRequestErrorStub,
   };
 });
@@ -53,6 +57,9 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => {
+    return callback({ raw: async () => undefined });
+  }),
 }));
 
 vi.mock('@ee/lib/integrations/hudu/huduClient', () => ({
@@ -83,6 +90,11 @@ vi.mock('@ee/lib/integrations/hudu/huduDataCore', () => ({
 
 vi.mock('@ee/lib/credentials/audit', () => ({
   writeCredentialAudit: writeCredentialAuditMock,
+}));
+
+vi.mock('@ee/lib/credentials/credentialAuthorization', () => ({
+  createCredentialAuthorizationContext: createCredentialAuthorizationContextMock,
+  authorizeCredentialRecord: authorizeCredentialRecordMock,
 }));
 
 import { huduCredentialSource } from '@ee/lib/credentials/huduSource';
@@ -127,6 +139,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   resolveHuduCompanyIdForClientMock.mockResolvedValue(COMPANY_ID);
   resolveClientIdForHuduCompanyMock.mockResolvedValue(CLIENT_ID);
+  createCredentialAuthorizationContextMock.mockResolvedValue({ bundleNarrowingRules: [], requestCache: {} });
+  authorizeCredentialRecordMock.mockResolvedValue(true);
 });
 
 describe('huduCredentialSource — create', () => {
@@ -185,6 +199,7 @@ describe('huduCredentialSource — create', () => {
 describe('huduCredentialSource — update', () => {
   it('sends a partial payload to the Hudu API and invalidates the cache', async () => {
     const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord()),
       updateAssetPassword: vi.fn(async () => huduRecord({ name: 'Renamed' })),
     };
     createHuduClientMock.mockResolvedValue(clientMock);
@@ -195,6 +210,8 @@ describe('huduCredentialSource — update', () => {
       password: 'new-password',
     });
 
+    // The numeric password id is verified against the claimed company first.
+    expect(clientMock.getAssetPassword).toHaveBeenCalledWith(42);
     expect(clientMock.updateAssetPassword).toHaveBeenCalledTimes(1);
     const [id, payload] = clientMock.updateAssetPassword.mock.calls[0];
     expect(id).toBe(42);
@@ -204,26 +221,134 @@ describe('huduCredentialSource — update', () => {
     expect(clearCachedHuduListMock).toHaveBeenCalledWith(TENANT, COMPANY_ID, 'asset_passwords');
   });
 
-  it('rejects an update when the mapped company does not match the row company', async () => {
-    resolveHuduCompanyIdForClientMock.mockResolvedValue('999');
+  it('rejects an update when the caller claims a clientId that is not the row owner', async () => {
+    const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord()),
+      updateAssetPassword: vi.fn(async () => huduRecord()),
+    };
+    createHuduClientMock.mockResolvedValue(clientMock);
+
+    await expect(
+      huduCredentialSource.update(ctx, 'hudu:101:42', { clientId: 'other-client' })
+    ).rejects.toMatchObject({ code: 'HUDU_UNMAPPED' });
+    expect(clientMock.updateAssetPassword).not.toHaveBeenCalled();
+  });
+
+  it('rejects an update when the numeric password id belongs to a different company', async () => {
+    // The client is mapped to company 101, but the password record at id 42
+    // lives under company 999 — the claimed row does not exist in the claimed
+    // company, so the update must fail before any PUT.
+    const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord({ company_id: 999 })),
+      updateAssetPassword: vi.fn(async () => huduRecord()),
+    };
+    createHuduClientMock.mockResolvedValue(clientMock);
 
     await expect(
       huduCredentialSource.update(ctx, 'hudu:101:42', { clientId: CLIENT_ID })
-    ).rejects.toThrow(/not mapped/);
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
+    expect(clientMock.updateAssetPassword).not.toHaveBeenCalled();
+  });
+
+  it('rejects an update when the id company has no client mapping (unknown row)', async () => {
+    resolveClientIdForHuduCompanyMock.mockResolvedValue(null);
+
+    await expect(
+      huduCredentialSource.update(ctx, 'hudu:101:42', { clientId: CLIENT_ID })
+    ).rejects.toMatchObject({ code: 'CREDENTIAL_NOT_FOUND' });
     expect(createHuduClientMock).not.toHaveBeenCalled();
   });
 });
 
 describe('huduCredentialSource — remove', () => {
-  it('deletes through the Hudu API and invalidates the cache', async () => {
-    const clientMock = { deleteAssetPassword: vi.fn(async () => undefined) };
+  it('verifies company ownership then deletes through the Hudu API and invalidates the cache', async () => {
+    const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord()),
+      deleteAssetPassword: vi.fn(async () => undefined),
+    };
     createHuduClientMock.mockResolvedValue(clientMock);
 
     await huduCredentialSource.remove(ctx, 'hudu:101:42');
 
+    // Ownership confirmation before DELETE.
+    expect(clientMock.getAssetPassword).toHaveBeenCalledWith(42);
     expect(clientMock.deleteAssetPassword).toHaveBeenCalledWith(42);
     expect(clearCachedHuduListMock).toHaveBeenCalledWith(TENANT, COMPANY_ID, 'asset_passwords');
     expect(writeCredentialAuditMock).toHaveBeenCalled();
+  });
+
+  it('rejects a CROSS-company delete: numeric id belongs to a different company', async () => {
+    const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord({ company_id: 999 })),
+      deleteAssetPassword: vi.fn(async () => undefined),
+    };
+    createHuduClientMock.mockResolvedValue(clientMock);
+
+    await expect(huduCredentialSource.remove(ctx, 'hudu:101:42')).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+    // The delete MUST NOT reach the Hudu API for the wrong company's record.
+    expect(clientMock.deleteAssetPassword).not.toHaveBeenCalled();
+    expect(writeCredentialAuditMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a delete for a company with no client mapping', async () => {
+    resolveClientIdForHuduCompanyMock.mockResolvedValue(null);
+
+    await expect(huduCredentialSource.remove(ctx, 'hudu:101:42')).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('huduCredentialSource — bundle-scoped reveal (confused-deputy guard)', () => {
+  it('denies reveal even with a direct id when the bundle scope excludes the owning client', async () => {
+    // The mapping resolves to the client, but the authorization kernel denies
+    // the record (e.g. a `selected_clients` bundle that excludes it).
+    authorizeCredentialRecordMock.mockResolvedValue(false);
+
+    const result = await huduCredentialSource.reveal(ctx, 'hudu:101:42');
+
+    expect(result.state).toBe('not_found');
+    expect(result.password).toBeUndefined();
+    // No Hudu traffic and no audit for an out-of-scope reveal.
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+    expect(writeHuduPasswordRevealAuditMock).not.toHaveBeenCalled();
+  });
+
+  it('denies OTP-seed reveal the same way when bundle scope excludes the client', async () => {
+    authorizeCredentialRecordMock.mockResolvedValue(false);
+
+    const result = await huduCredentialSource.revealOtpSeed(ctx, 'hudu:101:42');
+
+    expect(result.state).toBe('not_found');
+    expect(result.password).toBeUndefined();
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+    expect(writeCredentialAuditMock).not.toHaveBeenCalled();
+  });
+
+  it('denies remove when the bundle scope excludes the owning client', async () => {
+    authorizeCredentialRecordMock.mockResolvedValue(false);
+
+    await expect(huduCredentialSource.remove(ctx, 'hudu:101:42')).rejects.toMatchObject({
+      code: 'CREDENTIAL_NOT_FOUND',
+    });
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+  });
+
+  it('still reveals when the bundle scope allows the owning client', async () => {
+    const clientMock = {
+      getAssetPassword: vi.fn(async () => huduRecord({ password: 'in-scope-value' })),
+    };
+    createHuduClientMock.mockResolvedValue(clientMock);
+
+    const result = await huduCredentialSource.reveal(ctx, 'hudu:101:42');
+
+    expect(result.state).toBe('ok');
+    expect(result.password).toBe('in-scope-value');
+    expect(authorizeCredentialRecordMock).toHaveBeenCalledTimes(1);
+    expect(writeHuduPasswordRevealAuditMock).toHaveBeenCalledTimes(1);
   });
 });
 

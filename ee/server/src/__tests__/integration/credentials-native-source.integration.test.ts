@@ -16,7 +16,7 @@ import { createRequire } from 'node:module';
 import { config as loadDotEnv } from 'dotenv';
 import type { IUserWithRoles } from '@alga-psa/types';
 
-import { tenantDb } from '@alga-psa/db';
+import { createTenantKnex, resetTenantConnectionPool, tenantDb } from '@alga-psa/db';
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(process.cwd(), '..', '..');
@@ -65,7 +65,18 @@ let ownerUser: string;
 let grantedUser: string;
 let strangerUser: string;
 
-const TEST_TABLES = ['credentials', 'credential_associations', 'credential_access_grants', 'audit_logs'];
+// Deletion order matters for FKs: child rows first, then users/clients, then
+// the tenant itself. `permissions` / `role_permissions` are included because
+// the permission-seed idempotency test writes them for the test tenant and a
+// leftover `permissions` row would block the final `tenants` delete.
+const CLEANUP_TABLES = [
+  'credential_access_grants',
+  'credential_associations',
+  'credentials',
+  'role_permissions',
+  'permissions',
+  'audit_logs',
+];
 
 async function seedUsers(tenant: string): Promise<void> {
   const insert = (username: string): Promise<string> => {
@@ -88,10 +99,30 @@ async function seedUsers(tenant: string): Promise<void> {
   strangerUser = await insert('stranger-user');
 }
 
-async function cleanCredentialTables(): Promise<void> {
-  for (const table of TEST_TABLES) {
-    await db(table).where({ tenant: tenantId }).del().catch(() => undefined);
+/**
+ * Remove every fixture the test created for a tenant. Failures PROPAGATE: a
+ * broken cleanup must fail the run loudly instead of leaving debris in the
+ * shared dev DB (previous versions swallowed errors and left temp tenants).
+ */
+async function removeTestTenantFixtures(targetTenant: string): Promise<void> {
+  for (const table of CLEANUP_TABLES) {
+    await db(table).where({ tenant: targetTenant }).del();
   }
+  await db('users').where({ tenant: targetTenant }).del();
+  await db('clients').where({ tenant: targetTenant }).del();
+  await db('tenants').where({ tenant: targetTenant }).del();
+}
+
+/**
+ * Per-test cleanup: clear credential rows + the permission fixtures the
+ * idempotency test writes, then re-seed fresh users. The client and tenant
+ * created in beforeAll are preserved across tests.
+ */
+async function clearPerTestFixtures(): Promise<void> {
+  for (const table of CLEANUP_TABLES) {
+    await db(table).where({ tenant: tenantId }).del();
+  }
+  await seedUsers(tenantId);
 }
 
 function userFor(userId: string): IUserWithRoles {
@@ -133,17 +164,17 @@ describe('native credentials store — DB integration', () => {
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
-    if (db && tenantId) {
-      await cleanCredentialTables();
-      await db('clients').where({ tenant: tenantId }).del().catch(() => undefined);
-      await db('users').where({ tenant: tenantId }).del().catch(() => undefined);
-      await db('tenants').where({ tenant: tenantId }).del().catch(() => undefined);
+    try {
+      if (db && tenantId) {
+        await removeTestTenantFixtures(tenantId);
+      }
+    } finally {
+      await db?.destroy();
     }
-    await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
   beforeEach(async () => {
-    await cleanCredentialTables();
+    await clearPerTestFixtures();
   });
 
   it('creates an encrypted row and lists only rows the user may see', async () => {
@@ -466,10 +497,7 @@ describe('native credentials store — DB integration', () => {
       );
       expect(primaryList.map((row) => row.id)).not.toContain(otherSummary.id);
     } finally {
-      await db('credentials').where({ tenant: otherTenant }).del().catch(() => undefined);
-      await db('clients').where({ tenant: otherTenant }).del().catch(() => undefined);
-      await db('users').where({ tenant: otherTenant }).del().catch(() => undefined);
-      await db('tenants').where({ tenant: otherTenant }).del().catch(() => undefined);
+      await removeTestTenantFixtures(otherTenant);
     }
   });
 
@@ -482,5 +510,92 @@ describe('native credentials store — DB integration', () => {
 
     const count = await db('permissions').where({ tenant: tenantId, resource: 'credential' }).count('* as c').first();
     expect(Number(count?.c)).toBe(5);
+  });
+
+  it('serves credential reads/writes on a NON-superuser pooled connection with no app.current_tenant GUC (prod parity)', async () => {
+    // Regression for the RLS removal: the app connects as a non-superuser
+    // through pooled connections where `app.current_tenant` may be unset. With
+    // the old RLS policies this failed with "unrecognized configuration
+    // parameter"; now the credential tables have no RLS and the tenantDb
+    // facade carries the tenant predicate instead. This test drives the REAL
+    // NativeCredentialSource over a dedicated non-superuser role connection
+    // with the GUC never set, proving pooled prod connections work.
+    const roleName = `credentials_it_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+    const rolePassword = `it-${randomUUID().replace(/-/g, '')}`;
+
+    // Create a dedicated non-superuser role (LOGIN, no superuser, no RLS bypass).
+    await db.raw(`CREATE ROLE "${roleName}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`);
+    await db.raw(`GRANT USAGE ON SCHEMA public TO "${roleName}"`);
+    // Broad app-like privileges so the full source path (kernel bundle reads,
+    // client names, grants, audit) can run — mirrors what app_user effectively
+    // has in dev; the role is dropped at the end of the test.
+    await db.raw(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "${roleName}"`);
+
+    // Point the tenant pool at the non-superuser role and reset the cached pool
+    // so createTenantKnex() inside the source connects as that role. The dev
+    // stack routes the app pool through pgbouncer (port 6472) whose auth_file
+    // only lists known roles, so the fresh role connects DIRECTLY to postgres
+    // (port 5472) — still a real non-superuser application connection.
+    const prevUser = process.env.DB_USER_SERVER;
+    const prevPassword = process.env.DB_PASSWORD_SERVER;
+    const prevPort = process.env.DB_PORT;
+    try {
+      process.env.DB_USER_SERVER = roleName;
+      process.env.DB_PASSWORD_SERVER = rolePassword;
+      process.env.DB_PORT = String(process.env.DB_PORT === '6472' ? '5472' : process.env.DB_PORT ?? '5432');
+      await resetTenantConnectionPool();
+
+      // Prove the pool is genuinely non-superuser and the GUC is unset.
+      const probe = await createTenantKnex(tenantId);
+      const who = await probe.knex.raw('select current_user as u, current_setting(\'app.current_tenant\', true) as guc');
+      expect(String(who.rows[0].u)).toBe(roleName);
+      expect(who.rows[0].guc).toBeNull();
+
+      const source = new NativeCredentialSource();
+      const summary = await source.create(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        { clientId, name: 'Non-Superuser Row', password: 'plain-prod-value' }
+      );
+
+      const list = await source.list(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        { search: 'Non-Superuser' }
+      );
+      expect(list.map((row) => row.id)).toContain(summary.id);
+
+      const reveal = await source.reveal(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      expect(reveal.state).toBe('ok');
+      expect(reveal.password).toBe('plain-prod-value');
+
+      await source.update(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id,
+        { name: 'Non-Superuser Row (rotated)' }
+      );
+      await source.remove(
+        { tenant: tenantId, userId: ownerUser, user: userFor(ownerUser) },
+        summary.id
+      );
+      const gone = await db('credentials').where({ tenant: tenantId, credential_id: summary.id });
+      expect(gone).toHaveLength(0);
+    } finally {
+      // Restore the app_user pool + env so other tests in this file and any
+      // later file in the same worker keep using the normal connection.
+      if (prevUser === undefined) delete process.env.DB_USER_SERVER;
+      else process.env.DB_USER_SERVER = prevUser;
+      if (prevPassword === undefined) delete process.env.DB_PASSWORD_SERVER;
+      else process.env.DB_PASSWORD_SERVER = prevPassword;
+      if (prevPort === undefined) delete process.env.DB_PORT;
+      else process.env.DB_PORT = prevPort;
+      await resetTenantConnectionPool();
+      // Revoke the granted privileges first — a role with outstanding grants
+      // cannot be dropped ("objects depend on it").
+      await db.raw(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM "${roleName}"`).catch(() => undefined);
+      await db.raw(`REVOKE ALL ON SCHEMA public FROM "${roleName}"`).catch(() => undefined);
+      await db.raw(`DROP ROLE IF EXISTS "${roleName}"`);
+    }
   });
 });

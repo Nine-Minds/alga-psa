@@ -19,6 +19,7 @@ const {
   updateCredentialMock,
   deleteCredentialMock,
   getAllClientsMock,
+  getHuduClientContextMock,
   useFeatureFlagMock,
 } = vi.hoisted(() => ({
   getCredentialsContextMock: vi.fn(),
@@ -28,6 +29,7 @@ const {
   updateCredentialMock: vi.fn(),
   deleteCredentialMock: vi.fn(),
   getAllClientsMock: vi.fn(),
+  getHuduClientContextMock: vi.fn(),
   useFeatureFlagMock: vi.fn(),
 }));
 
@@ -39,6 +41,10 @@ vi.mock('@ee/lib/actions/credentials/credentialActions', () => ({
   updateCredential: updateCredentialMock,
   deleteCredential: deleteCredentialMock,
   setCredentialRestriction: vi.fn(),
+}));
+
+vi.mock('@enterprise/lib/actions/integrations/huduDataActions', () => ({
+  getHuduClientContext: getHuduClientContextMock,
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -195,6 +201,7 @@ beforeEach(() => {
   revealCredentialMock.mockResolvedValue({ state: 'ok', password: SECRET_VALUE, otpCode: null });
   createCredentialMock.mockResolvedValue(credential());
   getAllClientsMock.mockResolvedValue([{ client_id: CLIENT_ID, client_name: 'Acme Corp' }]);
+  getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
   for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
     consoleSpies.push(vi.spyOn(console, method).mockImplementation(() => undefined));
   }
@@ -321,12 +328,15 @@ describe('CredentialsScreen — filters and flags', () => {
 });
 
 describe('CredentialsScreen — create dialog destination picker', () => {
-  it('shows the destination picker only when Hudu is connected and a client is chosen', async () => {
+  it('shows the destination picker only when the SELECTED CLIENT is mapped to a Hudu company', async () => {
     getCredentialsContextMock.mockResolvedValue({
       tierOk: true,
       huduConnected: true,
       flagIrrelevantHere: true,
     });
+    // The chosen client resolves as connected AND mapped — the per-client
+    // basis for the destination picker (not a global "Hudu connected" check).
+    getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
     await renderScreen();
 
     fireEvent.click(document.getElementById('credentials-screen-new')!);
@@ -346,16 +356,20 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     await waitFor(() => {
       expect(document.getElementById('credential-form-destination-hudu')).toBeTruthy();
     });
+    expect(getHuduClientContextMock).toHaveBeenCalledWith(CLIENT_ID);
     expect(document.getElementById('credential-form-destination-alga')).toBeTruthy();
     expect(document.getElementById('credential-form-destination-hint')).toBeNull();
   });
 
-  it('keeps the Alga-only hint when Hudu is disconnected, regardless of client', async () => {
+  it('keeps the Alga-only hint when the selected client is NOT mapped, even if Hudu is connected', async () => {
+    // Global "Hudu connected" is true, but THIS client is unmapped → no
+    // destination picker (destination availability is per-client mapping).
     getCredentialsContextMock.mockResolvedValue({
       tierOk: true,
-      huduConnected: false,
+      huduConnected: true,
       flagIrrelevantHere: true,
     });
+    getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: false });
     await renderScreen();
 
     fireEvent.click(document.getElementById('credentials-screen-new')!);

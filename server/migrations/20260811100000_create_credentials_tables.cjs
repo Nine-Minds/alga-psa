@@ -5,11 +5,14 @@
  *  - credential_associations   — polymorphic entity attachments (assets in v1)
  *  - credential_access_grants  — per-credential ACL subjects (users / teams)
  *
- * Every table follows the tenant-scoped pattern: composite PK including
- * `tenant`, RLS (`tenant = current_setting('app.current_tenant')`), and Citus
- * distribution by `tenant` (see the document share links migration). Rows carry
- * a per-row `encryption_scheme` tag — the scheme roster is closed by a CHECK
- * constraint; adding a scheme is an explicit migration.
+ * Every table follows the repo-standard tenant-scoped pattern: composite PK
+ * including `tenant`, and Citus distribution by `tenant`. NO RLS: the app
+ * connects through pooled connections where `app.current_tenant` may be unset,
+ * and the repo standard (`20260509120000_disable_remaining_rls_policies.cjs`)
+ * dropped RLS repo-wide — tenant isolation is enforced at the query layer via
+ * the tenantDb facade, exactly like every other table. Rows carry a per-row
+ * `encryption_scheme` tag — the scheme roster is closed by a CHECK constraint;
+ * adding a scheme is an explicit migration.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -33,19 +36,6 @@ async function distributeIfCitus(knex, tableName) {
       await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant')`);
     }
   }
-}
-
-/** RLS + tenant isolation policy (select / insert), matching sibling tables. */
-async function enableTenantRls(knex, tableName) {
-  await knex.raw(`
-    ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;
-
-    CREATE POLICY tenant_isolation_policy ON ${tableName}
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-
-    CREATE POLICY tenant_isolation_insert_policy ON ${tableName}
-      FOR INSERT WITH CHECK (tenant = current_setting('app.current_tenant')::uuid);
-  `);
 }
 
 exports.up = async function up(knex) {
@@ -83,8 +73,6 @@ exports.up = async function up(knex) {
       table.index(['tenant', 'client_id'], 'idx_credentials_tenant_client');
       table.index(['tenant', 'name'], 'idx_credentials_tenant_name');
     });
-
-    await enableTenantRls(knex, 'credentials');
   }
 
   await distributeIfCitus(knex, 'credentials');
@@ -112,8 +100,6 @@ exports.up = async function up(knex) {
       );
       table.index(['tenant', 'entity_id', 'entity_type'], 'idx_credential_associations_entity');
     });
-
-    await enableTenantRls(knex, 'credential_associations');
   }
 
   await distributeIfCitus(knex, 'credential_associations');
@@ -142,8 +128,6 @@ exports.up = async function up(knex) {
       );
       table.index(['tenant', 'credential_id'], 'idx_credential_access_grants_credential');
     });
-
-    await enableTenantRls(knex, 'credential_access_grants');
   }
 
   await distributeIfCitus(knex, 'credential_access_grants');

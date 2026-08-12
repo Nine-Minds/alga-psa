@@ -5,12 +5,13 @@
  *
  * Since the credentials vault, the client Passwords surface is gated by
  * `useCredentialsVaultTab` (EE + release-v1.5-feature + credentials tier);
- * when that vault gate is ON it REPLACES the legacy Hudu tabs with a single
- * unified Passwords tab. When the vault gate is OFF the legacy Hudu-only
- * registration (Hudu + Hudu Passwords tabs behind `useHuduClientTab`:
- * EE + Hudu connected + this client mapped) is preserved exactly. A
- * registration probe mirrors that spread, and a source-wiring check pins the
- * real ClientDetails registration.
+ * when that vault gate is ON the unified Passwords tab REPLACES only the
+ * legacy Hudu-only Passwords tab. The general "Hudu" client tab (F070) stays
+ * registered whenever EE + Hudu connected + this client mapped — the flag
+ * never removes it. Flag off ⇒ the legacy Hudu pair (Hudu + Hudu Passwords
+ * behind `useHuduClientTab`) is preserved exactly. A registration probe
+ * mirrors that spread, and a source-wiring check pins the real ClientDetails
+ * registration.
  */
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -52,19 +53,19 @@ vi.mock('@enterprise/lib/actions/credentials/credentialActions', () => ({
 
 const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 
-/** Mirrors the ClientDetails registration: vault tab first, legacy fallback. */
+/** Mirrors the ClientDetails registration: Hudu tab always, vault/legacy swap. */
 function TabsProbe({ clientId = CLIENT_ID }: { clientId?: string }) {
   const vault = useCredentialsVaultTab();
   const hudu = useHuduClientTab(clientId);
   const tabs = [
     { id: 'details', label: 'Details' },
+    ...(hudu.visible
+      ? [{ id: 'hudu', label: 'Hudu' }]
+      : []),
     ...(vault.visible
       ? [{ id: 'credentials', label: 'Passwords' }]
       : hudu.visible
-        ? [
-            { id: 'hudu', label: 'Hudu' },
-            { id: 'hudu-passwords', label: 'Passwords' },
-          ]
+        ? [{ id: 'hudu-passwords', label: 'Passwords' }]
         : []),
   ];
   return (
@@ -103,8 +104,9 @@ beforeEach(() => {
 });
 
 describe('T080: client "Passwords" tab registration gate', () => {
-  it('renders the unified credentials tab instead of the Hudu pair when the vault gate is on', async () => {
-    // Vault gate on: EE + flag + tier.
+  it('keeps the general Hudu tab and swaps only the password surface when the vault gate is on', async () => {
+    // Vault gate on: EE + flag + tier. The general Hudu tab must remain; only
+    // the legacy Hudu Passwords tab is replaced by the unified credentials tab.
     useFeatureFlagMock.mockReturnValue({ enabled: true });
     getCredentialsContextMock.mockResolvedValue({ tierOk: true, huduConnected: false, flagIrrelevantHere: true });
 
@@ -113,12 +115,12 @@ describe('T080: client "Passwords" tab registration gate', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('tab-credentials')).toBeTruthy();
     });
+    expect(screen.queryByTestId('tab-hudu')).toBeTruthy();
     expect(passwordsTab()).toBeNull();
-    expect(screen.queryByTestId('tab-hudu')).toBeNull();
     const ids = Array.from(tabs.querySelectorAll('[data-testid^="tab-"]')).map((el) =>
       el.getAttribute('data-testid')
     );
-    expect(ids).toEqual(['tab-details', 'tab-credentials']);
+    expect(ids).toEqual(['tab-details', 'tab-hudu', 'tab-credentials']);
   });
 
   it('is absent in Community Edition (both gates closed)', async () => {
@@ -166,31 +168,32 @@ describe('T080: client "Passwords" tab registration gate', () => {
     expect(screen.queryByTestId('tab-credentials')).toBeNull();
   });
 
-  it('wiring: ClientDetails registers the vault tab first and the legacy Hudu pair as the fallback', () => {
+  it('wiring: ClientDetails always registers the general Hudu tab; the password surface swaps vault/legacy', () => {
     const source: string = clientDetailsSource;
 
-    // Vault-first registration.
+    // General Hudu tab is registered unconditionally on huduClientTab.visible.
+    expect(source).toContain('...(huduClientTab.visible ? [{');
+    expect(source).toContain("id: 'hudu',");
+    expect(source).toContain('<HuduClientTab clientId={client.client_id} />');
+
+    // Password surface: unified vault tab when visible, else legacy Hudu-only.
     expect(source).toContain('...(credentialsVaultTab.visible ? [{');
     expect(source).toContain("id: 'credentials',");
     expect(source).toContain('<ClientCredentialsTab clientId={client.client_id} />');
-
-    // Legacy fallback preserved exactly (Hudu + Hudu Passwords in one gated spread).
     expect(source).toContain('}] : huduClientTab.visible ? [{');
-    expect(source).toContain("id: 'hudu',");
     expect(source).toContain("id: 'hudu-passwords',");
-    expect(source).toContain("t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' })");
     expect(source).toContain('<HuduClientPasswordsTab clientId={client.client_id} />');
 
-    // Ordering: vault spread first, then the legacy hudu spread.
-    const vaultIdx = source.indexOf('...(credentialsVaultTab.visible ? [{');
+    // Ordering: general hudu spread first, then the password-surface swap.
+    const huduIdx = source.indexOf('...(huduClientTab.visible ? [{');
+    const vaultIdx = source.indexOf('...(credentialsVaultTab.visible ? [{', huduIdx);
     const legacyIdx = source.indexOf('}] : huduClientTab.visible ? [{', vaultIdx);
-    const huduIdx = source.indexOf("id: 'hudu',", legacyIdx);
-    const passwordsIdx = source.indexOf("id: 'hudu-passwords',", legacyIdx);
+    const huduPasswordsIdx = source.indexOf("id: 'hudu-passwords',", legacyIdx);
     const closeIdx = source.indexOf('}] : [])', legacyIdx);
-    expect(vaultIdx).toBeGreaterThan(-1);
+    expect(huduIdx).toBeGreaterThan(-1);
+    expect(vaultIdx).toBeGreaterThan(huduIdx);
     expect(legacyIdx).toBeGreaterThan(vaultIdx);
-    expect(huduIdx).toBeGreaterThan(legacyIdx);
-    expect(passwordsIdx).toBeGreaterThan(huduIdx);
-    expect(closeIdx).toBeGreaterThan(passwordsIdx);
+    expect(huduPasswordsIdx).toBeGreaterThan(legacyIdx);
+    expect(closeIdx).toBeGreaterThan(huduPasswordsIdx);
   });
 });

@@ -15,7 +15,8 @@
  * server-side from the reveal-time otp_secret; the seed is discarded.
  */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import type {
   CredentialListFilter,
   CredentialRevealResult,
@@ -36,6 +37,10 @@ import { toHuduAssetPasswordSummary, clearCachedHuduList } from '../integrations
 import { writeHuduPasswordRevealAudit } from '../integrations/hudu/revealAudit';
 import { fetchCompanyList, toErrorMessage } from '../integrations/hudu/huduDataCore';
 import { writeCredentialAudit } from './audit';
+import {
+  authorizeCredentialRecord,
+  createCredentialAuthorizationContext,
+} from './credentialAuthorization';
 import { generateTotp, normalizeOtpSecret } from './totp';
 
 export const HUDU_CREDENTIAL_ID_PREFIX = 'hudu:';
@@ -91,17 +96,118 @@ function huduErrorKind(error: unknown): HuduErrorKind | undefined {
   return error instanceof HuduRequestError ? error.hudu.kind : undefined;
 }
 
+/**
+ * Bundle-scope check for a single Hudu row (confused-deputy guard). Hudu rows
+ * carry no per-item grants; a caller with a direct `hudu:{company}:{password}`
+ * id must still be denied when the authorization kernel's bundle narrowing
+ * excludes the owning client (e.g. `credential read → selected_clients`). The
+ * synthetic record is unrestricted with the resolved owning client, so the
+ * kernel applies RBAC tier + bundle rules only — exactly the Hudu contract.
+ *
+ * Fail-closed: any resolution error denies rather than leaking.
+ */
+async function isClientInCredentialBundleScope(
+  knex: Knex,
+  ctx: CredentialSourceContext,
+  clientId: string,
+  credentialId: string
+): Promise<boolean> {
+  try {
+    return await withTransaction(knex, async (trx) => {
+      const context = await createCredentialAuthorizationContext(trx, ctx.tenant, ctx.user);
+      return authorizeCredentialRecord(
+        trx,
+        context,
+        {
+          credential_id: credentialId,
+          created_by: '',
+          client_id: clientId,
+          is_restricted: false,
+        },
+        []
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve the owning client for a Hudu row id and confirm the caller's bundle
+ * scope includes it. Returns the clientId when in scope, else null (denied or
+ * unmapped — both are indistinguishable to the caller).
+ */
+async function resolveHuduRecordClientId(
+  knex: Knex,
+  ctx: CredentialSourceContext,
+  companyId: string,
+  credentialId: string
+): Promise<string | null> {
+  const clientId = await resolveClientIdForHuduCompany(knex, ctx.tenant, companyId);
+  if (!clientId) {
+    return null;
+  }
+  if (!(await isClientInCredentialBundleScope(knex, ctx, clientId, credentialId))) {
+    return null;
+  }
+  return clientId;
+}
+
+/**
+ * Confirm the numeric Hudu password id actually belongs to the claimed company
+ * before any single-record mutation/delete (deleteAssetPassword/PUT address a
+ * global password id, so an unverified id could hit another company's record).
+ * Fail-closed: throws CREDENTIAL_NOT_FOUND on mismatch / unmapped / not_found.
+ */
+async function requireHuduRecordInCompany(
+  client: HuduClient,
+  passwordId: string,
+  companyId: string
+): Promise<HuduAssetPassword> {
+  let record: HuduAssetPassword;
+  try {
+    record = await client.getAssetPassword(Number(passwordId));
+  } catch (error) {
+    if (error instanceof HuduRequestError) {
+      if (error.hudu.kind === 'no_password_access') {
+        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+      }
+      if (error.hudu.kind === 'not_found') {
+        throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+      }
+    }
+    throw error;
+  }
+  if (String(record.company_id) !== companyId) {
+    throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+  }
+  return record;
+}
+
 export class HuduCredentialSource implements CredentialSource {
   readonly kind = 'hudu' as const;
 
   async list(ctx: CredentialSourceContext, filter: CredentialListFilter): Promise<CredentialSummary[]> {
     if (!filter.clientId) {
-      // Hudu rows are company-scoped; without a client the aggregation handles
-      // only native rows. No Hudu traffic for tenant-wide searches in v1.
+      // Hudu rows are company-scoped; a tenant-wide aggregation resolves
+      // mapped clients itself and calls list per client.
       return [];
     }
     if (filter.assetId) {
       // v1 Hudu writes are company-scoped; no asset-attachment linkage.
+      return [];
+    }
+
+    // Bundle-scope guard on the LIST path too: a bundle that narrows
+    // `credential read` to selected clients must hide Hudu rows of excluded
+    // clients the same way it hides native restricted rows. Unmapped + excluded
+    // are indistinguishable (empty result).
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const mappedCompanyId = await resolveHuduCompanyIdForClient(knex, ctx.tenant, filter.clientId);
+    if (!mappedCompanyId) {
+      return [];
+    }
+    if (!(await isClientInCredentialBundleScope(knex, ctx, filter.clientId, `hudu:${mappedCompanyId}`))) {
       return [];
     }
 
@@ -128,7 +234,10 @@ export class HuduCredentialSource implements CredentialSource {
     try {
       const { companyId, passwordId } = parseHuduCredentialId(id);
       const { knex } = await createTenantKnex(ctx.tenant);
-      const clientId = await resolveClientIdForHuduCompany(knex, ctx.tenant, companyId);
+      // Bundle-scope guard FIRST (fail-closed): a direct id must not bypass a
+      // bundle that excludes the owning client. Resolves to null for unmapped
+      // companies AND out-of-scope clients — indistinguishable to the caller.
+      const clientId = await resolveHuduRecordClientId(knex, ctx, companyId, id);
       if (!clientId) {
         return { state: 'not_found' };
       }
@@ -172,7 +281,7 @@ export class HuduCredentialSource implements CredentialSource {
     try {
       const { companyId, passwordId } = parseHuduCredentialId(id);
       const { knex } = await createTenantKnex(ctx.tenant);
-      const clientId = await resolveClientIdForHuduCompany(knex, ctx.tenant, companyId);
+      const clientId = await resolveHuduRecordClientId(knex, ctx, companyId, id);
       if (!clientId) {
         return { state: 'not_found' };
       }
@@ -242,10 +351,23 @@ export class HuduCredentialSource implements CredentialSource {
   ): Promise<CredentialSummary> {
     const { companyId, passwordId } = parseHuduCredentialId(id);
     const { knex } = await createTenantKnex(ctx.tenant);
-    const huduCompanyId = await resolveHuduCompanyIdForClient(knex, ctx.tenant, input.clientId ?? '');
-    if (!huduCompanyId || huduCompanyId !== companyId) {
+
+    // Resolve the owning client from the row's company (authoritative) and
+    // enforce bundle scope. When the caller supplies a clientId, it must match
+    // the row's owning client — otherwise the caller is claiming a mapping
+    // that does not exist for this row (confused deputy).
+    const clientId = await resolveHuduRecordClientId(knex, ctx, companyId, id);
+    if (!clientId) {
+      throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+    }
+    if (input.clientId && input.clientId !== clientId) {
       throw Object.assign(new Error('Client is not mapped to this Hudu company.'), { code: 'HUDU_UNMAPPED' });
     }
+
+    const client = await createHuduClient(ctx.tenant);
+    // Confirm the numeric password id actually belongs to the claimed company
+    // before PUT (an unverified id could hit another company's record).
+    await requireHuduRecordInCompany(client, passwordId, companyId);
 
     const payload: Partial<HuduAssetPasswordWriteInput> = {};
     if (input.name !== undefined) payload.name = input.name.trim();
@@ -255,30 +377,40 @@ export class HuduCredentialSource implements CredentialSource {
     if (input.url !== undefined) payload.url = input.url || null;
     if (input.description !== undefined) payload.description = input.description || null;
 
-    const client = await createHuduClient(ctx.tenant);
     const updated = await client.updateAssetPassword(Number(passwordId), payload);
-    clearCachedHuduList(ctx.tenant, huduCompanyId, 'asset_passwords');
+    clearCachedHuduList(ctx.tenant, companyId, 'asset_passwords');
 
     await writeCredentialAudit(knex, ctx.tenant, 'credential_updated', {
       userId: ctx.userId,
       credentialId: id,
-      clientId: input.clientId ?? '',
+      clientId,
     });
 
-    return toSummary(toHuduAssetPasswordSummary(updated), input.clientId ?? '', null);
+    return toSummary(toHuduAssetPasswordSummary(updated), clientId, null);
   }
 
   async remove(ctx: CredentialSourceContext, id: string): Promise<void> {
     const { companyId, passwordId } = parseHuduCredentialId(id);
     const { knex } = await createTenantKnex(ctx.tenant);
+
+    // Same confused-deputy guards as update/reveal: resolve the owning client
+    // authoritatively, enforce bundle scope, and confirm the numeric password
+    // id belongs to the claimed company before DELETE.
+    const clientId = await resolveHuduRecordClientId(knex, ctx, companyId, id);
+    if (!clientId) {
+      throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
+    }
+
     const client = await createHuduClient(ctx.tenant);
+    await requireHuduRecordInCompany(client, passwordId, companyId);
+
     await client.deleteAssetPassword(Number(passwordId));
     clearCachedHuduList(ctx.tenant, companyId, 'asset_passwords');
 
     await writeCredentialAudit(knex, ctx.tenant, 'credential_deleted', {
       userId: ctx.userId,
       credentialId: id,
-      clientId: '',
+      clientId,
     });
   }
 }

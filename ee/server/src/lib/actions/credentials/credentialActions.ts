@@ -22,6 +22,7 @@ import { TIER_FEATURES } from '@alga-psa/types';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepository';
+import { getHuduCompanyMappingRows } from '../../integrations/hudu/companyMapping';
 import { nativeCredentialSource } from '../../credentials/nativeSource';
 import { huduCredentialSource, isHuduCredentialId } from '../../credentials/huduSource';
 import type {
@@ -100,14 +101,31 @@ async function aggregateList(
   const ctx = sourceContext(user, tenant);
   const native = await nativeCredentialSource.list(ctx, filter);
 
-  if (!filter.clientId) {
-    // v1: Hudu rows are company-scoped and aggregated per mapped client only;
-    // a tenant-wide search surfaces native rows (see draftSummary).
+  if (filter.clientId) {
+    const huduRows = await huduCredentialSource.list(ctx, filter);
+    return [...native, ...huduRows];
+  }
+
+  // Tenant-wide listing: aggregate every selected source. Hudu rows are
+  // company-scoped, so fetch each mapped client's Hudu passwords (bundle
+  // scope is enforced per client inside huduSource.list). Only touch Hudu
+  // when the integration is actually connected for this tenant.
+  const { knex } = await createTenantKnex(tenant);
+  const integration = await getHuduIntegration(knex, tenant);
+  if (integration?.is_active !== true) {
+    return native;
+  }
+  const mappings = await getHuduCompanyMappingRows(knex, tenant);
+  if (mappings.length === 0) {
     return native;
   }
 
-  const huduRows = await huduCredentialSource.list(ctx, filter);
-  return [...native, ...huduRows];
+  const huduLists = await Promise.all(
+    mappings.map(async (mapping) =>
+      huduCredentialSource.list(ctx, { clientId: mapping.alga_entity_id, search: filter.search })
+    )
+  );
+  return [...native, ...huduLists.flat()];
 }
 
 export interface ListCredentialsInput {

@@ -12,6 +12,10 @@ const {
   assertTierAccessMock,
   TierAccessErrorMock,
   auditLogMock,
+  nativeListMock,
+  huduListMock,
+  getHuduIntegrationMock,
+  getHuduCompanyMappingRowsMock,
 } = vi.hoisted(() => {
   class TierAccessErrorMock extends Error {
     readonly statusCode = 403;
@@ -22,6 +26,10 @@ const {
     assertTierAccessMock: vi.fn(),
     TierAccessErrorMock,
     auditLogMock: vi.fn(),
+    nativeListMock: vi.fn(async () => []),
+    huduListMock: vi.fn(async () => []),
+    getHuduIntegrationMock: vi.fn(async () => null),
+    getHuduCompanyMappingRowsMock: vi.fn(async () => []),
   };
 });
 
@@ -54,7 +62,20 @@ vi.mock('server/src/lib/logging/auditLog', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', () => ({
-  getHuduIntegration: vi.fn(async () => null),
+  getHuduIntegration: getHuduIntegrationMock,
+}));
+
+vi.mock('@ee/lib/integrations/hudu/companyMapping', () => ({
+  getHuduCompanyMappingRows: getHuduCompanyMappingRowsMock,
+}));
+
+vi.mock('@ee/lib/credentials/nativeSource', () => ({
+  nativeCredentialSource: { list: nativeListMock },
+}));
+
+vi.mock('@ee/lib/credentials/huduSource', () => ({
+  huduCredentialSource: { list: huduListMock },
+  isHuduCredentialId: (id: string) => id.startsWith('hudu:'),
 }));
 
 const internalUser = {
@@ -76,6 +97,14 @@ beforeEach(() => {
   assertTierAccessMock.mockResolvedValue(undefined);
   auditLogMock.mockReset();
   auditLogMock.mockResolvedValue(undefined);
+  nativeListMock.mockReset();
+  huduListMock.mockReset();
+  getHuduIntegrationMock.mockReset();
+  getHuduCompanyMappingRowsMock.mockReset();
+  nativeListMock.mockResolvedValue([]);
+  huduListMock.mockResolvedValue([]);
+  getHuduIntegrationMock.mockResolvedValue(null);
+  getHuduCompanyMappingRowsMock.mockResolvedValue([]);
 });
 
 describe('credentials actions — tier gate', () => {
@@ -121,5 +150,55 @@ describe('fail-closed reveal audit (writeCredentialAudit)', () => {
         { userId: 'user-1', credentialId: 'cred-1', clientId: 'client-1' }
       )
     ).rejects.toThrow('audit insert failed');
+  });
+});
+
+describe('credentials actions — tenant-wide aggregation', () => {
+  it('aggregates native + every mapped client Hudu rows for a tenant-wide list', async () => {
+    nativeListMock.mockResolvedValue([{ id: 'native-1', source: 'alga', clientId: 'c1' }]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: true });
+    getHuduCompanyMappingRowsMock.mockResolvedValue([
+      { alga_entity_id: 'c1', client_name: 'Acme' },
+      { alga_entity_id: 'c2', client_name: 'Globex' },
+    ]);
+    huduListMock.mockImplementation(async (_ctx: unknown, filter: { clientId: string }) =>
+      filter.clientId === 'c1'
+        ? [{ id: 'hudu:101:1', source: 'hudu', clientId: 'c1' }]
+        : [{ id: 'hudu:102:2', source: 'hudu', clientId: 'c2' }]
+    );
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({});
+
+    // Both sources, across all mapped clients.
+    const ids = rows.map((row: { id: string }) => row.id).sort();
+    expect(ids).toEqual(['hudu:101:1', 'hudu:102:2', 'native-1']);
+    expect(getHuduCompanyMappingRowsMock).toHaveBeenCalledTimes(1);
+    expect(huduListMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns native-only rows when Hudu is not connected (no mapping traffic)', async () => {
+    nativeListMock.mockResolvedValue([{ id: 'native-1', source: 'alga', clientId: 'c1' }]);
+    getHuduIntegrationMock.mockResolvedValue({ is_active: false });
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({});
+
+    expect(rows.map((row: { id: string }) => row.id)).toEqual(['native-1']);
+    expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
+    expect(huduListMock).not.toHaveBeenCalled();
+  });
+
+  it('merges native + Hudu for a client-scoped list (client tab)', async () => {
+    nativeListMock.mockResolvedValue([{ id: 'native-1', source: 'alga', clientId: 'c1' }]);
+    huduListMock.mockResolvedValue([{ id: 'hudu:101:1', source: 'hudu', clientId: 'c1' }]);
+
+    const { listCredentials } = await importActions();
+    const rows = await listCredentials({ clientId: 'c1' });
+
+    const ids = rows.map((row: { id: string }) => row.id).sort();
+    expect(ids).toEqual(['hudu:101:1', 'native-1']);
+    // Client-scoped list does not enumerate mappings.
+    expect(getHuduCompanyMappingRowsMock).not.toHaveBeenCalled();
   });
 });

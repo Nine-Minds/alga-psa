@@ -101,7 +101,6 @@ export function CredentialFormDialog({
   assetId,
   editing,
   clients: clientsProp,
-  context,
   onError,
 }: CredentialFormDialogProps) {
   const { t } = useTranslation('msp/credentials');
@@ -125,7 +124,9 @@ export function CredentialFormDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const huduAvailable = context?.huduConnected === true;
+  // Hudu destination availability is per selected client (connected AND that
+  // client mapped to a Hudu company) — not a global "Hudu connected" flag.
+  const [huduClientMapped, setHuduClientMapped] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!clientsProp || clientsProp.length === 0) {
@@ -134,6 +135,29 @@ export function CredentialFormDialog({
         .catch(() => undefined);
     }
   }, [clientsProp]);
+
+  useEffect(() => {
+    if (!isOpen || editing || !clientId) {
+      setHuduClientMapped(null);
+      return;
+    }
+    let cancelled = false;
+    setHuduClientMapped(null);
+    (async () => {
+      try {
+        const { getHuduClientContext } = await import(
+          '@enterprise/lib/actions/integrations/huduDataActions'
+        );
+        const result = await getHuduClientContext(clientId);
+        if (!cancelled) setHuduClientMapped(result.connected === true && result.mapped === true);
+      } catch {
+        if (!cancelled) setHuduClientMapped(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, editing, clientId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -185,7 +209,7 @@ export function CredentialFormDialog({
     };
   }, [isOpen, destination, clientId]);
 
-  const canUseHudu = huduAvailable && Boolean(clientId);
+  const canUseHudu = huduClientMapped === true;
 
   const handleSubmit = async () => {
     if (!name.trim()) {

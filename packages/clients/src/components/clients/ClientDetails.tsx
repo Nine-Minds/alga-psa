@@ -1648,9 +1648,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
-    // Passwords tab: the unified credentials-vault tab when the release flag +
-    // tier gate is on; otherwise the legacy Hudu-only Passwords tab (registered
-    // only when EE + Hudu connected + mapped, exactly as before the vault).
+    // Hudu tab (F070): the general Hudu client tab (articles/assets mapping)
+    // is ALWAYS registered when EE + Hudu connected + this client mapped — it
+    // is independent of the credentials-vault flag. The release flag only
+    // swaps the password surface: the unified vault tab replaces the legacy
+    // Hudu-only Passwords tab, nothing else. Flag off ⇒ legacy pair as before.
+    ...(huduClientTab.visible ? [{
+      id: 'hudu',
+      label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <HuduClientTab clientId={client.client_id} />
+        </div>
+      )
+    }] : []),
     ...(credentialsVaultTab.visible ? [{
       id: 'credentials',
       label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
@@ -1660,14 +1671,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     }] : huduClientTab.visible ? [{
-      id: 'hudu',
-      label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
-      content: (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <HuduClientTab clientId={client.client_id} />
-        </div>
-      )
-    }, {
       id: 'hudu-passwords',
       label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
       content: (
