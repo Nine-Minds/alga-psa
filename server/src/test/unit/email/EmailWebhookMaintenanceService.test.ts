@@ -12,6 +12,11 @@ const mocks = vi.hoisted(() => ({
   },
   enqueue: vi.fn(),
   getAdminConnection: vi.fn(),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
@@ -27,7 +32,7 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: mocks.getAdminConnection,
 }));
 vi.mock('@alga-psa/core/logger', () => ({
-  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  default: mocks.logger,
 }));
 
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
@@ -79,6 +84,9 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       whereIn: vi.fn().mockReturnThis(),
       forUpdate: vi.fn().mockReturnThis(),
       first: vi.fn().mockImplementation((...columns: string[]) => {
+        if (columns.includes('status')) {
+          return Promise.resolve({ status: provider.status });
+        }
         if (columns.includes('webhook_silent_runs')) {
           return Promise.resolve({
             last_webhook_delivery_at: provider.last_webhook_delivery_at || null,
@@ -102,6 +110,9 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
         return [];
       }),
       update: vi.fn().mockImplementation(async (values: Record<string, unknown>) => {
+        if (typeof values.status === 'string') {
+          provider.status = values.status;
+        }
         if (values.webhook_silent_runs === 'webhook_silent_runs + 1') {
           provider.webhook_silent_runs = Number(provider.webhook_silent_runs || 0) + 1;
         }
@@ -142,6 +153,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
   });
 
   it('reports refresh failures instead of continuing with a connected status', async () => {
+    provider.status = 'connected';
     mocks.adapter.ensureTokenHealthy.mockRejectedValueOnce(new Error('invalid_grant'));
 
     const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
@@ -154,6 +166,30 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       action: 'failed',
       error: 'invalid_grant',
     });
+    const unhealthyEvents = mocks.logger.error.mock.calls
+      .map(([message]) => message)
+      .filter((message) => String(message).includes('event=microsoft_email_provider_unhealthy'));
+    expect(unhealthyEvents).toEqual([
+      `event=microsoft_email_provider_unhealthy provider_id=${provider.id} failure_category=oauth_unauthorized`,
+    ]);
+  });
+
+  it('emits one categorized transition when a refresh starts failing with HTTP 400', async () => {
+    provider.status = 'connected';
+    mocks.adapter.ensureTokenHealthy.mockRejectedValueOnce(
+      new Error('Error in refreshAccessToken: Request failed with status code 400 (code: 400)')
+    );
+
+    await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+    });
+
+    const unhealthyEvents = mocks.logger.error.mock.calls
+      .map(([message]) => message)
+      .filter((message) => String(message).includes('event=microsoft_email_provider_unhealthy'));
+    expect(unhealthyEvents).toEqual([
+      `event=microsoft_email_provider_unhealthy provider_id=${provider.id} failure_category=oauth_bad_request`,
+    ]);
   });
 
   // The next two scenarios were ported from the retired shared/ duplicate
