@@ -2,7 +2,10 @@ import type { Knex } from 'knex';
 
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
-import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
+// Deep import (not the /actions barrel): the temporal worker compiles this file
+// and stubs only this exact subpath (ee/temporal-workflows/src/typings/notifications);
+// the barrel would pull @alga-psa/auth's UI surface into the worker build.
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 import { getConnection } from '@/lib/db/db';
 
 import type { AiCreditsError, AiFeature } from './types';
