@@ -78,7 +78,7 @@
   {
     "id": "T010",
     "description": "The reconciler creates a device-sync schedule for an active, enabled, eligible integration that has none",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "The reconciler creates the schedule with singletonKey rmm-device-sync:<tenant>:<integration>",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
@@ -94,7 +94,7 @@
   {
     "id": "T012",
     "description": "Running the reconciler twice does not produce two schedules for the same integration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F014"
@@ -103,7 +103,7 @@
   {
     "id": "T013",
     "description": "The reconciler cancels the schedule when is_active flips to false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -111,7 +111,7 @@
   {
     "id": "T014",
     "description": "The reconciler cancels the schedule when deviceSync.enabled flips to false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
@@ -119,7 +119,7 @@
   {
     "id": "T015",
     "description": "The reconciler recreates the schedule with a new cron when intervalMinutes changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -127,7 +127,7 @@
   {
     "id": "T016",
     "description": "The reconciler makes no schedule calls when nothing changed between passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -135,7 +135,7 @@
   {
     "id": "T017",
     "description": "The reconciler ignores integrations whose provider is not in RMM_DEVICE_SYNC_PROVIDERS",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -143,7 +143,7 @@
   {
     "id": "T018",
     "description": "The reconciler continues processing remaining integrations when one row errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -151,7 +151,7 @@
   {
     "id": "T019",
     "description": "The reconciler tolerates an integration deleted between scan and schedule creation without throwing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -159,7 +159,7 @@
   {
     "id": "T020",
     "description": "Reconciling device sync does not create, cancel or modify any alert-polling schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F004"
@@ -168,7 +168,7 @@
   {
     "id": "T021",
     "description": "Enabling device sync on one integration leaves a sibling integration in the same tenant without a schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]

@@ -163,7 +163,7 @@
   {
     "id": "F021",
     "description": "Concurrent runs for the same integration are prevented (singleton semantics honoured on both backends)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -455,7 +455,7 @@
   {
     "id": "F056",
     "description": "The reconciler tolerates an integration row deleted between scan and schedule creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -471,7 +471,7 @@
   {
     "id": "F058",
     "description": "Enabling device sync for one integration does not create schedules for that tenant's other integrations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]

@@ -462,7 +462,14 @@ async function reconcileDeviceSyncForIntegration(
  * The create/recreate/cancel decision, shared by both capabilities. Errors are
  * caught per schedule so one bad integration cannot abort the whole pass.
  */
-async function convergeSchedule(
+export type FindExistingRecurringJob = (
+  adminKnex: Knex,
+  tenantId: string,
+  singletonKey: string,
+  options?: { anyStatus?: boolean }
+) => Promise<ExistingRecurringJob | null>;
+
+export async function convergeSchedule(
   runner: IJobRunner,
   adminKnex: Knex,
   args: {
@@ -474,21 +481,22 @@ async function convergeSchedule(
     eligible: boolean;
     desiredCron: string;
     data: RmmAlertReconciliationJobData | HuntressIncidentPollJobData | RmmDeviceSyncJobData;
-  }
+  },
+  findExisting: FindExistingRecurringJob = findExistingRecurringJob
 ): Promise<ReconcileOutcome> {
   const { tenantId, integrationId, provider, jobName, singletonKey, eligible, desiredCron, data } = args;
   let ensured = 0;
   let cancelled = 0;
 
   try {
-    const existing = await findExistingRecurringJob(adminKnex, tenantId, singletonKey);
+    const existing = await findExisting(adminKnex, tenantId, singletonKey);
 
     if (!eligible) {
       // Cancel via the newest record of ANY status: a failed last run must
       // not strand the underlying schedule (cancelJob unschedules
       // recurring records regardless of run status; repeat cancels no-op).
       const candidate =
-        existing ?? (await findExistingRecurringJob(adminKnex, tenantId, singletonKey, { anyStatus: true }));
+        existing ?? (await findExisting(adminKnex, tenantId, singletonKey, { anyStatus: true }));
       if (candidate) {
         const didCancel = await runner.cancelJob(candidate.job_id, tenantId);
         if (didCancel) cancelled += 1;
