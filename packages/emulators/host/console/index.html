@@ -51,6 +51,11 @@
   pre.out { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
     font-size: 12px; overflow-x: auto; max-height: 340px; margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; }
   pre.out.error { border-color: var(--bad); color: var(--bad); }
+  .outwrap { position: relative; }
+  .outwrap .copybtn { position: absolute; top: 14px; right: 6px; background: var(--panel-2); color: var(--dim);
+    border: 1px solid var(--line); border-radius: 5px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: var(--mono); }
+  .outwrap .copybtn:hover { color: var(--text); border-color: var(--accent); }
+  .outwrap .copybtn.done { color: var(--ok); border-color: var(--ok); }
   .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
   .tabs button { background: var(--panel-2); border: 1px solid var(--line); color: var(--dim);
     border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: var(--mono); }
@@ -110,6 +115,27 @@ function el(tag, attrs, ...children) {
   return node;
 }
 
+/** Wrap an output <pre> with a copy-to-clipboard button. */
+function copyable(pre) {
+  const btn = el('button', { class: 'copybtn', type: 'button', title: 'Copy to clipboard', onclick: async () => {
+    const text = pre.textContent;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const scratch = el('textarea', { style: 'position:fixed;opacity:0' });
+      scratch.value = text;
+      document.body.append(scratch);
+      scratch.select();
+      document.execCommand('copy');
+      scratch.remove();
+    }
+    btn.textContent = 'copied ✓'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('done'); }, 1200);
+  } }, 'copy');
+  return el('div', { class: 'outwrap' }, btn, pre);
+}
+
 // ---- schema-driven forms -------------------------------------------------
 
 function isSimpleProp(prop) {
@@ -149,7 +175,9 @@ function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
     }
   }
 
-  const out = el('pre', { class: 'out', style: 'display:none' });
+  const out = el('pre', { class: 'out' });
+  const outWrap = copyable(out);
+  outWrap.style.display = 'none';
   const button = el('button', { class: 'go' + (danger ? ' danger' : ''), type: 'submit' }, submitLabel);
   form.append(button);
   form.addEventListener('submit', async (event) => {
@@ -166,21 +194,21 @@ function buildForm(schema, submitLabel, onSubmit, danger, rerenderOnSuccess) {
         else params[input.name] = value;
       }
     } catch (err) {
-      out.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
+      outWrap.style.display = ''; out.className = 'out error'; out.textContent = 'Bad JSON: ' + err.message;
       return;
     }
     try {
       const result = await onSubmit(params);
       if (rerenderOnSuccess) { await loadCatalog(true); return; }
-      out.className = 'out'; out.style.display = '';
+      out.className = 'out'; outWrap.style.display = '';
       out.textContent = result === null ? 'ok' : JSON.stringify(result, null, 2);
       await loadCatalog(false);
     } catch (err) {
-      out.className = 'out error'; out.style.display = ''; out.textContent = err.message;
+      out.className = 'out error'; outWrap.style.display = ''; out.textContent = err.message;
     }
   });
   const wrap = el('div', {});
-  wrap.append(form, out);
+  wrap.append(form, outWrap);
   return wrap;
 }
 
@@ -215,7 +243,7 @@ function renderEmulator(emu) {
       el('button', { class: view.name === active ? 'active' : '',
         onclick: () => { activeView[emu.id] = view.name; renderEmulator(emu); } }, view.name)));
     const pre = el('pre', { class: 'out', id: 'stateview' }, 'loading…');
-    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, pre));
+    sections.push(el('section', { class: 'card' }, el('h3', {}, 'State'), tabs, copyable(pre)));
     refreshState(emu.id, active);
   }
 
@@ -263,7 +291,9 @@ function renderEmulator(emu) {
 async function renderScenarios() {
   const content = document.getElementById('content');
   const scenarios = await api('GET', '/control/scenarios');
-  const out = el('pre', { class: 'out', style: 'display:none' });
+  const out = el('pre', { class: 'out' });
+  const outWrap = copyable(out);
+  outWrap.style.display = 'none';
   const rows = scenarios.length
     ? scenarios.map((scenario) => el('div', { class: 'control' },
         el('div', { class: 'head' },
@@ -271,14 +301,14 @@ async function renderScenarios() {
           el('span', { class: 'desc' }, (scenario.description || '') + ' · ' + scenario.stepCount + ' steps'),
           el('button', { class: 'go', onclick: async () => {
             try {
-              out.className = 'out'; out.style.display = '';
+              out.className = 'out'; outWrap.style.display = '';
               out.textContent = JSON.stringify(await api('POST', '/control/scenarios/' + scenario.name + '/run'), null, 2);
-            } catch (err) { out.className = 'out error'; out.style.display = ''; out.textContent = err.message; }
+            } catch (err) { out.className = 'out error'; outWrap.style.display = ''; out.textContent = err.message; }
           } }, 'run'))))
     : [el('p', { class: 'muted' }, 'No scenarios loaded. Start the host with --scenarios <dir>, or run files from the CLI: algasim scenario run <file>.')];
   content.replaceChildren(
     el('h2', { style: 'margin:0 0 12px;font-size:18px' }, 'Scenarios'),
-    el('section', { class: 'card' }, ...rows, out));
+    el('section', { class: 'card' }, ...rows, outWrap));
 }
 
 async function refreshState(emuId, view) {
