@@ -7,6 +7,7 @@ import type {
   TemplateTotalsRow,
   TemplateValueExpression,
 } from '@alga-psa/types';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 
 /** Namespace holding the standard document chrome (labels, headers, totals rows). */
 export const DOCUMENT_LABEL_NAMESPACE = 'documents';
@@ -107,3 +108,33 @@ export const resolveTemplateAstI18n = (
   ast: TemplateAst,
   t: TemplateLabelTranslator
 ): TemplateAst => ({ ...ast, layout: resolveNode(ast.layout, t) });
+
+/**
+ * The single seam every render goes through — PDF generation and designer
+ * preview alike, so a preview is authoritative about what a client receives.
+ *
+ * Returns the AST with its label keys resolved into `locale`, plus the locale
+ * that actually applied (numbers, dates and currency must follow the same one).
+ * An unsupported locale, or a locale pack that will not load, falls back to the
+ * authored English rather than failing the render.
+ */
+export const localizeTemplateAstForLocale = async (
+  ast: TemplateAst,
+  locale: string | null | undefined
+): Promise<{ ast: TemplateAst; locale?: string }> => {
+  const normalized = normalizeLocale(locale) ?? undefined;
+  if (!normalized) {
+    return { ast };
+  }
+
+  try {
+    // Dynamic: the i18n loader is server-only, and this module is imported by
+    // paths that must not drag Next request APIs into their bundle.
+    const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+    const { t } = await getServerTranslation(normalized, DOCUMENT_LABEL_NAMESPACE);
+    return { ast: resolveTemplateAstI18n(ast, (key, options) => String(t(key, options))), locale: normalized };
+  } catch (error) {
+    console.error('Failed to load document label translations:', error);
+    return { ast, locale: normalized };
+  }
+};

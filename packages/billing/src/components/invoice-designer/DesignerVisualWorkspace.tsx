@@ -18,6 +18,8 @@ import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
 import TransformsWorkspace from './transforms/TransformsWorkspace';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { PreviewLocaleSelect } from './preview/PreviewLocaleSelect';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -60,7 +62,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
 }) => {
-  const { t } = useTranslation('msp/invoicing');
+  const { t, i18n } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
@@ -70,7 +72,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const transforms = useInvoiceDesignerStore((state) => state.transforms);
 
-  const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
+  const [previewState, dispatch] = useReducer(previewSessionReducer, normalizeLocale(i18n.language) ?? undefined, createInitialPreviewSessionState);
   const [authoritativePreview, setAuthoritativePreview] = useState<
     Awaited<ReturnType<typeof runAuthoritativeInvoiceTemplatePreview>> | null
   >(null);
@@ -238,6 +240,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     runAuthoritativeInvoiceTemplatePreview({
       workspace: previewWorkspace as any,
       invoiceData: previewData,
+      locale: previewState.selectedLocale,
     })
       .then((result) => {
         if (requestId !== previewRunSequence.current) {
@@ -282,6 +285,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     previewWorkspace,
     previewState.isInvoiceDetailLoading,
     previewState.selectedInvoiceId,
+    previewState.selectedLocale,
     previewState.sourceKind,
     visualWorkspaceTab,
   ]);
@@ -425,16 +429,24 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                 {displayStatuses.renderStatus}
               </span>
             </div>
-            <Button
-              id="invoice-designer-preview-rerun-button"
-              variant="outline"
-              size="sm"
-              disabled={!previewData || isPreviewRunning}
-              onClick={() => setManualRunNonce((value) => value + 1)}
-              data-automation-id="invoice-designer-preview-rerun"
-            >
-              {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
-            </Button>
+            <div className="flex items-center gap-2">
+              <PreviewLocaleSelect
+                id="invoice-designer-preview-locale-select"
+                value={previewState.selectedLocale}
+                onChange={(locale) => dispatch({ type: 'set-locale', locale })}
+                disabled={isPreviewRunning}
+              />
+              <Button
+                id="invoice-designer-preview-rerun-button"
+                variant="outline"
+                size="sm"
+                disabled={!previewData || isPreviewRunning}
+                onClick={() => setManualRunNonce((value) => value + 1)}
+                data-automation-id="invoice-designer-preview-rerun"
+              >
+                {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
+              </Button>
+            </div>
           </div>
 
           {authoritativePreview?.compile.status === 'error' && (
