@@ -879,13 +879,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
       const mailboxBase = this.getMailboxBasePath();
-      await this.httpClient.get(mailboxBase);
+      // Test mail-data access rather than reading the mailbox's user object:
+      // for shared mailboxes GET /users/{mailbox} requires directory
+      // permissions (User.Read.All) that the email OAuth scopes do not
+      // include, so it returns 403 even when mail access is fully authorized.
       await this.httpClient.get(`${mailboxBase}/mailFolders`, {
         params: { $top: 1, $select: 'id' },
       });
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message || 'Connection test failed' };
+      const failure = this.classifyGraphFailure(error);
+      const detail = [
+        failure.status,
+        failure.code !== String(failure.status) ? failure.code : undefined,
+        failure.requestId && `request-id=${failure.requestId}`,
+      ]
+        .filter(Boolean)
+        .join(' ');
+      return {
+        success: false,
+        error: detail
+          ? `${failure.message} (${detail})`
+          : failure.message || 'Connection test failed',
+      };
     }
   }
 
