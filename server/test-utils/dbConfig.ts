@@ -50,7 +50,7 @@ export function wireLocalTestDbEnv(): void {
   process.env.DB_USER_SERVER = 'app_user';
   process.env.DB_PASSWORD_ADMIN = readSecret('postgres_password') || 'postpass123';
   process.env.DB_PASSWORD_SERVER = readSecret('db_password_server') || 'postpass123';
-  process.env.NODE_ENV = 'test';
+  (process.env as Record<string, string>).NODE_ENV = 'test';
 }
 
 export function verifyTestDatabase(dbName: string): void {
