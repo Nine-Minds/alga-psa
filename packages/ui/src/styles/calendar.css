@@ -313,50 +313,54 @@ button[aria-selected="true"].rdp-day {
   left: 0;
   z-index: 50;
   margin-top: 0.25rem;
-  min-width: 12rem;
-  max-height: 15rem;
-  overflow-y: auto;
-  overflow-x: hidden;
+  width: 14rem;
+  padding: 0.5rem;
   background: rgb(var(--color-card));
   border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  scrollbar-width: thin;
-  scrollbar-color: rgb(var(--color-border-300)) transparent;
 }
 
-.calendar-month-year-dropdown::-webkit-scrollbar {
-  width: 6px;
+.calendar-month-year-yearnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
 }
 
-.calendar-month-year-dropdown::-webkit-scrollbar-track {
-  background: transparent;
+.calendar-month-year-yearlabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(var(--color-text-900));
 }
 
-.calendar-month-year-dropdown::-webkit-scrollbar-thumb {
-  background-color: rgb(var(--color-border-300));
-  border-radius: 3px;
-}
-
-.calendar-month-year-dropdown::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(var(--color-border-400));
+.calendar-month-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
 }
 
 .calendar-month-year-option {
   display: block;
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
   font-size: 0.875rem;
   color: rgb(var(--color-text-900));
   background: transparent;
   border: none;
+  border-radius: 0.375rem;
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
-.calendar-month-year-option:hover {
+.calendar-month-year-option:hover:not(:disabled) {
   background-color: var(--calendar-hover-bg);
+}
+
+.calendar-month-year-option:disabled {
+  color: var(--calendar-text-disabled);
+  cursor: not-allowed;
 }
 
 .calendar-month-year-option.selected {
