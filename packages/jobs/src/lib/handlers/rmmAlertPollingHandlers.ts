@@ -188,6 +188,110 @@ export async function rmmAlertReconciliationHandler(
   });
 }
 
+/**
+ * A provider's device sync. Registered rather than imported so this module
+ * stays free of per-provider dependencies — several live under ee/ and must
+ * not be reachable from a CE build.
+ */
+export interface RmmDeviceSyncStrategy {
+  /** Sync devices changed since `since`. Returns how many rows it touched. */
+  syncDevicesIncremental(input: {
+    tenantId: string;
+    integrationId: string;
+    since: Date;
+  }): Promise<{ devicesProcessed: number }>;
+}
+
+const deviceSyncStrategies = new Map<string, RmmDeviceSyncStrategy>();
+
+export function registerRmmDeviceSyncStrategy(provider: string, strategy: RmmDeviceSyncStrategy): void {
+  deviceSyncStrategies.set(provider, strategy);
+}
+
+export function getRmmDeviceSyncStrategy(provider: string): RmmDeviceSyncStrategy | undefined {
+  return deviceSyncStrategies.get(provider);
+}
+
+/**
+ * Where a delta starts. Mirrors the cursor NinjaOne's manual incremental sync
+ * already uses, so the scheduled and manual paths cannot drift: the last
+ * incremental, else the last full sync, else a bounded look-back so a first
+ * scheduled run does not attempt the entire estate.
+ */
+export function resolveDeviceSyncCursor(row: {
+  last_incremental_sync_at?: unknown;
+  last_full_sync_at?: unknown;
+}): Date {
+  const candidate = row.last_incremental_sync_at ?? row.last_full_sync_at;
+  if (candidate) {
+    const parsed = new Date(candidate as string);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date(Date.now() - 24 * 60 * 60 * 1000);
+}
+
+export async function rmmDeviceSyncHandler(
+  _jobId: string,
+  data: RmmDeviceSyncJobData
+): Promise<void> {
+  const adminKnex = await getAdminConnection();
+  const row = await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+    .where({ integration_id: data.integrationId })
+    .first('is_active', 'settings', 'last_incremental_sync_at', 'last_full_sync_at');
+
+  // Re-check eligibility per run: a schedule that outlives its integration
+  // between reconciliations must be a no-op, not an error.
+  const state = row ? parseRmmDeviceSyncState(row) : null;
+  if (!state?.active || !state.pollingEnabled) {
+    logger.info('[RmmDeviceSyncJob] Skipping: integration inactive or device sync disabled', data);
+    return;
+  }
+
+  const strategy = getRmmDeviceSyncStrategy(data.provider);
+  if (!strategy) {
+    logger.warn('[RmmDeviceSyncJob] No device sync strategy for provider; skipping', data);
+    return;
+  }
+
+  const since = resolveDeviceSyncCursor(row);
+  const startedAt = new Date();
+
+  try {
+    const result = await strategy.syncDevicesIncremental({
+      tenantId: data.tenantId,
+      integrationId: data.integrationId,
+      since,
+    });
+
+    await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+      .where({ integration_id: data.integrationId })
+      .update({
+        last_incremental_sync_at: startedAt,
+        last_sync_at: startedAt,
+        sync_status: 'completed',
+        sync_error: null,
+        updated_at: adminKnex.fn.now(),
+      });
+
+    logger.info('[RmmDeviceSyncJob] cycle complete', {
+      ...data,
+      since: since.toISOString(),
+      devicesProcessed: result.devicesProcessed,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Record the failure but leave the cursor alone, so the next run retries
+    // the same window rather than skipping whatever changed inside it.
+    await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
+      .where({ integration_id: data.integrationId })
+      .update({ sync_status: 'failed', sync_error: message, updated_at: adminKnex.fn.now() })
+      .catch(() => undefined);
+
+    logger.warn('[RmmDeviceSyncJob] cycle failed', { ...data, error: message });
+    throw error;
+  }
+}
+
 export async function huntressIncidentPollHandler(
   _jobId: string,
   data: HuntressIncidentPollJobData

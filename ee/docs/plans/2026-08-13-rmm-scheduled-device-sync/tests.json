@@ -185,7 +185,7 @@
   {
     "id": "T023",
     "description": "The delta cursor uses last_incremental_sync_at when present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -193,7 +193,7 @@
   {
     "id": "T024",
     "description": "The delta cursor falls back to last_full_sync_at when last_incremental_sync_at is null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -201,7 +201,7 @@
   {
     "id": "T025",
     "description": "The delta cursor falls back to now-24h when both timestamps are null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -598,7 +598,7 @@
   {
     "id": "T073",
     "description": "The device-sync handler is registered in the job registry under 'rmm-device-sync'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"

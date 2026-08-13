@@ -43,7 +43,7 @@
   {
     "id": "F006",
     "description": "Register an rmm-device-sync job handler with the IJobRunner registry so both pg-boss (CE) and Temporal (EE) can execute it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Existing machinery to reuse"
     ]
@@ -123,7 +123,7 @@
   {
     "id": "F016",
     "description": "The device-sync handler resolves the provider's sync strategy and no-ops with a warning when none is registered for that provider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
@@ -131,7 +131,7 @@
   {
     "id": "F017",
     "description": "A successful scheduled run sets rmm_integrations.last_incremental_sync_at",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]
@@ -139,7 +139,7 @@
   {
     "id": "F018",
     "description": "A successful scheduled run sets last_sync_at and sync_status = 'completed' and clears sync_error",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]
@@ -147,7 +147,7 @@
   {
     "id": "F019",
     "description": "A failed scheduled run records sync_error and sync_status = 'failed' without cancelling the schedule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]
@@ -155,7 +155,7 @@
   {
     "id": "F020",
     "description": "A scheduled run for a suspended tenant exits without calling the provider API",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -171,7 +171,7 @@
   {
     "id": "F022",
     "description": "Define a shared syncDevicesIncremental strategy interface that every provider strategy can implement",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
@@ -179,7 +179,7 @@
   {
     "id": "F023",
     "description": "The delta cursor resolves as last_incremental_sync_at ?? last_full_sync_at ?? now-24h, matching NinjaOne's existing semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
