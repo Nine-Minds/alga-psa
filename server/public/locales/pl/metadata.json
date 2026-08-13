@@ -222,7 +222,10 @@
       "title": "Akceptacje wycen"
     },
     "reports": {
-      "title": "Raporty"
+      "title": "Raporty",
+      "deferredRevenue": {
+        "title": "Przychód rozliczany w czasie"
+      }
     },
     "securitySettings": {
       "title": "Ustawienia bezpieczeństwa"

@@ -209,7 +209,10 @@
       "title": "Goedkeuringen van offertes"
     },
     "reports": {
-      "title": "Rapporten"
+      "title": "Rapporten",
+      "deferredRevenue": {
+        "title": "Uitgestelde omzet"
+      }
     },
     "securitySettings": {
       "title": "Beveiligingsinstellingen"

@@ -12,12 +12,12 @@ import type { ClientRollforward, CurrencySection } from './types';
  *
  * Connects to the worktree's dev database (DB_HOST / DB_PORT, defaulting to
  * the local dev stack), seeds a scratch tenant inside a single transaction,
- * and rolls the transaction back afterwards — nothing is persisted. Set
- * SKIP_DB_INTEGRATION_TESTS=true to skip when no database is reachable.
+ * and rolls the transaction back afterwards — nothing is persisted. The suite
+ * auto-skips when no dev-database secret is present (e.g. in CI, where there is
+ * no local stack), and SKIP_DB_INTEGRATION_TESTS=true forces a skip explicitly.
  */
 
 const repoRoot = path.resolve(__dirname, '../../../../../..');
-const SKIP = process.env.SKIP_DB_INTEGRATION_TESTS === 'true';
 
 function readSecret(name: string): string {
   try {
@@ -32,6 +32,11 @@ const dbPort = parseInt(process.env.DB_PORT || '6472', 10);
 const dbUser = process.env.DB_USER_SERVER || 'app_user';
 const dbPassword = readSecret('db_password_server');
 const dbName = process.env.DB_NAME_SERVER || 'server';
+
+// Skip when explicitly disabled or when the dev-database secret is absent —
+// the missing secret is the reliable "no reachable database" signal (CI, fresh
+// clones), so the suite skips gracefully instead of failing the run.
+const SKIP = process.env.SKIP_DB_INTEGRATION_TESTS === 'true' || !dbPassword;
 
 const TENANT = uuidv4();
 

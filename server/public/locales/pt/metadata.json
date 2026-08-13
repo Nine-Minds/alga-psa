@@ -228,7 +228,10 @@
       "title": "Layouts de cotação"
     },
     "reports": {
-      "title": "Relatórios"
+      "title": "Relatórios",
+      "deferredRevenue": {
+        "title": "Receita diferida"
+      }
     },
     "schedule": {
       "title": "Agendar"

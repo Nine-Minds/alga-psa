@@ -166,8 +166,8 @@
         "description": "Zamknięte zgłoszenia sprzętowe bez zarejestrowanych części — koszty, które warsztat mógł ponieść."
       },
       "deferredRevenue": {
-        "title": "Deferred Revenue",
-        "description": "Prepaid liability across clients: credit balances and unburned bucket hours by month."
+        "title": "Przychód rozliczany w czasie",
+        "description": "Zobowiązania z przedpłat u klientów: salda kredytów i niewykorzystane godziny z pakietów według miesiąca."
       }
     },
     "table": {
@@ -446,64 +446,64 @@
     }
   },
   "deferredRevenue": {
-    "title": "Deferred revenue / prepaid liability",
-    "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.",
-    "printSubtitle": "Month {{month}}",
-    "printTable": "Per-client rollforward",
-    "empty": "No prepaid liability for this month.",
+    "title": "Przychód rozliczany w czasie / zobowiązania z przedpłat",
+    "description": "Zestawienie zmian sald kredytów klientów oraz niewykorzystanych, przedpłaconych godzin z pakietów w podziale na klienta i miesiąc.",
+    "printSubtitle": "Miesiąc {{month}}",
+    "printTable": "Zestawienie zmian według klienta",
+    "empty": "Brak zobowiązań z przedpłat w tym miesiącu.",
     "actions": {
-      "csv": "Download CSV"
+      "csv": "Pobierz CSV"
     },
     "errors": {
-      "load": "Failed to load the deferred revenue report."
+      "load": "Nie udało się załadować raportu przychodów rozliczanych w czasie."
     },
     "summary": {
-      "totalLiability": "Total prepaid liability",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "delta": "Change vs prior month"
+      "totalLiability": "Łączne zobowiązania z przedpłat",
+      "credits": "Kredyty",
+      "hours": "Przedpłacone godziny",
+      "delta": "Zmiana względem poprzedniego miesiąca"
     },
     "table": {
-      "client": "Client",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "total": "Total closing",
-      "opening": "Opening",
-      "issued": "Issued",
-      "applied": "Applied",
-      "expired": "Expired",
-      "adjustments": "Adj.",
-      "closing": "Closing",
-      "currencyHeading": "Currency",
-      "noClients": "No clients with prepaid balances this month.",
-      "tenantTotal": "Tenant total"
+      "client": "Klient",
+      "credits": "Kredyty",
+      "hours": "Przedpłacone godziny",
+      "total": "Saldo końcowe łącznie",
+      "opening": "Saldo początkowe",
+      "issued": "Wystawione",
+      "applied": "Zastosowane",
+      "expired": "Wygasłe",
+      "adjustments": "Kor.",
+      "closing": "Saldo końcowe",
+      "currencyHeading": "Waluta",
+      "noClients": "Brak klientów z saldami przedpłat w tym miesiącu.",
+      "tenantTotal": "Suma dla tenanta"
     },
     "detail": {
-      "credits": "Credit balances",
-      "noCredits": "No credit entries.",
-      "date": "Issued",
-      "description": "Description",
-      "remaining": "Remaining",
-      "expires": "Expires",
+      "credits": "Salda kredytów",
+      "noCredits": "Brak wpisów kredytowych.",
+      "date": "Wystawiono",
+      "description": "Opis",
+      "remaining": "Pozostało",
+      "expires": "Wygasa",
       "qbo": "QBO",
-      "reachable": "Synced",
-      "notReachable": "Not in QBO",
-      "notReachableTitle": "Prepayment / project-deposit credits never export to QuickBooks — Alga is the system of record.",
-      "buckets": "Prepaid bucket hours",
-      "noBuckets": "No prepaid bucket periods.",
-      "line": "Line",
-      "period": "Period",
-      "included": "Included",
-      "used": "Used",
-      "value": "Value",
-      "feeSource": "Fee",
-      "rollover": "rollover",
-      "notBilled": "Not yet billed",
-      "billed": "Billed"
+      "reachable": "Zsynchronizowano",
+      "notReachable": "Brak w QBO",
+      "notReachableTitle": "Kredyty z przedpłat / zaliczek projektowych nigdy nie są eksportowane do QuickBooks — Alga jest systemem źródłowym.",
+      "buckets": "Przedpłacone godziny z pakietu",
+      "noBuckets": "Brak przedpłaconych okresów pakietu.",
+      "line": "Pozycja",
+      "period": "Okres",
+      "included": "Zawarte",
+      "used": "Wykorzystane",
+      "value": "Wartość",
+      "feeSource": "Opłata",
+      "rollover": "przeniesienie",
+      "notBilled": "Jeszcze nie rozliczone",
+      "billed": "Rozliczone"
     },
     "csv": {
-      "client": "Client",
-      "currency": "Currency"
+      "client": "Klient",
+      "currency": "Waluta"
     }
   }
 }

@@ -166,8 +166,8 @@
         "description": "Tickets matériel fermés sans pièces enregistrées — des coûts que l'atelier a peut-être absorbés."
       },
       "deferredRevenue": {
-        "title": "Deferred Revenue",
-        "description": "Prepaid liability across clients: credit balances and unburned bucket hours by month."
+        "title": "Produits différés",
+        "description": "Passif prépayé par client : soldes de crédits et heures de forfait d’heures non consommées par mois."
       }
     },
     "table": {
@@ -446,64 +446,64 @@
     }
   },
   "deferredRevenue": {
-    "title": "Deferred revenue / prepaid liability",
-    "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.",
-    "printSubtitle": "Month {{month}}",
-    "printTable": "Per-client rollforward",
-    "empty": "No prepaid liability for this month.",
+    "title": "Produits différés / passif prépayé",
+    "description": "Report par client et par mois des soldes de crédits clients et des heures de forfait d’heures prépayées non consommées.",
+    "printSubtitle": "Mois {{month}}",
+    "printTable": "Report par client",
+    "empty": "Aucun passif prépayé pour ce mois.",
     "actions": {
-      "csv": "Download CSV"
+      "csv": "Télécharger le CSV"
     },
     "errors": {
-      "load": "Failed to load the deferred revenue report."
+      "load": "Échec du chargement du rapport des produits différés."
     },
     "summary": {
-      "totalLiability": "Total prepaid liability",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "delta": "Change vs prior month"
+      "totalLiability": "Passif prépayé total",
+      "credits": "Crédits",
+      "hours": "Heures prépayées",
+      "delta": "Variation par rapport au mois précédent"
     },
     "table": {
       "client": "Client",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "total": "Total closing",
-      "opening": "Opening",
-      "issued": "Issued",
-      "applied": "Applied",
-      "expired": "Expired",
-      "adjustments": "Adj.",
-      "closing": "Closing",
-      "currencyHeading": "Currency",
-      "noClients": "No clients with prepaid balances this month.",
-      "tenantTotal": "Tenant total"
+      "credits": "Crédits",
+      "hours": "Heures prépayées",
+      "total": "Solde de clôture total",
+      "opening": "Ouverture",
+      "issued": "Émis",
+      "applied": "Appliqués",
+      "expired": "Expirés",
+      "adjustments": "Ajust.",
+      "closing": "Clôture",
+      "currencyHeading": "Devise",
+      "noClients": "Aucun client avec des soldes prépayés ce mois-ci.",
+      "tenantTotal": "Total du locataire"
     },
     "detail": {
-      "credits": "Credit balances",
-      "noCredits": "No credit entries.",
-      "date": "Issued",
+      "credits": "Soldes de crédits",
+      "noCredits": "Aucune entrée de crédit.",
+      "date": "Émis",
       "description": "Description",
-      "remaining": "Remaining",
-      "expires": "Expires",
+      "remaining": "Restant",
+      "expires": "Expire",
       "qbo": "QBO",
-      "reachable": "Synced",
-      "notReachable": "Not in QBO",
-      "notReachableTitle": "Prepayment / project-deposit credits never export to QuickBooks — Alga is the system of record.",
-      "buckets": "Prepaid bucket hours",
-      "noBuckets": "No prepaid bucket periods.",
-      "line": "Line",
-      "period": "Period",
-      "included": "Included",
-      "used": "Used",
-      "value": "Value",
-      "feeSource": "Fee",
-      "rollover": "rollover",
-      "notBilled": "Not yet billed",
-      "billed": "Billed"
+      "reachable": "Synchronisé",
+      "notReachable": "Absent de QBO",
+      "notReachableTitle": "Les crédits de prépaiement / d’acompte de projet ne sont jamais exportés vers QuickBooks — Alga fait foi.",
+      "buckets": "Heures de forfait d’heures prépayées",
+      "noBuckets": "Aucune période de forfait d’heures prépayée.",
+      "line": "Ligne",
+      "period": "Période",
+      "included": "Incluses",
+      "used": "Utilisées",
+      "value": "Valeur",
+      "feeSource": "Frais",
+      "rollover": "report",
+      "notBilled": "Pas encore facturé",
+      "billed": "Facturé"
     },
     "csv": {
       "client": "Client",
-      "currency": "Currency"
+      "currency": "Devise"
     }
   }
 }

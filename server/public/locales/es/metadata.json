@@ -216,7 +216,10 @@
       "title": "Diseños de cotización"
     },
     "reports": {
-      "title": "Informes"
+      "title": "Informes",
+      "deferredRevenue": {
+        "title": "Ingresos diferidos"
+      }
     },
     "search": {
       "title": "Buscar"
