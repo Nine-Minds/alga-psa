@@ -18,6 +18,7 @@ import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAda
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
+import { setEmailProviderConnectionStatus } from '@alga-psa/shared/services/email/emailProviderConnectionStatus';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -883,6 +884,34 @@ function buildProcessingMetadata(params: {
   };
 }
 
+// A fetch failure on the job's last attempt means the queue is about to
+// dead-letter it (mirrors the attempt arithmetic in
+// failUnifiedInboundEmailQueueJob): the provider has failed every retry, so
+// surface that on the provider itself instead of leaving it nominally healthy
+// while its mail silently stops. Transition events for alerting are emitted
+// by setEmailProviderConnectionStatus.
+async function recordMicrosoftFetchOutcome(
+  job: UnifiedInboundEmailQueueJob,
+  outcome: { status: 'connected'; errorMessage: null } | { status: 'error'; errorMessage: string }
+): Promise<void> {
+  if (job.provider !== 'microsoft') return;
+  try {
+    await setEmailProviderConnectionStatus({
+      providerId: job.providerId,
+      tenant: job.tenantId,
+      status: outcome.status,
+      errorMessage: outcome.errorMessage,
+    });
+  } catch (statusError: any) {
+    console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to record provider connection status', {
+      event: 'inbound_email_provider_status_update_failed',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      error: statusError?.message || String(statusError),
+    });
+  }
+}
+
 async function getInboundProviderGateReason(
   job: UnifiedInboundEmailQueueJob
 ): Promise<'inactive' | 'paused' | null> {
@@ -972,8 +1001,16 @@ export async function processUnifiedInboundEmailQueueJob(
         reason: `source_unavailable:${error.reason}`,
       };
     }
+    const maxAttempts = job.maxAttempts > 0 ? job.maxAttempts : 5;
+    if ((job.attempt || 0) + 1 >= maxAttempts) {
+      await recordMicrosoftFetchOutcome(job, {
+        status: 'error',
+        errorMessage: (error as any)?.message || String(error),
+      });
+    }
     throw error;
   }
+  await recordMicrosoftFetchOutcome(job, { status: 'connected', errorMessage: null });
 
   if (payloads.length === 0) {
     return {

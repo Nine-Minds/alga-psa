@@ -8,6 +8,7 @@ import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { persistIngressPointer } from './inboundEmailProducer';
 import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
+import { setEmailProviderConnectionStatus } from './emailProviderConnectionStatus';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -38,39 +39,6 @@ const DEFAULT_RECONCILE_MAX_MESSAGES = 50;
 const WEBHOOK_SILENT_RUN_THRESHOLD = 3;
 const SUBSCRIPTION_PROBE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-type MicrosoftEmailFailureCategory =
-  | 'authorization_missing'
-  | 'oauth_unauthorized'
-  | 'oauth_bad_request'
-  | 'tenant_configuration'
-  | 'webhook_configuration'
-  | 'maintenance_failure';
-
-function classifyMicrosoftEmailFailure(message: string | null): MicrosoftEmailFailureCategory {
-  const normalized = (message || '').toLowerCase();
-
-  if (normalized.includes('tokens not found') || normalized.includes('complete authorization')) {
-    return 'authorization_missing';
-  }
-  if (
-    normalized.includes('status code 401') ||
-    normalized.includes('invalid_grant') ||
-    normalized.includes('re-authorize') ||
-    normalized.includes('authorization appears invalid')
-  ) {
-    return 'oauth_unauthorized';
-  }
-  if (normalized.includes('status code 400')) {
-    return 'oauth_bad_request';
-  }
-  if (normalized.includes('concrete microsoft tenant id')) {
-    return 'tenant_configuration';
-  }
-  if (normalized.includes('webhook') && normalized.includes('url')) {
-    return 'webhook_configuration';
-  }
-  return 'maintenance_failure';
-}
 
 export class EmailWebhookMaintenanceService {
   
@@ -843,31 +811,7 @@ export class EmailWebhookMaintenanceService {
     status: 'connected' | 'error',
     errorMessage: string | null
   ): Promise<void> {
-    const knex = await getAdminConnection();
-    const scopedDb = tenantDb(knex, tenant);
-    const previous = await scopedDb.table('email_providers')
-      .where({ id: providerId })
-      .first('status');
-
-    await scopedDb.table('email_providers')
-      .where({ id: providerId })
-      .update({
-        status,
-        error_message: errorMessage,
-        updated_at: new Date().toISOString(),
-      });
-
-    if (previous?.status === status) return;
-
-    if (status === 'error') {
-      const failureCategory = classifyMicrosoftEmailFailure(errorMessage);
-      logger.error(
-        `event=microsoft_email_provider_unhealthy provider_id=${providerId} failure_category=${failureCategory}`
-      );
-      return;
-    }
-
-    logger.info(`event=microsoft_email_provider_recovered provider_id=${providerId}`);
+    await setEmailProviderConnectionStatus({ providerId, tenant, status, errorMessage });
   }
 
   private isResourceNotFoundError(error: any): boolean {
