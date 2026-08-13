@@ -3,8 +3,9 @@
  * has the inventory schema applied). Every test runs inside a transaction that is
  * ALWAYS rolled back, so the dev database is never mutated.
  *
- * Connects directly to Postgres (port 5472) using the wired server/.env.local
- * admin credentials. Run: (cd packages/inventory && npx vitest run src/lib/alloc.test.ts)
+ * Connects using the credentials resolved by src/test-utils/inventoryTestDatabase.ts
+ * (server/.env.local or env; skipped when none resolve — always in CI).
+ * Run: (cd packages/inventory && npx vitest run src/lib/alloc.test.ts)
  *
  * Covers (engine/DB level):
  *  - T009 soft allocation (reserved): available = on_hand - reserved; on_hand unchanged.
