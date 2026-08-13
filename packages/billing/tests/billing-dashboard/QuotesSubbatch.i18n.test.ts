@@ -277,7 +277,7 @@ describe('Quotes i18n wiring contract', () => {
     );
 
     expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
-    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toMatch(/const \{ t(?:, \w+)* \} = useTranslation\('msp\/quotes'\);/);
 
     const keyChecks = [
       'templateEditor.title',
