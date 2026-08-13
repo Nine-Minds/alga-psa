@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { runWithTenant } from '@alga-psa/db';
 import { OnlineMeetingModel } from '@alga-psa/clients/models';
 import { fetchAndPersistMeetingArtifacts } from '@alga-psa/clients/lib/onlineMeetingArtifactCapture';
 import { buildTeamsArtifactCaptureDeps } from '@alga-psa/scheduling/actions';
@@ -83,14 +84,19 @@ export async function processTeamsMeetingArtifactNotification(
     return;
   }
 
-  const meeting = await OnlineMeetingModel.getByProviderMeetingId(providerMeetingId, data.tenantId);
-  if (!meeting || meeting.status === 'cancelled') {
-    return;
-  }
+  // pg-boss handlers run without ambient tenant context (unlike the Temporal
+  // worker path); the storage layer under fetchAndPersistMeetingArtifacts reads
+  // it from AsyncLocalStorage, so set it here at the job boundary.
+  await runWithTenant(data.tenantId, async () => {
+    const meeting = await OnlineMeetingModel.getByProviderMeetingId(providerMeetingId, data.tenantId);
+    if (!meeting || meeting.status === 'cancelled') {
+      return;
+    }
 
-  const captureDeps = await buildTeamsArtifactCaptureDeps();
-  await fetchAndPersistMeetingArtifacts({
-    tenantId: data.tenantId,
-    meetingId: meeting.meeting_id,
-  }, captureDeps);
+    const captureDeps = await buildTeamsArtifactCaptureDeps();
+    await fetchAndPersistMeetingArtifacts({
+      tenantId: data.tenantId,
+      meetingId: meeting.meeting_id,
+    }, captureDeps);
+  });
 }
