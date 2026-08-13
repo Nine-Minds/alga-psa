@@ -253,6 +253,7 @@
     "selectLanguage": "Select Language",
     "changeLanguage": "Change Language",
     "currentLanguage": "Current Language",
+    "previewLanguage": "Preview language",
     "preference": {
       "label": "Language Preference",
       "helper": "Select your preferred language for the interface and email notifications. Overrides the organization and client portal defaults for you.",

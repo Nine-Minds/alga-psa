@@ -163,6 +163,7 @@
     "selectLanguage": "Selecteer taal",
     "changeLanguage": "Taal wijzigen",
     "currentLanguage": "Huidige taal",
+    "previewLanguage": "Voorbeeldtaal",
     "preference": {
       "label": "Taalvoorkeur",
       "helper": "Selecteer uw voorkeurstaal voor de interface en e-mailmeldingen",

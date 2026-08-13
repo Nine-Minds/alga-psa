@@ -163,6 +163,7 @@
     "selectLanguage": "Sélectionner une langue",
     "changeLanguage": "Changer de langue",
     "currentLanguage": "Langue actuelle",
+    "previewLanguage": "Langue de l’aperçu",
     "preference": {
       "label": "Préférence de langue",
       "helper": "Sélectionnez votre langue préférée pour l'interface et les notifications par e-mail",

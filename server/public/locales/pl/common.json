@@ -236,6 +236,7 @@
     "selectLanguage": "Wybierz język",
     "changeLanguage": "Zmień język",
     "currentLanguage": "Aktualny język",
+    "previewLanguage": "Język podglądu",
     "preference": {
       "label": "Preferencje językowe",
       "helper": "Wybierz preferowany język interfejsu i powiadomień e-mail",

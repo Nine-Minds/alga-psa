@@ -23,7 +23,9 @@ export function PreviewLocaleSelect({
   disabled = false,
   id = 'designer-preview-locale-select',
 }: PreviewLocaleSelectProps) {
-  const { t } = useTranslation('msp/invoicing');
+  // `common` rather than a feature namespace: this control ships in the
+  // invoice, quote and document template editors, which load different packs.
+  const { t } = useTranslation('common');
   const options = useMemo(
     () =>
       filterPseudoLocales(LOCALE_CONFIG.supportedLocales).map((locale) => ({
@@ -41,7 +43,7 @@ export function PreviewLocaleSelect({
       onValueChange={(locale) => onChange(locale as SupportedLocale)}
       disabled={disabled}
       className="min-w-[160px]"
-      placeholder={t('designer.workspace.preview.language', { defaultValue: 'Preview language' })}
+      placeholder={t('language.previewLanguage', { defaultValue: 'Preview language' })}
     />
   );
 }
