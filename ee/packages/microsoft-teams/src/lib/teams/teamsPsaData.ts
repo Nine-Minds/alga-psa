@@ -217,11 +217,10 @@ export async function getTeamsTicketCreationDefaults(params: {
     return { boardId: null, statusId: null };
   }
 
+  // Board-scoped only: ticket creation validates status.board_id === boardId
+  // strictly (shared/models/ticketModel), so a global status would be rejected.
   const status = (await db.table('statuses')
-    .where({ status_type: 'ticket', is_closed: false })
-    .where((builder: any) => {
-      builder.where('board_id', boardId).orWhereNull('board_id');
-    })
+    .where({ status_type: 'ticket', is_closed: false, board_id: boardId })
     .select('status_id')
     .orderBy([
       { column: 'is_default', order: 'desc' },
