@@ -111,6 +111,7 @@ const persistedReaderExclusions = new Set([
 // check so the inventory remains an accurate record of its point in time.
 const billingCycleAlignmentPostInventoryRefs = new Set([
   'packages/billing/src/services/quoteConversionService.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
@@ -132,6 +133,13 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
+  // Deferred-revenue reporting reads persisted service-period boundaries to
+  // value prepaid bucket liability; it landed after the pass-0 snapshot.
+  'packages/reporting/src/actions/report-actions/deferred-revenue/compose.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/fee.test.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/fee.ts',
+  'packages/reporting/src/actions/report-actions/deferred-revenue/loaders.ts',
   // Project-billing wave tests (feature/project-billing) landed after the
   // pass-0 snapshot and reference service-period fields in fixtures/assertions.
   'packages/billing/src/actions/accountingExportActions.test.ts',
