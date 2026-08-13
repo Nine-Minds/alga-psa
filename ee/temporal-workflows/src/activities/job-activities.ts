@@ -131,6 +131,20 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
   registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  // Teams meeting recording/transcript capture, enqueued by the app's
+  // /api/teams/webhooks/recordings route when Graph notifies about a new
+  // artifact. Same constraint as the cleanup job: the handler imports
+  // src-consumed vertical packages (@alga-psa/clients, @alga-psa/scheduling),
+  // so it executes server-side via the event bus.
+  registerJobHandlerForActivities(
+    'process-teams-meeting-artifact-notification',
+    forwardJobToServer('process-teams-meeting-artifact-notification'),
+  );
+  // Invoice bundling/delivery, enqueued from billing UI actions via the shared
+  // enqueueImmediateJob seam. The handlers live server-side (StorageService,
+  // PDF generation), so the worker forwards them like the jobs above.
+  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
+  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /

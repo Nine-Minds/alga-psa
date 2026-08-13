@@ -155,14 +155,17 @@ export async function initializeApp() {
     registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     // Let vertical packages (billing, client-portal) enqueue jobs without
     // importing @alga-psa/jobs (which would create a vertical -> jobs cycle).
+    // Routed through the runner seam (Temporal on EE, pg-boss on CE), not the
+    // legacy pg-boss-only JobScheduler: both runners create the `jobs` record
+    // and inject jobServiceId, so step-progress handlers keep working.
     registerJobEnqueuer(async (jobName, data) => {
-      const jobService = await JobService.create();
-      const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
-        jobName,
-        data as Parameters<typeof jobService.createAndScheduleJob>[1],
-        'immediate',
-      );
-      return { jobId: jobRecord.id as string, scheduledJobId };
+      const runner = await initializeJobRunner();
+      const userId =
+        typeof (data as Record<string, unknown>).user_id === 'string'
+          ? ((data as Record<string, unknown>).user_id as string)
+          : undefined;
+      const result = await runner.scheduleJob(jobName, data as never, userId ? { userId } : undefined);
+      return { jobId: result.jobId, scheduledJobId: result.externalId ?? null };
     });
     // Converge the accounting-sync schedule the moment a tenant connects or
     // disconnects QuickBooks, so connected-only scheduling doesn't wait for the
