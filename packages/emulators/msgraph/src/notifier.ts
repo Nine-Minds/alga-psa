@@ -1,6 +1,17 @@
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { signBotFrameworkJwt } from './botFramework';
-import type { GraphMessage, GraphSubscription, InboundBotActivityInput, MsGraphCore } from './core';
+import type {
+  GraphMeetingArtifact,
+  GraphMessage,
+  GraphSubscription,
+  InboundBotActivityInput,
+  MsGraphCore,
+} from './core';
+
+const ARTIFACT_SUBSCRIPTION_RESOURCES = {
+  recording: 'communications/onlineMeetings/getAllRecordings',
+  transcript: 'communications/onlineMeetings/getAllTranscripts',
+} as const;
 
 /**
  * Webhook I/O lives here, outside the pure core: Graph's subscription
@@ -22,9 +33,82 @@ export async function validateNotificationUrl(notificationUrl: string, validatio
 }
 
 export async function deliverNotifications(core: MsGraphCore, message: GraphMessage, env: HostEnv): Promise<void> {
+  // Mail notifications must not reach meeting-artifact subscriptions: real Graph
+  // scopes change notifications to the subscribed resource.
+  const artifactResources = new Set<string>(Object.values(ARTIFACT_SUBSCRIPTION_RESOURCES));
   await Promise.all(
-    core.activeSubscriptions().map((subscription) => deliverOne(subscription, message, env)),
+    core.activeSubscriptions()
+      .filter((subscription) => !artifactResources.has(subscription.resource))
+      .map((subscription) => deliverOne(subscription, message, env)),
   );
+}
+
+export interface ArtifactNotificationDelivery {
+  subscriptionId: string;
+  notificationUrl: string;
+  delivered: boolean;
+  status: number | null;
+  error?: string;
+}
+
+/**
+ * Push a Graph change notification for a new recording/transcript at every live
+ * getAllRecordings/getAllTranscripts subscription, the way real Graph notifies
+ * the app's /api/teams/webhooks/recordings endpoint. The resource string uses
+ * the onlineMeetings('{id}')/kind('{id}') shape the app's parser expects.
+ */
+export async function deliverMeetingArtifactNotifications(
+  core: MsGraphCore,
+  artifact: GraphMeetingArtifact,
+  env: HostEnv,
+): Promise<ArtifactNotificationDelivery[]> {
+  const resource = ARTIFACT_SUBSCRIPTION_RESOURCES[artifact.kind];
+  const kindSegment = artifact.kind === 'recording' ? 'recordings' : 'transcripts';
+  const subscriptions = core.activeSubscriptions().filter((subscription) => subscription.resource === resource);
+
+  return Promise.all(subscriptions.map(async (subscription): Promise<ArtifactNotificationDelivery> => {
+    const body = {
+      value: [
+        {
+          subscriptionId: subscription.id,
+          clientState: subscription.clientState,
+          changeType: 'created',
+          resource: `communications/onlineMeetings('${artifact.meetingId}')/${kindSegment}('${artifact.id}')`,
+          resourceData: {
+            id: artifact.id,
+            '@odata.id': `communications/onlineMeetings('${artifact.meetingId}')/${kindSegment}('${artifact.id}')`,
+          },
+        },
+      ],
+    };
+    try {
+      const response = await fetch(subscription.notificationUrl, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: response.ok,
+        status: response.status,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      env.log('msgraph artifact notification delivery failed', {
+        subscriptionId: subscription.id,
+        error: message,
+      });
+      return {
+        subscriptionId: subscription.id,
+        notificationUrl: subscription.notificationUrl,
+        delivered: false,
+        status: null,
+        error: message,
+      };
+    }
+  }));
 }
 
 async function deliverOne(subscription: GraphSubscription, message: GraphMessage, env: HostEnv): Promise<void> {

@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { MsGraphCore } from './core';
-import { deliverInboundBotActivity, deliverNotifications } from './notifier';
+import {
+  deliverInboundBotActivity,
+  deliverMeetingArtifactNotifications,
+  deliverNotifications,
+} from './notifier';
 
 const directoryUserParams = {
   id: z.string().optional(),
@@ -130,6 +134,51 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
         .optional(),
     }),
     run: (input) => core.addChat(input),
+  });
+
+  reg.seeder({
+    name: 'meeting',
+    description:
+      'Create an online meeting directly (as if the app created it via Graph), returning its id and join URL for artifact seeding',
+    params: z.object({
+      organizerUserId: z.string().optional(),
+      subject: z.string().optional(),
+      startDateTime: z.string().optional(),
+      endDateTime: z.string().optional(),
+    }),
+    run: ({ organizerUserId, subject, startDateTime, endDateTime }) =>
+      core.createOnlineMeeting(organizerUserId ?? 'emulated-organizer', { subject, startDateTime, endDateTime }),
+  });
+
+  const meetingArtifactParams = z.object({
+    meetingId: z.string(),
+    id: z.string().optional(),
+    content: z.string().optional(),
+    createdDateTime: z.string().optional(),
+  });
+
+  reg.seeder({
+    name: 'meeting-recording',
+    description:
+      'Add a recording to an online meeting and push Graph change notifications to live getAllRecordings subscriptions',
+    params: meetingArtifactParams,
+    run: async ({ meetingId, id, content, createdDateTime }) => {
+      const artifact = core.addMeetingArtifact('recording', meetingId, { id, content, createdDateTime });
+      const deliveries = await deliverMeetingArtifactNotifications(core, artifact, core.env);
+      return { artifact, deliveries };
+    },
+  });
+
+  reg.seeder({
+    name: 'meeting-transcript',
+    description:
+      'Add a VTT transcript to an online meeting and push Graph change notifications to live getAllTranscripts subscriptions',
+    params: meetingArtifactParams,
+    run: async ({ meetingId, id, content, createdDateTime }) => {
+      const artifact = core.addMeetingArtifact('transcript', meetingId, { id, content, createdDateTime });
+      const deliveries = await deliverMeetingArtifactNotifications(core, artifact, core.env);
+      return { artifact, deliveries };
+    },
   });
 
   reg.seeder({
@@ -273,6 +322,25 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     description: 'Teams chats with their messages',
     get: () =>
       [...core.chats.values()].map((chat) => ({ ...chat, messages: core.chatMessages.get(chat.id) ?? [] })),
+  });
+
+  reg.stateView({
+    name: 'online-meetings',
+    description: 'Online meetings with their recordings and transcripts',
+    get: () =>
+      [...core.onlineMeetings.values()].map((meeting) => ({
+        ...meeting,
+        artifacts: (core.meetingArtifacts.get(meeting.id) ?? []).map(({ content, ...artifact }) => ({
+          ...artifact,
+          contentBytes: content.length,
+        })),
+      })),
+  });
+
+  reg.stateView({
+    name: 'calendar-events',
+    description: 'Calendar events created through Graph /users/{id}/events',
+    get: () => [...core.calendarEvents.values()],
   });
 
   reg.stateView({

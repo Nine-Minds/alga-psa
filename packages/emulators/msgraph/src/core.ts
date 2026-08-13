@@ -93,6 +93,44 @@ export interface GraphChatMessage {
   body: { contentType: string; content: string };
 }
 
+export interface GraphOnlineMeeting {
+  id: string;
+  subject: string | null;
+  joinWebUrl: string;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  /** Path segment the meeting was created under (organizer UPN or object id). */
+  organizerUserId: string;
+  createdDateTime: string;
+}
+
+export interface GraphCalendarEvent {
+  id: string;
+  subject: string | null;
+  organizerUserId: string;
+  start: unknown;
+  end: unknown;
+  isOnlineMeeting: boolean;
+  onlineMeeting: { joinUrl: string } | null;
+  /** The auto-created online meeting behind an isOnlineMeeting event. */
+  onlineMeetingId: string | null;
+  body: unknown;
+  attendees: unknown[];
+  createdDateTime: string;
+}
+
+export type MeetingArtifactKind = 'recording' | 'transcript';
+
+export interface GraphMeetingArtifact {
+  id: string;
+  meetingId: string;
+  kind: MeetingArtifactKind;
+  createdDateTime: string;
+  /** VTT text for transcripts; stand-in payload for recordings. */
+  content: string;
+  contentType: string;
+}
+
 /** A conversation created through the Bot Framework connector (proactive send). */
 export interface BotConversation {
   id: string;
@@ -267,6 +305,10 @@ export class MsGraphCore implements EmulatorCore {
   readonly teams = new Map<string, GraphTeam>();
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly calendarEvents = new Map<string, GraphCalendarEvent>();
+  readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
+  /** Keyed by meeting id; holds both recordings and transcripts. */
+  readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
   readonly activityNotifications: ActivityNotificationRecord[] = [];
@@ -292,6 +334,9 @@ export class MsGraphCore implements EmulatorCore {
     this.teams.clear();
     this.chats.clear();
     this.chatMessages.clear();
+    this.calendarEvents.clear();
+    this.onlineMeetings.clear();
+    this.meetingArtifacts.clear();
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
     this.activityNotifications.length = 0;
@@ -722,6 +767,138 @@ export class MsGraphCore implements EmulatorCore {
     return this.chatMessages.get(id) ?? [];
   }
 
+  // --- Meetings (calendar events, onlineMeetings, recordings/transcripts) ---
+
+  createOnlineMeeting(
+    organizerUserId: string,
+    input: { subject?: string | null; startDateTime?: string | null; endDateTime?: string | null } = {},
+  ): GraphOnlineMeeting {
+    const id = this.newId('meeting');
+    const meeting: GraphOnlineMeeting = {
+      id,
+      subject: input.subject ?? null,
+      // Shaped like a real Teams join link; the app stores and displays it opaquely.
+      joinWebUrl: `https://teams.microsoft.com/l/meetup-join/19%3ameeting_${id}/0`,
+      startDateTime: input.startDateTime ?? null,
+      endDateTime: input.endDateTime ?? null,
+      organizerUserId,
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.onlineMeetings.set(id, meeting);
+    return meeting;
+  }
+
+  getOnlineMeeting(meetingId: string): GraphOnlineMeeting {
+    const meeting = this.onlineMeetings.get(meetingId);
+    if (!meeting) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return meeting;
+  }
+
+  deleteOnlineMeeting(meetingId: string): void {
+    this.getOnlineMeeting(meetingId);
+    this.onlineMeetings.delete(meetingId);
+    this.meetingArtifacts.delete(meetingId);
+  }
+
+  findOnlineMeetingsByJoinUrl(joinWebUrl: string): GraphOnlineMeeting[] {
+    return [...this.onlineMeetings.values()].filter((meeting) => meeting.joinWebUrl === joinWebUrl);
+  }
+
+  createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    const isOnlineMeeting = body.isOnlineMeeting === true;
+    const subject = typeof body.subject === 'string' ? body.subject : null;
+    const start = (body.start as { dateTime?: string } | undefined) ?? null;
+    const end = (body.end as { dateTime?: string } | undefined) ?? null;
+    const meeting = isOnlineMeeting
+      ? this.createOnlineMeeting(organizerUserId, {
+          subject,
+          startDateTime: start?.dateTime ?? null,
+          endDateTime: end?.dateTime ?? null,
+        })
+      : null;
+    const event: GraphCalendarEvent = {
+      id: this.newId('event'),
+      subject,
+      organizerUserId,
+      start,
+      end,
+      isOnlineMeeting,
+      onlineMeeting: meeting ? { joinUrl: meeting.joinWebUrl } : null,
+      onlineMeetingId: meeting?.id ?? null,
+      body: body.body ?? null,
+      attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      createdDateTime: this.env.clock.now().toISOString(),
+    };
+    this.calendarEvents.set(event.id, event);
+    return event;
+  }
+
+  getCalendarEvent(eventId: string): GraphCalendarEvent {
+    const event = this.calendarEvents.get(eventId);
+    if (!event) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  }
+
+  updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
+    const event = this.getCalendarEvent(eventId);
+    if (typeof patch.subject === 'string') event.subject = patch.subject;
+    if (patch.start !== undefined) event.start = patch.start;
+    if (patch.end !== undefined) event.end = patch.end;
+    if (patch.body !== undefined) event.body = patch.body;
+    if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    return event;
+  }
+
+  deleteCalendarEvent(eventId: string): void {
+    const event = this.getCalendarEvent(eventId);
+    this.calendarEvents.delete(eventId);
+    if (event.onlineMeetingId) {
+      this.onlineMeetings.delete(event.onlineMeetingId);
+      this.meetingArtifacts.delete(event.onlineMeetingId);
+    }
+  }
+
+  addMeetingArtifact(
+    kind: MeetingArtifactKind,
+    meetingId: string,
+    input: { id?: string; content?: string; createdDateTime?: string } = {},
+  ): GraphMeetingArtifact {
+    this.getOnlineMeeting(meetingId);
+    const artifact: GraphMeetingArtifact = {
+      id: input.id ?? this.newId(kind),
+      meetingId,
+      kind,
+      createdDateTime: input.createdDateTime ?? this.env.clock.now().toISOString(),
+      content:
+        input.content ??
+        (kind === 'transcript'
+          ? 'WEBVTT\n\n00:00:00.000 --> 00:00:04.000\n<v Emulated Speaker>Hello from the algasim transcript.'
+          : `algasim-recording-bytes:${meetingId}`),
+      contentType: kind === 'transcript' ? 'text/vtt' : 'video/mp4',
+    };
+    const list = this.meetingArtifacts.get(meetingId) ?? [];
+    list.push(artifact);
+    this.meetingArtifacts.set(meetingId, list);
+    return artifact;
+  }
+
+  listMeetingArtifacts(kind: MeetingArtifactKind, meetingId: string): GraphMeetingArtifact[] {
+    this.getOnlineMeeting(meetingId);
+    return (this.meetingArtifacts.get(meetingId) ?? []).filter((artifact) => artifact.kind === kind);
+  }
+
+  getMeetingArtifact(kind: MeetingArtifactKind, meetingId: string, artifactId: string): GraphMeetingArtifact {
+    const artifact = this.listMeetingArtifacts(kind, meetingId).find((candidate) => candidate.id === artifactId);
+    if (!artifact) {
+      throw new GraphApiError(404, { error: { code: 'ResourceNotFound' } });
+    }
+    return artifact;
+  }
+
   // --- Bot Framework connector ---
 
   createConversation(input: { isGroup?: boolean; tenantId?: string; members?: unknown[] }): BotConversation {
@@ -837,5 +1014,17 @@ export function publicTeam(team: GraphTeam): Omit<GraphTeam, 'channels'> {
 /** Vendor-surface representation: the owning client id stays internal. */
 export function publicSubscription(subscription: GraphSubscription): Omit<GraphSubscription, 'clientId'> {
   const { clientId: _clientId, ...rest } = subscription;
+  return rest;
+}
+
+/** Vendor-surface event: the linked online-meeting id stays internal. */
+export function publicEvent(event: GraphCalendarEvent): Omit<GraphCalendarEvent, 'organizerUserId' | 'onlineMeetingId'> {
+  const { organizerUserId: _organizer, onlineMeetingId: _meetingId, ...rest } = event;
+  return rest;
+}
+
+/** Vendor-surface online meeting: the organizer path segment stays internal. */
+export function publicOnlineMeeting(meeting: GraphOnlineMeeting): Omit<GraphOnlineMeeting, 'organizerUserId'> {
+  const { organizerUserId: _organizer, ...rest } = meeting;
   return rest;
 }

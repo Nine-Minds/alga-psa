@@ -2,7 +2,7 @@ import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicSubscription, publicTeam } from './core';
+import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
 import { deliverNotifications, validateNotificationUrl } from './notifier';
@@ -210,6 +210,69 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   graph.get('/chats/:chatId/messages', (req, res) => {
     res.json({ value: core.listChatMessages(String(req.params.chatId)) });
   });
+
+  // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
+  // (creation probe, join-URL resolution), and recording/transcript artifacts.
+  graph.post('/users/:userId/events', (req, res) => {
+    res.status(201).json(publicEvent(core.createCalendarEvent(String(req.params.userId), req.body ?? {})));
+  });
+
+  graph.patch('/users/:userId/events/:eventId', (req, res) => {
+    res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
+  });
+
+  graph.delete('/users/:userId/events/:eventId', (req, res) => {
+    core.deleteCalendarEvent(String(req.params.eventId));
+    res.status(204).end();
+  });
+
+  graph.get('/users/:userId/onlineMeetings', (req, res) => {
+    const filter = String(req.query.$filter ?? '');
+    const match = filter.match(/JoinWebUrl\s+eq\s+'(.+)'$/i);
+    if (!match) {
+      res.json({ value: [...core.onlineMeetings.values()].map(publicOnlineMeeting) });
+      return;
+    }
+    const joinWebUrl = match[1].replace(/''/g, "'");
+    res.json({ value: core.findOnlineMeetingsByJoinUrl(joinWebUrl).map(publicOnlineMeeting) });
+  });
+
+  graph.post('/users/:userId/onlineMeetings', (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const meeting = core.createOnlineMeeting(String(req.params.userId), {
+      subject: typeof body.subject === 'string' ? body.subject : null,
+      startDateTime: typeof body.startDateTime === 'string' ? body.startDateTime : null,
+      endDateTime: typeof body.endDateTime === 'string' ? body.endDateTime : null,
+    });
+    res.status(201).json(publicOnlineMeeting(meeting));
+  });
+
+  graph.get('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    res.json(publicOnlineMeeting(core.getOnlineMeeting(String(req.params.meetingId))));
+  });
+
+  graph.delete('/users/:userId/onlineMeetings/:meetingId', (req, res) => {
+    core.deleteOnlineMeeting(String(req.params.meetingId));
+    res.status(204).end();
+  });
+
+  for (const kind of ['recording', 'transcript'] as const) {
+    const segment = kind === 'recording' ? 'recordings' : 'transcripts';
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}`, (req, res) => {
+      res.json({
+        value: core.listMeetingArtifacts(kind, String(req.params.meetingId)).map((artifact) => ({
+          id: artifact.id,
+          createdDateTime: artifact.createdDateTime,
+        })),
+      });
+    });
+
+    graph.get(`/users/:userId/onlineMeetings/:meetingId/${segment}/:artifactId/content`, (req, res) => {
+      const artifact = core.getMeetingArtifact(kind, String(req.params.meetingId), String(req.params.artifactId));
+      res.type(artifact.contentType).send(artifact.content);
+    });
+  }
 
   graph.post('/applications', (req, res) => {
     res.status(201).json(core.createApplication(req.body ?? {}));

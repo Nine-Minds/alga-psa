@@ -200,7 +200,52 @@ The bot answers an unlinked Teams identity with the "Teams sign-in required"
 card. Linking a Teams user to a PSA user happens through Microsoft SSO sign-in,
 which the emulator does not serve yet (no OIDC discovery document on the login
 surface), so richer command replies still need a tenant whose users are already
-linked.
+linked. For local testing, plant the link directly — one row in
+`user_auth_accounts` (`provider='microsoft'`, `provider_account_id=<the
+teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
+
+### Teams meetings and recordings
+
+The msgraph emulator also serves the meetings surface the Teams add-on uses:
+calendar events (`POST/PATCH/DELETE /users/{upn}/events`, an `isOnlineMeeting`
+event auto-creates an online meeting with a join URL), `onlineMeetings`
+(creation probe, join-URL `$filter` resolution), recordings/transcripts lists
+and `/content` endpoints, and `getAllRecordings`/`getAllTranscripts`
+subscriptions with Graph-style change notifications.
+
+The app reaches it through the same `TEAMS_EMULATOR_MODE` gate (the meetings
+module resolves Graph URLs via `getMicrosoftGraphBaseUrl()`), plus one extra
+var so the artifact webhook is reachable from inside the container — plain
+http is accepted only while the emulator gate is on:
+
+```
+TEAMS_RECORDINGS_WEBHOOK_URL=http://host.docker.internal:3000/api/teams/webhooks/recordings
+```
+
+The subscription + artifact loop, end to end:
+
+```bash
+# The app's own renewal job creates both artifact subscriptions against the
+# emulator (validation handshake included). Locally on pg-boss, enqueue it:
+#   INSERT INTO pgboss.job (name, data) VALUES
+#     ('renew-teams-meeting-artifact-subscriptions', '{"tenantId":"<tenant>"}');
+# (`teams_integrations` must be active with default_meeting_organizer_upn set.)
+
+# A meeting the app knows about, then a recording landing on it:
+algasim seed msgraph meeting -p '{"organizerUserId":"organizer@example.test","subject":"Standup"}'
+algasim seed msgraph meeting-recording -p '{"meetingId":"<id from above>"}'
+algasim seed msgraph meeting-transcript -p '{"meetingId":"<id>"}'
+
+algasim state msgraph online-meetings       # meetings + artifact inventory
+algasim state msgraph subscriptions         # who is listening
+```
+
+`meeting-recording`/`meeting-transcript` return the webhook delivery status
+inline. For the app to fetch-and-persist, its `online_meetings` row must match
+the emulator meeting id (`provider_meeting_id`) and have a `created_by` —
+meetings created through the app get both automatically; a hand-planted row
+needs them set. On success the meeting advances to `recording_ready`, with
+recordings stored as files and transcripts as documents.
 
 ## Drive them
 
