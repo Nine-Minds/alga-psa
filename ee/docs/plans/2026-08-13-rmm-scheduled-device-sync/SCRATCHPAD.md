@@ -109,6 +109,29 @@ The mapper already reads `device.security`, `device.operating_system` and
 `device.network_interfaces`, so the payload is richer than what is mapped —
 worth re-reading the API response before concluding a field is unavailable.
 
+## F027 answered: Level.io has no server-side delta
+
+`levelApiClient.listDevices()` accepts only `group_id` and `ancestor_group_id`.
+`starting_after` is a pagination cursor by item id, not a time filter, and
+`limit` caps at 100.
+
+So an incremental Level.io sync is the same page walk as a full sync, filtered
+on `last_seen_at` after the fetch. It cuts ingest writes and mapping work, **not
+API reads**. Do not treat it as a cheap call when choosing a cadence — the
+interval floor matters more for Level.io than for NinjaOne.
+
+Filter semantics chosen (pinned by tests):
+- inclusive at the cursor, so a device changing in the same instant the previous
+  run recorded is not dropped;
+- a device with null or unparseable `last_seen_at` is always considered, so
+  absent data cannot exclude a device from every incremental run forever.
+
+Also spotted while reading the client: `listUpdates({ status: 'available' |
+'installed' })` already exists and the full sync uses it for
+`pendingOsPatches`. That is the likely source for the missing
+`pending_patches` / `pending_software_patches` / `failed_patches` columns
+(F049-F051) — check its payload before concluding Level.io does not expose them.
+
 ## Decisions
 
 - **All five providers in scope** (user decision, 2026-08-13). Note tacticalrmm

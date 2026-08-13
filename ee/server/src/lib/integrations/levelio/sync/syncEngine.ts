@@ -186,14 +186,32 @@ export async function runLevelIoScopeSync(args: LevelIoSyncArgs, deps: LevelIoSy
  * Throws on sync-level failure (after recording status + emitting RMM_SYNC_FAILED);
  * per-device failures are collected in the returned result's errors[].
  */
-export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyncDeps): Promise<RmmSyncResult> {
+/**
+ * Options for the device-list sync. `since` turns it into an incremental run.
+ *
+ * Level.io's /v2/devices endpoint takes only group filters — `starting_after`
+ * is a pagination cursor by item id, not a time filter — so an incremental
+ * sync still walks every page and filters here. That cuts write volume and
+ * ingestion work, not the number of API reads.
+ */
+export interface LevelIoDeviceListSyncOptions {
+  syncType?: 'full' | 'incremental';
+  since?: Date;
+}
+
+export async function runLevelIoFullSync(
+  args: LevelIoSyncArgs,
+  deps: LevelIoSyncDeps,
+  options: LevelIoDeviceListSyncOptions = {}
+): Promise<RmmSyncResult> {
+  const syncType = options.syncType ?? 'full';
   const startedAt = new Date().toISOString();
   const ingest = deps.ingest ?? ingestNormalizedRmmDeviceSnapshot;
 
   await emitSyncEvent(deps, {
     eventName: 'RMM_SYNC_STARTED',
     tenant: args.tenant,
-    payload: { integration_id: args.integrationId, provider: PROVIDER, sync_type: 'full', started_at: startedAt },
+    payload: { integration_id: args.integrationId, provider: PROVIDER, sync_type: syncType, started_at: startedAt },
   });
 
   try {
@@ -229,7 +247,17 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
     let skippedNoMapping = 0;
     const errors: string[] = [];
 
-    for (const device of devices) {
+    // A device with no last_seen_at is always considered: absent data must not
+    // silently exclude a device from every incremental run forever.
+    const changedDevices = options.since
+      ? devices.filter((device) => {
+          if (!device.last_seen_at) return true;
+          const lastSeen = new Date(device.last_seen_at);
+          return Number.isNaN(lastSeen.getTime()) || lastSeen >= options.since!;
+        })
+      : devices;
+
+    for (const device of changedDevices) {
       const scopeGroupId = resolveDeepestMappedGroup(device.group_id ?? null, parentByGroupId, mappedGroupIds);
       if (!scopeGroupId) {
         skippedNoMapping += 1;
@@ -265,7 +293,9 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
     await setSyncStatus(deps.knex, args.tenant, {
       sync_status: errors.length ? 'error' : 'completed',
       last_sync_at: deps.knex.fn.now(),
-      last_full_sync_at: deps.knex.fn.now(),
+      ...(syncType === 'full'
+        ? { last_full_sync_at: deps.knex.fn.now() }
+        : { last_incremental_sync_at: deps.knex.fn.now() }),
       sync_error: errors.length ? errors.slice(0, 10).join('; ') : null,
     });
 
@@ -276,7 +306,7 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
       payload: {
         integration_id: args.integrationId,
         provider: PROVIDER,
-        sync_type: 'full',
+        sync_type: syncType,
         items_processed: processed,
         items_created: created,
         items_updated: updated,
@@ -289,7 +319,7 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
     return {
       success: errors.length === 0,
       provider: PROVIDER,
-      sync_type: 'full',
+      sync_type: syncType,
       started_at: startedAt,
       completed_at: completedAt,
       items_processed: processed,
@@ -307,7 +337,7 @@ export async function runLevelIoFullSync(args: LevelIoSyncArgs, deps: LevelIoSyn
       payload: {
         integration_id: args.integrationId,
         provider: PROVIDER,
-        sync_type: 'full',
+        sync_type: syncType,
         error: message,
         failed_at: new Date().toISOString(),
       },

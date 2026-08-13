@@ -213,7 +213,7 @@
   {
     "id": "F027",
     "description": "Level.io: determine whether the device list endpoint supports any server-side filter that avoids a full page walk; record the finding",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open questions",
       "Risks"
@@ -222,7 +222,7 @@
   {
     "id": "F028",
     "description": "Level.io: implement syncDevicesIncremental filtering devices by last_seen_at against the delta cursor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
@@ -230,7 +230,7 @@
   {
     "id": "F029",
     "description": "Level.io: incremental sync walks cursor pagination (starting_after, limit 100) to completion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -238,7 +238,7 @@
   {
     "id": "F030",
     "description": "Level.io: incremental sync writes only devices whose snapshot changed, leaving untouched rows' updated_at stable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals"
     ]

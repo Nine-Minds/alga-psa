@@ -298,7 +298,7 @@
   {
     "id": "T037",
     "description": "Level.io syncDevicesIncremental returns only devices whose last_seen_at is at or after the cursor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "T040",
     "description": "Level.io incremental sync leaves unchanged asset rows untouched",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "T041",
     "description": "Level.io incremental sync with no changed devices completes successfully and still advances the cursor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F017"

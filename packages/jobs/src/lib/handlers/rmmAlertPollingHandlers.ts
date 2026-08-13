@@ -229,6 +229,14 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
   } catch {
     // CE build without the alias target — NinjaOne device sync unavailable.
   }
+  try {
+    const mod = await import('@enterprise/lib/integrations/levelio/sync/deviceSyncStrategy');
+    if (mod.levelIoDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('levelio', mod.levelIoDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — Level.io device sync unavailable.
+  }
   deviceSyncStrategiesEnsured = true;
 }
 
