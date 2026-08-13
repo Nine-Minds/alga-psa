@@ -187,6 +187,10 @@ exports.up = async function up(knex) {
   }
 };
 
+// Exported so the billing suite can prove this map has not drifted from the
+// standard-template catalog in code.
+exports.__LABEL_KEYS = LABEL_KEYS;
+
 exports.down = async function down() {
   // No-op: this refreshes live catalog data and should not be auto-reverted.
   // Every key reference carries its English default, so the rendered output is

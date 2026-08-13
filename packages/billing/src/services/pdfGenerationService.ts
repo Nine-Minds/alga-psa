@@ -627,11 +627,15 @@ export class PDFGenerationService {
     quoteId?: string;
     salesOrderId?: string;
   }): Promise<string> {
-    return runWithTenant(this.tenant, async () => {
-      const { knex } = await createTenantKnex();
-      const clientId = await this.resolveRecipientClientId(knex, options);
-      return (await this.resolveRenderedLocale(knex, clientId)) ?? 'en';
-    });
+    try {
+      return await runWithTenant(this.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        const clientId = await this.resolveRecipientClientId(knex, options);
+        return (await this.resolveRenderedLocale(knex, clientId)) ?? 'en';
+      });
+    } catch {
+      return 'en';
+    }
   }
 
   /**
