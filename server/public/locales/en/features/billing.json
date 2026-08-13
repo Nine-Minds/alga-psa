@@ -122,13 +122,33 @@
     "usage": "Usage",
     "overage": "Overage",
     "noContractLineTitle": "No bucket contract lines available",
-    "noContractLineDescription": "There are no active bucket contract lines for your account."
+    "noContractLineDescription": "There are no active bucket contract lines for your account.",
+    "remainingSummary": "{{remaining}} hours left of {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} hours left of {{total}} (incl. {{rollover}} rollover)",
+    "overageSummary": "{{hours}} hours over",
+    "overBucket": "OVER BUCKET",
+    "usedHours": "{{hours}}h used",
+    "leftHours": "{{hours}}h left",
+    "overHours": "{{hours}}h OVER"
   },
   "messages": {
     "noInvoices": "No invoices found",
     "loadingInvoices": "Loading invoices...",
     "paymentSuccessful": "Payment processed successfully",
     "paymentFailed": "Payment failed. Please try again."
+  },
+  "paymentUnavailable": {
+    "title": "Payment Unavailable",
+    "notConfigured": "Online payment is not available for this invoice.",
+    "creationFailed": "We could not start the payment. Please try again.",
+    "alreadyPaid": "This invoice has already been paid.",
+    "invoiceUnavailable": "This invoice is not available for payment.",
+    "accessDenied": "You do not have access to pay this invoice.",
+    "generic": "Online payment could not be started.",
+    "tryAgain": "Try again",
+    "backToBilling": "Back to billing",
+    "retryFailed": "We still could not start the payment. Please try again in a moment.",
+    "loading": "Loading..."
   },
   "quotes": {
     "pendingQuotes": "Pending Quotes",
@@ -335,6 +355,26 @@
     "availableCredit": "Available Credit",
     "appliedAutomatically": "Applied automatically to your next invoice.",
     "credit": "Credit",
-    "expires": "Expires {{date}}"
+    "expires": "Expires {{date}}",
+    "history": {
+      "viewHistory": "View history",
+      "title": "Credit History",
+      "empty": "No credit activity yet",
+      "issued": "Issued",
+      "issuedWithInvoice": "Issued — prepayment #{{invoice}}",
+      "issuedForInvoice": "Issued — invoice #{{invoice}}",
+      "issuedFromCreditNote": "Issued from credit note",
+      "applied": "Applied",
+      "appliedToInvoice": "Applied to invoice #{{invoice}}",
+      "adjusted": "Adjusted",
+      "expired": "Expired",
+      "transferred": "Transferred",
+      "transaction": "Credit activity",
+      "balance": "balance {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Prepaid hours",
+    "viewBilling": "View billing"
   }
 }

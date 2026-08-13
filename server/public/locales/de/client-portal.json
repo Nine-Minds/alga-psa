@@ -701,7 +701,13 @@
       "saveError": "Einstellung konnte nicht gespeichert werden",
       "noCategories": "Keine Benachrichtigungskategorien verfügbar",
       "emailPreferences": "E-Mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "priority": {
+        "high": "Hoch",
+        "normal": "Normal",
+        "low": "Niedrig"
+      },
+      "resetPriority": "Zurücksetzen"
     },
     "categories": {
       "tickets": "Tickets",
@@ -710,6 +716,8 @@
       "projects": "Projekte",
       "system": "System"
     },
+    "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
+    "lowPriority": "Niedrige Priorität ({{count}})",
     "filters": {
       "title": "Benachrichtigungen filtern",
       "description": "Wählen Sie Kriterien zum Filtern von Benachrichtigungsaktivitäten aus.",
@@ -720,6 +728,9 @@
       "allCategories": "Alle Kategorien",
       "categoryPlaceholder": "Kategorie auswählen...",
       "dateRangeLabel": "Datumsbereich",
+      "priorityLabel": "Priorität",
+      "allPriorities": "Alle Prioritäten",
+      "priorityPlaceholder": "Priorität auswählen...",
       "reset": "Zurücksetzen",
       "cancel": "Abbrechen",
       "apply": "Filter anwenden"

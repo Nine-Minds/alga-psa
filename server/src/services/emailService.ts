@@ -7,6 +7,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import { ensureInvoiceEmailLinks } from '@alga-psa/billing/services';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
@@ -258,6 +259,7 @@ export class EmailService {
     pdfPath: string,
     options?: {
       paymentLink?: string;
+      portalLink?: string;
       companyName?: string;
     }
   ) {
@@ -266,7 +268,8 @@ export class EmailService {
     const senderClient = options?.companyName || defaultClient?.client_name || 'Our Client';
 
     const hasPaymentLink = !!options?.paymentLink;
-    const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
+    const hasPortalLink = !!options?.portalLink;
+    const template = await this.getInvoiceEmailTemplate(hasPaymentLink, hasPortalLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
       path: pdfPath,
@@ -284,14 +287,25 @@ export class EmailService {
     if (options?.paymentLink) {
       html = html.replace(/{{payment_link}}/g, options.paymentLink);
     }
+    if (options?.portalLink) {
+      html = html.replace(/{{portal_link}}/g, options.portalLink);
+    }
     const text = this.stripHtml(html);
     const subject = template.subject.replace(/{{([^}]+)}}/g, (_, key) => templateData[key as keyof InvoiceEmailTemplateData] || '');
+
+    // Templates that do not render the URLs still get the missing CTAs.
+    const { html: finalHtml, text: finalText } = ensureInvoiceEmailLinks({
+      html,
+      text,
+      paymentUrl: options?.paymentLink,
+      portalUrl: options?.portalLink,
+    });
 
     return await this.sendEmail({
       to: invoice.recipientEmail,
       subject,
-      html,
-      text,
+      html: finalHtml,
+      text: finalText,
       attachments
     });
   }
@@ -314,7 +328,7 @@ export class EmailService {
     });
   }
 
-  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false) {
+  private async getInvoiceEmailTemplate(hasPaymentLink: boolean = false, hasPortalLink: boolean = false) {
     // TODO: Fetch from database
     const paymentSection = hasPaymentLink ? `
         <div style="margin: 24px 0; text-align: center;">
@@ -327,6 +341,14 @@ export class EmailService {
           Or copy this link to pay: <a href="{{payment_link}}" style="color: #4f46e5;">{{payment_link}}</a>
         </p>
     ` : '';
+    const portalSection = hasPortalLink ? `
+        <div style="margin: 16px 0; text-align: center;">
+          <a href="{{portal_link}}"
+             style="background-color: #ffffff; color: #4f46e5; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; border: 1px solid #4f46e5;">
+            View invoice in client portal
+          </a>
+        </div>
+    ` : '';
 
     return {
       subject: 'Invoice {{invoice_number}} from {{sender_client}}',
@@ -334,6 +356,7 @@ export class EmailService {
         <p>Dear {{client_name}},</p>
         <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
         ${paymentSection}
+        ${portalSection}
         <p>Thank you for your business!</p>
         <p>Best regards,<br>{{sender_client}}</p>
       `

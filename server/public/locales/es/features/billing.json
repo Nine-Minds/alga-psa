@@ -122,13 +122,33 @@
     "usage": "Uso",
     "overage": "Exceso",
     "noContractLineTitle": "No hay planes de horas disponibles",
-    "noContractLineDescription": "No existen planes de horas activos para su cuenta."
+    "noContractLineDescription": "No existen planes de horas activos para su cuenta.",
+    "remainingSummary": "Quedan {{remaining}} horas de {{total}}",
+    "remainingSummaryWithRollover": "Quedan {{remaining}} horas de {{total}} (incl. {{rollover}} de prórroga)",
+    "overageSummary": "{{hours}} horas de exceso",
+    "overBucket": "SALDO EXCEDIDO",
+    "usedHours": "{{hours}} h usadas",
+    "leftHours": "{{hours}} h disponibles",
+    "overHours": "{{hours}} h DE MÁS"
   },
   "messages": {
     "noInvoices": "No se encontraron facturas",
     "loadingInvoices": "Cargando facturas...",
     "paymentSuccessful": "Pago procesado correctamente",
     "paymentFailed": "El pago falló. Inténtelo de nuevo."
+  },
+  "paymentUnavailable": {
+    "title": "Pago no disponible",
+    "notConfigured": "El pago en línea no está disponible para esta factura.",
+    "creationFailed": "No pudimos iniciar el pago. Inténtelo de nuevo.",
+    "alreadyPaid": "Esta factura ya ha sido pagada.",
+    "invoiceUnavailable": "Esta factura no está disponible para el pago.",
+    "accessDenied": "No tiene acceso para pagar esta factura.",
+    "generic": "No se pudo iniciar el pago en línea.",
+    "tryAgain": "Intentar de nuevo",
+    "backToBilling": "Volver a facturación",
+    "retryFailed": "Aún no pudimos iniciar el pago. Inténtelo de nuevo en un momento.",
+    "loading": "Cargando..."
   },
   "quotes": {
     "pendingQuotes": "Cotizaciones pendientes",
@@ -335,6 +355,26 @@
     "availableCredit": "Crédito disponible",
     "appliedAutomatically": "Se aplica automáticamente a su próxima factura.",
     "credit": "Crédito",
-    "expires": "Vence el {{date}}"
+    "expires": "Vence el {{date}}",
+    "history": {
+      "viewHistory": "Ver historial",
+      "title": "Historial de crédito",
+      "empty": "Aún no hay actividad de crédito",
+      "issued": "Emitido",
+      "issuedWithInvoice": "Emitido — prepago n.º {{invoice}}",
+      "issuedForInvoice": "Emitido — factura n.º {{invoice}}",
+      "issuedFromCreditNote": "Emitido desde nota de crédito",
+      "applied": "Aplicado",
+      "appliedToInvoice": "Aplicado a la factura n.º {{invoice}}",
+      "adjusted": "Ajustado",
+      "expired": "Caducado",
+      "transferred": "Transferido",
+      "transaction": "Actividad de crédito",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Horas prepagadas",
+    "viewBilling": "Ver facturación"
   }
 }

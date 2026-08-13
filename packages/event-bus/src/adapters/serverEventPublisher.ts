@@ -75,6 +75,14 @@ export class ServerEventPublisher implements IEventPublisher {
   }): Promise<void> {
     await this.safePublishWorkflowEvent('TICKET_ASSIGNED', data.tenantId, data.assignedByUserId ?? data.userId, {
       ticketId: data.ticketId,
+      // The recipient must ride in payload.userId — that is the single field the
+      // internal-notification subscriber reads for the assignee (handleTicketAssigned
+      // destructures event.payload.userId). Emitting only assignedToUserId (the v2
+      // workflow field) loses the recipient through union validation, so the
+      // notification is either created for the wrong user or stamped the subtype
+      // default. Every other TICKET_ASSIGNED publisher carries userId; this one
+      // must too.
+      userId: data.userId,
       assignedToUserId: data.userId,
       assignedByUserId: data.assignedByUserId,
       assignedAt: new Date().toISOString(),

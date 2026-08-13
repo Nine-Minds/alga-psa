@@ -33,18 +33,28 @@ export default async function OpportunitiesPage() {
   let total = 0;
   let clients: IClient[] = [];
   let queue: IWorkQueue | null = null;
-  try {
-    const [listResult, clientsResult, queueResult] = await Promise.all([
-      listOpportunities({ status: 'all', page: 1, page_size: DEFAULT_OPPORTUNITY_PAGE_SIZE }),
-      getAllClients(false),
-      getWorkQueue(),
-    ]);
-    items = listResult.data;
-    total = listResult.total;
-    clients = clientsResult;
-    queue = queueResult;
-  } catch (err) {
-    console.error('opportunities: initial load failed', err);
+  // Load independently so one failure (e.g. a missing opportunities permission)
+  // doesn't blank the others — an empty clients list breaks the create dialog.
+  const [listResult, clientsResult, queueResult] = await Promise.allSettled([
+    listOpportunities({ status: 'all', page: 1, page_size: DEFAULT_OPPORTUNITY_PAGE_SIZE }),
+    getAllClients(false),
+    getWorkQueue(),
+  ]);
+  if (listResult.status === 'fulfilled') {
+    items = listResult.value.data;
+    total = listResult.value.total;
+  } else {
+    console.error('opportunities: list load failed', listResult.reason);
+  }
+  if (clientsResult.status === 'fulfilled') {
+    clients = clientsResult.value;
+  } else {
+    console.error('opportunities: clients load failed', clientsResult.reason);
+  }
+  if (queueResult.status === 'fulfilled') {
+    queue = queueResult.value;
+  } else {
+    console.error('opportunities: work queue load failed', queueResult.reason);
   }
 
   if (!queue) {

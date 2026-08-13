@@ -1328,5 +1328,9 @@
       "description": "11111",
       "cta": "11111"
     }
+  },
+  "notifications": {
+    "needsAttention": "11111 {{count}} 11111",
+    "lowPriority": "11111 {{count}} 11111"
   }
 }

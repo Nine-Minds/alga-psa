@@ -435,6 +435,15 @@
           "cancel": "Annuleren",
           "apply": "Filters toepassen"
         }
+      },
+      "priority": {
+        "label": "Prioriteit",
+        "all": "Alle",
+        "allPriorities": "Alle prioriteiten",
+        "placeholder": "Selecteer prioriteit…",
+        "high": "Hoog",
+        "normal": "Normaal",
+        "low": "Laag"
       }
     }
   },

@@ -11,6 +11,7 @@ import {
   InternalNotificationCategory,
   InternalNotificationSubtype,
   InternalNotificationType,
+  InternalNotificationPriority,
   CreateInternalNotificationRequest,
   GetInternalNotificationsRequest,
   InternalNotificationListResponse,
@@ -27,6 +28,7 @@ import {
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
 import { runPostCreationHooks } from './notificationHooks';
+import { pickNotificationPriority } from './priorityResolution';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
@@ -214,6 +216,10 @@ export async function createNotificationFromTemplateInternal(
       return null;
     }
 
+    // Resolve the configured priority (user ?? tenant ?? subtype default ?? 'normal').
+    // Governed centrally by configuration — the caller cannot supply a priority.
+    const priority = await resolveNotificationPriority(trx, request.tenant, request.user_id, subtypeId);
+
     // Render template with data
     const title = renderTemplate(template.title, request.data);
     const message = renderTemplate(template.message, request.data);
@@ -228,6 +234,7 @@ export async function createNotificationFromTemplateInternal(
         title,
         message,
         type: request.type || 'info',
+        priority,
         category: request.category || null,
         link: request.link || null,
         metadata: request.metadata ? JSON.stringify(request.metadata) : null,
@@ -329,6 +336,10 @@ export const createNotificationFromTemplateAction = withAuth(async (
         return null;
       }
 
+      // Resolve the configured priority (user ?? tenant ?? subtype default ?? 'normal').
+      // Governed centrally by configuration — the caller cannot supply a priority.
+      const priority = await resolveNotificationPriority(trx, targetTenant, targetUserId, subtypeId);
+
       // Render template with data
       const title = renderTemplate(template.title, request.data);
       const message = renderTemplate(template.message, request.data);
@@ -343,6 +354,7 @@ export const createNotificationFromTemplateAction = withAuth(async (
           title,
           message,
           type: request.type || 'info',
+          priority,
           category: request.category || null,
           link: request.link || null,
           metadata: request.metadata ? JSON.stringify(request.metadata) : null,
@@ -467,6 +479,36 @@ async function checkInternalNotificationEnabled(
 }
 
 /**
+ * Resolve the effective priority for a notification about to be created.
+ *
+ * Runs inside the creation transaction, alongside the enablement lookup, so
+ * call sites cannot influence the stamped priority — it is governed centrally
+ * by configuration only. Per-user priority is meaningful on subtype-level rows.
+ */
+export async function resolveNotificationPriority(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  subtypeId: number
+): Promise<InternalNotificationPriority> {
+  const userPreference = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
+    .where({ user_id: userId, subtype_id: subtypeId })
+    .first();
+  const tenantSetting = await tenantScopedTable(trx, 'tenant_internal_notification_subtype_settings', tenant)
+    .where({ subtype_id: subtypeId })
+    .first();
+  const subtype = await tenantScopedTable(trx, 'internal_notification_subtypes', tenant)
+    .where({ internal_notification_subtype_id: subtypeId })
+    .first();
+
+  return pickNotificationPriority(
+    userPreference?.priority,
+    tenantSetting?.priority,
+    subtype?.default_priority
+  );
+}
+
+/**
  * Get paginated notifications for a user
  *
  * Only the authenticated user's own notifications are returned — tenant and
@@ -528,10 +570,22 @@ export const getNotificationsAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    // Unread high-priority count so the bell badge can render high-only
+    // (task 29.8.46) without a second round-trip.
+    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      .where({
+        user_id: userId,
+        is_read: false,
+        priority: 'high'
+      })
+      .whereNull('deleted_at')
+      .count('* as count');
+
     return {
       notifications,
       total: Number(totalCount),
       unread_count: Number(unreadCount),
+      unread_high: Number(unreadHighCount),
       has_more: Number(totalCount) > offset + limit
     };
   });
@@ -594,8 +648,22 @@ export const getUnreadCountAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    // Split the unread count by priority tier so the bell can render a
+    // high-only badge (and a neutral dot for normal/low) without a second
+    // round-trip. `total` mirrors `unread_count`; `high` is unread-high.
+    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      .where({
+        user_id: userId,
+        is_read: false,
+        priority: 'high'
+      })
+      .whereNull('deleted_at')
+      .count('* as count');
+
     const response: UnreadCountResponse = {
-      unread_count: Number(unreadCount)
+      unread_count: Number(unreadCount),
+      total: Number(unreadCount),
+      high: Number(highUnreadCount)
     };
 
     // Get counts by category if requested
@@ -845,7 +913,12 @@ export const getSubtypesAction = withAuth(async (
         'ins.created_at',
         'ins.updated_at',
         trx.raw('COALESCE(tiss.is_enabled, true) as is_enabled'),
-        trx.raw('COALESCE(tiss.is_default_enabled, true) as is_default_enabled')
+        trx.raw('COALESCE(tiss.is_default_enabled, true) as is_default_enabled'),
+        // Priority (task 29.8.46): the subtype's system default, the tenant's
+        // override (NULL = inherit), and the effective value to display.
+        trx.raw("COALESCE(ins.default_priority, 'normal') as default_priority"),
+        trx.raw('tiss.priority as tenant_priority'),
+        trx.raw("COALESCE(tiss.priority, ins.default_priority, 'normal') as effective_priority")
       );
 
     // Get translated title using subquery to avoid duplicate rows
@@ -939,6 +1012,14 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
       })
       .first();
 
+    // Priority overrides are meaningful on subtype-level rows only; category
+    // rows always keep priority NULL. `null` clears an override; omitting the
+    // key preserves any existing value (task 29.8.46).
+    const isSubtypeRow = (request.subtype_id ?? null) !== null;
+    const priority = isSubtypeRow
+      ? ('priority' in request ? (request.priority ?? null) : (existing?.priority ?? null))
+      : null;
+
     if (existing) {
       // Update existing preference
       const [updated] = await tenantScopedTable(trx, 'user_internal_notification_preferences', tenant)
@@ -947,6 +1028,7 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
         })
         .update({
           is_enabled: request.is_enabled,
+          priority,
           updated_at: trx.fn.now()
         })
         .returning('*');
@@ -959,7 +1041,8 @@ export const updateUserInternalNotificationPreferenceAction = withAuth(async (
           user_id: userId,
           category_id: request.category_id || null,
           subtype_id: request.subtype_id || null,
-          is_enabled: request.is_enabled
+          is_enabled: request.is_enabled,
+          priority
         })
         .returning('*');
       return created;
@@ -1101,7 +1184,10 @@ export const updateInternalSubtypeAction = withAuth(async (
   currentUser,
   { tenant },
   subtypeId: number,
-  updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>>
+  updates: Partial<Pick<InternalNotificationSubtype, 'is_enabled' | 'is_default_enabled'>> & {
+    /** Tenant priority override. `null` clears it (reset to subtype default); `undefined` leaves it unchanged. */
+    priority?: InternalNotificationPriority | null;
+  }
 ): Promise<InternalNotificationSubtype | NotificationActionError> => {
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
@@ -1130,6 +1216,11 @@ export const updateInternalSubtypeAction = withAuth(async (
       // Build update object with only defined values, defaulting to existing or true
       const is_enabled = updates.is_enabled ?? existingSettings?.is_enabled ?? true;
       const is_default_enabled = updates.is_default_enabled ?? existingSettings?.is_default_enabled ?? true;
+      // Priority override (task 29.8.46): only touch it when the caller supplied a
+      // `priority` key. `null` clears the override; omitting the key preserves it.
+      const priority = 'priority' in updates
+        ? (updates.priority ?? null)
+        : (existingSettings?.priority ?? null);
       // Compute timestamp before query - CitusDB requires IMMUTABLE values in ON CONFLICT UPDATE
       const now = new Date();
 
@@ -1139,19 +1230,23 @@ export const updateInternalSubtypeAction = withAuth(async (
           tenant,
           subtype_id: subtypeId,
           is_enabled,
-          is_default_enabled
+          is_default_enabled,
+          priority
         })
         .onConflict(['tenant', 'subtype_id'])
         .merge({
           is_enabled,
           is_default_enabled,
+          priority,
           updated_at: now
         });
 
       return {
         ...subtype,
         is_enabled,
-        is_default_enabled
+        is_default_enabled,
+        tenant_priority: priority as InternalNotificationPriority | null,
+        effective_priority: (priority ?? subtype.default_priority ?? 'normal') as InternalNotificationPriority
       };
     });
   } catch (error) {

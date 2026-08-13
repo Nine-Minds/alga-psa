@@ -122,13 +122,33 @@
     "usage": "11111",
     "overage": "11111",
     "noContractLineTitle": "11111",
-    "noContractLineDescription": "11111"
+    "noContractLineDescription": "11111",
+    "remainingSummary": "11111 {{remaining}} 11111 {{total}} 11111",
+    "remainingSummaryWithRollover": "11111 {{remaining}} 11111 {{total}} 11111 {{rollover}} 11111",
+    "overageSummary": "11111 {{hours}} 11111",
+    "overBucket": "11111",
+    "usedHours": "11111 {{hours}} 11111",
+    "leftHours": "11111 {{hours}} 11111",
+    "overHours": "11111 {{hours}} 11111"
   },
   "messages": {
     "noInvoices": "11111",
     "loadingInvoices": "11111",
     "paymentSuccessful": "11111",
     "paymentFailed": "11111"
+  },
+  "paymentUnavailable": {
+    "title": "11111",
+    "notConfigured": "11111",
+    "creationFailed": "11111",
+    "alreadyPaid": "11111",
+    "invoiceUnavailable": "11111",
+    "accessDenied": "11111",
+    "generic": "11111",
+    "tryAgain": "11111",
+    "backToBilling": "11111",
+    "retryFailed": "11111",
+    "loading": "11111"
   },
   "quotes": {
     "pendingQuotes": "11111",
@@ -335,6 +355,26 @@
     "availableCredit": "11111",
     "appliedAutomatically": "11111",
     "credit": "11111",
-    "expires": "11111 {{date}} 11111"
+    "expires": "11111 {{date}} 11111",
+    "history": {
+      "viewHistory": "11111",
+      "title": "11111",
+      "empty": "11111",
+      "issued": "11111",
+      "issuedWithInvoice": "11111 {{invoice}} 11111",
+      "issuedForInvoice": "11111 {{invoice}} 11111",
+      "issuedFromCreditNote": "11111",
+      "applied": "11111",
+      "appliedToInvoice": "11111 {{invoice}} 11111",
+      "adjusted": "11111",
+      "expired": "11111",
+      "transferred": "11111",
+      "transaction": "11111",
+      "balance": "11111 {{amount}} 11111"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "11111",
+    "viewBilling": "11111"
   }
 }

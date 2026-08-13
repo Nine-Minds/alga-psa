@@ -1494,7 +1494,8 @@
         "description": "Beschreibung",
         "enabled": "Aktiviert",
         "defaultForUsers": "Standard für Benutzer",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "priority": "Priorität"
       },
       "actions": {
         "enableAllSubtypes": "Alle Untertypen aktivieren",
@@ -1506,7 +1507,8 @@
         "discardChanges": "Änderungen verwerfen",
         "saving": "Wird gespeichert...",
         "saveChanges": "Änderungen speichern",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "resetToDefault": "Auf Standard zurücksetzen"
       },
       "intro": "Legen Sie fest, welche internen Benachrichtigungstypen verfügbar sind, und definieren Sie Standardwerte für neue Benutzer.",
       "enabledLabel": "Aktiviert:",
@@ -1517,6 +1519,11 @@
       "discardDialog": {
         "title": "Änderungen verwerfen?",
         "message": "Sind Sie sicher, dass Sie alle nicht gespeicherten Änderungen verwerfen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "priority": {
+        "high": "Hoch",
+        "normal": "Normal",
+        "low": "Niedrig"
       }
     }
   },

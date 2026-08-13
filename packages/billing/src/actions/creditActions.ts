@@ -19,6 +19,7 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
+import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import {
     actionError,
     getErrorMessage,
@@ -1025,6 +1026,55 @@ export async function applyCreditToInvoiceInternal(
     return { appliedAmount: appliedAmountResult };
 }
 
+/**
+ * Retires provider-active Checkout links for an invoice after a UI credit
+ * application. The UI action path never derives/writes invoice status (that is
+ * the REST endpoint's contract — see InvoiceService.applyCredit), so the
+ * invoice still carries its pre-credit status; passing that truthful status
+ * together with the reduced balance makes the terminal-status registry retire
+ * only the active links whose stored amount no longer matches the remaining
+ * balance. A full credit application leaves balanceDue 0 and retires every
+ * link. Mirrors the REST path's post-commit placement: runs after the credit
+ * transaction commits, and failures are logged — a reconciliation problem
+ * must never roll back or mask a successfully applied credit.
+ */
+async function reconcileInvoicePaymentLinksAfterCredit(
+    tenant: string,
+    invoiceId: string
+): Promise<void> {
+    try {
+        const { knex } = await createTenantKnex();
+        const invoice = await tenantScopedTable(knex, tenant, 'invoices')
+            .where({ invoice_id: invoiceId, tenant })
+            .select('status', 'total_amount', 'credit_applied')
+            .first();
+
+        if (!invoice) return;
+
+        const payments = await tenantScopedTable(knex, tenant, 'invoice_payments')
+            .where({ invoice_id: invoiceId, tenant })
+            .sum('amount as total_paid');
+        const totalPayments = Number(payments?.[0]?.total_paid || 0);
+
+        const balanceDue = Number(invoice.total_amount || 0)
+            - Number(invoice.credit_applied || 0)
+            - totalPayments;
+
+        await notifyInvoiceTerminalStatus({
+            knex,
+            tenantId: tenant,
+            invoiceId,
+            newStatus: String(invoice.status),
+            balanceDue,
+        });
+    } catch (error) {
+        console.error(
+            `Failed to reconcile payment links after credit application for invoice ${invoiceId}`,
+            error
+        );
+    }
+}
+
 export const applyCreditToInvoice = withAuth(async (
     user,
     { tenant },
@@ -1038,7 +1088,18 @@ export const applyCreditToInvoice = withAuth(async (
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    await applyCreditToInvoiceInternal(tenant, user.user_id, clientId, invoiceId, requestedAmount);
+    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user.user_id, clientId, invoiceId, requestedAmount);
+
+    // Reconcile any still-active Checkout links now that the balance changed:
+    // a customer must not be able to pay the pre-credit amount through an old
+    // email link. The credit engine deliberately does not derive invoice
+    // status, so the invoice still carries its pre-credit status here; the
+    // reduced balanceDue makes the terminal-status registry retire every
+    // active link whose stored amount no longer matches (a full application
+    // leaves balanceDue 0 and retires every link).
+    if (appliedAmount > 0) {
+        await reconcileInvoicePaymentLinksAfterCredit(tenant, invoiceId);
+    }
     });
 });
 

@@ -1328,5 +1328,9 @@
       "description": "This page is not available in your current product experience.",
       "cta": "Go to dashboard"
     }
+  },
+  "notifications": {
+    "needsAttention": "Needs attention ({{count}})",
+    "lowPriority": "Low priority ({{count}})"
   }
 }

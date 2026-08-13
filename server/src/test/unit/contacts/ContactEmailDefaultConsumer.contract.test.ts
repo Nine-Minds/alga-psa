@@ -25,13 +25,20 @@ describe('default contact email consumer compatibility contracts', () => {
     const surveyServiceSource = readRepoSource('server/src/services/surveyService.ts');
     const invoiceJobActionsSource = readRepoSource('packages/billing/src/actions/invoiceJobActions.ts');
     const invoiceEmailHandlerSource = readRepoSource('server/src/lib/jobs/handlers/invoiceEmailHandler.ts');
+    const paymentServiceSource = readRepoSource('ee/server/src/lib/payments/PaymentService.ts');
     const appointmentRequestActionsSource = readRepoSource('packages/client-portal/src/actions/client-portal-actions/appointmentRequestActions.ts');
     const projectEmailSubscriberSource = readRepoSource('server/src/lib/eventBus/subscribers/projectEmailSubscriber.ts');
     const ticketEmailSubscriberSource = readRepoSource('server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts');
 
     expect(surveyServiceSource).toContain('to: contact.email,');
-    expect(invoiceJobActionsSource).toContain('recipientEmail = contact.email;');
-    expect(invoiceEmailHandlerSource).toContain('recipientEmail = contact.email || recipientEmail;');
+
+    // Invoice email preview, direct delivery, scheduled delivery, and Stripe
+    // customer creation all resolve the billing recipient through the shared
+    // tenant-scoped resolver instead of duplicating the precedence.
+    expect(invoiceJobActionsSource).toContain('resolveInvoiceBillingRecipient');
+    expect(invoiceEmailHandlerSource).toContain('resolveInvoiceBillingRecipient');
+    expect(paymentServiceSource).toContain('resolveInvoiceBillingRecipient');
+
     expect(appointmentRequestActionsSource).toContain("requesterEmail: contact.email || currentUser.email || ''");
     expect(projectEmailSubscriberSource).toContain("'ct.email as contact_email'");
     expect(projectEmailSubscriberSource).toContain('to: project.contact_email,');

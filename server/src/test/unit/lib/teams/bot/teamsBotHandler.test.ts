@@ -2023,7 +2023,7 @@ describe('teamsBotHandler', () => {
     expect(response.attachments?.[0]?.content.buttons).toContainEqual(
       expect.objectContaining({
         type: 'openUrl',
-        value: 'https://docs.algapsa.com/integrations/teams-setup#supported-scopes',
+        value: 'https://www.nineminds.com/documentation/microsoft-teams-integration',
       })
     );
   });

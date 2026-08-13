@@ -9,6 +9,7 @@ services:
       - "4020:4020" # qbo (Intuit OAuth + v3 company API)
       - "4030:4030" # webhook-sink
       - "4040:4040" # smtp-sink (SMTP protocol)
+      - "4050:4050" # stripe (Stripe /v1 API + simulated hosted Checkout)
       - "9500:9500" # control API + console
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9500/control/catalog"]

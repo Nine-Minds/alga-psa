@@ -56,7 +56,7 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           }
         } else {
           setStatus('failed');
-          setError(result.error || t('billing.paymentSuccess.errors.verifyFailed', { defaultValue: 'Failed to verify payment' }));
+          setError(result.error?.message || t('billing.paymentSuccess.errors.verifyFailed', { defaultValue: 'Failed to verify payment' }));
         }
       } catch (err) {
         console.error('Payment verification error:', err);

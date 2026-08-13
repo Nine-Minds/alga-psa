@@ -77,13 +77,18 @@ vi.mock('stripe', () => {
   return { default: mockStripe, Stripe: mockStripe };
 });
 
-// Mock the secret provider
-vi.mock('@alga-psa/core', () => ({
-  getSecretProviderInstance: vi.fn().mockResolvedValue({
-    getTenantSecret: vi.fn().mockResolvedValue('sk_test_mock'),
-    getAppSecret: vi.fn().mockResolvedValue('sk_test_mock'),
-  }),
-}));
+// Mock the secret provider (the billing-recipient resolver also imports
+// isValidEmail from the @alga-psa/core barrel, so spread the real module).
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+  return {
+    ...actual,
+    getSecretProviderInstance: vi.fn().mockResolvedValue({
+      getTenantSecret: vi.fn().mockResolvedValue('sk_test_mock'),
+      getAppSecret: vi.fn().mockResolvedValue('sk_test_mock'),
+    }),
+  };
+});
 
 // The payment providers import from the /secrets subpath, which is its own
 // module in the mock registry.
@@ -936,7 +941,8 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
       // The URLs should use /client-portal/billing/invoices/ not /portal/invoices/
       expect(successUrl).toContain('/client-portal/billing/invoices/');
       expect(successUrl).toContain('/payment-success');
-      expect(cancelUrl).toContain('/client-portal/billing/invoices/');
+      expect(cancelUrl).toContain('/client-portal/billing');
+      expect(cancelUrl).toContain('tab=invoices');
 
       // Also verify they DON'T use the wrong path
       expect(successUrl).not.toMatch(/\/portal\/invoices\/[^/]/);
@@ -1212,7 +1218,10 @@ async function createTestInvoiceWithClient(
     updated_at: db.fn.now(),
   });
 
-  // Create invoice - uses client_id column (renamed from company_id)
+  // Create invoice - uses client_id column (renamed from company_id).
+  // A sent invoice is finalized; draft invoices are not. PaymentService
+  // refuses to create a payment link for an unfinalized invoice.
+  const isDraft = (options.status || 'sent') === 'draft';
   await tenantTable(db, tenantId, 'invoices').insert({
     invoice_id: invoiceId,
     tenant: tenantId,
@@ -1222,6 +1231,7 @@ async function createTestInvoiceWithClient(
     status: options.status || 'sent',
     invoice_date: new Date().toISOString(),
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    finalized_at: isDraft ? null : new Date().toISOString(),
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });

@@ -122,13 +122,33 @@
     "usage": "Verbruik",
     "overage": "Overschrijding",
     "noContractLineTitle": "Geen urenbundels beschikbaar",
-    "noContractLineDescription": "Er zijn geen actieve urenbundels voor uw account."
+    "noContractLineDescription": "Er zijn geen actieve urenbundels voor uw account.",
+    "remainingSummary": "{{remaining}} uur resterend van {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} uur resterend van {{total}} (incl. {{rollover}} overgedragen)",
+    "overageSummary": "{{hours}} uur te veel",
+    "overBucket": "BUDGET OVERSCHREDEN",
+    "usedHours": "{{hours}} u verbruikt",
+    "leftHours": "{{hours}} u resterend",
+    "overHours": "{{hours}} u TE VEEL"
   },
   "messages": {
     "noInvoices": "Geen facturen gevonden",
     "loadingInvoices": "Facturen worden geladen...",
     "paymentSuccessful": "Betaling succesvol verwerkt",
     "paymentFailed": "Betaling mislukt. Probeer het opnieuw."
+  },
+  "paymentUnavailable": {
+    "title": "Betaling niet beschikbaar",
+    "notConfigured": "Online betalen is niet beschikbaar voor deze factuur.",
+    "creationFailed": "We konden de betaling niet starten. Probeer het opnieuw.",
+    "alreadyPaid": "Deze factuur is al betaald.",
+    "invoiceUnavailable": "Deze factuur is niet beschikbaar voor betaling.",
+    "accessDenied": "U heeft geen toegang om deze factuur te betalen.",
+    "generic": "De online betaling kon niet worden gestart.",
+    "tryAgain": "Opnieuw proberen",
+    "backToBilling": "Terug naar facturering",
+    "retryFailed": "We konden de betaling nog steeds niet starten. Probeer het over een moment opnieuw.",
+    "loading": "Laden..."
   },
   "quotes": {
     "pendingQuotes": "Openstaande offertes",
@@ -335,6 +355,26 @@
     "availableCredit": "Beschikbaar krediet",
     "appliedAutomatically": "Wordt automatisch verrekend met uw volgende factuur.",
     "credit": "Krediet",
-    "expires": "Verloopt op {{date}}"
+    "expires": "Verloopt op {{date}}",
+    "history": {
+      "viewHistory": "Geschiedenis weergeven",
+      "title": "Kredietgeschiedenis",
+      "empty": "Nog geen kredietactiviteit",
+      "issued": "Uitgegeven",
+      "issuedWithInvoice": "Uitgegeven — vooruitbetaling #{{invoice}}",
+      "issuedForInvoice": "Uitgegeven — factuur #{{invoice}}",
+      "issuedFromCreditNote": "Uitgegeven via creditnota",
+      "applied": "Toegepast",
+      "appliedToInvoice": "Toegepast op factuur #{{invoice}}",
+      "adjusted": "Aangepast",
+      "expired": "Verlopen",
+      "transferred": "Overgedragen",
+      "transaction": "Kredietactiviteit",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Vooruitbetaalde uren",
+    "viewBilling": "Facturatie bekijken"
   }
 }

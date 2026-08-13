@@ -5,6 +5,12 @@
  */
 
 export { TaxService } from './taxService';
+export {
+  resolveInvoiceBillingRecipient,
+  type InvoiceBillingRecipient,
+  type InvoiceBillingRecipientSource,
+} from './invoiceBillingRecipientService';
+export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials } from './quoteCalculationService';
 export {
@@ -97,6 +103,14 @@ export {
   reverseExternalPayment,
   computeBalanceDue
 } from './accountingSync/recordExternalPayment';
+export {
+  registerInvoiceTerminalStatusHandler,
+  notifyInvoiceTerminalStatus,
+  listActiveInvoicePaymentLinks,
+  listPendingInvoicePaymentLinks,
+  type InvoiceTerminalStatusParams,
+  type InvoiceTerminalStatusHandler,
+} from './accountingSync/invoiceTerminalStatusHandlers';
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,

@@ -1494,7 +1494,8 @@
         "description": "Descripción",
         "enabled": "Habilitado",
         "defaultForUsers": "Predeterminado para usuarios",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "priority": "Prioridad"
       },
       "actions": {
         "enableAllSubtypes": "Habilitar todos los subtipos",
@@ -1506,7 +1507,8 @@
         "discardChanges": "Descartar cambios",
         "saving": "Guardando...",
         "saveChanges": "Guardar cambios",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "resetToDefault": "Restablecer al valor predeterminado"
       },
       "intro": "Controle qué tipos de notificaciones internas están disponibles y establezca los valores predeterminados para los nuevos usuarios.",
       "enabledLabel": "Habilitado:",
@@ -1517,6 +1519,11 @@
       "discardDialog": {
         "title": "¿Descartar cambios?",
         "message": "¿Está seguro de que desea descartar todos los cambios sin guardar? Esta acción no se puede deshacer."
+      },
+      "priority": {
+        "high": "Alta",
+        "normal": "Normal",
+        "low": "Baja"
       }
     }
   },

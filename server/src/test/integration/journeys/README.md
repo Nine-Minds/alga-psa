@@ -96,12 +96,20 @@ tenant.
 
 `invoiceRenderToDelivery` closes the render-and-store half of the old PDF gap:
 a real Chromium-rendered PDF, the `external_files` row, tenant scoping, and
-the `DOCUMENT_GENERATED` linkage event are all journey-covered. Still
-uncovered above that seam: emailing the PDF. `sendInvoiceEmailAction` and the
-invoice email job handler — recipient resolution (billing contact →
-billing_email → location email), the Handlebars invoice-email template, and
-the attachment round-trip through `StorageService.downloadFile` — have only
-unit-level coverage with mocked PDFs.
+the `DOCUMENT_GENERATED` linkage event are all journey-covered.
+
+`invoiceEmailPaymentLinks` in `../payments` now closes the emailing half for
+the **direct MSP send path**: a real `sendInvoiceEmailAction` walk with the
+Stripe-like emulator asserting the payment + portal CTAs, the shared
+billing-recipient precedence, sequential payment-link reuse, the
+creation-failure portal fallback (with the emulator message retained as the
+logged cause), the tenant/ownership boundary, and the shared-resolver
+precedence/isolation rules.
+
+Still uncovered above that seam: the **scheduled** invoice-email job handler
+(`InvoiceEmailHandler`) has only unit-level coverage with mocked PDFs, and the
+portal-hosted Checkout success/failure browser flows are covered by the e2e
+Playwright spec (`server/src/test/e2e/`), not this journey directory.
 
 ## Running locally
 

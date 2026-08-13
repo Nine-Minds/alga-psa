@@ -1,6 +1,6 @@
 import logger from '@alga-psa/core/logger';
 
-export type RootRedirectTarget = '/client-portal' | '/msp/dashboard';
+export type RootRedirectTarget = '/client-portal/dashboard' | '/msp/dashboard';
 
 export async function resolveRootRedirect(args: {
   hostname: string;
@@ -23,7 +23,7 @@ export async function resolveRootRedirect(args: {
   try {
     for (const candidate of hostCandidates) {
       if (await lookupPortalDomain(candidate)) {
-        return '/client-portal';
+        return '/client-portal/dashboard';
       }
     }
   } catch (error) {

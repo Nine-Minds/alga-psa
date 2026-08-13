@@ -23,8 +23,16 @@ vi.mock('../services/accountingSync/syncProducers', () => ({
   enqueueInvoiceVoid: vi.fn(async () => undefined)
 }));
 
+vi.mock('../services/accountingSync/invoiceTerminalStatusHandlers', () => ({
+  notifyInvoiceTerminalStatus: vi.fn(async () => undefined),
+  registerInvoiceTerminalStatusHandler: vi.fn(),
+  listActiveInvoicePaymentLinks: vi.fn(),
+  listPendingInvoicePaymentLinks: vi.fn(),
+}));
+
 import { reverseCreditApplicationsForInvoice, voidInvoice } from './voidInvoiceActions';
 import { createTenantKnex } from '@alga-psa/db';
+import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 
 // ── Helper: build a fake transaction (knex-like) ────────────────────────────
 
@@ -297,6 +305,15 @@ describe('voidInvoice (credit note)', () => {
     // …and the document itself voided.
     expect(log.some((e) => e.table === 'invoices' && e.op === 'update' && e.args.status === 'cancelled')).toBe(true);
     expect(log.some((e) => e.table === 'transactions' && e.op === 'insert' && e.args.type === 'invoice_cancelled')).toBe(true);
+
+    // Voiding reconciles still-active Checkout sessions via the terminal-status
+    // registry (best-effort; isolated in production).
+    expect(notifyInvoiceTerminalStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invoiceId: 'inv-cn-1',
+        newStatus: 'cancelled',
+      })
+    );
   });
 
   it('blocks the void when issued credit was already spent', async () => {

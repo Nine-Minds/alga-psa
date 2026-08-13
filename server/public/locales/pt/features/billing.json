@@ -122,13 +122,33 @@
     "usage": "Uso",
     "overage": "Excedente",
     "noContractLineTitle": "Nenhuma linha de contrato bucket disponível",
-    "noContractLineDescription": "Não há linhas de contrato de intervalo ativas para sua conta."
+    "noContractLineDescription": "Não há linhas de contrato de intervalo ativas para sua conta.",
+    "remainingSummary": "Restam {{remaining}} horas de {{total}}",
+    "remainingSummaryWithRollover": "Restam {{remaining}} horas de {{total}} (incl. {{rollover}} de remanescente)",
+    "overageSummary": "{{hours}} horas acima do limite",
+    "overBucket": "LIMITE EXCEDIDO",
+    "usedHours": "{{hours}} h utilizadas",
+    "leftHours": "{{hours}} h restantes",
+    "overHours": "{{hours}} h ACIMA"
   },
   "messages": {
     "noInvoices": "Nenhuma fatura encontrada",
     "loadingInvoices": "Carregando faturas...",
     "paymentSuccessful": "Pagamento processado com sucesso",
     "paymentFailed": "Falha no pagamento. Por favor, tente novamente."
+  },
+  "paymentUnavailable": {
+    "title": "Pagamento indisponível",
+    "notConfigured": "O pagamento online não está disponível para esta fatura.",
+    "creationFailed": "Não foi possível iniciar o pagamento. Tente novamente.",
+    "alreadyPaid": "Esta fatura já foi paga.",
+    "invoiceUnavailable": "Esta fatura não está disponível para pagamento.",
+    "accessDenied": "Você não tem acesso para pagar esta fatura.",
+    "generic": "Não foi possível iniciar o pagamento online.",
+    "tryAgain": "Tentar novamente",
+    "backToBilling": "Voltar para cobrança",
+    "retryFailed": "Ainda não foi possível iniciar o pagamento. Tente novamente em instantes.",
+    "loading": "Carregando..."
   },
   "quotes": {
     "pendingQuotes": "Cotações pendentes",
@@ -335,6 +355,26 @@
     "availableCredit": "Crédito disponível",
     "appliedAutomatically": "Aplicado automaticamente à sua próxima fatura.",
     "credit": "Crédito",
-    "expires": "Expira em {{date}}"
+    "expires": "Expira em {{date}}",
+    "history": {
+      "viewHistory": "Ver histórico",
+      "title": "Histórico de créditos",
+      "empty": "Ainda não há atividade de crédito",
+      "issued": "Emitido",
+      "issuedWithInvoice": "Emitido — pré-pagamento n.º {{invoice}}",
+      "issuedForInvoice": "Emitido — fatura n.º {{invoice}}",
+      "issuedFromCreditNote": "Emitido a partir de nota de crédito",
+      "applied": "Aplicado",
+      "appliedToInvoice": "Aplicado à fatura n.º {{invoice}}",
+      "adjusted": "Ajustado",
+      "expired": "Expirado",
+      "transferred": "Transferido",
+      "transaction": "Atividade de crédito",
+      "balance": "saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Horas pré-pagas",
+    "viewBilling": "Ver faturação"
   }
 }

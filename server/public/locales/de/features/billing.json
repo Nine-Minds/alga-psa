@@ -122,13 +122,33 @@
     "usage": "Nutzung",
     "overage": "Überschreitung",
     "noContractLineTitle": "Keine Stundenpläne verfügbar",
-    "noContractLineDescription": "Für Ihr Konto sind keine aktiven Stundenkontingent-Vertragslinien vorhanden."
+    "noContractLineDescription": "Für Ihr Konto sind keine aktiven Stundenkontingent-Vertragslinien vorhanden.",
+    "remainingSummary": "{{remaining}} Stunden übrig von {{total}}",
+    "remainingSummaryWithRollover": "{{remaining}} Stunden übrig von {{total}} (inkl. {{rollover}} Übertrag)",
+    "overageSummary": "{{hours}} Stunden überschritten",
+    "overBucket": "KONTINGENT ÜBERSCHRITTEN",
+    "usedHours": "{{hours}} Std. verbraucht",
+    "leftHours": "{{hours}} Std. übrig",
+    "overHours": "{{hours}} Std. ÜBERSCHRITTEN"
   },
   "messages": {
     "noInvoices": "Keine Rechnungen gefunden",
     "loadingInvoices": "Rechnungen werden geladen...",
     "paymentSuccessful": "Zahlung erfolgreich verarbeitet",
     "paymentFailed": "Zahlung fehlgeschlagen. Bitte versuche es erneut."
+  },
+  "paymentUnavailable": {
+    "title": "Zahlung nicht verfügbar",
+    "notConfigured": "Online-Zahlung ist für diese Rechnung nicht verfügbar.",
+    "creationFailed": "Die Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+    "alreadyPaid": "Diese Rechnung wurde bereits bezahlt.",
+    "invoiceUnavailable": "Diese Rechnung ist nicht zur Zahlung verfügbar.",
+    "accessDenied": "Sie haben keinen Zugriff auf die Zahlung dieser Rechnung.",
+    "generic": "Die Online-Zahlung konnte nicht gestartet werden.",
+    "tryAgain": "Erneut versuchen",
+    "backToBilling": "Zurück zur Abrechnung",
+    "retryFailed": "Die Zahlung konnte weiterhin nicht gestartet werden. Bitte versuchen Sie es gleich erneut.",
+    "loading": "Wird geladen..."
   },
   "quotes": {
     "pendingQuotes": "Ausstehende Angebote",
@@ -335,6 +355,26 @@
     "availableCredit": "Verfügbares Guthaben",
     "appliedAutomatically": "Wird automatisch mit Ihrer nächsten Rechnung verrechnet.",
     "credit": "Guthaben",
-    "expires": "Läuft ab am {{date}}"
+    "expires": "Läuft ab am {{date}}",
+    "history": {
+      "viewHistory": "Verlauf anzeigen",
+      "title": "Guthabenverlauf",
+      "empty": "Noch keine Guthabenaktivität",
+      "issued": "Gutschrift erteilt",
+      "issuedWithInvoice": "Gutschrift erteilt — Vorauszahlung #{{invoice}}",
+      "issuedForInvoice": "Gutschrift erteilt — Rechnung #{{invoice}}",
+      "issuedFromCreditNote": "Gutschrift aus Kreditnota",
+      "applied": "Verrechnet",
+      "appliedToInvoice": "Mit Rechnung #{{invoice}} verrechnet",
+      "adjusted": "Angepasst",
+      "expired": "Abgelaufen",
+      "transferred": "Übertragen",
+      "transaction": "Guthabenaktivität",
+      "balance": "Saldo {{amount}}"
+    }
+  },
+  "dashboard": {
+    "prepaidHours": "Vorausbezahlte Stunden",
+    "viewBilling": "Zur Abrechnung"
   }
 }
