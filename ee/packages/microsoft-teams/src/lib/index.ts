@@ -9,6 +9,7 @@ export * from './graphAuth';
 export * from './meetings/createTeamsMeeting';
 export * from './meetings/deleteTeamsMeeting';
 export * from './meetings/fetchMeetingArtifacts';
+export * from './meetings/transcriptTicketSummary';
 export * from './meetings/artifactSubscriptions';
 export * from './meetings/meetingConfig';
 export * from './meetings/updateTeamsMeeting';

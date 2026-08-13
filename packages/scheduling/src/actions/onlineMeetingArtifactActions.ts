@@ -31,6 +31,7 @@ interface EeTeamsArtifactModule {
     clientId: string;
     clientSecret: string;
   }) => Promise<string>;
+  annotateLinkedTicketFromTranscript?: NonNullable<CaptureDeps['annotateTicketFromTranscript']>;
 }
 
 async function loadEeTeamsModule(): Promise<EeTeamsArtifactModule> {
@@ -121,7 +122,11 @@ export async function buildTeamsArtifactCaptureDeps(): Promise<CaptureDeps> {
     return file.file_id;
   };
 
-  return { fetchArtifacts, downloadRecording };
+  // AI transcript summary onto the linked ticket (EE + AI add-on gated inside).
+  const annotateTicketFromTranscript: CaptureDeps['annotateTicketFromTranscript'] = async (input) =>
+    (ee.annotateLinkedTicketFromTranscript ? ee.annotateLinkedTicketFromTranscript(input) : undefined);
+
+  return { fetchArtifacts, downloadRecording, annotateTicketFromTranscript };
 }
 
 /**
