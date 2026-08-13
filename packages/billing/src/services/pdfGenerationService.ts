@@ -591,8 +591,8 @@ export class PDFGenerationService {
     knex: Knex,
     options: { invoiceId?: string; quoteId?: string; salesOrderId?: string }
   ): Promise<string | null> {
-    const db = tenantDb(knex, this.tenant);
     try {
+      const db = tenantDb(knex, this.tenant);
       if (options.invoiceId) {
         const invoice = await db.table('invoices')
           .where({ invoice_id: options.invoiceId })
@@ -627,6 +627,11 @@ export class PDFGenerationService {
     quoteId?: string;
     salesOrderId?: string;
   }): Promise<string> {
+    // A plain document render has no template chrome to translate and is never
+    // filed, so there is nothing to resolve a locale for.
+    if (!options.invoiceId && !options.quoteId && !options.salesOrderId) {
+      return 'en';
+    }
     try {
       return await runWithTenant(this.tenant, async () => {
         const { knex } = await createTenantKnex();

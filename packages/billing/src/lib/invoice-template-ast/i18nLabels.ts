@@ -134,7 +134,9 @@ export const localizeTemplateAstForLocale = async (
     const { t } = await getServerTranslation(normalized, DOCUMENT_LABEL_NAMESPACE);
     return { ast: resolveTemplateAstI18n(ast, (key, options) => String(t(key, options))), locale: normalized };
   } catch (error) {
+    // Drop the locale as well as the translation: English labels beside German
+    // dates is worse than a consistently English document.
     console.error('Failed to load document label translations:', error);
-    return { ast, locale: normalized };
+    return { ast };
   }
 };
