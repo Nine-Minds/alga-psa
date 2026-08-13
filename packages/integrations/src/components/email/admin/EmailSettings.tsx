@@ -743,7 +743,9 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                 notificationTitle: t('email.senderIdentities.notification.title'),
                 notificationDescription: t('email.senderIdentities.notification.description'),
                 notificationAddressLabel: t('email.senderIdentities.notification.addressLabel'),
-                notificationAddressPlaceholder: t('email.senderIdentities.notification.addressPlaceholder'),
+                // Effective fallback sender goes in the placeholder, never the value:
+                // rendering it as the value makes an unsaved field look configured.
+                notificationAddressPlaceholder: settings.effectiveNotificationFrom.email,
                 notificationAddressHelp: t('email.senderIdentities.notification.addressHelp'),
                 notificationNameLabel: t('email.senderIdentities.notification.nameLabel'),
                 notificationNamePlaceholder: t('email.senderIdentities.notification.namePlaceholder'),
@@ -764,7 +766,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                   : null
               }
               ticketError={ticketIdentityError}
-              notificationAddress={getCurrentProviderConfig()?.config.from || settings.effectiveNotificationFrom.email}
+              notificationAddress={getCurrentProviderConfig()?.config.from || ''}
               notificationName={getCurrentProviderConfig()?.config.fromName || ''}
               notificationAddressReadOnly={selectedProvider === 'microsoft'}
               onTicketAddressChange={(value) => setSettings({ ...settings, ticketingFromEmail: value || null })}

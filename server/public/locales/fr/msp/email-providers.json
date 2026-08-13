@@ -769,7 +769,7 @@
         "authHint": "Laissez le nom d'utilisateur et le mot de passe vides si votre relais accepte les e-mails sans authentification.",
         "fromLabel": "Adresse d'expéditeur",
         "fromPlaceholder": "noreply@exemple.com",
-        "fromHelp": "Adresse d'expéditeur par défaut pour les e-mails sortants.",
+        "fromHelp": "Expéditeur par défaut pour tous les e-mails sortants. Les e-mails de tickets peuvent utiliser leur propre identité ci-dessous.",
         "security": {
           "title": "Sécurité de la connexion",
           "secure": "Utiliser le TLS implicite (SSL à la connexion, généralement le port 465)",
@@ -846,7 +846,7 @@
           "description": "Personnalisez les invitations au portail, les réinitialisations de mot de passe, les factures, les mises à jour de projet et les notifications générales indépendamment du routage des tickets.",
           "addressLabel": "Adresse d'expéditeur",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Il s'agit de l'adresse de marque utilisée pour les e-mails hors tickets envoyés par votre serveur SMTP.",
+          "smtpAddressHelp": "Définie par l'adresse d'expéditeur dans la configuration SMTP ci-dessus. Tous les e-mails hors tickets sont envoyés depuis cette adresse.",
           "lockedAddressHelp": "Cette adresse est déterminée par le domaine géré actif ou la boîte aux lettres Microsoft 365 sélectionnée.",
           "nameLabel": "Nom d'affichage de l'expéditeur",
           "namePlaceholder": "Nom de votre entreprise",

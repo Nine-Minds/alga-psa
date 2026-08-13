@@ -769,7 +769,7 @@
         "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
         "fromLabel": "Indirizzo mittente",
         "fromPlaceholder": "noreply@esempio.it",
-        "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "fromHelp": "Mittente predefinito per tutte le email in uscita. Le email dei ticket possono usare un'identità dedicata qui sotto.",
         "security": {
           "title": "Sicurezza della connessione",
           "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
@@ -846,7 +846,7 @@
           "description": "Inviti al portale personalizzato, reimpostazioni della password, fatture, aggiornamenti dei progetti e notifiche generali, indipendentemente dall’instradamento dei ticket.",
           "addressLabel": "Indirizzo mittente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Questo è l’indirizzo associato al marchio usato per le email non relative ai ticket inviate tramite il tuo server SMTP.",
+          "smtpAddressHelp": "Impostato dall'Indirizzo mittente nella configurazione SMTP qui sopra. Tutte le email non relative ai ticket vengono inviate da questo indirizzo.",
           "lockedAddressHelp": "Questo indirizzo è determinato dal dominio gestito attivo o dalla casella di posta Microsoft 365 selezionata.",
           "nameLabel": "Nome visualizzato del mittente",
           "namePlaceholder": "Nome della tua azienda",

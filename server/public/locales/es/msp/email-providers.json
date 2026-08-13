@@ -769,7 +769,7 @@
         "authHint": "Deje el nombre de usuario y la contraseña en blanco si su retransmisor acepta correo sin autenticación.",
         "fromLabel": "Dirección de remitente",
         "fromPlaceholder": "noreply@ejemplo.com",
-        "fromHelp": "Dirección de remitente predeterminada para los correos salientes.",
+        "fromHelp": "Remitente predeterminado para todos los correos salientes. Los correos de tickets pueden usar su propia identidad más abajo.",
         "security": {
           "title": "Seguridad de la conexión",
           "secure": "Usar TLS implícito (SSL al conectar, normalmente el puerto 465)",
@@ -846,7 +846,7 @@
           "description": "Personalice las invitaciones al portal, los restablecimientos de contraseña, las facturas, las actualizaciones de proyectos y las notificaciones generales de forma independiente del enrutamiento de tickets.",
           "addressLabel": "Dirección del remitente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Esta es la dirección de marca que se usa para los correos electrónicos que no son de tickets a través de su servidor SMTP.",
+          "smtpAddressHelp": "Se establece mediante la Dirección de remitente en la configuración SMTP de arriba. Todos los correos que no son de tickets se envían desde ella.",
           "lockedAddressHelp": "Esta dirección está determinada por el dominio administrado activo o el buzón de Microsoft 365 seleccionado.",
           "nameLabel": "Nombre visible del remitente",
           "namePlaceholder": "Nombre de su empresa",

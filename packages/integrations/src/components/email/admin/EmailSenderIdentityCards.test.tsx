@@ -52,6 +52,49 @@ describe('EmailSenderIdentityCards', () => {
     expect(screen.getByText('Blank uses Example MSP automatically.')).toBeInTheDocument();
   });
 
+  it('renders read-only addresses as text, with the default shown when empty', () => {
+    render(
+      <EmailSenderIdentityCards
+        copy={copy}
+        ticketAddress=""
+        ticketName=""
+        notificationAddress=""
+        notificationName=""
+        notificationAddressReadOnly
+        onTicketAddressChange={vi.fn()}
+        onTicketNameChange={vi.fn()}
+        onNotificationAddressChange={vi.fn()}
+        onNotificationNameChange={vi.fn()}
+      />
+    );
+
+    // No input for the read-only address: the effective default renders as text.
+    expect(screen.queryByDisplayValue('notifications@example.com')).not.toBeInTheDocument();
+    const readOnlyAddress = document.getElementById('notification-from-address');
+    expect(readOnlyAddress?.tagName).toBe('P');
+    expect(readOnlyAddress).toHaveTextContent('notifications@example.com');
+  });
+
+  it('hides the notification card when the identity is edited elsewhere', () => {
+    render(
+      <EmailSenderIdentityCards
+        copy={copy}
+        ticketAddress=""
+        ticketName=""
+        notificationAddress=""
+        notificationName=""
+        showNotificationCard={false}
+        onTicketAddressChange={vi.fn()}
+        onTicketNameChange={vi.fn()}
+        onNotificationAddressChange={vi.fn()}
+        onNotificationNameChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Ticket email identity')).toBeInTheDocument();
+    expect(screen.queryByText('All other email identity')).not.toBeInTheDocument();
+  });
+
   it('keeps ticket and notification change handlers independent', () => {
     const onTicketNameChange = vi.fn();
     const onNotificationNameChange = vi.fn();

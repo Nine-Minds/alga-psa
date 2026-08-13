@@ -769,7 +769,7 @@
         "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
         "fromLabel": "From Address",
         "fromPlaceholder": "noreply@example.com",
-        "fromHelp": "The default sender address for outbound emails.",
+        "fromHelp": "Default sender for all outbound email. Ticket email can use its own identity below.",
         "security": {
           "title": "Connection Security",
           "secure": "Use implicit TLS (SSL on connect, typically port 465)",
@@ -846,7 +846,7 @@
           "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
           "addressLabel": "From address",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "This is the branding address used for non-ticket email through your SMTP server.",
+          "smtpAddressHelp": "Set by the From Address in the SMTP configuration above. All non-ticket email is sent from it.",
           "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
           "nameLabel": "Sender display name",
           "namePlaceholder": "Your company name",

@@ -769,7 +769,7 @@
         "authHint": "Lassen Sie Benutzername und Passwort leer, wenn Ihr Relay E-Mails ohne Authentifizierung akzeptiert.",
         "fromLabel": "Absenderadresse",
         "fromPlaceholder": "noreply@beispiel.de",
-        "fromHelp": "Die Standardabsenderadresse für ausgehende E-Mails.",
+        "fromHelp": "Standardabsender für alle ausgehenden E-Mails. Ticket-E-Mails können unten eine eigene Absenderidentität verwenden.",
         "security": {
           "title": "Verbindungssicherheit",
           "secure": "Implizites TLS verwenden (SSL beim Verbinden, üblicherweise Port 465)",
@@ -846,7 +846,7 @@
           "description": "Versehen Sie Portal-Einladungen, Passwortrücksetzungen, Rechnungen, Projektaktualisierungen und allgemeine Benachrichtigungen unabhängig vom Ticket-Routing mit Ihrem Branding.",
           "addressLabel": "Absenderadresse",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Dies ist die Branding-Adresse, die für E-Mails ohne Ticketbezug über Ihren SMTP-Server verwendet wird.",
+          "smtpAddressHelp": "Wird durch die Absenderadresse in der SMTP-Konfiguration oben festgelegt. Alle E-Mails ohne Ticketbezug werden von dieser Adresse gesendet.",
           "lockedAddressHelp": "Diese Adresse wird durch die aktive verwaltete Domain oder das ausgewählte Microsoft 365-Postfach bestimmt.",
           "nameLabel": "Anzeigename des Absenders",
           "namePlaceholder": "Name Ihres Unternehmens",

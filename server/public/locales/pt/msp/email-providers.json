@@ -769,7 +769,7 @@
         "authHint": "Deixe o nome de usuário e a senha em branco se o seu relay aceitar e-mails sem autenticação.",
         "fromLabel": "Do endereço",
         "fromPlaceholder": "noreply@example.com",
-        "fromHelp": "O endereço do remetente padrão para e-mails enviados.",
+        "fromHelp": "Remetente padrão de todos os emails enviados. Os emails de tickets podem usar uma identidade própria abaixo.",
         "security": {
           "title": "Segurança da conexão",
           "secure": "Usar TLS implícito (SSL ao conectar, normalmente a porta 465)",
@@ -846,7 +846,7 @@
           "description": "Personalize convites do portal, redefinições de senha, faturas, atualizações de projetos e notificações gerais, independentemente do roteamento de tickets.",
           "addressLabel": "Endereço do remetente",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Este é o endereço da marca usado para emails que não são de tickets enviados pelo seu servidor SMTP.",
+          "smtpAddressHelp": "Definido pelo endereço do remetente na configuração SMTP acima. Todos os emails que não são de tickets são enviados a partir dele.",
           "lockedAddressHelp": "Este endereço é determinado pelo domínio gerenciado ativo ou pela caixa de correio selecionada do Microsoft 365.",
           "nameLabel": "Nome de exibição do remetente",
           "namePlaceholder": "Nome da sua empresa",

@@ -769,7 +769,7 @@
         "authHint": "Pozostaw nazwę użytkownika i hasło puste, jeśli przekaźnik akceptuje pocztę bez uwierzytelniania.",
         "fromLabel": "Adres nadawcy",
         "fromPlaceholder": "noreply@przyklad.pl",
-        "fromHelp": "Domyślny adres nadawcy dla poczty wychodzącej.",
+        "fromHelp": "Domyślny nadawca całej poczty wychodzącej. Wiadomości zgłoszeń mogą używać własnej tożsamości poniżej.",
         "security": {
           "title": "Bezpieczeństwo połączenia",
           "secure": "Użyj niejawnego TLS (SSL przy połączeniu, zwykle port 465)",
@@ -846,7 +846,7 @@
           "description": "Oddziel identyfikację nadawcy zaproszeń do portalu, wiadomości o resetowaniu haseł, faktur, aktualizacji projektów i ogólnych powiadomień od routingu zgłoszeń.",
           "addressLabel": "Adres nadawcy",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "To adres marki używany przez serwer SMTP do wysyłania wiadomości e-mail niezwiązanych ze zgłoszeniami.",
+          "smtpAddressHelp": "Ustalany przez adres nadawcy w konfiguracji SMTP powyżej. Cała poczta niezwiązana ze zgłoszeniami jest wysyłana z tego adresu.",
           "lockedAddressHelp": "Ten adres wynika z aktywnej domeny zarządzanej lub wybranej skrzynki pocztowej Microsoft 365.",
           "nameLabel": "Wyświetlana nazwa nadawcy",
           "namePlaceholder": "Nazwa Twojej firmy",
