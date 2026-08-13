@@ -23,21 +23,42 @@ export interface DocumentTemplateResolvers {
   getStandard: () => TemplateAst;
 }
 
+/** A template plus the provenance a rendered document records about it. */
+export interface DocumentTemplateRef {
+  ast: TemplateAst;
+  /** Custom template uuid, or the standard template's code. */
+  templateId: string | null;
+  version: number | null;
+}
+
+/**
+ * Resolve which template to render: entity override → tenant default → standard fallback.
+ * Generic in what a resolver yields so callers can carry provenance alongside the AST.
+ */
+export async function resolveDocumentTemplate<T>(resolvers: {
+  fetchOverride: () => Promise<T | null>;
+  fetchTenantDefault: () => Promise<T | null>;
+  getStandard: () => T;
+}): Promise<{ value: T; source: DocumentTemplateSource }> {
+  const override = await resolvers.fetchOverride();
+  if (override) {
+    return { value: override, source: 'override' };
+  }
+
+  const tenantDefault = await resolvers.fetchTenantDefault();
+  if (tenantDefault) {
+    return { value: tenantDefault, source: 'tenant-default' };
+  }
+
+  return { value: resolvers.getStandard(), source: 'standard' };
+}
+
 /**
  * Resolve which template AST to render: entity override → tenant default → standard fallback.
  */
 export async function resolveDocumentTemplateAst(
   resolvers: DocumentTemplateResolvers,
 ): Promise<DocumentTemplateResolution> {
-  const override = await resolvers.fetchOverride();
-  if (override) {
-    return { ast: override, source: 'override' };
-  }
-
-  const tenantDefault = await resolvers.fetchTenantDefault();
-  if (tenantDefault) {
-    return { ast: tenantDefault, source: 'tenant-default' };
-  }
-
-  return { ast: resolvers.getStandard(), source: 'standard' };
+  const { value, source } = await resolveDocumentTemplate<TemplateAst>(resolvers);
+  return { ast: value, source };
 }

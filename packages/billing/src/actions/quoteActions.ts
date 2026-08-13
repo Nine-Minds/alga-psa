@@ -1,7 +1,6 @@
 'use server';
-/* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote PDF generation creates document records - direct model access required in server action context */
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
-import { randomUUID } from 'crypto';
 import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -20,7 +19,6 @@ import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailL
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
-import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -439,43 +437,17 @@ const getQuoteRecipients = async (
   );
 };
 
+// Filing (documents row + quote association, /Quotes/Generated, client-visible)
+// lives in the PDF service alongside invoice and sales-order filing.
 const storeQuotePdf = async (
-  knex: Knex,
   tenant: string,
   quote: IQuote,
   userId: string
 ): Promise<string> => {
-  const pdfService = createPDFGenerationService(tenant);
-  const fileRecord = await pdfService.generateAndStore({
+  const fileRecord = await createPDFGenerationService(tenant).generateAndStore({
     quoteId: quote.quote_id,
     quoteNumber: quote.quote_number ?? undefined,
     userId,
-  });
-
-  const documentId = randomUUID();
-  const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
-
-  await DocumentModel.insert(knex, {
-    document_id: documentId,
-    document_name: `Quote_${resolvedQuoteNumber}.pdf`,
-    type_id: null,
-    user_id: userId,
-    created_by: userId,
-    order_number: 0,
-    tenant,
-    file_id: fileRecord.file_id,
-    storage_path: fileRecord.storage_path,
-    mime_type: 'application/pdf',
-    file_size: fileRecord.file_size,
-    folder_path: '/Quotes/Generated',
-    is_client_visible: true,
-  });
-
-  await DocumentAssociation.create(knex, {
-    document_id: documentId,
-    entity_id: quote.quote_id,
-    entity_type: 'quote',
-    tenant,
   });
 
   return fileRecord.file_id;
@@ -1553,7 +1525,7 @@ export const sendQuote = withAuth(async (
 
   // Store the generated PDF as a document associated with the quote (best-effort)
   try {
-    await storeQuotePdf(knex, tenant, quote, actorUserId ?? quote.created_by ?? 'system');
+    await storeQuotePdf(tenant, quote, actorUserId ?? quote.created_by ?? 'system');
   } catch (pdfStoreError) {
     console.error('Failed to store quote PDF:', pdfStoreError);
   }
@@ -2139,7 +2111,7 @@ export const regenerateQuotePdf = withAuth(async (
   );
 
   const actorUserId = getActorUserId(user) ?? quote.created_by ?? 'system';
-  const fileId = await storeQuotePdf(knex, tenant, quote, actorUserId);
+  const fileId = await storeQuotePdf(tenant, quote, actorUserId);
   return fileId;
   });
 });

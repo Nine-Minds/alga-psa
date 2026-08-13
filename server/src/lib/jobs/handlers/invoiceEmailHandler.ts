@@ -1,5 +1,5 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
+import { PDFGenerationService, createPDFGenerationService, publishGeneratedDocumentsToClient } from '@alga-psa/billing/services';
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -264,6 +264,16 @@ export class InvoiceEmailHandler {
             if (!success) {
               throw new Error('Failed to send invoice email');
             }
+
+            // The invoice has reached the client, so the filed document may now
+            // be shown in the client portal.
+            await publishGeneratedDocumentsToClient(tenantId, 'invoice', invoiceId).catch((visibilityError) => {
+              logger.warn('[InvoiceEmailHandler] Failed to publish invoice document to client', {
+                tenantId,
+                invoiceId,
+                error: visibilityError instanceof Error ? visibilityError.message : 'Unknown error',
+              });
+            });
 
             const emailCompleteDetails = {
               invoiceId,

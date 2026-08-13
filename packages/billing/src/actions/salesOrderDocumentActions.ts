@@ -4,9 +4,10 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { TenantEmailService } from '@alga-psa/email';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-import { createPDFGenerationService } from '../services/pdfGenerationService';
+import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import {
   buildSalesOrderConfirmationEmailContent,
   dedupeRecipients,
@@ -54,16 +55,44 @@ export const downloadSalesOrderPDF = withAuth(
       );
     }
 
-    const pdfGenerationService = createPDFGenerationService(tenant);
-    const pdfBuffer = await pdfGenerationService.generatePDF({
-      salesOrderId: soId,
-      salesOrderDocumentType: documentType,
-      userId: user.user_id,
-    });
+    const pdfBuffer = await renderStoredSalesOrderPdf(tenant, soId, documentType, user.user_id);
 
     return { pdfData: Array.from(pdfBuffer), soNumber: so.so_number, documentType };
   },
 );
+
+/**
+ * File the Sales Order document (reusing an already-filed one) and hand back its bytes, so a
+ * download and the emailed copy are the same stored artifact rather than two independent renders.
+ */
+async function renderStoredSalesOrderPdf(
+  tenant: string,
+  soId: string,
+  documentType: SalesOrderDocumentType,
+  userId: string,
+): Promise<Buffer> {
+  const pdfGenerationService = createPDFGenerationService(tenant);
+
+  try {
+    const stored = await pdfGenerationService.generateAndStore({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+
+    const { buffer } = await StorageService.downloadFile(stored.file_id);
+    return Buffer.from(buffer);
+  } catch (error) {
+    // Filing is what makes the document findable, but it is not what the caller
+    // asked for: an unavailable document store must not cost them the PDF.
+    console.error('[salesOrderDocument] Falling back to an unfiled render:', error);
+    return pdfGenerationService.generatePDF({
+      salesOrderId: soId,
+      salesOrderDocumentType: documentType,
+      userId,
+    });
+  }
+}
 
 /**
  * Resolve the recipient email(s) for a Sales Order: any explicitly-passed addresses, else the
@@ -139,11 +168,7 @@ export const emailSalesOrderConfirmation = withAuth(
       };
     }
 
-    const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({
-      salesOrderId: soId,
-      salesOrderDocumentType: 'sales-order',
-      userId: user.user_id,
-    });
+    const pdfBuffer = await renderStoredSalesOrderPdf(tenant, soId, 'sales-order', user.user_id);
 
     const soNumber = so.so_number ?? soId;
     const tenantRow = await knex('tenants').select('client_name').where({ tenant }).first();
@@ -167,6 +192,11 @@ export const emailSalesOrderConfirmation = withAuth(
       entityId: soId,
       userId: user.user_id,
     });
+
+    if (result.success) {
+      // Sent, so the filed confirmation may now be shown in the client portal.
+      await publishGeneratedDocumentsToClient(tenant, 'sales_order', soId).catch(() => undefined);
+    }
 
     return {
       success: result.success,

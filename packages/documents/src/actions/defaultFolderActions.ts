@@ -166,6 +166,7 @@ const SUGGESTED_DEFAULTS: ISuggestedDefault[] = [
       { folderPath: '/Clients/Technical', sortOrder: 6, isClientVisible: false },
       { folderPath: '/Clients/Technical/Runbooks', sortOrder: 7, isClientVisible: false },
       { folderPath: '/Clients/Meeting Notes', sortOrder: 8, isClientVisible: true },
+      { folderPath: '/Clients/Sales Orders', sortOrder: 9, isClientVisible: false },
     ],
   },
   {

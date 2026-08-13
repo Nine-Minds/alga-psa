@@ -4,7 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
-import { createPDFGenerationService } from '../services/pdfGenerationService';
+import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
@@ -614,6 +614,15 @@ export const sendInvoiceEmailAction = withAuth(async (
       });
 
       await emailProvider.sendEmail(message, tenant);
+
+      // The invoice has now reached the client, so the filed document may be
+      // shown in the client portal.
+      await publishGeneratedDocumentsToClient(tenant, 'invoice', invoiceId).catch((error) => {
+        logger.warn('[sendInvoiceEmailAction] Failed to publish invoice document to client', {
+          error,
+          invoiceId,
+        });
+      });
 
       results.push({
         success: true,

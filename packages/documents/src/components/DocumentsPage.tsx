@@ -25,7 +25,7 @@ import HuduDocumentsTab from './HuduDocumentsTab';
 import { useHuduDocumentsTab } from './useHuduDocumentsTab';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
-const DOCUMENT_FILTER_ENTITY_TYPES = ['client', 'contact', 'ticket', 'asset', 'project_task', 'contract', 'quote'];
+const DOCUMENT_FILTER_ENTITY_TYPES = ['client', 'contact', 'ticket', 'asset', 'project_task', 'contract', 'quote', 'invoice', 'sales_order'];
 
 export default function DocumentsPage() {
   const { t } = useTranslation('common');
