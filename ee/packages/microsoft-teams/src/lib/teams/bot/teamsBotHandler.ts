@@ -23,9 +23,16 @@ import {
 } from './teamsConversationReferences';
 import {
   buildAdaptiveCardFromHeroContent,
+  buildAdaptiveSubmitAction,
+  buildTeamsAdaptiveCard,
   buildTicketAdaptiveCard,
   type TeamsAdaptiveCardAttachment,
 } from './teamsAdaptiveCards';
+import {
+  buildGuestTicketIdempotencyKey,
+  createTeamsGuestTicket,
+  resolveTeamsGuestSender,
+} from './teamsGuestIntake';
 import {
   suggestTeamsBotCommand,
   TEAMS_BOT_COMMAND_DEFINITIONS,
@@ -129,6 +136,8 @@ export interface TeamsBotResponseActivity {
     userId?: string;
     commandId?: string;
     conversationType?: string;
+    /** Contact attribution for guest-intake replies (no PSA user involved). */
+    guestContactId?: string;
   };
 }
 
@@ -1647,6 +1656,132 @@ function extractBotCardActionValue(activity: TeamsBotActivity): Record<string, u
     : null;
 }
 
+function extractGuestCardActionValue(activity: TeamsBotActivity): Record<string, unknown> | null {
+  const value = activity.value;
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  return (value as Record<string, unknown>).command === 'guest_card_action'
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/**
+ * Guest intake: conversation flow for senders who are not linked MSP users.
+ * Returns null when the guest path does not apply (capability off, non-personal
+ * scope, or sender unresolvable) so the caller falls through to the sign-in
+ * card. See teamsGuestIntake for the identity confidence ladder.
+ */
+async function maybeHandleGuestConversation(params: {
+  tenantContext: { tenantId: string; enabledCapabilities: string[] };
+  activity: TeamsBotActivity;
+  conversationType: string;
+  microsoftAccountId: string | null;
+  metadata: TeamsBotResponseActivity['metadata'];
+}): Promise<TeamsBotResponseActivity | null> {
+  const { tenantContext, activity, conversationType, microsoftAccountId } = params;
+  if (!tenantContext.enabledCapabilities.includes('guest_ticket_submission')) {
+    return null;
+  }
+  // Personal scope only: a guest submission confirmed in a group chat would
+  // echo ticket data to every member.
+  if (conversationType !== 'personal') {
+    return null;
+  }
+
+  if (!microsoftAccountId) {
+    return null;
+  }
+
+  const sender = await resolveTeamsGuestSender({
+    tenantId: tenantContext.tenantId,
+    microsoftAccountId,
+  });
+  if (!sender) {
+    return null;
+  }
+
+  const metadata: TeamsBotResponseActivity['metadata'] = {
+    ...params.metadata,
+    commandId: 'guest_ticket_intake',
+    guestContactId: sender.contactId,
+  };
+  const clientLabel = sender.clientName ?? 'your organization';
+
+  // Confirmation card press → create (idempotently) and confirm.
+  const guestAction = extractGuestCardActionValue(activity);
+  if (guestAction) {
+    if (normalizeOptionalString(guestAction.actionId) !== 'guest_submit_ticket') {
+      return buildMessageResponse('That action is not available here.', { metadata });
+    }
+    const result = await createTeamsGuestTicket({
+      tenantId: tenantContext.tenantId,
+      sender,
+      microsoftAccountId,
+      title: normalizeOptionalString(guestAction.title) ?? '',
+      description: normalizeOptionalString(guestAction.description) ?? '',
+      idempotencyKey:
+        normalizeOptionalString(guestAction.idempotencyKey) ?? buildGuestTicketIdempotencyKey(),
+    });
+
+    if (result.status === 'created' || result.status === 'replayed') {
+      const ticketNumber = result.status === 'created' ? result.ticketNumber : result.ticketNumber ?? 'your ticket';
+      const text = `Ticket ${ticketNumber} was submitted for ${clientLabel}. The team will follow up${sender.contactEmail ? ` at ${sender.contactEmail}` : ''}.`;
+      return buildMessageResponse(text, {
+        attachments: [buildCard('Ticket submitted', text)],
+        metadata,
+      });
+    }
+    const failText =
+      result.reason === 'no_board_defaults'
+        ? 'Ticket submission is not fully configured for this workspace yet. Please reach the team another way for now.'
+        : 'The ticket could not be submitted right now. Please try again, or reach the team another way.';
+    return buildMessageResponse(failText, {
+      attachments: [buildCard('Ticket not submitted', failText)],
+      metadata,
+    });
+  }
+
+  if (activity.type === 'conversationUpdate') {
+    const greeting = `Hi${sender.contactName ? ` ${sender.contactName}` : ''}! Describe your issue in a message and I will submit a support ticket for ${clientLabel}.`;
+    return buildMessageResponse(greeting, {
+      attachments: [buildCard('Welcome to AlgaPSA support', greeting)],
+      metadata,
+    });
+  }
+
+  const text = normalizeOptionalString(activity.text) ?? '';
+  if (!text) {
+    return buildMessageResponse(
+      `Describe your issue in a message and I will submit a support ticket for ${clientLabel}.`,
+      { metadata }
+    );
+  }
+
+  // First line becomes the title; the full message rides along as description.
+  const title = text.split('\n')[0].slice(0, 120);
+  const confirmText = `Submit this as a support ticket for ${clientLabel}?`;
+  return buildMessageResponse(confirmText, {
+    attachments: [buildCard('Submit a support ticket', confirmText)],
+    adaptiveAttachments: [
+      buildTeamsAdaptiveCard({
+        title: 'Submit a support ticket',
+        text: `"${title}"${text.length > title.length ? ' …' : ''}\n\n${confirmText}`,
+        actions: [
+          buildAdaptiveSubmitAction('Submit ticket', {
+            command: 'guest_card_action',
+            actionId: 'guest_submit_ticket',
+            title,
+            description: text,
+            idempotencyKey: buildGuestTicketIdempotencyKey(),
+          }),
+        ],
+      }),
+    ],
+    metadata,
+  });
+}
+
 async function handleBotCardAction(params: {
   tenantId: string;
   user: BotUser;
@@ -2061,6 +2196,18 @@ export async function handleTeamsBotActivity(
   });
 
   if (linkedUser.status !== 'linked') {
+    // Guest intake first (when the tenant opted in): client contacts and
+    // other non-MSP senders can submit tickets without ever linking.
+    const guestResponse = await maybeHandleGuestConversation({
+      tenantContext,
+      activity,
+      conversationType,
+      microsoftAccountId: getMicrosoftAccountId(activity),
+      metadata: baseMetadata,
+    });
+    if (guestResponse) {
+      return guestResponse;
+    }
     // No dead ends: the sign-in card deep-links into the Microsoft
     // account-link flow, carrying tenant + conversation so the callback can
     // resume with a proactive welcome card.
@@ -2075,6 +2222,18 @@ export async function handleTeamsBotActivity(
 
   const user = await getUserWithRoles(linkedUser.userId, tenantContext.tenantId);
   if (!user || user.user_type !== 'internal') {
+    // Linked client-portal users land here (link exists, not internal):
+    // route them into guest intake rather than a dead end.
+    const guestResponse = await maybeHandleGuestConversation({
+      tenantContext,
+      activity,
+      conversationType,
+      microsoftAccountId: getMicrosoftAccountId(activity),
+      metadata: baseMetadata,
+    });
+    if (guestResponse) {
+      return guestResponse;
+    }
     return buildMessageResponse('The Teams bot could not resolve an MSP technician for this request.', {
       attachments: [
         buildCard('Teams sign-in required', 'The Teams bot could not resolve an MSP technician for this request.'),

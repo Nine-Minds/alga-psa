@@ -161,8 +161,10 @@ function normalizeNullableString(value: unknown): string | null {
 // Capabilities that default to disabled for new tenants. `group_chat_bot`
 // is opt-in because bot responses in group chats are visible to every
 // member of the chat regardless of their PSA permissions — admins must
-// consciously enable it.
-const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot'];
+// consciously enable it. `guest_ticket_submission` opens the bot to
+// non-MSP senders (client contacts submitting tickets), so it too requires
+// a conscious admin decision.
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot', 'guest_ticket_submission'];
 
 function defaultTeamsIntegrationState() {
   return {

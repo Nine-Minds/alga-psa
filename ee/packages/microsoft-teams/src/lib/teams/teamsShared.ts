@@ -7,6 +7,7 @@ export const TEAMS_CAPABILITIES = [
   'group_chat_bot',
   'message_extension',
   'activity_notifications',
+  'guest_ticket_submission',
 ] as const;
 export type TeamsCapability = typeof TEAMS_CAPABILITIES[number];
 
