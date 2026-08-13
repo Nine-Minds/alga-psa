@@ -5,6 +5,8 @@ import type {
   TemplatePrintSettings,
   TemplateNodeStyleRef,
   TemplateFieldDisplayFormat,
+  TemplateI18nRef,
+  TemplateI18nText,
   TemplateTableColumn,
   TemplateTotalsRow,
   TemplateValueExpression,
@@ -83,7 +85,36 @@ const isTemplateValueExpression = (value: unknown): value is TemplateValueExpres
   if (value.type === 'template') {
     return typeof value.template === 'string';
   }
+  if (value.type === 'i18n') {
+    return typeof value.i18nKey === 'string' && typeof value.defaultValue === 'string';
+  }
   return false;
+};
+
+/**
+ * Translatable labels round-trip as two halves: the display text the designer
+ * shows and edits, and the key it came from, parked in a private metadata slot.
+ * Re-typing the text drops the key — customizing a label freezes it, which is
+ * the no-surprises rule the whole feature rests on.
+ */
+const isTemplateI18nRef = (value: unknown): value is TemplateI18nRef =>
+  isRecord(value) && typeof value.i18nKey === 'string' && typeof value.defaultValue === 'string';
+
+const importI18nText = (value: TemplateI18nText | undefined): {
+  text: string | undefined;
+  ref: TemplateI18nRef | undefined;
+} => {
+  if (isTemplateI18nRef(value)) {
+    return { text: value.defaultValue, ref: value };
+  }
+  return { text: typeof value === 'string' ? value : undefined, ref: undefined };
+};
+
+const exportI18nText = (text: string, ref: unknown): TemplateI18nText | undefined => {
+  if (isTemplateI18nRef(ref) && text === ref.defaultValue) {
+    return ref;
+  }
+  return text.length > 0 ? text : undefined;
 };
 
 const resolveExpressionPreviewText = (
@@ -857,7 +888,7 @@ const mapTableColumns = (node: WorkspaceNode): TemplateTableColumn[] => {
 
       const mapped: TemplateTableColumn = {
         id: sanitizeId(id),
-        header: header.length > 0 ? header : undefined,
+        header: exportI18nText(header, column.__astHeaderI18n),
         value: resolvedValue,
       };
       const style = mapTemplateNodeStyleRef(column.style);
@@ -999,7 +1030,7 @@ const mapDesignerNodeToAstNode = (
       return {
         ...createBaseNode(node),
         type: 'section',
-        title: node.type === 'section' && explicitTitle.length > 0 ? explicitTitle : undefined,
+        title: node.type === 'section' ? exportI18nText(explicitTitle, metadata.__astTitleI18n) : undefined,
         children,
       };
       }
@@ -1087,9 +1118,7 @@ const mapDesignerNodeToAstNode = (
         binding: { bindingId },
         label:
           node.type === 'field'
-            ? explicitLabel.length > 0
-              ? explicitLabel
-              : undefined
+            ? exportI18nText(explicitLabel, metadata.__astLabelI18n)
             : resolveNodeTextContent(node),
       };
       if (hasExplicitEmptyValue) {
@@ -1154,8 +1183,8 @@ const mapDesignerNodeToAstNode = (
         columns: mapTableColumns(node),
         headerStyle,
         emptyStateText:
-          typeof metadata.emptyStateText === 'string' && metadata.emptyStateText.trim().length > 0
-            ? metadata.emptyStateText.trim()
+          typeof metadata.emptyStateText === 'string'
+            ? exportI18nText(metadata.emptyStateText.trim(), metadata.__astEmptyStateTextI18n)
             : undefined,
       };
     }
@@ -1171,7 +1200,8 @@ const mapDesignerNodeToAstNode = (
                 return null;
               }
               const id = asTrimmedString(row.id) || `row-${index + 1}`;
-              const label = asTrimmedString(row.label) || id;
+              const labelText = asTrimmedString(row.label) || id;
+              const label = exportI18nText(labelText, row.__astLabelI18n) ?? labelText;
               const preservedValue = isTemplateValueExpression(row.valueExpression)
                 ? row.valueExpression
                 : null;
@@ -1874,8 +1904,12 @@ export const importTemplateAstToWorkspace = (
           } else {
             metadata.fieldBorderStyle = 'none';
           }
-          if (inputNode.label) {
-            metadata.label = inputNode.label;
+          const importedLabel = importI18nText(inputNode.label);
+          if (importedLabel.text) {
+            metadata.label = importedLabel.text;
+          }
+          if (importedLabel.ref) {
+            metadata.__astLabelI18n = importedLabel.ref;
           }
           if (inputNode.labelStyle) {
             metadata.labelStyle = cloneJson(inputNode.labelStyle);
@@ -1904,11 +1938,13 @@ export const importTemplateAstToWorkspace = (
           const collectionPath = resolveImportedCollectionBindingPath(astInput, rawBindingId);
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
           metadata.columns = inputNode.columns.map((column) => {
+            const importedHeader = importI18nText(column.header);
             const mappedColumn: Record<string, unknown> = {
               id: column.id,
-              header: column.header,
+              header: importedHeader.text,
               key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
               valueExpression: column.value,
+              ...(importedHeader.ref ? { __astHeaderI18n: importedHeader.ref } : {}),
             };
 
             if (column.format) {
@@ -1921,8 +1957,12 @@ export const importTemplateAstToWorkspace = (
 
             return mappedColumn;
           });
-          if (typeof inputNode.emptyStateText === 'string' && inputNode.emptyStateText.trim().length > 0) {
-            metadata.emptyStateText = inputNode.emptyStateText.trim();
+          const importedEmptyState = importI18nText(inputNode.emptyStateText);
+          if (importedEmptyState.text && importedEmptyState.text.trim().length > 0) {
+            metadata.emptyStateText = importedEmptyState.text.trim();
+          }
+          if (importedEmptyState.ref) {
+            metadata.__astEmptyStateTextI18n = importedEmptyState.ref;
           }
           if (inputNode.headerStyle?.inline) {
             const hs = inputNode.headerStyle.inline;
@@ -1936,17 +1976,21 @@ export const importTemplateAstToWorkspace = (
             inputNode.sourceBinding.bindingId
           );
           metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
-          metadata.totalsRows = inputNode.rows.map((row) => ({
-            id: row.id,
-            label: row.label,
-            valueExpression: row.value,
-            valuePath: row.value.type === 'path' ? row.value.path : '',
-            type: row.format,
-            format: row.format,
-            emphasize: row.emphasize === true,
-            ...(row.style ? { style: cloneJson(row.style) } : {}),
-            ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
-          }));
+          metadata.totalsRows = inputNode.rows.map((row) => {
+            const importedRowLabel = importI18nText(row.label);
+            return {
+              id: row.id,
+              label: importedRowLabel.text,
+              ...(importedRowLabel.ref ? { __astLabelI18n: importedRowLabel.ref } : {}),
+              valueExpression: row.value,
+              valuePath: row.value.type === 'path' ? row.value.path : '',
+              type: row.format,
+              format: row.format,
+              emphasize: row.emphasize === true,
+              ...(row.style ? { style: cloneJson(row.style) } : {}),
+              ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
+            };
+          });
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {
@@ -1971,8 +2015,12 @@ export const importTemplateAstToWorkspace = (
             }
           }
         } else if (inputNode.type === 'section') {
-          if (typeof inputNode.title === 'string' && inputNode.title.trim().length > 0) {
-            metadata.title = inputNode.title;
+          const importedTitle = importI18nText(inputNode.title);
+          if (importedTitle.text && importedTitle.text.trim().length > 0) {
+            metadata.title = importedTitle.text;
+          }
+          if (importedTitle.ref) {
+            metadata.__astTitleI18n = importedTitle.ref;
           }
         } else if (inputNode.type === 'stack') {
           // Carry the optional `repeat` region binding through so the designer

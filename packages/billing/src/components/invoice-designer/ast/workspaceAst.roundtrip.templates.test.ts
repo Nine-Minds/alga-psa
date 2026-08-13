@@ -7,7 +7,7 @@ const hasOwn = (value: object, key: string): boolean => Object.prototype.hasOwnP
 
 const assertColumnSemantics = (source: TemplateTableColumn, roundTripped: TemplateTableColumn) => {
   expect(roundTripped.id).toBe(source.id);
-  expect(roundTripped.header).toBe(source.header);
+  expect(roundTripped.header).toEqual(source.header);
   expect(roundTripped.value).toEqual(source.value);
   if (hasOwn(source, 'format')) {
     expect(roundTripped.format).toBe(source.format);
@@ -41,7 +41,7 @@ const assertNodeSemantics = (source: TemplateNode, roundTripped: TemplateNode) =
     case 'section':
       expect(roundTripped.type).toBe('section');
       if (roundTripped.type !== 'section') return;
-      expect(roundTripped.title).toBe(source.title);
+      expect(roundTripped.title).toEqual(source.title);
       expect(roundTripped.children.length).toBe(source.children.length);
       source.children.forEach((sourceChild, index) => assertNodeSemantics(sourceChild, roundTripped.children[index]!));
       return;
@@ -61,7 +61,7 @@ const assertNodeSemantics = (source: TemplateNode, roundTripped: TemplateNode) =
       expect(roundTripped.type).toBe('field');
       if (roundTripped.type !== 'field') return;
       expect(roundTripped.binding).toEqual(source.binding);
-      expect(roundTripped.label).toBe(source.label);
+      expect(roundTripped.label).toEqual(source.label);
       if (hasOwn(source, 'format')) {
         expect(roundTripped.format).toBe(source.format);
       }
@@ -95,7 +95,7 @@ const assertNodeSemantics = (source: TemplateNode, roundTripped: TemplateNode) =
       expect(roundTripped.columns.length).toBe(source.columns.length);
       source.columns.forEach((sourceColumn, index) => assertColumnSemantics(sourceColumn, roundTripped.columns[index]!));
       if (hasOwn(source, 'emptyStateText')) {
-        expect(roundTripped.emptyStateText).toBe(source.emptyStateText);
+        expect(roundTripped.emptyStateText).toEqual(source.emptyStateText);
       }
       return;
     case 'totals':
