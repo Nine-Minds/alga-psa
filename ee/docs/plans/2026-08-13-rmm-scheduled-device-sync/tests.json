@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "parseRmmDeviceSyncState returns intervalMinutes 60 when settings.deviceSync is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F001"
@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "parseRmmDeviceSyncState clamps intervalMinutes 5 up to 15",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
@@ -19,7 +19,7 @@
   {
     "id": "T003",
     "description": "parseRmmDeviceSyncState clamps intervalMinutes 5000 down to 1440",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "parseRmmDeviceSyncState handles settings stored as a JSON string as well as an object",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F001"
@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "parseRmmDeviceSyncState returns syncEnabled false when deviceSync is absent (opt-in default)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F001"
@@ -45,7 +45,7 @@
   {
     "id": "T006",
     "description": "parseRmmDeviceSyncState returns syncEnabled false when the integration is inactive even if deviceSync.enabled is true",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F011"
@@ -54,7 +54,7 @@
   {
     "id": "T007",
     "description": "RMM_DEVICE_SYNC_PROVIDERS is not the same array reference or contents as RMM_ALERT_POLLING_PROVIDERS",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

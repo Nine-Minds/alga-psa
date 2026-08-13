@@ -1,60 +1,479 @@
 [
-  { "id": "F001", "description": "Add a `deviceSync` settings shape to rmm_integrations.settings: { enabled: boolean, intervalMinutes: number }, read with defaults rather than backfilled by migration", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F002", "description": "parseRmmDeviceSyncState(row) returns { active, syncEnabled, intervalMinutes } with intervalMinutes clamped to 15..1440 and defaulting to 60", "implemented": false, "prdRefs": ["Data model", "UX notes"] },
-  { "id": "F003", "description": "deviceSync.enabled defaults to false for existing integrations so no tenant gains recurring API load without opting in", "implemented": false, "prdRefs": ["Rollout"] },
-  { "id": "F004", "description": "Define RMM_DEVICE_SYNC_PROVIDERS as a list independent of RMM_ALERT_POLLING_PROVIDERS", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F005", "description": "Add RMM_DEVICE_SYNC_JOB = 'rmm-device-sync' job name constant alongside the existing RMM job constants", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F006", "description": "Register an rmm-device-sync job handler with the IJobRunner registry so both pg-boss (CE) and Temporal (EE) can execute it", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F007", "description": "rmm-device-sync job data carries { tenantId, integrationId, provider }", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F008", "description": "Recurring device-sync jobs use singletonKey `rmm-device-sync:<tenant>:<integration>` so one integration cannot accumulate duplicate schedules", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F009", "description": "Device-sync schedules are created from intervalMinutesToCron(intervalMinutes), reusing the existing helper", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F010", "description": "The RMM polling reconciler also reconciles device-sync schedules, creating jobs for newly eligible integrations", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F011", "description": "The reconciler cancels a device-sync schedule when the integration is deactivated", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F012", "description": "The reconciler cancels a device-sync schedule when deviceSync.enabled becomes false", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F013", "description": "The reconciler recreates a device-sync schedule at the new cadence when intervalMinutes changes", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F014", "description": "The reconciler leaves an unchanged, healthy device-sync schedule untouched (no churn on every pass)", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F015", "description": "The reconciler skips providers absent from RMM_DEVICE_SYNC_PROVIDERS without logging an error per pass", "implemented": false, "prdRefs": ["Existing machinery to reuse"] },
-  { "id": "F016", "description": "The device-sync handler resolves the provider's sync strategy and no-ops with a warning when none is registered for that provider", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F017", "description": "A successful scheduled run sets rmm_integrations.last_incremental_sync_at", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F018", "description": "A successful scheduled run sets last_sync_at and sync_status = 'completed' and clears sync_error", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F019", "description": "A failed scheduled run records sync_error and sync_status = 'failed' without cancelling the schedule", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F020", "description": "A scheduled run for a suspended tenant exits without calling the provider API", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F021", "description": "Concurrent runs for the same integration are prevented (singleton semantics honoured on both backends)", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F022", "description": "Define a shared syncDevicesIncremental strategy interface that every provider strategy can implement", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F023", "description": "The delta cursor resolves as last_incremental_sync_at ?? last_full_sync_at ?? now-24h, matching NinjaOne's existing semantics", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F024", "description": "NinjaOne: the scheduled job calls the existing syncDevicesIncremental strategy rather than a new code path", "implemented": false, "prdRefs": ["Provider capability", "Acceptance criteria"] },
-  { "id": "F025", "description": "NinjaOne: verify and document the `since` parameter's server-side semantics against the NinjaOne API before relying on it", "implemented": false, "prdRefs": ["Provider capability", "Open questions"] },
-  { "id": "F026", "description": "NinjaOne: the manual server action and the scheduled job share one implementation with no behavioural divergence", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F027", "description": "Level.io: determine whether the device list endpoint supports any server-side filter that avoids a full page walk; record the finding", "implemented": false, "prdRefs": ["Open questions", "Risks"] },
-  { "id": "F028", "description": "Level.io: implement syncDevicesIncremental filtering devices by last_seen_at against the delta cursor", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F029", "description": "Level.io: incremental sync walks cursor pagination (starting_after, limit 100) to completion", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F030", "description": "Level.io: incremental sync writes only devices whose snapshot changed, leaving untouched rows' updated_at stable", "implemented": false, "prdRefs": ["Goals"] },
-  { "id": "F031", "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F032", "description": "TacticalRMM: investigate why no integration has ever completed a sync and record the root cause", "implemented": false, "prdRefs": ["Provider capability", "Open questions"] },
-  { "id": "F033", "description": "TacticalRMM: implement or repair device sync so a manual sync succeeds before any schedule is enabled", "implemented": false, "prdRefs": ["Provider capability", "Risks"] },
-  { "id": "F034", "description": "TacticalRMM: implement syncDevicesIncremental once the base sync works", "implemented": false, "prdRefs": ["Provider capability"] },
-  { "id": "F035", "description": "Huntress: determine whether a device sync path exists at all; if not, exclude it from RMM_DEVICE_SYNC_PROVIDERS and record why", "implemented": false, "prdRefs": ["Provider capability", "Open questions"] },
-  { "id": "F036", "description": "Huntress: device sync must not disturb the incident poller's use of last_incremental_sync_at as its cursor", "implemented": false, "prdRefs": ["Provider capability", "Risks"] },
-  { "id": "F037", "description": "Add a Device sync enable/disable toggle to each connected integration's panel in Integrations → RMM", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F038", "description": "Add an interval control (minutes) to the integration panel, constrained to the same 15..1440 bounds enforced server-side", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F039", "description": "The panel shows last synced, derived from last_incremental_sync_at ?? last_full_sync_at", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F040", "description": "The panel surfaces sync_error when the last scheduled run failed", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F041", "description": "Saving the interval persists to settings.deviceSync and takes effect within one reconciler pass without a restart", "implemented": false, "prdRefs": ["Target users and flows"] },
-  { "id": "F042", "description": "The Device sync control is hidden or disabled for providers not in RMM_DEVICE_SYNC_PROVIDERS", "implemented": false, "prdRefs": ["Provider capability", "UX notes"] },
-  { "id": "F043", "description": "The manual Full sync button retains its existing behaviour unchanged", "implemented": false, "prdRefs": ["Non-goals"] },
-  { "id": "F044", "description": "All new UI strings are wired through useTranslation and added to the English pack (no hardcoded copy)", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F045", "description": "New interactive elements carry kebab-case ids for the UI reflection system", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F046", "description": "A server action persists deviceSync settings with permission checks via withAuth", "implemented": false, "prdRefs": ["UX notes"] },
-  { "id": "F047", "description": "Level.io deviceMapper populates agent_version from the device payload", "implemented": false, "prdRefs": ["Problem statement", "Acceptance criteria"] },
-  { "id": "F048", "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null", "implemented": false, "prdRefs": ["Problem statement", "Acceptance criteria"] },
-  { "id": "F049", "description": "Level.io deviceMapper populates pending_patches", "implemented": false, "prdRefs": ["Problem statement"] },
-  { "id": "F050", "description": "Level.io deviceMapper populates pending_software_patches", "implemented": false, "prdRefs": ["Problem statement"] },
-  { "id": "F051", "description": "Level.io deviceMapper populates failed_patches", "implemented": false, "prdRefs": ["Problem statement"] },
-  { "id": "F052", "description": "Any of the five fields the Level.io API genuinely does not expose is documented in SCRATCHPAD.md rather than left silently null", "implemented": false, "prdRefs": ["Acceptance criteria"] },
-  { "id": "F053", "description": "Device sync schedules work on CE via pg-boss cron for providers available in CE", "implemented": false, "prdRefs": ["Risks", "Acceptance criteria"] },
-  { "id": "F054", "description": "Device sync schedules work on EE via Temporal Schedules", "implemented": false, "prdRefs": ["Risks", "Acceptance criteria"] },
-  { "id": "F055", "description": "CE degrades cleanly for providers whose sync engine lives under ee/ (no import failure, no crashloop)", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F056", "description": "The reconciler tolerates an integration row deleted between scan and schedule creation", "implemented": false, "prdRefs": ["Risks"] },
-  { "id": "F057", "description": "All device-sync queries include tenant in WHERE and JOIN clauses per the CitusDB rules", "implemented": false, "prdRefs": ["Data model"] },
-  { "id": "F058", "description": "Enabling device sync for one integration does not create schedules for that tenant's other integrations", "implemented": false, "prdRefs": ["Acceptance criteria"] }
+  {
+    "id": "F001",
+    "description": "Add a `deviceSync` settings shape to rmm_integrations.settings: { enabled: boolean, intervalMinutes: number }, read with defaults rather than backfilled by migration",
+    "implemented": true,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "parseRmmDeviceSyncState(row) returns { active, syncEnabled, intervalMinutes } with intervalMinutes clamped to 15..1440 and defaulting to 60",
+    "implemented": true,
+    "prdRefs": [
+      "Data model",
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "deviceSync.enabled defaults to false for existing integrations so no tenant gains recurring API load without opting in",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Define RMM_DEVICE_SYNC_PROVIDERS as a list independent of RMM_ALERT_POLLING_PROVIDERS",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add RMM_DEVICE_SYNC_JOB = 'rmm-device-sync' job name constant alongside the existing RMM job constants",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Register an rmm-device-sync job handler with the IJobRunner registry so both pg-boss (CE) and Temporal (EE) can execute it",
+    "implemented": false,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "rmm-device-sync job data carries { tenantId, integrationId, provider }",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Recurring device-sync jobs use singletonKey `rmm-device-sync:<tenant>:<integration>` so one integration cannot accumulate duplicate schedules",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Device-sync schedules are created from intervalMinutesToCron(intervalMinutes), reusing the existing helper",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "The RMM polling reconciler also reconciles device-sync schedules, creating jobs for newly eligible integrations",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "The reconciler cancels a device-sync schedule when the integration is deactivated",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "The reconciler cancels a device-sync schedule when deviceSync.enabled becomes false",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "The reconciler recreates a device-sync schedule at the new cadence when intervalMinutes changes",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "The reconciler leaves an unchanged, healthy device-sync schedule untouched (no churn on every pass)",
+    "implemented": true,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "The reconciler skips providers absent from RMM_DEVICE_SYNC_PROVIDERS without logging an error per pass",
+    "implemented": true,
+    "prdRefs": [
+      "Existing machinery to reuse"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "The device-sync handler resolves the provider's sync strategy and no-ops with a warning when none is registered for that provider",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "A successful scheduled run sets rmm_integrations.last_incremental_sync_at",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "A successful scheduled run sets last_sync_at and sync_status = 'completed' and clears sync_error",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "A failed scheduled run records sync_error and sync_status = 'failed' without cancelling the schedule",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "A scheduled run for a suspended tenant exits without calling the provider API",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Concurrent runs for the same integration are prevented (singleton semantics honoured on both backends)",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Define a shared syncDevicesIncremental strategy interface that every provider strategy can implement",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The delta cursor resolves as last_incremental_sync_at ?? last_full_sync_at ?? now-24h, matching NinjaOne's existing semantics",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "NinjaOne: the scheduled job calls the existing syncDevicesIncremental strategy rather than a new code path",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "NinjaOne: verify and document the `since` parameter's server-side semantics against the NinjaOne API before relying on it",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Open questions"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "NinjaOne: the manual server action and the scheduled job share one implementation with no behavioural divergence",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Level.io: determine whether the device list endpoint supports any server-side filter that avoids a full page walk; record the finding",
+    "implemented": false,
+    "prdRefs": [
+      "Open questions",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Level.io: implement syncDevicesIncremental filtering devices by last_seen_at against the delta cursor",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Level.io: incremental sync walks cursor pagination (starting_after, limit 100) to completion",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Level.io: incremental sync writes only devices whose snapshot changed, leaving untouched rows' updated_at stable",
+    "implemented": false,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "TacticalRMM: investigate why no integration has ever completed a sync and record the root cause",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Open questions"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "TacticalRMM: implement or repair device sync so a manual sync succeeds before any schedule is enabled",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "TacticalRMM: implement syncDevicesIncremental once the base sync works",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Huntress: determine whether a device sync path exists at all; if not, exclude it from RMM_DEVICE_SYNC_PROVIDERS and record why",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Open questions"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Huntress: device sync must not disturb the incident poller's use of last_incremental_sync_at as its cursor",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "Risks"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Add a Device sync enable/disable toggle to each connected integration's panel in Integrations → RMM",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Add an interval control (minutes) to the integration panel, constrained to the same 15..1440 bounds enforced server-side",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "The panel shows last synced, derived from last_incremental_sync_at ?? last_full_sync_at",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "The panel surfaces sync_error when the last scheduled run failed",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Saving the interval persists to settings.deviceSync and takes effect within one reconciler pass without a restart",
+    "implemented": false,
+    "prdRefs": [
+      "Target users and flows"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "The Device sync control is hidden or disabled for providers not in RMM_DEVICE_SYNC_PROVIDERS",
+    "implemented": false,
+    "prdRefs": [
+      "Provider capability",
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "The manual Full sync button retains its existing behaviour unchanged",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "All new UI strings are wired through useTranslation and added to the English pack (no hardcoded copy)",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "New interactive elements carry kebab-case ids for the UI reflection system",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "A server action persists deviceSync settings with permission checks via withAuth",
+    "implemented": false,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Level.io deviceMapper populates agent_version from the device payload",
+    "implemented": false,
+    "prdRefs": [
+      "Problem statement",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null",
+    "implemented": false,
+    "prdRefs": [
+      "Problem statement",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Level.io deviceMapper populates pending_patches",
+    "implemented": false,
+    "prdRefs": [
+      "Problem statement"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Level.io deviceMapper populates pending_software_patches",
+    "implemented": false,
+    "prdRefs": [
+      "Problem statement"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Level.io deviceMapper populates failed_patches",
+    "implemented": false,
+    "prdRefs": [
+      "Problem statement"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Any of the five fields the Level.io API genuinely does not expose is documented in SCRATCHPAD.md rather than left silently null",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Device sync schedules work on CE via pg-boss cron for providers available in CE",
+    "implemented": false,
+    "prdRefs": [
+      "Risks",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Device sync schedules work on EE via Temporal Schedules",
+    "implemented": false,
+    "prdRefs": [
+      "Risks",
+      "Acceptance criteria"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "CE degrades cleanly for providers whose sync engine lives under ee/ (no import failure, no crashloop)",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "The reconciler tolerates an integration row deleted between scan and schedule creation",
+    "implemented": false,
+    "prdRefs": [
+      "Risks"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "All device-sync queries include tenant in WHERE and JOIN clauses per the CitusDB rules",
+    "implemented": false,
+    "prdRefs": [
+      "Data model"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Enabling device sync for one integration does not create schedules for that tenant's other integrations",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance criteria"
+    ]
+  }
 ]

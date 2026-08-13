@@ -39,8 +39,23 @@ import type { IJobRunner } from '../jobs/interfaces';
 
 export const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 export const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
+export const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 
 const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
+
+/**
+ * Which providers get a recurring device sync. Deliberately NOT the alert
+ * polling list: the two capabilities do not coincide. Level.io syncs devices
+ * but polls no alerts; Huntress polls incidents but has no proven device sync
+ * path. A provider only belongs here once a manual sync is known to work for
+ * it — scheduling a broken path just manufactures recurring failures.
+ */
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio'];
+
+/** Device syncs are far heavier than alert polls, so the floor is higher. */
+const DEVICE_SYNC_MIN_MINUTES = 15;
+const DEVICE_SYNC_MAX_MINUTES = 1440;
+const DEVICE_SYNC_DEFAULT_MINUTES = 60;
 const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
 const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
 
@@ -53,6 +68,12 @@ export interface RmmAlertReconciliationJobData extends Record<string, unknown> {
 export interface HuntressIncidentPollJobData extends Record<string, unknown> {
   tenantId: string;
   integrationId: string;
+}
+
+export interface RmmDeviceSyncJobData extends Record<string, unknown> {
+  tenantId: string;
+  integrationId: string;
+  provider: string;
 }
 
 function tenantScopedTable(knex: Knex, table: string, tenant: string) {
@@ -89,6 +110,24 @@ function parseRmmPollState(row: { is_active: boolean; settings: unknown }): Inte
     active: Boolean(row.is_active),
     pollingEnabled: polling.enabled !== false,
     intervalMinutes: Number.isFinite(rawInterval) ? Math.min(60, Math.max(5, Math.round(rawInterval))) : 15,
+  };
+}
+
+/**
+ * Device-sync desired state. Defaults to DISABLED: enabling a recurring provider
+ * API load is an opt-in, so an integration that has never been configured must
+ * not acquire a schedule on upgrade.
+ */
+export function parseRmmDeviceSyncState(row: { is_active: boolean; settings: unknown }): IntegrationPollState {
+  const settings = typeof row.settings === 'string' ? safeParse(row.settings) : (row.settings ?? {});
+  const deviceSync = ((settings as Record<string, unknown>).deviceSync ?? {}) as Record<string, unknown>;
+  const rawInterval = Number(deviceSync.intervalMinutes);
+  return {
+    active: Boolean(row.is_active),
+    pollingEnabled: deviceSync.enabled === true,
+    intervalMinutes: Number.isFinite(rawInterval)
+      ? Math.min(DEVICE_SYNC_MAX_MINUTES, Math.max(DEVICE_SYNC_MIN_MINUTES, Math.round(rawInterval)))
+      : DEVICE_SYNC_DEFAULT_MINUTES,
   };
 }
 
@@ -202,6 +241,151 @@ async function findExistingRecurringJob(
   return (row as unknown as ExistingRecurringJob | undefined) ?? null;
 }
 
+interface ReconcileArgs {
+  tenantId: string;
+  integrationId: string;
+  provider: string;
+  row: { is_active: boolean; settings: unknown; tenant_suspended_at?: unknown };
+}
+
+interface ReconcileOutcome {
+  ensured: number;
+  cancelled: number;
+}
+
+/**
+ * Converge one integration's alert-polling schedule. Behaviour is unchanged
+ * from when this lived inline in the reconciler loop; it is a function so that
+ * device sync can be reconciled independently of its early exits.
+ */
+async function reconcileAlertScheduleForIntegration(
+  runner: IJobRunner,
+  adminKnex: Knex,
+  { tenantId, integrationId, provider, row }: ReconcileArgs
+): Promise<ReconcileOutcome> {
+  const isHuntress = provider === 'huntress';
+  const jobName = isHuntress ? HUNTRESS_INCIDENT_POLL_JOB : RMM_ALERT_RECONCILIATION_JOB;
+  const singletonKey = `${jobName}:${tenantId}:${integrationId}`;
+  const state = isHuntress ? parseHuntressPollState(row) : parseRmmPollState(row);
+  // Suspended tenants are ineligible, so the control loop cancels their
+  // polls and recreates them automatically once the suspension clears.
+  const eligible =
+    state.active
+    && state.pollingEnabled
+    && !row.tenant_suspended_at
+    && (isHuntress || Boolean(getRmmAlertFetcher(provider)));
+  const desiredCron = intervalMinutesToCron(state.intervalMinutes);
+
+  const data = isHuntress
+    ? ({ tenantId, integrationId } satisfies HuntressIncidentPollJobData)
+    : ({ tenantId, integrationId, provider } satisfies RmmAlertReconciliationJobData);
+
+  return convergeSchedule(runner, adminKnex, {
+    tenantId,
+    integrationId,
+    provider,
+    jobName,
+    singletonKey,
+    eligible,
+    desiredCron,
+    data,
+  });
+}
+
+/**
+ * Converge one integration's device-sync schedule. Eligibility is deliberately
+ * narrower than the alert path: the provider must be on the device-sync list
+ * AND deviceSync.enabled must be explicitly true, so nothing acquires a
+ * recurring provider API load by default.
+ */
+async function reconcileDeviceSyncForIntegration(
+  runner: IJobRunner,
+  adminKnex: Knex,
+  { tenantId, integrationId, provider, row }: ReconcileArgs
+): Promise<ReconcileOutcome> {
+  const singletonKey = `${RMM_DEVICE_SYNC_JOB}:${tenantId}:${integrationId}`;
+  const state = parseRmmDeviceSyncState(row);
+  const eligible =
+    state.active
+    && state.pollingEnabled
+    && !row.tenant_suspended_at
+    && RMM_DEVICE_SYNC_PROVIDERS.includes(provider);
+  const desiredCron = intervalMinutesToCron(state.intervalMinutes);
+
+  return convergeSchedule(runner, adminKnex, {
+    tenantId,
+    integrationId,
+    provider,
+    jobName: RMM_DEVICE_SYNC_JOB,
+    singletonKey,
+    eligible,
+    desiredCron,
+    data: { tenantId, integrationId, provider } satisfies RmmDeviceSyncJobData,
+  });
+}
+
+/**
+ * The create/recreate/cancel decision, shared by both capabilities. Errors are
+ * caught per schedule so one bad integration cannot abort the whole pass.
+ */
+async function convergeSchedule(
+  runner: IJobRunner,
+  adminKnex: Knex,
+  args: {
+    tenantId: string;
+    integrationId: string;
+    provider: string;
+    jobName: string;
+    singletonKey: string;
+    eligible: boolean;
+    desiredCron: string;
+    data: RmmAlertReconciliationJobData | HuntressIncidentPollJobData | RmmDeviceSyncJobData;
+  }
+): Promise<ReconcileOutcome> {
+  const { tenantId, integrationId, provider, jobName, singletonKey, eligible, desiredCron, data } = args;
+  let ensured = 0;
+  let cancelled = 0;
+
+  try {
+    const existing = await findExistingRecurringJob(adminKnex, tenantId, singletonKey);
+
+    if (!eligible) {
+      // Cancel via the newest record of ANY status: a failed last run must
+      // not strand the underlying schedule (cancelJob unschedules
+      // recurring records regardless of run status; repeat cancels no-op).
+      const candidate =
+        existing ?? (await findExistingRecurringJob(adminKnex, tenantId, singletonKey, { anyStatus: true }));
+      if (candidate) {
+        const didCancel = await runner.cancelJob(candidate.job_id, tenantId);
+        if (didCancel) cancelled += 1;
+      }
+      return { ensured, cancelled };
+    }
+
+    if (existing && existing.interval === desiredCron) {
+      return { ensured, cancelled }; // converged
+    }
+    if (existing) {
+      // Interval changed: recreate (neither backend mutates args in place).
+      await runner.cancelJob(existing.job_id, tenantId);
+      cancelled += 1;
+    }
+
+    await runner.scheduleRecurringJob(jobName, data, desiredCron, { singletonKey });
+    ensured += 1;
+  } catch (error) {
+    logger.warn('[RmmPollingReconciler] Failed to reconcile schedule', {
+      tenantId,
+      integrationId,
+      provider,
+      jobName,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return { ensured, cancelled };
+}
+
 /**
  * Control loop: converge per-integration polling jobs onto the desired state
  * in rmm_integrations. Safe to run from anywhere, any time — operations are
@@ -215,7 +399,9 @@ export async function reconcileRmmPollingSchedules(
   const integrations = await tenantDb(adminKnex, RMM_POLLING_RECONCILE_TENANT)
     .unscoped('rmm_integrations', RMM_POLLING_RECONCILE_REASON)
     .join('tenants as t', 'rmm_integrations.tenant', 't.tenant')
-    .whereIn('provider', [...RMM_ALERT_POLLING_PROVIDERS, 'huntress'])
+    .whereIn('provider', [
+      ...new Set([...RMM_ALERT_POLLING_PROVIDERS, 'huntress', ...RMM_DEVICE_SYNC_PROVIDERS]),
+    ])
     .select(
       'rmm_integrations.tenant',
       'rmm_integrations.integration_id',
@@ -232,57 +418,17 @@ export async function reconcileRmmPollingSchedules(
     const tenantId = String(row.tenant);
     const integrationId = String(row.integration_id);
     const provider = String(row.provider);
-    const isHuntress = provider === 'huntress';
 
-    const jobName = isHuntress ? HUNTRESS_INCIDENT_POLL_JOB : RMM_ALERT_RECONCILIATION_JOB;
-    const singletonKey = `${jobName}:${tenantId}:${integrationId}`;
-    const state = isHuntress ? parseHuntressPollState(row) : parseRmmPollState(row);
-    // Suspended tenants are ineligible, so the control loop cancels their
-    // polls and recreates them automatically once the suspension clears.
-    const eligible =
-      state.active
-      && state.pollingEnabled
-      && !row.tenant_suspended_at
-      && (isHuntress || Boolean(getRmmAlertFetcher(provider)));
-    const desiredCron = intervalMinutesToCron(state.intervalMinutes);
-
-    try {
-      const existing = await findExistingRecurringJob(adminKnex, tenantId, singletonKey);
-
-      if (!eligible) {
-        // Cancel via the newest record of ANY status: a failed last run must
-        // not strand the underlying schedule (cancelJob unschedules
-        // recurring records regardless of run status; repeat cancels no-op).
-        const candidate =
-          existing ?? (await findExistingRecurringJob(adminKnex, tenantId, singletonKey, { anyStatus: true }));
-        if (candidate) {
-          const didCancel = await runner.cancelJob(candidate.job_id, tenantId);
-          if (didCancel) cancelled += 1;
-        }
-        continue;
-      }
-
-      if (existing && existing.interval === desiredCron) {
-        continue; // converged
-      }
-      if (existing) {
-        // Interval changed: recreate (neither backend mutates args in place).
-        await runner.cancelJob(existing.job_id, tenantId);
-        cancelled += 1;
-      }
-
-      const data = isHuntress
-        ? ({ tenantId, integrationId } satisfies HuntressIncidentPollJobData)
-        : ({ tenantId, integrationId, provider } satisfies RmmAlertReconciliationJobData);
-      await runner.scheduleRecurringJob(jobName, data, desiredCron, { singletonKey });
-      ensured += 1;
-    } catch (error) {
-      logger.warn('[RmmPollingReconciler] Failed to reconcile integration', {
-        tenantId,
-        integrationId,
-        provider,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    // Alerts and device sync are independent capabilities on the same
+    // integration: a provider may have one, the other, or both. Each is
+    // reconciled on its own so an ineligible alert poll cannot suppress a
+    // device sync (or vice versa).
+    for (const outcome of [
+      await reconcileAlertScheduleForIntegration(runner, adminKnex, { tenantId, integrationId, provider, row }),
+      await reconcileDeviceSyncForIntegration(runner, adminKnex, { tenantId, integrationId, provider, row }),
+    ]) {
+      ensured += outcome.ensured;
+      cancelled += outcome.cancelled;
     }
   }
 
