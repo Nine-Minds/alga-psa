@@ -202,6 +202,11 @@ async function migrateAndSeed(cfg: DbCfg): Promise<void> {
       '20250810140000_align_registry_v2_schema.cjs',
       '20251031130000_create_install_config_tables.cjs',
       '20260101120000_create_extension_schedule_tables.cjs',
+      // Stripe payment/provider tables needed by the portal payment-link e2e
+      // specs (payment_provider_configs, client_payment_customers,
+      // invoice_payment_links, payment_webhook_events, invoice_payments).
+      '20251124120000_create_payment_provider_tables.cjs',
+      '20251203120000_create_invoice_payments_table.cjs',
     ]);
 
     await db.migrate.latest({

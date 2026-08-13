@@ -137,6 +137,19 @@
     "paymentSuccessful": "Betaling succesvol verwerkt",
     "paymentFailed": "Betaling mislukt. Probeer het opnieuw."
   },
+  "paymentUnavailable": {
+    "title": "Betaling niet beschikbaar",
+    "notConfigured": "Online betalen is niet beschikbaar voor deze factuur.",
+    "creationFailed": "We konden de betaling niet starten. Probeer het opnieuw.",
+    "alreadyPaid": "Deze factuur is al betaald.",
+    "invoiceUnavailable": "Deze factuur is niet beschikbaar voor betaling.",
+    "accessDenied": "U heeft geen toegang om deze factuur te betalen.",
+    "generic": "De online betaling kon niet worden gestart.",
+    "tryAgain": "Opnieuw proberen",
+    "backToBilling": "Terug naar facturering",
+    "retryFailed": "We konden de betaling nog steeds niet starten. Probeer het over een moment opnieuw.",
+    "loading": "Laden..."
+  },
   "quotes": {
     "pendingQuotes": "Openstaande offertes",
     "awaitingResponse": "{{count}} offerte(s) wacht(en) op uw reactie",

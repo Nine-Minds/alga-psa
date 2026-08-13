@@ -54,6 +54,7 @@
     "@alga-psa/opportunities": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",

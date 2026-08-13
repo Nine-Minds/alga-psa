@@ -44,6 +44,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         return t('sendEmail.recipients.billingContact', { defaultValue: 'Billing Contact' });
       case 'billing_email':
         return t('sendEmail.recipients.billingEmail', { defaultValue: 'Billing Email' });
+      case 'billing_location':
+      case 'default_location':
       case 'client_email':
         return t('sendEmail.recipients.clientEmail', { defaultValue: 'Client Email' });
       case 'none':

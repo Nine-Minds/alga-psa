@@ -137,6 +137,19 @@
     "paymentSuccessful": "Zahlung erfolgreich verarbeitet",
     "paymentFailed": "Zahlung fehlgeschlagen. Bitte versuche es erneut."
   },
+  "paymentUnavailable": {
+    "title": "Zahlung nicht verfügbar",
+    "notConfigured": "Online-Zahlung ist für diese Rechnung nicht verfügbar.",
+    "creationFailed": "Die Zahlung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+    "alreadyPaid": "Diese Rechnung wurde bereits bezahlt.",
+    "invoiceUnavailable": "Diese Rechnung ist nicht zur Zahlung verfügbar.",
+    "accessDenied": "Sie haben keinen Zugriff auf die Zahlung dieser Rechnung.",
+    "generic": "Die Online-Zahlung konnte nicht gestartet werden.",
+    "tryAgain": "Erneut versuchen",
+    "backToBilling": "Zurück zur Abrechnung",
+    "retryFailed": "Die Zahlung konnte weiterhin nicht gestartet werden. Bitte versuchen Sie es gleich erneut.",
+    "loading": "Wird geladen..."
+  },
   "quotes": {
     "pendingQuotes": "Ausstehende Angebote",
     "awaitingResponse": "{{count}} Angebot(e) warten auf Ihre Antwort",

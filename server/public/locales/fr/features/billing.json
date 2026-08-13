@@ -137,6 +137,19 @@
     "paymentSuccessful": "Paiement traité avec succès",
     "paymentFailed": "Échec du paiement. Veuillez réessayer."
   },
+  "paymentUnavailable": {
+    "title": "Paiement indisponible",
+    "notConfigured": "Le paiement en ligne n'est pas disponible pour cette facture.",
+    "creationFailed": "Nous n'avons pas pu démarrer le paiement. Veuillez réessayer.",
+    "alreadyPaid": "Cette facture a déjà été payée.",
+    "invoiceUnavailable": "Cette facture n'est pas disponible pour le paiement.",
+    "accessDenied": "Vous n'avez pas accès au paiement de cette facture.",
+    "generic": "Le paiement en ligne n'a pas pu être lancé.",
+    "tryAgain": "Réessayer",
+    "backToBilling": "Retour à la facturation",
+    "retryFailed": "Nous n'avons toujours pas pu démarrer le paiement. Veuillez réessayer dans un instant.",
+    "loading": "Chargement..."
+  },
   "quotes": {
     "pendingQuotes": "Devis en attente",
     "awaitingResponse": "{{count}} devis en attente de votre réponse",

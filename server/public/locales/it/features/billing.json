@@ -137,6 +137,19 @@
     "paymentSuccessful": "Pagamento elaborato correttamente",
     "paymentFailed": "Il pagamento non è andato a buon fine. Riprova."
   },
+  "paymentUnavailable": {
+    "title": "Pagamento non disponibile",
+    "notConfigured": "Il pagamento online non è disponibile per questa fattura.",
+    "creationFailed": "Non è stato possibile avviare il pagamento. Riprova.",
+    "alreadyPaid": "Questa fattura è già stata pagata.",
+    "invoiceUnavailable": "Questa fattura non è disponibile per il pagamento.",
+    "accessDenied": "Non hai accesso per pagare questa fattura.",
+    "generic": "Impossibile avviare il pagamento online.",
+    "tryAgain": "Riprova",
+    "backToBilling": "Torna alla fatturazione",
+    "retryFailed": "Non è ancora stato possibile avviare il pagamento. Riprova tra un momento.",
+    "loading": "Caricamento..."
+  },
   "quotes": {
     "pendingQuotes": "Preventivi in sospeso",
     "awaitingResponse": "{{count}} preventivo/i in attesa della tua risposta",

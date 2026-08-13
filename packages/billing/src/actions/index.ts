@@ -34,6 +34,12 @@ export * from './invoiceModification';
 export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+// NOTE: invoiceEmailLinkContext is intentionally NOT re-exported here. It is not a
+// `'use server'` module (it exports a pure sync predicate), so re-exporting it from
+// this barrel pulls its server-only transitive imports (@alga-psa/tenancy/server -> db
+// -> node:async_hooks/crypto/buffer) into any client component that imports from the
+// barrel, breaking the webpack client build. Import it directly from
+// './invoiceEmailLinkContext' or '@alga-psa/billing/actions/invoiceEmailLinkContext'.
 export {
   createSeparateProjectProductInvoices,
   getSeparateProjectProductInvoiceReview,

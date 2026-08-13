@@ -12,12 +12,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface PaymentSuccessPageProps {
-  params: {
+  params: Promise<{
     invoiceId: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     session_id?: string;
-  };
+  }>;
 }
 
 /**
@@ -26,12 +26,15 @@ interface PaymentSuccessPageProps {
  * Displayed after a customer completes payment via Stripe Checkout.
  * Shows payment confirmation and next steps.
  */
-export default function PaymentSuccessPage({ params, searchParams }: PaymentSuccessPageProps) {
+export default async function PaymentSuccessPage({ params, searchParams }: PaymentSuccessPageProps) {
+  const { invoiceId } = await params;
+  const { session_id } = await searchParams;
+
   return (
     <Suspense fallback={<PaymentSuccessLoading />}>
       <PaymentSuccessContent
-        invoiceId={params.invoiceId}
-        sessionId={searchParams.session_id}
+        invoiceId={invoiceId}
+        sessionId={session_id}
       />
     </Suspense>
   );

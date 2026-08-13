@@ -87,8 +87,14 @@ export interface PaymentLinkResult {
 
 /**
  * Status of a payment link.
+ *
+ * `expire_pending` is an intermediate, blocking state: the row is never
+ * returned or reused for checkout, but stays discoverable so a later attempt
+ * retries the provider expiration before any replacement session is created.
+ * It transitions to `expired` only after the provider confirms the session is
+ * closed.
  */
-export type PaymentLinkStatus = 'active' | 'expired' | 'completed' | 'cancelled';
+export type PaymentLinkStatus = 'active' | 'expire_pending' | 'expired' | 'completed' | 'cancelled';
 
 // =============================================================================
 // Payment Details & Status
@@ -159,6 +165,13 @@ export interface PaymentWebhookEvent {
   currency?: string;
   /** Payment status derived from event */
   status: PaymentStatus;
+  /**
+   * External Checkout Session/link ID the event refers to (when the object is
+   * a Checkout Session). Always known for checkout.session.* events, unlike
+   * `paymentIntentId`, which is null on open sessions under apiVersion
+   * 2024-12-18.acacia.
+   */
+  externalLinkId?: string;
   /** External payment intent/charge ID */
   paymentIntentId?: string;
   /** External customer ID */
@@ -238,6 +251,12 @@ export interface PaymentProvider {
    * @returns The created payment link details
    */
   createPaymentLink(request: CreatePaymentLinkRequest): Promise<PaymentLinkResult>;
+
+  /**
+   * Expires an existing hosted payment link when the provider supports it.
+   * Used before replacing a link whose payable amount is no longer current.
+   */
+  expirePaymentLink?(externalLinkId: string): Promise<void>;
 
   /**
    * Verifies the signature of a webhook payload.

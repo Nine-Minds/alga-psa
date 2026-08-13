@@ -1160,6 +1160,22 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "example": "Acme Corporation",
             "availability": "available-unused",
             "notes": "Assembled in templateContext (client.name) but the template uses company.name and recipient.name instead."
+          },
+          {
+            "path": "invoice.paymentUrl",
+            "type": "url",
+            "description": "Hosted Stripe Checkout URL for the invoice, present only when payments are enabled and a link could be created.",
+            "example": "https://checkout.stripe.com/c/pay/cs_test_xyz",
+            "availability": "used",
+            "notes": "Rendered as the primary 'Pay now' action; the block is hidden when empty."
+          },
+          {
+            "path": "invoice.portalUrl",
+            "type": "url",
+            "description": "Authenticated client-portal billing URL (invoices tab) for the invoice, present when a public portal base is available.",
+            "example": "https://app.algapsa.com/client-portal/billing?tab=invoices&invoiceId=inv-001",
+            "availability": "used",
+            "notes": "Rendered as the secondary 'View invoice in client portal' action; the block is hidden when empty."
           }
         ]
       },

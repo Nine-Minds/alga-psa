@@ -137,6 +137,19 @@
     "paymentSuccessful": "11111",
     "paymentFailed": "11111"
   },
+  "paymentUnavailable": {
+    "title": "11111",
+    "notConfigured": "11111",
+    "creationFailed": "11111",
+    "alreadyPaid": "11111",
+    "invoiceUnavailable": "11111",
+    "accessDenied": "11111",
+    "generic": "11111",
+    "tryAgain": "11111",
+    "backToBilling": "11111",
+    "retryFailed": "11111",
+    "loading": "11111"
+  },
   "quotes": {
     "pendingQuotes": "11111",
     "awaitingResponse": "11111 {{count}} 11111",

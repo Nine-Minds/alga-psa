@@ -38,6 +38,7 @@ import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditAc
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
+import { notifyInvoiceTerminalStatus } from '@alga-psa/billing/services';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
@@ -1138,6 +1139,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
+    let finalStatus: string | null = null;
+    let finalBalanceDue = 0;
 
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
@@ -1225,6 +1228,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
+      finalStatus = newStatus;
+      finalBalanceDue = Number(invoice.total_amount) - totalPaid;
+
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: data.invoice_id })
         .update({
@@ -1285,6 +1291,20 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     await publishDeferredEvents(deferredEvents);
 
+    // Reconcile any still-active Checkout sessions immediately: a manual
+    // payment can flip the invoice to paid (retire all) or reduce the balance
+    // (retire only the links whose stored amount no longer matches). Failures
+    // are isolated inside the registry, so this never affects the response.
+    if (finalStatus) {
+      await notifyInvoiceTerminalStatus({
+        knex,
+        tenantId: context.tenant,
+        invoiceId: data.invoice_id,
+        newStatus: finalStatus,
+        balanceDue: finalBalanceDue,
+      });
+    }
+
     // Re-fetch after commit: getById runs on a pooled (non-transaction)
     // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
@@ -1306,6 +1326,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
+    let finalStatus: string | null = null;
+    let finalBalanceDue = 0;
 
     const invoice = await tenantDb(knex, context.tenant).table('invoices')
       .where({ invoice_id: data.invoice_id })
@@ -1357,6 +1379,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
           newStatus = 'partially_applied';
         }
+
+        finalStatus = newStatus;
+        finalBalanceDue = Number(invoice.total_amount) - totalPaid;
 
         await tenantDb(trx, context.tenant).table('invoices')
           .where({ invoice_id: data.invoice_id })
@@ -1425,6 +1450,19 @@ export class InvoiceService extends BaseService<IInvoice> {
     }
 
     await publishDeferredEvents(deferredEvents);
+
+    // Reconcile any still-active Checkout sessions immediately: a credit
+    // application can flip the invoice to paid (retire all) or reduce the
+    // balance (retire only the links whose stored amount no longer matches).
+    if (finalStatus) {
+      await notifyInvoiceTerminalStatus({
+        knex,
+        tenantId: context.tenant,
+        invoiceId: data.invoice_id,
+        newStatus: finalStatus,
+        balanceDue: finalBalanceDue,
+      });
+    }
 
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }

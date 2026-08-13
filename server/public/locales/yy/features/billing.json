@@ -137,6 +137,19 @@
     "paymentSuccessful": "55555",
     "paymentFailed": "55555"
   },
+  "paymentUnavailable": {
+    "title": "55555",
+    "notConfigured": "55555",
+    "creationFailed": "55555",
+    "alreadyPaid": "55555",
+    "invoiceUnavailable": "55555",
+    "accessDenied": "55555",
+    "generic": "55555",
+    "tryAgain": "55555",
+    "backToBilling": "55555",
+    "retryFailed": "55555",
+    "loading": "55555"
+  },
   "quotes": {
     "pendingQuotes": "55555",
     "awaitingResponse": "55555 {{count}} 55555",
