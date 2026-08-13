@@ -72,7 +72,7 @@ type TeamsFormState = {
 
 type TeamsCheckboxGroupField = 'enabledCapabilities' | 'notificationCategories' | 'allowedActions';
 
-const TEAMS_CAPABILITY_VALUES = ['personal_tab', 'personal_bot', 'group_chat_bot', 'message_extension', 'activity_notifications', 'guest_ticket_submission'] as const;
+const TEAMS_CAPABILITY_VALUES = ['personal_tab', 'personal_bot', 'group_chat_bot', 'channel_bot', 'message_extension', 'activity_notifications', 'guest_ticket_submission'] as const;
 const TEAMS_NOTIFICATION_VALUES = ['assignment', 'customer_reply', 'approval_request', 'escalation', 'sla_risk'] as const;
 const TEAMS_ALLOWED_ACTION_VALUES = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;
 
@@ -83,6 +83,7 @@ function getTeamsCapabilityOptions(t: TranslateFn) {
     { value: 'personal_tab', label: t('integrations.teams.settings.capabilities.personalTab.label', { defaultValue: 'Personal tab' }), description: t('integrations.teams.settings.capabilities.personalTab.description', { defaultValue: 'Launch the PSA personal tab entry point.' }) },
     { value: 'personal_bot', label: t('integrations.teams.settings.capabilities.personalBot.label', { defaultValue: 'Personal bot' }), description: t('integrations.teams.settings.capabilities.personalBot.description', { defaultValue: 'Enable personal-scope bot commands for technicians.' }) },
     { value: 'group_chat_bot', label: t('integrations.teams.settings.capabilities.groupChatBot.label', { defaultValue: 'Group chat bot' }), description: t('integrations.teams.settings.capabilities.groupChatBot.description', { defaultValue: 'Allow the bot to respond in Teams group chats. Bot replies (including ticket details) are visible to every member of the chat.' }) },
+    { value: 'channel_bot', label: t('integrations.teams.settings.capabilities.channelBot.label', { defaultValue: 'Channel bot' }), description: t('integrations.teams.settings.capabilities.channelBot.description', { defaultValue: 'Allow the bot to respond when @mentioned in team channels. Bot replies (including ticket details) are visible to every channel member.' }) },
     { value: 'message_extension', label: t('integrations.teams.settings.capabilities.messageExtension.label', { defaultValue: 'Message extension' }), description: t('integrations.teams.settings.capabilities.messageExtension.description', { defaultValue: 'Enable lookup and message-driven PSA actions.' }) },
     { value: 'activity_notifications', label: t('integrations.teams.settings.capabilities.activityNotifications.label', { defaultValue: 'Activity notifications' }), description: t('integrations.teams.settings.capabilities.activityNotifications.description', { defaultValue: 'Deliver personal Teams activity-feed notifications.' }) },
     { value: 'guest_ticket_submission', label: t('integrations.teams.settings.capabilities.guestTicketSubmission.label', { defaultValue: 'Guest ticket submission' }), description: t('integrations.teams.settings.capabilities.guestTicketSubmission.description', { defaultValue: 'Let client contacts who message the bot submit tickets without signing in. Senders are matched to contacts by their verified Microsoft identity; unmatched senders are declined.' }) },

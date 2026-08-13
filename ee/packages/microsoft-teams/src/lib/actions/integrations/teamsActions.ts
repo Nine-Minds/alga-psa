@@ -164,7 +164,7 @@ function normalizeNullableString(value: unknown): string | null {
 // consciously enable it. `guest_ticket_submission` opens the bot to
 // non-MSP senders (client contacts submitting tickets), so it too requires
 // a conscious admin decision.
-const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot', 'guest_ticket_submission'];
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot', 'channel_bot', 'guest_ticket_submission'];
 
 function defaultTeamsIntegrationState() {
   return {

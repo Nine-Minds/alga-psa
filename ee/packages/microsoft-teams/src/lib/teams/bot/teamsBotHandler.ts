@@ -2162,12 +2162,12 @@ export async function handleTeamsBotActivity(
     activity,
   });
 
-  if (conversationType !== 'personal' && conversationType !== 'groupChat') {
-    return buildMessageResponse('The AlgaPSA Teams bot supports personal and group chats. Channel conversations are not supported yet.', {
+  if (conversationType !== 'personal' && conversationType !== 'groupChat' && conversationType !== 'channel') {
+    return buildMessageResponse('The AlgaPSA Teams bot supports personal chats, group chats, and team channels.', {
       attachments: [
         buildCard(
           'Unsupported conversation type',
-          'The AlgaPSA Teams bot works in personal and group chats. Channel conversations are not supported yet. Open the bot in a personal or group chat and try again.',
+          'The AlgaPSA Teams bot works in personal chats, group chats, and team channels. Open the bot in one of those scopes and try again.',
           [buildOpenUrlButton('View supported scopes', TEAMS_SCOPE_DOCS_URL)]
         ),
       ],
@@ -2175,15 +2175,28 @@ export async function handleTeamsBotActivity(
     });
   }
 
-  // Group-chat responses are visible to every chat member regardless of their
-  // PSA permissions. Require an explicit per-tenant capability so admins
-  // knowingly opt in before the bot echoes ticket data into a shared chat.
+  // Group-chat and channel responses are visible to every member regardless
+  // of their PSA permissions. Require an explicit per-tenant capability so
+  // admins knowingly opt in before the bot echoes ticket data into a shared
+  // conversation.
   if (conversationType === 'groupChat' && !tenantContext.enabledCapabilities.includes('group_chat_bot')) {
     return buildMessageResponse('The AlgaPSA Teams bot is not enabled for group chats in this tenant. Ask an administrator to enable the group chat capability in Teams integration settings.', {
       attachments: [
         buildCard(
           'Group chat not enabled',
           'Group chat is not enabled for AlgaPSA in this tenant. Administrators can enable it under Settings → Integrations → Teams → Capabilities.'
+        ),
+      ],
+      metadata: baseMetadata,
+    });
+  }
+
+  if (conversationType === 'channel' && !tenantContext.enabledCapabilities.includes('channel_bot')) {
+    return buildMessageResponse('The AlgaPSA Teams bot is not enabled for team channels in this tenant. Ask an administrator to enable the channel capability in Teams integration settings.', {
+      attachments: [
+        buildCard(
+          'Channels not enabled',
+          'Channel conversations are not enabled for AlgaPSA in this tenant. Administrators can enable them under Settings → Integrations → Teams → Capabilities.'
         ),
       ],
       metadata: baseMetadata,
