@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -45,6 +45,15 @@ const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+const DEFAULT_ENTRY_DURATION_MS = 60 * 60 * 1000;
+
+function durationBetween(start: Date | string, end: Date | string): number {
+  const from = new Date(start).getTime();
+  const to = new Date(end).getTime();
+  if (isNaN(from) || isNaN(to) || to <= from) return DEFAULT_ENTRY_DURATION_MS;
+  return to - from;
 }
 
 interface EntryPopupProps {
@@ -159,6 +168,21 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
+
+  const endsBeforeStart = useMemo(() => {
+    const start = new Date(entryData.scheduled_start);
+    const end = new Date(entryData.scheduled_end);
+    return !isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start;
+  }, [entryData.scheduled_start, entryData.scheduled_end]);
+
+  // The length the user actually asked for. Reading it back off the two fields
+  // whenever the start moves picked up half-finished picker states — building
+  // 2:35 PM out of hour/minute/period clicks passes through 2:35 AM — and baked
+  // that bogus gap into the end time. It is refreshed only when the entry loads
+  // or the end is edited outright, never from an in-flight start edit.
+  const intendedDurationRef = useRef(
+    durationBetween(entryData.scheduled_start, entryData.scheduled_end)
+  );
 
     // Determine mode and permissions
     const isEditing = !!event;
@@ -294,6 +318,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           assigned_user_ids: event.assigned_user_ids,
           work_item_id: event.work_item_id,
         });
+        intendedDurationRef.current = durationBetween(event.scheduled_start, event.scheduled_end);
 
         // Load recurrence pattern if it exists
         if (event.recurrence_pattern) {
@@ -332,6 +357,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           work_item_type: initialWorkItem?.type ?? 'ad_hoc',
           assigned_user_ids: slot.assigned_user_ids || (focusedTechnicianId ? [focusedTechnicianId] : [currentUserId]),
         });
+        intendedDurationRef.current = durationBetween(slot.start, slot.end);
         if (initialWorkItem) {
           setSelectedWorkItem(initialWorkItem);
         }
@@ -1261,9 +1287,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 id="scheduled_start"
                 value={entryData.scheduled_start}
                 onChange={(date) => {
+                  // Moving the start used to leave an appointment that finishes
+                  // before it begins. The end now rides along at the length the
+                  // user asked for, which also makes the result independent of
+                  // the order the hour/minute/period buttons were clicked in.
+                  if (isNaN(date.getTime())) return;
                   setEntryData(prev => ({
                     ...prev,
-                    scheduled_start: date
+                    scheduled_start: date,
+                    scheduled_end: new Date(date.getTime() + intendedDurationRef.current)
                   }));
                 }}
                 className="mt-1"
@@ -1278,6 +1310,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 id="scheduled_end"
                 value={entryData.scheduled_end}
                 onChange={(date) => {
+                  // Editing the end outright is the only thing that redefines
+                  // how long the entry is meant to be; an end that lands before
+                  // the start is flagged inline instead of poisoning the length.
+                  if (!isNaN(date.getTime()) && date > new Date(entryData.scheduled_start)) {
+                    intendedDurationRef.current = durationBetween(entryData.scheduled_start, date);
+                  }
                   setEntryData(prev => ({
                     ...prev,
                     scheduled_end: date
@@ -1289,6 +1327,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               />
             </div>
           </div>
+          {/* Always rendered: letting this line appear and disappear resized the
+              dialog under an open time popover, moving the rows mid-click. */}
+          <p
+            id="schedule-time-hint"
+            className={`min-h-[1.25rem] text-sm ${endsBeforeStart ? 'text-red-500' : 'text-gray-500'}`}
+          >
+            {endsBeforeStart
+              ? t('entryPopup.validation.endAfterStart', {
+                  defaultValue: 'End date must be after start date',
+                })
+              : ''}
+          </p>
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               {t('entryPopup.fields.notes', { defaultValue: 'Notes' })}
