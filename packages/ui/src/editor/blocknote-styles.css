@@ -31,3 +31,15 @@
 [contenteditable="false"] .bn-block-content[data-placeholder]::after {
   content: none !important;
 }
+
+/*
+ * Draw the node-selection ring inside the selected block in read-only surfaces.
+ * BlockNote outlines a selected node (e.g. a clicked image) with a 4px outline,
+ * which paints outside the border box and is therefore clipped wherever the
+ * viewer sits in a tight/overflow-hidden wrapper — grid-view comments being the
+ * common case. Insetting the offset keeps the ring visible on all four sides.
+ */
+.bn-container [contenteditable="false"] .bn-block-content.ProseMirror-selectednode > *,
+[contenteditable="false"] .ProseMirror-selectednode > .bn-block-content > * {
+  outline-offset: -4px;
+}
