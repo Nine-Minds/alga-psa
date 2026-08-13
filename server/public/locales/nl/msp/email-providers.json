@@ -756,7 +756,7 @@
         "authHint": "Laat gebruikersnaam en wachtwoord leeg als uw relay e-mail zonder authenticatie accepteert.",
         "fromLabel": "Afzenderadres",
         "fromPlaceholder": "noreply@voorbeeld.nl",
-        "fromHelp": "Het standaard afzenderadres voor uitgaande e-mails.",
+        "fromHelp": "Standaardafzender voor alle uitgaande e-mail. Ticket-e-mail kan hieronder een eigen identiteit gebruiken.",
         "security": {
           "title": "Verbindingsbeveiliging",
           "secure": "Impliciete TLS gebruiken (SSL bij verbinden, doorgaans poort 465)",
@@ -833,7 +833,7 @@
           "description": "Geef portaaluitnodigingen, wachtwoordresets, facturen, projectupdates en algemene meldingen onafhankelijk van de ticketroutering een eigen huisstijl.",
           "addressLabel": "Afzenderadres",
           "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Dit is het huisstijladres dat via uw SMTP-server wordt gebruikt voor e-mail die niet aan tickets is gerelateerd.",
+          "smtpAddressHelp": "Wordt bepaald door het afzenderadres in de SMTP-configuratie hierboven. Alle e-mail die niet aan tickets is gerelateerd wordt vanaf dit adres verzonden.",
           "lockedAddressHelp": "Dit adres wordt bepaald door het actieve beheerde domein of het geselecteerde Microsoft 365-postvak.",
           "nameLabel": "Weergavenaam van afzender",
           "namePlaceholder": "Uw bedrijfsnaam",

@@ -36,6 +36,7 @@ import { EmailProviderConfiguration, EmailSenderIdentityCards } from '@alga-psa/
 import type { EmailProvider } from '@alga-psa/integrations/components';
 import type { TenantEmailSettings } from 'server/src/types/email.types';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
+import { isValidEmail } from '@alga-psa/validation';
 import {
   getEmailSettings,
   updateEmailSettings,
@@ -270,7 +271,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
 
     const trimmed = value.trim();
-    if (!/^[^\s@]+@[^\s@]+$/.test(trimmed)) {
+    if (!isValidEmail(trimmed)) {
       return t('managed.validation.invalidEmail');
     }
 
@@ -559,6 +560,12 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
     if (!from?.trim()) {
       toast.error(t('managed.messages.fromAddressRequired'));
+      return null;
+    }
+    // A junk address here poisons defaultFromDomain (derived below by splitting
+    // on '@'), which then leaks into every synthesized fallback sender.
+    if (!isValidEmail(from)) {
+      toast.error(t('managed.validation.invalidEmail'));
       return null;
     }
 
@@ -941,6 +948,39 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                       {t('managed.outbound.smtp.authHint')}
                     </p>
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="smtp-from">{t('managed.outbound.smtp.fromLabel')}</Label>
+                        <Input
+                          id="smtp-from"
+                          type="email"
+                          value={smtpConfig?.config.from || ''}
+                          placeholder={t('managed.outbound.smtp.fromPlaceholder')}
+                          onChange={(e) => updateSmtpField('from', e.target.value)}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t('managed.outbound.smtp.fromHelp')}
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="smtp-from-name">
+                          {t('managed.outbound.senderIdentities.notification.nameLabel')}
+                        </Label>
+                        <Input
+                          id="smtp-from-name"
+                          value={smtpConfig?.config.fromName || ''}
+                          placeholder={t('managed.outbound.senderIdentities.notification.namePlaceholder')}
+                          onChange={(e) => updateSmtpField('fromName', e.target.value)}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {t('managed.outbound.senderIdentities.notification.nameHelp', {
+                            company: emailSettings?.tenantCompanyName
+                              || t('managed.outbound.senderIdentities.notification.companyFallback'),
+                          })}
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="border-t pt-4 space-y-4">
                       <h4 className="text-sm font-medium">
                         {t('managed.outbound.smtp.security.title')}
@@ -1062,7 +1102,9 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
               notificationTitle: t('managed.outbound.senderIdentities.notification.title'),
               notificationDescription: t('managed.outbound.senderIdentities.notification.description'),
               notificationAddressLabel: t('managed.outbound.senderIdentities.notification.addressLabel'),
-              notificationAddressPlaceholder: t('managed.outbound.senderIdentities.notification.addressPlaceholder'),
+              // Effective fallback sender goes in the placeholder, never the value:
+              // rendering it as the value makes an unsaved field look configured.
+              notificationAddressPlaceholder: emailSettings.effectiveNotificationFrom.email,
               notificationAddressHelp: outboundProvider === 'smtp'
                 ? t('managed.outbound.senderIdentities.notification.smtpAddressHelp')
                 : t('managed.outbound.senderIdentities.notification.lockedAddressHelp'),
@@ -1076,11 +1118,20 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
             ticketName={ticketingFromName}
             connectedInboxes={ticketMailboxOptions}
             ticketFieldsDisabled={loadingOutbound || !outboundDomain}
-            ticketWarning={ticketingFromWarning}
+            ticketWarning={
+              !loadingOutbound && !outboundDomain
+                ? (outboundProvider === 'smtp'
+                    ? t('managed.validation.saveSmtpFirst')
+                    : t('managed.validation.addOutboundFirst'))
+                : ticketingFromWarning
+            }
             ticketError={ticketingFromError}
-            notificationAddress={notificationConfig?.config.from || emailSettings.effectiveNotificationFrom.email}
+            notificationAddress={notificationConfig?.config.from || ''}
             notificationName={notificationConfig?.config.fromName || ''}
-            notificationAddressReadOnly={outboundProvider !== 'smtp'}
+            // Shown only for managed/Microsoft, where the address comes from the
+            // domain or mailbox selection; SMTP edits its identity in the SMTP card.
+            showNotificationCard={outboundProvider !== 'smtp'}
+            notificationAddressReadOnly
             notificationFieldsDisabled={loadingOutbound}
             onTicketAddressChange={handleTicketingFromChange}
             onTicketNameChange={setTicketingFromName}

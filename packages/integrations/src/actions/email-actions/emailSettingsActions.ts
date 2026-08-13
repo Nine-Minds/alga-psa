@@ -18,6 +18,7 @@ import {
   isActionMessageError,
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { isValidEmail } from '@alga-psa/validation';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
@@ -273,7 +274,43 @@ export const updateEmailSettings = withAuth(async (
       updatedAt: now
     };
 
+    // Reject malformed sender data before it persists: a junk config.from
+    // propagates into default_from_domain and every synthesized fallback sender.
+    // Only the fields present in this update are checked, so tenants carrying
+    // legacy junk can still save unrelated settings.
+    if (updates.providerConfigs) {
+      // Provider switches resend stored configs verbatim, so an unchanged
+      // (possibly legacy-junk) From must pass — only new values are checked.
+      const existingFromByType = new Map(
+        (existingSettings?.providerConfigs ?? []).map(config => [
+          config.providerType,
+          typeof config.config?.from === 'string' ? config.config.from.trim() : '',
+        ])
+      );
+      for (const config of normalizedProviderConfigs) {
+        const configFrom = typeof config.config?.from === 'string' ? config.config.from.trim() : '';
+        if (!configFrom || isValidEmail(configFrom)) {
+          continue;
+        }
+        if (configFrom === existingFromByType.get(config.providerType)) {
+          continue;
+        }
+        return actionError(`The ${config.providerType} From address must be a valid email address`);
+      }
+    }
+    if (
+      hasOwnUpdate(updates, 'ticketingFromEmail')
+      && mergedSettings.ticketingFromEmail
+      && !isValidEmail(mergedSettings.ticketingFromEmail)
+    ) {
+      return actionError('Ticketing From address must be a valid email address');
+    }
+
     const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
+    // Same schema as the address checks: a domain is valid iff an address on it is.
+    if (hasOwnUpdate(updates, 'defaultFromDomain') && targetDomain && !isValidEmail(`sender@${targetDomain}`)) {
+      return actionError('Outbound sending domain must be a valid domain (e.g. example.com)');
+    }
     if (mergedSettings.ticketingFromEmail) {
       if (!targetDomain) {
         return actionError('Configure an outbound domain before choosing a ticketing From address');

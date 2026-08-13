@@ -45,11 +45,23 @@ interface EmailSenderIdentityCardsProps {
   notificationName: string;
   notificationAddressReadOnly?: boolean;
   notificationFieldsDisabled?: boolean;
+  /** Hide the notification card when the default identity is edited elsewhere (e.g. the SMTP form). */
+  showNotificationCard?: boolean;
   onTicketAddressChange: (value: string) => void;
   onTicketNameChange: (value: string) => void;
   onNotificationAddressChange: (value: string) => void;
   onNotificationNameChange: (value: string) => void;
   actions?: ReactNode;
+}
+
+// Read-only addresses render as plain text: a normal input suggests the value
+// can be typed over, which reads as "configured here" when it is not.
+function ReadOnlyAddress({ id, value, fallback }: { id: string; value: string; fallback: string }) {
+  return (
+    <p id={id} className="text-sm py-1.5">
+      {value || <span className="text-muted-foreground">{fallback}</span>}
+    </p>
+  );
 }
 
 export function EmailSenderIdentityCards({
@@ -65,6 +77,7 @@ export function EmailSenderIdentityCards({
   notificationName,
   notificationAddressReadOnly = false,
   notificationFieldsDisabled = false,
+  showNotificationCard = true,
   onTicketAddressChange,
   onTicketNameChange,
   onNotificationAddressChange,
@@ -79,7 +92,7 @@ export function EmailSenderIdentityCards({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={`grid gap-4 ${showNotificationCard ? 'lg:grid-cols-2' : ''}`}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -112,15 +125,22 @@ export function EmailSenderIdentityCards({
             {(ticketAddressReadOnly || connectedInboxes.length === 0 || ticketAddressOption === 'custom') && (
               <div className="space-y-2">
                 <Label htmlFor="ticket-from-address">{copy.ticketAddressLabel}</Label>
-                <Input
-                  id="ticket-from-address"
-                  type="email"
-                  value={ticketAddress}
-                  readOnly={ticketAddressReadOnly}
-                  disabled={ticketFieldsDisabled}
-                  placeholder={copy.ticketAddressPlaceholder}
-                  onChange={(event) => onTicketAddressChange(event.target.value)}
-                />
+                {ticketAddressReadOnly ? (
+                  <ReadOnlyAddress
+                    id="ticket-from-address"
+                    value={ticketAddress}
+                    fallback={copy.ticketAddressPlaceholder}
+                  />
+                ) : (
+                  <Input
+                    id="ticket-from-address"
+                    type="email"
+                    value={ticketAddress}
+                    disabled={ticketFieldsDisabled}
+                    placeholder={copy.ticketAddressPlaceholder}
+                    onChange={(event) => onTicketAddressChange(event.target.value)}
+                  />
+                )}
                 <p className="text-xs text-muted-foreground">{copy.ticketAddressHelp}</p>
               </div>
             )}
@@ -152,6 +172,7 @@ export function EmailSenderIdentityCards({
           </CardContent>
         </Card>
 
+        {showNotificationCard && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -163,15 +184,22 @@ export function EmailSenderIdentityCards({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="notification-from-address">{copy.notificationAddressLabel}</Label>
-              <Input
-                id="notification-from-address"
-                type="email"
-                value={notificationAddress}
-                readOnly={notificationAddressReadOnly}
-                disabled={notificationFieldsDisabled}
-                placeholder={copy.notificationAddressPlaceholder}
-                onChange={(event) => onNotificationAddressChange(event.target.value)}
-              />
+              {notificationAddressReadOnly ? (
+                <ReadOnlyAddress
+                  id="notification-from-address"
+                  value={notificationAddress}
+                  fallback={copy.notificationAddressPlaceholder}
+                />
+              ) : (
+                <Input
+                  id="notification-from-address"
+                  type="email"
+                  value={notificationAddress}
+                  disabled={notificationFieldsDisabled}
+                  placeholder={copy.notificationAddressPlaceholder}
+                  onChange={(event) => onNotificationAddressChange(event.target.value)}
+                />
+              )}
               <p className="text-xs text-muted-foreground">{copy.notificationAddressHelp}</p>
             </div>
 
@@ -188,6 +216,7 @@ export function EmailSenderIdentityCards({
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
       {actions}
     </div>
