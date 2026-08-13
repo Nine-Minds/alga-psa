@@ -99,6 +99,8 @@ interface RenderedPdf {
   buffer: Buffer;
   templateId: string | null;
   templateVersion: number | null;
+  /** The locale this render was produced in — labels and formatting both. */
+  renderedLocale: string;
 }
 
 const SALES_ORDER_DOCUMENT_PREFIX: Record<SalesOrderDocumentKind, string> = {
@@ -155,20 +157,25 @@ export class PDFGenerationService {
     let templateId: string | null = null;
     let templateVersion: number | null = null;
 
+    // Resolved once, up front: the recipient's language decides the labels and
+    // the number/date/currency formatting in the same document, and is the
+    // locale recorded against the filed artifact.
+    const renderedLocale = await this.resolveRenderLocale(options);
+
     if (options.invoiceId) {
-      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId);
+      const result = await this.getInvoiceHtml(options.invoiceId, options.templateId, renderedLocale);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.quoteId) {
-      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst });
+      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.salesOrderId) {
-      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst });
+      const result = await this.getSalesOrderHtml({ salesOrderId: options.salesOrderId, documentType: options.salesOrderDocumentType, templateAst: options.templateAst }, renderedLocale);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
@@ -183,6 +190,7 @@ export class PDFGenerationService {
       buffer: await this.generatePDFBuffer(htmlContent, templateAst),
       templateId,
       templateVersion,
+      renderedLocale,
     };
   }
 
@@ -439,7 +447,7 @@ export class PDFGenerationService {
     userId: string,
     options: { regenerate: boolean; templateId?: string }
   ): Promise<{ document_id: string; issuedFile: StoredPdfResult | null; supersededFileId?: string }> {
-    const renderedLocale = await this.resolveRenderedLocale(knex, target.clientId);
+    const renderedLocale = rendered.renderedLocale;
     const documentType = await this.resolvePdfDocumentType(knex);
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -574,9 +582,62 @@ export class PDFGenerationService {
   }
 
   /**
+   * The client a rendered document is addressed to. Same lookups
+   * `resolveFilingTarget` does, minus the filing rules: quotes are filed against
+   * the quote alone, but they are still *sent* to a client, and it is that
+   * client's language the document must speak.
+   */
+  private async resolveRecipientClientId(
+    knex: Knex,
+    options: { invoiceId?: string; quoteId?: string; salesOrderId?: string }
+  ): Promise<string | null> {
+    const db = tenantDb(knex, this.tenant);
+    try {
+      if (options.invoiceId) {
+        const invoice = await db.table('invoices')
+          .where({ invoice_id: options.invoiceId })
+          .first<{ client_id?: string | null } | undefined>('client_id');
+        return invoice?.client_id ?? null;
+      }
+      if (options.salesOrderId) {
+        const salesOrder = await db.table('sales_orders')
+          .where({ so_id: options.salesOrderId })
+          .first<{ client_id?: string | null } | undefined>('client_id');
+        return salesOrder?.client_id ?? null;
+      }
+      if (options.quoteId) {
+        const quote = await db.table('quotes')
+          .where({ quote_id: options.quoteId })
+          .first<{ client_id?: string | null } | undefined>('client_id');
+        return quote?.client_id ?? null;
+      }
+    } catch {
+      // Fall through to the tenant default rather than failing the render.
+    }
+    return null;
+  }
+
+  /**
+   * The locale a document is rendered in. English when nothing resolves — a
+   * document that renders in the wrong language is recoverable, one that fails
+   * to render is not.
+   */
+  private async resolveRenderLocale(options: {
+    invoiceId?: string;
+    quoteId?: string;
+    salesOrderId?: string;
+  }): Promise<string> {
+    return runWithTenant(this.tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const clientId = await this.resolveRecipientClientId(knex, options);
+      return (await this.resolveRenderedLocale(knex, clientId)) ?? 'en';
+    });
+  }
+
+  /**
    * The locale this document was issued in: the billing contact's, else the
-   * client's, else the tenant's. Recorded now so that when template labels become
-   * translatable every stored document already answers "what language was this?".
+   * client's, else the tenant's. Recorded against the stored document so every
+   * artifact answers "what language was this?".
    */
   private async resolveRenderedLocale(knex: Knex, clientId: string | null): Promise<string | null> {
     try {
@@ -718,7 +779,8 @@ export class PDFGenerationService {
 
   private async getInvoiceHtml(
     invoiceId: string,
-    overrideTemplateId?: string
+    overrideTemplateId?: string,
+    locale?: string
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -791,6 +853,7 @@ export class PDFGenerationService {
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: 'Invoice',
         knex,
+        locale,
       });
 
       return {
@@ -839,7 +902,8 @@ export class PDFGenerationService {
   // ---- Quote HTML ----------------------------------------------------------
 
   private async getQuoteHtml(
-    options: QuotePDFOptions
+    options: QuotePDFOptions,
+    locale?: string
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -873,6 +937,7 @@ export class PDFGenerationService {
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
         knex,
+        locale,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion: null };
@@ -882,7 +947,8 @@ export class PDFGenerationService {
   // ---- Sales Order HTML ----------------------------------------------------
 
   private async getSalesOrderHtml(
-    options: SalesOrderPDFOptions
+    options: SalesOrderPDFOptions,
+    locale?: string
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
@@ -920,6 +986,7 @@ export class PDFGenerationService {
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: `Sales Order ${viewModel.so_number ?? ''}`.trim(),
         knex,
+        locale,
       });
 
       return { htmlContent, templateAst, templateId, templateVersion };

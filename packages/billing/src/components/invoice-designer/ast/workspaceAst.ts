@@ -108,6 +108,10 @@ const resolveExpressionPreviewText = (
     }
     return `{{${denormalizedPath}}}`;
   }
+  if (expression.type === 'i18n') {
+    // The designer shows the authored English; the key travels in metadata.
+    return expression.defaultValue;
+  }
   return expression.template;
 };
 

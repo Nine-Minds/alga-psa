@@ -1,7 +1,9 @@
 import type { Knex } from 'knex';
 import type { TemplateAst } from '@alga-psa/types';
+import { LOCALE_CONFIG, normalizeLocale } from '@alga-psa/core/i18n/config';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
+import { DOCUMENT_LABEL_NAMESPACE, resolveTemplateAstI18n } from './i18nLabels';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
@@ -23,6 +25,13 @@ export interface TemplateHtmlDocumentOptions {
    * protected document images from the API.
    */
   knex?: Knex | Knex.Transaction;
+  /**
+   * The recipient's locale. When set, template label keys are resolved against
+   * it and the same locale formats numbers, dates and currency — one locale per
+   * document, so the frame never disagrees with itself. Literal labels (every
+   * customized template) are unaffected.
+   */
+  locale?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +87,30 @@ async function inlineDocumentImages(
 }
 
 // ---------------------------------------------------------------------------
+// Label translation
+// ---------------------------------------------------------------------------
+
+/**
+ * Translate the template's label keys into `locale`, or hand the AST back
+ * untouched when the locale pack cannot be loaded. English (the authored
+ * `defaultValue`) is the built-in fallback on every path, so a document always
+ * renders rather than failing.
+ */
+const localizeTemplateAst = async (ast: TemplateAst, locale: string): Promise<TemplateAst> => {
+  const normalized = normalizeLocale(locale) ?? (LOCALE_CONFIG.defaultLocale as string);
+  try {
+    // Dynamic: the i18n loader is server-only, and this module is also imported
+    // by preview paths that must not drag Next request APIs into their bundle.
+    const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
+    const { t } = await getServerTranslation(normalized as never, DOCUMENT_LABEL_NAMESPACE);
+    return resolveTemplateAstI18n(ast, (key, opts) => String(t(key, opts)));
+  } catch (error) {
+    console.error('Failed to load document label translations:', error);
+    return ast;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -86,7 +119,9 @@ export const renderTemplateAstHtmlDocument = async (
   evaluation: TemplateEvaluationResult,
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
-  const { html, css } = await renderEvaluatedTemplateAst(ast, evaluation);
+  const locale = options.locale ? normalizeLocale(options.locale) ?? undefined : undefined;
+  const localizedAst = locale ? await localizeTemplateAst(ast, locale) : ast;
+  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, { locale });
   const title = escapeHtml(options.title ?? 'Invoice');
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
@@ -98,7 +133,7 @@ export const renderTemplateAstHtmlDocument = async (
   const baseTag = baseUrl ? `\n    <base href="${escapeHtml(baseUrl)}" />` : '';
 
   let renderedHtml = `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(locale ?? 'en')}">
   <head>
     <meta charset="utf-8" />${baseTag}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
