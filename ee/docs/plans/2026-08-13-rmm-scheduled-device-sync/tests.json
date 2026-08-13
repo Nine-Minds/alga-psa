@@ -274,7 +274,7 @@
   {
     "id": "T034",
     "description": "NinjaOne scheduled runs call syncDevicesIncremental, not the full-sync path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "T035",
     "description": "NinjaOne manual and scheduled syncs produce identical asset writes for the same input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -590,7 +590,7 @@
   {
     "id": "T072",
     "description": "CE startup does not fail when a provider's sync engine is EE-only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -641,7 +641,7 @@
   {
     "id": "T078",
     "description": "Every provider registered in RMM_DEVICE_SYNC_PROVIDERS exposes a strategy satisfying the syncDevicesIncremental interface",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F004"

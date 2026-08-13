@@ -212,6 +212,26 @@ export function getRmmDeviceSyncStrategy(provider: string): RmmDeviceSyncStrateg
   return deviceSyncStrategies.get(provider);
 }
 
+let deviceSyncStrategiesEnsured = false;
+
+/**
+ * Register the per-provider device syncs. Same shape as ensureFetchersRegistered:
+ * dynamic @enterprise imports that resolve to CE stubs exporting undefined, so a
+ * community build simply has no strategy for that provider and the job no-ops.
+ */
+async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
+  if (deviceSyncStrategiesEnsured) return;
+  try {
+    const mod = await import('@enterprise/lib/integrations/ninjaone/sync/deviceSyncStrategy');
+    if (mod.ninjaOneDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('ninjaone', mod.ninjaOneDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — NinjaOne device sync unavailable.
+  }
+  deviceSyncStrategiesEnsured = true;
+}
+
 /**
  * Where a delta starts. Mirrors the cursor NinjaOne's manual incremental sync
  * already uses, so the scheduled and manual paths cannot drift: the last
@@ -234,6 +254,8 @@ export async function rmmDeviceSyncHandler(
   _jobId: string,
   data: RmmDeviceSyncJobData
 ): Promise<void> {
+  await ensureDeviceSyncStrategiesRegistered();
+
   const adminKnex = await getAdminConnection();
   const row = await tenantScopedTable(adminKnex, 'rmm_integrations', data.tenantId)
     .where({ integration_id: data.integrationId })

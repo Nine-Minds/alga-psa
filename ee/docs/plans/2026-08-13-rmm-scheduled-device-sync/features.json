@@ -187,7 +187,7 @@
   {
     "id": "F024",
     "description": "NinjaOne: the scheduled job calls the existing syncDevicesIncremental strategy rather than a new code path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "Acceptance criteria"
@@ -205,7 +205,7 @@
   {
     "id": "F026",
     "description": "NinjaOne: the manual server action and the scheduled job share one implementation with no behavioural divergence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
@@ -447,7 +447,7 @@
   {
     "id": "F055",
     "description": "CE degrades cleanly for providers whose sync engine lives under ee/ (no import failure, no crashloop)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
