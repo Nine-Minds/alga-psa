@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: vi.fn(async () => null),
@@ -15,9 +15,13 @@ vi.mock('redis', () => ({
 }));
 
 describe('event-bus redisConfig.getRedisClient', () => {
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('attaches an error handler to prevent uncaughtException on socket close', async () => {
-    process.env.REDIS_HOST = 'redis.msp.svc.cluster.local';
-    process.env.REDIS_PORT = '6379';
+    vi.stubEnv('REDIS_HOST', 'redis.msp.svc.cluster.local');
+    vi.stubEnv('REDIS_PORT', '6379');
 
     const { getRedisClient } = await import('./redisConfig');
     await getRedisClient();

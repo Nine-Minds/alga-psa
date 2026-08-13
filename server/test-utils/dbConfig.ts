@@ -1,4 +1,5 @@
 import { Knex, knex } from 'knex';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -25,6 +26,31 @@ export interface CreateTestDbConnectionOptions {
    * @default true
    */
   recreate?: boolean;
+}
+
+// For suites that vi.mock the secrets provider: .env.localtest points
+// DB_PASSWORD_* at container secret paths that don't exist on the host, and
+// with getAppSecret mocked to undefined, getSecret() falls back to these env
+// vars — so rewire them to the local test Postgres + real ./secrets files.
+// Local-only: CI already sets correct DB_* step env, and the suite runs
+// singleFork, so overriding there would poison every file that runs later.
+export function wireLocalTestDbEnv(): void {
+  if (process.env.CI) return;
+  const secretsDir = path.resolve(serverRoot, '..', 'secrets');
+  const readSecret = (name: string) => {
+    try {
+      return fs.readFileSync(path.join(secretsDir, name), 'utf8').trim();
+    } catch {
+      return undefined;
+    }
+  };
+  process.env.DB_HOST = '127.0.0.1';
+  process.env.DB_PORT = '5472';
+  process.env.DB_USER_ADMIN = 'postgres';
+  process.env.DB_USER_SERVER = 'app_user';
+  process.env.DB_PASSWORD_ADMIN = readSecret('postgres_password') || 'postpass123';
+  process.env.DB_PASSWORD_SERVER = readSecret('db_password_server') || 'postpass123';
+  (process.env as Record<string, string>).NODE_ENV = 'test';
 }
 
 export function verifyTestDatabase(dbName: string): void {

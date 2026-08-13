@@ -20,8 +20,23 @@ const TEST_DB_ADMIN_USER = 'postgres';
 const TEST_DB_APP_USER = 'app_user';
 const TEST_DB_PASSWORD = process.env.DB_PASSWORD_SERVER || 'postpass123';
 
-let originalNextRuntime: string | undefined;
-let originalSkipAppInit: string | undefined;
+const OVERRIDDEN_ENV_KEYS = [
+  'NEXT_TELEMETRY_DISABLED',
+  'NODE_ENV',
+  'NEXTAUTH_URL',
+  'NEXTAUTH_SECRET',
+  'DB_HOST',
+  'DB_PORT',
+  'DB_NAME_SERVER',
+  'DB_USER_ADMIN',
+  'DB_USER_SERVER',
+  'DB_PASSWORD_ADMIN',
+  'DB_PASSWORD_SERVER',
+  'NEXT_RUNTIME',
+  'E2E_SKIP_APP_INIT',
+] as const;
+let savedEnv: Partial<Record<string, string | undefined>> = {};
+let savedKnexConnections: { development: unknown; production: unknown } | null = null;
 let nextApp: any = null;
 let server: http.Server | null = null;
 let baseUrl = '';
@@ -35,6 +50,13 @@ if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
 }
 
 function configureTicketTestDatabase(): void {
+  // The suite shares one fork; snapshot everything this file overrides so
+  // afterAll can restore it and later files don't inherit the e2e wiring.
+  savedEnv = Object.fromEntries(OVERRIDDEN_ENV_KEYS.map((key) => [key, process.env[key]]));
+  savedKnexConnections = {
+    development: baseKnexConfig.development.connection,
+    production: baseKnexConfig.production?.connection,
+  };
   process.env.NEXT_TELEMETRY_DISABLED = process.env.NEXT_TELEMETRY_DISABLED ?? '1';
   process.env.NODE_ENV = 'test';
   process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://127.0.0.1:3000';
@@ -105,8 +127,6 @@ describe('Ticket rich-text round-trip E2E', () => {
   beforeAll(async () => {
     configureTicketTestDatabase();
 
-    originalNextRuntime = process.env.NEXT_RUNTIME;
-    originalSkipAppInit = process.env.E2E_SKIP_APP_INIT;
     process.env.NEXT_RUNTIME = 'nodejs';
     process.env.E2E_SKIP_APP_INIT = 'true';
 
@@ -155,15 +175,19 @@ describe('Ticket rich-text round-trip E2E', () => {
       }
     } finally {
       nextApp = null;
-      if (originalNextRuntime === undefined) {
-        delete process.env.NEXT_RUNTIME;
-      } else {
-        process.env.NEXT_RUNTIME = originalNextRuntime;
+      for (const key of OVERRIDDEN_ENV_KEYS) {
+        const value = savedEnv[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
       }
-      if (originalSkipAppInit === undefined) {
-        delete process.env.E2E_SKIP_APP_INIT;
-      } else {
-        process.env.E2E_SKIP_APP_INIT = originalSkipAppInit;
+      if (savedKnexConnections) {
+        baseKnexConfig.development.connection = savedKnexConnections.development as Knex.Config['connection'];
+        if (baseKnexConfig.production) {
+          baseKnexConfig.production.connection = savedKnexConnections.production as Knex.Config['connection'];
+        }
       }
     }
   });

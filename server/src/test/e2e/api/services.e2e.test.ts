@@ -59,7 +59,7 @@ interface PaginatedResponse<T> {
 }
 
 // Ensure the API server uses the same database as the E2E test fixtures
-process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
+process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'test_database';
 if (!process.env.DB_USER_SERVER && process.env.DB_USER_ADMIN) {
   process.env.DB_USER_SERVER = process.env.DB_USER_ADMIN;
 }

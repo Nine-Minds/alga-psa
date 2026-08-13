@@ -1,8 +1,9 @@
 /**
  * Procurement integration tests against the real local `server` DB. Every test
  * runs inside a transaction that is ALWAYS rolled back, so the dev database is
- * never mutated. Connects directly to Postgres (port 5472) with the wired
- * server/.env.local admin credentials.
+ * never mutated. Connects using the credentials resolved by
+ * src/test-utils/inventoryTestDatabase.ts (server/.env.local or env; skipped
+ * when none resolve — always in CI).
  *
  * These exercise BEHAVIOR at the engine/DB level (no withAuth session in vitest):
  *  - T005: the moving-average cost math the purchase-order receipt action runs.

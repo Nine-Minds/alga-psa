@@ -21,11 +21,9 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
 import type { Knex } from 'knex';
-import fs from 'node:fs';
-import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { processUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor';
 import { processInboundEmailArtifactsBestEffort } from '@alga-psa/shared/services/email/processInboundEmailArtifacts';
 
@@ -240,24 +238,7 @@ function unifiedJob(providerId: string) {
 
 describe('Microsoft inbound email runtime issuer pinning (DB-backed)', () => {
   beforeAll(async () => {
-    const secretsDir = path.resolve(__dirname, '../../../../secrets');
-    const readSecret = (name: string) => {
-      try {
-        return fs.readFileSync(path.join(secretsDir, name), 'utf8').trim();
-      } catch {
-        return undefined;
-      }
-    };
-    // Override unconditionally: .env.localtest points DB_PASSWORD_* at container
-    // secret paths that do not exist on this host, and the secrets provider is
-    // mocked below, so getSecret() falls back to these env vars.
-    process.env.DB_HOST = '127.0.0.1';
-    process.env.DB_PORT = '5472';
-    process.env.DB_USER_ADMIN = 'postgres';
-    process.env.DB_USER_SERVER = 'app_user';
-    process.env.DB_PASSWORD_ADMIN = readSecret('postgres_password') || 'postpass123';
-    process.env.DB_PASSWORD_SERVER = readSecret('db_password_server') || 'postpass123';
-    process.env.NODE_ENV = 'test';
+    wireLocalTestDbEnv();
 
     testDb = await createTestDbConnection();
     testTenant = uuidv4();
