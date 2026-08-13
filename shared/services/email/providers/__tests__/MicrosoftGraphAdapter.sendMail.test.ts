@@ -102,6 +102,49 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
   });
 });
 
+describe('MicrosoftGraphAdapter.testConnection', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('reads only mail data for shared mailboxes, never the mailbox user object', async () => {
+    // GET /users/{mailbox} needs User.Read.All, which the email OAuth scopes
+    // do not include; reading it made every shared-mailbox connection test
+    // fail with 403 under the platform Microsoft app.
+    const adapter = makeAdapter();
+    (adapter as any).authenticatedUserEmail = 'owner@example.com';
+    const get = vi.fn(async () => ({ data: {} }));
+    (adapter as any).httpClient = { get };
+
+    const result = await adapter.testConnection();
+
+    expect(result).toEqual({ success: true });
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith('/users/support%2Bdesk%40example.com/mailFolders', {
+      params: { $top: 1, $select: 'id' },
+    });
+  });
+
+  it('surfaces the Graph status, error code, and request id on failure', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).authenticatedUserEmail = 'owner@example.com';
+    const get = vi.fn().mockRejectedValue({
+      message: 'Request failed with status code 403',
+      response: {
+        status: 403,
+        data: { error: { code: 'ErrorAccessDenied', message: 'Access is denied.' } },
+        headers: { 'request-id': 'graph-request-1' },
+      },
+    });
+    (adapter as any).httpClient = { get };
+
+    const result = await adapter.testConnection();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Access is denied. (403 ErrorAccessDenied request-id=graph-request-1)');
+  });
+});
+
 describe('MicrosoftGraphAdapter.connect', () => {
   it('does not report a failed Graph health check as connected', async () => {
     const adapter = makeAdapter();
