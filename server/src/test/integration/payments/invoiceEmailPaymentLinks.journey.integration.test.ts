@@ -175,6 +175,7 @@ vi.mock('@alga-psa/billing/services/pdfGenerationService', () => ({
     generateAndStore: vi.fn(async () => ({ file_id: `file-${uuidv4()}` })),
   })),
   PDFGenerationService: class {},
+  publishGeneratedDocumentsToClient: vi.fn(async () => {}),
 }));
 
 vi.mock('@alga-psa/billing/services', async (importOriginal) => {
