@@ -132,6 +132,35 @@ Also spotted while reading the client: `listUpdates({ status: 'available' |
 `pending_patches` / `pending_software_patches` / `failed_patches` columns
 (F049-F051) — check its payload before concluding Level.io does not expose them.
 
+## F047-F052 answered: what Level.io actually exposes
+
+Checked against `LevelIoDevice`, `LevelIoNetworkInterface` and `LevelIoUpdate`
+in `levelApiClient.ts`. Of the five columns that were permanently null on the
+reporting tenant, exactly one is mappable:
+
+| column | API | outcome |
+|---|---|---|
+| `pending_patches` | total of `listUpdates({status:'available'})` | **mapped** |
+| `agent_version` | no field on LevelIoDevice at all | not exposed |
+| `wan_ip` | network_interfaces carry LAN data only — ip_addresses, gateway, dhcp_server, dns_servers | not exposed |
+| `failed_patches` | LevelIoUpdate has is_available / installed_on, no failure state | not exposed |
+| `pending_software_patches` | needs the OS/software split below | not derivable yet |
+
+Three of them are provider limitations, not mapper bugs. The original
+`wanIp: null` was correct; it just looked like an oversight.
+
+**Latent mislabel found while doing this.** The sync counts *every* available
+update into `pendingOsPatches` regardless of category, so that column is really
+"all pending updates" and has been since it was written. `LevelIoUpdate.category`
+is typed `string` and the only value observed anywhere is `'Security Updates'`
+(a Windows Update category). Splitting OS from software patches needs Level.io's
+category taxonomy; guessing an allowlist would produce numbers that look precise
+and are not. Both columns therefore receive the same total today, and the split
+is left as follow-up work with the constraint written on the args type.
+
+Worth confirming with Level.io (or a live payload) which categories exist before
+anyone attempts the split.
+
 ## Decisions
 
 - **All five providers in scope** (user decision, 2026-08-13). Note tacticalrmm

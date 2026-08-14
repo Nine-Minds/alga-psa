@@ -378,7 +378,7 @@
   },
   {
     "id": "F047",
-    "description": "Level.io deviceMapper populates agent_version from the device payload",
+    "description": "Level.io deviceMapper populates agent_version from the device payload — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement",
@@ -387,7 +387,7 @@
   },
   {
     "id": "F048",
-    "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null",
+    "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement",
@@ -397,14 +397,14 @@
   {
     "id": "F049",
     "description": "Level.io deviceMapper populates pending_patches",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem statement"
     ]
   },
   {
     "id": "F050",
-    "description": "Level.io deviceMapper populates pending_software_patches",
+    "description": "Level.io deviceMapper populates pending_software_patches — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement"
@@ -412,7 +412,7 @@
   },
   {
     "id": "F051",
-    "description": "Level.io deviceMapper populates failed_patches",
+    "description": "Level.io deviceMapper populates failed_patches — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement"
@@ -421,7 +421,7 @@
   {
     "id": "F052",
     "description": "Any of the five fields the Level.io API genuinely does not expose is documented in SCRATCHPAD.md rather than left silently null",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance criteria"
     ]

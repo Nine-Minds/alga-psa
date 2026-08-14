@@ -98,7 +98,14 @@ export function mapLevelIoDeviceToSnapshot(args: {
   integrationId: string;
   device: LevelIoDevice;
   scopeId: string;
+  /**
+   * Count of available updates. Level.io types `category` as free text (the
+   * only observed value is 'Security Updates'), so OS and software updates
+   * cannot be separated without knowing its full taxonomy — today both of
+   * these receive the same total. Split them once the categories are known.
+   */
   pendingOsPatches?: number | null;
+  pendingPatches?: number | null;
 }): NormalizedRmmExternalDeviceSnapshot {
   const { device } = args;
   const isOnline = device.online === true;
@@ -137,6 +144,10 @@ export function mapLevelIoDeviceToSnapshot(args: {
       antivirusProduct: device.security?.antivirus_provider ?? null,
       lastRebootAt: device.last_reboot_time ?? null,
       pendingOsPatches: args.pendingOsPatches ?? null,
+      // Total available updates across every category. pendingOsPatches is
+      // currently the same number — see the comment on the args type — so this
+      // is the only one of the two that is certainly correct today.
+      pendingPatches: args.pendingPatches ?? args.pendingOsPatches ?? null,
       cpuModel: cpu?.model ?? null,
       cpuCores: device.cpu_cores ?? cpu?.cores ?? null,
       // ram_gb is an integer column; round to whole GB (matches NinjaOne's getRamGb).
