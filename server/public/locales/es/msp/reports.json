@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Uso fantasma",
         "description": "Tickets de hardware cerrados sin piezas registradas — costos que el taller pudo haber absorbido."
+      },
+      "deferredRevenue": {
+        "title": "Ingresos diferidos",
+        "description": "Pasivo prepagado entre clientes: saldos de crédito y horas de bolsa no consumidas por mes."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Clientes totales",
       "activeAssignments": "Asignaciones activas",
       "totalBilled": "Total facturado"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Ingresos diferidos / pasivo prepagado",
+    "description": "Evolución por cliente y por mes de los saldos de crédito de los clientes y de las horas de bolsa prepagadas no consumidas.",
+    "printSubtitle": "Mes {{month}}",
+    "printTable": "Evolución por cliente",
+    "empty": "No hay pasivo prepagado para este mes.",
+    "actions": {
+      "csv": "Descargar CSV"
+    },
+    "errors": {
+      "load": "No se pudo cargar el informe de ingresos diferidos."
+    },
+    "summary": {
+      "totalLiability": "Pasivo prepagado total",
+      "credits": "Créditos",
+      "hours": "Horas prepagadas",
+      "delta": "Cambio respecto al mes anterior"
+    },
+    "table": {
+      "client": "Cliente",
+      "credits": "Créditos",
+      "hours": "Horas prepagadas",
+      "total": "Cierre total",
+      "opening": "Apertura",
+      "issued": "Emitidos",
+      "applied": "Aplicados",
+      "expired": "Vencidos",
+      "adjustments": "Ajust.",
+      "closing": "Cierre",
+      "currencyHeading": "Moneda",
+      "noClients": "No hay clientes con saldos prepagados este mes.",
+      "tenantTotal": "Total del tenant"
+    },
+    "detail": {
+      "credits": "Saldos de crédito",
+      "noCredits": "No hay entradas de crédito.",
+      "date": "Emitido",
+      "description": "Descripción",
+      "remaining": "Restante",
+      "expires": "Vence",
+      "qbo": "QBO",
+      "reachable": "Sincronizado",
+      "notReachable": "No está en QBO",
+      "notReachableTitle": "Los créditos de prepago / depósito de proyecto nunca se exportan a QuickBooks; Alga es el sistema de registro.",
+      "buckets": "Horas de bolsa prepagadas",
+      "noBuckets": "No hay períodos de bolsa prepagada.",
+      "line": "Línea",
+      "period": "Período",
+      "included": "Incluidas",
+      "used": "Usadas",
+      "value": "Valor",
+      "feeSource": "Tarifa",
+      "rollover": "traspaso",
+      "notBilled": "Aún sin facturar",
+      "billed": "Facturado"
+    },
+    "csv": {
+      "client": "Cliente",
+      "currency": "Moneda"
     }
   }
 }

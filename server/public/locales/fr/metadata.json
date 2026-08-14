@@ -194,7 +194,10 @@
       "title": "Mises en page des devis"
     },
     "reports": {
-      "title": "Rapports"
+      "title": "Rapports",
+      "deferredRevenue": {
+        "title": "Produits différés"
+      }
     },
     "securitySettings": {
       "title": "Paramètres de sécurité"

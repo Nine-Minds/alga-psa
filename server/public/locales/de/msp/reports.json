@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Ghost-Verbrauch",
         "description": "Geschlossene Hardware-Tickets ohne erfasste Teile — Kosten, die der Betrieb möglicherweise verschluckt hat."
+      },
+      "deferredRevenue": {
+        "title": "Abgegrenzte Umsatzerlöse",
+        "description": "Vorausbezahlte Verbindlichkeiten über alle Kunden: Gutschriftensalden und ungenutzte Stunden aus Stundenkontingenten nach Monat."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Gesamtkunden",
       "activeAssignments": "Aktive Zuordnungen",
       "totalBilled": "Insgesamt abgerechnet"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Abgegrenzte Umsatzerlöse / vorausbezahlte Verbindlichkeiten",
+    "description": "Fortschreibung der Gutschriftensalden von Kunden und ungenutzter vorausbezahlter Stunden aus Stundenkontingenten – pro Kunde und Monat.",
+    "printSubtitle": "Monat {{month}}",
+    "printTable": "Fortschreibung pro Kunde",
+    "empty": "Keine vorausbezahlten Verbindlichkeiten für diesen Monat.",
+    "actions": {
+      "csv": "CSV herunterladen"
+    },
+    "errors": {
+      "load": "Der Bericht zu abgegrenzten Umsatzerlösen konnte nicht geladen werden."
+    },
+    "summary": {
+      "totalLiability": "Vorausbezahlte Verbindlichkeiten gesamt",
+      "credits": "Gutschriften",
+      "hours": "Vorausbezahlte Stunden",
+      "delta": "Veränderung zum Vormonat"
+    },
+    "table": {
+      "client": "Kunde",
+      "credits": "Gutschriften",
+      "hours": "Vorausbezahlte Stunden",
+      "total": "Endbestand gesamt",
+      "opening": "Anfangsbestand",
+      "issued": "Ausgestellt",
+      "applied": "Verrechnet",
+      "expired": "Verfallen",
+      "adjustments": "Anp.",
+      "closing": "Endbestand",
+      "currencyHeading": "Währung",
+      "noClients": "Keine Kunden mit vorausbezahlten Salden in diesem Monat.",
+      "tenantTotal": "Mandantensumme"
+    },
+    "detail": {
+      "credits": "Gutschriftensalden",
+      "noCredits": "Keine Gutschrifteneinträge.",
+      "date": "Ausgestellt",
+      "description": "Beschreibung",
+      "remaining": "Verbleibend",
+      "expires": "Läuft ab",
+      "qbo": "QBO",
+      "reachable": "Synchronisiert",
+      "notReachable": "Nicht in QBO",
+      "notReachableTitle": "Gutschriften aus Vorauszahlungen / Projektanzahlungen werden nie nach QuickBooks exportiert – Alga ist das führende System.",
+      "buckets": "Vorausbezahlte Stunden aus Stundenkontingenten",
+      "noBuckets": "Keine vorausbezahlten Stundenkontingent-Zeiträume.",
+      "line": "Position",
+      "period": "Zeitraum",
+      "included": "Enthalten",
+      "used": "Verwendet",
+      "value": "Wert",
+      "feeSource": "Gebühr",
+      "rollover": "Übertrag",
+      "notBilled": "Noch nicht abgerechnet",
+      "billed": "Abgerechnet"
+    },
+    "csv": {
+      "client": "Kunde",
+      "currency": "Währung"
     }
   }
 }

@@ -419,7 +419,10 @@
       "title": "Quote Layouts"
     },
     "reports": {
-      "title": "Reports"
+      "title": "Reports",
+      "deferredRevenue": {
+        "title": "Deferred Revenue"
+      }
     },
     "schedule": {
       "title": "Schedule"

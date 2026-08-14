@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Usage fantôme",
         "description": "Tickets matériel fermés sans pièces enregistrées — des coûts que l'atelier a peut-être absorbés."
+      },
+      "deferredRevenue": {
+        "title": "Produits différés",
+        "description": "Passif prépayé par client : soldes de crédits et heures de forfait d’heures non consommées par mois."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Clients totaux",
       "activeAssignments": "Affectations actives",
       "totalBilled": "Total facturé"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Produits différés / passif prépayé",
+    "description": "Report par client et par mois des soldes de crédits clients et des heures de forfait d’heures prépayées non consommées.",
+    "printSubtitle": "Mois {{month}}",
+    "printTable": "Report par client",
+    "empty": "Aucun passif prépayé pour ce mois.",
+    "actions": {
+      "csv": "Télécharger le CSV"
+    },
+    "errors": {
+      "load": "Échec du chargement du rapport des produits différés."
+    },
+    "summary": {
+      "totalLiability": "Passif prépayé total",
+      "credits": "Crédits",
+      "hours": "Heures prépayées",
+      "delta": "Variation par rapport au mois précédent"
+    },
+    "table": {
+      "client": "Client",
+      "credits": "Crédits",
+      "hours": "Heures prépayées",
+      "total": "Solde de clôture total",
+      "opening": "Ouverture",
+      "issued": "Émis",
+      "applied": "Appliqués",
+      "expired": "Expirés",
+      "adjustments": "Ajust.",
+      "closing": "Clôture",
+      "currencyHeading": "Devise",
+      "noClients": "Aucun client avec des soldes prépayés ce mois-ci.",
+      "tenantTotal": "Total du locataire"
+    },
+    "detail": {
+      "credits": "Soldes de crédits",
+      "noCredits": "Aucune entrée de crédit.",
+      "date": "Émis",
+      "description": "Description",
+      "remaining": "Restant",
+      "expires": "Expire",
+      "qbo": "QBO",
+      "reachable": "Synchronisé",
+      "notReachable": "Absent de QBO",
+      "notReachableTitle": "Les crédits de prépaiement / d’acompte de projet ne sont jamais exportés vers QuickBooks — Alga fait foi.",
+      "buckets": "Heures de forfait d’heures prépayées",
+      "noBuckets": "Aucune période de forfait d’heures prépayée.",
+      "line": "Ligne",
+      "period": "Période",
+      "included": "Incluses",
+      "used": "Utilisées",
+      "value": "Valeur",
+      "feeSource": "Frais",
+      "rollover": "report",
+      "notBilled": "Pas encore facturé",
+      "billed": "Facturé"
+    },
+    "csv": {
+      "client": "Client",
+      "currency": "Devise"
     }
   }
 }

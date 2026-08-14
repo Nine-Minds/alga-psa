@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Ghost-verbruik",
         "description": "Gesloten hardware-tickets zonder geregistreerde onderdelen — kosten die de werkplaats mogelijk heeft opgeslokt."
+      },
+      "deferredRevenue": {
+        "title": "Uitgestelde omzet",
+        "description": "Vooruitbetaalde verplichting over klanten: kredietsaldi en niet-verbruikte urenbundeluren per maand."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Totale klanten",
       "activeAssignments": "Actieve toewijzingen",
       "totalBilled": "Totaal gefactureerd"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Uitgestelde omzet / vooruitbetaalde verplichting",
+    "description": "Rollforward per klant en per maand van kredietsaldi van klanten en niet-verbruikte vooruitbetaalde urenbundeluren.",
+    "printSubtitle": "Maand {{month}}",
+    "printTable": "Rollforward per klant",
+    "empty": "Geen vooruitbetaalde verplichting voor deze maand.",
+    "actions": {
+      "csv": "CSV downloaden"
+    },
+    "errors": {
+      "load": "Het rapport uitgestelde omzet kon niet worden geladen."
+    },
+    "summary": {
+      "totalLiability": "Totale vooruitbetaalde verplichting",
+      "credits": "Kredieten",
+      "hours": "Vooruitbetaalde uren",
+      "delta": "Wijziging t.o.v. vorige maand"
+    },
+    "table": {
+      "client": "Klant",
+      "credits": "Kredieten",
+      "hours": "Vooruitbetaalde uren",
+      "total": "Totaal eindstand",
+      "opening": "Beginstand",
+      "issued": "Uitgegeven",
+      "applied": "Toegepast",
+      "expired": "Verlopen",
+      "adjustments": "Aanp.",
+      "closing": "Eindstand",
+      "currencyHeading": "Valuta",
+      "noClients": "Geen klanten met vooruitbetaalde saldi deze maand.",
+      "tenantTotal": "Tenanttotaal"
+    },
+    "detail": {
+      "credits": "Kredietsaldi",
+      "noCredits": "Geen kredietregels.",
+      "date": "Uitgegeven",
+      "description": "Omschrijving",
+      "remaining": "Resterend",
+      "expires": "Verloopt",
+      "qbo": "QBO",
+      "reachable": "Gesynchroniseerd",
+      "notReachable": "Niet in QBO",
+      "notReachableTitle": "Kredieten voor vooruitbetalingen of projectaanbetalingen worden nooit naar QuickBooks geëxporteerd — Alga is het bronsysteem.",
+      "buckets": "Vooruitbetaalde urenbundeluren",
+      "noBuckets": "Geen vooruitbetaalde urenbundelperioden.",
+      "line": "Regel",
+      "period": "Periode",
+      "included": "Inbegrepen",
+      "used": "Gebruikt",
+      "value": "Waarde",
+      "feeSource": "Tarief",
+      "rollover": "overdracht",
+      "notBilled": "Nog niet gefactureerd",
+      "billed": "Gefactureerd"
+    },
+    "csv": {
+      "client": "Klant",
+      "currency": "Valuta"
     }
   }
 }

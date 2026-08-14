@@ -219,7 +219,10 @@
       "title": "Angebotslayouts"
     },
     "reports": {
-      "title": "Berichte"
+      "title": "Berichte",
+      "deferredRevenue": {
+        "title": "Abgegrenzte Umsatzerlöse"
+      }
     },
     "securitySettings": {
       "title": "Sicherheitseinstellungen"

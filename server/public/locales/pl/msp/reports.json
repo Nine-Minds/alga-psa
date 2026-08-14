@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Zużycie widmowe",
         "description": "Zamknięte zgłoszenia sprzętowe bez zarejestrowanych części — koszty, które warsztat mógł ponieść."
+      },
+      "deferredRevenue": {
+        "title": "Przychód rozliczany w czasie",
+        "description": "Zobowiązania z przedpłat u klientów: salda kredytów i niewykorzystane godziny z pakietów według miesiąca."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Łączna liczba klientów",
       "activeAssignments": "Aktywne przypisania",
       "totalBilled": "Łącznie rozliczone"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Przychód rozliczany w czasie / zobowiązania z przedpłat",
+    "description": "Zestawienie zmian sald kredytów klientów oraz niewykorzystanych, przedpłaconych godzin z pakietów w podziale na klienta i miesiąc.",
+    "printSubtitle": "Miesiąc {{month}}",
+    "printTable": "Zestawienie zmian według klienta",
+    "empty": "Brak zobowiązań z przedpłat w tym miesiącu.",
+    "actions": {
+      "csv": "Pobierz CSV"
+    },
+    "errors": {
+      "load": "Nie udało się załadować raportu przychodów rozliczanych w czasie."
+    },
+    "summary": {
+      "totalLiability": "Łączne zobowiązania z przedpłat",
+      "credits": "Kredyty",
+      "hours": "Przedpłacone godziny",
+      "delta": "Zmiana względem poprzedniego miesiąca"
+    },
+    "table": {
+      "client": "Klient",
+      "credits": "Kredyty",
+      "hours": "Przedpłacone godziny",
+      "total": "Saldo końcowe łącznie",
+      "opening": "Saldo początkowe",
+      "issued": "Wystawione",
+      "applied": "Zastosowane",
+      "expired": "Wygasłe",
+      "adjustments": "Kor.",
+      "closing": "Saldo końcowe",
+      "currencyHeading": "Waluta",
+      "noClients": "Brak klientów z saldami przedpłat w tym miesiącu.",
+      "tenantTotal": "Suma dla tenanta"
+    },
+    "detail": {
+      "credits": "Salda kredytów",
+      "noCredits": "Brak wpisów kredytowych.",
+      "date": "Wystawiono",
+      "description": "Opis",
+      "remaining": "Pozostało",
+      "expires": "Wygasa",
+      "qbo": "QBO",
+      "reachable": "Zsynchronizowano",
+      "notReachable": "Brak w QBO",
+      "notReachableTitle": "Kredyty z przedpłat / zaliczek projektowych nigdy nie są eksportowane do QuickBooks — Alga jest systemem źródłowym.",
+      "buckets": "Przedpłacone godziny z pakietu",
+      "noBuckets": "Brak przedpłaconych okresów pakietu.",
+      "line": "Pozycja",
+      "period": "Okres",
+      "included": "Zawarte",
+      "used": "Wykorzystane",
+      "value": "Wartość",
+      "feeSource": "Opłata",
+      "rollover": "przeniesienie",
+      "notBilled": "Jeszcze nie rozliczone",
+      "billed": "Rozliczone"
+    },
+    "csv": {
+      "client": "Klient",
+      "currency": "Waluta"
     }
   }
 }

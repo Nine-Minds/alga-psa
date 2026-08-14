@@ -419,7 +419,10 @@
       "title": "55555"
     },
     "reports": {
-      "title": "55555"
+      "title": "55555",
+      "deferredRevenue": {
+        "title": "55555"
+      }
     },
     "schedule": {
       "title": "55555"

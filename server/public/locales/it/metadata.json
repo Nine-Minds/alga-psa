@@ -419,7 +419,10 @@
       "title": "Layout dei preventivi"
     },
     "reports": {
-      "title": "Report"
+      "title": "Report",
+      "deferredRevenue": {
+        "title": "Ricavi differiti"
+      }
     },
     "schedule": {
       "title": "Pianificazione"

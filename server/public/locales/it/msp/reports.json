@@ -164,6 +164,10 @@
       "inventoryGhostUsage": {
         "title": "Utilizzo fantasma",
         "description": "Ticket hardware chiusi senza parti registrate — costi che l'officina potrebbe aver assorbito."
+      },
+      "deferredRevenue": {
+        "title": "Ricavi differiti",
+        "description": "Passività anticipata tra i clienti: saldi dei crediti e ore di pacchetto ore non consumate per mese."
       }
     },
     "table": {
@@ -439,6 +443,67 @@
       "totalClients": "Clienti totali",
       "activeAssignments": "Assegnazioni attive",
       "totalBilled": "Totale fatturato"
+    }
+  },
+  "deferredRevenue": {
+    "title": "Ricavi differiti / passività anticipata",
+    "description": "Riepilogo per cliente e per mese dei saldi dei crediti del cliente e delle ore di pacchetto ore anticipate non consumate.",
+    "printSubtitle": "Mese {{month}}",
+    "printTable": "Riepilogo per cliente",
+    "empty": "Nessuna passività anticipata per questo mese.",
+    "actions": {
+      "csv": "Scarica CSV"
+    },
+    "errors": {
+      "load": "Impossibile caricare il report dei ricavi differiti."
+    },
+    "summary": {
+      "totalLiability": "Passività anticipata totale",
+      "credits": "Crediti",
+      "hours": "Ore anticipate",
+      "delta": "Variazione rispetto al mese precedente"
+    },
+    "table": {
+      "client": "Cliente",
+      "credits": "Crediti",
+      "hours": "Ore anticipate",
+      "total": "Saldo finale totale",
+      "opening": "Apertura",
+      "issued": "Emessi",
+      "applied": "Applicati",
+      "expired": "Scaduti",
+      "adjustments": "Rett.",
+      "closing": "Chiusura",
+      "currencyHeading": "Valuta",
+      "noClients": "Nessun cliente con saldi anticipati questo mese.",
+      "tenantTotal": "Totale tenant"
+    },
+    "detail": {
+      "credits": "Saldi dei crediti",
+      "noCredits": "Nessuna voce di credito.",
+      "date": "Emesso",
+      "description": "Descrizione",
+      "remaining": "Residuo",
+      "expires": "Scade",
+      "qbo": "QBO",
+      "reachable": "Sincronizzato",
+      "notReachable": "Non in QBO",
+      "notReachableTitle": "I crediti di pagamento anticipato / deposito di progetto non vengono mai esportati in QuickBooks — Alga è il sistema di riferimento.",
+      "buckets": "Ore di pacchetto ore anticipate",
+      "noBuckets": "Nessun periodo di pacchetto ore anticipato.",
+      "line": "Riga",
+      "period": "Periodo",
+      "included": "Incluse",
+      "used": "Utilizzate",
+      "value": "Valore",
+      "feeSource": "Tariffa",
+      "rollover": "riporto",
+      "notBilled": "Non ancora fatturato",
+      "billed": "Fatturato"
+    },
+    "csv": {
+      "client": "Cliente",
+      "currency": "Valuta"
     }
   }
 }
