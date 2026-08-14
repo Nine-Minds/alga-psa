@@ -290,7 +290,11 @@ Fetch quote → mapDbQuoteToViewModel → Evaluate AST → Render HTML → Puppe
 
 ### Preview
 
-In-browser preview renders the template without Puppeteer, using the same AST evaluation and React rendering pipeline as invoices.
+In-browser preview renders the template without Puppeteer, using the same AST evaluation and React rendering pipeline as invoices. Previewing a real quote renders it in the client's language, the same as the PDF the client receives; the designer's language selector previews sample data in any supported locale.
+
+### Localization
+
+Standard quote templates carry `{ i18nKey, defaultValue }` labels, so their chrome, dates, numbers and currency render in the recipient's locale. Customized templates are literals and are never re-worded. See [document-template-translation.md](./document-template-translation.md).
 
 ### Template Selection Priority
 
