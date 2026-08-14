@@ -34,7 +34,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser, 
+  assertInternalApiUser,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
