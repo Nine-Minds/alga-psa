@@ -30,6 +30,28 @@ describe('resolvePasswordResetOrigin', () => {
     );
   });
 
+  it('accepts a HOST that already carries a scheme', () => {
+    expect(resolvePasswordResetOrigin({ HOST: 'http://localhost:3614' })).toBe(
+      'http://localhost:3614'
+    );
+  });
+
+  it('normalizes a scheme-bearing HOST with a path to its origin', () => {
+    expect(resolvePasswordResetOrigin({ HOST: 'https://x.example.com/path/' })).toBe(
+      'https://x.example.com'
+    );
+  });
+
+  it('never turns a scheme-bearing HOST into a bogus http/https-hostname origin', () => {
+    for (const host of ['http://localhost:3614', 'https://x.example.com/path/', 'http://', 'https://']) {
+      const origin = resolvePasswordResetOrigin({ HOST: host });
+      if (origin) {
+        const url = new URL(origin);
+        expect(['http', 'https'], `HOST=${host}`).not.toContain(url.hostname);
+      }
+    }
+  });
+
   it('refuses when every trusted source is absent or invalid', () => {
     expect(resolvePasswordResetOrigin({})).toBeNull();
     expect(
