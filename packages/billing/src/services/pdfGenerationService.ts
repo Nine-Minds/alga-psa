@@ -24,6 +24,7 @@ import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
+import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -621,8 +622,11 @@ export class PDFGenerationService {
    * The locale a document is rendered in. English when nothing resolves — a
    * document that renders in the wrong language is recoverable, one that fails
    * to render is not.
+   *
+   * Public because the on-screen previews resolve it through this exact seam:
+   * what an MSP sees before sending has to be what the client receives.
    */
-  private async resolveRenderLocale(options: {
+  async resolveRenderLocale(options: {
     invoiceId?: string;
     quoteId?: string;
     salesOrderId?: string;
@@ -727,7 +731,11 @@ export class PDFGenerationService {
         invoiceViewModel as unknown as Record<string, unknown>,
         { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
-      const rendered = await renderEvaluatedTemplateAst(templateAst, evaluation);
+      const localized = await localizeTemplateAstForLocale(
+        templateAst,
+        await this.resolveRenderLocale({ invoiceId: options.invoiceId })
+      );
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -756,7 +764,11 @@ export class PDFGenerationService {
         templateAst,
         quoteViewModel as unknown as Record<string, unknown>
       );
-      const rendered = await renderEvaluatedTemplateAst(templateAst, evaluation);
+      const localized = await localizeTemplateAstForLocale(
+        templateAst,
+        await this.resolveRenderLocale({ quoteId: options.quoteId })
+      );
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
