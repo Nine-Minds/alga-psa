@@ -773,8 +773,8 @@
     },
     {
       "id": "ticket-and-quote-register",
-      "rule": "Support ticket tłumaczyć jako zgłoszenie, a sales quote jako wycena.",
-      "notes": "Nie używać bilet ani ticket dla wsparcia oraz cytat/cytowanie dla dokumentu handlowego. Oferta jest istniejącym wariantem w features/billing, ale jedna ścieżka produktu powinna używać jednej nazwy."
+      "rule": "Support ticket tłumaczyć jako zgłoszenie, a sales quote jako oferta.",
+      "notes": "Nie używać bilet ani ticket dla wsparcia oraz cytat/cytowanie dla dokumentu handlowego. Dokument handlowy to oferta (przegląd kontradyktoryjny 2026-08, zgodnie z terminem słownikowym i listą zakazaną); wycena oznacza czynność wyceniania i pozostaje dla akcji, np. ponowna wycena."
     },
     {
       "id": "loanwords",
