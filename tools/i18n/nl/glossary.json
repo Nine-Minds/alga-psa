@@ -162,6 +162,12 @@
       "notes": "Use filter as the UI noun and filteren for the action."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "afhandeling",
+      "notes": "Use afhandeling for the sales-order fulfillment column and the matching customer-document label; levering is the physical delivery and is a different concept."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "branche",
@@ -234,6 +240,12 @@
       "notes": "Use betaling for invoice payments, online payments, and payment status."
     },
     {
+      "id": "pick-list",
+      "en-term": "pick list",
+      "term": "picklijst",
+      "notes": "Use picklijst for the warehouse pick list and gepickt for a picked line: the warehouse anglicism is the accepted Dutch term. Piklijst is a misspelling."
+    },
+    {
       "id": "pipeline",
       "en-term": "pipeline",
       "term": "salesfunnel",
@@ -268,6 +280,12 @@
       "en-term": "quote",
       "term": "offerte",
       "notes": "Use offerte/offertes for sales and service quotes. Never citaat, which means a textual quotation."
+    },
+    {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "tarief",
+      "notes": "Use tarief for a priced rate column on customer documents and keep stukprijs for unit price, so a document that shows both columns keeps them distinguishable."
     },
     {
       "id": "report",
@@ -348,6 +366,12 @@
       "notes": "Use taak for project tasks, workflow tasks, and task inbox items. Use achtergrondtaak when a background job must be distinguished from user work."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "belasting",
+      "notes": "Use the neutral belasting for tax labels on customer documents. Btw is correct only where value-added tax is specifically meant; a tenant may charge a different levy and the label would then lie."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "technicus",
@@ -376,6 +400,12 @@
       "en-term": "timesheet",
       "term": "urenstaat",
       "notes": "Use urenstaat for grouped/submitted time entries and approval flows. Urenregistratie appears in one header but urenstaat dominates the workflow."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "stukprijs",
+      "notes": "Use stukprijs for the per-unit price column and tarief for rate; the two must stay distinguishable on documents that show both."
     },
     {
       "id": "user",

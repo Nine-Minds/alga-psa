@@ -162,6 +162,12 @@
       "notes": "Use Filter (masculine: der Filter) as the UI noun and filtern for the action."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "Auslieferung",
+      "notes": "Use Auslieferung for the sales-order fulfillment column and the matching customer-document label; Direktversand and Aus Bestand are its values. Lieferart means shipping method and is a different concept."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "Branche",
@@ -234,6 +240,12 @@
       "notes": "Use Zahlung for invoice payments, online payments, and payment status."
     },
     {
+      "id": "pick-list",
+      "en-term": "pick list",
+      "term": "Kommissionierliste",
+      "notes": "Use Kommissionierliste for the warehouse pick list and kommissioniert for a picked line, including the Kommissioniert von signature note. Erledigt (done) is not specific enough."
+    },
+    {
       "id": "pipeline",
       "en-term": "pipeline",
       "term": "Pipeline",
@@ -268,6 +280,12 @@
       "en-term": "quote",
       "term": "Angebot",
       "notes": "Use Angebot (neuter: das Angebot, die Angebote) for sales/service quotes. Never Zitat, which means a textual quotation."
+    },
+    {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "Satz",
+      "notes": "Use Satz for a priced rate column on customer documents; it covers hourly, per-unit, and flat rates. Keep Einzelpreis for unit price so the two columns stay distinguishable, and use Stundensatz only where the rate is explicitly hourly."
     },
     {
       "id": "report",
@@ -348,6 +366,12 @@
       "notes": "Use Aufgabe for project tasks, workflow tasks, and task inbox items; do not confuse it with the background Job entity."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "Steuer",
+      "notes": "Use the neutral Steuer for tax labels on invoices, quotes, and sales orders. Name a specific levy (Umsatzsteuer, Mehrwertsteuer) only where that levy is actually meant, because a tenant may charge a different one."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "Techniker",
@@ -376,6 +400,12 @@
       "en-term": "timesheet",
       "term": "Stundenzettel",
       "notes": "Use Stundenzettel for grouped/submitted time entries and approval flows. The current msp/time-entry file also uses Arbeitszeitnachweis and Zeiterfassung; keep Stundenzettel for the entity. Arbeitszeitnachweis is an acceptable formal synonym (Microsoft uses both); Arbeitszeittabelle also appears in the files and should converge on Stundenzettel."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "Einzelpreis",
+      "notes": "Use Einzelpreis for the per-unit price column. Never reuse it for rate, which is Satz; a document that shows both columns must keep them distinguishable."
     },
     {
       "id": "user",

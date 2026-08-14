@@ -11,8 +11,8 @@
     "estimateTitle": "RAMING",
     "expectedShip": "Verwachte verzending",
     "from": "Van",
-    "fulfilled": "Geleverd",
-    "fulfillment": "Levering",
+    "fulfilled": "Uitgevoerd",
+    "fulfillment": "Afhandeling",
     "invoice": "Factuur",
     "invoiceNumber": "Factuurnr.",
     "invoiceTitle": "FACTUUR",
@@ -52,7 +52,7 @@
     "sku": "SKU",
     "source": "Bron",
     "subtotal": "Subtotaal",
-    "tax": "Btw",
+    "tax": "Belasting",
     "termsAndConditions": "Algemene voorwaarden",
     "total": "Totaal",
     "unitPrice": "Stukprijs",
@@ -70,7 +70,7 @@
     },
     "note": {
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
-      "preTaxTotals": "De getoonde totalen zijn exclusief btw. De verschuldigde btw wordt op uw factuur berekend.",
+      "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
       "thankYouForOrder": "Bedankt voor uw order."
     }
   }
