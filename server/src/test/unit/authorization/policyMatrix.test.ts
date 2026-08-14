@@ -157,11 +157,19 @@ describe('authorization policy matrix (role x resource x action)', () => {
     userType: 'internal' | 'client',
     resource: string,
     action: string,
-    tenant: string = TENANT_A
+    tenant: string = TENANT_A,
+    clientId?: string
   ) {
+    const subject: any = { tenant, userId, userType };
+    // Client subjects need an explicit client scope: the built-in layer now
+    // resolves a client subject to a same_client rule, so a client without a
+    // resolvable client ID fails closed even in a scope-only evaluation.
+    if (clientId !== undefined) {
+      subject.clientId = clientId;
+    }
     return kernel.authorizeResource({
       knex: fakeKnex(),
-      subject: { tenant, userId, userType },
+      subject,
       resource: { type: resource, action },
     });
   }
@@ -173,6 +181,7 @@ describe('authorization policy matrix (role x resource x action)', () => {
     resource: string;
     action: string;
     expected: boolean;
+    clientId?: string;
   }> = [
     { label: 'admin can read tickets', userId: 'alice', userType: 'internal', resource: 'ticket', action: 'read', expected: true },
     { label: 'admin can update tickets', userId: 'alice', userType: 'internal', resource: 'ticket', action: 'update', expected: true },
@@ -181,16 +190,16 @@ describe('authorization policy matrix (role x resource x action)', () => {
     { label: 'admin is denied unlisted resources (deny by default)', userId: 'alice', userType: 'internal', resource: 'invoice', action: 'read', expected: false },
     { label: 'technician can read tickets', userId: 'bob', userType: 'internal', resource: 'ticket', action: 'read', expected: true },
     { label: 'technician cannot update tickets', userId: 'bob', userType: 'internal', resource: 'ticket', action: 'update', expected: false },
-    { label: 'client portal user can read tickets via client permission', userId: 'carol', userType: 'client', resource: 'ticket', action: 'read', expected: true },
-    { label: 'client portal user can read invoices via client permission', userId: 'carol', userType: 'client', resource: 'invoice', action: 'read', expected: true },
-    { label: 'client portal user cannot update tickets', userId: 'carol', userType: 'client', resource: 'ticket', action: 'update', expected: false },
-    { label: 'client user cannot use an MSP-only role', userId: 'dave', userType: 'client', resource: 'ticket', action: 'read', expected: false },
+    { label: 'client portal user can read tickets via client permission', userId: 'carol', userType: 'client', clientId: 'client-carol', resource: 'ticket', action: 'read', expected: true },
+    { label: 'client portal user can read invoices via client permission', userId: 'carol', userType: 'client', clientId: 'client-carol', resource: 'invoice', action: 'read', expected: true },
+    { label: 'client portal user cannot update tickets', userId: 'carol', userType: 'client', clientId: 'client-carol', resource: 'ticket', action: 'update', expected: false },
+    { label: 'client user cannot use an MSP-only role', userId: 'dave', userType: 'client', clientId: 'client-dave', resource: 'ticket', action: 'read', expected: false },
     { label: 'internal user cannot use a client-only permission', userId: 'erin', userType: 'internal', resource: 'ticket', action: 'read', expected: false },
     { label: 'user without roles is denied everything', userId: 'frank', userType: 'internal', resource: 'ticket', action: 'read', expected: false },
   ];
 
-  it.each(matrix)('$label', async ({ userId, userType, resource, action, expected }) => {
-    const decision = await authorize(userId, userType, resource, action);
+  it.each(matrix)('$label', async ({ userId, userType, resource, action, expected, clientId }) => {
+    const decision = await authorize(userId, userType, resource, action, TENANT_A, clientId);
 
     expect(decision.allowed).toBe(expected);
     if (expected) {

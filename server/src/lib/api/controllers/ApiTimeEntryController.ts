@@ -33,7 +33,8 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { 
+import {
+  assertInternalApiUser, 
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -117,9 +118,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -206,9 +205,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -278,9 +275,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -370,9 +365,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -450,9 +443,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -535,9 +526,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -590,9 +579,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -670,9 +657,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -750,9 +735,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -805,9 +788,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -885,9 +866,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -965,9 +944,7 @@ export class ApiTimeEntryController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 

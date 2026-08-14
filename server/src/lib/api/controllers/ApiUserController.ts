@@ -30,6 +30,7 @@ import {
 } from '../../auth/rbac';
 import { createSystemContext, tenantDb } from '@alga-psa/db';
 import {
+  assertInternalApiUser,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -128,9 +129,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -192,9 +191,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -293,9 +290,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -379,9 +374,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -466,9 +459,7 @@ export class ApiUserController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;

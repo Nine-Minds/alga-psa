@@ -222,15 +222,28 @@ function getApplicationErrorStatus(error: unknown): number | undefined {
   return APPLICATION_ERROR_STATUS[code];
 }
 
+/**
+ * The authenticated API user context is an internal-user credential. A client
+ * user must never be admitted to a user-key API context, even if a validator
+ * was accidentally bypassed, replaced, or mocked permissively. This is the
+ * final context-construction defense before a handler runs.
+ */
+export function assertInternalApiUser(user: SafeApiUser | null | undefined): asserts user is SafeApiUser {
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+  if (user.user_type !== 'internal') {
+    throw new UnauthorizedError('Invalid API key');
+  }
+}
+
 export async function buildAuthenticatedApiContext(keyRecord: {
   user_id: string;
   tenant: string;
   api_key_id?: string;
 }): Promise<AuthenticatedApiContext> {
   const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-  if (!user) {
-    throw new UnauthorizedError('User not found');
-  }
+  assertInternalApiUser(user);
 
   return {
     userId: keyRecord.user_id,

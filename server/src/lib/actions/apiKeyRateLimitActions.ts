@@ -33,6 +33,18 @@ const apiRateLimitInputSchema = z.object({
 
 type ApiRateLimitActionError = ActionMessageError | ActionPermissionError;
 
+/**
+ * API-rate-limit settings are internal-user configuration. A client-portal
+ * identity must not inspect or mutate them, even if a client role happens to
+ * carry an admin-like name. Returns a permission error for client users.
+ */
+function clientUserPermissionError(user: { user_type?: string }): ActionPermissionError | null {
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: API key configuration is restricted to internal users');
+  }
+  return null;
+}
+
 export interface ApiRateLimitSettingsValue {
   maxTokens: number;
   refillPerMin: number;
@@ -122,6 +134,10 @@ export const getApiRateLimitForKey = withAuth(async (
   { tenant },
   apiKeyId: string,
 ): Promise<ApiRateLimitSettingsView | ApiRateLimitActionError> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
   const adminError = await getTenantAdminError(user.user_id);
   if (adminError) {
     return adminError;
@@ -135,6 +151,10 @@ export const getApiRateLimitForKey = withAuth(async (
 
 export const getApiRateLimitsForKeys = withAuth(
   async (user, { tenant }, apiKeyIds: string[]): Promise<ApiRateLimitSettingsView[] | ApiRateLimitActionError> => {
+    const clientError = clientUserPermissionError(user);
+    if (clientError) {
+      return clientError;
+    }
     const adminError = await getTenantAdminError(user.user_id);
     if (adminError) {
       return adminError;
@@ -201,6 +221,10 @@ export const setApiRateLimitForKey = withAuth(
     apiKeyId: string,
     input: ApiRateLimitSettingsValue,
   ): Promise<ApiRateLimitSettingsView | ApiRateLimitActionError> => {
+    const clientError = clientUserPermissionError(user);
+    if (clientError) {
+      return clientError;
+    }
     const adminError = await getTenantAdminError(user.user_id);
     if (adminError) {
       return adminError;
@@ -224,6 +248,10 @@ export const setApiRateLimitForKey = withAuth(
 
 export const setTenantDefaultApiRateLimit = withAuth(
   async (_user, { tenant }, input: ApiRateLimitSettingsValue): Promise<ApiRateLimitSettingsValue | ApiRateLimitActionError> => {
+    const clientError = clientUserPermissionError(_user);
+    if (clientError) {
+      return clientError;
+    }
     const adminError = await getTenantAdminError(_user.user_id);
     if (adminError) {
       return adminError;
@@ -249,6 +277,10 @@ export const clearApiRateLimitForKey = withAuth(async (
   { tenant },
   apiKeyId: string,
 ): Promise<(ApiRateLimitSettingsView & { deleted: boolean; defaultSettings: ApiRateLimitSettingsValue }) | ApiRateLimitActionError> => {
+  const clientError = clientUserPermissionError(user);
+  if (clientError) {
+    return clientError;
+  }
   const adminError = await getTenantAdminError(user.user_id);
   if (adminError) {
     return adminError;

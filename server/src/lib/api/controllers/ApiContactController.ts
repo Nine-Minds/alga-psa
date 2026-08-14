@@ -24,6 +24,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
+  assertInternalApiUser,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -89,9 +90,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -171,9 +170,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -270,9 +267,7 @@ export class ApiContactController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;

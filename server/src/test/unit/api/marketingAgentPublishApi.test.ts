@@ -255,7 +255,7 @@ describe('T009(b): ApiMarketingController flag + permission guard', () => {
       tenant: TENANT_ID,
       api_key_id: 'api-key-1',
     });
-    mocks.findUserByIdForApi.mockResolvedValue({ user_id: USER_ID, tenant: TENANT_ID });
+    mocks.findUserByIdForApi.mockResolvedValue({ user_id: USER_ID, tenant: TENANT_ID, user_type: 'internal' });
     mocks.getConnection.mockResolvedValue({});
     mocks.enforceApiRateLimit.mockResolvedValue(null);
     mocks.getTenantProduct.mockResolvedValue('psa');
