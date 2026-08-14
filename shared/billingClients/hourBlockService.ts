@@ -320,12 +320,112 @@ export async function reverseTimeEntryAllocations(
 }
 
 /**
+ * Reverses an entry's burn, but only against blocks owned by `clientId`.
+ * Used by the nightly reconcile so one client's pass can never touch another
+ * client's block balances.
+ */
+async function reverseClientTimeEntryAllocations(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  timeEntryId: string,
+): Promise<void> {
+  const db = tenantDb(trx, tenant);
+  const allocationQuery = db.table('hour_block_time_allocations as hba');
+  db.tenantJoin(allocationQuery, 'hour_blocks as hb', 'hba.block_id', 'hb.block_id');
+  const allocations = await allocationQuery
+    .where({ 'hba.time_entry_id': timeEntryId, 'hb.client_id': clientId })
+    .select('hba.block_id', 'hba.minutes');
+
+  if (allocations.length === 0) return;
+
+  const now = new Date().toISOString();
+  for (const allocation of allocations) {
+    await db.table('hour_blocks')
+      .where({ tenant, block_id: allocation.block_id })
+      .update({
+        remaining_minutes: trx.raw('remaining_minutes + ?', [Number(allocation.minutes)]),
+        updated_at: now,
+      });
+  }
+
+  const blockIds = allocations.map((allocation) => allocation.block_id);
+  await db.table('hour_block_time_allocations')
+    .where({ tenant, time_entry_id: timeEntryId })
+    .whereIn('block_id', blockIds)
+    .delete();
+}
+
+/**
+ * Eligible entries belonging to one client, resolved through their work items
+ * in SQL (time_entries has no client_id column). Restricts the reconcile
+ * candidate set to this client, so a full nightly pass costs
+ * O(entries-of-this-client) instead of O(clients × tenant-entries), and a
+ * client's pass can never touch another client's entries.
+ */
+async function selectClientEligibleEntries(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+): Promise<Array<BlockBurnTimeEntry & { entry_id: string }>> {
+  const db = tenantDb(trx, tenant);
+  const query = db.table('time_entries as te');
+  db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', {
+    type: 'left',
+    on(join) {
+      join.andOnVal('te.work_item_type', '=', 'ticket');
+    },
+  });
+  db.tenantJoin(query, 'project_tasks as pta', 'te.work_item_id', 'pta.task_id', {
+    type: 'left',
+    on(join) {
+      join.andOnVal('te.work_item_type', '=', 'project_task');
+    },
+  });
+  db.tenantJoin(query, 'project_phases as pp', 'pta.phase_id', 'pp.phase_id', { type: 'left' });
+  db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
+  db.tenantJoin(query, 'interactions as i', 'te.work_item_id', 'i.interaction_id', {
+    type: 'left',
+    on(join) {
+      join.andOnVal('te.work_item_type', '=', 'interaction');
+    },
+  });
+
+  return await query
+    .where('te.tenant', tenant)
+    .whereNull('te.contract_line_id')
+    .whereNotNull('te.service_id')
+    .where('te.invoiced', false)
+    .where('te.billable_duration', '>', 0)
+    .where(function (this: Knex.QueryBuilder) {
+      this.where('tk.client_id', clientId)
+        .orWhere('p.client_id', clientId)
+        .orWhere('i.client_id', clientId);
+    })
+    .select(
+      'te.entry_id',
+      'te.service_id',
+      'te.billable_duration',
+      'te.contract_line_id',
+      'te.work_item_id',
+      'te.work_item_type',
+      'te.work_date',
+      'te.start_time',
+    );
+}
+
+/**
  * Nightly reconcile: recomputes allocations for a client's time entries from
  * scratch (reverse + re-allocate), so drift introduced by contract-signing
  * after a burn, approval changes, edited durations, or missed save-time burns
  * converges to the canonical FIFO state. Idempotent by construction — the
- * result depends only on current entry state and block balances. Invoiced
- * entries are skipped: their allocations are locked by the invoice.
+ * result depends only on current entry state and block balances.
+ *
+ * Scope is strictly this client: candidates are (a) entries with allocations
+ * against this client's blocks, and (b) eligible entries that resolve to this
+ * client (joined in SQL). Entries of other clients are never touched, and
+ * INVOICED entries are skipped entirely — their allocations are locked by the
+ * finalized invoice and reversing them would inflate balances nightly.
  */
 export async function reconcileClientAllocations(
   trx: Knex.Transaction,
@@ -334,46 +434,51 @@ export async function reconcileClientAllocations(
 ): Promise<number> {
   const db = tenantDb(trx, tenant);
 
-  // Entries that already carry allocations against one of this client's blocks.
+  // Entries that already carry allocations against one of this client's blocks,
+  // joined to time_entries so INVOICED entries are excluded (locked by invoice).
   const allocationQuery = db.table('hour_block_time_allocations as hba');
   db.tenantJoin(allocationQuery, 'hour_blocks as hb', 'hba.block_id', 'hb.block_id');
+  db.tenantJoin(allocationQuery, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id');
   const withAllocations = await allocationQuery
-    .where({ 'hb.client_id': clientId })
+    .where({ 'hb.client_id': clientId, 'te.invoiced': false })
     .distinct('hba.time_entry_id')
     .then((rows: any[]) => rows.map((row) => row.time_entry_id));
 
-  const eligibleCandidates = await db.table('time_entries')
-    .where({ tenant })
-    .whereNull('contract_line_id')
-    .whereNotNull('service_id')
-    .where('invoiced', false)
-    .where('billable_duration', '>', 0)
-    .select('entry_id', 'service_id', 'billable_duration', 'work_item_id', 'work_item_type', 'work_date', 'start_time');
+  const clientEligible = await selectClientEligibleEntries(trx, tenant, clientId);
 
-  const candidateIds = new Set<string>([...withAllocations, ...eligibleCandidates.map((row: any) => row.entry_id)]);
+  const entryById = new Map<string, BlockBurnTimeEntry>();
+  for (const entry of clientEligible) {
+    entryById.set(entry.entry_id, entry);
+  }
+  // Entries with allocations but no longer eligible need their full row state
+  // for the eligibility re-check; fetch those not already loaded.
+  const missingIds = withAllocations.filter((id) => !entryById.has(id));
+  if (missingIds.length > 0) {
+    const staleRows = await db.table('time_entries')
+      .whereIn('entry_id', missingIds)
+      .where('invoiced', false)
+      .select('entry_id', 'service_id', 'billable_duration', 'contract_line_id', 'work_item_id', 'work_item_type', 'work_date', 'start_time');
+    for (const row of staleRows) {
+      entryById.set(row.entry_id, row);
+    }
+  }
+
+  const candidateIds = new Set<string>([...withAllocations, ...entryById.keys()]);
 
   let reconciled = 0;
   for (const entryId of candidateIds) {
-    const row = eligibleCandidates.find((candidate: any) => candidate.entry_id === entryId);
-    const entry: BlockBurnTimeEntry = row ?? { entry_id: entryId };
+    const entry = entryById.get(entryId) ?? { entry_id: entryId };
 
+    // An entry with allocations against this client's blocks must resolve to
+    // this client. If it does not (work item deleted/moved), reverse only the
+    // allocations owned by this client — never another client's blocks.
     const entryClientId = await resolveClientIdForWorkItem(trx, tenant, entry.work_item_id, entry.work_item_type);
-    if (!entryClientId || entryClientId !== clientId) {
-      // Entry belongs to another client (e.g. a mis-recorded allocation); drop
-      // stale allocations regardless so ledger and block balances stay exact.
-      await reverseTimeEntryAllocations(trx, tenant, entryId);
-      continue;
-    }
-    if (entry.billable_duration != null && !entry.service_id) {
-      continue;
-    }
-    if (!entry.service_id) {
-      // Has allocations but no longer billable/eligible — reverse.
-      await reverseTimeEntryAllocations(trx, tenant, entryId);
+    if (entryClientId !== clientId) {
+      await reverseClientTimeEntryAllocations(trx, tenant, clientId, entryId);
       continue;
     }
 
-    await reverseTimeEntryAllocations(trx, tenant, entryId);
+    await reverseClientTimeEntryAllocations(trx, tenant, clientId, entryId);
     if (await isEntryEligibleForBlockBurn(trx, tenant, entry, clientId)) {
       await allocateTimeEntry(trx, tenant, clientId, entry);
       reconciled += 1;

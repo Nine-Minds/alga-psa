@@ -2445,6 +2445,7 @@ export class BillingEngine {
         "te.invoiced": false,
       })
       .whereNull("te.contract_line_id")
+      .where("te.approval_status", "APPROVED")
       .where("te.start_time", ">=", billingPeriod.startDate)
       .where("te.end_time", "<", billingPeriod.endDate)
       .select(
@@ -2457,46 +2458,10 @@ export class BillingEngine {
         "te.billable_duration",
       );
 
-    const byBlock = new Map<
-      string,
-      {
-        block_id: string;
-        service_id: string;
-        service_name: string;
-        remaining_minutes: number;
-        minutesUsed: number;
-        coveredEntryIds: Set<string>;
-      }
-    >();
-    for (const row of rows) {
-      let aggregate = byBlock.get(row.block_id);
-      if (!aggregate) {
-        aggregate = {
-          block_id: row.block_id,
-          service_id: row.service_id,
-          service_name: row.service_name || "Prepaid hour block",
-          remaining_minutes: Number(row.remaining_minutes) || 0,
-          minutesUsed: 0,
-          coveredEntryIds: new Set<string>(),
-        };
-        byBlock.set(row.block_id, aggregate);
-      }
-      const allocated = Number(row.minutes) || 0;
-      aggregate.minutesUsed += allocated;
-      if (allocated >= (Number(row.billable_duration) || 0)) {
-        aggregate.coveredEntryIds.add(row.time_entry_id);
-      }
-    }
-
-    const { computeHourBlockCharges } = await import("./compute/computeHourBlockCharges");
-    const blocks = Array.from(byBlock.values()).map((aggregate) => ({
-      block_id: aggregate.block_id,
-      service_id: aggregate.service_id,
-      service_name: aggregate.service_name,
-      hours_used: aggregate.minutesUsed / 60,
-      hours_remaining: Math.max(0, aggregate.remaining_minutes) / 60,
-      covered_entry_ids: Array.from(aggregate.coveredEntryIds),
-    }));
+    const { aggregateHourBlockBurnRows, computeHourBlockCharges } = await import(
+      "./compute/computeHourBlockCharges"
+    );
+    const blocks = aggregateHourBlockBurnRows(rows);
 
     return computeHourBlockCharges({ billingPeriod, blocks }).charges;
   }

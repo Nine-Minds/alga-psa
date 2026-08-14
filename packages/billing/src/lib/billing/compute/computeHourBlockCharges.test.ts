@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeHourBlockCharges } from "./computeHourBlockCharges";
+import { aggregateHourBlockBurnRows, computeHourBlockCharges } from "./computeHourBlockCharges";
 
 const PERIOD = { startDate: "2026-08-01", endDate: "2026-09-01" };
 
@@ -86,5 +86,78 @@ describe("computeHourBlockCharges", () => {
     expect(charges).toHaveLength(2);
     expect(charges.map((charge) => charge.block_id)).toEqual(["block-1", "block-2"]);
     expect(charges.every((charge) => charge.total === 0)).toBe(true);
+  });
+});
+
+describe("aggregateHourBlockBurnRows", () => {
+  it("marks a fully-covered spanning entry on its first block even though no single allocation covers it", () => {
+    const aggregates = aggregateHourBlockBurnRows([
+      {
+        block_id: "block-1",
+        service_id: "svc-1",
+        service_name: "Support Hours",
+        remaining_minutes: 360,
+        time_entry_id: "entry-span",
+        minutes: 240,
+        billable_duration: 540,
+      },
+      {
+        block_id: "block-2",
+        service_id: "svc-1",
+        service_name: "Support Hours",
+        remaining_minutes: 180,
+        time_entry_id: "entry-span",
+        minutes: 300,
+        billable_duration: 540,
+      },
+    ]);
+
+    expect(aggregates).toHaveLength(2);
+    const first = aggregates.find((aggregate) => aggregate.block_id === "block-1")!;
+    const second = aggregates.find((aggregate) => aggregate.block_id === "block-2")!;
+    expect(first.hours_used).toBe(4);
+    expect(second.hours_used).toBe(5);
+    expect(first.covered_entry_ids).toEqual(["entry-span"]);
+    expect(second.covered_entry_ids).toEqual([]);
+  });
+
+  it("does not mark a partially covered entry", () => {
+    const aggregates = aggregateHourBlockBurnRows([
+      {
+        block_id: "block-1",
+        service_id: "svc-1",
+        service_name: "Support Hours",
+        remaining_minutes: 300,
+        time_entry_id: "entry-partial",
+        minutes: 120,
+        billable_duration: 300,
+      },
+    ]);
+    expect(aggregates[0].covered_entry_ids).toEqual([]);
+  });
+
+  it("sums hours used per block across entries", () => {
+    const aggregates = aggregateHourBlockBurnRows([
+      {
+        block_id: "block-1",
+        service_id: "svc-1",
+        service_name: "Support Hours",
+        remaining_minutes: 0,
+        time_entry_id: "entry-a",
+        minutes: 120,
+        billable_duration: 120,
+      },
+      {
+        block_id: "block-1",
+        service_id: "svc-1",
+        service_name: "Support Hours",
+        remaining_minutes: 0,
+        time_entry_id: "entry-b",
+        minutes: 60,
+        billable_duration: 60,
+      },
+    ]);
+    expect(aggregates[0].hours_used).toBe(3);
+    expect(aggregates[0].covered_entry_ids.sort()).toEqual(["entry-a", "entry-b"]);
   });
 });

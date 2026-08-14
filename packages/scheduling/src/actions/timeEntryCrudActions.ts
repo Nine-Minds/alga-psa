@@ -739,8 +739,18 @@ export const saveTimeEntry = withAuth(async (
       // mutually exclusive by construction. Block burn is best-effort on save:
       // a failure is logged, never aborts the entry save, and the nightly
       // reconcile converges allocations to the canonical FIFO state.
-      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-        try {
+      // The reverse-on-update runs UNCONDITIONALLY (before any eligibility
+      // check): an entry edited to be contract-covered, non-billable, or
+      // serviceless must still give its minutes back to the blocks immediately
+      // — otherwise the client loses block minutes AND pays the contract/
+      // hourly rate until the nightly reconcile catches up.
+      try {
+        const savedEntryId = resultingEntry?.entry_id;
+        if (entry_id && savedEntryId) {
+          // Update: reverse then re-allocate (clean FIFO, no delta).
+          await reverseTimeEntryAllocations(trx, tenant, savedEntryId);
+        }
+        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
           let blockClientId: string | null = null;
           if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
             blockClientId = await getClientIdForWorkItem(
@@ -751,10 +761,8 @@ export const saveTimeEntry = withAuth(async (
             );
           }
           if (blockClientId && !resultingEntry.contract_line_id) {
-            // The save path always sets entry_id before this point.
-            const savedEntryId = resultingEntry.entry_id!;
             const burnEntry = {
-              entry_id: savedEntryId,
+              entry_id: savedEntryId!,
               service_id: resultingEntry.service_id,
               billable_duration: resultingEntry.billable_duration,
               contract_line_id: resultingEntry.contract_line_id,
@@ -763,18 +771,14 @@ export const saveTimeEntry = withAuth(async (
               work_date: resultingEntry.work_date,
               start_time: resultingEntry.start_time,
             };
-            if (entry_id) {
-              // Update: reverse then re-allocate (clean FIFO, no delta).
-              await reverseTimeEntryAllocations(trx, tenant, savedEntryId);
-            }
             const burned = await allocateTimeEntry(trx, tenant, blockClientId, burnEntry);
             if (burned.length > 0) {
               console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
             }
           }
-        } catch (blockBurnError) {
-          console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
         }
+      } catch (blockBurnError) {
+        console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
       }
       // --- End Hour-block burn logic ---
     });

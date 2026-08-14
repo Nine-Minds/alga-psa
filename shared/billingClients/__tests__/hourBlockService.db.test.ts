@@ -251,4 +251,91 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
       await db.destroy();
     }
   });
+
+  it('keeps every client\'s burns across a full handler-style pass and never reverses invoiced entries', async () => {
+    const db = connect();
+    const tenant = uuidv4();
+    const workDate = '2026-08-10';
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB Multi Tenant', email: 'hb3@test.local', billing_source: 'test' });
+      const { service_id: svcA } = await insertService(db, tenant, 'Multi Svc', 1);
+
+      // Two clients, each with their own block, user, ticket, and burned entry.
+      const clientA = uuidv4();
+      const clientB = uuidv4();
+      const blockA = uuidv4();
+      const blockB = uuidv4();
+      await db('clients').insert({ tenant, client_id: clientA, client_name: 'Client A' });
+      await db('clients').insert({ tenant, client_id: clientB, client_name: 'Client B' });
+      const userA = await insertUser(db, tenant);
+      const userB = await insertUser(db, tenant);
+      const ticketA = await insertTicket(db, tenant, clientA, 'Ticket A');
+      const ticketB = await insertTicket(db, tenant, clientB, 'Ticket B');
+      for (const [clientId, blockId] of [[clientA, blockA], [clientB, blockB]] as const) {
+        await db('hour_blocks').insert({
+          tenant, block_id: blockId, client_id: clientId, service_id: svcA,
+          total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000,
+          purchase_amount: 60000, currency_code: 'USD', status: 'active',
+          purchased_at: new Date().toISOString(), expiration_date: null,
+        });
+      }
+
+      // Burn 120 minutes from each client's block.
+      const entryA = await insertTimeEntry(db, tenant, userA, ticketA, svcA, 120, workDate);
+      const entryB = await insertTimeEntry(db, tenant, userB, ticketB, svcA, 120, workDate);
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, tenant, clientA, entryA);
+        await allocateTimeEntry(trx, tenant, clientB, entryB);
+      });
+
+      // Mark client B's entry invoiced (locked by a finalized invoice).
+      await db('time_entries').where({ tenant, entry_id: entryB.entry_id }).update({ invoiced: true });
+
+      // Full handler-style pass: reconcile client A, then client B.
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await reconcileClientAllocations(trx, tenant, clientA);
+      });
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await reconcileClientAllocations(trx, tenant, clientB);
+      });
+
+      // Both blocks keep their burns — the pass for one client must never
+      // reverse the other client's allocations.
+      const [bA, bB] = await Promise.all([
+        db('hour_blocks').where({ tenant, block_id: blockA }).first(),
+        db('hour_blocks').where({ tenant, block_id: blockB }).first(),
+      ]);
+      expect(Number(bA.remaining_minutes)).toBe(480);
+      expect(Number(bB.remaining_minutes)).toBe(480);
+
+      // Client B's entry is invoiced: its allocation must be untouched and its
+      // block balance must NOT be restored.
+      const allocationsAfter = await db('hour_block_time_allocations')
+        .where({ tenant, time_entry_id: entryB.entry_id })
+        .select('minutes');
+      expect(allocationsAfter).toHaveLength(1);
+      expect(Number(allocationsAfter[0].minutes)).toBe(120);
+
+      // Client A's (uninvoiced) entry survived reconcile with its burn intact.
+      const allocationsA = await db('hour_block_time_allocations')
+        .where({ tenant, time_entry_id: entryA.entry_id })
+        .select('minutes');
+      expect(allocationsA).toHaveLength(1);
+      expect(Number(allocationsA[0].minutes)).toBe(120);
+    } finally {
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
 });
