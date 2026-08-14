@@ -11,15 +11,24 @@ import { useTranslation } from './i18n/client';
  * English wording as the fallback and get that instead of a raw
  * `datePicker.today` — which is what "Hour", "Minute" and "Today" used to be
  * hardcoded to avoid, at the cost of never being translatable at all.
+ *
+ * `{{placeholders}}` are filled here too, so a fallback string interpolates the
+ * same way a translated one does.
  */
 export function usePickerText() {
   const { t } = useTranslation('common');
 
   return React.useCallback(
-    (key: string, fallback: string): string => {
-      const translated = t(key, fallback);
-      if (!translated || translated === key || translated === `common:${key}`) return fallback;
-      return translated;
+    (key: string, fallback: string, values?: Record<string, string>): string => {
+      const translated = t(key, fallback, values);
+      const text =
+        !translated || translated === key || translated === `common:${key}` ? fallback : translated;
+
+      if (!values) return text;
+      return Object.entries(values).reduce(
+        (result, [name, value]) => result.split(`{{${name}}}`).join(value),
+        text
+      );
     },
     [t]
   );

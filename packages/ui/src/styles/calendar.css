@@ -842,3 +842,9 @@ button[aria-selected="true"].rdp-day {
     border-top: 1px solid rgb(var(--color-border-100));
   }
 }
+
+.dtf-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: rgb(var(--color-destructive));
+}

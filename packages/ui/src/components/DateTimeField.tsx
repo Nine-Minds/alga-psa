@@ -602,6 +602,18 @@ export function DateTimeField({
           </div>
         </Popover.Anchor>
 
+        {(dateError || timeError) && (
+          <p className="dtf-error" role="status">
+            {dateError
+              ? t('dateTimePicker.invalidDate', 'Not a date — kept {{value}}', {
+                  value: dateDisplay(dateValue) || t('dateTimePicker.empty', 'nothing'),
+                })
+              : t('dateTimePicker.invalidTime', 'Not a time — kept {{value}}', {
+                  value: timeDisplay(timeValue) || t('dateTimePicker.empty', 'nothing'),
+                })}
+          </p>
+        )}
+
         <Popover.Portal>
           <Popover.Content
             className={cn('dtf-panel', variant === 'time' && 'dtf-panel-rail-only')}

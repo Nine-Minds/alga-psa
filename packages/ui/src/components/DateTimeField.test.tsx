@@ -72,8 +72,10 @@ describe('typing', () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(input.getAttribute('aria-invalid')).toBe('true');
-    // The text stays put so it can be corrected rather than retyped.
+    // The text stays put so it can be corrected rather than retyped, and the
+    // field says which value it is still holding.
     expect(input.value).toBe('31.02.2026');
+    expect(screen.getByText('Not a date — kept 13.08.2026')).toBeTruthy();
   });
 });
 
