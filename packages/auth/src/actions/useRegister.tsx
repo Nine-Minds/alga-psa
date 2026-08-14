@@ -136,31 +136,41 @@ export async function recoverPassword(
   portal: 'msp' | 'client' = 'msp',
   portalDomain?: string
 ): Promise<boolean> {
-  if (!isValidEmail(email)) {
-    logger.debug(`Invalid email format: [ ${email} ]`);
-    return true; // Return true for security - don't reveal invalid format
-  }
-
-  logger.debug(`Checking if email [ ${email} ] exists for portal type: ${portal}`);
-  
+  // Normalize the address once; validation, lookup, token payload, recipient,
+  // and logging all share this value.
+  const normalizedEmail = email.trim().toLowerCase();
   // For MSP portal, look for 'internal' users; for client portal, look for 'client' users
   const userType = portal === 'msp' ? 'internal' : 'client';
-  const userInfo = await User.findUserByEmailAndType(email, userType);
-  
-  if (!userInfo) {
-    logger.debug(`No ${userType} user found with email [ ${email} ]`);
-    // For security, always return true to not reveal if user exists
-    // But don't actually send an email since there's no matching user
+
+  // Invalid format is indistinguishable from an unknown address: finish with
+  // the generic success result without a lookup or send attempt.
+  if (!isValidEmail(normalizedEmail)) {
+    logger.debug('Password recovery skipped: invalid email format', { portal, userType });
     return true;
   }
 
-  // Only proceed with email if we found a user of the correct type
-  if (EMAIL_ENABLE) {
-    // For password reset, we only need the email in the token
-    // This makes the token much shorter
+  logger.debug('Checking if email exists for portal type', { portal, userType });
+
+  let matchedTenant: string | undefined;
+  try {
+    const userInfo = await User.findUserByEmailAndType(normalizedEmail, userType);
+
+    // Only a matched, active user of the requested portal type may produce a
+    // token or send attempt. Unknown and inactive users resolve to the same
+    // generic success result and never mint a token or write an email log.
+    if (!userInfo || userInfo.is_inactive) {
+      logger.debug('Password recovery skipped: no active matching user', { portal, userType });
+      return true;
+    }
+    matchedTenant = userInfo.tenant;
+
+    // Provider readiness is decided by the send path, not by an environment
+    // flag here. An enabled tenant SMTP/Resend/Microsoft provider therefore
+    // works even when EMAIL_ENABLE is false or unset; the system fallback
+    // remains controlled by SystemEmailProviderFactory and EMAIL_ENABLE.
     const recoverToken = await createToken({
       username: '',
-      email: email,
+      email: normalizedEmail,
       password: '',
       clientName: '',
       user_type: userType  // Include the correct user type in token
@@ -174,26 +184,36 @@ export async function recoverPassword(
     );
 
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
-    try {
-      await getAuthEmailRegistry().sendPasswordResetEmail({
-        email,
-        userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || email,
-        resetLink,
-        expirationTime: '1 hour',
-        tenant: userInfo.tenant,
-        supportEmail: 'support@algapsa.com',
-        clientName: 'AlgaPSA'
-      });
+    await getAuthEmailRegistry().sendPasswordResetEmail({
+      email: normalizedEmail,
+      userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || normalizedEmail,
+      resetLink,
+      expirationTime: '1 hour',
+      tenant: userInfo.tenant,
+      supportEmail: 'support@algapsa.com',
+      clientName: 'AlgaPSA'
+    });
 
-      logger.info(`Recover password email sent successfully for User [ ${email} ]`);
-      return true;
-    } catch (error) {
-      logger.error('Failed to send recover password email:', error);
-      return false;
-    }
-  } else {
-    logger.error('Password recovery unavailable: Automatic email functionality is not enabled or configured correctly. Please contact system administrator for manual password reset.');
-    return false;
+    logger.info('Password recovery email sent successfully', {
+      portal,
+      userType,
+      tenant: userInfo.tenant,
+      email: normalizedEmail
+    });
+    return true;
+  } catch (error) {
+    // All lookup, token, and send failures resolve to the same public success
+    // value: an unauthenticated requester must never learn whether an account
+    // exists or whether delivery succeeded. Operators observe failures through
+    // structured application logs and the Email Log. The token and reset URL
+    // are never logged.
+    logger.error('password_recovery_send_failed', {
+      portal,
+      userType,
+      tenant: matchedTenant,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return true;
   }
 }
 
