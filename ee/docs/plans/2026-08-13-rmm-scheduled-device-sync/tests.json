@@ -379,7 +379,7 @@
   {
     "id": "T047",
     "description": "The integration panel renders a Device sync toggle for an eligible provider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -387,7 +387,7 @@
   {
     "id": "T048",
     "description": "The panel does not render the Device sync control for an ineligible provider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -395,7 +395,7 @@
   {
     "id": "T049",
     "description": "The interval input rejects values below 15 and above 1440 in the UI",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -412,7 +412,7 @@
   {
     "id": "T051",
     "description": "The panel shows last synced from last_incremental_sync_at when present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -420,7 +420,7 @@
   {
     "id": "T052",
     "description": "The panel falls back to last_full_sync_at for last synced when no incremental has run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -428,7 +428,7 @@
   {
     "id": "T053",
     "description": "The panel renders sync_error when the last run failed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -436,7 +436,7 @@
   {
     "id": "T054",
     "description": "The panel renders no error state when sync_error is null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -444,7 +444,7 @@
   {
     "id": "T055",
     "description": "Saving the interval persists settings.deviceSync.intervalMinutes to the integration row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F046"
@@ -478,7 +478,7 @@
   {
     "id": "T059",
     "description": "Every new UI string resolves through the English pack (find-missing-i18n-keys reports none)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -486,7 +486,7 @@
   {
     "id": "T060",
     "description": "The new panel controls do not appear in the hardcoded-English scanner's high-severity list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -494,7 +494,7 @@
   {
     "id": "T061",
     "description": "New interactive elements have kebab-case ids",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]

@@ -2522,6 +2522,29 @@
           "updateContact": "Échec de la mise à jour du contact par défaut",
           "updateAutoSync": "Échec de la mise à jour du paramètre de synchronisation automatique"
         }
+      },
+      "deviceSync": {
+        "title": "Synchronisation planifiée des appareils",
+        "description": "Actualisez cet inventaire d'appareils selon une planification plutôt que d'attendre qu'une synchronisation complète soit lancée manuellement. Chaque exécution appelle l'API du fournisseur et, chez certains fournisseurs, une exécution incrémentielle lit malgré tout la liste complète des appareils : un intervalle plus court coûte donc proportionnellement plus d'appels d'API.",
+        "enabledLabel": "Synchroniser les appareils selon une planification",
+        "intervalLabel": "Exécuter toutes les (minutes)",
+        "intervalHelp": "Choisissez entre {{min}} et {{max}} minutes. Un intervalle plus court garde les données des appareils plus à jour et appelle l'API du fournisseur plus souvent.",
+        "intervalInvalid": "Saisissez un nombre entier de minutes compris entre {{min}} et {{max}}.",
+        "lastScheduledRun": "Dernière exécution planifiée : {{time}}",
+        "lastScheduledRunNever": "La synchronisation planifiée n'a pas encore été exécutée.",
+        "lastAnySync": "Dernière synchronisation de tout type, y compris les synchronisations complètes manuelles : {{time}}",
+        "lastAnySyncNever": "Aucune synchronisation d'appareils, de quelque type que ce soit, n'a encore été exécutée.",
+        "lastSyncError": "La dernière synchronisation a échoué : {{error}}",
+        "actions": {
+          "save": "Enregistrer la planification",
+          "saving": "Enregistrement..."
+        },
+        "success": {
+          "saved": "Planification de la synchronisation des appareils enregistrée. Le planificateur l'applique en quelques minutes."
+        },
+        "errors": {
+          "saveFailed": "Impossible d'enregistrer la planification de la synchronisation des appareils."
+        }
       }
     },
     "sso": {

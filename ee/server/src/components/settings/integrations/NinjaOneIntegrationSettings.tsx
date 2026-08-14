@@ -43,6 +43,7 @@ import {
 } from '../../../lib/actions/integrations/ninjaoneActions';
 import { getRmmIntegrationIdByProvider } from '@alga-psa/integrations/actions';
 import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
+import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
 import { RmmConnectionStatus } from '../../../interfaces/rmm.interfaces';
 import { NinjaOneRegion, NINJAONE_REGIONS } from '../../../interfaces/ninjaone.interfaces';
 
@@ -687,6 +688,13 @@ const NinjaOneIntegrationSettings: React.FC = () => {
       {/* Alert Automation - shown when connected and integration ID is known */}
       {isConnected && isActive && ninjaIntegrationId && (
         <RmmAlertAutomationSettings integrationId={ninjaIntegrationId} provider="ninjaone" />
+      )}
+
+      {/* Scheduled device sync - shown when connected */}
+      {isConnected && isActive && (
+        <div className="mt-6">
+          <RmmDeviceSyncSettings provider="ninjaone" onSaved={refreshStatus} />
+        </div>
       )}
     </>
   );

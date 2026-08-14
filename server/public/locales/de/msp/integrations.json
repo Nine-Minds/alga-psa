@@ -2522,6 +2522,29 @@
           "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
           "updateAutoSync": "Auto-Sync-Einstellung konnte nicht aktualisiert werden"
         }
+      },
+      "deviceSync": {
+        "title": "Geplante Gerätesynchronisierung",
+        "description": "Aktualisieren Sie dieses Geräteinventar nach einem Zeitplan, statt auf eine manuelle Vollsynchronisierung zu warten. Jeder Lauf ruft die Anbieter-API auf, und bei manchen Anbietern liest auch ein inkrementeller Lauf die vollständige Geräteliste, sodass ein kürzeres Intervall entsprechend mehr API-Aufrufe verursacht.",
+        "enabledLabel": "Geräte nach Zeitplan synchronisieren",
+        "intervalLabel": "Ausführen alle (Minuten)",
+        "intervalHelp": "Wählen Sie zwischen {{min}} und {{max}} Minuten. Ein kürzeres Intervall hält die Gerätedaten aktueller und ruft die Anbieter-API häufiger auf.",
+        "intervalInvalid": "Geben Sie eine ganze Zahl von Minuten zwischen {{min}} und {{max}} ein.",
+        "lastScheduledRun": "Letzter geplanter Lauf: {{time}}",
+        "lastScheduledRunNever": "Die geplante Synchronisierung wurde noch nicht ausgeführt.",
+        "lastAnySync": "Letzte Synchronisierung jeder Art, einschließlich manueller Vollsynchronisierungen: {{time}}",
+        "lastAnySyncNever": "Es wurde noch keine Gerätesynchronisierung jeglicher Art ausgeführt.",
+        "lastSyncError": "Die letzte Synchronisierung ist fehlgeschlagen: {{error}}",
+        "actions": {
+          "save": "Synchronisierungszeitplan speichern",
+          "saving": "Wird gespeichert..."
+        },
+        "success": {
+          "saved": "Zeitplan für die Gerätesynchronisierung gespeichert. Der Scheduler wendet ihn innerhalb weniger Minuten an."
+        },
+        "errors": {
+          "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
+        }
       }
     },
     "sso": {

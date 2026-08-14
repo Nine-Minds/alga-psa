@@ -298,7 +298,7 @@
   {
     "id": "F037",
     "description": "Add a Device sync enable/disable toggle to each connected integration's panel in Integrations → RMM",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F038",
     "description": "Add an interval control (minutes) to the integration panel, constrained to the same 15..1440 bounds enforced server-side",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F039",
     "description": "The panel shows last synced, derived from last_incremental_sync_at ?? last_full_sync_at",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F040",
     "description": "The panel surfaces sync_error when the last scheduled run failed",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F041",
     "description": "Saving the interval persists to settings.deviceSync and takes effect within one reconciler pass without a restart",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Target users and flows"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "F042",
     "description": "The Device sync control is hidden or disabled for providers not in RMM_DEVICE_SYNC_PROVIDERS",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "UX notes"
@@ -347,7 +347,7 @@
   {
     "id": "F043",
     "description": "The manual Full sync button retains its existing behaviour unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals"
     ]
@@ -355,7 +355,7 @@
   {
     "id": "F044",
     "description": "All new UI strings are wired through useTranslation and added to the English pack (no hardcoded copy)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
@@ -363,7 +363,7 @@
   {
     "id": "F045",
     "description": "New interactive elements carry kebab-case ids for the UI reflection system",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
