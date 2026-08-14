@@ -131,6 +131,15 @@ schema-driven workflow forms (simulate an event, schedule a workflow, start a ru
 render `date` / `date-time` properties as browser controls and now go through `DatePicker` /
 `DateTimePicker` bridged by `dateInput.ts`.
 
+Which *variant* a surface uses is still a per-surface call, and the ticket due date is the one place
+the same field answers differently in two views: the entry view gives it the pair, the grid hero
+gives it the date half alone. That is a width decision, not an oversight — the hero band is a
+seven-column grid and the Due column measures 146 px, where a pair renders as two clipped boxes
+reading `mm/…` and `9:`. The hero's handler carries the existing time-of-day through a date change,
+so nothing is lost there; the time is set from the entry view. Widening the column means spanning
+two of seven and pushing Reply status onto a second row, which is a hero redesign and belongs to
+whoever owns that band.
+
 Three fields are deliberately **not** migrated. They are named here so the gap is a decision on the
 record rather than something to rediscover:
 
