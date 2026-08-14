@@ -22,7 +22,10 @@ import {
   buildTimeOptions,
   formatTimeDisplay,
   getDatePlaceholder,
+  getDateSeparator,
   isExactMinuteOption,
+  isTypableDateText,
+  isTypableTimeText,
   isValidTimeValue,
   minutesToTime,
   parseDateInput,
@@ -165,6 +168,15 @@ export function DateTimeField({
       yesterday: [t('datePicker.yesterday', 'Yesterday')],
     }),
     [t]
+  );
+
+  // What a half-typed entry is allowed to look like, in this locale.
+  const typableDateOptions = React.useMemo(
+    () => ({
+      separators: [getDateSeparator(locale)],
+      words: [...relativeWords.today, ...relativeWords.tomorrow, ...relativeWords.yesterday],
+    }),
+    [locale, relativeWords]
   );
 
   // What the panel should show: the text if it parses, otherwise the value.
@@ -563,11 +575,29 @@ export function DateTimeField({
           aria-expanded={open}
           placeholder={isDateField ? datePlaceholder : timePlaceholder}
           onChange={(event) => {
+            const input = event.target as HTMLInputElement;
+            const next = input.value;
+            const typable = isDateField
+              ? isTypableDateText(next, typableDateOptions)
+              : isTypableTimeText(next);
+
+            if (!typable) {
+              // A character no valid entry can hold never lands: refusing the
+              // keystroke beats accepting it and arguing at commit time.
+              const caret = Math.min(
+                text.length,
+                Math.max(0, (input.selectionStart ?? next.length) - (next.length - text.length))
+              );
+              input.value = text;
+              input.setSelectionRange(caret, caret);
+              return;
+            }
+
             if (isDateField) {
-              setDateText(event.target.value);
+              setDateText(next);
               setDateError(false);
             } else {
-              setTimeText(event.target.value);
+              setTimeText(next);
               setTimeError(false);
             }
           }}

@@ -241,6 +241,56 @@ export function isValidTimeValue(value?: string): boolean {
   return !!value && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+const BASE_DATE_SEPARATORS = ['/', '.', '-', ' '];
+
+function escapeForCharClass(value: string): string {
+  return value.replace(/[\\\]^-]/g, '\\$&');
+}
+
+export interface TypableDateOptions {
+  /** Separator the active locale writes, when it is none of `/ . -`. */
+  separators?: Array<string | undefined>;
+  /** Localised relative words, so they can still be spelled out. */
+  words?: Array<string | undefined>;
+}
+
+/**
+ * Whether text could still grow into something `parseDateInput` accepts.
+ *
+ * The field refuses characters that no valid entry can contain instead of
+ * taking them and failing on commit: a letter in a date is a typo at the
+ * keystroke, not a decision to be argued with later.
+ */
+export function isTypableDateText(raw: string, options: TypableDateOptions = {}): boolean {
+  const text = raw.trim();
+  if (!text) return true;
+
+  const separators = Array.from(
+    new Set([...BASE_DATE_SEPARATORS, ...(options.separators ?? [])].filter((s): s is string => !!s))
+  );
+  const separatorClass = separators.map(escapeForCharClass).join('');
+  if (new RegExp(`^[+-]?\\d{0,8}(?:[${separatorClass}]\\d{0,4}){0,2}$`).test(text)) {
+    return true;
+  }
+
+  const lower = text.toLowerCase();
+  const words = ['today', 'tomorrow', 'yesterday', ...(options.words ?? [])];
+  return words.some((word) => word && word.toLowerCase().startsWith(lower));
+}
+
+/** The same rule for the time half: digits, one separator, and a meridiem after a digit. */
+export function isTypableTimeText(raw: string): boolean {
+  const text = raw.trim().toLowerCase().replace(/\s+/g, '');
+  if (!text) return true;
+
+  const meridiem = text.match(/(am?|pm?)$/);
+  const numericPart = meridiem ? text.slice(0, text.length - meridiem[0].length) : text;
+  // "2:35p" is on its way somewhere; a bare "p" is not.
+  if (meridiem && !/^\d/.test(numericPart)) return false;
+
+  return /^(\d{1,2}[:.]\d{0,2}|\d{0,4})$/.test(numericPart);
+}
+
 export function timeToMinutes(value: string): number {
   const [hour, minute] = value.split(':');
   return parseInt(hour, 10) * 60 + parseInt(minute, 10);

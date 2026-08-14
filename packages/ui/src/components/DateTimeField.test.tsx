@@ -4,7 +4,13 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DateTimeField } from './DateTimeField';
-import { buildTimeOptions, parseDateInput, parseTimeInput } from '../lib/dateTimeInput';
+import {
+  buildTimeOptions,
+  isTypableDateText,
+  isTypableTimeText,
+  parseDateInput,
+  parseTimeInput,
+} from '../lib/dateTimeInput';
 
 /**
  * The family's contract, in the order it was argued for: you can type, the
@@ -59,6 +65,32 @@ describe('typing', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0]).toEqual(new Date(2019, 2, 1));
+  });
+
+  it('refuses a character no entry could hold, rather than failing on it later', () => {
+    const onChange = vi.fn();
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '08/13/2026x' } });
+
+    expect(input.value).toBe('08/13/2026');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('still takes the words and shortcuts the parser understands', () => {
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={() => {}} />);
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: 'tomorrow' } });
+    expect(input.value).toBe('tomorrow');
+
+    cleanup();
+    render(<DateTimeField variant="time" value="09:00" onChange={() => {}} timeFormat="12h" />);
+    const [timeInput] = fields();
+    fireEvent.change(timeInput, { target: { value: '2:35p' } });
+    expect(timeInput.value).toBe('2:35p');
   });
 
   it('keeps the previous value when the text does not parse', () => {
@@ -265,6 +297,23 @@ describe('parsing rules', () => {
     expect(parseDateInput('yesterday', 'en', { today })).toEqual(new Date(2026, 7, 12));
     expect(parseDateInput('+7', 'en', { today })).toEqual(new Date(2026, 7, 20));
     expect(parseDateInput('31/02/2026', 'it', { today })).toBeNull();
+  });
+
+  it('lets only characters a valid entry could hold be typed', () => {
+    expect(isTypableDateText('13/08/2026')).toBe(true);
+    expect(isTypableDateText('13/')).toBe(true);
+    expect(isTypableDateText('-3')).toBe(true);
+    expect(isTypableDateText('tod')).toBe(true);
+    expect(isTypableDateText('ogg', { words: ['Oggi'] })).toBe(true);
+    expect(isTypableDateText('abc')).toBe(false);
+    expect(isTypableDateText('13/08/2026x')).toBe(false);
+
+    expect(isTypableTimeText('14:3')).toBe(true);
+    expect(isTypableTimeText('1435')).toBe(true);
+    expect(isTypableTimeText('2:35p')).toBe(true);
+    expect(isTypableTimeText('9a')).toBe(true);
+    expect(isTypableTimeText('p')).toBe(false);
+    expect(isTypableTimeText('abc')).toBe(false);
   });
 
   it('builds a quarter-hour rail that still carries the odd minute', () => {
