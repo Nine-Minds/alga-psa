@@ -173,6 +173,48 @@ describe('the exit contract', () => {
   });
 });
 
+describe('clearing', () => {
+  it('clears from the button when the field is clearable', () => {
+    const onChange = vi.fn();
+    render(
+      <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} clearable />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(onChange).toHaveBeenCalledWith(undefined);
+    expect(fields()[0].value).toBe('');
+  });
+
+  it('clears on Backspace only when the whole field is selected', () => {
+    const onChange = vi.fn();
+    render(
+      <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} clearable />
+    );
+
+    const [input] = fields();
+    input.setSelectionRange(2, 2);
+    fireEvent.keyDown(input, { key: 'Backspace' });
+    expect(onChange).not.toHaveBeenCalled();
+
+    input.setSelectionRange(0, input.value.length);
+    fireEvent.keyDown(input, { key: 'Backspace' });
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+
+  it('leaves a non-clearable value alone when its text is emptied', () => {
+    const onChange = vi.fn();
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} />);
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input.value).toBe('08/13/2026');
+  });
+});
+
 describe('keyboard', () => {
   it('steps the date a day at a time without committing', () => {
     const onChange = vi.fn();

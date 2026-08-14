@@ -65,7 +65,7 @@ export function DatePicker({
     <DateTimeField
       variant="date"
       value={value}
-      onChange={onChange as (value: any) => void}
+      onChange={onChange as (value: Date | string | undefined) => void}
       placeholder={placeholder}
       className={className}
       disabled={disabled}

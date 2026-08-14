@@ -47,7 +47,7 @@ export function TimePicker({
     <DateTimeField
       variant="time"
       value={value}
-      onChange={onChange as (value: any) => void}
+      onChange={onChange as (value: Date | string | undefined) => void}
       placeholder={placeholder}
       className={className}
       disabled={disabled}

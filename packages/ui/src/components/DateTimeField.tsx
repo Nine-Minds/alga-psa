@@ -40,7 +40,7 @@ export interface DateTimeFieldProps {
   variant: DateTimeFieldVariant;
   /** `Date` for date/datetime, `"HH:mm"` for time */
   value?: Date | string;
-  onChange: (value: any) => void;
+  onChange: (value: Date | string | undefined) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
