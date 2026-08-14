@@ -357,7 +357,7 @@ describe('Extension Proxy Flow Integration', () => {
         principalKind: 'msp',
         userId: 'user-1',
       });
-      expect(mocks.getInstallConfig).toHaveBeenCalledWith({ tenantId: 'tenant-1', extensionId });
+      expect(mocks.getInstallConfig).toHaveBeenCalledWith({ tenantId: 'tenant-1', extensionId: 'registry-1' });
       // Audit start precedes secret-bearing hydration.
       const startOrder = mocks.startExtensionExecution.mock.invocationCallOrder[0];
       const hydrateOrder = mocks.getInstallConfig.mock.invocationCallOrder[0];
@@ -366,7 +366,7 @@ describe('Extension Proxy Flow Integration', () => {
       expect(execute).toHaveBeenCalledWith(
         expect.objectContaining({
           context: expect.objectContaining({
-            extension_id: extensionId,
+            extension_id: 'registry-1',
             tenant_id: 'tenant-1',
             install_id: 'install-1',
             version_id: 'version-1',
@@ -377,6 +377,7 @@ describe('Extension Proxy Flow Integration', () => {
         expect.objectContaining({
           requestId: 'req-123',
           headers: expect.objectContaining({
+            'x-alga-extension': 'registry-1',
             'x-ext-install-id': 'install-1',
             'x-ext-version-id': 'version-1',
             'x-ext-registry-id': 'registry-1',
@@ -597,6 +598,65 @@ describe('Extension Proxy Flow Integration', () => {
       expect(await badResponse.json()).toEqual({ error: 'forbidden' });
       expect(mocks.getInstallConfig).not.toHaveBeenCalled();
       expect(mocks.getRunnerBackend).not.toHaveBeenCalled();
+    });
+
+    it('7. an extension-level 4xx/5xx from the runner is audited as upstream_error with the true status, not ok', async () => {
+      const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+
+      mocks.getRunnerBackend.mockReturnValue({
+        kind: 'docker',
+        getPublicBase: () => null,
+        execute: vi.fn().mockResolvedValue({
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+          body: Buffer.from('{"error":"ext temporarily unavailable"}'),
+        }),
+      } as any);
+      mocks.finishExtensionExecution.mockClear();
+
+      const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets`, { method: 'GET' });
+      const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+      // The HTTP response stays a pass-through as today; only the audit
+      // classification changes from ok to upstream_error.
+      expect(response.status).toBe(503);
+      expect(mocks.finishExtensionExecution).toHaveBeenCalledWith(
+        'log-1',
+        'tenant-1',
+        expect.objectContaining({ outcome: 'upstream_error', status: 503 }),
+      );
+      const finishArgs = mocks.finishExtensionExecution.mock.calls[0][2] as Record<string, unknown>;
+      expect(finishArgs).not.toHaveProperty('secretEnvelope');
+      expect(finishArgs).not.toHaveProperty('config');
+    });
+
+    it('8. a runner transport error returns a generic body with requestId only — no runner detail', async () => {
+      const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+      const { RunnerRequestError } = mocks;
+
+      mocks.getRunnerBackend.mockReturnValue({
+        kind: 'docker',
+        getPublicBase: () => null,
+        execute: vi.fn().mockRejectedValue(
+          new RunnerRequestError('Runner responded with non-success status 500: SECRET-STACK-TRACE', 'docker', 500)
+        ),
+      } as any);
+
+      const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets`, { method: 'GET' });
+      const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body).toEqual({ error: 'bad_gateway', requestId: expect.any(String) });
+      const serialized = JSON.stringify(body);
+      expect(serialized).not.toContain('Runner');
+      expect(serialized).not.toContain('SECRET-STACK-TRACE');
+      expect(serialized).not.toContain('detail');
+      expect(mocks.finishExtensionExecution).toHaveBeenCalledWith(
+        'log-1',
+        'tenant-1',
+        expect.objectContaining({ outcome: 'error', status: 500 }),
+      );
     });
   });
 });

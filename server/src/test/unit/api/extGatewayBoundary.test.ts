@@ -116,7 +116,10 @@ function runnerResponse(body: string, status = 200) {
 }
 
 describe('direct /api/ext gateway boundary', () => {
-  const extensionId = 'registry-1';
+  // Caller-supplied URL alias (slug form) must never be used for install
+  // hydration or runner identity after authorization; the canonical
+  // access.registryId is used instead.
+  const extensionId = 'publisher.agreements';
 
   beforeEach(() => {
     process.env.EDITION = 'ee';
@@ -163,6 +166,12 @@ describe('direct /api/ext gateway boundary', () => {
       method: 'GET',
       path: '/tickets',
     });
+    // Install hydration and runner identity must use the canonical registry ID,
+    // never the caller-supplied slug.
+    expect(mocks.getInstallConfig).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      extensionId: 'registry-1',
+    });
     expect(mocks.startExtensionExecution).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
       registryId: 'registry-1',
@@ -184,7 +193,12 @@ describe('direct /api/ext gateway boundary', () => {
         install_id: 'install-1',
         version_id: 'version-1',
         tenant_id: 'tenant-1',
+        extension_id: 'registry-1',
       })
+    );
+    expect(fetchBody.http.headers['x-alga-extension']).toBe('registry-1');
+    expect((fetchSpy.mock.calls[0][1] as RequestInit).headers).toEqual(
+      expect.objectContaining({ 'x-alga-extension': 'registry-1' })
     );
     expect(fetchBody.secret_envelope).toEqual({
       ciphertext_b64: 'SECRET-CIPHERTEXT',
@@ -258,6 +272,7 @@ describe('direct /api/ext gateway boundary', () => {
       fetchImpl: () => Promise<unknown>,
       expectedResponseStatus: number,
       expectedOutcome: string,
+      expectedAuditStatus: number,
     ) {
       mocks.finishExtensionExecution.mockClear();
       vi.spyOn(global, 'fetch').mockImplementation(fetchImpl as any);
@@ -267,7 +282,7 @@ describe('direct /api/ext gateway boundary', () => {
       expect(mocks.finishExtensionExecution).toHaveBeenCalledWith(
         'log-1',
         'tenant-1',
-        expect.objectContaining({ outcome: expectedOutcome }),
+        expect.objectContaining({ outcome: expectedOutcome, status: expectedAuditStatus }),
       );
       const finishArgs = mocks.finishExtensionExecution.mock.calls[0][2] as Record<string, unknown>;
       expect(finishArgs).not.toHaveProperty('secretEnvelope');
@@ -278,21 +293,41 @@ describe('direct /api/ext gateway boundary', () => {
       () => Promise.resolve(runnerResponse(JSON.stringify({ status: 200, body_b64: Buffer.from('x').toString('base64') }))),
       200,
       'ok',
+      200,
     );
     await assertOutcome(
       () => Promise.reject(new Error('runner unreachable')),
       502,
       'error',
+      502,
     );
     await assertOutcome(
       () => Promise.resolve(runnerResponse('')),
       502,
       'error',
+      200,
     );
     await assertOutcome(
       () => Promise.resolve(runnerResponse('this is not json')),
       502,
       'error',
+      200,
+    );
+    // A non-2xx transport status from the runner's /v1/execute is a runner
+    // failure and must not be audited as success.
+    await assertOutcome(
+      () => Promise.resolve(runnerResponse(JSON.stringify({ error: 'runner exploded' }), 500)),
+      502,
+      'error',
+      500,
+    );
+    // An extension-level payload 4xx/5xx (HTTP 200 transport) stays a
+    // pass-through response but is audited as upstream_error, never ok.
+    await assertOutcome(
+      () => Promise.resolve(runnerResponse(JSON.stringify({ status: 503, body_b64: Buffer.from('ext unavailable').toString('base64') }))),
+      503,
+      'upstream_error',
+      503,
     );
 
     const abortError = new Error('aborted');
@@ -301,6 +336,32 @@ describe('direct /api/ext gateway boundary', () => {
       () => Promise.reject(abortError),
       502,
       'timeout',
+      502,
+    );
+  });
+
+  it('7. runner failure responses carry a generic body with requestId only — no runner detail or body preview', async () => {
+    const { GET } = await import('server/src/app/api/ext/[extensionId]/[[...path]]/route');
+
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      runnerResponse('runner blew up with SECRET-MATERIAL and stack frames', 500)
+    );
+
+    const req = new NextRequest(`http://localhost:3000/api/ext/${extensionId}/tickets`, { method: 'GET' });
+    const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+    expect(response.status).toBe(502);
+    const body = await response.json();
+    expect(body).toEqual({ error: 'bad_gateway', requestId: expect.any(String) });
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain('runner');
+    expect(serialized).not.toContain('SECRET-MATERIAL');
+    expect(serialized).not.toContain('stack');
+    expect(serialized).not.toContain('detail');
+    expect(mocks.finishExtensionExecution).toHaveBeenCalledWith(
+      'log-1',
+      'tenant-1',
+      expect.objectContaining({ outcome: 'error', status: 500 }),
     );
   });
 

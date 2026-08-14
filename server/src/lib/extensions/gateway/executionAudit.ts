@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-export type ExtensionExecutionOutcome = 'ok' | 'error' | 'timeout' | 'policy_denied';
+export type ExtensionExecutionOutcome =
+  | 'ok'
+  | 'error'
+  | 'timeout'
+  | 'policy_denied'
+  | 'upstream_error';
 
 export interface StartExtensionExecutionInput {
   tenantId: string;

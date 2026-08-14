@@ -61,16 +61,22 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       error: zOpenApi
         .enum([
+          'unauthenticated',
+          'tenant_mismatch',
+          'extension_not_available',
+          'endpoint_not_found',
+          'forbidden',
+          'rate_limited',
           'not_installed',
           'payload_too_large',
-          'install_context_missing',
-          'runner_empty_response',
-          'runner_invalid_response',
           'bad_gateway',
-          'internal_error',
+          'access_policy_unavailable',
         ])
-        .describe('Gateway-level error code.'),
-      detail: zOpenApi.unknown().optional().describe('Additional error detail when available.'),
+        .describe('Gateway-level error code. Runner and install internals are never returned to callers; upstream failures surface as a generic bad_gateway carrying only the request ID.'),
+      requestId: zOpenApi
+        .string()
+        .optional()
+        .describe('Correlates the response with server-side gateway logs.'),
     }),
   );
 

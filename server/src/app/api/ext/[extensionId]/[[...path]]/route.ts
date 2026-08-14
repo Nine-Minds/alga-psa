@@ -289,7 +289,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       userId: access.principal.userId,
     });
 
-    const install = await resolveInstallContext(tenantId, extensionId);
+    const install = await resolveInstallContext(access.tenantId, access.registryId);
     console.log('[api/ext] install context resolved', {
       hasInstall: !!install,
       versionId: install?.versionId,
@@ -315,7 +315,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
         durationMs: Date.now() - startedAt,
       });
       return applyCorsHeaders(
-        NextResponse.json({ error: 'install_context_missing', detail: 'installId missing' }, { status: 502 }),
+        NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
         corsOrigin
       );
     }
@@ -341,7 +341,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
 
     const headers = filterRequestHeaders(req.headers);
     headers['x-alga-tenant'] = tenantId;
-    headers['x-alga-extension'] = extensionId;
+    headers['x-alga-extension'] = access.registryId;
     const maxBody = 10 * 1024 * 1024; // 10MB cap
     let bodyB64: string | undefined;
     if (req.method !== 'GET') {
@@ -384,14 +384,14 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           'content-type': 'application/json',
           'x-request-id': requestId,
           'x-alga-tenant': tenantId,
-          'x-alga-extension': extensionId,
+          'x-alga-extension': access.registryId,
           ...(idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : {}),
         },
         body: JSON.stringify({
           context: {
             request_id: requestId,
             tenant_id: tenantId,
-            extension_id: extensionId,
+            extension_id: access.registryId,
             install_id,
             content_hash,
             version_id,
@@ -417,10 +417,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           error: 'empty_response',
         });
         return applyCorsHeaders(
-          NextResponse.json(
-            { error: 'runner_empty_response', detail: { status: resp.status } },
-            { status: 502 }
-          ),
+          NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
           corsOrigin
         );
       }
@@ -442,25 +439,41 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           error: 'invalid_response',
         });
         return applyCorsHeaders(
-          NextResponse.json(
-            {
-              error: 'runner_invalid_response',
-              detail: { status: resp.status, bodyPreview: rawBody.slice(0, 500) },
-            },
-            { status: 502 }
-          ),
+          NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
           corsOrigin
         );
       }
+      const effectiveStatus = typeof payload.status === 'number' ? payload.status : resp.status;
+      if (resp.status >= 400) {
+        console.error('[api/ext] runner transport failure', {
+          status: resp.status,
+          requestId,
+          tenantId,
+          extensionId,
+          bodyPreview: rawBody.slice(0, 500),
+        });
+        await finishExtensionExecution(logId, tenantId, {
+          outcome: 'error',
+          status: resp.status,
+          durationMs: Date.now() - startedAt,
+          error: 'runner_transport_error',
+        });
+        return applyCorsHeaders(
+          NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
+          corsOrigin
+        );
+      }
+      const upstreamError = effectiveStatus >= 400;
       await finishExtensionExecution(logId, tenantId, {
-        outcome: 'ok',
-        status: payload.status || resp.status,
+        outcome: upstreamError ? 'upstream_error' : 'ok',
+        status: effectiveStatus,
         durationMs: Date.now() - startedAt,
+        error: upstreamError ? 'extension_error_status' : undefined,
       });
       const respHeaders = new Headers(filterResponseHeaders(resp.headers));
       const body = payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined;
       return applyCorsHeaders(
-        new NextResponse(body, { status: payload.status || resp.status, headers: respHeaders }),
+        new NextResponse(body, { status: effectiveStatus, headers: respHeaders }),
         corsOrigin
       );
     } catch (err) {

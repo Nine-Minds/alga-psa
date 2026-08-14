@@ -255,7 +255,7 @@ async function handle(
     // not stale-proof, so hydrate fresh through the active-state-filtered
     // getInstallConfig() and reject any install/version that changed since the
     // authorization query.
-    const installConfig = await getInstallConfig({ tenantId, extensionId });
+    const installConfig = await getInstallConfig({ tenantId: access.tenantId, extensionId: access.registryId });
     if (!installConfig) {
       await finishExtensionExecution(logId, tenantId, {
         outcome: 'policy_denied',
@@ -274,7 +274,7 @@ async function handle(
         outcome: 'policy_denied',
         durationMs: Date.now() - startedAt,
       });
-      return applyCorsHeaders(json(502, { error: 'Extension install context missing (installId)' }), corsOrigin);
+      return applyCorsHeaders(json(502, { error: 'bad_gateway', requestId }), corsOrigin);
     }
     if (!installConfig.contentHash) {
       console.error('[ext-proxy] Missing content hash', { tenantId, extensionId });
@@ -282,7 +282,7 @@ async function handle(
         outcome: 'policy_denied',
         durationMs: Date.now() - startedAt,
       });
-      return applyCorsHeaders(json(502, { error: 'Extension bundle unavailable' }), corsOrigin);
+      return applyCorsHeaders(json(502, { error: 'bad_gateway', requestId }), corsOrigin);
     }
     if (
       installConfig.installId !== access.installId ||
@@ -324,7 +324,7 @@ async function handle(
       context: {
         request_id: requestId,
         tenant_id: tenantId,
-        extension_id: extensionId,
+        extension_id: access.registryId,
         install_id: access.installId,
         version_id: access.versionId,
         content_hash: installConfig.contentHash,
@@ -335,7 +335,7 @@ async function handle(
         url: pathname,
         path: pathname,
         query,
-        headers: filterRequestHeaders(req.headers, tenantId, extensionId, requestId, method),
+        headers: filterRequestHeaders(req.headers, access.tenantId, access.registryId, requestId, method),
         body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined,
       },
       limits: { timeout_ms: timeoutMs },
@@ -362,7 +362,7 @@ async function handle(
 
     const runnerHeaders: Record<string, string> = {
       'x-alga-tenant': tenantId,
-      'x-alga-extension': extensionId,
+      'x-alga-extension': access.registryId,
       'x-ext-install-id': access.installId,
       'x-ext-version-id': access.versionId,
       'x-ext-registry-id': access.registryId,
@@ -385,10 +385,12 @@ async function handle(
       bodyLength: runnerResp.body?.length
     });
 
+    const upstreamError = runnerResp.status >= 400;
     await finishExtensionExecution(logId, tenantId, {
-      outcome: 'ok',
+      outcome: upstreamError ? 'upstream_error' : 'ok',
       status: runnerResp.status,
       durationMs: Date.now() - startedAt,
+      error: upstreamError ? 'extension_error_status' : undefined,
     });
 
     const proxyResponse = new NextResponse(runnerResp.body as any, {
@@ -425,12 +427,12 @@ async function handle(
     }
     if (error instanceof RunnerConfigError) {
       console.error('[ext-proxy] Runner configuration error:', error.message);
-      return applyCorsHeaders(json(500, { error: 'Runner not configured' }), corsOrigin);
+      return applyCorsHeaders(json(500, { error: 'bad_gateway', requestId }), corsOrigin);
     }
     if (error instanceof RunnerRequestError) {
       console.error('[ext-proxy] Runner request error:', error.message, { backend: error.backend, status: error.status });
       const status = error.status || 502;
-      return applyCorsHeaders(json(status, { error: 'Runner error', details: error.message }), corsOrigin);
+      return applyCorsHeaders(json(status, { error: 'bad_gateway', requestId }), corsOrigin);
     }
     if (error?.name === 'AbortError') {
       return applyCorsHeaders(json(504, { error: 'Gateway timeout' }), corsOrigin);
