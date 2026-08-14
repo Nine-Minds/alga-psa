@@ -371,7 +371,7 @@
   {
     "id": "F046",
     "description": "A server action persists deviceSync settings with permission checks via withAuth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX notes"
     ]
