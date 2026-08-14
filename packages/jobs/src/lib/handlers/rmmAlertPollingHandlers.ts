@@ -277,6 +277,16 @@ export async function rmmDeviceSyncHandler(
     return;
   }
 
+  // Suspension takes effect immediately, but the schedule survives until the
+  // next reconciler pass minutes later. Without this check that window sends
+  // provider API traffic for a tenant that is supposed to be dormant.
+  const tenantRow = await tenantScopedTable(adminKnex, 'tenants', data.tenantId)
+    .first('suspended_at');
+  if (tenantRow?.suspended_at) {
+    logger.info('[RmmDeviceSyncJob] Skipping: tenant suspended', data);
+    return;
+  }
+
   const strategy = getRmmDeviceSyncStrategy(data.provider);
   if (!strategy) {
     logger.warn('[RmmDeviceSyncJob] No device sync strategy for provider; skipping', data);

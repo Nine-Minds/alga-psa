@@ -176,7 +176,7 @@
   {
     "id": "T022",
     "description": "The device-sync handler invokes the provider strategy with the resolved delta cursor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F023"
@@ -209,7 +209,7 @@
   {
     "id": "T026",
     "description": "The handler warns and no-ops when no strategy is registered for the provider",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -217,7 +217,7 @@
   {
     "id": "T027",
     "description": "A successful run sets last_incremental_sync_at to the run time",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -225,7 +225,7 @@
   {
     "id": "T028",
     "description": "A successful run sets sync_status = 'completed' and clears a previous sync_error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -233,7 +233,7 @@
   {
     "id": "T029",
     "description": "A failed run sets sync_status = 'failed' and records the error message in sync_error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -241,7 +241,7 @@
   {
     "id": "T030",
     "description": "A failed run does not advance last_incremental_sync_at",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F017"
@@ -250,7 +250,7 @@
   {
     "id": "T031",
     "description": "A failed run leaves the recurring schedule in place",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "T032",
     "description": "A run for a suspended tenant returns before any provider API call is made",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
