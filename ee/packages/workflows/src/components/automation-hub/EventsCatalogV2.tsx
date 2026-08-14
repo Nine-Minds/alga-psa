@@ -7,6 +7,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -1641,11 +1643,19 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
               <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.from', { defaultValue: 'From' })}</div>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <DatePicker
+                label={t('automation.eventsCatalog.metricsDialog.from', { defaultValue: 'From' })}
+                value={dateFromString(from)}
+                onChange={(date) => setFrom(dateToString(date))}
+              />
             </div>
             <div className="flex flex-col gap-1">
               <div className="text-xs text-gray-500">{t('automation.eventsCatalog.metricsDialog.to', { defaultValue: 'To' })}</div>
-              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <DatePicker
+                label={t('automation.eventsCatalog.metricsDialog.to', { defaultValue: 'To' })}
+                value={dateFromString(to)}
+                onChange={(date) => setTo(dateToString(date))}
+              />
             </div>
             <Button id="workflow-event-metrics-refresh" variant="outline" onClick={() => void load()} disabled={loading}>
               <RefreshCw className="h-4 w-4 mr-2" />

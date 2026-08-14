@@ -251,8 +251,10 @@ test.describe("Contract simulator journeys", () => {
       await projectedHours.fill("3");
       await expect(page.getByText(/Loaded value:/)).not.toBeVisible();
       await page.getByText("Compare with past invoices").click();
-      await page.locator("#simulation-replay-start").fill("2026-01-01");
-      await page.locator("#simulation-replay-end").fill("2026-01-31");
+      await page.getByLabel("From").fill("2026-01-01");
+      await page.getByLabel("From").press("Enter");
+      await page.getByLabel("Through").fill("2026-01-31");
+      await page.getByLabel("Through").press("Enter");
       await page.locator("#load-historical-replay-button").click();
       await expect(
         page.getByText(/Historical activity loaded from/),

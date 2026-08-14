@@ -146,7 +146,10 @@ export function parseDateInput(
       values[part] = tokens[index];
     });
   } else if (tokens.length === 3) {
-    order.forEach((part, index) => {
+    // A leading 4-digit token can only be an ISO year, whatever the locale
+    // orders — that is what gets pasted out of reports and spreadsheets.
+    const isoOrder: DateFieldPart[] = ['year', 'month', 'day'];
+    (tokens[0].length === 4 ? isoOrder : order).forEach((part, index) => {
       values[part] = tokens[index];
     });
   } else {

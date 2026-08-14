@@ -216,6 +216,8 @@ describe('parsing rules', () => {
     expect(parseDateInput('13/08/26', 'it', { today })).toEqual(new Date(2026, 7, 13));
     expect(parseDateInput('130826', 'it', { today })).toEqual(new Date(2026, 7, 13));
     expect(parseDateInput('08/13/2026', 'en', { today })).toEqual(new Date(2026, 7, 13));
+    // Pasted ISO reads as ISO in every locale, never as 2026 months.
+    expect(parseDateInput('2026-08-13', 'it', { today })).toEqual(new Date(2026, 7, 13));
     expect(parseDateInput('yesterday', 'en', { today })).toEqual(new Date(2026, 7, 12));
     expect(parseDateInput('+7', 'en', { today })).toEqual(new Date(2026, 7, 20));
     expect(parseDateInput('31/02/2026', 'it', { today })).toBeNull();
