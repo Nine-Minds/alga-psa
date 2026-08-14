@@ -486,6 +486,24 @@ export function DateTimeField({
     return () => window.cancelAnimationFrame(frame);
   }, [open, showTime, panelTime]);
 
+  // The panel is portalled, so inside a dialog the scroll lock cancels wheel
+  // events over the rail and it would only move by dragging its scrollbar.
+  // Scroll it ourselves, from a listener that is allowed to say no to that.
+  React.useEffect(() => {
+    const container = railRef.current;
+    if (!open || !showTime || !container) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) return;
+      const lineHeight = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
+      container.scrollTop += event.deltaY * lineHeight;
+      event.preventDefault();
+    };
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => container.removeEventListener('wheel', onWheel);
+  }, [open, showTime]);
+
   const datePlaceholder = showDate
     ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(locale)
     : undefined;
