@@ -292,16 +292,25 @@ export const createTemplateFromProject = withAuth(async (
         ? phaseMap.get(mapping.phase_id) ?? null
         : null;
 
-      const isStandard = Boolean(mapping.is_standard) || Boolean(mapping.standard_status_id);
+      // Classify by which reference is actually present so the row satisfies
+      // the variant_shape_check: standard > tenant > inline (custom-name-only).
+      const standardStatusId = mapping.standard_status_id || null;
+      const tenantStatusId = mapping.status_id || null;
+      const statusSource = standardStatusId ? 'standard' : tenantStatusId ? 'tenant' : 'inline';
+      if (statusSource === 'inline' && !mapping.custom_name) {
+        throw new Error(
+          `Project status mapping ${mapping.project_status_mapping_id} has no status reference or custom name; cannot copy it into a template.`
+        );
+      }
       const [templateStatusMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
         .insert({
           tenant,
           template_id: template.template_id,
           template_phase_id: templatePhaseId,
-          status_id: isStandard ? null : (mapping.status_id || null),
-          standard_status_id: isStandard ? (mapping.standard_status_id || null) : null,
+          status_id: statusSource === 'tenant' ? tenantStatusId : null,
+          standard_status_id: statusSource === 'standard' ? standardStatusId : null,
           unresolved_status_id: null,
-          status_source: isStandard ? 'standard' : 'tenant',
+          status_source: statusSource,
           custom_status_name: mapping.custom_name,
           display_order: mapping.display_order
         })
