@@ -4,6 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { MoreVertical, Eye, SlidersHorizontal, CalendarClock, TimerOff, Ban } from 'lucide-react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -177,34 +184,73 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
     {
       title: t('columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'block_id',
-      cellClassName: 'whitespace-nowrap',
+      width: '5%',
       render: (value: string, record) => {
         const actionable = record.status === 'active' || record.status === 'pending';
         return (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" id={`hb-view-${value}`} onClick={(e) => { e.stopPropagation(); setDetailBlock(record); }}>
-              {t('actions.viewDetails', { defaultValue: 'View details' })}
-            </Button>
-            {actionable && (
-              <>
-                <Button variant="outline" size="sm" id={`hb-adjust-${value}`} onClick={(e) => { e.stopPropagation(); setAdjustBlock(record); }}>
-                  {t('actions.adjust', { defaultValue: 'Adjust hours' })}
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id={`hb-row-actions-${value}`}
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  aria-label={t('actions.openMenu', { defaultValue: 'Open menu' })}
+                >
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" id={`hb-expiration-${value}`} onClick={(e) => { e.stopPropagation(); setExpirationBlock(record); }}>
-                  {t('actions.editExpiration', { defaultValue: 'Edit expiration' })}
-                </Button>
-                {record.status === 'active' && (
-                  <Button variant="outline" size="sm" id={`hb-expire-${value}`} className="text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setExpireBlock(record); }}>
-                    {t('actions.expire', { defaultValue: 'Expire' })}
-                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  id={`hb-view-${value}`}
+                  className="flex items-center gap-2"
+                  onClick={() => setDetailBlock(record)}
+                >
+                  <Eye className="h-4 w-4" />
+                  {t('actions.viewDetails', { defaultValue: 'View details' })}
+                </DropdownMenuItem>
+                {actionable && (
+                  <>
+                    <DropdownMenuItem
+                      id={`hb-adjust-${value}`}
+                      className="flex items-center gap-2"
+                      onClick={() => setAdjustBlock(record)}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      {t('actions.adjust', { defaultValue: 'Adjust hours' })}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      id={`hb-expiration-${value}`}
+                      className="flex items-center gap-2"
+                      onClick={() => setExpirationBlock(record)}
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                      {t('actions.editExpiration', { defaultValue: 'Edit expiration' })}
+                    </DropdownMenuItem>
+                    {record.status === 'active' && (
+                      <DropdownMenuItem
+                        id={`hb-expire-${value}`}
+                        className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                        onClick={() => setExpireBlock(record)}
+                      >
+                        <TimerOff className="h-4 w-4" />
+                        {t('actions.expire', { defaultValue: 'Expire' })}
+                      </DropdownMenuItem>
+                    )}
+                    {!record.has_allocations && (
+                      <DropdownMenuItem
+                        id={`hb-void-${value}`}
+                        className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                        onClick={() => setVoidBlock(record)}
+                      >
+                        <Ban className="h-4 w-4" />
+                        {t('actions.void', { defaultValue: 'Void' })}
+                      </DropdownMenuItem>
+                    )}
+                  </>
                 )}
-                {!record.has_allocations && (
-                  <Button variant="outline" size="sm" id={`hb-void-${value}`} className="text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setVoidBlock(record); }}>
-                    {t('actions.void', { defaultValue: 'Void' })}
-                  </Button>
-                )}
-              </>
-            )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },
