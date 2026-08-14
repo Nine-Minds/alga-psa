@@ -15557,7 +15557,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/email/oauth/initiate",
     "displayName": "Initiate email OAuth flow",
     "summary": "Initiate email OAuth flow",
-    "description": "Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.",
+    "description": "Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.",
     "tags": [
       "Email"
     ],
@@ -15884,7 +15884,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward GET request to extension runner",
     "summary": "Forward GET request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
     "tags": [
       "Extension Gateway"
     ],
@@ -15930,26 +15930,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -15965,7 +15945,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward POST request to extension runner",
     "summary": "Forward POST request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16011,26 +15991,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16051,7 +16011,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PUT request to extension runner",
     "summary": "Forward PUT request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16097,26 +16057,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16137,7 +16077,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PATCH request to extension runner",
     "summary": "Forward PATCH request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16183,26 +16123,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16223,7 +16143,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward DELETE request to extension runner",
     "summary": "Forward DELETE request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16269,26 +16189,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -51841,14 +51741,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-        },
-        "next_action": {
-          "type": "string",
-          "minLength": 1
-        },
-        "next_action_due": {
-          "type": "string",
-          "format": "date-time"
         },
         "generator_key": {
           "type": [

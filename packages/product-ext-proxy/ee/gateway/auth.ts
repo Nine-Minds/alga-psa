@@ -96,25 +96,13 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
 /**
  * Get full user info from session for passing to runner.
  * Returns null if no valid session exists.
+ *
+ * User context is session-driven. A tenant header's presence is not treated as
+ * internal-caller proof and never suppresses the authenticated user.
  */
 export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUserInfo | null> {
-  // Check for internal header first (not typically used for user info)
-  const headerTenant = req.headers.get('x-alga-tenant');
-  if (headerTenant) {
-    // When using header-based auth, we don't have user info
-    console.log('[ext-proxy auth] Skipping user info - x-alga-tenant header present');
-    return null;
-  }
-
   const session = await getSession();
   const user = session?.user as any;
-
-  console.log('[ext-proxy auth] Session check', {
-    hasSession: !!session,
-    hasUser: !!user,
-    userId: user?.user_id || user?.id,
-    userEmail: user?.email,
-  });
 
   if (!user) {
     return null;
@@ -149,40 +137,7 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     additional_fields: extractAdditionalFields(user as Record<string, unknown>),
   };
 
-  console.log('[ext-proxy auth] Returning user info', {
-    userId: userInfo.user_id,
-    userEmail: userInfo.user_email,
-    userName: userInfo.user_name,
-    userType: userInfo.user_type,
-    clientId: userInfo.client_id,
-  });
-
   return userInfo;
-}
-
-export async function getTenantFromAuth(req: NextRequest): Promise<string> {
-  const session = await getSession();
-  const sessionTenant = (session?.user as any)?.tenant;
-  const h = req.headers.get('x-alga-tenant')?.trim();
-  const legacy = req.headers.get('x-tenant-id')?.trim();
-
-  if (sessionTenant && String(sessionTenant).trim()) {
-    const tenant = String(sessionTenant).trim();
-    if ((h && h !== tenant) || (legacy && legacy !== tenant)) {
-      throw new Error('tenant_mismatch');
-    }
-    return tenant;
-  }
-
-  // Header-based tenant selection is only allowed for non-browser/internal callers
-  // that do not already have a session tenant. A browser user must never be able
-  // to switch tenants by supplying x-alga-tenant/x-tenant-id.
-  if (h) return h;
-  if (legacy) return legacy;
-
-  const dev = process.env.DEV_TENANT_ID;
-  if (dev && dev.trim()) return dev.trim();
-  throw new Error('unauthenticated');
 }
 
 export async function assertAccess(_tenantId: string, _extensionId: string, _method: string, _path: string): Promise<void> {
