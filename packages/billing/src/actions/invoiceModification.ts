@@ -267,6 +267,68 @@ async function releaseMaterialsForDeletedInvoice(
   }
 }
 
+/**
+ * Draft-deletion hook for ad-hoc prepaid hour blocks: voids any `pending`
+ * hour_blocks linked to this invoice (via source_invoice_id) and writes the
+ * `void` audit row, then detaches the FK reference. Must run before the
+ * invoice row is deleted — the `hour_blocks_invoice_fkey` FK is `ON DELETE
+ * SET NULL` on the composite `(tenant, source_invoice_id)`, so without this
+ * the block would be silently detached (or the delete would abort trying to
+ * null the NOT NULL tenant column) and left `pending` forever. Mirrors the
+ * manual `voidHourBlock` shape (status/voided_at/voided_by/void_reason +
+ * audit); the audit metadata retains the deleted invoice's id as provenance.
+ */
+async function voidPendingHourBlocksForDeletedInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string,
+  now: string,
+): Promise<void> {
+  const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
+    .where({ tenant, source_invoice_id: invoiceId })
+    .select('block_id', 'status');
+
+  // Non-pending, non-voided linked blocks are an impossible state for a draft
+  // invoice deletion — refuse rather than silently voiding an active/expired
+  // block. Already-voided blocks are left alone.
+  for (const block of linkedBlocks) {
+    if (block.status !== 'pending' && block.status !== 'voided') {
+      throw expectedInvoiceActionError(
+        `Cannot delete invoice ${invoiceId}: linked hour block ${block.block_id} is ${block.status}, not pending. Void or expire it first.`,
+      );
+    }
+  }
+
+  for (const block of linkedBlocks) {
+    if (block.status === 'pending') {
+      await tenantScopedTable(trx, tenant, 'hour_blocks')
+        .where({ tenant, block_id: block.block_id })
+        .update({
+          status: 'voided',
+          voided_at: now,
+          voided_by: userId,
+          void_reason: 'Draft purchase invoice deleted',
+          updated_at: now,
+          source_invoice_id: null,
+        });
+      await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+        tenant,
+        block_id: block.block_id,
+        type: 'void',
+        minutes_delta: null,
+        reason: 'Draft purchase invoice deleted',
+        created_by: userId,
+        metadata: { source_invoice_id: invoiceId },
+      });
+    } else {
+      await tenantScopedTable(trx, tenant, 'hour_blocks')
+        .where({ tenant, block_id: block.block_id })
+        .update({ source_invoice_id: null, updated_at: now });
+    }
+  }
+}
+
 type ProjectDepositCreditEvent = {
   creditNoteId: string;
   clientId: string;
@@ -1857,6 +1919,9 @@ export const hardDeleteInvoice = withAuth(async (
 
     await releaseProjectBillingForDeletedInvoice(trx, tenant, invoiceId);
     await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);
+    // Void pending hour blocks minted by this draft purchase invoice before the
+    // invoice row is deleted (the FK nulls source_invoice_id on delete).
+    await voidPendingHourBlocksForDeletedInvoice(trx, tenant, invoiceId, user.user_id, now);
 
     // 4. Unmark time entries
     await tenantScopedTable(trx, tenant, 'time_entries')
