@@ -50,6 +50,7 @@ export { default as CustomTabs } from './CustomTabs';
 export * from './DataTable';
 export * from './DatePicker';
 export * from './DateRangePicker';
+export * from './DateTimeField';
 export * from './DateTimePicker';
 export * from './Dialog';
 export * from './Drawer';

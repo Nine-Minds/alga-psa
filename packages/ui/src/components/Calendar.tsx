@@ -9,6 +9,7 @@ import type { Locale } from 'date-fns';
 import { useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
 import { getDateFnsLocale } from '../lib/dateFnsLocale';
+import { usePickerText } from '../lib/pickerText';
 // Import default styles first, then our overrides
 import 'react-day-picker/dist/style.css';
 import '../styles/calendar.css';
@@ -35,6 +36,7 @@ interface MonthYearSelectProps {
 }
 
 const MonthYearSelect = ({ value, onChange, minMonth, maxMonth, locale }: MonthYearSelectProps) => {
+  const t = usePickerText();
   const [isOpen, setIsOpen] = React.useState(false);
   const [panelYear, setPanelYear] = React.useState(value.getFullYear());
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -90,7 +92,7 @@ const MonthYearSelect = ({ value, onChange, minMonth, maxMonth, locale }: MonthY
       <button
         onClick={() => (isOpen ? setIsOpen(false) : openPanel())}
         className="calendar-month-year-button"
-        aria-label="Select month and year"
+        aria-label={t('datePicker.monthAndYear', 'Select month and year')}
         aria-expanded={isOpen}
         type="button"
       >
@@ -104,7 +106,7 @@ const MonthYearSelect = ({ value, onChange, minMonth, maxMonth, locale }: MonthY
             <button
               onClick={() => setPanelYear((year) => year - 1)}
               className="rdp-nav_button"
-              aria-label="Previous year"
+              aria-label={t('datePicker.previousYear', 'Previous year')}
               disabled={!canGoToPreviousYear}
               type="button"
             >
@@ -114,7 +116,7 @@ const MonthYearSelect = ({ value, onChange, minMonth, maxMonth, locale }: MonthY
             <button
               onClick={() => setPanelYear((year) => year + 1)}
               className="rdp-nav_button"
-              aria-label="Next year"
+              aria-label={t('datePicker.nextYear', 'Next year')}
               disabled={!canGoToNextYear}
               type="button"
             >
@@ -153,11 +155,23 @@ function Calendar({
   onSelect,
   onClear,
   mode = 'single',
+  month,
   ...props
 }: CalendarProps) {
+  const t = usePickerText();
   const i18n = useOptionalI18n();
   const dateFnsLocale = getDateFnsLocale(i18n?.locale ?? LOCALE_CONFIG.defaultLocale);
-  const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
+  const [monthYear, setMonthYear] = React.useState<Date>(month || selected || new Date());
+
+  // `month` steers the view from outside (the field family moves it as the user
+  // types) without taking navigation away from the caption's own controls.
+  const monthKey = month ? `${month.getFullYear()}-${month.getMonth()}` : null;
+  React.useEffect(() => {
+    if (!month) return;
+    setMonthYear(new Date(month.getFullYear(), month.getMonth(), 1));
+    // month is re-derived from the same key on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthKey]);
   const today = React.useMemo(() => normalizeDate(new Date()), []);
   const minMonth = React.useMemo(
     () =>
@@ -224,7 +238,7 @@ function Calendar({
           <button
             onClick={handlePreviousMonth}
             className="rdp-nav_button"
-            aria-label="Previous month"
+            aria-label={t('datePicker.previousMonth', 'Previous month')}
             disabled={previousMonth.getTime() < minMonth.getTime()}
             type="button"
           >
@@ -233,7 +247,7 @@ function Calendar({
           <button
             onClick={handleNextMonth}
             className="rdp-nav_button"
-            aria-label="Next month"
+            aria-label={t('datePicker.nextMonth', 'Next month')}
             disabled={nextMonth.getTime() > maxMonth.getTime()}
             type="button"
           >
@@ -266,22 +280,22 @@ function Calendar({
               <button
                 onClick={onClear}
                 className="calendar-today-button"
-                aria-label="Clear date"
+                aria-label={t('datePicker.clear', 'Clear')}
                 type="button"
               >
                 <X className="w-4 h-4" />
-                Clear
+                {t('datePicker.clear', 'Clear')}
               </button>
             )}
             <button
               onClick={handleTodayClick}
               className="calendar-today-button"
-              aria-label="Select today"
+              aria-label={t('datePicker.selectToday', 'Select today')}
               type="button"
               disabled={!isTodaySelectable}
             >
               <ChevronsLeft className="w-4 h-4" />
-              Today
+              {t('datePicker.today', 'Today')}
             </button>
           </div>
         }
