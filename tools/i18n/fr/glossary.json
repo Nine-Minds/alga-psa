@@ -164,8 +164,8 @@
     {
       "id": "fulfillment",
       "en-term": "fulfillment",
-      "term": "livraison",
-      "notes": "Employer livraison pour la colonne fulfillment des commandes client et pour le libellé correspondant sur les documents ; conserver expédition pour l’acheminement lui-même."
+      "term": "traitement",
+      "notes": "Employer traitement pour la colonne fulfillment des documents client : elle indique le mode de traitement de la ligne (depuis le stock, expédition directe) et non l’expédition elle-même, que la colonne voisine libelle livré."
     },
     {
       "id": "industry",

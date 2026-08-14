@@ -164,8 +164,8 @@
     {
       "id": "fulfillment",
       "en-term": "fulfillment",
-      "term": "Auslieferung",
-      "notes": "Use Auslieferung for the sales-order fulfillment column and the matching customer-document label; Direktversand and Aus Bestand are its values. Lieferart means shipping method and is a different concept."
+      "term": "Erfüllung",
+      "notes": "Use Erfüllung on customer documents for the column that says how a line is fulfilled (Aus Bestand, Direktversand). Lieferart means shipping method, and the sales-order UI term Auslieferung sits too close to Ausgeliefert, the neighbouring delivered-quantity column."
     },
     {
       "id": "industry",
