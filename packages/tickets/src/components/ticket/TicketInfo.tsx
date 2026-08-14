@@ -16,9 +16,7 @@ import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { CategoryPicker } from '../CategoryPicker';
-import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { TimePicker } from '@alga-psa/ui/components/TimePicker';
-import { format, setHours, setMinutes } from 'date-fns';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
@@ -1816,9 +1814,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 const effectiveDueDate = pendingChanges.due_date !== undefined
                   ? (pendingChanges.due_date ? new Date(pendingChanges.due_date as string) : undefined)
                   : (originalTicketValues.due_date ? new Date(originalTicketValues.due_date as string) : undefined);
-                const existingTime = effectiveDueDate ? format(effectiveDueDate, 'HH:mm') : undefined;
-                const isMidnight = existingTime === '00:00';
-
                 // Check if due date is SLA-driven (matches sla_resolution_due_at within 60s)
                 const isSlaDriven = effectiveDueDate && ticket.sla_resolution_due_at &&
                   Math.abs(effectiveDueDate.getTime() - new Date(ticket.sla_resolution_due_at).getTime()) < 60000;
@@ -1826,87 +1821,41 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
                 let containerClass = '';
                 if (isDueDatePaused) {
-                  containerClass = '[&_button]:border-gray-300 [&_button]:text-gray-400 dark:[&_button]:text-gray-500 [&_button]:bg-gray-500/5';
+                  containerClass = '[&_.dtf-field]:border-gray-300 [&_.dtf-input]:text-gray-400 dark:[&_.dtf-input]:text-gray-500 [&_.dtf-field]:bg-gray-500/5';
                 } else if (effectiveDueDate) {
                   const now = new Date();
                   const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
-                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 dark:[&_button]:text-red-400 [&_button]:bg-red-500/10';
+                    containerClass = '[&_.dtf-field]:border-red-500 [&_.dtf-input]:text-red-600 dark:[&_.dtf-input]:text-red-400 [&_.dtf-field]:bg-red-500/10';
                   } else if (hoursUntilDue <= 24) {
-                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 dark:[&_button]:text-orange-400 [&_button]:bg-orange-500/10';
+                    containerClass = '[&_.dtf-field]:border-orange-500 [&_.dtf-input]:text-orange-600 dark:[&_.dtf-input]:text-orange-400 [&_.dtf-field]:bg-orange-500/10';
                   }
                 }
 
-                const handleDateChange = (newDate: Date | undefined) => {
-                  if (!newDate) {
-                    handlePendingChange('due_date', null);
-                    return;
-                  }
-                  if (effectiveDueDate && !isMidnight) {
-                    newDate = setHours(newDate, effectiveDueDate.getHours());
-                    newDate = setMinutes(newDate, effectiveDueDate.getMinutes());
-                  } else {
-                    newDate = setHours(newDate, 0);
-                    newDate = setMinutes(newDate, 0);
-                  }
-                  handlePendingChange('due_date', newDate.toISOString());
-                };
-
-                const handleTimeChange = (newTime: string) => {
-                  if (!effectiveDueDate) return;
-                  const [hours, minutes] = newTime.split(':').map(Number);
-                  let newDate = setHours(effectiveDueDate, hours);
-                  newDate = setMinutes(newDate, minutes);
-                  handlePendingChange('due_date', newDate.toISOString());
+                const handleDueDateChange = (newDate: Date | undefined) => {
+                  handlePendingChange('due_date', newDate ? newDate.toISOString() : null);
                 };
 
                 return (
-                  <>
-                    <div className={`flex items-center gap-2 w-fit ${containerClass}`}>
-                      <div className="w-fit">
-                        <DatePicker
-                          id={`${id}-due-date-picker`}
-                          value={effectiveDueDate}
-                          onChange={handleDateChange}
-                          placeholder={t('quickAdd.selectDate', 'Select date')}
-                          label={t('fields.dueDate', 'Due Date')}
-                          disabled={isFieldFrozen('due_date')}
-                        />
-                      </div>
-                      <div className="w-fit">
-                        <TimePicker
-                          id={`${id}-due-time-picker`}
-                          value={effectiveDueDate && !isMidnight ? existingTime : undefined}
-                          onChange={handleTimeChange}
-                          placeholder={t('quickAdd.timePlaceholder', 'Time')}
-                          disabled={!effectiveDueDate || isFieldFrozen('due_date')}
-                        />
-                      </div>
-                      {effectiveDueDate && (
-                        <Button
-                          id={`${id}-clear-due-date`}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePendingChange('due_date', null)}
-                          className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] px-2"
-                          title={t('info.clearDueDate', 'Clear due date')}
-                          disabled={isFieldFrozen('due_date')}
-                        >
-                          ✕
-                        </Button>
-                      )}
-                      {isDueDatePaused && (
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full">
-                          <PauseCircle className="w-3 h-3" />
-                          {t('info.paused', 'Paused')}
-                        </span>
-                      )}
+                  <div className={`flex items-center gap-2 ${containerClass}`}>
+                    <div className="w-72">
+                      <DateTimePicker
+                        id={`${id}-due-date-picker`}
+                        value={effectiveDueDate}
+                        onChange={handleDueDateChange}
+                        clearable
+                        placeholder={t('quickAdd.selectDate', 'Select date')}
+                        label={t('fields.dueDate', 'Due Date')}
+                        disabled={isFieldFrozen('due_date')}
+                      />
                     </div>
-                    {effectiveDueDate && isMidnight && (
-                      <p className="text-xs text-gray-500 mt-1">{t('quickAdd.noTimeDefault', 'No time set - defaults to 12:00 AM')}</p>
+                    {isDueDatePaused && (
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full">
+                        <PauseCircle className="w-3 h-3" />
+                        {t('info.paused', 'Paused')}
+                      </span>
                     )}
-                  </>
+                  </div>
                 );
               })()}
               {liveFieldConflicts.due_date ? (

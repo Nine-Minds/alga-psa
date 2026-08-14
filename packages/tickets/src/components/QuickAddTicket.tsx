@@ -40,8 +40,7 @@ import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUI
 import { calculateItilPriority, ItilLabels } from '@alga-psa/tickets/lib/itilUtils';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
-import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { TimePicker } from '@alga-psa/ui/components/TimePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
@@ -270,12 +269,11 @@ export function QuickAddTicket({
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [dueDateDate, setDueDateDate] = useState<Date | undefined>(() => {
+  const [dueDate, setDueDate] = useState<Date | undefined>(() => {
     if (!prefilledDueDate) return undefined;
     const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   });
-  const [dueDateTime, setDueDateTime] = useState<string | undefined>(undefined);
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
@@ -384,7 +382,7 @@ export function QuickAddTicket({
         }
         if (prefilledDueDate) {
           const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
-          setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+          setDueDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
         }
       } catch (error) {
         console.error('Error fetching form data:', error);
@@ -729,11 +727,10 @@ export function QuickAddTicket({
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
-      setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
+      setDueDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
     } else {
-      setDueDateDate(undefined);
+      setDueDate(undefined);
     }
-    setDueDateTime(undefined);
     setError(null);
     setHasAttemptedSubmit(false);
     descriptionUploadSession.resetDraftTracking();
@@ -897,17 +894,9 @@ export function QuickAddTicket({
         formData.append('itil_urgency', itilUrgency.toString());
       }
 
-      // Add due date if provided (combine date and optional time)
-      if (dueDateDate) {
-        const combinedDate = new Date(dueDateDate);
-        if (dueDateTime) {
-          const [hours, minutes] = dueDateTime.split(':').map(Number);
-          combinedDate.setHours(hours, minutes, 0, 0);
-        } else {
-          // No time specified - use midnight (00:00)
-          combinedDate.setHours(0, 0, 0, 0);
-        }
-        formData.append('due_date', combinedDate.toISOString());
+      // Add due date if provided (the field carries the time of day with it)
+      if (dueDate) {
+        formData.append('due_date', dueDate.toISOString());
       }
 
       // ITIL categories now use the unified category system
@@ -1583,43 +1572,16 @@ export function QuickAddTicket({
                   {/* Due Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('quickAdd.dueDate', 'Due Date')}</label>
-                    <div className="flex items-center gap-2 w-fit">
-                      <div className="w-fit">
-                        <DatePicker
-                          id={`${id}-due-date`}
-                          value={dueDateDate}
-                          onChange={(date) => setDueDateDate(date)}
-                          placeholder={t('quickAdd.selectDate', 'Select date')}
-                        />
-                      </div>
-                      <div className="w-fit">
-                        <TimePicker
-                          id={`${id}-due-time`}
-                          value={dueDateTime}
-                          onChange={(time) => setDueDateTime(time)}
-                          placeholder={t('quickAdd.timePlaceholder', 'Time')}
-                          disabled={!dueDateDate}
-                        />
-                      </div>
-                      {(dueDateDate || dueDateTime) && (
-                        <Button
-                          id={`${id}-clear-due-date`}
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDueDateDate(undefined);
-                            setDueDateTime(undefined);
-                          }}
-                          className="text-gray-400 hover:text-gray-600 px-2"
-                        >
-                          ✕
-                        </Button>
-                      )}
+                    <div className="w-72">
+                      <DateTimePicker
+                        id={`${id}-due-date`}
+                        value={dueDate}
+                        onChange={(date) => setDueDate(date)}
+                        clearable
+                        placeholder={t('quickAdd.selectDate', 'Select date')}
+                        label={t('quickAdd.dueDate', 'Due Date')}
+                      />
                     </div>
-                    {dueDateDate && !dueDateTime && (
-                      <p className="text-xs text-gray-500 mt-1">{t('quickAdd.noTimeDefault', 'No time set - defaults to 12:00 AM')}</p>
-                    )}
                   </div>
 
                   <QuickAddTagPicker
