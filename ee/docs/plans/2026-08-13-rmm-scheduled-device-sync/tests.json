@@ -363,7 +363,7 @@
   {
     "id": "T045",
     "description": "Huntress is excluded from RMM_DEVICE_SYNC_PROVIDERS unless a device sync path is implemented",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -371,7 +371,7 @@
   {
     "id": "T046",
     "description": "A Huntress device sync, if implemented, does not overwrite last_incremental_sync_at in a way that breaks the incident poller's cursor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]

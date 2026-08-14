@@ -161,6 +161,76 @@ is left as follow-up work with the constraint written on the args type.
 Worth confirming with Level.io (or a live payload) which categories exist before
 anyone attempts the split.
 
+## F032 answered: TacticalRMM has no bulk device sync to schedule
+
+Production (2026-08-14), all three integrations:
+
+```
+55f6a1b8  active   connected 2026-06-17  last_sync_at 2026-06-17 18:03  sync_status pending
+46208df6  active   connected 2026-06-26  last_sync_at 2026-06-26 14:06  sync_status pending
+1052ba6d  inactive       —              —                              sync_status pending
+```
+
+`sync_status` has never left `'pending'` and `last_full_sync_at` is null on all
+three — not because a sync failed, but because **nothing writes those columns
+for this provider**. Tenant 55f6a1b8 has 16 tacticalrmm assets, all ingested in
+a single burst at 2026-06-17 18:03:14, and none since.
+
+The reason: TacticalRMM's entire sync surface is
+`packages/integrations/src/lib/rmm/tacticalrmm/syncSingleAgent.ts` — one agent
+at a time, triggered by the webhook at
+`server/src/app/api/webhooks/tacticalrmm/route.ts`. It writes `sync_status` on
+the `tenant_external_entity_mappings` row for that agent, never on
+`rmm_integrations`. There is no full-sync engine, no device-list walk, and no
+strategy to adapt.
+
+So the 16 assets came from 16 webhook deliveries, not from a sync. This provider
+is in the same position Level.io was in for callbacks: devices refresh only when
+they generate an event.
+
+**Consequence for this plan.** F033/F034 as written ("repair the sync, then add
+incremental") are really "build a device sync for TacticalRMM", which is a
+different and larger piece of work than adapting an existing one. It does not
+belong in this phase. TacticalRMM stays out of RMM_DEVICE_SYNC_PROVIDERS, and a
+scheduled sync for it should be planned separately once someone decides whether
+`/agents` bulk listing is worth building against.
+
+Caution for whoever picks that up: `sync_status` on rmm_integrations is
+effectively unused for this provider, so any UI that reads it for TacticalRMM is
+reading a value nothing maintains.
+
+## F035 answered: Huntress has no device inventory to sync
+
+`huntressClient.ts` exposes `getAgent(id)` and nothing that lists agents, so
+there is no device list to walk. More decisively, `organizations/orgSync.ts`
+writes `auto_sync_assets: false` for every Huntress organization mapping — the
+integration deliberately does not treat Huntress as an asset source. It is an
+incident product here; its recurring work is `huntress-incident-poll`, which
+already exists and is unaffected by any of this.
+
+Huntress stays out of RMM_DEVICE_SYNC_PROVIDERS, and its use of
+`last_incremental_sync_at` as an incident-poll cursor is left alone. Anything
+that later adds a Huntress device sync must not reuse that column for two
+meanings.
+
+## F031 answered: Tanium can full sync, but not from a job
+
+`triggerTaniumFullSync` in `taniumActions.ts` works and writes
+`last_full_sync_at` — production shows both Tanium integrations have completed
+one. There is no incremental path and no time filter in the gateway client.
+
+The blocker is not the sync, it is how it is reached. The action is wrapped in
+`withAdvancedAssetsAccess`, which is `withAuth` plus a tier assertion, and its
+first act is `hasPermission(user, 'system_settings', 'update')`. A scheduled run
+has no acting user. Scheduling Tanium means first extracting the sync out of the
+server action into an engine that a job can call — the same shape as Level.io's
+`runLevelIoFullSync`, which is exactly why Level.io was adaptable in an
+afternoon and this is not.
+
+Deferred rather than bodged. Passing a synthetic user into a permission check to
+satisfy a scheduler would put a fake principal into an authorisation decision,
+which is a bad trade for one provider's cadence.
+
 ## Decisions
 
 - **All five providers in scope** (user decision, 2026-08-13). Note tacticalrmm

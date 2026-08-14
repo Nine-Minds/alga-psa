@@ -245,7 +245,7 @@
   },
   {
     "id": "F031",
-    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence",
+    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence — DEFERRED: sync is only reachable through a user-gated server action; needs extracting into a callable engine first (see SCRATCHPAD F031)",
     "implemented": false,
     "prdRefs": [
       "Provider capability"
@@ -254,7 +254,7 @@
   {
     "id": "F032",
     "description": "TacticalRMM: investigate why no integration has ever completed a sync and record the root cause",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "Open questions"
@@ -262,7 +262,7 @@
   },
   {
     "id": "F033",
-    "description": "TacticalRMM: implement or repair device sync so a manual sync succeeds before any schedule is enabled",
+    "description": "TacticalRMM: implement or repair device sync so a manual sync succeeds before any schedule is enabled — DEFERRED: TacticalRMM has no bulk device sync to repair; building one is separate work (see SCRATCHPAD F032)",
     "implemented": false,
     "prdRefs": [
       "Provider capability",
@@ -271,7 +271,7 @@
   },
   {
     "id": "F034",
-    "description": "TacticalRMM: implement syncDevicesIncremental once the base sync works",
+    "description": "TacticalRMM: implement syncDevicesIncremental once the base sync works — DEFERRED: TacticalRMM has no bulk device sync to repair; building one is separate work (see SCRATCHPAD F032)",
     "implemented": false,
     "prdRefs": [
       "Provider capability"
@@ -280,7 +280,7 @@
   {
     "id": "F035",
     "description": "Huntress: determine whether a device sync path exists at all; if not, exclude it from RMM_DEVICE_SYNC_PROVIDERS and record why",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "Open questions"
@@ -289,7 +289,7 @@
   {
     "id": "F036",
     "description": "Huntress: device sync must not disturb the incident poller's use of last_incremental_sync_at as its cursor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "Risks"

@@ -84,3 +84,23 @@ describe('device sync eligibility', () => {
     expect(deviceSyncEligible({ is_active: true, settings, provider: 'ninjaone' })).toBe(true);
   });
 });
+
+/**
+ * Why the other three providers are absent, recorded so nobody "fixes" the list
+ * by adding them:
+ *
+ * - tacticalrmm: has no bulk device sync at all. Its only sync is
+ *   syncSingleAgent, driven by webhook deliveries, and it writes sync state on
+ *   the entity mapping rather than on rmm_integrations. There is nothing to
+ *   schedule until a device-list sync is built.
+ * - huntress: exposes getAgent(id) but no agent listing, and orgSync sets
+ *   auto_sync_assets: false — it is an incident source, not an inventory one.
+ * - tanium: has a working full sync, but only behind a server action wrapped in
+ *   withAuth + a per-user permission check. A scheduled run has no acting user,
+ *   so it needs extracting into a callable engine first.
+ */
+describe('providers deliberately excluded from device sync', () => {
+  it('lists only the providers with a job-callable device sync', () => {
+    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone']);
+  });
+});
