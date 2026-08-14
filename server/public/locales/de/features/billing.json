@@ -378,12 +378,12 @@
     "viewBilling": "Zur Abrechnung"
   },
   "hourBlocks": {
-    "title": "Prepaid Hour Blocks",
-    "blockLabel": "{{service}} block",
-    "expiringSoon": "Expires in {{days}}d",
-    "hoursLeft": "{{hours}}h left",
-    "expires": "Expires {{date}}",
-    "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "title": "Vorausbezahlte Stundenblöcke",
+    "blockLabel": "{{service}}-Block",
+    "expiringSoon": "Läuft in {{days}} Tagen ab",
+    "hoursLeft": "Noch {{hours}} Std.",
+    "expires": "Läuft am {{date}} ab",
+    "recentBurn": "Letzte Nutzung",
+    "timeEntry": "Zeiteintrag"
   }
 }

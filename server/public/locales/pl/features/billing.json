@@ -378,12 +378,12 @@
     "viewBilling": "Przejdź do rozliczeń"
   },
   "hourBlocks": {
-    "title": "Prepaid Hour Blocks",
-    "blockLabel": "{{service}} block",
-    "expiringSoon": "Expires in {{days}}d",
-    "hoursLeft": "{{hours}}h left",
-    "expires": "Expires {{date}}",
-    "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "title": "Przedpłacone pakiety godzin",
+    "blockLabel": "Pakiet {{service}}",
+    "expiringSoon": "Wygasa za {{days}} dni",
+    "hoursLeft": "Pozostało {{hours}} godz.",
+    "expires": "Wygasa {{date}}",
+    "recentBurn": "Ostatnie wykorzystanie",
+    "timeEntry": "Wpis czasu"
   }
 }

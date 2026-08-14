@@ -378,12 +378,12 @@
     "viewBilling": "Facturatie bekijken"
   },
   "hourBlocks": {
-    "title": "Prepaid Hour Blocks",
-    "blockLabel": "{{service}} block",
-    "expiringSoon": "Expires in {{days}}d",
-    "hoursLeft": "{{hours}}h left",
-    "expires": "Expires {{date}}",
-    "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "title": "Vooruitbetaalde urenblokken",
+    "blockLabel": "{{service}}-blok",
+    "expiringSoon": "Vervalt over {{days}}d",
+    "hoursLeft": "Nog {{hours}}u",
+    "expires": "Vervalt op {{date}}",
+    "recentBurn": "Recent verbruik",
+    "timeEntry": "Tijdsvermelding"
   }
 }

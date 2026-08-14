@@ -378,12 +378,12 @@
     "viewBilling": "Ver faturação"
   },
   "hourBlocks": {
-    "title": "Prepaid Hour Blocks",
-    "blockLabel": "{{service}} block",
-    "expiringSoon": "Expires in {{days}}d",
-    "hoursLeft": "{{hours}}h left",
-    "expires": "Expires {{date}}",
-    "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "title": "Blocos de horas pré-pagos",
+    "blockLabel": "Bloco de {{service}}",
+    "expiringSoon": "Expira em {{days}}d",
+    "hoursLeft": "{{hours}}h restantes",
+    "expires": "Expira em {{date}}",
+    "recentBurn": "Uso recente",
+    "timeEntry": "Lançamento de horas"
   }
 }

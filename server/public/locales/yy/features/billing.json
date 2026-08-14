@@ -378,12 +378,12 @@
     "viewBilling": "55555"
   },
   "hourBlocks": {
-    "title": "Prepaid Hour Blocks",
-    "blockLabel": "{{service}} block",
-    "expiringSoon": "Expires in {{days}}d",
-    "hoursLeft": "{{hours}}h left",
-    "expires": "Expires {{date}}",
-    "recentBurn": "Recent usage",
-    "timeEntry": "Time entry"
+    "title": "55555",
+    "blockLabel": "55555 {{service}} 55555",
+    "expiringSoon": "55555 {{days}} 55555",
+    "hoursLeft": "55555 {{hours}} 55555",
+    "expires": "55555 {{date}} 55555",
+    "recentBurn": "55555",
+    "timeEntry": "55555"
   }
 }
