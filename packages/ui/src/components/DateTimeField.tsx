@@ -505,6 +505,7 @@ export function DateTimeField({
     const isDateField = field === 'date';
     const hasError = isDateField ? dateError : timeError;
     const text = isDateField ? dateText : timeText;
+    const fieldPlaceholder = (isDateField ? datePlaceholder : timePlaceholder) ?? '';
     // In the pair the value is one thing, so it clears from one place: the date half.
     const canClear =
       clearable && !disabled && (variant === 'time' ? !!timeValue : isDateField && !!dateValue);
@@ -524,6 +525,10 @@ export function DateTimeField({
           ref={isDateField ? dateInputRef : timeInputRef}
           type="text"
           autoComplete="off"
+          // An input's default 20-character intrinsic width is wider than either
+          // half of the pair needs, and would push the second field out of a
+          // narrow column. Ask for room for the format and no more.
+          size={Math.max(7, fieldPlaceholder.length)}
           className="dtf-input"
           value={text}
           disabled={disabled}
