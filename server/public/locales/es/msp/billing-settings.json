@@ -88,6 +88,39 @@
         "save": "No se pudo guardar la configuración"
       }
     },
+    "creditDrawdown": {
+      "title": "Credit Draw-Down",
+      "description": "Control when client credits are applied to invoices and how they are consumed.",
+      "fields": {
+        "autoApply": {
+          "label": "Automatically apply credit at finalization",
+          "help": "When enabled, available credit is applied automatically when an invoice is finalized"
+        },
+        "order": {
+          "label": "Credit application order",
+          "placeholder": "Select credit order",
+          "help": "Choose the order in which credits are consumed"
+        },
+        "serviceTypes": {
+          "label": "Eligible service types",
+          "help": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
+          "empty": "No service types configured.",
+          "restricted": "Credit is restricted to the selected service types."
+        }
+      },
+      "options": {
+        "expirationFirst": "Expiring soonest first",
+        "oldestFirst": "Oldest credit first",
+        "newestFirst": "Newest credit first"
+      },
+      "toast": {
+        "updated": "Credit draw-down settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings"
+      }
+    },
     "renewal": {
       "title": "Automatización de renovación",
       "description": "Configure el comportamiento predeterminado cuando los contratos lleguen a su fecha de renovación.",

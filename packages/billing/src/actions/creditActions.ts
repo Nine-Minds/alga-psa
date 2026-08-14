@@ -459,6 +459,173 @@ export async function resolveCreditExpirationDate(
     return undefined;
 }
 
+export type CreditApplicationOrder = 'expiration_first' | 'oldest_first' | 'newest_first';
+
+export interface CreditDrawdownPolicy {
+    autoApplyEnabled: boolean;
+    applicationOrder: CreditApplicationOrder;
+    /** null = no restriction (all charges eligible); otherwise only these service_type ids. */
+    eligibleServiceTypeIds: string[] | null;
+}
+
+const CREDIT_APPLICATION_ORDERS: ReadonlySet<string> = new Set([
+    'expiration_first',
+    'oldest_first',
+    'newest_first',
+]);
+
+function normalizeCreditApplicationOrder(value: unknown): CreditApplicationOrder {
+    return typeof value === 'string' && CREDIT_APPLICATION_ORDERS.has(value)
+        ? (value as CreditApplicationOrder)
+        : 'expiration_first';
+}
+
+function normalizeEligibleServiceTypeIds(value: unknown): string[] | null {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    let parsed: unknown = value;
+    if (typeof value === 'string') {
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
+        }
+    }
+
+    if (!Array.isArray(parsed)) {
+        throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
+    }
+
+    return parsed.map((id) => String(id));
+}
+
+/**
+ * Resolve the credit draw-down policy for a client: per-field first-non-null
+ * cascade from `client_billing_settings` over `default_billing_settings` to
+ * hardcoded behavior-preserving defaults (auto-apply on, expiration-first,
+ * no service-type restriction). Contract opt-out is not part of this cascade;
+ * it is a charge-level filter in the apply engine.
+ */
+export async function resolveCreditDrawdownPolicy(
+    conn: Knex | Knex.Transaction,
+    tenant: string,
+    clientId: string
+): Promise<CreditDrawdownPolicy> {
+    const clientSettings = await tenantScopedTable(conn, tenant, 'client_billing_settings')
+        .where({ client_id: clientId, tenant })
+        .first();
+
+    const defaultSettings = await tenantScopedTable(conn, tenant, 'default_billing_settings')
+        .first();
+
+    let autoApplyEnabled = true;
+    if (typeof clientSettings?.credit_auto_apply_enabled === 'boolean') {
+        autoApplyEnabled = clientSettings.credit_auto_apply_enabled;
+    } else if (typeof defaultSettings?.credit_auto_apply_enabled === 'boolean') {
+        autoApplyEnabled = defaultSettings.credit_auto_apply_enabled;
+    }
+
+    let applicationOrder: CreditApplicationOrder = 'expiration_first';
+    if (clientSettings?.credit_application_order != null) {
+        applicationOrder = normalizeCreditApplicationOrder(clientSettings.credit_application_order);
+    } else if (defaultSettings?.credit_application_order != null) {
+        applicationOrder = normalizeCreditApplicationOrder(defaultSettings.credit_application_order);
+    }
+
+    let eligibleServiceTypeIds: string[] | null = null;
+    if (clientSettings?.credit_eligible_service_type_ids != null) {
+        eligibleServiceTypeIds = normalizeEligibleServiceTypeIds(clientSettings.credit_eligible_service_type_ids);
+    } else if (defaultSettings?.credit_eligible_service_type_ids != null) {
+        eligibleServiceTypeIds = normalizeEligibleServiceTypeIds(defaultSettings.credit_eligible_service_type_ids);
+    }
+
+    return {
+        autoApplyEnabled,
+        applicationOrder,
+        eligibleServiceTypeIds,
+    };
+}
+
+/**
+ * Sum the invoice charges eligible for credit application under the resolved
+ * policy: charges on contracts opted out of credit draw-down are excluded, and
+ * when a service-type restriction is set, only charges whose resolved service
+ * type is in the list count (charges with no `service_id` are conservatively
+ * ineligible). Eligibility is computed from stored charge totals (tax included,
+ * per charge) — no proportional tax attribution is attempted.
+ */
+async function computeEligibleCreditAmount(
+    trx: Knex.Transaction,
+    tenant: string,
+    invoiceId: string,
+    policy: CreditDrawdownPolicy
+): Promise<number> {
+    const charges = (await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .select('total_price', 'net_amount', 'service_id', 'client_contract_id')) as Array<{
+        total_price: number | string | null;
+        net_amount: number | string | null;
+        service_id: string | null;
+        client_contract_id: string | null;
+    }>;
+
+    const contractIds = Array.from(new Set(
+        charges
+            .map((charge) => charge.client_contract_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ));
+
+    let optedOutContractIds = new Set<string>();
+    if (contractIds.length > 0) {
+        const optedOutRows = (await tenantScopedTable(trx, tenant, 'client_contracts')
+            .whereIn('client_contract_id', contractIds)
+            .where('credit_drawdown_opt_out', true)
+            .select('client_contract_id')) as Array<{ client_contract_id: string }>;
+        optedOutContractIds = new Set(optedOutRows.map((row) => row.client_contract_id));
+    }
+
+    const serviceRestriction = policy.eligibleServiceTypeIds;
+    let serviceTypeByServiceId = new Map<string, string>();
+    if (serviceRestriction !== null) {
+        const serviceIds = Array.from(new Set(
+            charges
+                .map((charge) => charge.service_id)
+                .filter((id): id is string => typeof id === 'string' && id.length > 0)
+        ));
+        if (serviceIds.length > 0) {
+            const catalogRows = (await tenantScopedTable(trx, tenant, 'service_catalog')
+                .whereIn('service_id', serviceIds)
+                .select('service_id', 'custom_service_type_id')) as Array<{ service_id: string; custom_service_type_id: string }>;
+            for (const row of catalogRows) {
+                serviceTypeByServiceId.set(row.service_id, row.custom_service_type_id);
+            }
+        }
+    }
+
+    const eligibleSet = serviceRestriction !== null ? new Set(serviceRestriction) : null;
+
+    let eligibleAmount = 0;
+    for (const charge of charges) {
+        if (charge.client_contract_id && optedOutContractIds.has(charge.client_contract_id)) {
+            continue;
+        }
+        if (eligibleSet !== null) {
+            if (!charge.service_id) {
+                continue;
+            }
+            const serviceTypeId = serviceTypeByServiceId.get(charge.service_id);
+            if (!serviceTypeId || !eligibleSet.has(serviceTypeId)) {
+                continue;
+            }
+        }
+        eligibleAmount += Number(charge.total_price ?? charge.net_amount ?? 0);
+    }
+
+    return eligibleAmount;
+}
+
 /**
  * Grant credit to a client directly — no invoice is created. Writes the
  * credit_issuance transaction and credit_tracking entry atomically, so the
@@ -768,7 +935,37 @@ export async function applyCreditToInvoiceInternal(
         if (requestedAmount <= 0) {
             return;
         }
-        
+
+        // Resolve the draw-down policy (auto-apply toggle is enforced only in
+        // finalize; here we honor eligibility + ordering) and cap the request at
+        // the eligible amount. Over-cap requests clamp (mirroring the existing
+        // clamp-to-remaining-invoice behavior above), not error.
+        const policy = await resolveCreditDrawdownPolicy(trx, tenant, clientId);
+        const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
+        if (requestedAmount > eligibleAmount) {
+            requestedAmount = eligibleAmount;
+        }
+        if (requestedAmount <= 0) {
+            console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
+            return;
+        }
+
+        const creditOrderBy: Array<{ column: string; order: 'asc' | 'desc'; nulls?: 'last' }> =
+            policy.applicationOrder === 'oldest_first'
+                ? [
+                    { column: 'created_at', order: 'asc' },
+                    { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                ]
+                : policy.applicationOrder === 'newest_first'
+                    ? [
+                        { column: 'created_at', order: 'desc' },
+                        { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                    ]
+                    : [
+                        { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                        { column: 'created_at', order: 'asc' },
+                    ];
+
         // Get all active credit tracking entries for this client in the same currency as the invoice
         const now = new Date().toISOString();
         let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
@@ -783,10 +980,7 @@ export async function applyCreditToInvoiceInternal(
                     .orWhere('expiration_date', '>', now);
             })
             .where('remaining_amount', '>', 0)
-            .orderBy([
-                { column: 'expiration_date', order: 'asc', nulls: 'last' }, // Prioritize credits with expiration dates (oldest first)
-                { column: 'created_at', order: 'asc' } // For credits with same expiration date or no expiration, use FIFO
-            ]);
+            .orderBy(creditOrderBy);
 
         if (creditEntries.length === 0) {
             // Check if there are credits in other currencies

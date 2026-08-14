@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "11111 {{id}} 11111",
+      "creditDrawdownOptOut": "11111",
       "empty": "11111",
       "endDate": "11111",
       "endDateLabel": "11111",

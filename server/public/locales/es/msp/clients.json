@@ -909,6 +909,30 @@
     "updateError": "No se pudo actualizar la configuración",
     "useDefaultSuccess": "El cliente ahora utilizará la configuración predeterminada de vencimiento de crédito."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Credit Draw-Down Settings",
+    "useDefault": "Use Default Settings",
+    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
+    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
+    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
+    "autoApply": "Automatically apply credit at finalization",
+    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
+    "orderLabel": "Credit application order",
+    "selectOrder": "Select credit order",
+    "orderHelp": "Choose the order in which credits are consumed",
+    "serviceTypesLabel": "Eligible service types",
+    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
+    "noServiceTypes": "No service types configured.",
+    "order": {
+      "expirationFirst": "Expiring soonest first",
+      "oldestFirst": "Oldest credit first",
+      "newestFirst": "Newest credit first"
+    },
+    "updatedSuccess": "Credit draw-down settings have been updated.",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "updateError": "Failed to update settings"
+  },
   "clientExternalCreditSettings": {
     "title": "Crédito externo registrado",
     "enable": "El cliente tiene crédito en el sistema contable",

@@ -12,6 +12,10 @@ export type ClientBillingSettings = {
   hasExternalCredit?: boolean;
   /** Free-text shown alongside the flag (e.g. "Paid through Dec 2026 by check"). */
   externalCreditNote?: string | null;
+  creditAutoApplyEnabled?: boolean;
+  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first';
+  /** null/undefined = inherit tenant default; array = restrict to these service type ids. */
+  creditEligibleServiceTypeIds?: string[] | null;
 };
 
 type DbClientBillingSettings = {
@@ -24,6 +28,9 @@ type DbClientBillingSettings = {
   credit_expiration_notification_days: number[];
   has_external_credit: boolean;
   external_credit_note: string | null;
+  credit_auto_apply_enabled: boolean | null;
+  credit_application_order: string | null;
+  credit_eligible_service_type_ids: string[] | null;
 };
 
 async function ensureClientBillingSettingsRowInTransaction(
@@ -94,7 +101,10 @@ export async function getClientBillingSettings(
       'credit_expiration_days',
       'credit_expiration_notification_days',
       'has_external_credit',
-      'external_credit_note'
+      'external_credit_note',
+      'credit_auto_apply_enabled',
+      'credit_application_order',
+      'credit_eligible_service_type_ids'
     );
 
   if (!row) return null;
@@ -107,6 +117,11 @@ export async function getClientBillingSettings(
     creditExpirationNotificationDays: row.credit_expiration_notification_days,
     hasExternalCredit: row.has_external_credit,
     externalCreditNote: row.external_credit_note,
+    creditAutoApplyEnabled: row.credit_auto_apply_enabled ?? undefined,
+    creditApplicationOrder: (row.credit_application_order === 'expiration_first' || row.credit_application_order === 'oldest_first' || row.credit_application_order === 'newest_first')
+      ? row.credit_application_order
+      : undefined,
+    creditEligibleServiceTypeIds: row.credit_eligible_service_type_ids,
   };
 }
 
@@ -128,7 +143,7 @@ export async function updateClientBillingSettings(
     return;
   }
 
-  const updates: Partial<DbClientBillingSettings> = {};
+  const updates: Record<string, unknown> = {};
   if (settings.zeroDollarInvoiceHandling !== undefined) {
     updates.zero_dollar_invoice_handling = settings.zeroDollarInvoiceHandling;
   }
@@ -149,6 +164,18 @@ export async function updateClientBillingSettings(
   }
   if (settings.externalCreditNote !== undefined) {
     updates.external_credit_note = settings.externalCreditNote;
+  }
+  if (settings.creditAutoApplyEnabled !== undefined) {
+    updates.credit_auto_apply_enabled = settings.creditAutoApplyEnabled;
+  }
+  if (settings.creditApplicationOrder !== undefined) {
+    updates.credit_application_order = settings.creditApplicationOrder;
+  }
+  if (settings.creditEligibleServiceTypeIds !== undefined) {
+    // JSONB: store arrays as JSON strings; null means "no restriction".
+    updates.credit_eligible_service_type_ids = settings.creditEligibleServiceTypeIds === null
+      ? null
+      : JSON.stringify(settings.creditEligibleServiceTypeIds);
   }
 
   await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
