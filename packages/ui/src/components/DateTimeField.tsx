@@ -335,6 +335,11 @@ export function DateTimeField({
     const input = field === 'date' ? dateInputRef.current : timeInputRef.current;
     input?.focus();
     input?.select();
+    // The same commit that moved focus here also rewrites this field's text, and
+    // the re-render leaves the caret at the end. Take the selection again once
+    // that has landed, so the next keystroke replaces the value instead of
+    // running on after it.
+    window.requestAnimationFrame(() => input?.select());
     window.setTimeout(() => {
       skipOpenOnFocusRef.current = false;
     }, 0);
