@@ -729,8 +729,16 @@ button[aria-selected="true"].rdp-day {
   background: rgb(var(--color-border-50));
 }
 
+/* With no calendar beside it the rail is the whole panel: the footer sets the
+   width, so let the rail take all of it instead of leaving a blank column. */
+.dtf-panel-rail-only .dtf-panel-body {
+  flex: 1 1 auto;
+}
+
 .dtf-panel-rail-only .dtf-rail {
-  width: 11rem;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 11rem;
   border-left: none;
   background: rgb(var(--color-card));
 }
