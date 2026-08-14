@@ -184,15 +184,21 @@ of the shipped labels:
   specifically; a tenant charging a different levy would be misdescribed. Use
   *belasting*, *taxes*, *Steuer*, *podatek*, *impuesto*, *imposta*, *imposto*,
   and name a specific tax only where that tax is actually meant.
-- **`fulfillment` follows the sales-order column.** The document label uses the
-  same term the locale's own sales-order table uses (de *Auslieferung*, nl
-  *afhandeling*, fr *livraison*, …), not a shipping-method word.
+- **`fulfillment` names a type, not a shipment.** The column shows how a line is
+  fulfilled — from stock, drop ship — so German uses *Erfüllung* (not
+  *Lieferart*, a shipping method) and French *traitement*. It also has to stay
+  clear of the delivered-quantity column beside it, which is why German avoids
+  *Auslieferung* next to *Ausgeliefert* and French avoids *livraison* next to
+  *livré*.
 - **`pick list`** is *Kommissionierliste* / *kommissioniert* in German and
   *picklijst* / *gepickt* in Dutch, matching the signature line printed on the
   document itself.
 
-The same principle applies generally: when a document label names a field the
-app already shows in a table, use the term that table already uses.
+Two principles fall out of that list. When a document label names a field the app
+already shows in a table, prefer the term that table already uses — that is how
+the `fulfilled` and `ordered` quantity columns got their Dutch, Spanish and
+Portuguese wording. And when two labels sit in the same header row, they have to
+be tellable apart in that language, even where the English shares a stem.
 
 ## 9. Tests and gates
 
