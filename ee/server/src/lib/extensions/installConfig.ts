@@ -45,6 +45,8 @@ interface InstallRow {
   version_capabilities: unknown;
   install_config: unknown;
   granted_caps: unknown;
+  is_enabled: boolean;
+  status: string;
 }
 
 async function getDb(): Promise<Knex> {
@@ -99,6 +101,8 @@ async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookup
   const row = await tenantDb(db, tenantId).table('tenant_extension_install as install')
     .leftJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .leftJoin('extension_version as version', 'version.id', 'install.version_id')
+    .where('install.is_enabled', true)
+    .where('install.status', 'enabled')
     .andWhere((builder) => {
       if (isId) {
         builder.where('install.id', extensionId);
@@ -115,6 +119,8 @@ async function loadInstallRow(db: Knex, { tenantId, extensionId }: InstallLookup
       'install.registry_id',
       'install.config as install_config',
       'install.granted_caps',
+      'install.is_enabled',
+      'install.status',
       'registry.publisher as registry_publisher',
       'registry.name as registry_name',
       'version.id as version_id',
@@ -138,12 +144,16 @@ async function loadInstallRowById(db: Knex, installId: string): Promise<InstallR
     .leftJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
     .leftJoin('extension_version as version', 'version.id', 'install.version_id')
     .where('install.id', installId)
+    .where('install.is_enabled', true)
+    .where('install.status', 'enabled')
     .select<InstallRow[]>([
       'install.id as install_id',
       'install.tenant_id',
       'install.registry_id',
       'install.config as install_config',
       'install.granted_caps',
+      'install.is_enabled',
+      'install.status',
       'registry.publisher as registry_publisher',
       'registry.name as registry_name',
       'version.id as version_id',

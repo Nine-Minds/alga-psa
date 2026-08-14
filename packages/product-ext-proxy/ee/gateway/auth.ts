@@ -3,6 +3,17 @@ import { getSession } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
+export {
+  assertAccess,
+  ExtensionGatewayAccessError,
+} from 'server/src/lib/extensions/gateway/access';
+export type {
+  AssertExtensionAccessInput,
+  AuthorizedExtensionAccess,
+  ExtensionGatewayAccessErrorCode,
+  ExtensionGatewayPrincipal,
+} from 'server/src/lib/extensions/gateway/access';
+
 export interface ExtProxyUserInfo {
   user_id: string;
   user_email: string;
@@ -183,9 +194,4 @@ export async function getTenantFromAuth(req: NextRequest): Promise<string> {
   const dev = process.env.DEV_TENANT_ID;
   if (dev && dev.trim()) return dev.trim();
   throw new Error('unauthenticated');
-}
-
-export async function assertAccess(_tenantId: string, _extensionId: string, _method: string, _path: string): Promise<void> {
-  // TODO: implement RBAC and per-tenant endpoint checks
-  return;
 }

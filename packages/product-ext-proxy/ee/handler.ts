@@ -3,9 +3,10 @@ import { appendFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
-import { loadInstallConfigCached } from './install-config-cache';
+import { getInstallConfig } from './install-config';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from './gateway/auth';
+import { getTenantFromAuth, getUserInfoFromAuth, assertAccess, ExtensionGatewayAccessError } from './gateway/auth';
+import { startExtensionExecution, finishExtensionExecution } from 'server/src/lib/extensions/gateway/executionAudit';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 type ProxyMethod = Exclude<Method, 'OPTIONS'>;
@@ -24,21 +25,6 @@ function logDebug(event: string, payload: Record<string, unknown>) {
   } catch {
     // swallow logging errors
   }
-}
-
-class AccessError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
-// Re-export AccessError for use in assertAccess wrapper
-function wrapAssertAccess(tenantId: string, extensionId: string, method: string, pathname: string): Promise<void> {
-  // Use the same permissive access check as /api/ext/ route
-  // TODO: implement proper RBAC for extension proxy calls
-  return assertAccess(tenantId, extensionId, method, pathname);
 }
 
 export const dynamic = 'force-dynamic';
@@ -215,6 +201,10 @@ async function handle(
     return corsPreflight(corsOrigin);
   }
 
+  let tenantId: string | null = null;
+  let logId: string | null = null;
+  const startedAt = Date.now();
+
   try {
     const routeParams = await ctx.params;
     const extensionId = routeParams.extensionId;
@@ -229,22 +219,48 @@ async function handle(
       methodOverrideSource,
     } = resolveMethodAndBody(rawMethod as ProxyMethod, url, initialBodyBuf);
 
-    const tenantId = await getTenantFromAuth(req);
-    const userInfo = await getUserInfoFromAuth(req);
+    tenantId = await getTenantFromAuth(req);
     logDebug('ext-proxy:start', {
       tenantId,
       extensionId,
       rawMethod,
       method,
       methodOverrideSource,
-      hasUserInfo: !!userInfo,
     });
     if (!tenantId) return applyCorsHeaders(json(401, { error: 'Unauthorized' }), corsOrigin);
 
-    await wrapAssertAccess(tenantId, extensionId, method, pathname);
+    const access = await assertAccess({ tenantId, extensionId, method, path: pathname });
 
-    const installConfig = await loadInstallConfigCached(tenantId, extensionId);
+    const userInfo = await getUserInfoFromAuth(req);
+    if (access.principal.kind === 'client') {
+      if (!userInfo || userInfo.user_type !== 'client') {
+        return applyCorsHeaders(json(403, { error: 'forbidden' }), corsOrigin);
+      }
+      userInfo.client_id = access.principal.clientId;
+    }
+
+    logId = await startExtensionExecution({
+      tenantId: access.tenantId,
+      registryId: access.registryId,
+      versionId: access.versionId,
+      requestId,
+      method,
+      path: pathname,
+      endpointTemplate: access.endpoint.path,
+      principalKind: access.principal.kind,
+      userId: access.principal.userId,
+    });
+
+    // Bypass the secret-bearing install-config cache: the access decision is
+    // not stale-proof, so hydrate fresh through the active-state-filtered
+    // getInstallConfig() and reject any install/version that changed since the
+    // authorization query.
+    const installConfig = await getInstallConfig({ tenantId, extensionId });
     if (!installConfig) {
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
       return applyCorsHeaders(json(404, { error: 'Extension not installed' }), corsOrigin);
     }
     const installId = String(installConfig.installId ?? '').trim();
@@ -254,11 +270,37 @@ async function handle(
         extensionId,
         installId: installConfig.installId,
       });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
       return applyCorsHeaders(json(502, { error: 'Extension install context missing (installId)' }), corsOrigin);
     }
     if (!installConfig.contentHash) {
       console.error('[ext-proxy] Missing content hash', { tenantId, extensionId });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
       return applyCorsHeaders(json(502, { error: 'Extension bundle unavailable' }), corsOrigin);
+    }
+    if (
+      installConfig.installId !== access.installId ||
+      installConfig.versionId !== access.versionId
+    ) {
+      console.error('[ext-proxy] Install state changed between authorization and hydration', {
+        tenantId,
+        extensionId,
+        expectedInstallId: access.installId,
+        expectedVersionId: access.versionId,
+        actualInstallId: installConfig.installId,
+        actualVersionId: installConfig.versionId,
+      });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
+      return applyCorsHeaders(json(503, { error: 'access_policy_unavailable' }), corsOrigin);
     }
 
     const timeoutMs = getTimeoutMs();
@@ -271,8 +313,8 @@ async function handle(
       rawMethod,
       effectiveMethod: method,
       methodOverrideSource,
-      installId: installConfig.installId,
-      versionId: installConfig.versionId,
+      installId: access.installId,
+      versionId: access.versionId,
       contentHash: installConfig.contentHash,
       timeoutMs,
       hasBody: !!bodyBuf,
@@ -283,8 +325,8 @@ async function handle(
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
-        install_id: installId,
-        version_id: installConfig.versionId,
+        install_id: access.installId,
+        version_id: access.versionId,
         content_hash: installConfig.contentHash,
         config: installConfig.config,
       },
@@ -321,6 +363,9 @@ async function handle(
     const runnerHeaders: Record<string, string> = {
       'x-alga-tenant': tenantId,
       'x-alga-extension': extensionId,
+      'x-ext-install-id': access.installId,
+      'x-ext-version-id': access.versionId,
+      'x-ext-registry-id': access.registryId,
     };
     if (installConfig.configVersion) {
       runnerHeaders['x-ext-config-version'] = installConfig.configVersion;
@@ -340,6 +385,12 @@ async function handle(
       bodyLength: runnerResp.body?.length
     });
 
+    await finishExtensionExecution(logId, tenantId, {
+      outcome: 'ok',
+      status: runnerResp.status,
+      durationMs: Date.now() - startedAt,
+    });
+
     const proxyResponse = new NextResponse(runnerResp.body as any, {
       status: runnerResp.status,
       headers: runnerResp.headers,
@@ -353,11 +404,24 @@ async function handle(
       request_id: getRequestId(req)
     });
     logDebug('ext-proxy:error', { message: error?.message, name: error?.name, stack: error?.stack });
-    if (error instanceof AccessError) {
-      return applyCorsHeaders(json(error.status, { error: error.message }), corsOrigin);
+    if (error instanceof ExtensionGatewayAccessError) {
+      const response = json(error.status, { error: error.code });
+      if (error.code === 'rate_limited' && error.retryAfterSeconds) {
+        response.headers.set('retry-after', String(error.retryAfterSeconds));
+      }
+      return applyCorsHeaders(response, corsOrigin);
     }
     if (error?.message === 'tenant_mismatch') {
       return applyCorsHeaders(json(403, { error: 'tenant_mismatch' }), corsOrigin);
+    }
+    if (logId && tenantId) {
+      const isTimeout = error?.name === 'AbortError';
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: isTimeout ? 'timeout' : 'error',
+        status: typeof error?.status === 'number' ? error.status : 502,
+        durationMs: Date.now() - startedAt,
+        error: isTimeout ? 'timeout' : 'runner_error',
+      });
     }
     if (error instanceof RunnerConfigError) {
       console.error('[ext-proxy] Runner configuration error:', error.message);
@@ -372,7 +436,7 @@ async function handle(
       return applyCorsHeaders(json(504, { error: 'Gateway timeout' }), corsOrigin);
     }
     console.error('[ext-proxy] Unhandled error:', error?.message, error?.stack);
-    return applyCorsHeaders(json(500, { error: 'Internal error', detail: String(error?.message || error) }), corsOrigin);
+    return applyCorsHeaders(json(503, { error: 'access_policy_unavailable' }), corsOrigin);
   }
 }
 

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 
-import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromAuth, assertAccess, ExtensionGatewayAccessError } from 'server/src/lib/extensions/gateway/auth';
+import {
+  startExtensionExecution,
+  finishExtensionExecution,
+} from 'server/src/lib/extensions/gateway/executionAudit';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -249,9 +253,11 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
 
     const tenantId = await getTenantFromAuth(req);
     console.log('[api/ext] tenant resolved', { tenantId, extensionId, method, elapsed: Date.now() - start });
-    await assertAccess(tenantId, extensionId, method, path);
 
-    // Get user info for extension context
+    const access = await assertAccess({ tenantId, extensionId, method, path });
+
+    // Get user info for extension context. For client principals the emitted
+    // user must be a client user carrying exactly the authorized client_id.
     let userInfo: UserInfo | null = null;
     try {
       userInfo = await getUserInfo(tenantId);
@@ -259,6 +265,29 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     } catch (userInfoError) {
       console.error('[api/ext] failed to get user info', { error: userInfoError, elapsed: Date.now() - start });
     }
+    if (access.principal.kind === 'client') {
+      if (!userInfo || userInfo.user_type !== 'client') {
+        return applyCorsHeaders(
+          NextResponse.json({ error: 'forbidden' }, { status: 403 }),
+          corsOrigin
+        );
+      }
+      userInfo.client_id = access.principal.clientId;
+    }
+
+    const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+    const startedAt = Date.now();
+    const logId = await startExtensionExecution({
+      tenantId: access.tenantId,
+      registryId: access.registryId,
+      versionId: access.versionId,
+      requestId,
+      method,
+      path,
+      endpointTemplate: access.endpoint.path,
+      principalKind: access.principal.kind,
+      userId: access.principal.userId,
+    });
 
     const install = await resolveInstallContext(tenantId, extensionId);
     console.log('[api/ext] install context resolved', {
@@ -268,6 +297,10 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       elapsed: Date.now() - start
     });
     if (!install) {
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
       return applyCorsHeaders(NextResponse.json({ error: 'not_installed' }, { status: 404 }), corsOrigin);
     }
     const install_id = String(install.installId ?? '').trim();
@@ -277,8 +310,30 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
         extensionId,
         install,
       });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
       return applyCorsHeaders(
         NextResponse.json({ error: 'install_context_missing', detail: 'installId missing' }, { status: 502 }),
+        corsOrigin
+      );
+    }
+    if (install.installId !== access.installId || install.versionId !== access.versionId) {
+      console.error('[api/ext] install state changed between authorization and hydration', {
+        tenantId,
+        extensionId,
+        expectedInstallId: access.installId,
+        expectedVersionId: access.versionId,
+        actualInstallId: install.installId,
+        actualVersionId: install.versionId,
+      });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'policy_denied',
+        durationMs: Date.now() - startedAt,
+      });
+      return applyCorsHeaders(
+        NextResponse.json({ error: 'access_policy_unavailable' }, { status: 503 }),
         corsOrigin
       );
     }
@@ -292,6 +347,10 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     if (req.method !== 'GET') {
       const buf = Buffer.from(await req.arrayBuffer());
       if (buf.length > maxBody) {
+        await finishExtensionExecution(logId, tenantId, {
+          outcome: 'policy_denied',
+          durationMs: Date.now() - startedAt,
+        });
         return applyCorsHeaders(
           NextResponse.json({ error: 'payload_too_large' }, { status: 413 }),
           corsOrigin
@@ -299,7 +358,6 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       }
       bodyB64 = buf.toString('base64');
     }
-    const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
     const idempotencyKey = req.method === 'GET' ? undefined : (req.headers.get('x-idempotency-key') || requestId);
 
     const runnerUrl = process.env.RUNNER_BASE_URL || 'http://localhost:8080';
@@ -352,6 +410,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       console.log('[api/ext] runner response received', { status: resp.status, elapsed: Date.now() - start });
       if (!rawBody) {
         console.error('[api/ext] runner returned empty body', { status: resp.status, requestId, tenantId, extensionId });
+        await finishExtensionExecution(logId, tenantId, {
+          outcome: 'error',
+          status: resp.status,
+          durationMs: Date.now() - startedAt,
+          error: 'empty_response',
+        });
         return applyCorsHeaders(
           NextResponse.json(
             { error: 'runner_empty_response', detail: { status: resp.status } },
@@ -371,6 +435,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           extensionId,
           bodyPreview: rawBody.slice(0, 500),
         });
+        await finishExtensionExecution(logId, tenantId, {
+          outcome: 'error',
+          status: resp.status,
+          durationMs: Date.now() - startedAt,
+          error: 'invalid_response',
+        });
         return applyCorsHeaders(
           NextResponse.json(
             {
@@ -382,6 +452,11 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           corsOrigin
         );
       }
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: 'ok',
+        status: payload.status || resp.status,
+        durationMs: Date.now() - startedAt,
+      });
       const respHeaders = new Headers(filterResponseHeaders(resp.headers));
       const body = payload.body_b64 ? Buffer.from(payload.body_b64, 'base64') : undefined;
       return applyCorsHeaders(
@@ -390,13 +465,27 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       );
     } catch (err) {
       clearTimeout(timeout);
+      const isTimeout = err instanceof Error && err.name === 'AbortError';
       console.error('[api/ext] runner execution failed', { error: err, requestId, tenantId, extensionId });
+      await finishExtensionExecution(logId, tenantId, {
+        outcome: isTimeout ? 'timeout' : 'error',
+        status: 502,
+        durationMs: Date.now() - startedAt,
+        error: isTimeout ? 'timeout' : 'runner_error',
+      });
       return applyCorsHeaders(
         NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
         corsOrigin
       );
     }
   } catch (err) {
+    if (err instanceof ExtensionGatewayAccessError) {
+      const response = NextResponse.json({ error: err.code }, { status: err.status });
+      if (err.code === 'rate_limited' && err.retryAfterSeconds) {
+        response.headers.set('retry-after', String(err.retryAfterSeconds));
+      }
+      return applyCorsHeaders(response, corsOrigin);
+    }
     if (err instanceof Error && err.message === 'tenant_mismatch') {
       return applyCorsHeaders(
         NextResponse.json({ error: 'tenant_mismatch' }, { status: 403 }),
@@ -411,7 +500,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       stack: err instanceof Error ? err.stack : undefined,
     });
     return applyCorsHeaders(
-      NextResponse.json({ error: 'internal_error' }, { status: 500 }),
+      NextResponse.json({ error: 'access_policy_unavailable' }, { status: 503 }),
       corsOrigin
     );
   }

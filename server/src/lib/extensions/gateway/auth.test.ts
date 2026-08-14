@@ -5,9 +5,13 @@ import { getTenantFromAuth } from './auth';
 
 const getSessionMock = vi.fn();
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: () => getSessionMock(),
-}));
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('@alga-psa/auth');
+  return {
+    ...actual,
+    getSession: () => getSessionMock(),
+  };
+});
 
 function request(headers: Record<string, string> = {}) {
   return new NextRequest('https://example.test/api/ext/demo', { headers });
