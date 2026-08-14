@@ -154,6 +154,21 @@ describe('the rail', () => {
     expect(onChange).toHaveBeenCalledWith('15:00');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
   });
+
+  // Inside a dialog or drawer the scroll lock cancels the wheel over the
+  // portalled panel, so the rail has to turn itself. It claims the event as it
+  // mounts; binding that from an effect keyed on the open state was too early,
+  // and left the rail movable only by dragging its scrollbar.
+  it('turns under the wheel, not only under the scrollbar', () => {
+    render(<DateTimeField variant="time" value="09:00" onChange={() => {}} timeFormat="24h" />);
+
+    fireEvent.focus(fields()[0]);
+    const rail = screen.getByRole('listbox');
+    const wheel = new WheelEvent('wheel', { deltaY: 240, bubbles: true, cancelable: true });
+    rail.dispatchEvent(wheel);
+
+    expect(wheel.defaultPrevented).toBe(true);
+  });
 });
 
 describe('the exit contract', () => {

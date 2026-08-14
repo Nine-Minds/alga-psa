@@ -146,7 +146,8 @@ export function DateTimeField({
   const fieldsRef = React.useRef<HTMLDivElement>(null);
   const dateInputRef = React.useRef<HTMLInputElement>(null);
   const timeInputRef = React.useRef<HTMLInputElement>(null);
-  const railRef = React.useRef<HTMLDivElement>(null);
+  const railRef = React.useRef<HTMLDivElement | null>(null);
+  const railWheelRef = React.useRef<(() => void) | null>(null);
 
   const dateValueKey = dateValue ? dateValue.getTime() : 0;
   React.useEffect(() => {
@@ -498,23 +499,29 @@ export function DateTimeField({
     return () => window.cancelAnimationFrame(frame);
   }, [open, showTime, panelTime]);
 
-  // The panel is portalled, so inside a dialog the scroll lock cancels wheel
-  // events over the rail and it would only move by dragging its scrollbar.
+  // The panel is portalled, so inside a dialog or drawer the scroll lock cancels
+  // wheel events over the rail and it would only move by dragging its scrollbar.
   // Scroll it ourselves, from a listener that is allowed to say no to that.
-  React.useEffect(() => {
-    const container = railRef.current;
-    if (!open || !showTime || !container) return;
+  //
+  // Bound as the rail mounts rather than from an effect keyed on `open`: the
+  // panel appears one commit after the state that opens it, so such an effect
+  // runs while the rail is still null and never gets a second chance.
+  const bindRail = React.useCallback((node: HTMLDivElement | null) => {
+    railWheelRef.current?.();
+    railWheelRef.current = null;
+    railRef.current = node;
+    if (!node) return;
 
     const onWheel = (event: WheelEvent) => {
       if (event.ctrlKey) return;
-      const lineHeight = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
-      container.scrollTop += event.deltaY * lineHeight;
+      const lineHeight = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientHeight : 1;
+      node.scrollTop += event.deltaY * lineHeight;
       event.preventDefault();
     };
 
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
-  }, [open, showTime]);
+    node.addEventListener('wheel', onWheel, { passive: false });
+    railWheelRef.current = () => node.removeEventListener('wheel', onWheel);
+  }, []);
 
   const datePlaceholder = showDate
     ? (variant === 'date' ? placeholder : undefined) ?? getDatePlaceholder(locale)
@@ -704,7 +711,7 @@ export function DateTimeField({
               {showTime && (
                 <div className="dtf-rail">
                   <div className="dtf-rail-heading">{t('timePicker.heading', 'Time')}</div>
-                  <div className="dtf-rail-scroll" ref={railRef} role="listbox" aria-label={timeLabel}>
+                  <div className="dtf-rail-scroll" ref={bindRail} role="listbox" aria-label={timeLabel}>
                     {timeOptions.map((option) => {
                       const selected = option === panelTime;
                       return (
