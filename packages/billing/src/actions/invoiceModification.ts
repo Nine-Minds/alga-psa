@@ -55,6 +55,54 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(tableExpression);
 }
 
+/**
+ * Finalize hook for ad-hoc prepaid hour blocks: flips any `pending` hour_blocks
+ * linked to this invoice (via source_invoice_id) to `active` and writes the
+ * `purchase` audit row. A draft purchase invoice grants nothing — mirroring the
+ * prepayment-credit finalization contract.
+ */
+export async function activateHourBlocksForFinalizedInvoice(
+  invoiceId: string,
+  knex: Knex,
+  tenant: string,
+  userId: string
+): Promise<void> {
+  const pendingBlocks = await tenantScopedTable(knex, tenant, 'hour_blocks')
+    .where({
+      tenant,
+      source_invoice_id: invoiceId,
+      status: 'pending',
+    })
+    .select('block_id', 'remaining_minutes');
+
+  if (pendingBlocks.length === 0) {
+    return;
+  }
+
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const now = new Date().toISOString();
+    for (const block of pendingBlocks) {
+      await tenantScopedTable(trx, tenant, 'hour_blocks')
+        .where({ tenant, block_id: block.block_id })
+        .update({
+          status: 'active',
+          purchased_at: now,
+          updated_at: now,
+        });
+      await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+        tenant,
+        block_id: block.block_id,
+        type: 'purchase',
+        minutes_delta: null,
+        reason: null,
+        created_by: userId,
+        metadata: { source_invoice_id: invoiceId, remaining_minutes: block.remaining_minutes },
+      });
+    }
+    console.log(`Activated ${pendingBlocks.length} pending hour block(s) from invoice ${invoiceId}`);
+  });
+}
+
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
   service_id?: string;
@@ -986,6 +1034,9 @@ export async function finalizeInvoiceWithKnex(
       }
     }
   }
+
+  // Ad-hoc prepaid hour blocks linked to this invoice go active at finalize.
+  await activateHourBlocksForFinalizedInvoice(invoiceId, knex, tenant, userId);
 
   if (invoice) {
     projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(

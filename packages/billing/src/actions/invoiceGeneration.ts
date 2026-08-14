@@ -128,6 +128,10 @@ function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
 }
 
+function isHourBlockCharge(charge: IBillingCharge): charge is IHourBlockCharge {
+  return charge.type === 'hour_block';
+}
+
 function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
   return charge.type === 'product';
 }
@@ -183,6 +187,7 @@ function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string
 // Uses local type guards now
 function getChargeQuantity(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.isUsageBucket ? charge.overageUnits ?? charge.quantity ?? 0 : charge.overageHours;
+  if (isHourBlockCharge(charge)) return charge.hoursUsed;
   if (isFixedPriceCharge(charge) || isUsageBasedCharge(charge)) return charge.quantity;
   if (isTimeBasedCharge(charge)) return charge.duration;
   if (isProductCharge(charge) || isLicenseCharge(charge)) return charge.quantity;
@@ -193,7 +198,16 @@ function getChargeQuantity(charge: IBillingCharge): number {
 // Uses local type guards now
 function getChargeUnitPrice(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.overageRate;
+  if (isHourBlockCharge(charge)) return 0;
   return charge.rate;
+}
+
+/**
+ * Bucket-style description for a prepaid-hour-block informational line:
+ * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
+ */
+function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
+  return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} hrs consumed, ${charge.hoursRemaining.toFixed(1)} hrs remaining`;
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -1787,7 +1801,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       item_id: 'preview-' + uuidv4(),
       invoice_id: `preview-${previewInvoiceKey}`,
       service_id: charge.serviceId,
-      description: charge.serviceName || 'Charge',
+      description: isHourBlockCharge(charge)
+        ? formatHourBlockChargeDescription(charge)
+        : (charge.serviceName || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,

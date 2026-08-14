@@ -1,0 +1,120 @@
+{
+  "section": {
+    "title": "Hour Blocks",
+    "description": "One-time prepaid hour blocks. Time that isn't covered by a contract line draws down these blocks, oldest expiration first.",
+    "availableBalance": "{{hours}} hrs available",
+    "noBlocks": "No hour blocks yet. Sell a block to this client or grant comped hours.",
+    "loadFailed": "Failed to load hour blocks. Try again."
+  },
+  "actions": {
+    "sell": "Sell block",
+    "grant": "Grant block",
+    "adjust": "Adjust hours",
+    "editExpiration": "Edit expiration",
+    "expire": "Expire",
+    "void": "Void",
+    "viewDetails": "View details",
+    "close": "Close",
+    "submit": "Save",
+    "cancel": "Cancel",
+    "confirmVoid": "Void block",
+    "viewInvoice": "View invoice"
+  },
+  "columns": {
+    "block": "Block",
+    "service": "Sold as",
+    "scope": "Scope",
+    "remaining": "Remaining",
+    "value": "Value",
+    "status": "Status",
+    "expiration": "Expiration",
+    "source": "Source",
+    "actions": "Actions"
+  },
+  "status": {
+    "pending": "Pending",
+    "active": "Active",
+    "expired": "Expired",
+    "voided": "Voided",
+    "never": "Never",
+    "allLabor": "All labor",
+    "expiringSoon": "Expires in {{count}} days"
+  },
+  "sell": {
+    "title": "Sell hour block",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Select a service",
+    "rateLabel": "Rate per hour ({{currency}})",
+    "hoursLabel": "Hours",
+    "hoursPlaceholder": "e.g. 10",
+    "expirationLabel": "Expiration (optional)",
+    "scopeLabel": "Scope — services this block covers (empty = all labor)",
+    "notesLabel": "Notes (optional)",
+    "totalLabel": "Total",
+    "submit": "Create draft invoice",
+    "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
+    "invoiceError": "Could not create the block purchase invoice."
+  },
+  "grant": {
+    "title": "Grant hour block",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why are these hours being granted?",
+    "submit": "Grant block",
+    "granted": "Hour block granted.",
+    "error": "Could not grant the hour block."
+  },
+  "adjust": {
+    "title": "Adjust remaining hours",
+    "blockLabel": "Block",
+    "currentRemaining": "Currently {{hours}} hrs remaining",
+    "deltaLabel": "Change in hours (positive adds, negative removes)",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Required",
+    "submit": "Adjust",
+    "adjusted": "Hour block adjusted.",
+    "error": "Could not adjust the hour block."
+  },
+  "expiration": {
+    "title": "Edit expiration",
+    "label": "Expiration date",
+    "clear": "No expiration",
+    "submit": "Save expiration",
+    "saved": "Expiration updated.",
+    "error": "Could not update the expiration."
+  },
+  "void": {
+    "title": "Void hour block",
+    "confirm": "Void this block? It cannot be undone.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Required",
+    "submit": "Void block",
+    "voided": "Hour block voided.",
+    "error": "Could not void the hour block."
+  },
+  "detail": {
+    "title": "Hour block details",
+    "purchased": "Purchased {{date}}",
+    "granted": "Granted {{date}}",
+    "pending": "Pending — finalize the draft invoice to activate",
+    "total": "Total",
+    "remaining": "Remaining",
+    "used": "Used",
+    "burnHistory": "Burn history",
+    "noBurn": "No time has been drawn from this block yet.",
+    "audit": "Audit trail",
+    "noAudit": "No audit entries.",
+    "sourceInvoice": "Source invoice",
+    "directGrant": "Direct grant",
+    "expires": "Expires {{date}}",
+    "allLabor": "All labor",
+    "scopeLabel": "Scope",
+    "adjusted": "Adjusted",
+    "purchaseLabel": "Purchased",
+    "grantLabel": "Granted",
+    "expirationChanged": "Expiration changed",
+    "manuallyExpired": "Expired manually",
+    "autoExpired": "Auto-expired",
+    "voidedLabel": "Voided",
+    "unknownUser": "System"
+  }
+}

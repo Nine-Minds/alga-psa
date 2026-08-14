@@ -1289,3 +1289,154 @@ export const getClientExternalCreditNotice = withAuth(async (
     };
   });
 });
+
+export interface ClientPortalHourBlock {
+  block_id: string;
+  service_name: string;
+  total_minutes: number;
+  remaining_minutes: number;
+  hours_remaining: number;
+  hours_total: number;
+  expiration_date: string | null;
+  status: string;
+  currency_code: string | null;
+  expiring_soon_days: number | null;
+}
+
+export interface ClientPortalHourBlockBurnEntry {
+  allocation_id: string;
+  minutes: number;
+  hours: number;
+  entry_date: string | null;
+  work_item_title: string | null;
+}
+
+/**
+ * The signed-in client's hour blocks (active or expiring), newest first. Rows
+ * are scoped to the portal user's client and gated by the client billing read
+ * permission. No cross-client or MSP-internal fields leak through.
+ */
+export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalHourBlock[]>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('hour_blocks as hb');
+      db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      const rows = await query
+        .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
+        .where('hb.remaining_minutes', '>', 0)
+        .select(
+          'hb.block_id',
+          'hb.total_minutes',
+          'hb.remaining_minutes',
+          'hb.expiration_date',
+          'hb.status',
+          'hb.currency_code',
+          { service_name: 'sc.service_name' },
+        )
+        .orderBy('hb.purchased_at', 'asc')
+        .orderBy('hb.created_at', 'asc');
+
+      const today = new Date();
+      return rows.map((row: Record<string, unknown>) => {
+        const remaining = Number(row.remaining_minutes ?? 0);
+        const total = Number(row.total_minutes ?? 0);
+        let expiringSoonDays: number | null = null;
+        if (row.expiration_date) {
+          const expDate = new Date(String(row.expiration_date));
+          const days = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (days <= 7 && days >= 0) {
+            expiringSoonDays = days;
+          }
+        }
+        return {
+          block_id: String(row.block_id),
+          service_name: (row.service_name as string) ?? 'Prepaid hours',
+          total_minutes: total,
+          remaining_minutes: remaining,
+          hours_remaining: Math.round((remaining / 60) * 10) / 10,
+          hours_total: Math.round((total / 60) * 10) / 10,
+          expiration_date: row.expiration_date ? String(row.expiration_date) : null,
+          status: String(row.status),
+          currency_code: (row.currency_code as string) ?? null,
+          expiring_soon_days: expiringSoonDays,
+        };
+      });
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client hour blocks:', error);
+    throw error;
+  }
+});
+
+/**
+ * Recent hour-block burn history for the signed-in client (newest first,
+ * limit 20). Scoped and permission-gated like getClientHourBlocks.
+ */
+export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalHourBlockBurnEntry[]>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('hour_block_time_allocations as hba');
+      db.tenantJoin(query, 'hour_blocks as hb', 'hba.block_id', 'hb.block_id');
+      db.tenantJoin(query, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
+      db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', { type: 'left' });
+      db.tenantJoin(query, 'project_tasks as pt', 'te.work_item_id', 'pt.task_id', { type: 'left' });
+      const rows = await query
+        .where({ 'hb.client_id': clientId })
+        .select(
+          'hba.allocation_id',
+          'hba.minutes',
+          'hba.created_at',
+          'te.work_date',
+          'tk.title as ticket_title',
+          'pt.task_name as task_title',
+        )
+        .orderBy('hba.created_at', 'desc')
+        .limit(20);
+
+      return rows.map((row: Record<string, unknown>) => ({
+        allocation_id: String(row.allocation_id),
+        minutes: Number(row.minutes ?? 0),
+        hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
+        entry_date: row.work_date ? String(row.work_date) : null,
+        work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
+      }));
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client hour block burn history:', error);
+    throw error;
+  }
+});

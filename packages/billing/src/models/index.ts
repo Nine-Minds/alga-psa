@@ -35,3 +35,4 @@ export type {
 } from './projectPhaseRateOverride';
 export { default as ProjectBillingCapUsage } from './projectBillingCapUsage';
 export type { ProjectBillingCapUsageIncrement } from './projectBillingCapUsage';
+export { default as HourBlock } from './hourBlock';

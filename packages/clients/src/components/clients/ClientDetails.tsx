@@ -64,6 +64,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
+import { HourBlocksSection } from '@alga-psa/billing/components';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
@@ -293,6 +294,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const drawer = useDrawer();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
+    defaultValue: false,
+  });
+  const hourBlocksFlag = useFeatureFlag('release-v1.5-feature', {
     defaultValue: false,
   });
   const entraSyncPermission = useEntraSyncPermission();
@@ -1443,8 +1447,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'billing-dashboard',
       label: t('clientDetails.billingDashboard', { defaultValue: 'Billing Dashboard' }),
       content: (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
+          {hourBlocksFlag.enabled && (
+            <HourBlocksSection clientId={client.client_id} currencyCode={client.default_currency_code ?? 'USD'} />
+          )}
         </div>
       )
     },

@@ -23,6 +23,13 @@ import {
   prepaidBalanceAlertScanHandler,
   PrepaidBalanceAlertScanJobData,
 } from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+  expiredHourBlocksHandler,
+  ExpiredHourBlocksJobData,
+} from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import {
+  expiringHourBlocksNotificationHandler,
+  ExpiringHourBlocksNotificationJobData,
+} from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
@@ -33,6 +40,10 @@ import {
   handleReconcileBucketUsage,
   ReconcileBucketUsageJobData,
 } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
+import {
+  handleReconcileHourBlockAllocations,
+  ReconcileHourBlockAllocationsJobData,
+} from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -263,6 +274,24 @@ export async function registerAllJobHandlers(
       name: PREPAID_BALANCE_ALERT_SCAN_JOB,
       handler: async (_jobId, data) => {
         await prepaidBalanceAlertScanHandler(data);
+  // Expired hour blocks handler
+  JobHandlerRegistry.register<ExpiredHourBlocksJobData & BaseJobData>(
+    {
+      name: 'expired-hour-blocks',
+      handler: async (_jobId, data) => {
+        await expiredHourBlocksHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Expiring hour blocks notification handler
+  JobHandlerRegistry.register<ExpiringHourBlocksNotificationJobData & BaseJobData>(
+    {
+      name: 'expiring-hour-blocks-notification',
+      handler: async (_jobId, data) => {
+        await expiringHourBlocksNotificationHandler(data);
       },
       retry: { maxAttempts: 3 },
     },
@@ -360,6 +389,18 @@ export async function registerAllJobHandlers(
       name: 'reconcile-bucket-usage',
       handler: async (jobId, data) => {
         await handleReconcileBucketUsage({ id: jobId, data } as Job<ReconcileBucketUsageJobData>);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Reconcile hour-block allocation handler
+  JobHandlerRegistry.register<ReconcileHourBlockAllocationsJobData & BaseJobData>(
+    {
+      name: 'reconcile-hour-block-allocations',
+      handler: async (jobId, data) => {
+        await handleReconcileHourBlockAllocations({ id: jobId, data } as Job<ReconcileHourBlockAllocationsJobData>);
       },
       retry: { maxAttempts: 3 },
     },
@@ -723,6 +764,8 @@ export function getAvailableJobHandlers(): string[] {
     'expired-credits',
     'expiring-credits-notification',
     PREPAID_BALANCE_ALERT_SCAN_JOB,
+    'expired-hour-blocks',
+    'expiring-hour-blocks-notification',
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',
@@ -732,6 +775,7 @@ export function getAvailableJobHandlers(): string[] {
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
+    'reconcile-hour-block-allocations',
     'process-renewal-queue',
     // Marketing
     MARKETING_FLIP_DUE_POSTS_JOB,

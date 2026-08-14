@@ -376,5 +376,14 @@
   "dashboard": {
     "prepaidHours": "Godziny przedpłacone",
     "viewBilling": "Przejdź do rozliczeń"
+  },
+  "hourBlocks": {
+    "title": "Prepaid Hour Blocks",
+    "blockLabel": "{{service}} block",
+    "expiringSoon": "Expires in {{days}}d",
+    "hoursLeft": "{{hours}}h left",
+    "expires": "Expires {{date}}",
+    "recentBurn": "Recent usage",
+    "timeEntry": "Time entry"
   }
 }

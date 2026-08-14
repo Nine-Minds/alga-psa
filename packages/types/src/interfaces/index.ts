@@ -75,6 +75,7 @@ export * from './tenant.interface';
 export * from './ticket.interfaces';
 export * from './ticketResource.interfaces';
 export * from './timeEntry.interfaces';
+export * from './hourBlock.interfaces';
 export * from './usage.interfaces';
 export * from './validation.interfaces';
 export * from './workItem.interfaces';

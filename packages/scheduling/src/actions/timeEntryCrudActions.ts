@@ -9,6 +9,12 @@ import { determineDefaultContractLine } from '../lib/contractLineDisambiguation'
 // time-entry save. Don't recreate a local copy.
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
+// Hour-block burn MUST go through the shared canonical service too — same
+// rationale as bucketUsageService (both scheduling and billing import it).
+import {
+  allocateTimeEntry,
+  reverseTimeEntryAllocations,
+} from '@alga-psa/shared/billingClients/hourBlockService';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
@@ -726,6 +732,51 @@ export const saveTimeEntry = withAuth(async (
          console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
       }
       // --- End Bucket Usage Update Logic ---
+
+      // --- Hour-block burn logic ---
+      // Applies only when the entry is NOT contract-covered (contracts always
+      // win), so it never fires for the bucket path above — the two are
+      // mutually exclusive by construction. Block burn is best-effort on save:
+      // a failure is logged, never aborts the entry save, and the nightly
+      // reconcile converges allocations to the canonical FIFO state.
+      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+        try {
+          let blockClientId: string | null = null;
+          if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
+            blockClientId = await getClientIdForWorkItem(
+              trx,
+              tenant,
+              resultingEntry.work_item_id as string,
+              resultingEntry.work_item_type as string,
+            );
+          }
+          if (blockClientId && !resultingEntry.contract_line_id) {
+            // The save path always sets entry_id before this point.
+            const savedEntryId = resultingEntry.entry_id!;
+            const burnEntry = {
+              entry_id: savedEntryId,
+              service_id: resultingEntry.service_id,
+              billable_duration: resultingEntry.billable_duration,
+              contract_line_id: resultingEntry.contract_line_id,
+              work_item_id: resultingEntry.work_item_id,
+              work_item_type: resultingEntry.work_item_type,
+              work_date: resultingEntry.work_date,
+              start_time: resultingEntry.start_time,
+            };
+            if (entry_id) {
+              // Update: reverse then re-allocate (clean FIFO, no delta).
+              await reverseTimeEntryAllocations(trx, tenant, savedEntryId);
+            }
+            const burned = await allocateTimeEntry(trx, tenant, blockClientId, burnEntry);
+            if (burned.length > 0) {
+              console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
+            }
+          }
+        } catch (blockBurnError) {
+          console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
+        }
+      }
+      // --- End Hour-block burn logic ---
     });
 
     if (!resultingEntry) {
@@ -1080,6 +1131,18 @@ export const deleteTimeEntry = withAuth(async (
         }
       }
       // --- End Bucket Usage Update Logic ---
+
+      // --- Hour-block burn reversal ---
+      // Restore the minutes the deleted entry drew from any hour blocks. Best-
+      // effort like the save path: failures are logged and the nightly
+      // reconcile converges. Runs unconditionally (an entry may carry block
+      // allocations without being contract-covered).
+      try {
+        await reverseTimeEntryAllocations(trx, tenant, entryId);
+      } catch (blockReverseError) {
+        console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
+      }
+      // --- End Hour-block burn reversal ---
 
       // 2. Delete the time entry
       const deleteCount = await trxTenantDb.table('time_entries')

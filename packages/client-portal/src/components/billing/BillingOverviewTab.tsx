@@ -14,6 +14,7 @@ import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
 import CreditsSummaryCard from './CreditsSummaryCard';
+import HourBlocksCard from './HourBlocksCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
@@ -242,6 +243,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {invoiceCard}
           {quotesCard}
           <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
+          <HourBlocksCard formatDate={formatDate} />
         </div>
 
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}
