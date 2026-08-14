@@ -20,6 +20,12 @@
  *     nothing, writes a status='failed' row for the tenant SMTP provider, and
  *     emits a password_recovery_send_failed diagnostic without the token or
  *     reset URL.
+ *  7. Canonical-origin guard: with no trusted origin configured
+ *     (NEXT_PUBLIC_BASE_URL/NEXTAUTH_URL/HOST all absent) recovery returns the
+ *     same true value and sends nothing, emitting a password_recovery_send_refused
+ *     diagnostic pointing at the missing configuration. With NEXT_PUBLIC_BASE_URL
+ *     absent but a trusted fallback (NEXTAUTH_URL) configured, the delivered
+ *     link is an absolute URL on that origin and is logged as sent.
  *
  * The only mocked seams are the application logger (to inspect diagnostics)
  * and the @alga-psa/auth barrel that setup.ts globally replaces; the action is
@@ -89,6 +95,8 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     EMAIL_ENABLE: undefined,
     SECRET_KEY: undefined,
     NEXT_PUBLIC_BASE_URL: undefined,
+    NEXTAUTH_URL: undefined,
+    HOST: undefined,
   };
 
   async function capturedEmails(): Promise<CapturedEmail[]> {
@@ -112,10 +120,32 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     // A settings save elsewhere would have invalidated this; do it explicitly so
     // cases never share a cached provider.
     await TenantEmailService.invalidateTenantSettings(tenantId);
+    // Restore the canonical-origin baseline before every case. Individual cases
+    // override it to prove the guard and the trusted-fallback derivation.
+    process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3614';
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.HOST;
     loggerError.mockClear();
     loggerWarn.mockClear();
     loggerInfo.mockClear();
     loggerDebug.mockClear();
+  }
+
+  function resetLinkOf(email: CapturedEmail): string {
+    const text = email.text || email.html || '';
+    const match = text.match(/https?:\/\/[^\s<"']+/);
+    if (!match) throw new Error('No absolute reset link found in delivered message');
+    return match[0];
+  }
+
+  function expectUsableAbsoluteResetLink(email: CapturedEmail, expectedOrigin: string): string {
+    const link = resetLinkOf(email);
+    expect(link).not.toContain('undefined');
+    const url = new URL(link);
+    expect(['http:', 'https:']).toContain(url.protocol);
+    expect(url.origin).toBe(expectedOrigin);
+    expect(url.pathname).toBe('/auth/password-reset/set-new-password');
+    return link;
   }
 
   function expectNoTokenOrUrlIn(payload: unknown): void {
@@ -248,6 +278,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     expect(emails[0].subject).toBe('Password Reset Request');
     expect(emails[0].text).toContain('/auth/password-reset/set-new-password');
     expect(emails[0].html).toContain('/auth/password-reset/set-new-password');
+    expectUsableAbsoluteResetLink(emails[0], 'http://localhost:3614');
 
     const rows = await db('email_sending_logs').where({ tenant: tenantId });
     expect(rows).toHaveLength(1);
@@ -271,6 +302,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     expect(emails[0].text).toContain('/auth/password-reset/set-new-password');
     expect(emails[0].text).toContain('portal=client');
     expect(emails[0].text).toContain('portalDomain=portal.example.test');
+    expectUsableAbsoluteResetLink(emails[0], 'http://localhost:3614');
 
     const rows = await db('email_sending_logs').where({ tenant: tenantId });
     expect(rows).toHaveLength(1);
@@ -304,6 +336,59 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     expect(clientInfo.errorType).toBeNull();
     expect(clientInfo.userInfo?.email).toBe(clientEmail);
     expect(clientInfo.userInfo?.user_type).toBe('client');
+  });
+
+  it('refuses to send and returns the same success value when no trusted origin is configured', async () => {
+    process.env.EMAIL_ENABLE = 'false';
+    delete process.env.NEXT_PUBLIC_BASE_URL;
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.HOST;
+
+    const result = await recoverPassword(internalEmail, 'msp');
+    expect(result).toBe(true);
+
+    // Nothing was handed to the provider: no message, no send-log row, and no
+    // token minted for delivery.
+    expect(await capturedEmails()).toHaveLength(0);
+    const rows = await db('email_sending_logs').where({ tenant: tenantId });
+    expect(rows).toHaveLength(0);
+
+    // The refusal is diagnosable from server logs with a pointer to the fix.
+    const refusedCalls = loggerError.mock.calls.filter(
+      (call) => call[0] === 'password_recovery_send_refused'
+    );
+    expect(refusedCalls.length).toBeGreaterThan(0);
+    const payload = refusedCalls[refusedCalls.length - 1][1] as Record<string, unknown>;
+    expect(payload.portal).toBe('msp');
+    expect(payload.userType).toBe('internal');
+    expect(payload.tenant).toBe(tenantId);
+    expect(String(payload.error ?? '')).toContain('NEXT_PUBLIC_BASE_URL');
+    expectNoTokenOrUrlIn(payload);
+  });
+
+  it('derives a usable reset link from NEXTAUTH_URL when NEXT_PUBLIC_BASE_URL is absent', async () => {
+    process.env.EMAIL_ENABLE = 'false';
+    delete process.env.NEXT_PUBLIC_BASE_URL;
+    delete process.env.HOST;
+    process.env.NEXTAUTH_URL = 'https://trusted.example.test';
+
+    const result = await recoverPassword(internalEmail, 'msp');
+    expect(result).toBe(true);
+
+    const emails = await capturedEmails();
+    expect(emails).toHaveLength(1);
+    expect(emails[0].to).toContain(internalEmail);
+    // The derivation path must produce an absolute link on the trusted origin,
+    // never one beginning with "undefined".
+    const link = expectUsableAbsoluteResetLink(emails[0], 'https://trusted.example.test');
+    expect(link).not.toContain('undefined');
+
+    const rows = await db('email_sending_logs').where({ tenant: tenantId });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('sent');
+    expect(rows[0].provider_id).toBe(SMTP_PROVIDER_ID);
+    expect(rows[0].provider_type).toBe('smtp');
+    expect(normalizeAddressList(rows[0])).toContain(internalEmail);
   });
 
   it('keeps the public result, mail, and log state identical for every non-match', async () => {

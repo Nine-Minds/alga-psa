@@ -14,6 +14,7 @@ import { isValidEmail } from '@alga-psa/validation';
 
 import { getAuthEmailRegistry } from '../lib/emailRegistry';
 import { buildPasswordResetLink } from '../lib/portalDomain';
+import { resolvePasswordResetOrigin } from '../lib/resetLinkOrigin';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -168,6 +169,26 @@ export async function recoverPassword(
     // flag here. An enabled tenant SMTP/Resend/Microsoft provider therefore
     // works even when EMAIL_ENABLE is false or unset; the system fallback
     // remains controlled by SystemEmailProviderFactory and EMAIL_ENABLE.
+    //
+    // The reset link origin may only come from trusted server-side
+    // configuration. Request-derived headers are never consulted (reset-link
+    // poisoning). If no trusted origin exists, refuse the send: it must be
+    // impossible for a reset email whose link begins with "undefined" (or any
+    // non-absolute origin) to reach a provider.
+    const resetOrigin = resolvePasswordResetOrigin();
+    if (!resetOrigin) {
+      logger.error('password_recovery_send_refused', {
+        portal,
+        userType,
+        tenant: userInfo.tenant,
+        error:
+          'No trusted public origin configured for password-reset links. ' +
+          'Set NEXT_PUBLIC_BASE_URL (or NEXTAUTH_URL, or HOST) to the public ' +
+          'application URL; the reset email was not sent.'
+      });
+      return true;
+    }
+
     const recoverToken = await createToken({
       username: '',
       email: normalizedEmail,
@@ -177,7 +198,7 @@ export async function recoverPassword(
     });
 
     const resetLink = buildPasswordResetLink(
-      process.env.NEXT_PUBLIC_BASE_URL,
+      resetOrigin,
       recoverToken,
       portal,
       portalDomain
