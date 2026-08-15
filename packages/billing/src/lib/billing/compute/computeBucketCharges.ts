@@ -36,6 +36,12 @@ export interface BucketServiceComputeConfig {
   /** Cents per hour for time buckets; cents per unit for usage buckets. */
   overage_rate: number | string;
   allow_rollover?: boolean | null;
+  /**
+   * True when any member multiplier ≠ 1 or an after-hours rule contributed to
+   * the consumed (weighted) minutes. Only cosmetic — drives the "weighted hrs"
+   * unit label in explanations.
+   */
+  isWeighted?: boolean | null;
 }
 
 export interface BucketPeriodState {
@@ -278,7 +284,10 @@ export function computeBucketCharges(
     });
 
     const displayDivisor = isUsageBucket ? 1 : 60;
-    const unit = isUsageBucket ? config.unit_of_measure || "units" : "hrs";
+    const baseUnit = isUsageBucket ? config.unit_of_measure || "units" : "hrs";
+    // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
+    // minutes are weighted — name the unit so readers know the burn is weighted.
+    const unit = config.isWeighted && !isUsageBucket ? "weighted hrs" : baseUnit;
     const used = state.consumedQuantity / displayDivisor;
     const included = state.includedQuantity / displayDivisor;
     const rollover = state.rolledOverQuantity / displayDivisor;

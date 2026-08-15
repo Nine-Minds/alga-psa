@@ -4628,68 +4628,35 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    // Get bucket configurations for this plan
-    // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-    const bucketConfigQuery = db.table<any>(
-      "contract_line_service_configuration as clsc",
-    );
-    db.tenantJoin(
-      bucketConfigQuery,
-      "contract_line_services as cls",
-      "clsc.contract_line_id",
-      "cls.contract_line_id",
-      {
-        on(join) {
-          join.andOn("clsc.service_id", "=", "cls.service_id");
-        },
-      },
-    );
-    db.tenantJoin(
-      bucketConfigQuery,
-      "contract_line_service_bucket_config as clsbc",
-      "clsbc.config_id",
-      "clsc.config_id",
-      { type: "left" },
-    );
-    db.tenantJoin(
-      bucketConfigQuery,
-      "service_catalog as sc",
-      "cls.service_id",
-      "sc.service_id",
-    );
+    // Get the line's bucket pools (weighted-burn model). A pool is line-owned
+    // and holds its own totals/overage/rollover; member services draw from it
+    // (member rows are multiplier overrides under a catch-all).
+    const poolQuery = db.table<any>("contract_line_buckets as clb");
 
-    const bucketConfigs = await bucketConfigQuery
+    const pools = await poolQuery
       .where({
-        "cls.contract_line_id": contractLine.client_contract_line_id,
-        "clsc.configuration_type": "Bucket",
-        "cls.tenant": client.tenant,
+        "clb.tenant": client.tenant,
+        "clb.contract_line_id": contractLine.client_contract_line_id,
       })
       .select(
-        "clsc.*",
-        "clsbc.*",
-        "sc.service_name",
-        "sc.default_rate",
-        "sc.tax_rate_id",
-        "sc.unit_of_measure",
-        "sc.billing_method",
-        "cls.service_id",
+        "clb.*",
       );
 
-    if (!bucketConfigs || bucketConfigs.length === 0) {
+    if (!pools || pools.length === 0) {
       return [];
     }
 
     // Load persisted allowance state here; deterministic aggregation, rollover
     // application, overage pricing, and explanations live in shared compute.
+    // One charge per bucket per period, as today one-per-config.
     const bucketCharges = await Promise.all(
-      bucketConfigs.map(async (bucketConfig): Promise<IBucketCharge[]> => {
+      pools.map(async (pool): Promise<IBucketCharge[]> => {
         const usageRecords = await db
           .table("bucket_usage")
           .where({
             tenant: client.tenant,
             client_id: clientId,
-            contract_line_id: contractLine.contract_line_id,
-            service_catalog_id: bucketConfig.service_id,
+            bucket_id: pool.bucket_id,
           })
           .where("period_start", ">=", billingPeriod.startDate)
           .where("period_end", "<=", billingPeriod.endDate)
@@ -4697,22 +4664,57 @@ export class BillingEngine {
 
         if (usageRecords.length === 0) return [];
 
+        // Pool display name: bucket_name when set, else the member service name
+        // (or the bucket's id as a last resort).
+        const members = await db
+          .table("contract_line_bucket_services as clbs")
+          .where({ "clbs.tenant": client.tenant, "clbs.bucket_id": pool.bucket_id })
+          .select(
+            "clbs.service_id",
+            "sc.service_name",
+            "sc.tax_rate_id",
+            "sc.unit_of_measure",
+            "sc.billing_method",
+          )
+          .join("service_catalog as sc", function (this: any) {
+            this.on("sc.service_id", "=", "clbs.service_id")
+              .andOn("sc.tenant", "=", "clbs.tenant");
+          });
+        const serviceName = pool.bucket_name
+          ? pool.bucket_name
+          : members.length === 1
+            ? members[0].service_name
+            : `Bucket pool ${String(pool.bucket_id).slice(0, 8)}`;
+        const firstMemberServiceId = members[0]?.service_id ?? null;
+        const firstMemberTaxRateId = members[0]?.tax_rate_id ?? null;
+        const firstMemberUnitOfMeasure = members[0]?.unit_of_measure ?? null;
+        const firstMemberBillingMethod = members[0]?.billing_method ?? null;
+
+        // Weighted when any member multiplier ≠ 1 or an after-hours rule exists.
+        const memberMultipliers = await db
+          .table("contract_line_bucket_services")
+          .where({ tenant: client.tenant, bucket_id: pool.bucket_id })
+          .select("burn_multiplier");
+        const isWeighted =
+          Number(pool.after_hours_multiplier) !== 0 ||
+          memberMultipliers.some((member) => Number(member.burn_multiplier) !== 1);
+
         const result = await computeBucketCharges(
           {
             billingPeriod,
             clientContractLine: contractLine,
             client,
             config: {
-              config_id: bucketConfig.config_id,
-              service_id: bucketConfig.service_id,
-              service_name: bucketConfig.service_name,
-              tax_rate_id: bucketConfig.tax_rate_id,
-              unit_of_measure: bucketConfig.unit_of_measure,
-              billing_method: bucketConfig.billing_method,
-              total_minutes: bucketConfig.total_minutes,
-              total_hours: bucketConfig.total_hours,
-              overage_rate: bucketConfig.overage_rate,
-              allow_rollover: bucketConfig.allow_rollover,
+              config_id: pool.bucket_id,
+              service_id: firstMemberServiceId ?? pool.bucket_id,
+              service_name: serviceName,
+              tax_rate_id: firstMemberTaxRateId,
+              unit_of_measure: firstMemberUnitOfMeasure,
+              billing_method: firstMemberBillingMethod,
+              total_minutes: pool.total_minutes,
+              overage_rate: pool.overage_rate,
+              allow_rollover: pool.allow_rollover,
+              isWeighted,
             },
             usageRecords,
             contractCurrency: contractLine.currency_code || "USD",
@@ -4720,7 +4722,10 @@ export class BillingEngine {
           await this.loadChargeComputeTaxContext({
             client,
             locationId: contractLine.location_id,
-            services: [bucketConfig],
+            services: [{
+              ...pool,
+              tax_rate_id: firstMemberTaxRateId,
+            }],
           }),
         );
         return result.charges;

@@ -16,6 +16,41 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   return builder;
 };
 
+/**
+ * Builds the knex fake for the pool-keyed calculateBucketPlanCharges:
+ * `contract_line_buckets as clb` → pools, `contract_line_bucket_services as
+ * clbs` → members, `contract_line_bucket_services` → multiplier rows.
+ */
+const buildPoolKnex = (
+  base: any,
+  options: {
+    client: any;
+    pool: Record<string, unknown>;
+    members?: Array<Record<string, unknown>>;
+    usageRows?: Array<Record<string, unknown>>;
+  },
+) => {
+  const clientsBuilder = buildQuery(options.client);
+  const poolBuilder = buildQuery(null, [options.pool]);
+  const membersBuilder = buildQuery(null, options.members ?? []);
+  const multipliersBuilder = buildQuery(
+    null,
+    (options.members ?? []).map((member) => ({ burn_multiplier: member.burn_multiplier ?? 1 })),
+  );
+  const bucketUsageBuilder = buildQuery(null, options.usageRows ?? []);
+  const fallbackBuilder = buildQuery(null);
+
+  const mockKnex = vi.fn().mockImplementation((tableName: string) => {
+    if (tableName === "clients") return clientsBuilder;
+    if (tableName.startsWith("contract_line_buckets as clb")) return poolBuilder;
+    if (tableName.startsWith("contract_line_bucket_services as clbs")) return membersBuilder;
+    if (tableName === "contract_line_bucket_services") return multipliersBuilder;
+    if (tableName === "bucket_usage") return bucketUsageBuilder;
+    return fallbackBuilder;
+  });
+  return { mockKnex, bucketUsageBuilder };
+};
+
 describe("BillingEngine bucket timing", () => {
   it("T056: bucket overage charges map included units to the bucket usage service period instead of the raw invoice window", async () => {
     const engine = new BillingEngine();
@@ -29,47 +64,47 @@ describe("BillingEngine bucket timing", () => {
       "US-NY",
     );
 
-    const clientsBuilder = buildQuery({
-      client_id: "client-1",
-      tenant: "test_tenant",
-      is_tax_exempt: false,
-    });
-    const bucketConfigBuilder = buildQuery(null, [
-      {
-        config_id: "bucket-config-1",
+    const { mockKnex } = buildPoolKnex((engine as any).knex, {
+      client: {
+        client_id: "client-1",
         tenant: "test_tenant",
-        service_id: "service-bucket",
+        is_tax_exempt: false,
+      },
+      pool: {
+        bucket_id: "bucket-config-1",
+        tenant: "test_tenant",
+        contract_line_id: "contract-line-1",
         total_minutes: 2400,
         overage_rate: 5000,
+        allow_rollover: false,
+        bucket_name: null,
+        after_hours_multiplier: null,
+        covers_all_services: false,
+      },
+      members: [{
+        service_id: "service-bucket",
         service_name: "Consulting Hours",
         tax_rate_id: "tax-rate-1",
-      },
-    ]);
-    const bucketUsageBuilder = buildQuery(null, [
-      {
-        tenant: "test_tenant",
-        client_id: "client-1",
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-bucket",
-        period_start: "2025-01-01",
-        period_end: "2025-01-31",
-        minutes_used: 45 * 60,
-        overage_minutes: 5 * 60,
-      },
-    ]);
-
-    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
-      if (tableName === "clients") {
-        return clientsBuilder;
-      }
-      if (tableName === "contract_line_service_configuration as clsc") {
-        return bucketConfigBuilder;
-      }
-      if (tableName === "bucket_usage") {
-        return bucketUsageBuilder;
-      }
-      return buildQuery(null);
+        unit_of_measure: "hour",
+        billing_method: "hourly",
+        burn_multiplier: 1,
+      }],
+      usageRows: [
+        {
+          tenant: "test_tenant",
+          client_id: "client-1",
+          contract_line_id: "contract-line-1",
+          service_catalog_id: "service-bucket",
+          bucket_id: "bucket-config-1",
+          period_start: "2025-01-01",
+          period_end: "2025-01-31",
+          minutes_used: 45 * 60,
+          overage_minutes: 5 * 60,
+        },
+      ],
     });
+
+    (engine as any).knex = mockKnex;
 
     const charges = await (engine as any).calculateBucketPlanCharges(
       "client-1",
@@ -111,47 +146,47 @@ describe("BillingEngine bucket timing", () => {
       "US-NY",
     );
 
-    const clientsBuilder = buildQuery({
-      client_id: "client-1",
-      tenant: "test_tenant",
-      is_tax_exempt: false,
-    });
-    const bucketConfigBuilder = buildQuery(null, [
-      {
-        config_id: "bucket-config-1",
+    const { mockKnex, bucketUsageBuilder } = buildPoolKnex((engine as any).knex, {
+      client: {
+        client_id: "client-1",
         tenant: "test_tenant",
-        service_id: "service-bucket",
+        is_tax_exempt: false,
+      },
+      pool: {
+        bucket_id: "bucket-config-1",
+        tenant: "test_tenant",
+        contract_line_id: "contract-line-1",
         total_minutes: 2400,
         overage_rate: 5000,
+        allow_rollover: false,
+        bucket_name: null,
+        after_hours_multiplier: null,
+        covers_all_services: false,
+      },
+      members: [{
+        service_id: "service-bucket",
         service_name: "Consulting Hours",
         tax_rate_id: "tax-rate-1",
-      },
-    ]);
-    const bucketUsageBuilder = buildQuery(null, [
-      {
-        tenant: "test_tenant",
-        client_id: "client-1",
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-bucket",
-        period_start: "2025-02-01",
-        period_end: "2025-02-28",
-        minutes_used: 46 * 60,
-        overage_minutes: 6 * 60,
-      },
-    ]);
-
-    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
-      if (tableName === "clients") {
-        return clientsBuilder;
-      }
-      if (tableName === "contract_line_service_configuration as clsc") {
-        return bucketConfigBuilder;
-      }
-      if (tableName === "bucket_usage") {
-        return bucketUsageBuilder;
-      }
-      return buildQuery(null);
+        unit_of_measure: "hour",
+        billing_method: "hourly",
+        burn_multiplier: 1,
+      }],
+      usageRows: [
+        {
+          tenant: "test_tenant",
+          client_id: "client-1",
+          contract_line_id: "contract-line-1",
+          service_catalog_id: "service-bucket",
+          bucket_id: "bucket-config-1",
+          period_start: "2025-02-01",
+          period_end: "2025-02-28",
+          minutes_used: 46 * 60,
+          overage_minutes: 6 * 60,
+        },
+      ],
     });
+
+    (engine as any).knex = mockKnex;
 
     const charges = await (engine as any).calculateBucketPlanCharges(
       "client-1",
@@ -210,49 +245,47 @@ describe("BillingEngine bucket timing", () => {
       "US-NY",
     );
 
-    const clientsBuilder = buildQuery({
-      client_id: "client-1",
-      tenant: "test_tenant",
-      is_tax_exempt: false,
-    });
-    const bucketConfigBuilder = buildQuery(null, [
-      {
-        config_id: "usage-bucket-config-1",
+    const { mockKnex } = buildPoolKnex((engine as any).knex, {
+      client: {
+        client_id: "client-1",
         tenant: "test_tenant",
-        service_id: "service-usage-bucket",
+        is_tax_exempt: false,
+      },
+      pool: {
+        bucket_id: "usage-bucket-config-1",
+        tenant: "test_tenant",
+        contract_line_id: "contract-line-1",
         total_minutes: 1000,
         overage_rate: 20,
+        allow_rollover: false,
+        bucket_name: null,
+        after_hours_multiplier: null,
+        covers_all_services: false,
+      },
+      members: [{
+        service_id: "service-usage-bucket",
         service_name: "Data Transfer",
         tax_rate_id: "tax-rate-1",
-        billing_method: "usage",
         unit_of_measure: "GB",
-      },
-    ]);
-    const bucketUsageBuilder = buildQuery(null, [
-      {
-        tenant: "test_tenant",
-        client_id: "client-1",
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-usage-bucket",
-        period_start: "2025-02-01",
-        period_end: "2025-03-01",
-        minutes_used: 1250,
-        overage_minutes: 250,
-      },
-    ]);
-
-    (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
-      if (tableName === "clients") {
-        return clientsBuilder;
-      }
-      if (tableName === "contract_line_service_configuration as clsc") {
-        return bucketConfigBuilder;
-      }
-      if (tableName === "bucket_usage") {
-        return bucketUsageBuilder;
-      }
-      return buildQuery(null);
+        billing_method: "usage",
+        burn_multiplier: 1,
+      }],
+      usageRows: [
+        {
+          tenant: "test_tenant",
+          client_id: "client-1",
+          contract_line_id: "contract-line-1",
+          service_catalog_id: "service-usage-bucket",
+          bucket_id: "usage-bucket-config-1",
+          period_start: "2025-02-01",
+          period_end: "2025-03-01",
+          minutes_used: 1250,
+          overage_minutes: 250,
+        },
+      ],
     });
+
+    (engine as any).knex = mockKnex;
 
     const charges = await (engine as any).calculateBucketPlanCharges(
       "client-1",

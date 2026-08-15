@@ -23,6 +23,17 @@ import {
   updateBucketUsageMinutes,
 } from '@alga-psa/shared/billingClients/bucketUsageService';
 import { computeWeightedMinutes } from '@alga-psa/shared/billingClients/weightedBurn';
+import { computeBucketCharges } from '@alga-psa/billing/lib/billing/compute/computeBucketCharges';
+import type { ChargeComputeTaxPorts } from '@alga-psa/billing/lib/billing/compute/types';
+
+// Tax ports that resolve no region: the weighted-overage invoice amount
+// assertions below are about the pre-tax charge total.
+const NO_TAX_PORTS: ChargeComputeTaxPorts = {
+  getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
+  getLocationTaxRegionCode: () => null,
+  getClientDefaultTaxRegionCode: () => null,
+  calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
+} as unknown as ChargeComputeTaxPorts;
 
 const ENABLED = process.env.RUN_DB_TESTS === '1';
 const TOTAL_MINUTES = 600; // 10 hours included
@@ -229,6 +240,50 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
       const over = await trx('bucket_usage').where({ usage_id: record.usage_id }).first();
       expect(Number(over.minutes_used)).toBe(720);
       expect(Number(over.overage_minutes)).toBe(120);
+    });
+  });
+
+  it('invoice amount equals weighted overage hours × rate', async () => {
+    await withSeededPool(async ({ trx, clientId, serviceId2x, contractLineId }) => {
+      // Two hours of 2x in-hours work = 240 weighted minutes consumed, then
+      // five more hours at 2x = 600 weighted minutes → 840 weighted consumed.
+      const record = await findOrCreateCurrentBucketUsageRecord(trx, clientId, serviceId2x, '2026-03-10T10:00:00Z');
+      await updateBucketUsageMinutes(trx, record.usage_id, 240);
+      await updateBucketUsageMinutes(trx, record.usage_id, 600);
+
+      const usageRows = await trx('bucket_usage').where({ tenant: tenantOf(trx), bucket_id: record.bucket_id }).select('*');
+
+      // Total pool 600; consumed 840 weighted → overage 240 weighted = 4 overage hours.
+      const result = computeBucketCharges(
+        {
+          billingPeriod: { startDate: '2026-03-01', endDate: '2026-03-31' },
+          clientContractLine: {
+            contract_line_id: contractLineId,
+            client_contract_line_id: contractLineId,
+            contract_line_type: 'Bucket',
+            currency_code: 'USD',
+          } as any,
+          client: { client_id: clientId, is_tax_exempt: false },
+          config: {
+            config_id: record.bucket_id,
+            service_id: serviceId2x,
+            service_name: 'Emergency Bucket',
+            total_minutes: 600,
+            overage_rate: 15000, // $150/hr
+            allow_rollover: false,
+            isWeighted: true,
+          },
+          usageRecords: usageRows,
+          contractCurrency: 'USD',
+        },
+        NO_TAX_PORTS,
+      );
+
+      const charge = result.charges[0];
+      expect(charge).toBeDefined();
+      expect(charge.overageHours).toBe(4); // 240 weighted overage minutes / 60
+      expect(charge.total).toBe(Math.ceil(4 * 15000)); // 4 weighted overage hrs × $150/hr
+      expect(charge.total).toBe(60000);
     });
   });
 
