@@ -153,7 +153,7 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
   }
 
   const extensionGatewayAccessPosture =
-    'The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension read permission for MSP users or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers.';
+    'The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers.';
 
   registerGatewayMethod(
     'get',

@@ -23,7 +23,7 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: mocks.getAdminConnection,
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
 }));
 
