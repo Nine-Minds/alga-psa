@@ -71,6 +71,8 @@ import {
   type BillingCycleCreationResult,
   type BillingHistoryBootstrapPreview,
   type ClientBillingSettings,
+  type CreditDrawdownPolicy,
+  resolveCreditDrawdownPolicy,
   type ServiceListOptions,
   type PaginatedServicesResponse,
   type UpdateClientBillingScheduleInput,
@@ -137,6 +139,18 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
   });
 
   return { success: true };
+});
+
+export const getResolvedCreditDrawdownPolicyAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<CreditDrawdownPolicy> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return resolveCreditDrawdownPolicy(trx, tenant, clientId);
+  });
 });
 
 export const createNextBillingCycleAsync = withAuth(async (

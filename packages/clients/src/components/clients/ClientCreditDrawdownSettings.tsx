@@ -11,6 +11,7 @@ import {
   getClientContractLineSettingsAsync,
   updateClientContractLineSettingsAsync,
   getServiceTypesForSelectionAsync,
+  getResolvedCreditDrawdownPolicyAsync,
 } from "../../lib/billingHelpers";
 
 // Local type definition to avoid circular dependency
@@ -23,6 +24,14 @@ interface BillingSettings {
   creditAutoApplyEnabled?: boolean | null;
   creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
   creditEligibleServiceTypeIds?: string[] | null;
+}
+
+// The resolved tenant draw-down policy, used to populate the disabled "Use
+// Default" controls and to seed the custom form when the user opts in.
+interface ResolvedDrawdownPolicy {
+  autoApplyEnabled: boolean;
+  applicationOrder: 'expiration_first' | 'oldest_first' | 'newest_first';
+  eligibleServiceTypeIds: string[] | null;
 }
 
 // A client is "using defaults" when none of the three draw-down fields carry a
@@ -46,15 +55,17 @@ interface ClientCreditDrawdownSettingsProps {
 const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> = ({ clientId }) => {
   const { t } = useTranslation('msp/clients');
   const [settings, setSettings] = useState<BillingSettings | null>(null);
+  const [resolvedPolicy, setResolvedPolicy] = useState<ResolvedDrawdownPolicy | null>(null);
   const [useDefault, setUseDefault] = useState(true);
   const [serviceTypes, setServiceTypes] = useState<Array<{ id: string; name: string; is_standard: boolean }>>([]);
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [clientSettings, serviceTypeResult] = await Promise.all([
+        const [clientSettings, serviceTypeResult, resolved] = await Promise.all([
           getClientContractLineSettingsAsync(clientId),
           getServiceTypesForSelectionAsync(),
+          getResolvedCreditDrawdownPolicyAsync(clientId),
         ]);
         if (clientSettings) {
           setSettings(clientSettings);
@@ -63,6 +74,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
           setSettings(null);
           setUseDefault(true);
         }
+        setResolvedPolicy(resolved);
         if (Array.isArray(serviceTypeResult)) {
           setServiceTypes(serviceTypeResult);
         }
@@ -145,14 +157,29 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         if (result.success) {
           setSettings(null);
           setUseDefault(true);
+          // The resolved policy now follows the tenant defaults; refresh it so
+          // the disabled controls keep reflecting the tenant's actual values.
+          try {
+            const resolved = await getResolvedCreditDrawdownPolicyAsync(clientId);
+            setResolvedPolicy(resolved);
+          } catch (error) {
+            handleError(error, t('clientCreditDrawdownSettings.loadError', { defaultValue: 'Failed to load settings' }));
+          }
           toast.success(t('clientCreditDrawdownSettings.useDefaultSuccess', { defaultValue: 'Client will now use default credit draw-down settings.' }));
         }
       } else {
-        // Enable client-specific draw-down only; never touch unrelated overrides.
+        // Enable client-specific draw-down seeded from the *resolved* policy,
+        // so flipping to custom is a no-op on the effective policy until the
+        // user actually edits a field. Never touch unrelated overrides.
+        const seed = resolvedPolicy ?? {
+          autoApplyEnabled: true,
+          applicationOrder: 'expiration_first',
+          eligibleServiceTypeIds: null,
+        };
         const newSettings: BillingSettings = {
-          creditAutoApplyEnabled: settings?.creditAutoApplyEnabled ?? true,
-          creditApplicationOrder: settings?.creditApplicationOrder ?? 'expiration_first',
-          creditEligibleServiceTypeIds: settings?.creditEligibleServiceTypeIds ?? null,
+          creditAutoApplyEnabled: seed.autoApplyEnabled,
+          creditApplicationOrder: seed.applicationOrder,
+          creditEligibleServiceTypeIds: seed.eligibleServiceTypeIds,
         };
         const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
         if (result.success) {
@@ -172,7 +199,18 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
     { value: 'newest_first', label: t('clientCreditDrawdownSettings.order.newestFirst', { defaultValue: 'Newest credit first' }) },
   ];
 
-  const selectedIds = settings?.creditEligibleServiceTypeIds ?? [];
+  // When "Use Default Settings" is active, the disabled controls show the
+  // resolved tenant policy (not hardcoded placeholders); when custom, they show
+  // the client's own overrides.
+  const effectiveAutoApply = useDefault
+    ? (resolvedPolicy?.autoApplyEnabled ?? true)
+    : (settings?.creditAutoApplyEnabled ?? true);
+  const effectiveOrder = useDefault
+    ? (resolvedPolicy?.applicationOrder ?? 'expiration_first')
+    : (settings?.creditApplicationOrder ?? 'expiration_first');
+  const effectiveEligibleIds = useDefault
+    ? (resolvedPolicy?.eligibleServiceTypeIds ?? [])
+    : (settings?.creditEligibleServiceTypeIds ?? []);
 
   return (
     <div className="mt-6">
@@ -199,7 +237,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
             <div className="flex items-center space-x-2 mb-4">
               <Switch
                 id="client-credit-auto-apply-enabled"
-                checked={settings?.creditAutoApplyEnabled ?? true}
+                checked={effectiveAutoApply}
                 onCheckedChange={handleAutoApplyChange}
                 disabled={useDefault}
               />
@@ -217,7 +255,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
               <CustomSelect
                 id="client-credit-application-order"
                 options={orderOptions}
-                value={settings?.creditApplicationOrder ?? 'expiration_first'}
+                value={effectiveOrder}
                 onValueChange={handleOrderChange}
                 placeholder={t('clientCreditDrawdownSettings.selectOrder', { defaultValue: 'Select credit order' })}
                 label={t('clientCreditDrawdownSettings.orderLabel', { defaultValue: 'Credit application order' })}
@@ -244,7 +282,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
                       key={serviceType.id}
                       id={`client-credit-eligible-service-type-${serviceType.id}`}
                       label={serviceType.name}
-                      checked={selectedIds.includes(serviceType.id)}
+                      checked={effectiveEligibleIds.includes(serviceType.id)}
                       disabled={useDefault}
                       onChange={(event) => handleServiceTypeToggle(serviceType.id, event.target.checked)}
                     />

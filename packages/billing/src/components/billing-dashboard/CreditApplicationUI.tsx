@@ -10,7 +10,7 @@ import { formatCurrency } from '@alga-psa/core';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
 import { formatDateOnly } from '@alga-psa/core';
-import { listClientCredits, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
+import { listClientCredits, applyCreditToInvoice, getResolvedCreditDrawdownPolicy } from '@alga-psa/billing/actions/creditActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 
 interface CreditApplicationUIProps {
@@ -50,6 +50,26 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCredits, setTotalCredits] = useState<number>(0);
+  const [creditOrder, setCreditOrder] = useState<'expiration_first' | 'oldest_first' | 'newest_first'>('expiration_first');
+
+  // Surface the resolved draw-down order so the note reflects the real policy
+  // rather than a hardcoded "expiration date (oldest first)" claim.
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const result = await getResolvedCreditDrawdownPolicy(clientId);
+        const returnedError = getReturnedActionError(result);
+        if (returnedError || !('applicationOrder' in result)) {
+          return;
+        }
+        setCreditOrder(result.applicationOrder);
+      } catch (error) {
+        console.error('Error fetching credit order policy:', error);
+      }
+    };
+
+    fetchOrder();
+  }, [clientId]);
 
   // Fetch available credits
   useEffect(() => {
@@ -280,9 +300,17 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                {t('application.creditOrderNote', {
-                  defaultValue: 'Credits are applied in order of expiration date (oldest first)',
-                })}
+                {creditOrder === 'oldest_first'
+                  ? t('application.creditOrderNoteOldestFirst', {
+                    defaultValue: 'Credits are applied in order of creation date (oldest first)',
+                  })
+                  : creditOrder === 'newest_first'
+                    ? t('application.creditOrderNoteNewestFirst', {
+                      defaultValue: 'Credits are applied in order of creation date (newest first)',
+                    })
+                    : t('application.creditOrderNoteExpirationFirst', {
+                      defaultValue: 'Credits are applied in order of expiration date (soonest first)',
+                    })}
               </p>
             </div>
           </div>

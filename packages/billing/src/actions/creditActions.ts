@@ -8,6 +8,8 @@ import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
+import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
+import type { CreditApplicationOrder, CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -458,94 +460,30 @@ export async function resolveCreditExpirationDate(
     return undefined;
 }
 
-export type CreditApplicationOrder = 'expiration_first' | 'oldest_first' | 'newest_first';
-
-export interface CreditDrawdownPolicy {
-    autoApplyEnabled: boolean;
-    applicationOrder: CreditApplicationOrder;
-    /** null = no restriction (all charges eligible); otherwise only these service_type ids. */
-    eligibleServiceTypeIds: string[] | null;
-}
-
-const CREDIT_APPLICATION_ORDERS: ReadonlySet<string> = new Set([
-    'expiration_first',
-    'oldest_first',
-    'newest_first',
-]);
-
-function normalizeCreditApplicationOrder(value: unknown): CreditApplicationOrder {
-    return typeof value === 'string' && CREDIT_APPLICATION_ORDERS.has(value)
-        ? (value as CreditApplicationOrder)
-        : 'expiration_first';
-}
-
-function normalizeEligibleServiceTypeIds(value: unknown): string[] | null {
-    if (value === null || value === undefined) {
-        return null;
-    }
-
-    let parsed: unknown = value;
-    if (typeof value === 'string') {
-        try {
-            parsed = JSON.parse(value);
-        } catch {
-            throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
-        }
-    }
-
-    if (!Array.isArray(parsed)) {
-        throw new Error('Malformed credit_eligible_service_type_ids policy: expected a JSON array or null');
-    }
-
-    return parsed.map((id) => String(id));
-}
+export { resolveCreditDrawdownPolicy };
+export type { CreditApplicationOrder, CreditDrawdownPolicy };
 
 /**
- * Resolve the credit draw-down policy for a client: per-field first-non-null
- * cascade from `client_billing_settings` over `default_billing_settings` to
- * hardcoded behavior-preserving defaults (auto-apply on, expiration-first,
- * no service-type restriction). Contract opt-out is not part of this cascade;
- * it is a charge-level filter in the apply engine.
+ * Server-action wrapper over resolveCreditDrawdownPolicy so client components
+ * can surface the resolved draw-down policy (the "Use Default" inherited
+ * display and the order note on the manual credit-application dialog).
  */
-export async function resolveCreditDrawdownPolicy(
-    conn: Knex | Knex.Transaction,
-    tenant: string,
+export const getResolvedCreditDrawdownPolicy = withAuth(async (
+    user,
+    { tenant },
     clientId: string
-): Promise<CreditDrawdownPolicy> {
-    const clientSettings = await tenantScopedTable(conn, tenant, 'client_billing_settings')
-        .where({ client_id: clientId, tenant })
-        .first();
+): Promise<CreditDrawdownPolicy | CreditActionError> => {
+    return withCreditActionErrors(async () => {
+        if (!await hasPermission(user, 'credit', 'read')) {
+            throw new Error('Permission denied: Cannot read client credits');
+        }
 
-    const defaultSettings = await tenantScopedTable(conn, tenant, 'default_billing_settings')
-        .first();
-
-    let autoApplyEnabled = true;
-    if (typeof clientSettings?.credit_auto_apply_enabled === 'boolean') {
-        autoApplyEnabled = clientSettings.credit_auto_apply_enabled;
-    } else if (typeof defaultSettings?.credit_auto_apply_enabled === 'boolean') {
-        autoApplyEnabled = defaultSettings.credit_auto_apply_enabled;
-    }
-
-    let applicationOrder: CreditApplicationOrder = 'expiration_first';
-    if (clientSettings?.credit_application_order != null) {
-        applicationOrder = normalizeCreditApplicationOrder(clientSettings.credit_application_order);
-    } else if (defaultSettings?.credit_application_order != null) {
-        applicationOrder = normalizeCreditApplicationOrder(defaultSettings.credit_application_order);
-    }
-
-    let eligibleServiceTypeIds: string[] | null = null;
-    if (clientSettings?.credit_eligible_service_type_ids != null) {
-        eligibleServiceTypeIds = normalizeEligibleServiceTypeIds(clientSettings.credit_eligible_service_type_ids);
-    } else if (defaultSettings?.credit_eligible_service_type_ids != null) {
-        eligibleServiceTypeIds = normalizeEligibleServiceTypeIds(defaultSettings.credit_eligible_service_type_ids);
-    }
-
-    return {
-        autoApplyEnabled,
-        applicationOrder,
-        eligibleServiceTypeIds,
-    };
-}
+        const { knex } = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return resolveCreditDrawdownPolicy(trx, tenant, clientId);
+        });
+    });
+});
 
 /**
  * Sum the invoice charges eligible for credit application under the resolved
