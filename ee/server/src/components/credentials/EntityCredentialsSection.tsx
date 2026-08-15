@@ -299,7 +299,10 @@ function CredentialsTile({
         isOpen={managerOpen}
         onClose={closeManager}
         title={title}
-        className="max-w-3xl"
+        // min-h matters: nested dialogs (attach picker, create form) render
+        // confined to this panel's bounds, so a short manager would squeeze
+        // them into an unusable sliver.
+        className="max-w-3xl min-h-[28rem]"
       >
         {/* Reset the bento variant: inside the dialog the full entity screen
             has room and should render in its standard shape. */}

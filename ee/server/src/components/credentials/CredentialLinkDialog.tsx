@@ -17,7 +17,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -101,67 +101,74 @@ export function CredentialLinkDialog({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('credentials.link.title')}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <Input
-            id="credential-link-search"
-            placeholder={t('credentials.link.searchPlaceholder')}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          {isLoading && <p className="text-sm text-gray-500">{t('credentials.screen.loading')}</p>}
-          {error && (
-            <Alert id="credential-link-error" variant="destructive">
-              <AlertDescription>{t('credentials.link.loadFailed')}</AlertDescription>
-            </Alert>
-          )}
-          {candidates && visible.length === 0 && (
-            <p id="credential-link-empty" className="text-sm text-gray-500">
-              {t('credentials.link.empty')}
-            </p>
-          )}
-          {visible.length > 0 && (
-            <ul id="credential-link-list" className="max-h-72 divide-y divide-gray-100 overflow-y-auto">
-              {visible.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-3 py-2">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="flex items-center gap-2 font-medium text-gray-900">
-                      <span id={`credential-link-name-${item.id}`}>{item.name}</span>
-                      <Badge variant="secondary">
-                        {item.source === 'hudu'
-                          ? t('credentials.screen.sourceHudu')
-                          : t('credentials.screen.sourceAlga')}
-                      </Badge>
+    // The Dialog shell owns the chrome: title bar, close X, scrollable body,
+    // sticky footer. Sizing lives on the shell (not an inner wrapper), so the
+    // panel and its content agree on width, and Cancel can't scroll away.
+    <Dialog
+      id="credential-link-dialog"
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('credentials.link.title')}
+      className="max-w-lg"
+      footer={
+        <Button id="credential-link-cancel" variant="outline" onClick={onClose}>
+          {t('credentials.link.cancel')}
+        </Button>
+      }
+    >
+      <div className="space-y-3">
+        <Input
+          id="credential-link-search"
+          placeholder={t('credentials.link.searchPlaceholder')}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {isLoading && (
+          <p className="text-sm text-[rgb(var(--color-text-500))]">{t('credentials.screen.loading')}</p>
+        )}
+        {error && (
+          <Alert id="credential-link-error" variant="destructive">
+            <AlertDescription>{t('credentials.link.loadFailed')}</AlertDescription>
+          </Alert>
+        )}
+        {candidates && visible.length === 0 && (
+          <p id="credential-link-empty" className="text-sm text-[rgb(var(--color-text-500))]">
+            {t('credentials.link.empty')}
+          </p>
+        )}
+        {visible.length > 0 && (
+          <ul id="credential-link-list" className="divide-y divide-[rgb(var(--color-border-100))]">
+            {visible.map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-3 py-2">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="flex items-center gap-2 font-medium text-[rgb(var(--color-text-900))]">
+                    <span id={`credential-link-name-${item.id}`} className="min-w-0 truncate">
+                      {item.name}
                     </span>
-                    {item.username && (
-                      <span className="truncate text-xs text-gray-500">{item.username}</span>
+                    {/* Badge the marked case only, as everywhere else. */}
+                    {item.source === 'hudu' && (
+                      <Badge variant="secondary">{t('credentials.screen.sourceHudu')}</Badge>
                     )}
-                  </div>
-                  <Button
-                    id={`credential-link-select-${item.id}`}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSelect(item)}
-                    disabled={linkingId === item.id}
-                  >
-                    <Link2 className="mr-1 h-3.5 w-3.5" />
-                    {t('credentials.link.attach')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <DialogFooter>
-          <Button id="credential-link-cancel" variant="outline" onClick={onClose}>
-            {t('credentials.link.cancel')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+                  </span>
+                  {item.username && (
+                    <span className="truncate text-xs text-[rgb(var(--color-text-500))]">{item.username}</span>
+                  )}
+                </div>
+                <Button
+                  id={`credential-link-select-${item.id}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelect(item)}
+                  disabled={linkingId === item.id}
+                >
+                  <Link2 className="mr-1 h-3.5 w-3.5" />
+                  {t('credentials.link.attach')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Dialog>
   );
 }

@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -114,11 +114,28 @@ export function CredentialRestrictDialog({
   };
 
   return (
-    <Dialog isOpen onClose={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('credentials.restrict.title')}</DialogTitle>
-        </DialogHeader>
+    // Shell owns the chrome: title bar, X, scrollable body, sticky footer.
+    <Dialog
+      id="credential-restrict-dialog"
+      isOpen
+      onClose={onClose}
+      title={t('credentials.restrict.title')}
+      className="max-w-lg"
+      footer={
+        <>
+          <Button id="credential-restrict-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+            {t('credentials.form.cancel')}
+          </Button>
+          <Button
+            id="credential-restrict-save"
+            onClick={handleSave}
+            disabled={isSaving || credential.source === 'hudu'}
+          >
+            {isSaving ? t('credentials.restrict.saving') : t('credentials.restrict.save')}
+          </Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           {credential.source === 'hudu' ? (
             <Alert id="credential-restrict-hudu-unsupported">
@@ -192,19 +209,6 @@ export function CredentialRestrictDialog({
             </Alert>
           )}
         </div>
-        <DialogFooter>
-          <Button id="credential-restrict-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
-            {t('credentials.form.cancel')}
-          </Button>
-          <Button
-            id="credential-restrict-save"
-            onClick={handleSave}
-            disabled={isSaving || credential.source === 'hudu'}
-          >
-            {isSaving ? t('credentials.restrict.saving') : t('credentials.restrict.save')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
     </Dialog>
   );
 }

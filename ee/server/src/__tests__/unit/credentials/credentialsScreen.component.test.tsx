@@ -163,8 +163,24 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
-    isOpen ? <div data-testid="dialog">{children}</div> : null,
+  Dialog: ({
+    children,
+    isOpen,
+    title,
+    footer,
+  }: {
+    children: React.ReactNode;
+    isOpen: boolean;
+    title?: string;
+    footer?: React.ReactNode;
+  }) =>
+    isOpen ? (
+      <div data-testid="dialog">
+        {title ? <h2>{title}</h2> : null}
+        {children}
+        {footer}
+      </div>
+    ) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,

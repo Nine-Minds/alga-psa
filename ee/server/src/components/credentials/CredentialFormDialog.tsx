@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -249,13 +249,25 @@ export function CredentialFormDialog({
     }
   };
 
-  return (    <Dialog isOpen={isOpen} onClose={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
-          </DialogTitle>
-        </DialogHeader>
+  return (
+    // Shell owns the chrome: title bar, X, scrollable body, sticky footer.
+    <Dialog
+      id="credential-form-dialog"
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
+      className="max-w-lg"
+      footer={
+        <>
+          <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+            {t('credentials.form.cancel')}
+          </Button>
+          <Button id="credential-form-submit" onClick={handleSubmit} disabled={isSaving}>
+            {isSaving ? t('credentials.form.saving') : t('credentials.form.save')}
+          </Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           <div className="space-y-1">
             <Label htmlFor="credential-form-name">{t('credentials.form.name')}</Label>
@@ -446,15 +458,6 @@ export function CredentialFormDialog({
             </Alert>
           )}
         </div>
-        <DialogFooter>
-          <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
-            {t('credentials.form.cancel')}
-          </Button>
-          <Button id="credential-form-submit" onClick={handleSubmit} disabled={isSaving}>
-            {isSaving ? t('credentials.form.saving') : t('credentials.form.save')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
     </Dialog>
   );
 }
