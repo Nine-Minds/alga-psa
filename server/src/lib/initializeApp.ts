@@ -62,6 +62,19 @@ export async function initializeApp() {
     await bootstrapInboundWebhookActions();
     logger.info('Inbound webhook actions bootstrapped');
 
+    // Register the admin-notification implementation for the inbound
+    // auth-failure auto-pause (the shared lifecycle service owns the pause
+    // transition but cannot depend on @alga-psa/notifications).
+    try {
+      const { registerInboundAuthPauseNotifications } = await import(
+        '../services/email/inboundAuthPauseNotificationService'
+      );
+      registerInboundAuthPauseNotifications();
+      logger.info('Inbound auth-pause notifications registered');
+    } catch (error) {
+      logger.error('Failed to register inbound auth-pause notifications:', error);
+    }
+
     // Validate secret uniqueness first (must succeed)
     try {
       await validateSecretUniqueness();

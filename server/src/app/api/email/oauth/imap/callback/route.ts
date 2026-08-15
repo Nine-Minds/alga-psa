@@ -114,6 +114,37 @@ export async function GET(request: NextRequest) {
         updated_at: knex.fn.now(),
       });
 
+    // A successful reconnect for a provider auto-paused on repeated auth
+    // failures must resume ingestion only after reconciling the paused
+    // interval: recovery clears UID/folder cursors (bounded rescan with
+    // dedupe) and only then clears the pause. The token exchange above
+    // validated the new credentials.
+    if (provider.inbound_paused_at && provider.inbound_pause_reason === 'auth_failure') {
+      try {
+        const { EmailProviderLifecycleService } = await import(
+          '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+        );
+        const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+          state.providerId,
+          tenant,
+          { credentialsValidated: true }
+        );
+        console.info('IMAP auth-failure recovery after reconnect', {
+          tenant,
+          providerId: state.providerId,
+          resumed: recovery.resumed,
+          reconciliation: recovery.reconciliation,
+          error: recovery.error,
+        });
+      } catch (recoveryError) {
+        console.warn('IMAP auth-failure recovery after reconnect failed (provider stays paused)', {
+          tenant,
+          providerId: state.providerId,
+          error: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+        });
+      }
+    }
+
     const rawSuccessRedirect = state.redirectUri || url.origin;
     let successRedirect = rawSuccessRedirect;
 

@@ -1109,6 +1109,38 @@ export const updateEmailProvider = withAuth(async (
       }
     }
 
+    if (!skipAutomation && data.providerType === 'imap') {
+      // Edited IMAP credentials are the reconnect path for a provider
+      // auto-paused on repeated auth failures. Recovery validates the new
+      // credentials while still paused, clears UID/folder cursors so the
+      // poller rescans the paused interval, and only then clears the pause.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            {}
+          );
+          if (!recovery.resumed) {
+            result.setupError = recovery.error || 'IMAP reconnection failed. Check the credentials and try again.';
+            provider.status = 'error';
+          }
+        }
+      } catch (error) {
+        console.error('IMAP auth-failure recovery after credential update failed:', error);
+        result.setupError = 'IMAP reconnection failed. Check the credentials and try again.';
+        provider.status = 'error';
+      }
+    }
+
     return result;
   } catch (error) {
     if (error instanceof ExpectedEmailProviderActionError) {
@@ -1377,6 +1409,35 @@ export const testEmailProviderConnection = withAuth(async (
         error_message: null,
         updated_at: knex.fn.now()
       });
+
+    // A successful connection test validates the current credentials: for a
+    // provider auto-paused on repeated auth failures this is a legitimate
+    // reconnect trigger. Recovery re-establishes delivery, reconciles the
+    // paused interval, and only then clears the pause.
+    if (provider.inbound_paused_at && provider.inbound_pause_reason === 'auth_failure') {
+      try {
+        const { EmailProviderLifecycleService } = await import(
+          '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+        );
+        const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+          providerId,
+          tenant,
+          { credentialsValidated: true }
+        );
+        if (!recovery.resumed) {
+          return emailProviderOperationError(
+            recovery.error || 'Reconnection failed. Try the provider-specific reconnect flow.',
+            'connection_failed'
+          );
+        }
+      } catch (error) {
+        console.error('Auth-failure recovery after successful connection test failed:', error);
+        return emailProviderOperationError(
+          'Reconnection failed. Try the provider-specific reconnect flow.',
+          'connection_failed'
+        );
+      }
+    }
 
     return { success: true };
   } catch (error) {

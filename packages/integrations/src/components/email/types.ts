@@ -12,7 +12,7 @@ export interface EmailProvider {
   mailbox: string;
   isActive: boolean;
   inboundPausedAt?: string | null;
-  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;

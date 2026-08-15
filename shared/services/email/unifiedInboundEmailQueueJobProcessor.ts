@@ -2,7 +2,6 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import axios from 'axios';
 import type {
   EmailMessageDetails,
   EmailProviderConfig,
@@ -18,6 +17,9 @@ import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAda
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
+import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
+import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
+import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 
 export class SourceMessageUnavailableError extends Error {
   public readonly reason: string;
@@ -185,87 +187,6 @@ function isImapAuthenticationError(error: any): boolean {
   }
 
   return false;
-}
-
-async function getImapOauthSecrets(provider: {
-  id: string;
-  tenant: string;
-}): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
-  const secretProvider = await getSecretProviderInstance();
-  const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
-  const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
-  return { clientSecret, refreshToken };
-}
-
-async function refreshImapAccessToken(params: {
-  provider: {
-    id: string;
-    tenant: string;
-    oauth_token_url?: string | null;
-    oauth_client_id?: string | null;
-    oauth_client_secret?: string | null;
-    refresh_token?: string | null;
-    access_token?: string | null;
-    token_expires_at?: string | null;
-  };
-  db: Awaited<ReturnType<typeof getAdminConnection>>;
-}): Promise<string> {
-  const { provider, db } = params;
-  if (!provider.oauth_token_url || !provider.oauth_client_id) {
-    throw new Error('IMAP OAuth token URL or client ID missing');
-  }
-
-  const { clientSecret, refreshToken } = await getImapOauthSecrets({
-    id: provider.id,
-    tenant: provider.tenant,
-  });
-  const effectiveRefreshToken = refreshToken || provider.refresh_token;
-  const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
-  if (!effectiveRefreshToken) {
-    throw new Error('IMAP OAuth refresh token missing');
-  }
-
-  const paramsBody = new URLSearchParams();
-  paramsBody.append('grant_type', 'refresh_token');
-  paramsBody.append('refresh_token', effectiveRefreshToken);
-  paramsBody.append('client_id', provider.oauth_client_id);
-  if (effectiveClientSecret) {
-    paramsBody.append('client_secret', effectiveClientSecret);
-  }
-
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
-  const accessToken = asNonEmptyString(response?.data?.access_token);
-  if (!accessToken) {
-    throw new Error('IMAP OAuth refresh returned no access token');
-  }
-
-  const expiresInSeconds = Number(response?.data?.expires_in || 3600);
-  const expiresAt = new Date(
-    Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
-  ).toISOString();
-
-  await tenantDb(db, provider.tenant).table('imap_email_provider_config')
-    .where({ email_provider_id: provider.id })
-    .update({
-      access_token: accessToken,
-      token_expires_at: expiresAt,
-      updated_at: db.fn.now(),
-    });
-
-  provider.access_token = accessToken;
-  provider.token_expires_at = expiresAt;
-  console.info('[UnifiedInboundEmailQueueJobProcessor] refreshed IMAP OAuth access token', {
-    event: 'imap_oauth_refresh',
-    tenantId: provider.tenant,
-    providerId: provider.id,
-    expiresAt,
-  });
-
-  return accessToken;
 }
 
 export async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
@@ -972,7 +893,59 @@ export async function processUnifiedInboundEmailQueueJob(
         reason: `source_unavailable:${error.reason}`,
       };
     }
+
+    // Only strictly classified terminal credential failures advance the
+    // consecutive auth-failure counter; everything else (throttling, server
+    // errors, timeouts, transport failures, downstream processing) does not.
+    // The original error still propagates: the existing queue retry policy
+    // stays authoritative, and once the threshold trips, the pause gate above
+    // stops the next attempt.
+    const classification = classifyInboundAuthFailure({
+      providerType: job.provider,
+      error,
+    });
+    if (classification.kind === 'unrecoverable_auth') {
+      try {
+        const outcome = await new EmailProviderLifecycleService().recordUnrecoverableAuthFailure(
+          job.providerId,
+          job.tenantId,
+          classification.code
+        );
+        if (outcome.autoPaused) {
+          console.info('[UnifiedInboundEmailQueueJobProcessor] provider auto-paused after repeated auth failures', {
+            event: 'inbound_email_provider_auto_paused',
+            tenantId: job.tenantId,
+            providerId: job.providerId,
+            provider: job.provider,
+            authFailureCode: classification.code,
+            count: outcome.count,
+          });
+        }
+      } catch (recordError) {
+        console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to record auth failure', {
+          event: 'inbound_email_auth_failure_record_failed',
+          tenantId: job.tenantId,
+          providerId: job.providerId,
+          authFailureCode: classification.code,
+          error: recordError instanceof Error ? recordError.message : String(recordError),
+        });
+      }
+    }
     throw error;
+  }
+
+  // Any successful source access — including an empty fetch — resets the
+  // consecutive auth-failure counter before downstream ticket processing,
+  // so application failures never inflate the credential-failure count.
+  try {
+    await new EmailProviderLifecycleService().recordSourceAccessSuccess(job.providerId, job.tenantId);
+  } catch (resetError) {
+    console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to reset auth-failure counter', {
+      event: 'inbound_email_auth_failure_reset_failed',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      error: resetError instanceof Error ? resetError.message : String(resetError),
+    });
   }
 
   if (payloads.length === 0) {

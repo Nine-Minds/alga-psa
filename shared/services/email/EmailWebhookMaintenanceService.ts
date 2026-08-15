@@ -8,6 +8,7 @@ import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { persistIngressPointer } from './inboundEmailProducer';
 import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
+import { classifyInboundAuthFailure } from './InboundEmailAuthFailurePolicy';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -29,6 +30,45 @@ interface RenewalResult {
 interface ReconciliationResult {
   queuedMessages: number;
   switchedToPolling: boolean;
+}
+
+/**
+ * Record a Microsoft token-health outcome on the provider's auth-failure
+ * counter. This covers providers whose subscription has gone quiet (polling
+ * mode / lapsed webhook) and therefore no longer receive pointer jobs: their
+ * only regular source access is the maintenance token check.
+ *
+ * Lazy-imported to avoid a static module cycle with the lifecycle service.
+ */
+async function recordTokenHealthOutcome(params: {
+  providerId: string;
+  tenant: string;
+  error?: unknown;
+}): Promise<void> {
+  try {
+    const { EmailProviderLifecycleService } = await import('./EmailProviderLifecycleService');
+    const lifecycle = new EmailProviderLifecycleService();
+    if (!params.error) {
+      await lifecycle.recordSourceAccessSuccess(params.providerId, params.tenant);
+      return;
+    }
+    const classification = classifyInboundAuthFailure({
+      providerType: 'microsoft',
+      error: params.error,
+    });
+    if (classification.kind !== 'unrecoverable_auth') return;
+    await lifecycle.recordUnrecoverableAuthFailure(
+      params.providerId,
+      params.tenant,
+      classification.code
+    );
+  } catch (error) {
+    logger.warn('Failed to record Microsoft token-health auth outcome', {
+      providerId: params.providerId,
+      tenant: params.tenant,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 const TOKEN_REFRESH_LOOK_AHEAD_MINUTES = 30;
@@ -93,7 +133,17 @@ export class EmailWebhookMaintenanceService {
       try {
         const resolvedConfig = await buildMicrosoftEmailProviderConfig(candidate);
         const adapter = new MicrosoftGraphAdapter(resolvedConfig);
-        await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        try {
+          await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+          await recordTokenHealthOutcome({ providerId: candidate.id, tenant: candidate.tenant });
+        } catch (error: any) {
+          await recordTokenHealthOutcome({
+            providerId: candidate.id,
+            tenant: candidate.tenant,
+            error,
+          });
+          throw error;
+        }
         await this.updateProviderConnectionStatus(candidate.id, candidate.tenant, 'connected', null);
         await this.reconcileMissedMessages(adapter, resolvedConfig, false);
         results.push({
@@ -287,8 +337,14 @@ export class EmailWebhookMaintenanceService {
 
       try {
         await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        await recordTokenHealthOutcome({ providerId: config.id, tenant: config.tenant });
         await this.updateProviderConnectionStatus(config.id, config.tenant, 'connected', null);
       } catch (error: any) {
+        await recordTokenHealthOutcome({
+          providerId: config.id,
+          tenant: config.tenant,
+          error,
+        });
         const message = error?.message || 'Microsoft token refresh failed';
         await this.updateProviderConnectionStatus(config.id, config.tenant, 'error', message);
         await this.updateHealthStatus(config.id, config.tenant, {
@@ -514,10 +570,88 @@ export class EmailWebhookMaintenanceService {
     };
   }
 
+  /**
+   * Public, bounded reconciliation entry point for the auth-failure recovery
+   * path. Accepts an explicit `since` boundary (the provider's saved
+   * `inbound_paused_at`) and preserves the internal algorithm's safety
+   * margin, cursor lock, overflow handling, and durable ingress behavior.
+   *
+   * Unlike renewal candidates, the provider may still be ingestion-paused when
+   * this runs — the recovery flow only clears the pause after this handoff is
+   * durable — so the loader must not apply the paused gate.
+   */
+  async reconcileProviderMessages(params: {
+    providerId: string;
+    tenant: string;
+    since: string | Date;
+  }): Promise<{ queuedMessages: number }> {
+    const config = await this.loadMicrosoftProviderIgnoringPauseGate(params.providerId, params.tenant);
+    const resolvedConfig = await buildMicrosoftEmailProviderConfig(config);
+    const adapter = new MicrosoftGraphAdapter(resolvedConfig);
+    const result = await this.reconcileMissedMessages(adapter, resolvedConfig, false, new Date(params.since));
+    return { queuedMessages: result.queuedMessages };
+  }
+
+  /** Like findActiveMicrosoftProviders but tenant-scoped, exact-provider, and without the paused gate. */
+  private async loadMicrosoftProviderIgnoringPauseGate(
+    providerId: string,
+    tenant: string
+  ): Promise<EmailProviderConfig> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    const query = db.table('email_providers as ep');
+    db.tenantJoin(
+      query,
+      'microsoft_email_provider_config as mpc',
+      'ep.id',
+      'mpc.email_provider_id',
+      { rootTenantColumn: 'ep.tenant' }
+    );
+    const row = await query
+      .where('ep.id', providerId)
+      .andWhere('ep.provider_type', 'microsoft')
+      .first(
+        'ep.id',
+        'ep.tenant',
+        'ep.provider_name',
+        'ep.provider_type',
+        'ep.mailbox',
+        'ep.is_active',
+        'ep.status',
+        'ep.last_sync_at',
+        'ep.error_message',
+        'ep.created_at',
+        'ep.updated_at',
+        'mpc.webhook_subscription_id',
+        'mpc.webhook_verification_token',
+        'mpc.webhook_expires_at',
+        'mpc.last_subscription_renewal',
+        'mpc.delivery_mode',
+        'mpc.last_webhook_delivery_at',
+        'mpc.webhook_silent_runs',
+        'mpc.next_subscription_probe_at',
+        'mpc.client_id',
+        'mpc.client_secret',
+        'mpc.tenant_id',
+        'mpc.access_token',
+        'mpc.refresh_token',
+        'mpc.token_expires_at',
+        'mpc.folder_filters',
+        'mpc.max_emails_per_sync',
+        'mpc.microsoft_profile_id',
+        'mpc.client_secret_ref'
+      );
+    if (!row) {
+      throw new Error(`Microsoft email provider ${providerId} not found for reconciliation`);
+    }
+    return this.mapRowToConfig(row);
+  }
+
   private async reconcileMissedMessages(
     adapter: MicrosoftGraphAdapter,
     config: EmailProviderConfig,
-    detectWebhookSilence: boolean
+    detectWebhookSilence: boolean,
+    sinceOverride?: Date
   ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
@@ -531,7 +665,12 @@ export class EmailWebhookMaintenanceService {
     const lastReconciliationMs = reconciliationState?.last_reconciliation_at
       ? new Date(reconciliationState.last_reconciliation_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
       : Date.now() - RECONCILE_WINDOW_CAP_MS;
-    const since = new Date(Math.max(lastReconciliationMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    // An explicit boundary (auth-pause recovery) keeps the same safety margin
+    // and window cap as the renewal-driven path.
+    const sinceFloorMs = sinceOverride
+      ? sinceOverride.getTime() - RECONCILE_SAFETY_MARGIN_MS
+      : lastReconciliationMs;
+    const since = new Date(Math.max(sinceFloorMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
     const maxCount = Math.max(
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)

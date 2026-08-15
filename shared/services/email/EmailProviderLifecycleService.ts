@@ -6,14 +6,72 @@ import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfi
 import { GmailAdapter } from './providers/GmailAdapter';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
+import { INBOUND_AUTH_FAILURE_PAUSE_THRESHOLD } from './InboundEmailAuthFailurePolicy';
+import {
+  dispatchInboundAuthPauseNotification,
+} from './inboundAuthPauseNotifier';
+import { persistIngressPointer } from './inboundEmailProducer';
+import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
+import { refreshImapAccessToken } from './imapOauthToken';
 
-export type InboundPauseReason = 'manual' | 'tenant_cancelled';
+export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
 
 export interface ResumeProviderResult {
   resumed: boolean;
   webhookRegistered: boolean;
   error?: string;
+  reconciliation?: InboundAuthPauseReconciliation;
+  /** True when the provider is paused for auth_failure and credentials must be re-established before resume. */
+  reconnectRequired?: boolean;
 }
+
+export interface InboundAuthPauseReconciliation {
+  status: 'started' | 'completed';
+  queuedMessages: number;
+}
+
+export interface RecoverAuthPausedProviderOptions {
+  /**
+   * The reconnect path already proved the new credentials work (e.g. an OAuth
+   * callback that just exchanged tokens, or a successful connection test).
+   */
+  credentialsValidated?: boolean;
+  /**
+   * The reconnect path already re-established delivery (e.g. webhook/watch
+   * registration inside setup automation), so recovery must not double-register.
+   */
+  deliveryEstablished?: boolean;
+  /**
+   * Google only: the pre-watch history_id captured before the reconnect flow
+   * replaced it with a new watch cursor. When omitted, recovery captures the
+   * current cursor itself before any registration it performs.
+   */
+  savedHistoryId?: string | null;
+}
+
+export type RecoverAuthPausedProviderResult = ResumeProviderResult & {
+  reconciliation?: InboundAuthPauseReconciliation;
+};
+
+export interface RecordUnrecoverableAuthFailureResult {
+  count: number;
+  autoPaused: boolean;
+  providerType?: 'microsoft' | 'google' | 'imap';
+  providerName?: string;
+  mailbox?: string;
+  pausedAt?: string;
+}
+
+/** Safe, secret-free provider-facing error for the auth_failure pause state. */
+export const INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE =
+  'Sign-in was rejected by the email provider. Reconnect the mailbox to resume inbound email.';
+
+/** Upper bound on Google recovery message ids enqueued per reconnect. */
+const GOOGLE_RECOVERY_MAX_MESSAGES = 200;
+
+/** IMAP credential validation timeouts (mirror the queue processor defaults). */
+const IMAP_VALIDATION_CONNECTION_TIMEOUT_MS = 10_000;
+const IMAP_VALIDATION_SOCKET_TIMEOUT_MS = 30_000;
 
 type ProviderRecord = {
   id: string;
@@ -25,9 +83,22 @@ type ProviderRecord = {
   status: EmailProviderConfig['connection_status'];
   inbound_paused_at?: string | Date | null;
   inbound_pause_reason?: InboundPauseReason | null;
+  inbound_auth_failure_count?: number | null;
+  inbound_auth_failure_code?: string | null;
   created_at: string;
   updated_at: string;
 };
+
+function isImapTokenExpired(tokenExpiresAt: unknown): boolean {
+  if (typeof tokenExpiresAt !== 'string' || !tokenExpiresAt.trim()) return true;
+  const expiresAtMs = new Date(tokenExpiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) return true;
+  return expiresAtMs - Date.now() < 5 * 60 * 1000;
+}
+
+function isGmailHistoryIdRejected(error: any): boolean {
+  return error?.code === 'gmail.historyIdNotFound';
+}
 
 export class EmailProviderLifecycleService {
   private async loadProvider(providerId: string, tenant: string): Promise<{
@@ -160,9 +231,141 @@ export class EmailProviderLifecycleService {
     return true;
   }
 
+  /**
+   * Reset the consecutive auth-failure counter after any successful provider
+   * source access — including a fetch that returned no new messages.
+   */
+  async recordSourceAccessSuccess(providerId: string, tenant: string): Promise<void> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    await db.table('email_providers')
+      .where({ id: providerId })
+      .where((builder: any) => {
+        builder
+          .where('inbound_auth_failure_count', '>', 0)
+          .orWhereNotNull('inbound_auth_failure_last_at');
+      })
+      .update({
+        inbound_auth_failure_count: 0,
+        inbound_auth_failure_last_at: null,
+        inbound_auth_failure_code: null,
+        updated_at: knex.fn.now(),
+      });
+  }
+
+  /**
+   * Record one strictly classified unrecoverable auth failure. The provider
+   * row is locked in a tenant-scoped transaction so the counter increment and
+   * the pause transition are atomic; exactly one caller observes the
+   * unpaused→paused transition and performs teardown + admin notification.
+   * Concurrent failing jobs see the already-paused row and no-op.
+   */
+  async recordUnrecoverableAuthFailure(
+    providerId: string,
+    tenant: string,
+    safeCode: string
+  ): Promise<RecordUnrecoverableAuthFailureResult> {
+    const knex = await getAdminConnection();
+    const outcome = await knex.transaction(async (trx) => {
+      const trxDb = tenantDb(trx, tenant);
+      const row = await trxDb.table('email_providers')
+        .where({ id: providerId })
+        .forUpdate()
+        .first() as ProviderRecord | undefined;
+      if (!row) {
+        throw new Error('Provider not found');
+      }
+
+      if (row.inbound_paused_at) {
+        return {
+          count: Number(row.inbound_auth_failure_count || 0),
+          autoPaused: false,
+        };
+      }
+
+      const nextCount = Number(row.inbound_auth_failure_count || 0) + 1;
+      const nowIso = new Date().toISOString();
+      const shouldPause = nextCount >= INBOUND_AUTH_FAILURE_PAUSE_THRESHOLD;
+
+      await trxDb.table('email_providers')
+        .where({ id: providerId })
+        .update({
+          inbound_auth_failure_count: nextCount,
+          inbound_auth_failure_last_at: nowIso,
+          inbound_auth_failure_code: safeCode,
+          ...(shouldPause
+            ? {
+                inbound_paused_at: nowIso,
+                inbound_pause_reason: 'auth_failure' as InboundPauseReason,
+                status: 'error',
+                error_message: INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE,
+              }
+            : {}),
+          updated_at: trx.fn.now(),
+        });
+
+      return {
+        count: nextCount,
+        autoPaused: shouldPause,
+        providerType: row.provider_type,
+        providerName: row.provider_name,
+        mailbox: row.mailbox,
+        pausedAt: shouldPause ? nowIso : undefined,
+      };
+    });
+
+    // Only the transaction that flipped an unpaused row to paused may tear
+    // down subscriptions and notify admins — exactly once per pause.
+    if (outcome.autoPaused) {
+      console.info('[EmailProviderLifecycle] auto-paused provider after repeated auth failures', {
+        tenant,
+        providerId,
+        providerType: outcome.providerType,
+        authFailureCode: safeCode,
+        count: outcome.count,
+        pausedAt: outcome.pausedAt,
+      });
+      try {
+        await this.teardownProviderSubscriptions(providerId, tenant);
+      } catch (error) {
+        console.warn('[EmailProviderLifecycle] teardown after auth-failure pause failed', {
+          tenant,
+          providerId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      await dispatchInboundAuthPauseNotification({
+        tenant,
+        providerId,
+        providerName: outcome.providerName || '',
+        mailbox: outcome.mailbox || '',
+        providerType: outcome.providerType || 'microsoft',
+        authFailureCode: safeCode,
+        pausedAt: outcome.pausedAt || new Date().toISOString(),
+      });
+    }
+
+    return outcome;
+  }
+
   async resumeProvider(providerId: string, tenant: string): Promise<ResumeProviderResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, tenant);
+    const current = await db.table('email_providers')
+      .where({ id: providerId })
+      .first('id', 'inbound_paused_at', 'inbound_pause_reason') as
+      | { id: string; inbound_paused_at: string | null; inbound_pause_reason: InboundPauseReason | null }
+      | undefined;
+
+    if (!current) throw new Error('Provider not found');
+
+    // A provider paused because its credentials were rejected must not be
+    // resumed bare: dead credentials would immediately recreate the failure
+    // loop. Route through validate → re-establish → reconcile → clear.
+    if (current.inbound_paused_at && current.inbound_pause_reason === 'auth_failure') {
+      return await this.recoverAuthPausedProvider(providerId, tenant);
+    }
+
     const updated = await db.table('email_providers')
       .where({ id: providerId })
       .whereNotNull('inbound_paused_at')
@@ -189,48 +392,8 @@ export class EmailProviderLifecycleService {
     }
 
     try {
-      const adapterConfig = this.toAdapterConfig(provider, vendorConfig);
-      if (provider.provider_type === 'microsoft') {
-        const adapter = new MicrosoftGraphAdapter(
-          await buildMicrosoftEmailProviderConfig(adapterConfig)
-        );
-        const result = await adapter.initializeWebhook(adapterConfig.webhook_notification_url);
-        if (!result.success && result.errorKind === 'validation') {
-          // Same degradation as initializeProviderWebhook: an unreachable
-          // endpoint means polling, not a dead provider.
-          await new EmailWebhookMaintenanceService().usePollingDelivery({
-            providerId,
-            tenant,
-            reason: result.error || 'Microsoft webhook endpoint validation failed on resume',
-          });
-          await db.table('email_providers').where({ id: providerId }).update({
-            status: 'connected',
-            error_message: null,
-            updated_at: knex.fn.now(),
-          });
-          return { resumed: true, webhookRegistered: false };
-        }
-        if (!result.success) throw new Error(result.error || 'Microsoft webhook registration failed');
-        await db.table('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId })
-          .update({
-            webhook_subscription_id: result.subscriptionId || null,
-            updated_at: knex.fn.now(),
-          });
-        await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
-          providerId,
-          tenant,
-          reason: 'inbound pause resumed; webhook re-registered',
-        });
-      } else {
-        await new GmailAdapter(adapterConfig).registerWebhookSubscription();
-      }
-      await db.table('email_providers').where({ id: providerId }).update({
-        status: 'connected',
-        error_message: null,
-        updated_at: knex.fn.now(),
-      });
-      return { resumed: true, webhookRegistered: true };
+      const webhookRegistered = await this.establishProviderDelivery(providerId, tenant, provider, vendorConfig);
+      return { resumed: true, webhookRegistered };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await db.table('email_providers').where({ id: providerId }).update({
@@ -240,6 +403,392 @@ export class EmailProviderLifecycleService {
       });
       return { resumed: true, webhookRegistered: false, error: message };
     }
+  }
+
+  /**
+   * Re-establish delivery for a provider after its pause columns were already
+   * cleared. Shared by manual resume and the auth-failure recovery path.
+   * Returns whether a webhook/watch was registered.
+   */
+  private async establishProviderDelivery(
+    providerId: string,
+    tenant: string,
+    provider: ProviderRecord,
+    vendorConfig: any
+  ): Promise<boolean> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    const adapterConfig = this.toAdapterConfig(provider, vendorConfig);
+    if (provider.provider_type === 'microsoft') {
+      const adapter = new MicrosoftGraphAdapter(
+        await buildMicrosoftEmailProviderConfig(adapterConfig)
+      );
+      const result = await adapter.initializeWebhook(adapterConfig.webhook_notification_url);
+      if (!result.success && result.errorKind === 'validation') {
+        // Same degradation as initializeProviderWebhook: an unreachable
+        // endpoint means polling, not a dead provider.
+        await new EmailWebhookMaintenanceService().usePollingDelivery({
+          providerId,
+          tenant,
+          reason: result.error || 'Microsoft webhook endpoint validation failed on resume',
+        });
+        await db.table('email_providers').where({ id: providerId }).update({
+          status: 'connected',
+          error_message: null,
+          updated_at: knex.fn.now(),
+        });
+        return false;
+      }
+      if (!result.success) throw new Error(result.error || 'Microsoft webhook registration failed');
+      await db.table('microsoft_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .update({
+          webhook_subscription_id: result.subscriptionId || null,
+          updated_at: knex.fn.now(),
+        });
+      await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+        providerId,
+        tenant,
+        reason: 'inbound pause resumed; webhook re-registered',
+      });
+    } else {
+      await new GmailAdapter(adapterConfig).registerWebhookSubscription();
+    }
+    await db.table('email_providers').where({ id: providerId }).update({
+      status: 'connected',
+      error_message: null,
+      updated_at: knex.fn.now(),
+    });
+    return true;
+  }
+
+  /**
+   * Recovery path for providers auto-paused for auth_failure.
+   *
+   * Order is deliberate and matches the approved plan: save the pause
+   * boundary and old vendor cursor, validate credentials while still paused,
+   * re-establish delivery, reconcile the paused interval durably, and only
+   * then clear the pause and auth-failure counters. A failure at any step
+   * leaves/reinststates the pause and returns a reconnect-required error.
+   */
+  async recoverAuthPausedProvider(
+    providerId: string,
+    tenant: string,
+    options: RecoverAuthPausedProviderOptions = {}
+  ): Promise<RecoverAuthPausedProviderResult> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    const provider = await db.table('email_providers')
+      .where({ id: providerId })
+      .first() as ProviderRecord | undefined;
+    if (!provider) throw new Error('Provider not found');
+
+    if (!provider.inbound_paused_at || provider.inbound_pause_reason !== 'auth_failure') {
+      return { resumed: false, webhookRegistered: false };
+    }
+
+    // 1. Pause boundary snapshot — before any registration can overwrite cursors.
+    const pausedAt = new Date(provider.inbound_paused_at);
+
+    const failRecovery = async (error: unknown): Promise<RecoverAuthPausedProviderResult> => {
+      const message = error instanceof Error ? error.message : String(error);
+      await db.table('email_providers').where({ id: providerId }).update({
+        status: 'error',
+        error_message: INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE,
+        updated_at: knex.fn.now(),
+      });
+      console.warn('[EmailProviderLifecycle] auth-failure recovery rejected; provider stays paused', {
+        tenant,
+        providerId,
+        error: message,
+      });
+      return {
+        resumed: false,
+        webhookRegistered: false,
+        reconnectRequired: true,
+        error: message,
+      };
+    };
+
+    // 2. Validate credentials while the ingestion pause is still active.
+    if (!options.credentialsValidated) {
+      try {
+        await this.validateProviderCredentials(provider, tenant);
+      } catch (error) {
+        return await failRecovery(error);
+      }
+    }
+
+    // 3. Re-establish the notification source (unless the reconnect path
+    //    already did it — never double-register a webhook/watch).
+    let webhookRegistered = false;
+    if (!options.deliveryEstablished) {
+      const loaded = await this.loadProvider(providerId, tenant);
+      if (!loaded) throw new Error('Provider not found');
+      const shouldRegister = loaded.provider.is_active && (
+        loaded.provider.provider_type === 'google'
+        || (loaded.provider.provider_type === 'microsoft' && loaded.vendorConfig.delivery_mode === 'webhook')
+      );
+      if (shouldRegister) {
+        try {
+          webhookRegistered = await this.establishProviderDelivery(
+            providerId,
+            tenant,
+            loaded.provider,
+            loaded.vendorConfig
+          );
+        } catch (error) {
+          return await failRecovery(error);
+        }
+      }
+    }
+
+    // 4. Reconcile from the saved pause boundary with the durable dedupe path.
+    let reconciliation: InboundAuthPauseReconciliation;
+    try {
+      if (provider.provider_type === 'microsoft') {
+        const result = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
+          providerId,
+          tenant,
+          since: pausedAt,
+        });
+        reconciliation = { status: 'completed', queuedMessages: result.queuedMessages };
+      } else if (provider.provider_type === 'google') {
+        const result = await this.reconcileGooglePausedInterval({
+          providerId,
+          tenant,
+          pausedAt,
+          savedHistoryId: options.savedHistoryId,
+        });
+        reconciliation = { status: 'completed', queuedMessages: result.queuedMessages };
+      } else {
+        const result = await this.reconcileImapPausedInterval({ providerId, tenant });
+        reconciliation = { status: 'started', queuedMessages: result.queuedMessages };
+      }
+    } catch (error) {
+      return await failRecovery(error);
+    }
+
+    // 5. The reconciliation handoff is durable; clear the pause and counters.
+    await this.clearAuthPause(providerId, tenant);
+
+    console.info('[EmailProviderLifecycle] auth-failure recovery completed', {
+      tenant,
+      providerId,
+      providerType: provider.provider_type,
+      webhookRegistered,
+      reconciliation,
+    });
+
+    return { resumed: true, webhookRegistered, reconciliation };
+  }
+
+  private async clearAuthPause(providerId: string, tenant: string): Promise<void> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, tenant);
+    await db.table('email_providers')
+      .where({ id: providerId })
+      .update({
+        inbound_paused_at: null,
+        inbound_pause_reason: null,
+        inbound_auth_failure_count: 0,
+        inbound_auth_failure_last_at: null,
+        inbound_auth_failure_code: null,
+        status: 'connected',
+        error_message: null,
+        updated_at: knex.fn.now(),
+      });
+  }
+
+  /**
+   * Credential validation for the recovery path. Deliberately read-only: it
+   * proves the stored credentials can access the mailbox without registering
+   * anything or clearing the pause.
+   */
+  private async validateProviderCredentials(provider: ProviderRecord, tenant: string): Promise<void> {
+    const loaded = await this.loadProvider(provider.id, tenant);
+    if (!loaded) throw new Error('Provider not found');
+    const adapterConfig = this.toAdapterConfig(loaded.provider, loaded.vendorConfig);
+
+    if (loaded.provider.provider_type === 'microsoft') {
+      const adapter = new MicrosoftGraphAdapter(
+        await buildMicrosoftEmailProviderConfig(adapterConfig)
+      );
+      const test = await adapter.testConnection();
+      if (!test.success) {
+        throw new Error(test.error || 'Microsoft Graph connection test failed');
+      }
+      return;
+    }
+
+    if (loaded.provider.provider_type === 'google') {
+      const adapter = new GmailAdapter(adapterConfig);
+      const test = await adapter.testConnection();
+      if (!test.success) {
+        throw new Error(test.error || 'Gmail connection test failed');
+      }
+      return;
+    }
+
+    await this.validateImapCredentials(provider.id, tenant, loaded.vendorConfig);
+  }
+
+  private async validateImapCredentials(
+    providerId: string,
+    tenant: string,
+    imapConfig: any
+  ): Promise<void> {
+    if (!imapConfig?.host) {
+      throw new Error('IMAP provider config not found');
+    }
+
+    const knex = await getAdminConnection();
+    let accessToken = typeof imapConfig.access_token === 'string' && imapConfig.access_token.trim()
+      ? imapConfig.access_token
+      : null;
+
+    if (imapConfig.auth_type === 'oauth2' && (!accessToken || isImapTokenExpired(imapConfig.token_expires_at))) {
+      accessToken = await refreshImapAccessToken({ provider: imapConfig, db: knex });
+    }
+
+    const auth: any = { user: imapConfig.username };
+    if (imapConfig.auth_type === 'oauth2') {
+      auth.accessToken = accessToken;
+      auth.method = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+    } else {
+      const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+      const secretProvider = await getSecretProviderInstance();
+      auth.pass = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}`);
+    }
+
+    if (!auth.pass && !auth.accessToken) {
+      throw new Error('IMAP credentials missing');
+    }
+
+    const { ImapFlow } = await import('imapflow');
+    const client = new ImapFlow({
+      host: imapConfig.host,
+      port: Number(imapConfig.port),
+      secure: Boolean(imapConfig.secure),
+      auth,
+      disableAutoIdle: true,
+      logger: false,
+      connectionTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: IMAP_VALIDATION_CONNECTION_TIMEOUT_MS,
+      socketTimeout: IMAP_VALIDATION_SOCKET_TIMEOUT_MS,
+      tls: imapConfig.secure || imapConfig.allow_starttls ? { rejectUnauthorized: (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false' } : undefined,
+    });
+
+    try {
+      await client.connect();
+    } finally {
+      try {
+        await client.logout();
+      } catch {
+        try {
+          client.close();
+        } catch {
+          // best effort
+        }
+      }
+    }
+  }
+
+  /**
+   * Google reconciliation: list changes from the pre-watch history cursor and
+   * enqueue the resulting message ids through the unified durable path. If
+   * Gmail rejects the old cursor, fall back to a mailbox query bounded by the
+   * pause timestamp rather than silently accepting a gap.
+   */
+  private async reconcileGooglePausedInterval(params: {
+    providerId: string;
+    tenant: string;
+    pausedAt: Date;
+    savedHistoryId?: string | null;
+  }): Promise<{ queuedMessages: number }> {
+    const loaded = await this.loadProvider(params.providerId, params.tenant);
+    if (!loaded) throw new Error('Provider not found');
+
+    const currentHistoryId = loaded.vendorConfig?.history_id
+      ? String(loaded.vendorConfig.history_id)
+      : null;
+    const savedHistoryId = params.savedHistoryId
+      ? String(params.savedHistoryId)
+      : currentHistoryId;
+
+    const adapter = new GmailAdapter(this.toAdapterConfig(loaded.provider, loaded.vendorConfig));
+    let messageIds: string[] = [];
+    if (savedHistoryId) {
+      try {
+        messageIds = await adapter.listMessagesSince(savedHistoryId);
+      } catch (error) {
+        if (!isGmailHistoryIdRejected(error)) throw error;
+        console.info('[EmailProviderLifecycle] Gmail paused-interval cursor rejected; falling back to pause-bounded query', {
+          tenant: params.tenant,
+          providerId: params.providerId,
+          savedHistoryId,
+        });
+        messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
+      }
+    } else {
+      messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
+    }
+
+    messageIds = messageIds.slice(0, GOOGLE_RECOVERY_MAX_MESSAGES);
+
+    let queuedMessages = 0;
+    for (const messageId of messageIds) {
+      const durable = await persistIngressPointer({
+        tenant: params.tenant,
+        providerId: params.providerId,
+        providerType: 'google',
+        pointer: {
+          providerType: 'google',
+          providerMessageId: messageId,
+          historyId: savedHistoryId,
+          extra: { resource: 'auth-pause-reconcile' },
+        },
+      });
+      if (!(durable.mode === 'enforce' && durable.ingressId)) {
+        await enqueueUnifiedInboundEmailQueueJob({
+          tenantId: params.tenant,
+          providerId: params.providerId,
+          provider: 'google',
+          pointer: {
+            historyId: currentHistoryId || savedHistoryId || '',
+            emailAddress: loaded.provider.mailbox,
+            discoveredMessageIds: [messageId],
+          },
+        });
+      }
+      queuedMessages += 1;
+    }
+
+    return { queuedMessages };
+  }
+
+  /**
+   * IMAP reconciliation: clear UID/folder cursors (the existing resync
+   * contract) so the poller scans the mailbox again; normal dedupe suppresses
+   * already-processed mail. Only reachable after credentials validated.
+   */
+  private async reconcileImapPausedInterval(params: {
+    providerId: string;
+    tenant: string;
+  }): Promise<{ queuedMessages: number }> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, params.tenant);
+    await db.table('imap_email_provider_config')
+      .where({ email_provider_id: params.providerId })
+      .update({
+        uid_validity: null,
+        last_uid: null,
+        last_processed_message_id: null,
+        folder_state: {},
+        last_error: null,
+        updated_at: knex.fn.now(),
+      });
+    return { queuedMessages: 0 };
   }
 
   async deleteProvider(providerId: string, tenant: string): Promise<void> {

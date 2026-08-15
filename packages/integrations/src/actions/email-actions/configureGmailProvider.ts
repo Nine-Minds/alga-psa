@@ -65,8 +65,23 @@ export async function configureGmailProvider({
 
   try {
     await runWithTenant(tenant, async () => {
+      // Capture the pre-watch history cursor and pause state before any
+      // registration overwrites them: the auth-failure recovery path must
+      // reconcile from the cursor that was valid when the provider paused.
+      const { knex: boundaryKnex } = await createTenantKnex(tenant);
+      const boundaryDb = tenantDb(boundaryKnex, tenant);
+      const [boundaryProvider, boundaryGoogleConfig] = await Promise.all([
+        boundaryDb.table('email_providers').where({ id: providerId }).first('inbound_paused_at', 'inbound_pause_reason'),
+        boundaryDb.table('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id'),
+      ]);
+      const savedHistoryId = boundaryGoogleConfig?.history_id ? String(boundaryGoogleConfig.history_id) : null;
+      const pausedForAuthFailure = Boolean(
+        boundaryProvider?.inbound_paused_at && boundaryProvider.inbound_pause_reason === 'auth_failure'
+      );
+
       // Check if Pub/Sub was already initialized recently (within 24 hours) unless force=true
-      if (!force) {
+      // or the provider is paused for auth failure (reconnect must re-establish the watch).
+      if (!force && !pausedForAuthFailure) {
         const {knex} = await createTenantKnex(tenant);
         const db = tenantDb(knex, tenant);
         const config = await db.table('google_email_provider_config')
@@ -217,6 +232,38 @@ export async function configureGmailProvider({
         console.log(`✅ Successfully registered Gmail watch subscription for provider ${providerId}`);
         result.watchRegistered = true;
         result.success = true;
+
+        // A successful reconnect for a provider auto-paused on repeated auth
+        // failures must resume ingestion only after durably reconciling the
+        // paused interval. Tokens are freshly saved and the watch above
+        // re-established delivery, so recovery only reconciles from the
+        // saved pre-watch cursor and clears the pause.
+        if (pausedForAuthFailure) {
+          try {
+            const { EmailProviderLifecycleService } = await import(
+              '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+            );
+            const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+              providerId,
+              tenant,
+              { credentialsValidated: true, deliveryEstablished: true, savedHistoryId }
+            );
+            console.info('Gmail auth-failure recovery after reconnect', {
+              tenant,
+              providerId,
+              resumed: recovery.resumed,
+              reconciliation: recovery.reconciliation,
+              error: recovery.error,
+            });
+          } catch (recoveryError) {
+            console.warn('Gmail auth-failure recovery after reconnect failed (provider stays paused)', {
+              tenant,
+              providerId,
+              savedHistoryId,
+              error: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+            });
+          }
+        }
       } catch (watchError) {
         const errorMessage = watchError instanceof Error ? watchError.message : String(watchError);
         console.error(`❌ Failed to register Gmail watch subscription for provider ${providerId}:`, {

@@ -415,6 +415,19 @@ function EmailProviderConfigurationContent({
     setDiagnosticsOpen(true);
   };
 
+  // Provider-specific reconnect dispatch for auth_failure auto-pauses. The
+  // card's Reconnect button threads through here so no OAuth logic lives in
+  // the card: Microsoft/Google open their setup flow in the edit drawer,
+  // IMAP OAuth mailboxes start the popup reconnect flow, and password IMAP
+  // mailboxes open credential editing.
+  const handleReconnect = (provider: EmailProvider) => {
+    if (provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2') {
+      handleReconnectOAuth(provider);
+      return;
+    }
+    openEditDrawer(provider);
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -539,6 +552,7 @@ function EmailProviderConfigurationContent({
           onReconnectOAuth={handleReconnectOAuth}
           onResyncProvider={handleResyncProvider}
           onRunDiagnostics={handleRunDiagnostics}
+          onReconnect={handleReconnect}
           onAddClick={() => setWizardOpen(true)}
         />
 

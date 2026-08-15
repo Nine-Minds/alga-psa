@@ -167,6 +167,11 @@
       "pauseError": "55555"
     },
     "pausedHelp": "55555",
+    "authFailure": {
+      "title": "55555",
+      "description": "55555 {{mailbox}} 55555",
+      "action": "55555"
+    },
     "fields": {
       "status": "55555",
       "lastSync": "55555",
