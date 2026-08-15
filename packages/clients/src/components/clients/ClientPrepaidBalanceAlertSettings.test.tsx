@@ -98,7 +98,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
 
     await userEvent.click(screen.getByRole('switch', { name: /prepaid credit alerts/i }));
-    const amount = screen.getByLabelText(/credit threshold/i);
+    const amount = screen.getByPlaceholderText('e.g. 500.00');
     await userEvent.type(amount, '50');
     await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
@@ -118,7 +118,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
 
     await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
-    const percent = screen.getByLabelText(/consumption threshold/i);
+    const percent = screen.getByPlaceholderText('e.g. 80');
     await userEvent.type(percent, '150');
     await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
@@ -131,7 +131,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
 
     await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
-    await userEvent.type(screen.getByLabelText(/consumption threshold/i), '80');
+    await userEvent.type(screen.getByPlaceholderText('e.g. 80'), '80');
     await userEvent.click(screen.getByRole('switch', { name: /client billing recipient/i }));
     await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
@@ -163,8 +163,8 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
 
-    expect(screen.getByLabelText(/credit threshold/i)).toHaveValue(50);
-    expect(screen.getByLabelText(/consumption threshold/i)).toHaveValue(80);
+    expect(screen.getByPlaceholderText('e.g. 500.00')).toHaveValue(50);
+    expect(screen.getByPlaceholderText('e.g. 80')).toHaveValue(80);
     // Turning off both alert types disables and clears the client opt-in.
     await userEvent.click(screen.getByRole('switch', { name: /prepaid credit alerts/i }));
     await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
@@ -193,7 +193,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
 
     // JPY has 0 fraction digits: 500 JPY must display as "500", never "5.00".
-    const amount = screen.getByLabelText(/credit threshold/i) as HTMLInputElement;
+    const amount = screen.getByPlaceholderText('e.g. 500.00') as HTMLInputElement;
     expect(amount.value).toBe('500');
 
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
