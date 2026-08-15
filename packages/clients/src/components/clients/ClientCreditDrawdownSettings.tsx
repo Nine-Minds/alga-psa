@@ -76,15 +76,11 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
 
   const handleAutoApplyChange = async (checked: boolean) => {
     try {
-      const newSettings: BillingSettings = {
-        zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
-        suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
-        enableCreditExpiration: settings?.enableCreditExpiration ?? true,
-        creditExpirationDays: settings?.creditExpirationDays ?? 365,
-        creditExpirationNotificationDays: settings?.creditExpirationNotificationDays ?? [30, 7, 1],
+      // Send only the field being changed; the shared update path leaves every
+      // unrelated override untouched.
+      const result = await updateClientContractLineSettingsAsync(clientId, {
         creditAutoApplyEnabled: checked,
-      };
-      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
+      });
       if (result.success) {
         setSettings((prev) => ({ ...prev, creditAutoApplyEnabled: checked }));
         setUseDefault(false);
@@ -98,15 +94,11 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   const handleOrderChange = async (value: string) => {
     try {
       const order = value as 'expiration_first' | 'oldest_first' | 'newest_first';
-      const newSettings: BillingSettings = {
-        zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
-        suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
-        enableCreditExpiration: settings?.enableCreditExpiration ?? true,
-        creditExpirationDays: settings?.creditExpirationDays ?? 365,
-        creditExpirationNotificationDays: settings?.creditExpirationNotificationDays ?? [30, 7, 1],
+      // Send only the field being changed; the shared update path leaves every
+      // unrelated override untouched.
+      const result = await updateClientContractLineSettingsAsync(clientId, {
         creditApplicationOrder: order,
-      };
-      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
+      });
       if (result.success) {
         setSettings((prev) => ({ ...prev, creditApplicationOrder: order }));
         setUseDefault(false);
@@ -124,15 +116,11 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         ? Array.from(new Set([...current, serviceTypeId]))
         : current.filter((id) => id !== serviceTypeId);
       const nextValue = next.length === 0 ? null : next;
-      const newSettings: BillingSettings = {
-        zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
-        suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
-        enableCreditExpiration: settings?.enableCreditExpiration ?? true,
-        creditExpirationDays: settings?.creditExpirationDays ?? 365,
-        creditExpirationNotificationDays: settings?.creditExpirationNotificationDays ?? [30, 7, 1],
+      // Send only the field being changed; the shared update path leaves every
+      // unrelated override untouched.
+      const result = await updateClientContractLineSettingsAsync(clientId, {
         creditEligibleServiceTypeIds: nextValue,
-      };
-      const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
+      });
       if (result.success) {
         setSettings((prev) => ({ ...prev, creditEligibleServiceTypeIds: nextValue }));
         setUseDefault(false);
@@ -160,12 +148,8 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
           toast.success(t('clientCreditDrawdownSettings.useDefaultSuccess', { defaultValue: 'Client will now use default credit draw-down settings.' }));
         }
       } else {
+        // Enable client-specific draw-down only; never touch unrelated overrides.
         const newSettings: BillingSettings = {
-          zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
-          suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
-          enableCreditExpiration: settings?.enableCreditExpiration ?? true,
-          creditExpirationDays: settings?.creditExpirationDays ?? 365,
-          creditExpirationNotificationDays: settings?.creditExpirationNotificationDays ?? [30, 7, 1],
           creditAutoApplyEnabled: settings?.creditAutoApplyEnabled ?? true,
           creditApplicationOrder: settings?.creditApplicationOrder ?? 'expiration_first',
           creditEligibleServiceTypeIds: settings?.creditEligibleServiceTypeIds ?? null,

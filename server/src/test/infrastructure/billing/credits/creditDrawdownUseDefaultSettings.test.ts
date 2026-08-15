@@ -203,5 +203,32 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
     expect(policy.autoApplyEnabled).toBe(false);
     expect(policy.applicationOrder).toBe('oldest_first');
     expect(policy.eligibleServiceTypeIds).toEqual([tenantEligibleTypeId]);
+
+    // A subsequent single-field draw-down edit (e.g. toggling auto-apply) must
+    // not clobber the unrelated overrides that survived Use Default.
+    await updateClientBillingSettings(context.db, context.tenantId, clientId, {
+      creditAutoApplyEnabled: true,
+    });
+
+    const rowAfterEdit = await tenantTable(context, 'client_billing_settings')
+      .where({ client_id: clientId, tenant: context.tenantId })
+      .first();
+
+    expect(rowAfterEdit.zero_dollar_invoice_handling).toBe('finalized');
+    expect(rowAfterEdit.suppress_zero_dollar_invoices).toBe(true);
+    expect(rowAfterEdit.enable_credit_expiration).toBe(true);
+    expect(rowAfterEdit.credit_expiration_days).toBe(90);
+    expect(rowAfterEdit.credit_expiration_notification_days).toEqual([7]);
+    expect(rowAfterEdit.has_external_credit).toBe(true);
+    expect(rowAfterEdit.external_credit_note).toBe('Paid through Dec 2026 by check');
+
+    expect(rowAfterEdit.credit_auto_apply_enabled).toBe(true);
+    expect(rowAfterEdit.credit_application_order).toBeNull();
+    expect(rowAfterEdit.credit_eligible_service_type_ids).toBeNull();
+
+    const policyAfterEdit = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);
+    expect(policyAfterEdit.autoApplyEnabled).toBe(true);
+    expect(policyAfterEdit.applicationOrder).toBe('oldest_first');
+    expect(policyAfterEdit.eligibleServiceTypeIds).toEqual([tenantEligibleTypeId]);
   });
 });
