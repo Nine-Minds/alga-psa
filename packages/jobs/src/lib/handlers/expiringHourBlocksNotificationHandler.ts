@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
-import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
+import { runWithTenant, getConnection, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { IHourBlock } from '@alga-psa/types';
-import { toCalendarDateString } from '@alga-psa/core';
+import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { Temporal } from '@js-temporal/polyfill';
 
 export interface ExpiringHourBlocksNotificationJobData extends Record<string, unknown> {
   tenantId: string;
@@ -34,6 +35,14 @@ export async function expiringHourBlocksNotificationHandler(
     console.log(`Processing expiring hour blocks notifications for tenant ${tenantId}${clientId ? ` and client ${clientId}` : ''}`);
 
     try {
+      // "Today" for the notification window is the TENANT's calendar date (same
+      // invariant as the auto-expiration handler): expiration_date is stored as a
+      // tenant-local calendar date, and the threshold window must be built on the
+      // tenant's calendar regardless of the worker host's timezone.
+      // resolveEffectiveTimeZone falls back to UTC when the tenant has no
+      // timezone configured.
+      const timeZone = await resolveEffectiveTimeZone(knex, tenantId);
+
       const defaultSettings = await tenantScopedTable(knex, 'default_billing_settings', tenantId)
         .first();
 
@@ -50,7 +59,7 @@ export async function expiringHourBlocksNotificationHandler(
       }
 
       for (const daysBeforeExpiration of notificationThresholds) {
-        await processNotificationsForThreshold(knex, tenantId, daysBeforeExpiration, clientId);
+        await processNotificationsForThreshold(knex, tenantId, timeZone, daysBeforeExpiration, clientId);
       }
     } catch (error: any) {
       console.error(`Error processing expiring hour blocks notifications: ${error.message}`, error);
@@ -62,17 +71,17 @@ export async function expiringHourBlocksNotificationHandler(
 async function processNotificationsForThreshold(
   knex: Knex,
   tenant: string,
+  timeZone: string,
   daysBeforeExpiration: number,
   clientId?: string,
 ): Promise<void> {
-  // Target the exact LOCAL calendar date, never a UTC round-trip. expiration_date
-  // is a DATE column holding the calendar date the user picked, so the window
-  // must be built from local calendar components (toCalendarDateString, which
-  // never touches toISOString). A DATE column spans one day, so equality on
-  // YYYY-MM-DD is the correct predicate.
-  const target = new Date();
-  target.setDate(target.getDate() + daysBeforeExpiration);
-  const targetDate = toCalendarDateString(target);
+  // Target the exact TENANT-LOCAL calendar date, never a host-time or UTC
+  // round-trip. expiration_date is a DATE column holding the calendar date the
+  // user picked, so the window is tenant-today + N calendar days (Temporal
+  // PlainDate arithmetic keeps it calendar-based). A DATE column spans one day,
+  // so equality on YYYY-MM-DD is the correct predicate.
+  const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
+  const targetDate = Temporal.PlainDate.from(today).add({ days: daysBeforeExpiration }).toString();
 
   let query = (tenantScopedTable(knex, 'hour_blocks', tenant) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
     .where('status', 'active')

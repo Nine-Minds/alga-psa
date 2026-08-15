@@ -120,6 +120,31 @@ export function toCalendarDateString(
   return toPlainDate(value).toString();
 }
 
+/**
+ * Calendar date (YYYY-MM-DD) of `value` in the given IANA timezone. Derived via
+ * Intl.DateTimeFormat parts so the result is the wall-clock calendar day in
+ * `timeZone` regardless of the host's timezone — never routed through Date
+ * reparsing or toISOString (which would re-read the host/UTC calendar). This is
+ * the timezone-aware counterpart to {@link toCalendarDateString}: use it where
+ * "today" must be evaluated on a tenant's calendar (expiration boundaries) and
+ * the worker host's timezone is not authoritative.
+ *
+ * Throws on an invalid timeZone string (Intl rejects garbage); callers should
+ * resolve the timezone through a validating fallback (e.g. the tenant-settings
+ * read + `normalizeIanaTimeZone` pattern) and default to 'UTC' when unset.
+ */
+export function toCalendarDateStringInTimeZone(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 export function formatUtcDateNoTime(date: Date): string {
   return (
     date.getUTCFullYear() +

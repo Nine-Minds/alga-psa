@@ -1,8 +1,8 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
+import { runWithTenant, getConnection, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { IHourBlock } from '@alga-psa/types';
-import { toCalendarDateString } from '@alga-psa/core';
+import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 
 export interface ExpiredHourBlocksJobData extends Record<string, unknown> {
   tenantId: string;
@@ -30,6 +30,17 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
   await runWithTenant(tenantId, async () => {
     const knex = await getConnection(tenantId);
 
+    // "Today" for expiration eligibility is the TENANT's calendar date, not the
+    // worker host's: expiration_date is a DATE column holding the tenant-local
+    // calendar date, so a Berlin tenant's block expiring 2026-08-31 is expired
+    // the moment Berlin enters 2026-09-01 — even when the worker runs in UTC and
+    // still reads 2026-08-31. resolveEffectiveTimeZone reads the tenant's
+    // settings timezone and falls back to UTC when none is configured (no
+    // "user-local" ground truth exists, and UTC is deterministic across
+    // workers). Matches the shared burn engine
+    // (hourBlockService.getAvailableHourBlockMinutes).
+    const timeZone = await resolveEffectiveTimeZone(knex, tenantId);
+
     console.log(`Processing expired hour blocks for tenant ${tenantId}${clientId ? ` and client ${clientId}` : ''}`);
 
     try {
@@ -37,14 +48,7 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
         await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
-        // "Today" for expiration eligibility is the server's LOCAL calendar date:
-        // expiration_date is a DATE column holding the user-local calendar date, so
-        // a block expiring 2026-08-31 is expired the moment local time enters
-        // 2026-09-01 — even while UTC still reads 2026-08-31. UTC-today (the old
-        // `toISODate(toPlainDate(new Date().toISOString()))`) delayed auto-expiration
-        // by up to 24h in positive-offset zones. Matches the shared burn engine
-        // (hourBlockService.getAvailableHourBlockMinutes).
-        const today = toCalendarDateString(new Date());
+        const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
 
         let query = (tenantScopedTable(trx, 'hour_blocks', tenantId) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
           .where('status', 'active')

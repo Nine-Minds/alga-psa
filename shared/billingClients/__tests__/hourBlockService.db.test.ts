@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
-import { toCalendarDateString } from '@alga-psa/core';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import {
   allocateTimeEntry,
   reverseTimeEntryAllocations,
@@ -476,56 +476,121 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
     }
   });
 
-  // "Today" for expiration eligibility must be the server's LOCAL calendar date,
-  // not UTC-today: expiration dates are stored as user-local calendar dates, so
-  // a block expiring 2026-08-30 is expired the moment local time enters 2026-08-31
-  // even while UTC still reads 2026-08-30. The old UTC-today counted such a block
-  // as available for up to 24h.
-  it('available-minutes "today" boundary uses the server-local calendar date (Europe/Berlin)', async () => {
-    const originalTz = process.env.TZ;
-    assertTz('Europe/Berlin', -120);
-    const db = connect();
-    const tenant = uuidv4();
-    const clientId = uuidv4();
+  // "Today" for expiration eligibility must be the TENANT's calendar date, not
+  // the worker host's and not UTC: expiration dates are stored as tenant-local
+  // calendar dates, so a block expiring 2026-08-30 is expired the moment the
+  // tenant enters 2026-08-31 even while a UTC worker still reads 2026-08-30.
+  // Each case pins the WORKER process TZ to a zone that disagrees with the
+  // tenant's configured timezone, freezes "now" at an instant where the tenant
+  // calendar has rolled over but the worker's has not, and proves the boundary
+  // follows the tenant calendar. Blocks: the tenant-yesterday block is excluded,
+  // the tenant-today and never-expiring blocks count => 1200.
+  it('available-minutes "today" follows the tenant calendar for a Berlin tenant on a UTC worker (the reviewer\'s scenario)', async () => {
+    await assertAvailableBoundary({
+      workerTz: 'UTC',
+      workerOffsetMinutes: 0,
+      tenantTz: 'Europe/Berlin',
+      freezeAt: '2026-08-30T23:00:00.000Z', // Berlin 2026-08-31 01:00
+      tenantToday: '2026-08-31',
+      workerToday: '2026-08-30',
+      expiredDay: '2026-08-30',
+      todayDay: '2026-08-31',
+    });
+  });
 
-    try {
-      await db('tenants').insert({ tenant, client_name: 'HB TZ Today', email: 'hbtz-today@test.local', billing_source: 'test' });
-      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB TZ Today Client' });
-      const { service_id: svc } = await insertService(db, tenant, 'Today Svc', 1);
+  it('available-minutes "today" follows the tenant calendar for a Kiritimati tenant on a UTC worker', async () => {
+    await assertAvailableBoundary({
+      workerTz: 'UTC',
+      workerOffsetMinutes: 0,
+      tenantTz: 'Pacific/Kiritimati',
+      freezeAt: '2026-08-30T10:00:00.000Z', // Kiritimati 2026-08-31 00:00
+      tenantToday: '2026-08-31',
+      workerToday: '2026-08-30',
+      expiredDay: '2026-08-30',
+      todayDay: '2026-08-31',
+    });
+  });
 
-      // Freeze "now" at 2026-08-30T23:00Z = 2026-08-31T01:00+02:00 Berlin: local
-      // today is 2026-08-31 while UTC today is still 2026-08-30.
-      vi.useFakeTimers({ toFake: ['Date'] });
-      vi.setSystemTime(new Date('2026-08-30T23:00:00.000Z'));
-      expect(toCalendarDateString(new Date())).toBe('2026-08-31');
-      expect(new Date().toISOString().slice(0, 10)).toBe('2026-08-30');
+  it('available-minutes "today" is worker-independent: identical Berlin boundary from a New York worker', async () => {
+    await assertAvailableBoundary({
+      workerTz: 'America/New_York',
+      workerOffsetMinutes: 240,
+      tenantTz: 'Europe/Berlin',
+      freezeAt: '2026-08-30T23:00:00.000Z', // New York 2026-08-30 19:00, Berlin 2026-08-31 01:00
+      tenantToday: '2026-08-31',
+      workerToday: '2026-08-30',
+      expiredDay: '2026-08-30',
+      todayDay: '2026-08-31',
+    });
+  });
 
-      const blockUtcToday = uuidv4();
-      await insertBlock(db, tenant, clientId, svc, blockUtcToday, '2026-08-30'); // expired locally, UTC-today
-      const blockLocalToday = uuidv4();
-      await insertBlock(db, tenant, clientId, svc, blockLocalToday, '2026-08-31'); // local today
-      const blockNever = uuidv4();
-      await insertBlock(db, tenant, clientId, svc, blockNever, null);
-
-      const available = await getAvailableHourBlockMinutes(db, tenant, clientId);
-      // The UTC-today-expiring block is already expired in Berlin and must be
-      // excluded; the local-today and never-expiring blocks count.
-      expect(available).toBe(1200);
-    } finally {
-      vi.useRealTimers();
-      process.env.TZ = originalTz;
-      await db('hour_blocks').where({ tenant }).delete();
-      await db('hour_block_service_scopes').where({ tenant }).delete();
-      await db('hour_block_time_allocations').where({ tenant }).delete();
-      await db('hour_block_audit').where({ tenant }).delete();
-      await db('time_entries').where({ tenant }).delete();
-      await db('tickets').where({ tenant }).delete();
-      await db('service_catalog').where({ tenant }).delete();
-      await db('service_types').where({ tenant }).delete();
-      await db('users').where({ tenant }).delete();
-      await db('clients').where({ tenant }).delete();
-      await db('tenants').where({ tenant }).delete();
-      await db.destroy();
-    }
+  it('available-minutes "today" falls back to the UTC calendar when the tenant has no timezone configured (documented)', async () => {
+    await assertAvailableBoundary({
+      workerTz: 'UTC',
+      workerOffsetMinutes: 0,
+      tenantTz: null,
+      freezeAt: '2026-08-31T22:00:00.000Z', // UTC today 2026-08-31
+      tenantToday: '2026-08-31',
+      workerToday: '2026-08-31',
+      expiredDay: '2026-08-30',
+      todayDay: '2026-08-31',
+    });
   });
 });
+
+async function assertAvailableBoundary(opts: {
+  workerTz: string;
+  workerOffsetMinutes: number;
+  tenantTz: string | null;
+  freezeAt: string;
+  tenantToday: string;
+  workerToday: string;
+  expiredDay: string;
+  todayDay: string;
+}): Promise<void> {
+  const originalTz = process.env.TZ;
+  assertTz(opts.workerTz, opts.workerOffsetMinutes);
+  const db = connect();
+  const tenant = uuidv4();
+  const clientId = uuidv4();
+
+  try {
+    await db('tenants').insert({ tenant, client_name: 'HB TZ Today', email: 'hbtz-today@test.local', billing_source: 'test' });
+    await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB TZ Today Client' });
+    const { service_id: svc } = await insertService(db, tenant, 'Today Svc', 1);
+    await db('tenant_settings').insert({ tenant, settings: opts.tenantTz ? { timezone: opts.tenantTz } : {} });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(opts.freezeAt));
+    expect(toCalendarDateStringInTimeZone(new Date(), opts.tenantTz ?? 'UTC'), 'tenant calendar must be at tenantToday').toBe(opts.tenantToday);
+    expect(new Date().toISOString().slice(0, 10), 'worker calendar must still be at workerToday').toBe(opts.workerToday);
+
+    const blockExpired = uuidv4();
+    await insertBlock(db, tenant, clientId, svc, blockExpired, opts.expiredDay); // expired on the tenant calendar
+    const blockToday = uuidv4();
+    await insertBlock(db, tenant, clientId, svc, blockToday, opts.todayDay); // tenant today
+    const blockNever = uuidv4();
+    await insertBlock(db, tenant, clientId, svc, blockNever, null);
+
+    const available = await getAvailableHourBlockMinutes(db, tenant, clientId);
+    // The tenant-calendar-expired block is excluded; tenant-today and never
+    // count. The old host/UTC-today logic kept the expired block available.
+    expect(available).toBe(1200);
+  } finally {
+    vi.useRealTimers();
+    process.env.TZ = originalTz;
+    await db('hour_blocks').where({ tenant }).delete();
+    await db('hour_block_service_scopes').where({ tenant }).delete();
+    await db('hour_block_time_allocations').where({ tenant }).delete();
+    await db('hour_block_audit').where({ tenant }).delete();
+    await db('tenant_settings').where({ tenant }).delete();
+    await db('time_entries').where({ tenant }).delete();
+    await db('tickets').where({ tenant }).delete();
+    await db('service_catalog').where({ tenant }).delete();
+    await db('service_types').where({ tenant }).delete();
+    await db('users').where({ tenant }).delete();
+    await db('clients').where({ tenant }).delete();
+    await db('tenants').where({ tenant }).delete();
+    await db.destroy();
+  }
+}

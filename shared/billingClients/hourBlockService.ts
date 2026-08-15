@@ -25,8 +25,8 @@
  *    FIFO, no delta bookkeeping); on delete it is reversed.
  */
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { toCalendarDateString } from '@alga-psa/core';
+import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import type { IHourBlock } from '@alga-psa/types';
 
 /**
@@ -512,13 +512,16 @@ export async function getAvailableHourBlockMinutes(
   serviceId?: string,
 ): Promise<number> {
   const db = tenantDb(conn, tenant);
-  // "Today" for expiration eligibility must be the server's LOCAL calendar
-  // date: expiration dates are stored as user-local calendar dates, and a block
-  // expiring 2026-08-31 in Berlin is expired the moment Berlin enters
-  // 2026-09-01 — even while UTC still reads 2026-08-31. UTC-today (the old
-  // `toISODate(toPlainDate(new Date().toISOString()))`) counted such blocks as
-  // available for up to 24h, and drifted the other way east of UTC.
-  const today = toCalendarDateString(new Date());
+  // "Today" for expiration eligibility is the TENANT's calendar date: expiration
+  // dates are stored as tenant-local calendar dates, and a block expiring
+  // 2026-08-31 in Berlin is expired the moment Berlin enters 2026-09-01 — even
+  // while a UTC worker still reads 2026-08-31. resolveEffectiveTimeZone reads
+  // the tenant's settings timezone and falls back to UTC when none is configured
+  // (no "user-local" ground truth exists, and UTC is deterministic across
+  // workers). Host-local/UTC-today counted such blocks as available for up to
+  // 24h, and drifted the other way east of UTC.
+  const timeZone = await resolveEffectiveTimeZone(conn, tenant);
+  const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
 
   const query = db.table('hour_blocks as hb');
   if (serviceId) {

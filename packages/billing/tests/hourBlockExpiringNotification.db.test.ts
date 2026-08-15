@@ -2,21 +2,20 @@ import { describe, expect, it, beforeAll, afterAll, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
-import { toCalendarDateString } from '@alga-psa/core';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { expiringHourBlocksNotificationHandler } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 
 // DB-backed regression test for the expiring-hour-blocks notification handler
-// (29.8.18 mitigation). The handler used to build its query window and its event
-// payload through UTC round-trips (`toISOString()` slicing and a jobs-local
-// `toPlainDate` that routes Date objects through UTC), so in non-UTC timezones a
-// block stored with expiration_date = 2026-08-31 was queried against the wrong
-// window and emitted with expirationDate = "2026-08-30". This suite executes the
-// REAL handler against the dev DB with publishEvent stubbed, pins the process
-// timezone AND "today" (fake timers) so that today + threshold = 2026-08-31, and
-// proves the block is found and emitted with the exact calendar date.
-//
-// The conversion is process-timezone-dependent, so each test pins TZ and guards
-// that Node honored it via getTimezoneOffset() before asserting on dates.
+// (29.8.18 mitigation). The invariant: the "today + N days" window is computed
+// on the TENANT's calendar date (`tenant_settings.settings.timezone`), NOT the
+// worker host's local date and NOT UTC. A Berlin tenant with a 7-day threshold
+// gets notified for a 2026-08-31 expiration the moment Berlin enters 2026-08-24
+// — even when the worker runs in UTC and still reads 2026-08-23. This suite
+// executes the REAL handler against the dev DB with publishEvent stubbed, pins
+// the worker process TZ to a zone that disagrees with the tenant's timezone,
+// freezes "now" (fake timers), and proves the block is found and emitted with
+// the exact calendar date. When no tenant timezone is configured the handler
+// falls back to UTC (documented) — that fallback is pinned too.
 //
 // Run ONLY against an explicitly provided database with:
 //   HOUR_BLOCK_DB_HOST HOUR_BLOCK_DB_PORT HOUR_BLOCK_DB_USER
@@ -45,7 +44,8 @@ const { publishEventMock } = vi.hoisted(() => ({
 
 // The handler runs in the Temporal worker and may only publish events; stub the
 // publisher to capture the payload. Keep the REAL tenantDb/getConnection shape
-// but point the connection at the test DB, mirroring hourBlockExpirationTimezone.
+// but point the connection at the test DB. resolveEffectiveTimeZone (from
+// @alga-psa/db) stays real and reads the test tenant_settings row.
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
 }));
@@ -58,12 +58,12 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 
-function assertTz(zone: string, expectedOffsetMinutes: number) {
+function assertWorkerTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(new Date().getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
-async function seedBase() {
+async function seedBase(timezone: string | null) {
   const clientId = uuidv4();
   const serviceTypeId = uuidv4();
   const serviceId = uuidv4();
@@ -74,6 +74,10 @@ async function seedBase() {
     service_id: serviceId, tenant, service_name: 'Notif Svc',
     custom_service_type_id: serviceTypeId, billing_method: 'hourly', default_rate: 10000,
     unit_of_measure: 'hour', category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
+  });
+  await db('tenant_settings').insert({
+    tenant,
+    settings: timezone ? { timezone } : {},
   });
   await db('default_billing_settings').insert({
     tenant,
@@ -95,12 +99,18 @@ async function insertBlock(blockId: string, clientId: string, serviceId: string,
 }
 
 async function cleanup() {
+  // The shared dev DB has a background permission provisioner that may race the
+  // test lifecycle and insert permissions rows for a freshly-created tenant;
+  // clear those first so the tenants delete never trips the FK.
+  await db('role_permissions').where({ tenant }).delete();
+  await db('permissions').where({ tenant }).delete();
   await db('hour_block_time_allocations').where({ tenant }).delete();
   await db('hour_block_service_scopes').where({ tenant }).delete();
   await db('hour_block_audit').where({ tenant }).delete();
   await db('hour_blocks').where({ tenant }).delete();
   await db('invoices').where({ tenant }).delete();
   await db('invoice_charges').where({ tenant }).delete();
+  await db('tenant_settings').where({ tenant }).delete();
   await db('default_billing_settings').where({ tenant }).delete();
   await db('service_catalog').where({ tenant }).delete();
   await db('service_types').where({ tenant }).delete();
@@ -108,7 +118,25 @@ async function cleanup() {
   await db('tenants').where({ tenant }).delete();
 }
 
-describe.runIf(enabled)('expiring hour-block notification preserves the calendar date end to end', () => {
+/**
+ * Runs the real handler and asserts the ONLY emitted block is `expectedBlockId`
+ * with the exact calendar expiration date. Any other block in the window would
+ * have been emitted too.
+ */
+async function assertOnlyBlockEmitted(expectedBlockId: string, expectedExpirationDate: string) {
+  await expiringHourBlocksNotificationHandler({ tenantId: tenant });
+
+  const published = publishEventMock.mock.calls
+    .map(([event]) => event)
+    .filter((event) => event?.eventType === 'HOUR_BLOCK_EXPIRING');
+  expect(published).toHaveLength(1);
+  const blocks = published[0].payload.blocks;
+  expect(blocks).toHaveLength(1);
+  expect(blocks[0].blockId).toBe(expectedBlockId);
+  expect(blocks[0].expirationDate).toBe(expectedExpirationDate);
+}
+
+describe.runIf(enabled)('expiring hour-block notification window is the tenant calendar date, worker-independent', () => {
   beforeAll(async () => {
     db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
     tenant = uuidv4();
@@ -128,65 +156,92 @@ describe.runIf(enabled)('expiring hour-block notification preserves the calendar
     vi.useRealTimers();
   });
 
-  it('queries and emits 2026-08-31 as 2026-08-31 in Europe/Berlin (UTC+2)', async () => {
-    assertTz('Europe/Berlin', -120);
-    const { clientId, serviceId } = await seedBase();
+  it('windows today+7 on the Berlin tenant calendar while a UTC worker still reads a day earlier (the reviewer\'s scenario)', async () => {
+    assertWorkerTz('UTC', 0);
+    const { clientId, serviceId } = await seedBase('Europe/Berlin');
 
-    // Freeze "now" at 2026-08-23T22:00Z = 2026-08-24T00:00+02:00 Berlin, so
-    // local today is 2026-08-24 and today + 7 (the configured threshold) = 2026-08-31.
+    // Freeze "now" at 2026-08-23T22:00Z = 2026-08-24T00:00+02:00 Berlin: tenant
+    // today is 2026-08-24 (+7 = 2026-08-31) while the UTC worker still reads
+    // 2026-08-23 (+7 = 2026-08-30). The old host-local window hit the wrong day.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-08-23T22:00:00.000Z'));
-    expect(toCalendarDateString(new Date()), 'fake timers must pin Berlin to 2026-08-24').toBe('2026-08-24');
+    expect(toCalendarDateStringInTimeZone(new Date(), 'Europe/Berlin'), 'tenant (Berlin) must read 2026-08-24').toBe('2026-08-24');
+    expect(new Date().toISOString().slice(0, 10), 'worker (UTC) must still read 2026-08-23').toBe('2026-08-23');
 
     try {
       const blockGood = uuidv4();
-      const blockEarly = uuidv4();
+      const blockWrongDay = uuidv4();
       await insertBlock(blockGood, clientId, serviceId, '2026-08-31');
-      // One day earlier than the target: the old UTC-sliced window
-      // (['2026-08-30','2026-08-31'] in Berlin) wrongly included this block.
-      await insertBlock(blockEarly, clientId, serviceId, '2026-08-30');
+      // One day earlier than the tenant-local target: the old UTC-window
+      // (['2026-08-30','2026-08-31']) wrongly emitted this block.
+      await insertBlock(blockWrongDay, clientId, serviceId, '2026-08-30');
 
-      await expiringHourBlocksNotificationHandler({ tenantId: tenant, clientId });
-
-      const published = publishEventMock.mock.calls
-        .map(([event]) => event)
-        .filter((event) => event?.eventType === 'HOUR_BLOCK_EXPIRING');
-      expect(published).toHaveLength(1);
-      const blocks = published[0].payload.blocks;
-      expect(blocks).toHaveLength(1);
-      expect(blocks[0].blockId).toBe(blockGood);
-      expect(blocks[0].expirationDate).toBe('2026-08-31');
+      await assertOnlyBlockEmitted(blockGood, '2026-08-31');
     } finally {
       await cleanup();
     }
   });
 
-  it('queries and emits 2026-08-31 as 2026-08-31 in Pacific/Kiritimati (UTC+14)', async () => {
-    assertTz('Pacific/Kiritimati', -840);
-    const { clientId, serviceId } = await seedBase();
+  it('windows today+7 on the Kiritimati tenant calendar while a UTC worker still reads a day earlier', async () => {
+    assertWorkerTz('UTC', 0);
+    const { clientId, serviceId } = await seedBase('Pacific/Kiritimati');
 
-    // Freeze "now" at 2026-08-23T10:00Z = 2026-08-24T00:00+14:00 Kiritimati, so
-    // local today is 2026-08-24 and today + 7 = 2026-08-31.
+    // Freeze "now" at 2026-08-23T10:00Z = 2026-08-24T00:00+14:00 Kiritimati.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-08-23T10:00:00.000Z'));
-    expect(toCalendarDateString(new Date()), 'fake timers must pin Kiritimati to 2026-08-24').toBe('2026-08-24');
+    expect(toCalendarDateStringInTimeZone(new Date(), 'Pacific/Kiritimati'), 'tenant (Kiritimati) must read 2026-08-24').toBe('2026-08-24');
+    expect(new Date().toISOString().slice(0, 10), 'worker (UTC) must still read 2026-08-23').toBe('2026-08-23');
 
     try {
       const blockGood = uuidv4();
-      const blockEarly = uuidv4();
+      const blockWrongDay = uuidv4();
       await insertBlock(blockGood, clientId, serviceId, '2026-08-31');
-      await insertBlock(blockEarly, clientId, serviceId, '2026-08-30');
+      await insertBlock(blockWrongDay, clientId, serviceId, '2026-08-30');
 
-      await expiringHourBlocksNotificationHandler({ tenantId: tenant, clientId });
+      await assertOnlyBlockEmitted(blockGood, '2026-08-31');
+    } finally {
+      await cleanup();
+    }
+  });
 
-      const published = publishEventMock.mock.calls
-        .map(([event]) => event)
-        .filter((event) => event?.eventType === 'HOUR_BLOCK_EXPIRING');
-      expect(published).toHaveLength(1);
-      const blocks = published[0].payload.blocks;
-      expect(blocks).toHaveLength(1);
-      expect(blocks[0].blockId).toBe(blockGood);
-      expect(blocks[0].expirationDate).toBe('2026-08-31');
+  it('produces the identical Berlin window when the worker runs in America/New_York (worker-independence)', async () => {
+    assertWorkerTz('America/New_York', 240);
+    const { clientId, serviceId } = await seedBase('Europe/Berlin');
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-23T22:00:00.000Z'));
+    expect(toCalendarDateStringInTimeZone(new Date(), 'Europe/Berlin')).toBe('2026-08-24');
+    expect(toCalendarDateStringInTimeZone(new Date(), 'America/New_York')).toBe('2026-08-23');
+
+    try {
+      const blockGood = uuidv4();
+      const blockWrongDay = uuidv4();
+      await insertBlock(blockGood, clientId, serviceId, '2026-08-31');
+      await insertBlock(blockWrongDay, clientId, serviceId, '2026-08-30');
+
+      await assertOnlyBlockEmitted(blockGood, '2026-08-31');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('falls back to the UTC calendar when the tenant has no timezone configured (documented)', async () => {
+    assertWorkerTz('UTC', 0);
+    const { clientId, serviceId } = await seedBase(null);
+
+    // No tenant timezone => UTC calendar: at 2026-08-23T22:00Z UTC-today is
+    // 2026-08-23, +7 = 2026-08-30 — the 08-30 block is the target, not 08-31.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-23T22:00:00.000Z'));
+    expect(new Date().toISOString().slice(0, 10)).toBe('2026-08-23');
+
+    try {
+      const blockGood = uuidv4();
+      const blockWrongDay = uuidv4();
+      await insertBlock(blockGood, clientId, serviceId, '2026-08-30');
+      await insertBlock(blockWrongDay, clientId, serviceId, '2026-08-31');
+
+      await assertOnlyBlockEmitted(blockGood, '2026-08-30');
     } finally {
       await cleanup();
     }

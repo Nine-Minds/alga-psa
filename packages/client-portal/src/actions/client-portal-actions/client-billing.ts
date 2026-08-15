@@ -2,7 +2,8 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
-import { getConnection, createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
+import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -45,6 +46,18 @@ export type ClientBillingActionResult<T> = T | ClientBillingActionError;
 
 function actionError(message: string): ClientBillingActionError {
   return { actionError: message };
+}
+
+/**
+ * Whole-day difference between two YYYY-MM-DD calendar dates (`to` minus
+ * `from`). Computed via Date.UTC on the calendar components so it is host-
+ * timezone independent (no local Date math), matching the tenant-calendar
+ * invariant used for hour-block expiring-soon badges.
+ */
+function calendarDayDifference(from: string, to: string): number {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number);
+  const [toYear, toMonth, toDay] = to.split('-').map(Number);
+  return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86_400_000);
 }
 
 function permissionError(message: string): ClientBillingActionError {
@@ -1332,6 +1345,12 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
       }
 
       const db = tenantDb(trx, tenant);
+      // "Today" for the expiring-soon badge is the TENANT's calendar date (same
+      // invariant as auto-expiration / the burn engine): the badge must be
+      // worker-independent, so a UTC server cannot shift a Berlin tenant's
+      // "expires in N days". resolveEffectiveTimeZone falls back to UTC.
+      const timeZone = await resolveEffectiveTimeZone(trx, tenant);
+      const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
       const query = db.table('hour_blocks as hb');
       db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
       const rows = await query
@@ -1349,16 +1368,18 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
         .orderBy('hb.purchased_at', 'asc')
         .orderBy('hb.created_at', 'asc');
 
-      const today = new Date();
       return rows.map((row: Record<string, unknown>) => {
         const remaining = Number(row.remaining_minutes ?? 0);
         const total = Number(row.total_minutes ?? 0);
         let expiringSoonDays: number | null = null;
         if (row.expiration_date) {
-          const expDate = new Date(String(row.expiration_date));
-          const days = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          if (days <= 7 && days >= 0) {
-            expiringSoonDays = days;
+          const rawExpiration = row.expiration_date as string | Date | null;
+          const expDate = toCalendarDateString(rawExpiration);
+          if (expDate) {
+            const days = calendarDayDifference(today, expDate);
+            if (days <= 7 && days >= 0) {
+              expiringSoonDays = days;
+            }
           }
         }
         return {
