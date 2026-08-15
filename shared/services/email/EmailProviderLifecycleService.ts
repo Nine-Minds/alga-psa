@@ -28,16 +28,18 @@ export interface ResumeProviderResult {
 export interface InboundAuthPauseReconciliation {
   /**
    * 'completed' — the whole paused interval was handed off durably.
-   * 'partial'  — some paused-interval mail could not be reconciled (batch cap
-   *              or window clamp); the operator must resync manually.
    * 'started'  — provider-specific asynchronous reconciliation (IMAP cursor
-   *              rescan) has been kicked off; completion is not directly
-   *              observable here.
+   *              rescan) has been kicked off; the covering rescan is guaranteed
+   *              by the reset cursors and dedupe, not awaited here.
+   *
+   * There is deliberately no 'partial': an auth-pause recovery may never
+   * report success while paused-interval mail is knowingly unreconciled.
+   * When the interval cannot be fully swept (e.g. reconciliation keeps
+   * reporting more remaining), recovery fails and the provider stays paused
+   * with a reconnect-required error.
    */
-  status: 'started' | 'completed' | 'partial';
+  status: 'started' | 'completed';
   queuedMessages: number;
-  /** Present only on partial reconciliations; explains what was left behind. */
-  warning?: string;
 }
 
 export interface RecoverAuthPausedProviderOptions {
@@ -76,16 +78,17 @@ export interface RecordUnrecoverableAuthFailureResult {
 export const INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE =
   'Sign-in was rejected by the email provider. Reconnect the mailbox to resume inbound email.';
 
-/** Upper bound on Google recovery message ids enqueued per reconnect. */
-const GOOGLE_RECOVERY_MAX_MESSAGES = 200;
-
-/** Human label of the Microsoft reconciliation window cap (mirrors the maintenance service). */
-const MICROSOFT_RECONCILE_WINDOW_LABEL = '7 days';
+/**
+ * Upper bound on Microsoft recovery reconciliation passes. Each pass enqueues
+ * at most the per-pass cap and reports whether Graph still holds more
+ * unprocessed messages in the paused interval; recovery loops until the
+ * interval is exhausted. The bound converts a pathological non-terminating
+ * sweep into a failed recovery (provider stays paused) instead of a hang.
+ */
+const MICROSOFT_RECOVERY_MAX_PASSES = 500;
 
 interface GooglePausedIntervalReconciliation {
   queuedMessages: number;
-  truncated: boolean;
-  droppedMessages: number;
   usedFallbackQuery: boolean;
 }
 
@@ -579,20 +582,19 @@ export class EmailProviderLifecycleService {
     }
 
     // 4. Reconcile from the saved pause boundary with the durable dedupe path.
+    //    The interval must be FULLY handed off before the pause clears — a
+    //    recovery may never report success over a known gap.
     let reconciliation: InboundAuthPauseReconciliation;
     try {
       if (provider.provider_type === 'microsoft') {
-        const result = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
+        const result = await this.reconcileMicrosoftPausedInterval({
           providerId,
           tenant,
           since: pausedAt,
         });
         reconciliation = {
-          status: result.truncated ? 'partial' : 'completed',
+          status: 'completed',
           queuedMessages: result.queuedMessages,
-          warning: result.truncated
-            ? `Reconciliation covered only the most recent ${MICROSOFT_RECONCILE_WINDOW_LABEL} of the pause; older mail was not imported. Run a mailbox resync to cover the full paused interval.`
-            : undefined,
         };
       } else if (provider.provider_type === 'google') {
         const result = await this.reconcileGooglePausedInterval({
@@ -602,11 +604,8 @@ export class EmailProviderLifecycleService {
           savedHistoryId,
         });
         reconciliation = {
-          status: result.truncated ? 'partial' : 'completed',
+          status: 'completed',
           queuedMessages: result.queuedMessages,
-          warning: result.truncated
-            ? `The paused interval held more than ${GOOGLE_RECOVERY_MAX_MESSAGES} messages; ${result.droppedMessages} were not queued. Run a mailbox resync to import the remainder.`
-            : undefined,
         };
       } else {
         const result = await this.reconcileImapPausedInterval({ providerId, tenant });
@@ -742,16 +741,60 @@ export class EmailProviderLifecycleService {
   }
 
   /**
+   * Microsoft reconciliation: loop `reconcileProviderMessages` passes until
+   * the paused interval is exhausted. Each pass enqueues at most the per-pass
+   * cap (the maintenance algorithm's cursor lock, safety margin, and overflow
+   * handling stay authoritative) and reports whether Graph still holds more
+   * unprocessed messages; ids handed off by earlier passes are seeded into
+   * the next pass so re-listed messages are recognized as covered in every
+   * durable mode. Durable dedupe makes re-enqueueing safe.
+   *
+   * If the sweep cannot exhaust the interval within the pass bound, this
+   * throws so the caller fails the recovery and the provider stays paused —
+   * never "resumed with a known gap".
+   */
+  private async reconcileMicrosoftPausedInterval(params: {
+    providerId: string;
+    tenant: string;
+    since: Date;
+  }): Promise<{ queuedMessages: number }> {
+    const maintenance = new EmailWebhookMaintenanceService();
+    const handedOffIds = new Set<string>();
+    let queuedMessages = 0;
+    for (let pass = 1; pass <= MICROSOFT_RECOVERY_MAX_PASSES; pass += 1) {
+      const result = await maintenance.reconcileProviderMessages({
+        providerId: params.providerId,
+        tenant: params.tenant,
+        since: params.since,
+        handedOffIds,
+      });
+      queuedMessages += result.queuedMessages;
+      for (const id of result.enqueuedMessageIds || []) handedOffIds.add(id);
+      if (!result.moreRemaining) {
+        return { queuedMessages };
+      }
+      console.info('[EmailProviderLifecycle] Microsoft auth-pause reconciliation pass complete; more paused-interval mail remains', {
+        tenant: params.tenant,
+        providerId: params.providerId,
+        pass,
+        queuedSoFar: queuedMessages,
+      });
+    }
+    throw new Error(
+      `microsoft_auth_pause_reconcile_unexhausted_after_${MICROSOFT_RECOVERY_MAX_PASSES}_passes`
+    );
+  }
+
+  /**
    * Google reconciliation: list changes from the pre-watch history cursor and
    * enqueue the resulting message ids through the unified durable path. If
    * Gmail rejects the old cursor, fall back to a mailbox query bounded by the
    * pause timestamp rather than silently accepting a gap.
    *
-   * The reconciliation batch is capped at GOOGLE_RECOVERY_MAX_MESSAGES; when
-   * the paused interval holds more mail than the cap, the overflow is dropped
-   * LOUDLY (error-level log naming the provider/tenant and dropped count) and
-   * the result reports a partial status so the UI cannot toast a clean
-   * success over an unreconciled gap.
+   * Both listing paths paginate the FULL paused interval — there is no batch
+   * cap to truncate it. Every discovered id is handed off through the durable
+   * dedupe path, so a large backlog is reconciled completely and re-running
+   * the reconciliation is safe.
    */
   private async reconcileGooglePausedInterval(params: {
     providerId: string;
@@ -787,28 +830,11 @@ export class EmailProviderLifecycleService {
           savedHistoryId,
         });
         usedFallbackQuery = true;
-        messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
+        messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, undefined, { paginateAll: true });
       }
     } else {
       usedFallbackQuery = true;
-      messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
-    }
-
-    const droppedMessages = Math.max(0, messageIds.length - GOOGLE_RECOVERY_MAX_MESSAGES);
-    messageIds = messageIds.slice(0, GOOGLE_RECOVERY_MAX_MESSAGES);
-    if (droppedMessages > 0) {
-      // No silent gaps: the operator must learn that mail was left behind and
-      // resync manually. Logged at error level so alerting picks it up.
-      console.error('[EmailProviderLifecycle] Gmail auth-pause reconciliation hit its batch cap; overflow mail was NOT reconciled', {
-        event: 'inbound_auth_pause_reconcile_truncated',
-        tenant: params.tenant,
-        providerId: params.providerId,
-        cap: GOOGLE_RECOVERY_MAX_MESSAGES,
-        queued: messageIds.length,
-        dropped: droppedMessages,
-        pausedAt: params.pausedAt.toISOString(),
-        remediation: 'Run a mailbox resync for this provider to import the remaining paused-interval mail.',
-      });
+      messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, undefined, { paginateAll: true });
     }
 
     let queuedMessages = 0;
@@ -841,16 +867,24 @@ export class EmailProviderLifecycleService {
 
     return {
       queuedMessages,
-      truncated: droppedMessages > 0,
-      droppedMessages,
       usedFallbackQuery,
     };
   }
 
   /**
-   * IMAP reconciliation: clear UID/folder cursors (the existing resync
-   * contract) so the poller scans the mailbox again; normal dedupe suppresses
-   * already-processed mail. Only reachable after credentials validated.
+   * IMAP reconciliation: arm the covering resync (the existing resync
+   * contract, made gap-free) so the poller scans the mailbox from UID 1 and
+   * normal dedupe suppresses already-processed mail. Only reachable after
+   * credentials validated.
+   *
+   * Cursor semantics: `last_uid = '0'` is the explicit "scan from the
+   * beginning" marker — a NULL cursor would make the email-service listener
+   * resume from the most recent window (uidNext - max_emails_per_sync) and
+   * silently skip paused-interval mail older than that window. '0' makes the
+   * listener's start-uid resolution scan from UID 1, covering the entire
+   * paused interval; the scan then advances the cursor back to the newest
+   * UID. Because IMAP workers are gated on the pause in provider discovery,
+   * the rescan runs on the fresh listener started after the pause clears.
    */
   private async reconcileImapPausedInterval(params: {
     providerId: string;
@@ -862,7 +896,7 @@ export class EmailProviderLifecycleService {
       .where({ email_provider_id: params.providerId })
       .update({
         uid_validity: null,
-        last_uid: null,
+        last_uid: '0',
         last_processed_message_id: null,
         folder_state: {},
         last_error: null,

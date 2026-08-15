@@ -32,6 +32,10 @@ import { maybeExtractRawMimeFromEmailData } from './inboundEmailArtifactHelpers'
 import { buildIngressKey } from './inboundEmailIdentity';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
 import { GmailAdapter } from './providers/GmailAdapter';
+import {
+  recordInboundSourceAccessSuccess,
+  recordInboundSourceAuthFailure,
+} from './inboundEmailAuthOutcomeRecorder';
 
 const TERMINAL_INGRESS_STATUSES = new Set(['staged', 'terminal_failed']);
 
@@ -104,7 +108,42 @@ export async function processIngressStageJob(
   const version = Number(ingress.lease_version);
 
   try {
-    const stagedInboxes = await stageIngressSources(db, ingress);
+    let stagedInboxes: string[];
+    try {
+      stagedInboxes = await stageIngressSources(db, ingress);
+    } catch (error) {
+      // Source-access auth accounting with the same semantics as the V1
+      // processor boundary: only strictly classified terminal credential
+      // failures count (the classifier never matches staging/storage errors),
+      // a Google history notification with no messages is a successful empty
+      // fetch, and the original error still propagates so the ingress
+      // retry/terminal policy above stays authoritative.
+      if ((error as any)?.message === 'google_history_no_messages') {
+        await recordInboundSourceAccessSuccess({
+          tenant: ingress.tenant,
+          providerId: ingress.provider_id,
+          source: 'v2-ingress-staging',
+        });
+      } else {
+        await recordInboundSourceAuthFailure({
+          tenant: ingress.tenant,
+          providerId: ingress.provider_id,
+          providerType: ingress.provider_type,
+          error,
+          source: 'v2-ingress-staging',
+        });
+      }
+      throw error;
+    }
+
+    // Any successful source access — including an empty fetch — resets the
+    // consecutive auth-failure counter before downstream inbox processing.
+    await recordInboundSourceAccessSuccess({
+      tenant: ingress.tenant,
+      providerId: ingress.provider_id,
+      source: 'v2-ingress-staging',
+    });
+
     const written = await transitionIngress(db, {
       tenant: ingress.tenant,
       ingress_id: ingress.ingress_id,

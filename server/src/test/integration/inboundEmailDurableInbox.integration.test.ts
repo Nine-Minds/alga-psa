@@ -369,6 +369,11 @@ describeDb('Inbound email durable inbox (integration)', () => {
 
   beforeAll(async () => {
     process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+    // Same local-env wiring as the sibling integration suites: .env.localtest
+    // can carry stale DB_PASSWORD_* values, while the repo secrets dir is
+    // authoritative for the local test Postgres.
+    const { wireLocalTestDbEnv } = await import('../../../test-utils/dbConfig');
+    wireLocalTestDbEnv();
     db = await createTestDbConnection();
 
     const tenant = await tenantDb(db, SEEDED_TENANT_DISCOVERY_REASON)
@@ -1447,6 +1452,115 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const failedIngress = await tenantTable('inbound_email_ingress').where({ ingress_id: failed.ingressId }).first();
     expect(failedIngress.status).toBe('retryable_failed');
     expect(failedIngress.last_error).toContain('provider_unavailable_temporarily');
+  });
+
+  it('stage_ingress counts classified source auth failures, ignores transient ones, and resets on success', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'v2-auth-count@example.com', providerType: 'microsoft' });
+    const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+
+    const authCount = async (): Promise<number> => {
+      const row = await tenantTable('email_providers').where({ id: providerId }).first('inbound_auth_failure_count');
+      return Number(row?.inbound_auth_failure_count || 0);
+    };
+
+    const produced = await persistIngressPointer({
+      tenant: tenantId,
+      providerId,
+      providerType: 'microsoft',
+      pointer: { providerType: 'microsoft', providerMessageId: `v2-auth-${randomUUID()}` },
+    });
+    expect(produced.ingressId).toBeTruthy();
+
+    const job: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: produced.ingressId,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+    const makeDue = async () => {
+      await tenantTable('inbound_email_ingress')
+        .where({ ingress_id: produced.ingressId })
+        .update({ next_attempt_at: db.raw("now() - interval '1 minute'") });
+    };
+
+    // A terminal OAuth rejection from the Microsoft source fetch advances the
+    // provider's consecutive auth-failure counter (same counter as V1).
+    const invalidGrant: any = new Error('Error in refreshAccessToken: Request failed with status code 400 (code: 400)');
+    invalidGrant.status = 400;
+    invalidGrant.responseBody = { error: 'invalid_grant' };
+    microsoftFetchMock.mockRejectedValueOnce(invalidGrant);
+    const failed = await processIngressStageJob(job, ctx);
+    expect(failed.disposition).toBe('retry');
+    expect(await authCount()).toBe(1);
+
+    // A transient fetch error does not count (queue retry stays authoritative).
+    await makeDue();
+    microsoftFetchMock.mockRejectedValueOnce(new Error('provider_unavailable_temporarily'));
+    await processIngressStageJob(job, ctx);
+    expect(await authCount()).toBe(1);
+
+    // A successful stage is a successful source access: the counter resets
+    // even though this fetch returns a single ordinary message.
+    await makeDue();
+    microsoftFetchMock.mockResolvedValueOnce({
+      id: 'ms-auth-ok',
+      rawMime: 'From: Sender <sender@example.com>\r\nTo: Support <v2-auth-count@example.com>\r\nSubject: OK\r\nMessage-ID: <ms-auth-ok@example.com>\r\n\r\nbody\r\n',
+    });
+    const ok = await processIngressStageJob(job, ctx);
+    expect(ok.disposition).toBe('ack');
+    expect(await authCount()).toBe(0);
+
+    const row = await tenantTable('email_providers').where({ id: providerId }).first('inbound_paused_at', 'inbound_pause_reason');
+    expect(row.inbound_paused_at).toBeNull();
+  });
+
+  it('stage_ingress auth failures pause the provider at the threshold and stop being retried through the source gate', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'v2-auth-pause@example.com', providerType: 'microsoft' });
+    const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+    const invalidClient: any = new Error('Error in refreshAccessToken: Request failed with status code 401 (code: 401)');
+    invalidClient.status = 401;
+    invalidClient.responseBody = { error: 'invalid_client' };
+    microsoftFetchMock.mockRejectedValue(invalidClient);
+
+    // Three distinct ingress rows, each failing its staged source fetch with
+    // a terminal credential error: the third trips the automatic pause.
+    for (let i = 0; i < 3; i += 1) {
+      const produced = await persistIngressPointer({
+        tenant: tenantId,
+        providerId,
+        providerType: 'microsoft',
+        pointer: { providerType: 'microsoft', providerMessageId: `v2-pause-${i}-${randomUUID()}` },
+      });
+      const job: any = {
+        schemaVersion: 2,
+        workType: 'stage_ingress',
+        tenantId,
+        recordId: produced.ingressId,
+        jobId: `stage-${randomUUID()}`,
+        enqueuedAt: new Date().toISOString(),
+        attempt: 0,
+        maxAttempts: 5,
+      };
+      const result = await processIngressStageJob(job, ctx);
+      expect(result.disposition).toBe('retry');
+    }
+
+    const row = await tenantTable('email_providers')
+      .where({ id: providerId })
+      .first('inbound_paused_at', 'inbound_pause_reason', 'inbound_auth_failure_count', 'inbound_auth_failure_code');
+    expect(row.inbound_paused_at).not.toBeNull();
+    expect(row.inbound_pause_reason).toBe('auth_failure');
+    expect(Number(row.inbound_auth_failure_count)).toBe(3);
+    expect(row.inbound_auth_failure_code).toBe('microsoft:invalid_client');
   });
 
   it('core processing succeeds from the staged source when the provider message is gone', async () => {
@@ -2980,10 +3094,14 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const failedIngress = await tenantTable('inbound_email_ingress').where({ ingress_id: ingresses[0].ingress_id }).first();
     expect(failedIngress.status).toBe('retryable_failed');
 
-    // Re-run reconcile: the failed message is re-listed (its source is not
-    // staged) and re-ingressed idempotently; the cursor still does not advance.
+    // Re-run reconcile: both messages already have ingress rows, so they are
+    // handed off — the durable pipeline (retry backoff + recovery sweep) owns
+    // their fate and reconcile must not re-enqueue them. The cursor still
+    // does not advance past the unstaged message.
+    v2EnqueueMock.mockClear();
     const rerun = await service.reconcileMissedMessages(adapter, config, false);
-    expect(rerun.queuedMessages).toBeGreaterThanOrEqual(1);
+    expect(rerun.queuedMessages).toBe(0);
+    expect(v2EnqueueMock).not.toHaveBeenCalled();
     cursor = await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).first();
     expect(new Date(cursor.last_reconciliation_at).getTime()).toBe(new Date(oldCursor).getTime());
 

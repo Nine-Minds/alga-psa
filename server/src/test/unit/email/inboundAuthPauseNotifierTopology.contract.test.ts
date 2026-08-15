@@ -41,6 +41,26 @@ describe('inbound auth-pause notifier deployment topology', () => {
     expect(source).toContain("assertInboundAuthPauseNotifierRegistered('services/email-service')");
   });
 
+  it('email-service IMAP listener loop accounts auth outcomes and honours the pause', () => {
+    // The standalone IMAP listener is a real provider source-access boundary:
+    // classified auth failures must advance the counter, successful mailbox
+    // access must reset it, and the discovery/poll loop must stop connecting a
+    // paused provider (IMAP has no Graph/Gmail subscription to tear down —
+    // the poll loop itself is the noise source).
+    const source = read('services/email-service/src/emailService.ts');
+    expect(source).toContain('recordInboundSourceAuthFailure({');
+    expect(source).toContain("providerType: 'imap'");
+    expect(source).toContain('recordInboundSourceAccessSuccess({');
+    expect(source).toContain('isInboundPaused()');
+    expect(source).toContain("whereNull('ep.inbound_paused_at')");
+  });
+
+  it('durable-V2 staging worker accounts source auth outcomes at its fetch boundary', () => {
+    const source = read('shared/services/email/inboundEmailIngressStagingWorker.ts');
+    expect(source).toContain('recordInboundSourceAuthFailure({');
+    expect(source).toContain('recordInboundSourceAccessSuccess({');
+  });
+
   it('EE Temporal worker bootstrap registers the event-publisher notifier', () => {
     const source = read('ee/temporal-workflows/src/worker.ts');
     expect(source).toContain('registerInboundAuthPauseEventPublisher()');

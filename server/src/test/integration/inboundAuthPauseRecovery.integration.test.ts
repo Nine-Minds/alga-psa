@@ -427,9 +427,11 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       expect(row.inbound_paused_at).toBeNull();
     });
 
-    it('reports a partial reconciliation when the paused interval exceeds the batch cap', async () => {
+    it('queues the entire paused interval when it exceeds a single batch (no dropped mail)', async () => {
       const { providerId } = await seedPausedProvider('google');
-      // More message ids than the 200-message recovery cap.
+      // More message ids than the previous 200-message recovery cap: every
+      // message must now be handed off — the pause may not clear over a
+      // known gap, so the cap is gone.
       gmailAdapterMock.listMessagesSince.mockResolvedValue(
         Array.from({ length: 203 }, (_, index) => `g-overflow-${index}`)
       );
@@ -437,16 +439,17 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant);
 
       expect(result.resumed).toBe(true);
-      expect(result.reconciliation?.status).toBe('partial');
-      expect(result.reconciliation?.queuedMessages).toBe(200);
-      expect(result.reconciliation?.warning).toMatch(/more than 200 messages.*3 were not queued/i);
-      // The cap-bounded batch was still enqueued.
-      expect(enqueueMock.enqueueUnifiedInboundEmailQueueJob).toHaveBeenCalledTimes(200);
+      expect(result.reconciliation?.status).toBe('completed');
+      expect(result.reconciliation?.queuedMessages).toBe(203);
+      expect(enqueueMock.enqueueUnifiedInboundEmailQueueJob).toHaveBeenCalledTimes(203);
     });
 
-    it('reports a partial reconciliation when the Microsoft window clamp truncates the pause interval', async () => {
-      const { providerId } = await seedPausedProvider('microsoft', { pausedDaysAgo: 9 });
-      reconcileMock.reconcileProviderMessages.mockResolvedValue({ queuedMessages: 5, truncated: true });
+    it('loops Microsoft reconciliation passes until the paused interval is exhausted', async () => {
+      const { providerId, pausedAt } = await seedPausedProvider('microsoft');
+      reconcileMock.reconcileProviderMessages
+        .mockResolvedValueOnce({ queuedMessages: 50, moreRemaining: true, enqueuedMessageIds: Array.from({ length: 50 }, (_, i) => `ms-a-${i}`) })
+        .mockResolvedValueOnce({ queuedMessages: 30, moreRemaining: true, enqueuedMessageIds: Array.from({ length: 30 }, (_, i) => `ms-b-${i}`) })
+        .mockResolvedValueOnce({ queuedMessages: 2, moreRemaining: false, enqueuedMessageIds: ['ms-c-0', 'ms-c-1'] });
 
       const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
         providerId,
@@ -455,11 +458,46 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       );
 
       expect(result.resumed).toBe(true);
-      expect(result.reconciliation?.status).toBe('partial');
-      expect(result.reconciliation?.warning).toMatch(/most recent 7 days.*resync/i);
+      expect(result.reconciliation).toEqual({ status: 'completed', queuedMessages: 82 });
+      expect(reconcileMock.reconcileProviderMessages).toHaveBeenCalledTimes(3);
+
+      // Every pass sweeps from the pause boundary; ids handed off by earlier
+      // passes are seeded so later passes recognize them as covered.
+      for (const call of reconcileMock.reconcileProviderMessages.mock.calls) {
+        expect(call[0].providerId).toBe(providerId);
+        expect(new Date(call[0].since).getTime()).toBe(pausedAt.getTime());
+      }
+      expect(reconcileMock.reconcileProviderMessages.mock.calls[1][0].handedOffIds.has('ms-a-0')).toBe(true);
+      expect(reconcileMock.reconcileProviderMessages.mock.calls[2][0].handedOffIds.has('ms-b-29')).toBe(true);
 
       const row = await getProviderRow(providerId);
       expect(row.inbound_paused_at).toBeNull();
+    });
+
+    it('keeps the pause when Microsoft reconciliation never exhausts the interval', async () => {
+      const { providerId } = await seedPausedProvider('microsoft');
+      // A pathological provider that always reports more remaining: recovery
+      // must fail (bounded passes) and the provider must stay paused — never
+      // "resumed with a known gap".
+      reconcileMock.reconcileProviderMessages.mockResolvedValue({
+        queuedMessages: 50,
+        moreRemaining: true,
+        enqueuedMessageIds: Array.from({ length: 50 }, (_, i) => `ms-x-${i}`),
+      });
+
+      const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+        providerId,
+        testTenant,
+        { credentialsValidated: true, deliveryEstablished: true }
+      );
+
+      expect(result.resumed).toBe(false);
+      expect(result.reconnectRequired).toBe(true);
+      expect(result.error).toMatch(/unexhausted/i);
+
+      const row = await getProviderRow(providerId);
+      expect(row.inbound_paused_at).not.toBeNull();
+      expect(row.inbound_pause_reason).toBe('auth_failure');
     });
 
     it('reconciled messages are deduped on repeated processing', async () => {
@@ -541,7 +579,7 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       expect(row.inbound_paused_at).not.toBeNull();
     });
 
-    it('clears UID/folder cursors and the pause after credentials validate', async () => {
+    it('arms the covering resync cursor and clears the pause after credentials validate', async () => {
       const { providerId } = await seedPausedProvider('imap');
 
       const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant, {
@@ -555,7 +593,10 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
         .where({ email_provider_id: providerId })
         .first('uid_validity', 'last_uid', 'folder_state');
       expect(config.uid_validity).toBeNull();
-      expect(config.last_uid).toBeNull();
+      // '0' is the explicit scan-from-UID-1 marker: a NULL cursor would make
+      // the email-service listener resume from the most recent window and
+      // silently skip paused-interval mail older than that window.
+      expect(config.last_uid).toBe('0');
       expect(config.folder_state).toEqual({});
 
       const row = await getProviderRow(providerId);

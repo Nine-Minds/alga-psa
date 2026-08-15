@@ -497,9 +497,15 @@ This indicates a problem with the OAuth token saving process.`;
    * Fallback reconciliation path when the saved history cursor has been
    * invalidated (e.g. after a pause long enough for Gmail to expire it): a
    * mailbox query bounded by the pause timestamp instead of silently
-   * accepting a gap. Capped by `maxResults`.
+   * accepting a gap. Capped by `maxResults`, or fully paginated when
+   * `options.paginateAll` is set (auth-pause recovery must cover the whole
+   * paused interval, never a truncated prefix).
    */
-  async listMessageIdsSinceTime(since: Date, maxResults = 200): Promise<string[]> {
+  async listMessageIdsSinceTime(
+    since: Date,
+    maxResults = 200,
+    options?: { paginateAll?: boolean }
+  ): Promise<string[]> {
     await this.ensureValidToken();
     const ids: string[] = [];
     let pageToken: string | undefined;
@@ -508,7 +514,7 @@ This indicates a problem with the OAuth token saving process.`;
       const response: any = await this.gmail.users.messages.list({
         userId: 'me',
         q: `after:${Math.floor(since.getTime() / 1000)}`,
-        maxResults: Math.min(100, Math.max(1, maxResults - ids.length)),
+        maxResults: options?.paginateAll ? 500 : Math.min(100, Math.max(1, maxResults - ids.length)),
         pageToken,
       });
       for (const message of response?.data?.messages || []) {
@@ -517,7 +523,7 @@ This indicates a problem with the OAuth token saving process.`;
         }
       }
       pageToken = response?.data?.nextPageToken || undefined;
-    } while (pageToken && ids.length < maxResults);
+    } while (pageToken && (options?.paginateAll || ids.length < maxResults));
 
     // users.messages.list returns newest-first; reconcile oldest-first.
     return ids.reverse();

@@ -19,6 +19,10 @@ import { describeWithDb } from '../../../test-utils/requireDb';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { INBOUND_AUTH_FAILURE_PAUSE_THRESHOLD } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
 import {
+  recordInboundSourceAccessSuccess,
+  recordInboundSourceAuthFailure,
+} from '@alga-psa/shared/services/email/inboundEmailAuthOutcomeRecorder';
+import {
   clearInboundAuthPauseNotifier,
   registerInboundAuthPauseNotifier,
   type InboundAuthPauseNotificationParams,
@@ -103,6 +107,43 @@ async function seedGoogleProvider(): Promise<string> {
   return providerId;
 }
 
+async function seedImapProvider(): Promise<string> {
+  const providerId = uuidv4();
+  const now = new Date();
+  await tenantTable('email_providers').insert({
+    id: providerId,
+    tenant: testTenant,
+    provider_type: 'imap',
+    provider_name: 'IMAP Mailbox',
+    mailbox: `imap-${providerId.slice(0, 8)}@example.com`,
+    is_active: true,
+    status: 'connected',
+    inbound_paused_at: null,
+    error_message: null,
+    created_at: now,
+    updated_at: now,
+  });
+  await tenantTable('imap_email_provider_config').insert({
+    email_provider_id: providerId,
+    tenant: testTenant,
+    host: 'imap.example.com',
+    port: 993,
+    secure: true,
+    allow_starttls: false,
+    auth_type: 'password',
+    username: `imap-${providerId.slice(0, 8)}`,
+    folder_filters: JSON.stringify(['INBOX']),
+    auto_process_emails: true,
+    max_emails_per_sync: 50,
+    uid_validity: 'abc',
+    last_uid: '410',
+    folder_state: JSON.stringify({ INBOX: { uid_validity: 'abc', last_uid: '410' } }),
+    created_at: now,
+    updated_at: now,
+  });
+  return providerId;
+}
+
 async function seedUserWithRole(roleName: 'admin' | 'owner' | 'member'): Promise<string> {
   const userId = uuidv4();
   await tenantTable('users').insert({
@@ -158,6 +199,7 @@ describeDb('inbound auth-failure auto-pause lifecycle (DB-backed)', () => {
       await tenantTable('roles').delete();
       await tenantTable('users').delete();
       await tenantTable('google_email_provider_config').delete();
+      await tenantTable('imap_email_provider_config').delete();
       await tenantTable('email_providers').delete();
       await tenantFixtureTable().where('tenant', testTenant).delete();
     }
@@ -352,5 +394,137 @@ describeDb('inbound auth-failure auto-pause lifecycle (DB-backed)', () => {
       // No credential material may leak into the notification payload.
       expect(notification.message).not.toMatch(/refresh|token|secret/i);
     }
+  });
+
+  describe('IMAP email-service source-access accounting (standalone listener path)', () => {
+    // These tests drive the exact recorder the standalone IMAP email-service
+    // listener loop calls at its connection/fetch boundary
+    // (services/email-service/src/emailService.ts): strict classification →
+    // counter, success → reset, transient → neither. The admin notification
+    // flows through the notifier registered at startup in that runtime
+    // (event-publisher hand-off; asserted by the topology contract test).
+
+    function imapAuthenticationRejection(): Error {
+      // Shape produced by ImapFlow on an AUTHENTICATE failure.
+      const failure: any = new Error('Authentication failed');
+      failure.authenticationFailed = true;
+      failure.serverResponseCode = 'AUTHENTICATIONFAILED';
+      failure.responseText = 'INVALID CREDENTIALS';
+      return failure;
+    }
+
+    it('counts classified IMAP auth failures and pauses at the threshold with a notification', async () => {
+      const providerId = await seedImapProvider();
+
+      const first = await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: imapAuthenticationRejection(),
+        source: 'imap-email-service',
+      });
+      expect(first).toEqual({ unrecoverable: true, autoPaused: false });
+
+      await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: imapAuthenticationRejection(),
+        source: 'imap-email-service',
+      });
+
+      let row = await getProviderRow(providerId);
+      expect(row.inbound_paused_at).toBeNull();
+      expect(Number(row.inbound_auth_failure_count)).toBe(2);
+      expect(row.inbound_auth_failure_code).toBe('imap:authentication_failed');
+
+      const third = await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: imapAuthenticationRejection(),
+        source: 'imap-email-service',
+      });
+      expect(third.autoPaused).toBe(true);
+
+      row = await getProviderRow(providerId);
+      expect(row.inbound_paused_at).not.toBeNull();
+      expect(row.inbound_pause_reason).toBe('auth_failure');
+      expect(Number(row.inbound_auth_failure_count)).toBe(3);
+
+      // The notification reaches admins from the email-service runtime via the
+      // registered notifier (event-publisher → server subscriber in prod).
+      expect(dispatchedNotifications).toHaveLength(1);
+      expect(dispatchedNotifications[0]).toMatchObject({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        authFailureCode: 'imap:authentication_failed',
+      });
+    });
+
+    it('counts IMAP OAuth token-endpoint terminal failures', async () => {
+      const providerId = await seedImapProvider();
+      // Shape produced by the email-service refreshAccessToken rethrow: the
+      // raw axios error carries the OAuth error body on response.data.
+      const oauthFailure: any = new Error('Request failed with status code 400');
+      oauthFailure.response = { data: { error: 'invalid_grant' } };
+
+      const outcome = await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: oauthFailure,
+        source: 'imap-email-service',
+      });
+      expect(outcome).toEqual({ unrecoverable: true, autoPaused: false });
+
+      const row = await getProviderRow(providerId);
+      expect(Number(row.inbound_auth_failure_count)).toBe(1);
+      expect(row.inbound_auth_failure_code).toBe('imap:invalid_grant');
+    });
+
+    it('never counts transient connection errors and resets on successful access', async () => {
+      const providerId = await seedImapProvider();
+
+      const transientOutcome = await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: new Error('connect ETIMEDOUT 10.0.0.5:993'),
+        source: 'imap-email-service',
+      });
+      expect(transientOutcome).toEqual({ unrecoverable: false, autoPaused: false });
+      expect(Number((await getProviderRow(providerId)).inbound_auth_failure_count)).toBe(0);
+
+      // Arm the counter with two classified failures, then a successful
+      // mailbox access (the listener's connect-success path) resets it.
+      await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: imapAuthenticationRejection(),
+        source: 'imap-email-service',
+      });
+      await recordInboundSourceAuthFailure({
+        tenant: testTenant,
+        providerId,
+        providerType: 'imap',
+        error: imapAuthenticationRejection(),
+        source: 'imap-email-service',
+      });
+      expect(Number((await getProviderRow(providerId)).inbound_auth_failure_count)).toBe(2);
+
+      await recordInboundSourceAccessSuccess({
+        tenant: testTenant,
+        providerId,
+        source: 'imap-email-service',
+      });
+
+      const row = await getProviderRow(providerId);
+      expect(Number(row.inbound_auth_failure_count)).toBe(0);
+      expect(row.inbound_auth_failure_last_at).toBeNull();
+      expect(row.inbound_paused_at).toBeNull();
+    });
   });
 });

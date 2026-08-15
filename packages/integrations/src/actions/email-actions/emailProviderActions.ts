@@ -1160,11 +1160,6 @@ export const updateEmailProvider = withAuth(async (
               'Microsoft reconnection failed. Verify the client secret and try again.'
             );
             provider.status = 'error';
-          } else if (recovery.reconciliation?.status === 'partial') {
-            result.setupWarnings = [
-              ...(result.setupWarnings || []),
-              recovery.reconciliation.warning || 'Reconnection resumed, but some paused-interval mail was not reconciled. Run a mailbox resync.',
-            ];
           }
         }
       } catch (error) {

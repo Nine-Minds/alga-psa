@@ -38,12 +38,11 @@ export interface ConfigureGmailProviderResult {
   warnings: string[];
   /**
    * Outcome of the auth-failure recovery attempted when the provider was
-   * auto-paused: 'resumed' — pause cleared and reconciliation handed off;
-   * 'resumed_partial' — resumed but the paused interval was only partially
-   * reconciled (see warnings); 'failed' — still paused, reconnect required;
-   * undefined — no recovery was attempted (provider was not auth-paused).
+   * auto-paused: 'resumed' — pause cleared and the paused interval fully
+   * reconciled; 'failed' — still paused, reconnect required; undefined — no
+   * recovery was attempted (provider was not auth-paused).
    */
-  authFailureRecovery?: 'resumed' | 'resumed_partial' | 'failed';
+  authFailureRecovery?: 'resumed' | 'failed';
 }
 
 /**
@@ -264,18 +263,14 @@ export async function configureGmailProvider({
               error: recovery.error,
             });
             // The recovery outcome is part of the action result: the caller
-            // must not toast success while the mailbox is still paused, and
-            // partial reconciliations must surface their warning.
+            // must not toast success while the mailbox is still paused.
+            // (There is no partial outcome: recovery either fully reconciles
+            // the paused interval before clearing the pause or fails with the
+            // provider left paused.)
             if (!recovery.resumed) {
               result.authFailureRecovery = 'failed';
               result.success = false;
               result.error = recovery.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
-            } else if (recovery.reconciliation?.status === 'partial') {
-              result.authFailureRecovery = 'resumed_partial';
-              result.warnings.push(
-                recovery.reconciliation.warning ||
-                  'Reconnection resumed, but some paused-interval mail was not reconciled. Run a mailbox resync.'
-              );
             } else {
               result.authFailureRecovery = 'resumed';
             }

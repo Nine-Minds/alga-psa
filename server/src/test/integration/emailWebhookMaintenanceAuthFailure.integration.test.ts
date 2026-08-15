@@ -32,6 +32,11 @@ vi.mock('redis', () => ({
   },
 }));
 
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: vi.fn(async () => ({ job: {}, queueDepth: 0 })),
+  getInboundEmailRedisClient: vi.fn(async () => ({})),
+}));
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => testDb,
 }));
@@ -51,8 +56,8 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     async ensureTokenHealthy() {
       return tokenHealthMock.ensureTokenHealthy();
     }
-    async listMessagesReceivedSince() {
-      return tokenHealthMock.listMessagesReceivedSince();
+    async listMessagesReceivedSince(...args: any[]) {
+      return tokenHealthMock.listMessagesReceivedSince(...args);
     }
   },
 }));
@@ -181,28 +186,46 @@ describeDb('Microsoft maintenance token-health auth outcomes (DB-backed)', () =>
     expect(row.inbound_paused_at).toBeNull();
   });
 
-  it('flags reconciliation as truncated when the requested boundary predates the 7-day window cap', async () => {
+  it('honors an explicit recovery boundary beyond the renewal window cap and reports paging state', async () => {
     const providerId = await seedPollingProvider();
     tokenHealthMock.ensureTokenHealthy.mockResolvedValue(undefined);
+    tokenHealthMock.listMessagesReceivedSince.mockReset();
     tokenHealthMock.listMessagesReceivedSince.mockResolvedValue([]);
 
     // The module-level vi.mock only stubs the adapter; the service class
     // (and therefore the real reconciliation algorithm) runs against the DB.
+    // An explicit `since` (auth-pause recovery) must NOT be clamped by the
+    // 7-day renewal window cap: a 9-day-old pause boundary is listed from
+    // directly (minus the safety margin), so the paused interval has no gap.
+    const requestedSince = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000);
     const result = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
       providerId,
       tenant: testTenant,
-      since: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+      since: requestedSince,
     });
 
-    expect(result.truncated).toBe(true);
+    const listedSince = tokenHealthMock.listMessagesReceivedSince.mock.calls[0][0] as Date;
+    const marginMs = 15 * 60 * 1000;
+    expect(Math.abs(listedSince.getTime() - (requestedSince.getTime() - marginMs))).toBeLessThanOrEqual(2000);
+    expect(result.moreRemaining).toBe(false);
+    expect(result.enqueuedMessageIds).toEqual([]);
 
-    // Within the cap: no truncation flag.
-    const withinCap = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
+    // A full batch with Graph not exhausted reports that more may remain, so
+    // the recovery loop sweeps again instead of clearing the pause.
+    tokenHealthMock.listMessagesReceivedSince.mockImplementation(
+      async (_since: Date, maxCount: number) =>
+        Array.from({ length: maxCount }, (_, index) => ({
+          id: `ms-${index}`,
+          receivedDateTime: new Date().toISOString(),
+        }))
+    );
+    const capped = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
       providerId,
       tenant: testTenant,
-      since: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      since: requestedSince,
     });
-    expect(withinCap.truncated).toBeFalsy();
+    expect(capped.moreRemaining).toBe(true);
+    expect(capped.enqueuedMessageIds).toHaveLength(50);
   });
 
   it('keeps the curated auto-pause error message when the token-health catch path runs after the pause', async () => {
