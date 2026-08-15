@@ -408,6 +408,7 @@ def "main cleanup" [
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
+        "contract_line_bucket_services" "contract_line_buckets"
         "client_contracts" "contract_line_service_rate_tiers" "contract_line_service_bucket_config"
         "contract_line_service_hourly_config" "contract_line_service_hourly_configs" "contract_line_service_usage_config"
         "contract_line_service_fixed_config" "contract_line_service_configuration"
