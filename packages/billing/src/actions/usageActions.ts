@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import { findOrCreateCurrentBucketUsageRecord, resolveBucketDraw, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
 import {
   bucketUsageErrorMessage,
   findBucketUsageError,
@@ -29,6 +29,25 @@ function tenantScopedTable(
   table: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/**
+ * Weighted minutes a usage-tracking draw burns: usage draws have no time span,
+ * so they burn at the member multiplier only (no after-hours proration).
+ * `null` means the draw draws from no bucket (plain hourly).
+ */
+async function computeUsageWeightedBurn(
+  trx: Knex.Transaction,
+  clientId: string,
+  serviceId: string,
+  quantity: number,
+  usageDate: string | Date,
+): Promise<number | null> {
+  const draw = await resolveBucketDraw(trx, clientId, serviceId, String(usageDate));
+  if (!draw) {
+    return null;
+  }
+  return quantity * draw.memberMultiplier;
 }
 
 function usageActionErrorFrom(error: unknown): UsageActionError | null {
@@ -114,41 +133,38 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     }
 
     // --- Bucket Usage Update Logic ---
-    if (record.service_id && record.client_id && record.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: record.contract_line_id,
-          service_id: record.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
+    if (record.service_id && record.client_id) {
+      // Scope-resolution gate + weighted burn (quantity × member multiplier;
+      // usage draws have no time span).
+      const weightedDelta = await computeUsageWeightedBurn(
+        trx,
+        record.client_id,
+        record.service_id,
+        record.quantity || 0,
+        record.usage_date,
+      );
 
-      if (overlayConfig) {
-        console.log(`Usage record ${record.usage_id} linked to Bucket contract line ${record.contract_line_id}. Updating usage.`);
+      if (weightedDelta !== null && weightedDelta !== 0) {
+        console.log(`Usage record ${record.usage_id} linked to a bucket pool. Updating usage.`);
 
-        // Assuming 1 quantity = 1 hour/unit for buckets
-        const hoursDelta = record.quantity || 0;
+        try {
+          const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+            trx,
+            record.client_id,
+            record.service_id,
+            record.usage_date // Use usage record's date
+          );
 
-        if (hoursDelta !== 0) {
-          try {
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              record.client_id,
-              record.service_id,
-              record.usage_date // Use usage record's date
-            );
-
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta
-            );
-            console.log(`Successfully updated bucket usage for usage record ${record.usage_id}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
+          await updateBucketUsageMinutes(
+            trx,
+            bucketUsageRecord.usage_id,
+            weightedDelta
+          );
+          console.log(`Successfully updated bucket usage for usage record ${record.usage_id} (weighted delta ${weightedDelta})`);
+        } catch (bucketError) {
+          console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
+          if (isBucketUsageError(bucketError)) throw bucketError;
+          throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
         }
       }
     }
@@ -231,51 +247,49 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     }
 
     // --- Bucket Usage Update Logic ---
-    // We need to adjust bucket usage based on the change in quantity *if* the record is linked to a bucket plan *after* the update.
-    // This handles adding/removing quantity from a bucket-linked record, or changing a record to become bucket-linked.
-    // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
+    // Weighted delta = newQuantity × resolved multiplier − oldQuantity ×
+    // resolved multiplier (each side through the scope rule; usage draws have
+    // no time span so no after-hours proration).
 
-    if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: updatedRecord.contract_line_id,
-          service_id: updatedRecord.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
+    const newWeighted = await computeUsageWeightedBurn(
+      trx,
+      updatedRecord.client_id,
+      updatedRecord.service_id,
+      updatedRecord.quantity || 0,
+      updatedRecord.usage_date,
+    );
+    const oldWeighted = await computeUsageWeightedBurn(
+      trx,
+      originalRecord.client_id,
+      originalRecord.service_id,
+      oldQuantity,
+      originalRecord.usage_date,
+    );
 
-      if (overlayConfig) {
-        console.log(`Updated usage record ${updatedRecord.usage_id} linked to Bucket contract line ${updatedRecord.contract_line_id}. Updating usage.`);
+    const weightedDelta = (newWeighted ?? 0) - (oldWeighted ?? 0);
 
-        const newQuantity = updatedRecord.quantity || 0;
-        const quantityDelta = newQuantity - oldQuantity;
-        // Assuming 1 quantity = 1 hour/unit
-        const hoursDelta = quantityDelta;
+    if (weightedDelta !== 0 && updatedRecord.client_id) {
+      console.log(`Updated usage record ${updatedRecord.usage_id} linked to a bucket pool. Updating usage (weighted delta ${weightedDelta}).`);
 
-        if (hoursDelta !== 0) {
-          try {
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              updatedRecord.client_id,
-              updatedRecord.service_id,
-              updatedRecord.usage_date // Use updated usage date
-            );
+      try {
+        const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+          trx,
+          updatedRecord.client_id,
+          updatedRecord.service_id,
+          updatedRecord.usage_date // Use updated usage date
+        );
 
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta
-            );
-            console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
-        }
+        await updateBucketUsageMinutes(
+          trx,
+          bucketUsageRecord.usage_id,
+          weightedDelta
+        );
+        console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
       }
-      // TODO: Add logic here to handle the case where the *original* record was bucket-linked but the *updated* one is not.
-      // This would involve checking originalRecord.contract_line_id's type and applying a negative delta of -oldQuantity.
     }
     // --- End Bucket Usage Update Logic ---
 
@@ -308,43 +322,40 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
-    if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.contract_line_id) {
-      const overlayConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
-        .where({
-          contract_line_id: recordToDelete.contract_line_id,
-          service_id: recordToDelete.service_id,
-          configuration_type: 'Bucket'
-        })
-        .first('config_id');
+    if (recordToDelete.service_id && recordToDelete.client_id) {
+      // Scope-resolution gate + weighted burn, negative on delete.
+      const weighted = await computeUsageWeightedBurn(
+        trx,
+        recordToDelete.client_id,
+        recordToDelete.service_id,
+        recordToDelete.quantity || 0,
+        recordToDelete.usage_date,
+      );
 
-      if (overlayConfig) {
-        console.log(`Usage record ${usageId} linked to Bucket contract line ${recordToDelete.contract_line_id}. Updating usage before delete.`);
+      if (weighted !== null && weighted !== 0) {
+        console.log(`Usage record ${usageId} linked to a bucket pool. Updating usage before delete.`);
 
-        const quantity = recordToDelete.quantity || 0;
-        // Calculate NEGATIVE delta assuming 1 quantity = 1 hour/unit
-        const hoursDelta = -quantity;
+        const weightedDelta = -weighted;
 
-        if (hoursDelta !== 0) {
-          try {
-            // Find the record - it should exist if usage was previously logged
-            const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-              trx,
-              recordToDelete.client_id,
-              recordToDelete.service_id,
-              recordToDelete.usage_date // Use record's usage date
-            );
+        try {
+          // Find the record - it should exist if usage was previously logged
+          const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+            trx,
+            recordToDelete.client_id,
+            recordToDelete.service_id,
+            recordToDelete.usage_date // Use record's usage date
+          );
 
-            await updateBucketUsageMinutes(
-              trx,
-              bucketUsageRecord.usage_id,
-              hoursDelta // Apply negative delta
-            );
-            console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
+          await updateBucketUsageMinutes(
+            trx,
+            bucketUsageRecord.usage_id,
+            weightedDelta // Apply negative weighted delta
+          );
+          console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
+        } catch (bucketError) {
+          console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
+          if (isBucketUsageError(bucketError)) throw bucketError;
+          throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
         }
       }
     }

@@ -7,7 +7,13 @@ import { determineDefaultContractLine } from '../lib/contractLineDisambiguation'
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
 // the dropped `client_contract_lines` table and caused a prod outage on
 // time-entry save. Don't recreate a local copy.
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
+import {
+  findOrCreateCurrentBucketUsageRecord,
+  loadAfterHoursRuleForBucket,
+  resolveBucketDraw,
+  updateBucketUsageMinutes,
+} from '@alga-psa/shared/billingClients/bucketUsageService';
+import { computeWeightedMinutes } from '@alga-psa/shared/billingClients/weightedBurn';
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 // Hour-block burn MUST go through the shared canonical service too — same
 // rationale as bucketUsageService (both scheduling and billing import it).
@@ -51,6 +57,52 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
+}
+
+/**
+ * Compute the WEIGHTED minutes a time entry burns from its pool, through the
+ * shared weighted calculator. `null` means the entry draws from no bucket
+ * (plain hourly — no pool update).
+ *
+ * @returns the weighted minutes, or null when the scope rule resolves no bucket
+ */
+async function computeEntryWeightedBurn(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  entry: {
+    service_id?: string | null;
+    start_time: string | Date;
+    end_time: string | Date;
+    billable_duration?: number | null;
+  },
+): Promise<number | null> {
+  const startTime = new Date(String(entry.start_time));
+  const endTime = new Date(String(entry.end_time));
+  const billableDuration = Number(entry.billable_duration ?? 0);
+  if (billableDuration <= 0) {
+    return null;
+  }
+  if (!entry.service_id) {
+    return null;
+  }
+
+  const draw = await resolveBucketDraw(trx, clientId, entry.service_id, startTime.toISOString());
+  if (!draw) {
+    return null;
+  }
+
+  const afterHoursRule = await loadAfterHoursRuleForBucket(trx, tenant, draw.bucketId);
+  const result = computeWeightedMinutes(
+    {
+      startTime,
+      endTime,
+      billableDuration,
+    },
+    draw.memberMultiplier,
+    afterHoursRule,
+  );
+  return result.weightedMinutes;
 }
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
@@ -503,11 +555,12 @@ export const saveTimeEntry = withAuth(async (
       const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
       let oldDuration = 0; // Initialize oldDuration
+      let oldEntrySpan: { service_id?: string | null; start_time?: string | Date; end_time?: string | Date } | null = null;
       if (entry_id) {
         // Fetch original entry before update to calculate delta
         const originalEntryForUpdate = await trxTenantDb.table('time_entries')
           .where({ entry_id })
-          .select('billable_duration', 'work_item_id', 'work_item_type')
+          .select('billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time')
           .first();
         // If original entry not found, maybe throw error or handle gracefully?
         // Throwing error for now as update shouldn't happen if original is gone.
@@ -515,6 +568,7 @@ export const saveTimeEntry = withAuth(async (
              throw new Error(`Original time entry with ID ${entry_id} not found for update.`);
         }
         oldDuration = originalEntryForUpdate.billable_duration || 0;
+        oldEntrySpan = originalEntryForUpdate;
 
         // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
         const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
@@ -675,30 +729,49 @@ export const saveTimeEntry = withAuth(async (
             // Now TypeScript knows both are strings here
             clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
         }
-        const currentPlanId = resultingEntry.contract_line_id; // Use the plan ID associated with the entry
 
-        if (clientId && currentPlanId && resultingEntry.service_id) {
-          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
-            .where({
-              contract_line_id: currentPlanId,
-              service_id: resultingEntry.service_id,
-              configuration_type: 'Bucket'
-            })
-            .first('config_id');
+        if (clientId && resultingEntry.service_id) {
+          const resolvedClientId = clientId;
+          // Scope-resolution gate: explicit membership, else line catch-all,
+          // else no bucket (plain hourly). Replaces the legacy
+          // configuration_type='Bucket' config lookup.
+          const newWeighted = await computeEntryWeightedBurn(
+            trx,
+            tenant,
+            resolvedClientId,
+            resultingEntry,
+          );
 
-          if (overlayConfig) {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to bucket overlay on contract line ${currentPlanId}. Updating usage.`);
+          if (newWeighted !== null) {
+            console.log(`Time entry ${resultingEntry.entry_id} linked to a bucket pool. Updating usage.`);
 
-            const newDuration = resultingEntry.billable_duration || 0;
-            // Calculate delta in MINUTES first
-            const minutesDelta = newDuration - oldDuration; // oldDuration is 0 for inserts
+            // Old side (updates only): the previous entry's own span through the
+            // same weighted calculator, so a span/multiplier change is a delta
+            // of weighted minutes, not raw minutes.
+            let oldWeighted = 0;
+            if (entry_id && oldEntrySpan?.service_id && oldEntrySpan.start_time) {
+              const oldWeightedResult = await computeEntryWeightedBurn(
+                trx,
+                tenant,
+                resolvedClientId,
+                {
+                  service_id: oldEntrySpan.service_id,
+                  start_time: oldEntrySpan.start_time,
+                  end_time: oldEntrySpan.end_time ?? oldEntrySpan.start_time,
+                  billable_duration: oldDuration,
+                },
+              );
+              oldWeighted = oldWeightedResult ?? 0;
+            }
 
-            // Pass delta in MINUTES to bucket usage service
-            if (minutesDelta !== 0) {
+            const weightedDelta = newWeighted - oldWeighted;
+
+            // Pass the WEIGHTED delta to bucket usage service
+            if (weightedDelta !== 0) {
               try {
                 const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
                   trx,
-                  clientId,
+                  resolvedClientId,
                   resultingEntry.service_id,
                   resultingEntry.start_time // Use entry's start time to find the correct period
                 );
@@ -706,9 +779,9 @@ export const saveTimeEntry = withAuth(async (
                 await updateBucketUsageMinutes(
                   trx,
                   bucketUsageRecord.usage_id,
-                  minutesDelta // Pass the delta in minutes
+                  weightedDelta // Pass the weighted delta
                 );
-                console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id}`);
+                console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id} (weighted delta ${weightedDelta})`);
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
                 // Re-throwing ensures data consistency. Keep the typed failure
@@ -720,13 +793,13 @@ export const saveTimeEntry = withAuth(async (
                 throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             } else {
-               console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+               console.log(`No weighted duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
             }
           } else {
-             console.log(`Time entry ${resultingEntry.entry_id} service/plan has no bucket overlay or plan not found.`);
+             console.log(`Time entry ${resultingEntry.entry_id} service draws from no bucket pool.`);
           }
         } else {
-           console.log(`Could not determine client ID or contract line for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+           console.log(`Could not determine client ID for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
         }
       } else {
          console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
@@ -1092,44 +1165,41 @@ export const deleteTimeEntry = withAuth(async (
         if (timeEntry.work_item_id && timeEntry.work_item_type) {
             clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
         }
-        const currentPlanId = timeEntry.contract_line_id;
 
-        if (clientId && currentPlanId && timeEntry.service_id) {
-          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
-            .where({
-              contract_line_id: currentPlanId,
-              service_id: timeEntry.service_id,
-              configuration_type: 'Bucket'
-            })
-            .first('config_id');
+        if (clientId && timeEntry.service_id) {
+          // Scope-resolution gate + weighted burn (negative on delete).
+          const weighted = await computeEntryWeightedBurn(
+            trx,
+            tenant,
+            clientId,
+            timeEntry,
+          );
 
-          if (overlayConfig) {
-            console.log(`Time entry ${entryId} linked to bucket overlay on contract line ${currentPlanId}. Decrementing usage.`);
-            const minutesDelta = -(timeEntry.billable_duration || 0); // Negative delta
+          if (weighted !== null && weighted !== 0) {
+            console.log(`Time entry ${entryId} linked to a bucket pool. Decrementing usage.`);
+            const weightedDelta = -weighted; // Negative weighted delta
 
-            if (minutesDelta !== 0) {
-              try {
-                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-                  trx,
-                  clientId,
-                  timeEntry.service_id,
-                  timeEntry.start_time // Use entry's start time to find the correct period
-                );
+            try {
+              const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+                trx,
+                clientId,
+                timeEntry.service_id,
+                timeEntry.start_time // Use entry's start time to find the correct period
+              );
 
-                await updateBucketUsageMinutes(
-                  trx,
-                  bucketUsageRecord.usage_id,
-                  minutesDelta // Pass negative delta
-                );
-                console.log(`Successfully decremented bucket usage for deleted entry ${entryId}`);
-              } catch (bucketError) {
-                console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-                // Re-throwing ensures data consistency; preserve the typed code.
-                if (isBucketUsageError(bucketError)) {
-                  throw bucketError;
-                }
-                throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+              await updateBucketUsageMinutes(
+                trx,
+                bucketUsageRecord.usage_id,
+                weightedDelta // Pass negative weighted delta
+              );
+              console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${weightedDelta})`);
+            } catch (bucketError) {
+              console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
+              // Re-throwing ensures data consistency; preserve the typed code.
+              if (isBucketUsageError(bucketError)) {
+                throw bucketError;
               }
+              throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
             }
           }
         }
