@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { Statement } from '../types';
 import { dummyStatements } from '../data/dummyStatements';
 import { Button, Card, Stack, Text, DataTable } from '@alga/ui-kit';
-import { DatePicker } from 'server/src/components/ui/DatePicker';
 export const StatementsList: React.FC = () => {
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);

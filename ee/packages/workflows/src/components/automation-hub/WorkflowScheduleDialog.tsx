@@ -16,7 +16,9 @@ import {
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateFromString, dateTimeFromString, dateTimeToString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createWorkflowScheduleAction as createWorkflowScheduleActionDefault,
@@ -918,30 +920,18 @@ export default function WorkflowScheduleDialog({
       );
     }
 
-    const inputType = resolved.format === 'date-time'
-      ? 'datetime-local'
-      : resolved.format === 'date'
-        ? 'date'
-        : (type === 'number' || type === 'integer' ? 'number' : 'text');
+    const isNumeric = type === 'number' || type === 'integer';
+    const dateFormat = !isNumeric && (resolved.format === 'date' || resolved.format === 'date-time')
+      ? resolved.format
+      : null;
 
-    return (
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-[rgb(var(--color-text-800))]">
-          {label}{isRequired ? <span className="text-destructive"> *</span> : null}
-        </label>
-        <Input
-          id={`schedule-form-${fieldPath}`}
-          aria-label={label}
-          type={inputType}
-          value={value == null ? '' : String(value)}
-          onChange={(event) => {
-            const raw = event.target.value;
-            const parsed = raw === ''
-              ? null
-              : (type === 'number' || type === 'integer' ? Number(raw) : raw);
-            updateFormValue((previous) => setValueAtPath(previous, path, parsed));
-          }}
-        />
+    const fieldLabel = (
+      <label className="text-sm font-medium text-[rgb(var(--color-text-800))]">
+        {label}{isRequired ? <span className="text-destructive"> *</span> : null}
+      </label>
+    );
+    const fieldFooter = (
+      <>
         {resolved.description ? (
           <div className="text-xs text-[rgb(var(--color-text-500))]">{resolved.description}</div>
         ) : null}
@@ -950,6 +940,60 @@ export default function WorkflowScheduleDialog({
             {error.message}
           </div>
         ))}
+      </>
+    );
+
+    if (dateFormat) {
+      const rawValue = typeof value === 'string' ? value : '';
+      const commit = (next: Date | undefined) => {
+        const serialized = !next
+          ? null
+          : dateFormat === 'date-time' ? dateTimeToString(next) : dateToString(next);
+        updateFormValue((previous) => setValueAtPath(previous, path, serialized));
+      };
+
+      return (
+        <div className="space-y-1">
+          {fieldLabel}
+          {dateFormat === 'date-time' ? (
+            <DateTimePicker
+              id={`schedule-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateTimeFromString(rawValue)}
+              onChange={commit}
+            />
+          ) : (
+            <DatePicker
+              id={`schedule-form-${fieldPath}`}
+              label={label}
+              required={isRequired}
+              clearable
+              value={dateFromString(rawValue)}
+              onChange={commit}
+            />
+          )}
+          {fieldFooter}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-1">
+        {fieldLabel}
+        <Input
+          id={`schedule-form-${fieldPath}`}
+          aria-label={label}
+          type={isNumeric ? 'number' : 'text'}
+          value={value == null ? '' : String(value)}
+          onChange={(event) => {
+            const raw = event.target.value;
+            const parsed = raw === '' ? null : (isNumeric ? Number(raw) : raw);
+            updateFormValue((previous) => setValueAtPath(previous, path, parsed));
+          }}
+        />
+        {fieldFooter}
       </div>
     );
   };

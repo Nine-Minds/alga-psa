@@ -1,18 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, X } from 'lucide-react';
-import * as Popover from '@radix-ui/react-popover';
-import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
-import { DateTimePickerComponent } from '../ui-reflection/types';
-import { Calendar } from './Calendar';
-import { cn } from '../lib/utils';
-import { useOptionalI18n } from '../lib/i18n/client';
-import { LOCALE_CONFIG } from '../lib/i18n/config';
-import { getDateFnsLocale } from '../lib/dateFnsLocale';
-import { localeUses12HourClock } from '../lib/localeTimeFormat';
-import '../styles/calendar.css';
+import { DateTimeField } from './DateTimeField';
 
 interface DateTimePickerBaseProps {
   value?: Date;
@@ -49,10 +38,15 @@ interface DateTimePickerNonClearableProps extends DateTimePickerBaseProps {
 
 export type DateTimePickerProps = DateTimePickerClearableProps | DateTimePickerNonClearableProps;
 
+/**
+ * Date and time as a pair of typeable fields over one shared panel — calendar
+ * on the left, quarter-hour rail on the right. A day click keeps the panel for
+ * the time half; a time click saves and closes.
+ */
 export function DateTimePicker({
   value,
   onChange,
-  placeholder = 'Select date and time',
+  placeholder,
   className,
   disabled,
   id,
@@ -64,292 +58,22 @@ export function DateTimePicker({
   timeFormat,
   ref
 }: DateTimePickerProps) {
-  const [open, setOpen] = React.useState(false);
-  const i18n = useOptionalI18n();
-  const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
-  const dateFnsLocale = getDateFnsLocale(locale);
-  const effectiveTimeFormat = timeFormat ?? (localeUses12HourClock(locale) ? '12h' : '24h');
-  const hourListRef = React.useRef<HTMLDivElement>(null);
-  const minuteListRef = React.useRef<HTMLDivElement>(null);
-
-  // Type-safe helper for clearing - only defined when clearable is true
-  // This avoids repeated type assertions throughout the component
-  const clearValue = React.useMemo(() => {
-    if (clearable) {
-      // Type assertion is safe here because clearable=true means onChange accepts undefined
-      return () => (onChange as (date: Date | undefined) => void)(undefined);
-    }
-    return undefined;
-  }, [clearable, onChange]);
-
-  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-    if ((e.key === 'Backspace' || e.key === 'Delete') && value && !disabled && clearValue) {
-      e.preventDefault();
-      clearValue();
-    }
-  }, [value, disabled, clearValue]);
-
-  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
-  const [selectedHour, setSelectedHour] = React.useState(
-    value ? format(value, effectiveTimeFormat === '12h' ? 'hh' : 'HH') : '12'
-  );
-  const [selectedMinute, setSelectedMinute] = React.useState(
-    value ? format(value, 'mm') : '00'
-  );
-  const [period, setPeriod] = React.useState<'AM' | 'PM'>(
-    value ? (format(value, 'a') as 'AM' | 'PM') : 'AM'
-  );
-
-  // Scroll to selected values when dropdown opens
-  React.useEffect(() => {
-    if (open) {
-      // Use setTimeout to ensure the DOM has updated
-      setTimeout(() => {
-        // Scroll hour list to selected hour
-        if (hourListRef.current) {
-          const selectedHourElement = hourListRef.current.querySelector(`button[data-value="${selectedHour}"]`);
-          if (selectedHourElement) {
-            selectedHourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
-          }
-        }
-
-        // Scroll minute list to selected minute
-        if (minuteListRef.current) {
-          const selectedMinuteElement = minuteListRef.current.querySelector(`button[data-value="${selectedMinute}"]`);
-          if (selectedMinuteElement) {
-            selectedMinuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
-          }
-        }
-      }, 50);
-    }
-  }, [open, selectedHour, selectedMinute]);
-
-  // Register with UI reflection system if id is provided
-  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<DateTimePickerComponent>({
-    type: 'dateTimePicker',
-    id,
-    label: label || placeholder,
-    value: value?.toISOString(),
-    disabled,
-    required,
-  });
-
-  // Update metadata when field props change
-  React.useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({
-        value: value?.toISOString(),
-        disabled,
-        required
-      });
-    }
-  }, [value, disabled, required, updateMetadata]);
-
-  const hours = React.useMemo(() => {
-    if (effectiveTimeFormat === '24h') {
-      return Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-    }
-    return Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-  }, [effectiveTimeFormat]);
-
-  const minutes = React.useMemo(() =>
-    Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
-  []);
-
-  const handleTimeChange = (hour: string, minute: string, newPeriod: 'AM' | 'PM') => {
-    if (!selectedDate) return;
-
-    let h = parseInt(hour);
-    if (effectiveTimeFormat === '12h') {
-      if (newPeriod === 'PM' && h !== 12) h += 12;
-      if (newPeriod === 'AM' && h === 12) h = 0;
-    }
-
-    const newDate = new Date(selectedDate);
-    newDate.setHours(h);
-    newDate.setMinutes(parseInt(minute));
-    onChange(newDate);
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-
-    setSelectedDate(date);
-    const newDate = new Date(date);
-
-    // Preserve the current time when selecting a new date
-    if (value) {
-      newDate.setHours(value.getHours());
-      newDate.setMinutes(value.getMinutes());
-    }
-
-    onChange(newDate);
-  };
-
-  const displayValue = value
-    ? format(
-        value,
-        timeFormat ? (timeFormat === '12h' ? 'P hh:mm a' : 'P HH:mm') : 'P p',
-        { locale: dateFnsLocale }
-      )
-    : placeholder;
-
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <div className={className} ref={ref}>
-        <Popover.Trigger
-          {...automationIdProps}
-          disabled={disabled}
-          aria-label={label || placeholder}
-          onKeyDown={handleKeyDown}
-          className={`
-            flex h-10 w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
-            file:border-0 file:bg-transparent file:text-sm file:font-medium
-            placeholder:text-gray-500
-            hover:border-gray-400
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2
-            disabled:cursor-not-allowed disabled:opacity-50
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          `}
-        >
-          <span className="flex-1 text-left truncate">{displayValue}</span>
-          <div className="flex items-center gap-2">
-            {clearValue && value && !disabled && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  clearValue();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    clearValue();
-                  }
-                }}
-                className="text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </span>
-            )}
-            <Clock className="h-4 w-4 opacity-50" />
-          </div>
-        </Popover.Trigger>
-
-        <Popover.Portal>
-          <Popover.Content
-            className="calendar-popover-content datetime-picker-container"
-            align="center"
-            side="bottom"
-            sideOffset={4}
-            avoidCollisions={true}
-          >
-            <div className="datetime-picker-calendar">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                defaultMonth={value}
-                fromDate={minDate}
-                toDate={maxDate}
-              />
-            </div>
-
-            <div className="datetime-picker-time">
-              <div className="flex items-start justify-between gap-2 w-full">
-
-                <div className="datetime-picker-time-section" style={{ flex: 1 }}>
-                  <label className="datetime-picker-time-label">Hour</label>
-                  <div
-                    ref={hourListRef}
-                    className="datetime-picker-time-scroll"
-                    onWheel={(e) => {
-                      // Standard scrolling behavior
-                      const container = e.currentTarget;
-                      const scrollAmount = e.deltaY;
-                      container.scrollTop += scrollAmount;
-                    }}
-                  >
-                    {hours.map((hour) => (
-                      <button
-                        key={hour}
-                        data-value={hour}
-                        onClick={() => {
-                          setSelectedHour(hour);
-                          handleTimeChange(hour, selectedMinute, period);
-                        }}
-                        className={cn(
-                          'datetime-picker-time-option',
-                          selectedHour === hour && 'selected'
-                        )}
-                      >
-                        {hour}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="datetime-picker-time-section" style={{ flex: 1 }}>
-                  <label className="datetime-picker-time-label">Minute</label>
-                  <div
-                    ref={minuteListRef}
-                    className="datetime-picker-time-scroll"
-                    onWheel={(e) => {
-                      // Standard scrolling behavior
-                      const container = e.currentTarget;
-                      const scrollAmount = e.deltaY;
-                      container.scrollTop += scrollAmount;
-                    }}
-                  >
-                    {minutes.map((minute) => (
-                      <button
-                        key={minute}
-                        data-value={minute}
-                        onClick={() => {
-                          setSelectedMinute(minute);
-                          handleTimeChange(selectedHour, minute, period);
-                        }}
-                        className={cn(
-                          'datetime-picker-time-option',
-                          selectedMinute === minute && 'selected'
-                        )}
-                      >
-                        {minute}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {effectiveTimeFormat === '12h' && (
-                  <div className="datetime-picker-time-section w-16">
-                    <label className="datetime-picker-time-label">Period</label>
-                    <div className="datetime-picker-period-buttons">
-                      {(['AM', 'PM'] as const).map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => {
-                            setPeriod(p);
-                            handleTimeChange(selectedHour, selectedMinute, p);
-                          }}
-                          className={cn(
-                            'datetime-picker-period-button',
-                            period === p && 'selected'
-                          )}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Popover.Content>
-        </Popover.Portal>
-      </div>
-    </Popover.Root>
+    <DateTimeField
+      variant="datetime"
+      value={value}
+      onChange={onChange as (value: Date | string | undefined) => void}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+      clearable={clearable}
+      id={id}
+      label={label}
+      required={required}
+      minDate={minDate}
+      maxDate={maxDate}
+      timeFormat={timeFormat}
+      ref={ref}
+    />
   );
 }

@@ -13,6 +13,9 @@ let mockLocale: string | null = 'en';
 
 vi.mock('../lib/i18n/client', () => ({
   useOptionalI18n: () => (mockLocale ? { locale: mockLocale } : null),
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback ?? key,
+  }),
 }));
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
@@ -39,7 +42,7 @@ describe('DatePicker locale display', () => {
     for (const [locale, expected] of cases) {
       mockLocale = locale;
       const { unmount } = render(<DatePicker value={date} onChange={() => {}} />);
-      expect(screen.getByText(expected)).toBeTruthy();
+      expect(screen.getByDisplayValue(expected)).toBeTruthy();
       unmount();
     }
   });
@@ -47,13 +50,13 @@ describe('DatePicker locale display', () => {
   it('honors displayFormat override regardless of locale', () => {
     mockLocale = 'fr';
     render(<DatePicker value={date} onChange={() => {}} displayFormat="yyyy-MM-dd" />);
-    expect(screen.getByText('2026-06-10')).toBeTruthy();
+    expect(screen.getByDisplayValue('2026-06-10')).toBeTruthy();
   });
 
   it('renders without an I18nProvider (auth-page scenario), defaulting to en', () => {
     mockLocale = null;
     render(<DatePicker value={date} onChange={() => {}} />);
-    expect(screen.getByText('06/10/2026')).toBeTruthy();
+    expect(screen.getByDisplayValue('06/10/2026')).toBeTruthy();
   });
 });
 
@@ -66,25 +69,28 @@ describe('DateTimePicker locale display', () => {
   it('explicit timeFormat=24h renders 24h time with locale date under fr', () => {
     mockLocale = 'fr';
     render(<DateTimePicker value={date} onChange={() => {}} timeFormat="24h" />);
-    expect(screen.getByText('10/06/2026 14:30')).toBeTruthy();
+    expect(screen.getByDisplayValue('10/06/2026')).toBeTruthy();
+    expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });
 
   it('explicit timeFormat=12h renders 12h time with locale date under de', () => {
     mockLocale = 'de';
     render(<DateTimePicker value={date} onChange={() => {}} timeFormat="12h" />);
-    expect(screen.getByText(formatDateFns(date, 'P hh:mm a', { locale: deLocale }))).toBeTruthy();
-    expect(screen.getByText(/^10\.06\.2026 02:30/)).toBeTruthy();
+    expect(screen.getByDisplayValue(formatDateFns(date, 'P', { locale: deLocale }))).toBeTruthy();
+    expect(screen.getByDisplayValue('2:30 PM')).toBeTruthy();
   });
 
   it('unset timeFormat renders locale-derived date+time under en and de', () => {
     mockLocale = 'en';
     const first = render(<DateTimePicker value={date} onChange={() => {}} />);
-    expect(screen.getByText('06/10/2026 2:30 PM')).toBeTruthy();
+    expect(screen.getByDisplayValue('06/10/2026')).toBeTruthy();
+    expect(screen.getByDisplayValue('2:30 PM')).toBeTruthy();
     first.unmount();
 
     mockLocale = 'de';
     render(<DateTimePicker value={date} onChange={() => {}} />);
-    expect(screen.getByText('10.06.2026 14:30')).toBeTruthy();
+    expect(screen.getByDisplayValue('10.06.2026')).toBeTruthy();
+    expect(screen.getByDisplayValue('14:30')).toBeTruthy();
   });
 });
 

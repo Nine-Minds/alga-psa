@@ -35,7 +35,9 @@ describe('keyboard shortcuts final regression contract', () => {
 
   it('leaves component-local widget key handling in the owning widgets', () => {
     const widgets = [
-      'packages/ui/src/components/DatePicker.tsx',
+      // The pickers' own key handling moved into the shared field family when
+      // date, time and date+time became one component.
+      'packages/ui/src/components/DateTimeField.tsx',
       'packages/ui/src/components/SearchableSelect.tsx',
       'packages/ui/src/components/AsyncSearchableSelect.tsx',
       'packages/ui/src/components/tags/TagInput.tsx',

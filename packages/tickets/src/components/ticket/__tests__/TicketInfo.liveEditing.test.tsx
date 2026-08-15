@@ -114,8 +114,8 @@ vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   DatePicker: () => <button type="button">Due date</button>,
 }));
 
-vi.mock('@alga-psa/ui/components/TimePicker', () => ({
-  TimePicker: () => <button type="button">Due time</button>,
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: () => <button type="button">Due date and time</button>,
 }));
 
 vi.mock('@alga-psa/tags/components', () => ({
