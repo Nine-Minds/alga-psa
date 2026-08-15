@@ -80,7 +80,7 @@ describe('workflow time domain tenant-scoped query contract', () => {
   });
 
   it('uses structural tenant scoping for usage, timesheet resolution, and entry side-effect roots', () => {
-    const bucketPeriodSection = sectionBetween('async function resolveBucketUsagePeriod', 'async function applyBucketUsageDeltaForEntry');
+    const bucketDisambiguationSection = sectionBetween('async function determineDefaultContractLineForWorkflow', 'async function applyBucketUsageDeltaForEntry');
     const usageSection = sectionBetween('async function applyBucketUsageDeltaForEntry', 'async function resolveOrCreateTimeSheet');
     const timesheetSection = sectionBetween('async function resolveOrCreateTimeSheet', 'async function applyTicketAssignmentSideEffects');
     const ticketSideEffectSection = sectionBetween('async function applyTicketAssignmentSideEffects', 'async function recalculateProjectTaskActualMinutes');
@@ -88,19 +88,24 @@ describe('workflow time domain tenant-scoped query contract', () => {
     const taskSideEffectSection = sectionBetween('async function applyProjectTaskAssignmentSideEffects', 'export async function createWorkflowTimeEntry');
     const createEntryValidationSection = sectionBetween('export async function createWorkflowTimeEntry', '  const startDate = ensureValidDate');
 
-    expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'client_billing_cycles', tenantId)");
-    expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'client_contracts as cc', tenantId)");
-    expect(bucketPeriodSection).toContain("tenantJoin(trx, tenantId, contractAssignmentQuery, 'contracts as ct'");
-    expect(bucketPeriodSection).toContain("tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl'");
-    expect(bucketPeriodSection).toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");
-    expect(bucketPeriodSection).not.toMatch(/\.where\(\{\s*tenant:\s*tenantId/);
-    expect(bucketPeriodSection).not.toContain("'cc.tenant': tenantId");
-    expect(bucketPeriodSection).not.toContain('created_at: new Date().toISOString()');
-    expect(bucketPeriodSection).not.toContain('updated_at: new Date().toISOString()');
+    // The workflow runtime no longer resolves the bucket period or writes
+    // bucket_usage itself — it routes through the canonical shared service
+    // (scope-resolution rule + weighted calculator). Assert the new shape.
+    expect(bucketDisambiguationSection).toContain("tenantJoin(trx, tenantId, contractQuery, 'contract_line_bucket_services as member'");
+    expect(bucketDisambiguationSection).toContain("tenantJoin(trx, tenantId, contractQuery, 'contract_line_buckets as catch_all'");
+    expect(bucketDisambiguationSection).not.toContain("'contract_line_service_configuration as bucket_config'");
+    expect(bucketDisambiguationSection).not.toContain("'cfg.tenant': tenantId");
 
-    expect(usageSection).toContain("tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId)");
-    expect(usageSection).toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");
-    expect(usageSection).not.toContain("'cfg.tenant': tenantId");
+    expect(source).not.toContain('async function resolveBucketUsagePeriod');
+    expect(source).not.toContain('async function findOrCreateBucketUsageForEntry');
+    expect(source).toContain("resolveBucketDraw(trx, clientId, serviceId, startTimeIso)");
+    expect(source).toContain("loadAfterHoursRuleForBucket(trx, tenantId, draw.bucketId)");
+    expect(source).toContain("findOrCreateCurrentBucketUsageRecord(");
+    expect(source).toContain("updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta)");
+    // The canonical service owns the bucket_usage tenant scoping; the workflow
+    // runtime must not write it directly (that is what the rekey made unsafe).
+    expect(source).not.toMatch(/tenantScopedTable\(trx, 'bucket_usage'/);
+    expect(usageSection).not.toContain("tenantScopedTable(trx, 'bucket_usage', tenantId)");
     expect(usageSection).not.toContain('.where({ tenant: tenantId, usage_id: usageId })');
     expect(usageSection).not.toContain('updated_at: new Date().toISOString()');
 

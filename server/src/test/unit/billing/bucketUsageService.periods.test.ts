@@ -26,12 +26,15 @@ function buildBucketUsageTransaction(config: {
     client_id: string;
     contract_line_id: string;
     service_catalog_id: string;
+    bucket_id: string;
     period_start: string;
     period_end: string;
     minutes_used: number;
     overage_minutes: number;
     rolled_over_minutes: number;
   };
+  bucket?: Record<string, unknown> | null;
+  members?: Array<Record<string, unknown>>;
 }) {
   const state = {
     bucketUsageFirstCalls: 0,
@@ -40,6 +43,29 @@ function buildBucketUsageTransaction(config: {
     insertedRecord: null as Record<string, unknown> | null,
     tablesCalled: [] as string[],
     recurringWhereCalls: [] as unknown[][][],
+  };
+
+  const members = config.members ?? [{ bucket_id: "bucket-1", contract_line_id: config.contractLineId, service_id: "service-1", burn_multiplier: 1 }];
+  const listRowsFor = (tableName: string): unknown[] => {
+    if (tableName === "client_contracts as cc" && config.conflictingClientContractId) {
+      return [
+        {
+          client_contract_id: config.clientContractId ?? "assignment-1",
+          contract_line_id: config.contractLineId,
+          start_date: "2024-12-15",
+          billing_frequency: "monthly",
+          cadence_owner: config.cadenceOwner,
+        },
+        {
+          client_contract_id: config.conflictingClientContractId,
+          contract_line_id: config.contractLineId,
+          start_date: "2024-12-15",
+          billing_frequency: "monthly",
+          cadence_owner: config.cadenceOwner,
+        },
+      ];
+    }
+    return [];
   };
 
   const trx: any = ((tableName: string) => {
@@ -75,20 +101,16 @@ function buildBucketUsageTransaction(config: {
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.orderBy = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
+    builder.sum = vi.fn().mockImplementation(() => builder);
+
+    // List reads awaited directly.
+    builder.then = (resolve: (value: unknown[]) => void) => {
+      resolve(listRowsFor(tableName));
+    };
 
     builder.first = vi.fn().mockImplementation(async () => {
       if (tableName === "client_contracts as cc") {
         state.clientContractFirstCalls += 1;
-        if (state.clientContractFirstCalls > 1) {
-          if (!config.conflictingClientContractId) {
-            return undefined;
-          }
-
-          return {
-            client_contract_id: config.conflictingClientContractId,
-          };
-        }
-
         return {
           client_contract_id: config.clientContractId ?? "assignment-1",
           client_contract_line_id: config.clientContractLineId,
@@ -111,24 +133,26 @@ function buildBucketUsageTransaction(config: {
         if (state.bucketUsageFirstCalls === 1) {
           return undefined;
         }
-
         return config.previousBucketUsage;
       }
 
-      if (tableName === "contract_line_service_configuration") {
-        return {
-          config_id: "bucket-config-1",
-        };
+      if (tableName === "contract_line_bucket_services") {
+        return members[0];
       }
 
-      if (tableName === "contract_line_service_bucket_config") {
-        return {
-          config_id: "bucket-config-1",
+      if (tableName === "contract_line_buckets") {
+        if (config.bucket === null) {
+          return undefined;
+        }
+        return config.bucket ?? {
+          bucket_id: "bucket-1",
           contract_line_id: config.contractLineId,
-          service_catalog_id: "service-1",
           total_minutes: 2400,
+          overage_rate: 0,
           allow_rollover: true,
-          tenant: "test-tenant",
+          covers_all_services: false,
+          after_hours_multiplier: null,
+          business_hours_schedule_id: null,
         };
       }
 
@@ -162,13 +186,27 @@ function buildBucketUsageTransaction(config: {
 
 function buildBucketUsageUpdateTransaction(config: {
   currentUsage: Record<string, unknown>;
-  timeEntryMinutes?: string | number | null;
-  usageMinutes?: string | number | null;
+  members?: Array<Record<string, unknown>>;
+  timeEntries?: Array<Record<string, unknown>>;
+  usageRows?: Array<Record<string, unknown>>;
   updateCount?: number;
 }) {
   const state = {
     tablesCalled: [] as string[],
     updates: [] as Array<{ tableName: string; payload: Record<string, unknown> }>,
+  };
+
+  const listRowsFor = (tableName: string): unknown[] => {
+    if (tableName === "time_entries") {
+      return config.timeEntries ?? [];
+    }
+    if (tableName === "usage_tracking") {
+      return config.usageRows ?? [];
+    }
+    if (tableName === "contract_line_bucket_services") {
+      return config.members ?? [];
+    }
+    return [];
   };
 
   const trx: any = ((tableName: string) => {
@@ -177,25 +215,23 @@ function buildBucketUsageUpdateTransaction(config: {
     const builder: any = {};
     builder.where = vi.fn().mockImplementation(() => builder);
     builder.andWhere = vi.fn().mockImplementation(() => builder);
+    builder.whereIn = vi.fn().mockImplementation(() => builder);
+    builder.whereNull = vi.fn().mockImplementation(() => builder);
+    builder.whereNotIn = vi.fn().mockImplementation(() => builder);
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
     builder.andOn = vi.fn().mockImplementation(() => builder);
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
     builder.sum = vi.fn().mockImplementation(() => builder);
+    builder.then = (resolve: (value: unknown[]) => void) => {
+      resolve(listRowsFor(tableName));
+    };
+
     builder.first = vi.fn().mockImplementation(async () => {
       if (tableName === "bucket_usage as bu") {
         return config.currentUsage;
       }
-
-      if (tableName === "time_entries") {
-        return { total_duration_minutes: config.timeEntryMinutes ?? 0 };
-      }
-
-      if (tableName === "usage_tracking") {
-        return { total_quantity: config.usageMinutes ?? 0 };
-      }
-
       return undefined;
     });
     builder.update = vi.fn().mockImplementation(async (payload: Record<string, unknown>) => {
@@ -241,6 +277,7 @@ describe("bucketUsageService period selection", () => {
         client_id: "client-1",
         contract_line_id: "plan-1",
         service_catalog_id: "service-1",
+        bucket_id: "bucket-1",
         period_start: "2025-01-01",
         period_end: "2025-01-31",
         minutes_used: 1800,
@@ -261,6 +298,7 @@ describe("bucketUsageService period selection", () => {
       client_id: "client-1",
       contract_line_id: "plan-1",
       service_catalog_id: "service-1",
+      bucket_id: "bucket-1",
       period_start: "2025-02-01",
       period_end: "2025-02-28",
       rolled_over_minutes: 600,
@@ -301,6 +339,7 @@ describe("bucketUsageService period selection", () => {
         client_id: "client-1",
         contract_line_id: "plan-1",
         service_catalog_id: "service-1",
+        bucket_id: "bucket-1",
         period_start: "2025-01-15",
         period_end: "2025-02-14",
         minutes_used: 1200,
@@ -321,6 +360,7 @@ describe("bucketUsageService period selection", () => {
       client_id: "client-1",
       contract_line_id: "plan-1",
       service_catalog_id: "service-1",
+      bucket_id: "bucket-1",
       period_start: "2025-02-15",
       period_end: "2025-03-14",
       rolled_over_minutes: 1200,
@@ -363,6 +403,7 @@ describe("bucketUsageService period selection", () => {
         client_id: "client-1",
         contract_line_id: "plan-1",
         service_catalog_id: "service-1",
+        bucket_id: "bucket-1",
         period_start: "2025-01-01",
         period_end: "2025-01-31",
         minutes_used: 1800,
@@ -383,7 +424,7 @@ describe("bucketUsageService period selection", () => {
     );
   });
 
-  it("T056: bucket usage delta updates coerce bigint strings and never write audit timestamps", async () => {
+  it("T056: bucket usage delta updates coerce numeric strings and never write audit timestamps", async () => {
     const { trx, state } = buildBucketUsageUpdateTransaction({
       currentUsage: {
         minutes_used: "30",
@@ -410,13 +451,32 @@ describe("bucketUsageService period selection", () => {
       currentUsage: {
         client_id: "client-1",
         service_catalog_id: "service-1",
+        contract_line_id: "plan-1",
+        bucket_id: "bucket-1",
         period_start: "2025-02-01",
         period_end: "2025-02-28",
         rolled_over_minutes: "5",
         total_minutes: "40",
+        allow_rollover: false,
+        covers_all_services: false,
+        after_hours_multiplier: null,
+        business_hours_schedule_id: null,
       },
-      timeEntryMinutes: "45",
-      usageMinutes: "5",
+      members: [
+        { bucket_id: "bucket-1", contract_line_id: "plan-1", service_id: "service-1", burn_multiplier: 1 },
+      ],
+      timeEntries: [
+        {
+          entry_id: "entry-1",
+          service_id: "service-1",
+          start_time: "2025-02-10T10:00:00Z",
+          end_time: "2025-02-10T11:00:00Z",
+          billable_duration: "45",
+        },
+      ],
+      usageRows: [
+        { service_id: "service-1", quantity: "5" },
+      ],
     });
 
     await reconcileBucketUsageRecord(trx, "usage-1");

@@ -3,8 +3,15 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from '@alga-psa/db/workDate';
 import { Temporal } from '@js-temporal/polyfill';
-import { toISODate, toPlainDate } from '@alga-psa/core';
+import { toISODate } from '@alga-psa/core';
 import { hasPermissionByUserId } from './shared';
+import {
+  findOrCreateCurrentBucketUsageRecord,
+  loadAfterHoursRuleForBucket,
+  resolveBucketDraw,
+  updateBucketUsageMinutes,
+} from '../../../../billingClients/bucketUsageService';
+import { computeWeightedMinutes } from '../../../../billingClients/weightedBurn';
 
 export type WorkflowTimeDomainErrorCategory = 'ValidationError' | 'ActionError' | 'TransientError';
 
@@ -51,11 +58,6 @@ type ContractLineCandidate = {
   bucket_overlay?: {
     config_id: string;
   } | null;
-};
-
-type DefaultContractLineRow = {
-  client_contract_line_id: string;
-  bucket_config_id?: string | null;
 };
 
 type BucketUsagePeriod = {
@@ -598,12 +600,20 @@ async function determineDefaultContractLineForWorkflow(params: {
   tenantJoin(trx, tenantId, contractQuery, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
   tenantJoin(trx, tenantId, contractQuery, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
   tenantJoin(trx, tenantId, contractQuery, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
-  tenantJoin(trx, tenantId, contractQuery, 'contract_line_service_configuration as bucket_config', 'bucket_config.contract_line_id', 'contract_lines.contract_line_id', {
+  // Scope-resolution rule (weighted-burn model): the service draws from a pool
+  // when it is an explicit member of a line bucket OR the line has a catch-all
+  // (covers_all_services) bucket. Replacement for the legacy per-service
+  // configuration_type='Bucket' overlay join.
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_bucket_services as member', 'member.contract_line_id', 'contract_lines.contract_line_id', {
     type: 'left',
     on: (join) => {
-      join
-        .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
-        .andOnVal('bucket_config.configuration_type', 'Bucket');
+      join.andOn('member.service_id', '=', 'contract_line_services.service_id');
+    },
+  });
+  tenantJoin(trx, tenantId, contractQuery, 'contract_line_buckets as catch_all', 'catch_all.contract_line_id', 'contract_lines.contract_line_id', {
+    type: 'left',
+    on: (join) => {
+      join.andOnVal('catch_all.covers_all_services', '=', true);
     },
   });
 
@@ -624,185 +634,24 @@ async function determineDefaultContractLineForWorkflow(params: {
     })
     .select(
       'contract_lines.contract_line_id as client_contract_line_id',
-      'bucket_config.config_id as bucket_config_id'
-    ) as DefaultContractLineRow[];
+      'member.bucket_id as member_bucket_id',
+      'catch_all.bucket_id as catch_all_bucket_id'
+    ) as Array<{
+      client_contract_line_id: string;
+      member_bucket_id?: string | null;
+      catch_all_bucket_id?: string | null;
+    }>;
 
   const candidates: ContractLineCandidate[] = rows.map((row) => ({
     client_contract_line_id: String(row.client_contract_line_id),
-    bucket_overlay: row.bucket_config_id ? { config_id: String(row.bucket_config_id) } : null,
+    bucket_overlay: row.member_bucket_id
+      ? { config_id: String(row.member_bucket_id) }
+      : row.catch_all_bucket_id
+        ? { config_id: String(row.catch_all_bucket_id) }
+        : null,
   }));
 
   return resolveDeterministicContractLineSelection(candidates);
-}
-
-function calculateAnchoredPeriod(
-  targetDate: Temporal.PlainDate,
-  anchorDate: Temporal.PlainDate,
-  frequency: string
-): { periodStart: Temporal.PlainDate; periodEnd: Temporal.PlainDate } {
-  switch (frequency) {
-    case 'monthly': {
-      const monthsDiff = targetDate.since(anchorDate, { largestUnit: 'month' }).months;
-      const periodStart = anchorDate.add({ months: monthsDiff });
-      return {
-        periodStart,
-        periodEnd: periodStart.add({ months: 1 }).subtract({ days: 1 }),
-      };
-    }
-    case 'quarterly': {
-      const monthsDiff = targetDate.since(anchorDate, { largestUnit: 'month' }).months;
-      const quartersDiff = Math.floor(monthsDiff / 3);
-      const periodStart = anchorDate.add({ months: quartersDiff * 3 });
-      return {
-        periodStart,
-        periodEnd: periodStart.add({ months: 3 }).subtract({ days: 1 }),
-      };
-    }
-    case 'annually': {
-      const yearsDiff = targetDate.since(anchorDate, { largestUnit: 'year' }).years;
-      const periodStart = anchorDate.add({ years: yearsDiff });
-      return {
-        periodStart,
-        periodEnd: periodStart.add({ years: 1 }).subtract({ days: 1 }),
-      };
-    }
-    default:
-      throw new WorkflowTimeDomainError({
-        category: 'ActionError',
-        code: 'BUCKET_USAGE_PERIOD_ERROR',
-        message: `Unsupported billing frequency for bucket usage: ${frequency}`,
-        details: { frequency },
-      });
-  }
-}
-
-async function resolveBucketUsagePeriod(params: {
-  trx: Knex.Transaction;
-  tenantId: string;
-  clientId: string;
-  contractLineId: string;
-  startTimeIso: string;
-}): Promise<BucketUsagePeriod | null> {
-  const { trx, tenantId, clientId, contractLineId, startTimeIso } = params;
-  const targetDate = toPlainDate(startTimeIso);
-  const targetDateIso = toISODate(targetDate);
-
-  const matchingBillingCycle = await tenantScopedTable(trx, 'client_billing_cycles', tenantId)
-    .where({
-      client_id: clientId,
-    })
-    .whereNotNull('period_start_date')
-    .whereNotNull('period_end_date')
-    .andWhere('period_start_date', '<=', targetDateIso)
-    .andWhere('period_end_date', '>', targetDateIso)
-    .orderBy('period_start_date', 'desc')
-    .first<{ period_start_date: string; period_end_date: string }>('period_start_date', 'period_end_date');
-
-  if (matchingBillingCycle) {
-    return {
-      periodStart: toISODate(toPlainDate(matchingBillingCycle.period_start_date)),
-      periodEnd: toISODate(toPlainDate(matchingBillingCycle.period_end_date).subtract({ days: 1 })),
-    };
-  }
-
-  // LEVERAGE: pattern bucket-usage-period - same period logic also in shared/billingClients/bucketUsageService
-  // (the CANONICAL implementation); this is a deliberate hand-maintained copy kept separate to respect the
-  // workflow runtime's action boundary. If you touch this query, mirror the canonical join and
-  // NEVER reintroduce `client_contract_lines` (dropped table): resolve ownership via
-  // client_contracts (cc) -> contracts (ct) -> contract_lines (cl), as below.
-  const contractAssignmentQuery = tenantScopedTable(trx, 'client_contracts as cc', tenantId);
-  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
-  tenantJoin(trx, tenantId, contractAssignmentQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-
-  const contractAssignment = await contractAssignmentQuery
-    .where({
-      'cc.client_id': clientId,
-      'cl.contract_line_id': contractLineId,
-      'cc.is_active': true,
-    })
-    .andWhere('cc.start_date', '<=', targetDateIso)
-    .andWhere((query) => {
-      query.whereNull('cc.end_date').orWhere('cc.end_date', '>=', targetDateIso);
-    })
-    .orderBy('cc.start_date', 'desc')
-    .select('cc.start_date', 'cl.billing_frequency')
-    .first<{ start_date: string; billing_frequency: string }>();
-
-  if (!contractAssignment) {
-    return null;
-  }
-
-  const anchorDate = toPlainDate(contractAssignment.start_date);
-  const { periodStart, periodEnd } = calculateAnchoredPeriod(
-    targetDate,
-    anchorDate,
-    contractAssignment.billing_frequency
-  );
-
-  return {
-    periodStart: toISODate(periodStart),
-    periodEnd: toISODate(periodEnd),
-  };
-}
-
-async function findOrCreateBucketUsageForEntry(params: {
-  trx: Knex.Transaction;
-  tenantId: string;
-  clientId: string;
-  contractLineId: string;
-  serviceId: string;
-  startTimeIso: string;
-}): Promise<string> {
-  const { trx, tenantId, clientId, contractLineId, serviceId, startTimeIso } = params;
-
-  const period = await resolveBucketUsagePeriod({
-    trx,
-    tenantId,
-    clientId,
-    contractLineId,
-    startTimeIso,
-  });
-
-  if (!period) {
-    throw new WorkflowTimeDomainError({
-      category: 'ActionError',
-      code: 'BUCKET_USAGE_PERIOD_NOT_FOUND',
-      message: 'Unable to determine bucket usage period for time entry',
-      details: { client_id: clientId, contract_line_id: contractLineId, service_id: serviceId, start_time: startTimeIso },
-    });
-  }
-
-  const existing = await tenantScopedTable(trx, 'bucket_usage', tenantId)
-    .where({
-      client_id: clientId,
-      contract_line_id: contractLineId,
-      service_catalog_id: serviceId,
-      period_start: period.periodStart,
-      period_end: period.periodEnd,
-    })
-    .select('usage_id')
-    .first<{ usage_id: string }>();
-
-  if (existing?.usage_id) {
-    return existing.usage_id;
-  }
-
-  const [inserted] = await tenantScopedTable(trx, 'bucket_usage', tenantId)
-    .insert({
-      usage_id: uuidv4(),
-      tenant: tenantId,
-      client_id: clientId,
-      contract_line_id: contractLineId,
-      service_catalog_id: serviceId,
-      period_start: period.periodStart,
-      period_end: period.periodEnd,
-      minutes_used: 0,
-      overage_minutes: 0,
-      rolled_over_minutes: 0,
-    })
-    .returning('usage_id');
-
-  return String(inserted.usage_id);
 }
 
 async function applyBucketUsageDeltaForEntry(params: {
@@ -812,63 +661,52 @@ async function applyBucketUsageDeltaForEntry(params: {
   contractLineId: string | null;
   serviceId: string;
   startTimeIso: string;
+  endTimeIso: string;
   minutesDelta: number;
 }): Promise<void> {
-  const { trx, tenantId, clientId, contractLineId, serviceId, startTimeIso, minutesDelta } = params;
+  const { trx, tenantId, clientId, contractLineId, serviceId, startTimeIso, endTimeIso, minutesDelta } = params;
 
   if (!clientId || !contractLineId || minutesDelta === 0) {
     return;
   }
 
-  const overlayConfigQuery = tenantScopedTable(trx, 'contract_line_service_configuration as cfg', tenantId);
-  tenantJoin(trx, tenantId, overlayConfigQuery, 'contract_line_service_bucket_config as bucket_cfg', 'cfg.config_id', 'bucket_cfg.config_id');
+  // The canonical service derives tenant from the transaction config (the
+  // reconcile handler sets the same field). The workflow runtime otherwise
+  // scopes via the app.current_tenant session GUC.
+  if (!trx.client?.config?.tenant) {
+    (trx as any).client = (trx as any).client ?? {};
+    (trx as any).client.config = (trx as any).client.config ?? {};
+    (trx as any).client.config.tenant = tenantId;
+  }
 
-  const overlayConfig = await overlayConfigQuery
-    .where({
-      'cfg.contract_line_id': contractLineId,
-      'cfg.service_id': serviceId,
-      'cfg.configuration_type': 'Bucket',
-    })
-    .select('cfg.config_id', 'bucket_cfg.total_minutes')
-    .first<{ config_id: string; total_minutes: number }>();
-
-  if (!overlayConfig?.config_id) {
+  // Scope-resolution gate: explicit membership, else line catch-all, else no
+  // bucket (plain hourly). Replaces the legacy configuration_type='Bucket' check.
+  const draw = await resolveBucketDraw(trx, clientId, serviceId, startTimeIso);
+  if (!draw) {
     return;
   }
 
-  const usageId = await findOrCreateBucketUsageForEntry({
+  const afterHoursRule = await loadAfterHoursRuleForBucket(trx, tenantId, draw.bucketId);
+  const weighted = computeWeightedMinutes(
+    {
+      startTime: new Date(startTimeIso),
+      endTime: new Date(endTimeIso),
+      billableDuration: Math.abs(minutesDelta),
+    },
+    draw.memberMultiplier,
+    afterHoursRule,
+  );
+
+  const weightedDelta = Math.sign(minutesDelta) * weighted.weightedMinutes;
+
+  const usageRecord = await findOrCreateCurrentBucketUsageRecord(
     trx,
-    tenantId,
     clientId,
-    contractLineId,
     serviceId,
     startTimeIso,
-  });
+  );
 
-  const usageRecord = await tenantScopedTable(trx, 'bucket_usage', tenantId)
-    .where({ usage_id: usageId })
-    .select('minutes_used', 'rolled_over_minutes')
-    .first<{ minutes_used: number; rolled_over_minutes: number }>();
-
-  if (!usageRecord) {
-    throw new WorkflowTimeDomainError({
-      category: 'ActionError',
-      code: 'BUCKET_USAGE_NOT_FOUND',
-      message: 'Bucket usage record could not be loaded for update',
-      details: { usage_id: usageId, contract_line_id: contractLineId, service_id: serviceId },
-    });
-  }
-
-  const newMinutesUsed = Number(usageRecord.minutes_used ?? 0) + minutesDelta;
-  const totalAvailableMinutes = Number(overlayConfig.total_minutes ?? 0) + Number(usageRecord.rolled_over_minutes ?? 0);
-  const newOverageMinutes = Math.max(0, newMinutesUsed - totalAvailableMinutes);
-
-  await tenantScopedTable(trx, 'bucket_usage', tenantId)
-    .where({ usage_id: usageId })
-    .update({
-      minutes_used: newMinutesUsed,
-      overage_minutes: newOverageMinutes,
-    });
+  await updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta);
 }
 
 async function resolveOrCreateTimeSheet(params: {
@@ -1279,6 +1117,7 @@ export async function createWorkflowTimeEntry(params: {
     contractLineId: (entry.contract_line_id as string | null) ?? null,
     serviceId: entry.service_id,
     startTimeIso: toIsoString(entry.start_time as string | Date),
+    endTimeIso: toIsoString(entry.end_time as string | Date),
     minutesDelta: Number(entry.billable_duration ?? 0),
   });
 
@@ -1567,6 +1406,7 @@ export async function updateWorkflowTimeEntry(params: {
     contractLineId: (existing.contract_line_id as string | null) ?? null,
     serviceId: String(existing.service_id),
     startTimeIso: existingStartIso,
+    endTimeIso: existingEndIso,
     minutesDelta: -existingBillableMinutes,
   });
 
@@ -1577,6 +1417,7 @@ export async function updateWorkflowTimeEntry(params: {
     contractLineId: (updated.contract_line_id as string | null) ?? null,
     serviceId: String(updated.service_id),
     startTimeIso: toIsoString(updated.start_time as string | Date),
+    endTimeIso: toIsoString(updated.end_time as string | Date),
     minutesDelta: Number(updated.billable_duration ?? 0),
   });
 
@@ -1686,6 +1527,7 @@ export async function deleteWorkflowTimeEntry(params: {
     contractLineId: (existing.contract_line_id as string | null) ?? null,
     serviceId: String(existing.service_id),
     startTimeIso: toIsoString(existing.start_time as string | Date),
+    endTimeIso: toIsoString(existing.end_time as string | Date),
     minutesDelta: -Number(existing.billable_duration ?? 0),
   });
 
