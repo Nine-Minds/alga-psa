@@ -22,7 +22,9 @@
  *  - Burns are recorded in `hour_block_time_allocations` (one row per
  *    block/entry pair) and `remaining_minutes` is decremented in the same
  *    transaction. On update the entry is reversed then re-allocated (clean
- *    FIFO, no delta bookkeeping); on delete it is reversed.
+ *    FIFO, no delta bookkeeping); on delete it is reversed. `first_allocated_at`
+ *    on hour_blocks is set once at the first burn and NEVER cleared, so the
+ *    void guard keeps working after reversal removes the allocation rows.
  */
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
@@ -292,6 +294,10 @@ export async function allocateTimeEntry(
       .where({ tenant, block_id: allocation.block_id })
       .update({
         remaining_minutes: trx.raw('remaining_minutes - ?', [allocation.minutes]),
+        // Immutable "ever used" marker: set once at the first burn and never
+        // cleared (reversal/reconcile leave it alone), so the void guard can
+        // reject a block whose allocation rows have since been deleted.
+        first_allocated_at: trx.raw('COALESCE(first_allocated_at, now())'),
         updated_at: now,
       });
   }

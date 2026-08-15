@@ -494,8 +494,12 @@ export const manuallyExpireHourBlock = withAuth(async (
 });
 
 /**
- * Voids a block before any burn: only `pending`/`active` blocks with zero
- * allocation rows ever recorded may be voided. Draft-invoice deletion routes
+ * Voids a block before any burn: only `pending`/`active` blocks that have
+ * NEVER had an allocation recorded may be voided. The authoritative guard is
+ * the immutable `first_allocated_at` marker (set at the first burn, never
+ * cleared by reversal/reconcile/entry-edit churn), so a block whose burns were
+ * fully reversed still refuses voiding. The live allocation-row count is kept
+ * as a belt-and-suspenders second condition. Draft-invoice deletion routes
  * through here for the linked pending block.
  */
 export const voidHourBlock = withAuth(async (
@@ -519,6 +523,11 @@ export const voidHourBlock = withAuth(async (
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status !== 'pending' && block.status !== 'active') {
         throw new Error('Only pending or active hour blocks can be voided');
+      }
+
+      // Authoritative: the immutable "ever used" marker survives reversal.
+      if (block.first_allocated_at != null) {
+        throw new Error('Cannot void an hour block that has been used');
       }
 
       const allocationCount = await tenantScopedTable(trx, tenant, 'hour_block_time_allocations')
@@ -557,7 +566,9 @@ export const voidHourBlock = withAuth(async (
 
 /**
  * Lists a client's hour blocks with display joins (service name, source
- * invoice number, scopes, and a used flag for the void guard).
+ * invoice number, scopes, and a used flag for the void guard). The used flag
+ * derives from the immutable `first_allocated_at` marker so it agrees with the
+ * server-side void guard even after a burn was reversed.
  */
 export const listHourBlocks = withAuth(async (
   user,
@@ -583,7 +594,7 @@ export const listHourBlocks = withAuth(async (
           'sc.service_name as service_name',
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
-          trx.raw('EXISTS (SELECT 1 FROM hour_block_time_allocations a WHERE a.tenant = hb.tenant AND a.block_id = hb.block_id) as has_allocations'),
+          trx.raw('(hb.first_allocated_at IS NOT NULL) as has_allocations'),
         )
         .orderBy('hb.purchased_at', 'asc')
         .orderBy('hb.created_at', 'asc');

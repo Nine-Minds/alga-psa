@@ -35,6 +35,13 @@ export interface IHourBlock extends TenantEntity {
   status: HourBlockStatus;
   /** Set on activation (invoice finalize / grant). */
   purchased_at?: string | null;
+  /**
+   * Instant of the first allocation ever recorded against the block. Set once
+   * at the first burn and NEVER cleared — not by reversal, not by reconcile,
+   * not by entry edit churn — so the void guard can reject any block that has
+   * ever been used even after its allocation rows are gone.
+   */
+  first_allocated_at?: string | null;
   expiration_date?: string | null;
   /** Null ⇒ direct grant. */
   source_invoice_id?: string | null;
@@ -58,7 +65,7 @@ export interface IHourBlock extends TenantEntity {
   scope_service_ids?: string[];
   /** Dollar value remaining in minor units (remaining_minutes/60 × hourly_rate). */
   remaining_value?: number;
-  /** True when any allocation row exists for the block (void guard). */
+  /** True when the block has EVER been allocated (void guard; derived from `first_allocated_at IS NOT NULL`, not live allocation rows). */
   has_allocations?: boolean;
 }
 

@@ -280,6 +280,61 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
     }
   });
 
+  // Regression: the durable "ever used" marker. hour_block_time_allocations
+  // rows are DELETED on reversal, so the void guard must rely on the immutable
+  // first_allocated_at column: set at the first burn, never cleared by reverse
+  // or re-allocate cycles.
+  it('sets the immutable first_allocated_at marker on first burn and never clears it on reversal', async () => {
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+    const workDate = '2026-08-10';
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB Marker Tenant', email: 'hbmarker@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Marker Client' });
+      const { service_id: svc } = await insertService(db, tenant, 'Marker Svc', 1);
+      const userId = await insertUser(db, tenant);
+      const ticketId = await insertTicket(db, tenant, clientId, 'HB Marker Ticket');
+      const blockId = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, blockId, null);
+
+      const entry = await insertTimeEntry(db, tenant, userId, ticketId, svc, 60, workDate);
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, tenant, clientId, entry);
+      });
+      const afterBurn = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+      expect(afterBurn.first_allocated_at).toBeTruthy();
+
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await reverseTimeEntryAllocations(trx, tenant, entry.entry_id);
+      });
+      const afterReverse = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+      expect(afterReverse.first_allocated_at).toBeTruthy();
+      expect(Number(afterReverse.remaining_minutes)).toBe(600);
+
+      // Re-allocate then reverse again: the marker keeps its first-burn value.
+      await db.transaction(async (trx: Knex.Transaction) => {
+        await allocateTimeEntry(trx, tenant, clientId, entry);
+      });
+      const afterRealloc = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+      expect(new Date(afterRealloc.first_allocated_at).getTime()).toBe(new Date(afterBurn.first_allocated_at).getTime());
+    } finally {
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
+
   it('keeps every client\'s burns across a full handler-style pass and never reverses invoiced entries', async () => {
     const db = connect();
     const tenant = uuidv4();
