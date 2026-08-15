@@ -1,0 +1,33 @@
+# Smoke-evidence hygiene remediation (2026-08-15 HEAD run)
+
+**Workflow card:** `1491d80b-8fa7-4313-a134-f68e5b9dba79`
+
+**Branch head preserved:** `8503e3fe4cef190a4f40978386df0977055606b9`
+
+This note records the host-side cleanup of secret-bearing temporary artifacts left by the 2026-08-15 HEAD smoke run for the extension-gateway `assertAccess()` work. No gateway code, behavior, tests, or documentation was changed; the branch's accepted history is untouched.
+
+## Removed
+
+- `/tmp/extension-gateway-smoke-runner.jsonl` — contained the plaintext smoke secret marker `SMOKE-SECRET-HEAD-ENVELOPE`. Removed (shredded). Its content is byte-identical to the preserved evidence file `07-runner-observations.jsonl`, so no evidentiary value was lost.
+- `/tmp/sec-extension-head-server.log` — contained the cleartext database password (the known `[db/tenant] Database configuration` startup-log leak, tracked separately; no logging code was changed here). Removed (shredded).
+- `/tmp/alga-smoke-anon-headers2` — stray prior-run (2026-08-14) header capture containing a live `authjs.csrf-token` session token; not referenced by any evidence directory. Removed.
+- Ephemeral smoke redis container `alga-smoke-redis-sec-ext-gateway` (redis:7, `127.0.0.1:6381`) — was still running; removed with `docker rm -f`.
+
+## Redacted in place
+
+- `/tmp/alga-smoke-evidence/sec-extension-gateway-head-20260815T0928Z/07-runner-observations.jsonl` — secret-envelope marker value `SMOKE-SECRET-HEAD-ENVELOPE` replaced with `[REDACTED-SMOKE-MARKER]`; structure and all request metadata preserved.
+- `/tmp/alga-smoke-evidence/sec-extension-gateway-head-20260815T0928Z/08-sessionless-direct-head.txt` and `08-sessionless-proxy-head.txt` — `authjs.csrf-token` values replaced with `[REDACTED]`; header structure preserved.
+- `/tmp/sec-gateway-ready.headers` (prior-run artifact) — `authjs.csrf-token` value replaced with `[REDACTED]`.
+
+## Verification performed
+
+- `grep -rl 'SMOKE-SECRET' /tmp` → zero hits.
+- `grep -rl '<db-password>' /tmp` scoped to this run's artifacts → zero hits in the removed/kept evidence; the shared dev-stack DB credential still appears only in unrelated pre-existing artifacts of other tasks.
+- `grep -rl 'authjs.csrf-token=[0-9a-fA-F%]{20,}'` across the evidence dir and all `/tmp/sec-gateway-*` files → zero hits.
+- `ps` → no smoke runner/simulator process; no `next dev` on port 3238 (confirmed free); the only running `next dev` processes belong to other worktrees.
+- `docker ps -a` → no smoke or redis:7 containers remain (pre-existing `alga-smoke-temporal` and `citus-smoke` infra containers untouched).
+- Postgres spot-verify on both integration (5472) and live (6472) dev-stack DBs: `tenant_extension_install`, `extension_registry`, `extension_version`, `extension_execution_log`, and `tenant_extension_install_secrets` counts for the smoke fixture IDs all return `0`.
+
+## Human double-check recommended
+
+Re-run the `/tmp` greps for the smoke marker and the DB password value, and confirm the preserved simulator source in `/tmp/alga-smoke-evidence/sec-extension-gateway-head-20260815T0928Z/` (in particular `07-runner-observations.jsonl`) is still intact after redaction.
