@@ -11,16 +11,28 @@ import { tenantDb } from '@alga-psa/db';
 
 export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
 
-export const prepaidBalanceAlertSettingsInputSchema = z.object({
-  clientId: z.string().min(1),
-  prepaidCreditAlertThreshold: z.number().int().positive().nullable(),
-  prepaidCreditAlertCurrencyCode: z
-    .string()
-    .regex(/^[A-Z]{3}$/, 'Currency code must be three uppercase letters')
-    .nullable(),
-  bucketUsageAlertPercent: z.number().int().min(1).max(100).nullable(),
-  notifyClientOnPrepaidAlert: z.boolean(),
-});
+export const prepaidBalanceAlertSettingsInputSchema = z
+  .object({
+    clientId: z.string().min(1),
+    prepaidCreditAlertThreshold: z.number().int().positive().nullable(),
+    prepaidCreditAlertCurrencyCode: z
+      .string()
+      .regex(/^[A-Z]{3}$/, 'Currency code must be three uppercase letters')
+      .nullable(),
+    bucketUsageAlertPercent: z.number().int().min(1).max(100).nullable(),
+    notifyClientOnPrepaidAlert: z.boolean(),
+  })
+  // The credit amount and currency are either both present or both null; a
+  // mismatched pair must be rejected by validation, not the DB constraint.
+  .refine(
+    (value) =>
+      (value.prepaidCreditAlertThreshold === null) ===
+      (value.prepaidCreditAlertCurrencyCode === null),
+    {
+      message: 'Credit amount and currency must be both set or both unset',
+      path: ['prepaidCreditAlertCurrencyCode'],
+    }
+  );
 
 export type PrepaidBalanceAlertSettingsInput = z.infer<typeof prepaidBalanceAlertSettingsInputSchema>;
 

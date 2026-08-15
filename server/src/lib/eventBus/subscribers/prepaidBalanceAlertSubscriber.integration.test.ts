@@ -396,6 +396,205 @@ describe('prepaid balance alert scan (DB-backed)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Regression: concurrent drains must not double-claim one delivery (atomic
+  // SELECT ... FOR UPDATE SKIP LOCKED + claim inside a single transaction).
+  // -------------------------------------------------------------------------
+  it('does not double-claim a delivery under concurrent drains', async () => {
+    const tenantId = await createTenant('claim-atomic');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    const { knex } = await (await import('@alga-psa/db')).createTenantKnex();
+    await evaluatePrepaidBalanceAlertsForTenant(knex, tenantId);
+    const alert = (await openAlerts(tenantId))[0];
+    const deliveryId = randomUUID();
+    await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').insert({
+      tenant: tenantId,
+      delivery_id: deliveryId,
+      alert_id: alert.alert_id,
+      channel: 'email',
+      recipient_roles: JSON.stringify(['account_manager']),
+      recipient_key: 'manager@example.com',
+      recipient_email: 'manager@example.com',
+      status: 'pending',
+      attempt_count: 0,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    sendEmailMock.mockResolvedValue(undefined);
+    await Promise.all([
+      planAndDrainDeliveriesForTenant(knex, tenantId),
+      planAndDrainDeliveriesForTenant(knex, tenantId),
+    ]);
+
+    const row = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').where({ delivery_id: deliveryId }).first();
+    expect(Number(row.attempt_count)).toBe(1);
+    expect(row.status).toBe('sent');
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Regression: shared contract lines (system-managed defaults) must not let
+  // client A alert on client B's bucket usage.
+  // -------------------------------------------------------------------------
+  it('does not alert client A on client B bucket usage via a shared contract line', async () => {
+    const tenantId = await createTenant('shared-contract');
+    createdTenants.push(tenantId);
+    const clientA = await createClient(tenantId);
+    const clientB = await createClient(tenantId);
+    await createBillingSettings(tenantId, clientA, { percent: 80 });
+    await createBillingSettings(tenantId, clientB, { percent: 80 });
+
+    const contractId = randomUUID();
+    const contractLineId = randomUUID();
+    const configId = randomUUID();
+    const serviceId = randomUUID();
+    const usageId = randomUUID();
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+
+    await db('contracts').insert({
+      tenant: tenantId,
+      contract_id: contractId,
+      contract_name: 'Shared Contract',
+      billing_frequency: 'monthly',
+      status: 'active',
+      is_template: false,
+      currency_code: 'USD',
+      is_system_managed_default: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    for (const cid of [clientA, clientB]) {
+      await db('client_contracts').insert({
+        tenant: tenantId,
+        client_contract_id: randomUUID(),
+        client_id: cid,
+        contract_id: contractId,
+        start_date: '2026-01-01',
+        status: 'pending',
+        is_active: true,
+        renewal_mode: 'manual',
+        notice_period_days: 30,
+        use_tenant_renewal_defaults: false,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+    }
+    await db('contract_lines').insert({
+      tenant: tenantId,
+      contract_line_id: contractLineId,
+      contract_line_name: 'Shared Line',
+      contract_id: contractId,
+      billing_frequency: 'Monthly',
+      is_template: false,
+      billing_timing: 'arrears',
+      display_order: 0,
+      enable_proration: false,
+      billing_cycle_alignment: 'start',
+      cadence_owner: 'client',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    await db('contract_line_service_configuration').insert({
+      tenant: tenantId,
+      config_id: configId,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Bucket',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    await db('contract_line_service_bucket_config').insert({
+      tenant: tenantId,
+      config_id: configId,
+      total_minutes: 1000,
+      billing_period: 'Monthly',
+      overage_rate: 100,
+      allow_rollover: true,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    await db('bucket_usage').insert({
+      tenant: tenantId,
+      usage_id: usageId,
+      client_id: clientB,
+      contract_line_id: contractLineId,
+      service_catalog_id: serviceId,
+      period_start: start,
+      period_end: end,
+      minutes_used: 900,
+      rolled_over_minutes: 0,
+      overage_minutes: 0,
+    });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const aAlerts = await tenantDb(db, tenantId).table('prepaid_balance_alerts').where({ tenant: tenantId, client_id: clientA }).select('*');
+    const bAlerts = await tenantDb(db, tenantId).table('prepaid_balance_alerts').where({ tenant: tenantId, client_id: clientB }).select('*');
+    expect(aAlerts).toHaveLength(0);
+    expect(bAlerts).toHaveLength(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Regression: re-opening a resolved bucket episode uses a new dedupe key
+  // (no unique violation) and cannot roll back the client's credit evaluation.
+  // -------------------------------------------------------------------------
+  it('re-opens a resolved bucket episode without colliding and without rolling back credit', async () => {
+    const tenantId = await createTenant('bucket-reopen');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD', percent: 80 });
+    await createCredit(tenantId, clientId, { amount: 100 });
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+    await createBucketFixture(tenantId, clientId, {
+      totalMinutes: 1000,
+      minutesUsed: 800,
+      periodStart: start,
+      periodEnd: end,
+    });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const byType = new Map((await openAlerts(tenantId)).map((a) => [a.alert_type, a]));
+    expect(byType.get('credit')).toBeDefined();
+    expect(byType.get('bucket')).toBeDefined();
+
+    // Resolve the bucket episode (drop below the threshold).
+    await db('bucket_usage').where({ tenant: tenantId }).update({ minutes_used: 700 });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(0);
+
+    // Re-drop to the threshold: the re-open must use a fresh episode key.
+    await db('bucket_usage').where({ tenant: tenantId }).update({ minutes_used: 800 });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'bucket' })
+      .orderBy('created_at', 'asc')
+      .select('episode', 'resolved_at', 'dedupe_key');
+    expect(bucketRows).toHaveLength(2);
+    expect(Number(bucketRows[0].episode)).toBe(1);
+    expect(bucketRows[0].resolved_at).not.toBeNull();
+    expect(Number(bucketRows[1].episode)).toBe(2);
+    expect(bucketRows[1].resolved_at).toBeNull();
+    expect(bucketRows[1].dedupe_key).not.toBe(bucketRows[0].dedupe_key);
+
+    // The credit alert survived the bucket re-open (separate transactions).
+    const creditOpen = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'credit', resolved_at: null })
+      .count('* as n').first();
+    expect(Number(creditOpen?.n ?? 0)).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
   // T010: credit policy change
   // -------------------------------------------------------------------------
   it('resolves an open episode as policy_changed when the threshold changes', async () => {

@@ -180,4 +180,54 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
       })
     );
   });
+
+  it('converts the saved threshold using the alert currency, not the client default', async () => {
+    getSettingsMock.mockResolvedValue({
+      prepaidCreditAlertThreshold: 500,
+      prepaidCreditAlertCurrencyCode: 'JPY',
+      bucketUsageAlertPercent: null,
+      notifyClientOnPrepaidAlert: false,
+      defaultCurrencyCode: 'USD',
+    });
+    render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="USD" />);
+    await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
+
+    // JPY has 0 fraction digits: 500 JPY must display as "500", never "5.00".
+    const amount = screen.getByLabelText(/credit threshold/i) as HTMLInputElement;
+    expect(amount.value).toBe('500');
+
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    await waitFor(() =>
+      expect(updateSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ prepaidCreditAlertThreshold: 500, prepaidCreditAlertCurrencyCode: 'JPY' })
+      )
+    );
+  });
+
+  it('keeps the card busy while the flag is still resolving and while the read is in flight', async () => {
+    // While the flag loads the read action must not fire.
+    flagLoading = true;
+    flagEnabled = false;
+    const { rerender } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(getSettingsMock).not.toHaveBeenCalled();
+
+    // Flag resolves enabled; the read fires and Save stays disabled until done.
+    flagLoading = false;
+    flagEnabled = true;
+    let resolveRead: (value: unknown) => void = () => undefined;
+    getSettingsMock.mockReturnValue(new Promise((res) => { resolveRead = res; }));
+    rerender(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
+    await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+
+    resolveRead({
+      prepaidCreditAlertThreshold: null,
+      prepaidCreditAlertCurrencyCode: null,
+      bucketUsageAlertPercent: null,
+      notifyClientOnPrepaidAlert: false,
+      defaultCurrencyCode: 'USD',
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled());
+  });
 });

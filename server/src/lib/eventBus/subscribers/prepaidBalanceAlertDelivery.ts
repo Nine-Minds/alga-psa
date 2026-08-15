@@ -46,6 +46,7 @@ import {
   CREDIT_LOW_BALANCE_TEMPLATE,
   buildBucketAlertContext,
   buildCreditAlertContext,
+  buildInternalAlertContext,
   clientAlertLink,
   managerAlertLink,
 } from '../../notifications/prepaidBalanceAlertTemplates';
@@ -54,7 +55,7 @@ const CLAIM_BATCH_SIZE = 50;
 const LEASE_DURATION_MS = 15 * 60 * 1000;
 
 export interface DeliveryWarning {
-  code: 'missing_manager' | 'inactive_manager' | 'unresolved_client_recipient' | 'preference_skipped' | 'exhausted';
+  code: 'missing_manager' | 'inactive_manager' | 'unresolved_client_recipient' | 'preference_skipped' | 'exhausted' | 'reclaimed_lease';
   clientId?: string;
   clientName?: string;
   alertId?: string;
@@ -283,8 +284,13 @@ async function planDeliveriesForAlert(
         attempt_count: 0,
       })
       .onConflict(['tenant', 'alert_id', 'channel', 'recipient_key'])
+      // Union the roles instead of overwriting: when a client opt-in arrives
+      // for an address that already carries a sent manager delivery, the
+      // metadata must retain both roles without resending the message. The
+      // left side is qualified because the tenant-scoped facade adds a WHERE
+      // to the DO UPDATE that would otherwise make the bare column ambiguous.
       .merge({
-        recipient_roles: knex.raw('excluded.recipient_roles'),
+        recipient_roles: knex.raw('prepaid_balance_alert_deliveries.recipient_roles || excluded.recipient_roles'),
         updated_at: knex.raw('excluded.updated_at'),
       });
     if (row.channel === DELIVERY_CHANNEL_INTERNAL) summary.plannedInternal += 1;
@@ -303,106 +309,148 @@ interface ClaimedDelivery {
   attempt_count: number;
 }
 
-async function claimDeliveries(knex: Knex, tenantId: string): Promise<Array<ClaimedDelivery & { alert: AlertForDelivery }>> {
-  const db = tenantDb(knex, tenantId);
-  const query = db.table('prepaid_balance_alert_deliveries as d')
-    .select(
-      'd.delivery_id',
-      'd.alert_id',
-      'd.channel',
-      'd.recipient_key',
-      'd.recipient_roles',
-      'd.recipient_user_id',
-      'd.recipient_email',
-      'd.attempt_count',
-      'a.alert_type',
-      'a.client_id',
-      'cl.client_name',
-      'a.credit_currency_code',
-      'a.credit_threshold',
-      'a.bucket_percent',
-      'a.observed_value',
-      'a.observed_capacity',
-      'cl.account_manager_id',
-      'cl.billing_email',
-      'cl.billing_contact_id',
-      'cl.default_currency_code'
-    );
-  db.tenantJoin(query, 'prepaid_balance_alerts as a', 'd.alert_id', 'a.alert_id');
-  db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id');
-  query
-    .where('d.tenant', tenantId)
-    .andWhere((qb) => {
-      qb.where('d.status', DELIVERY_STATUS_PENDING)
-        .orWhere('d.status', DELIVERY_STATUS_PROCESSING)
-        .orWhere('d.status', DELIVERY_STATUS_FAILED);
-    })
-    .andWhere((qb) => {
-      qb.whereNull('d.lease_expires_at')
-        .orWhere('d.lease_expires_at', '<', new Date(Date.now() - 1).toISOString());
-    })
-    .orderBy('d.created_at', 'asc')
-    .limit(CLAIM_BATCH_SIZE)
-    .forUpdate()
-    .skipLocked();
+/**
+ * Atomically claim pending/retryable deliveries. The SELECT ... FOR UPDATE
+ * SKIP LOCKED and the per-row `processing` mark run inside ONE transaction so
+ * the row locks are held until the claim commits; two concurrent drains can
+ * never both claim the same row (the second blocks on the lock, then SKIP
+ * LOCKED skips it once it sees the fresh lease). Stale processing leases are
+ * reclaimed; rows whose attempt budget is already spent are exhausted.
+ */
+async function claimDeliveries(
+  knex: Knex,
+  tenantId: string,
+  summary: DeliverySummary
+): Promise<Array<ClaimedDelivery & { alert: AlertForDelivery }>> {
+  return knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenantId);
+    const query = db.table('prepaid_balance_alert_deliveries as d')
+      .select(
+        'd.delivery_id',
+        'd.alert_id',
+        'd.channel',
+        'd.recipient_key',
+        'd.recipient_roles',
+        'd.recipient_user_id',
+        'd.recipient_email',
+        'd.attempt_count',
+        'd.status',
+        'a.alert_type',
+        'a.client_id',
+        'cl.client_name',
+        'a.credit_currency_code',
+        'a.credit_threshold',
+        'a.bucket_percent',
+        'a.observed_value',
+        'a.observed_capacity',
+        'cl.account_manager_id',
+        'cl.billing_email',
+        'cl.billing_contact_id',
+        'cl.default_currency_code'
+      );
+    db.tenantJoin(query, 'prepaid_balance_alerts as a', 'd.alert_id', 'a.alert_id');
+    db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id');
+    query
+      .where('d.tenant', tenantId)
+      .andWhere((qb) => {
+        qb.where('d.status', DELIVERY_STATUS_PENDING)
+          .orWhere('d.status', DELIVERY_STATUS_PROCESSING)
+          .orWhere('d.status', DELIVERY_STATUS_FAILED);
+      })
+      .andWhere((qb) => {
+        qb.whereNull('d.lease_expires_at')
+          .orWhere('d.lease_expires_at', '<', new Date(Date.now() - 1).toISOString());
+      })
+      .orderBy('d.created_at', 'asc')
+      .limit(CLAIM_BATCH_SIZE)
+      .forUpdate()
+      .skipLocked();
 
-  const rows = (await query) as Array<Record<string, unknown> & {
-    delivery_id: string;
-    alert_id: string;
-    channel: string;
-    recipient_key: string;
-    recipient_user_id: string | null;
-    recipient_email: string | null;
-    attempt_count: number;
-  }>;
+    const rows = (await query) as Array<Record<string, unknown> & {
+      delivery_id: string;
+      alert_id: string;
+      channel: string;
+      recipient_key: string;
+      recipient_user_id: string | null;
+      recipient_email: string | null;
+      attempt_count: number;
+      status: string;
+    }>;
 
-  const workerId = `worker:${randomUUID()}`;
-  const leaseExpiresAt = new Date(Date.now() + LEASE_DURATION_MS).toISOString();
-  const claimed: Array<ClaimedDelivery & { alert: AlertForDelivery }> = [];
-  for (const row of rows) {
-    const nextAttempt = Number(row.attempt_count) + 1;
-    if (nextAttempt > MAX_DELIVERY_ATTEMPTS) {
+    const workerId = `worker:${randomUUID()}`;
+    const leaseExpiresAt = new Date(Date.now() + LEASE_DURATION_MS).toISOString();
+    const claimed: Array<ClaimedDelivery & { alert: AlertForDelivery }> = [];
+    for (const row of rows) {
+      const wasStaleProcessing = row.status === DELIVERY_STATUS_PROCESSING;
+      const nextAttempt = Number(row.attempt_count) + 1;
+      if (nextAttempt > MAX_DELIVERY_ATTEMPTS) {
+        await db.table('prepaid_balance_alert_deliveries')
+          .where({ tenant: tenantId, delivery_id: row.delivery_id })
+          .update({
+            status: DELIVERY_STATUS_EXHAUSTED,
+            exhausted_at: new Date().toISOString(),
+            last_error: `Exhausted after ${MAX_DELIVERY_ATTEMPTS} attempts`,
+          });
+        summary.exhausted += 1;
+        summary.warnings.push({
+          code: 'exhausted',
+          clientId: String(row.client_id),
+          clientName: String(row.client_name ?? ''),
+          alertId: row.alert_id,
+          deliveryId: row.delivery_id,
+          channel: row.channel,
+          message: `Delivery ${row.delivery_id} exhausted after ${MAX_DELIVERY_ATTEMPTS} attempts`,
+        });
+        continue;
+      }
       await db.table('prepaid_balance_alert_deliveries')
-        .where({ delivery_id: row.delivery_id })
-        .update({ status: DELIVERY_STATUS_EXHAUSTED, exhausted_at: new Date().toISOString() });
-      continue;
-    }
-    await db.table('prepaid_balance_alert_deliveries')
-      .where({ delivery_id: row.delivery_id })
-      .update({
-        status: DELIVERY_STATUS_PROCESSING,
-        worker_id: workerId,
-        lease_expires_at: leaseExpiresAt,
-        attempt_count: nextAttempt,
-      });
-    claimed.push({
-      delivery_id: row.delivery_id,
-      alert_id: row.alert_id,
-      channel: row.channel,
-      recipient_key: row.recipient_key,
-      recipient_roles: row.recipient_roles,
-      recipient_user_id: row.recipient_user_id,
-      recipient_email: row.recipient_email,
-      attempt_count: nextAttempt,
-      alert: {
+        .where({ tenant: tenantId, delivery_id: row.delivery_id })
+        .update({
+          status: DELIVERY_STATUS_PROCESSING,
+          worker_id: workerId,
+          lease_expires_at: leaseExpiresAt,
+          attempt_count: nextAttempt,
+        });
+      if (wasStaleProcessing) {
+        summary.warnings.push({
+          code: 'reclaimed_lease',
+          clientId: String(row.client_id),
+          clientName: String(row.client_name ?? ''),
+          alertId: row.alert_id,
+          deliveryId: row.delivery_id,
+          channel: row.channel,
+          message: `Reclaimed stale processing lease for delivery ${row.delivery_id}`,
+        });
+      }
+      claimed.push({
+        delivery_id: row.delivery_id,
         alert_id: row.alert_id,
-        client_id: String(row.client_id),
-        client_name: String(row.client_name ?? ''),
-        alert_type: row.alert_type as 'credit' | 'bucket',
-        credit_currency_code: row.credit_currency_code as string | null,
-        credit_threshold: row.credit_threshold as number | string | null,
-        bucket_percent: row.bucket_percent as number | string | null,
-        observed_value: row.observed_value as number | string | null,
-        observed_capacity: row.observed_capacity as number | string | null,
-        notify_client_on_prepaid_alert: true,
-        account_manager_id: row.account_manager_id as string | null,
-        billing_email: row.billing_email as string | null,
-        billing_contact_id: row.billing_contact_id as string | null,
-        default_currency_code: row.default_currency_code as string | null,
-      },
-    });
-  }
-  return claimed;
+        channel: row.channel,
+        recipient_key: row.recipient_key,
+        recipient_roles: row.recipient_roles,
+        recipient_user_id: row.recipient_user_id,
+        recipient_email: row.recipient_email,
+        attempt_count: nextAttempt,
+        alert: {
+          alert_id: row.alert_id,
+          client_id: String(row.client_id),
+          client_name: String(row.client_name ?? ''),
+          alert_type: row.alert_type as 'credit' | 'bucket',
+          credit_currency_code: row.credit_currency_code as string | null,
+          credit_threshold: row.credit_threshold as number | string | null,
+          bucket_percent: row.bucket_percent as number | string | null,
+          observed_value: row.observed_value as number | string | null,
+          observed_capacity: row.observed_capacity as number | string | null,
+          notify_client_on_prepaid_alert: true,
+          account_manager_id: row.account_manager_id as string | null,
+          billing_email: row.billing_email as string | null,
+          billing_contact_id: row.billing_contact_id as string | null,
+          default_currency_code: row.default_currency_code as string | null,
+        },
+      });
+    }
+    return claimed;
+  });
 }
 
 function rolesOf(delivery: ClaimedDelivery): string[] {
@@ -507,6 +555,40 @@ async function buildEmailContext(
   });
 }
 
+/**
+ * Flat template context for the INTERNAL notification channel (locale-aware
+ * formatting). The internal renderer substitutes only top-level `\w+` keys, so
+ * buildInternalAlertContext flattens values to match the seeded placeholders.
+ */
+function buildInternalAlertContextForDelivery(
+  alert: AlertForDelivery,
+  locale: string,
+  link: string
+): Record<string, unknown> {
+  const currency = alert.credit_currency_code || alert.default_currency_code || 'USD';
+  if (alert.alert_type === 'credit') {
+    const available = Number(alert.observed_value) || 0;
+    const threshold = Number(alert.credit_threshold) || 0;
+    return buildInternalAlertContext(alert.client_name, {
+      currency,
+      available: formatCurrencyFromMinorUnits(available, locale, currency),
+      threshold: formatCurrencyFromMinorUnits(threshold, locale, currency),
+      link,
+    });
+  }
+  const used = Number(alert.observed_value) || 0;
+  const capacity = Number(alert.observed_capacity) || 0;
+  const percent = Number(alert.bucket_percent) || 0;
+  const usedPercent = capacity > 0 ? (used * 100) / capacity : 0;
+  return buildInternalAlertContext(alert.client_name, {
+    percent,
+    usedPercent: roundPercent(usedPercent, locale),
+    capacity: formatHours(capacity, locale),
+    used: formatHours(used, locale),
+    link,
+  });
+}
+
 async function processDelivery(
   knex: Knex,
   tenantId: string,
@@ -574,10 +656,18 @@ async function processDelivery(
   };
 
   if (delivery.channel === DELIVERY_CHANNEL_INTERNAL) {
-    // Transactional: notification insert + `sent` commit together.
+    // Transactional: notification insert + `sent` commit together. The
+    // delivery-status updates go through the tenant-scoped facade inside the
+    // transaction so the (tenant, delivery_id) predicate is always applied
+    // (Citus shard pruning relies on it).
     await knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenantId);
       const link = managerAlertLink(delivery.alert.client_id);
-      const data = await buildEmailContext(delivery.alert, 'en', link);
+      const locale = await resolveEmailLocale(tenantId, {
+        email: delivery.recipient_email ?? '',
+        userId: delivery.recipient_user_id as string,
+      });
+      const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link);
       const created = await createNotificationFromTemplateInternal(trx, {
         tenant: tenantId,
         user_id: delivery.recipient_user_id as string,
@@ -588,8 +678,8 @@ async function processDelivery(
         data,
       });
       if (!created) {
-        await trx('prepaid_balance_alert_deliveries')
-          .where({ delivery_id: delivery.delivery_id })
+        await db.table('prepaid_balance_alert_deliveries')
+          .where({ tenant: tenantId, delivery_id: delivery.delivery_id })
           .update({ status: DELIVERY_STATUS_SKIPPED, skipped_at: new Date().toISOString() });
         summary.skipped += 1;
         summary.warnings.push({
@@ -602,8 +692,8 @@ async function processDelivery(
           message: `Internal delivery ${delivery.delivery_id} disabled by user preference`,
         });
       } else {
-        await trx('prepaid_balance_alert_deliveries')
-          .where({ delivery_id: delivery.delivery_id })
+        await db.table('prepaid_balance_alert_deliveries')
+          .where({ tenant: tenantId, delivery_id: delivery.delivery_id })
           .update({
             status: DELIVERY_STATUS_SENT,
             sent_at: new Date().toISOString(),
@@ -661,10 +751,22 @@ export async function planAndDrainDeliveriesForTenant(knex: Knex, tenantId: stri
 
   const alerts = await loadOpenAlerts(knex, tenantId);
   for (const alert of alerts) {
-    await planDeliveriesForAlert(knex, tenantId, alert, summary);
+    try {
+      await planDeliveriesForAlert(knex, tenantId, alert, summary);
+    } catch (error) {
+      // One alert's recipient planning failure (e.g. recipient resolution
+      // throwing) never aborts the rest of the tenant's drain.
+      summary.warnings.push({
+        code: 'unresolved_client_recipient',
+        clientId: alert.client_id,
+        clientName: alert.client_name,
+        alertId: alert.alert_id,
+        message: `Delivery planning failed for alert ${alert.alert_id}: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
 
-  const claimed = await claimDeliveries(knex, tenantId);
+  const claimed = await claimDeliveries(knex, tenantId, summary);
   for (const delivery of claimed) {
     try {
       await processDelivery(knex, tenantId, delivery, summary);

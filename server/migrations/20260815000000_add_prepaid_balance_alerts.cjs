@@ -215,6 +215,36 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
+  const { deleteEmailTemplate } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
+  const { deleteInternalTemplate } = require('./utils/templates/_shared/upsertInternalTemplates.cjs');
+
+  // Remove the seeded notification templates/subtypes (and categories when they
+  // become empty), mirroring the project-billing notification migration.
+  for (const name of ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']) {
+    await deleteEmailTemplate(knex, name);
+    await deleteInternalTemplate(knex, name);
+  }
+  await knex('notification_subtypes').whereIn('name', [
+    'prepaid-credit-low-balance',
+    'prepaid-bucket-threshold-reached',
+  ]).del();
+  await knex('internal_notification_subtypes').whereIn('name', [
+    'prepaid-credit-low-balance',
+    'prepaid-bucket-threshold-reached',
+  ]).del();
+  await knex('notification_categories').where({ name: 'Prepaid Alerts' }).whereNotExists(
+    knex('notification_subtypes')
+      .select(knex.raw('1'))
+      .whereRaw('notification_subtypes.category_id = notification_categories.id')
+  ).del();
+  await knex('internal_notification_categories').where({ name: 'prepaid-alerts' }).whereNotExists(
+    knex('internal_notification_subtypes')
+      .select(knex.raw('1'))
+      .whereRaw(
+        'internal_notification_subtypes.internal_category_id = internal_notification_categories.internal_notification_category_id'
+      )
+  ).del();
+
   await knex.schema.dropTableIfExists('prepaid_balance_alert_deliveries');
   await knex.schema.dropTableIfExists('prepaid_balance_alerts');
 

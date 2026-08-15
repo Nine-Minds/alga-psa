@@ -239,10 +239,21 @@ describe('prepaid balance alerts migration (DB-backed)', () => {
     const hasColumn = await db.schema.hasColumn('client_billing_settings', 'prepaid_credit_alert_threshold');
     expect(hasColumn).toBe(false);
 
+    // The down migration also removes the seeded notification templates and
+    // subtypes (and the now-empty categories).
+    expect(await db('system_email_templates').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeUndefined();
+    expect(await db('internal_notification_templates').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeUndefined();
+    expect(await db('notification_subtypes').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeUndefined();
+    expect(await db('internal_notification_subtypes').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeUndefined();
+    expect(await db('notification_categories').where({ name: 'Prepaid Alerts' }).first()).toBeUndefined();
+    expect(await db('internal_notification_categories').where({ name: 'prepaid-alerts' }).first()).toBeUndefined();
+
     await migration.up(db);
     expect(await db.schema.hasTable('prepaid_balance_alerts')).toBe(true);
     expect(await db.schema.hasTable('prepaid_balance_alert_deliveries')).toBe(true);
     expect(await db.schema.hasColumn('client_billing_settings', 'prepaid_credit_alert_threshold')).toBe(true);
     expect(await db.schema.hasColumn('client_billing_settings', 'notify_client_on_prepaid_alert')).toBe(true);
+    expect(await db('system_email_templates').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeDefined();
+    expect(await db('internal_notification_templates').whereIn('name', ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached']).first()).toBeDefined();
   });
 });

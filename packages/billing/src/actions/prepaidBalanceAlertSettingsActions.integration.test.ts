@@ -16,6 +16,7 @@ vi.mock('@alga-psa/core', async (importOriginal) => {
 
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
+import { prepaidBalanceAlertSettingsInputSchema } from '@shared/billingClients/prepaidBalanceAlertSettings';
 import {
   getPrepaidBalanceAlertSettings,
   updatePrepaidBalanceAlertSettings,
@@ -182,7 +183,9 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
       notifyClientOnPrepaidAlert: false,
     };
 
-    // Unpaired: amount without currency (schema pairing is authoritative).
+    // Unpaired: amount without currency (schema pairing refinement is
+    // authoritative; the DB constraint would also reject, but validation must
+    // fire first).
     (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const unpaired = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       ...base,
@@ -248,5 +251,43 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
       notifyClientOnPrepaidAlert: false,
     });
     expect(result).toMatchObject({ actionError: expect.any(String) });
+  });
+
+  it('input schema rejects a mismatched credit amount/currency pair by validation', () => {
+    const valid = prepaidBalanceAlertSettingsInputSchema.safeParse({
+      clientId: 'c1',
+      prepaidCreditAlertThreshold: 5000,
+      prepaidCreditAlertCurrencyCode: 'USD',
+      bucketUsageAlertPercent: 80,
+      notifyClientOnPrepaidAlert: false,
+    });
+    expect(valid.success).toBe(true);
+
+    const unpairedAmount = prepaidBalanceAlertSettingsInputSchema.safeParse({
+      clientId: 'c1',
+      prepaidCreditAlertThreshold: 5000,
+      prepaidCreditAlertCurrencyCode: null,
+      bucketUsageAlertPercent: 80,
+      notifyClientOnPrepaidAlert: false,
+    });
+    expect(unpairedAmount.success).toBe(false);
+
+    const unpairedCurrency = prepaidBalanceAlertSettingsInputSchema.safeParse({
+      clientId: 'c1',
+      prepaidCreditAlertThreshold: null,
+      prepaidCreditAlertCurrencyCode: 'USD',
+      bucketUsageAlertPercent: 80,
+      notifyClientOnPrepaidAlert: false,
+    });
+    expect(unpairedCurrency.success).toBe(false);
+
+    const bothDisabled = prepaidBalanceAlertSettingsInputSchema.safeParse({
+      clientId: 'c1',
+      prepaidCreditAlertThreshold: null,
+      prepaidCreditAlertCurrencyCode: null,
+      bucketUsageAlertPercent: null,
+      notifyClientOnPrepaidAlert: true,
+    });
+    expect(bothDisabled.success).toBe(true);
   });
 });

@@ -90,9 +90,11 @@ describe('dedupe keys', () => {
     expect(creditDedupeKey('client-1', 'USD', 1)).not.toBe(creditDedupeKey('client-2', 'USD', 1));
   });
 
-  it('builds stable bucket keys per usage period and percentage', () => {
-    expect(bucketDedupeKey('usage-1', 80)).toBe('bucket:usage-1:80pct');
+  it('builds stable bucket keys per usage period and percentage, with episode-aware reopenings', () => {
+    expect(bucketDedupeKey('usage-1', 80)).toBe('bucket:usage-1:80pct:ep1');
     expect(bucketDedupeKey('usage-1', 80)).toBe(bucketDedupeKey('usage-1', 80));
+    expect(bucketDedupeKey('usage-1', 80, 2)).toBe('bucket:usage-1:80pct:ep2');
+    expect(bucketDedupeKey('usage-1', 80, 1)).not.toBe(bucketDedupeKey('usage-1', 80, 2));
     expect(bucketDedupeKey('usage-1', 80)).not.toBe(bucketDedupeKey('usage-1', 90));
     expect(bucketDedupeKey('usage-1', 80)).not.toBe(bucketDedupeKey('usage-2', 80));
   });

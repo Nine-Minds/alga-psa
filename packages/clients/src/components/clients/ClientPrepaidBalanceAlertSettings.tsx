@@ -57,11 +57,22 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
   const [fieldErrors, setFieldErrors] = useState<{ credit?: string; bucket?: string }>({});
 
   useEffect(() => {
-    if (!enabled || !clientId) {
+    if (!clientId) {
+      setLoadingSettings(false);
+      return;
+    }
+    // Keep the card busy while the flag itself is still resolving so a user
+    // cannot Save empty defaults in the window before the async fetch runs.
+    if (loading) {
+      setLoadingSettings(true);
+      return;
+    }
+    if (!enabled) {
       setLoadingSettings(false);
       return;
     }
     let cancelled = false;
+    setLoadingSettings(true);
     (async () => {
       try {
         const result = await getPrepaidBalanceAlertSettingsAsync(clientId);
@@ -72,16 +83,19 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
         }
         const hasPolicy =
           result.prepaidCreditAlertThreshold != null || result.bucketUsageAlertPercent != null;
-        const fractionDigits = currencyFractionDigits(result.defaultCurrencyCode || creditCurrency);
+        // Minor-unit conversion must use the saved alert currency (which may
+        // have a different fraction digit count than the client default, e.g.
+        // JPY 0 vs USD 2); otherwise the displayed value corrupts on re-save.
+        const alertCurrency =
+          result.prepaidCreditAlertCurrencyCode || result.defaultCurrencyCode || defaultCurrencyCode || 'USD';
+        const fractionDigits = currencyFractionDigits(alertCurrency);
         setCreditEnabled(result.prepaidCreditAlertThreshold != null);
         setCreditAmount(
           result.prepaidCreditAlertThreshold != null
             ? (result.prepaidCreditAlertThreshold / 10 ** fractionDigits).toFixed(fractionDigits)
             : ''
         );
-        setCreditCurrency(
-          result.prepaidCreditAlertCurrencyCode || result.defaultCurrencyCode || defaultCurrencyCode || 'USD'
-        );
+        setCreditCurrency(alertCurrency);
         setBucketEnabled(result.bucketUsageAlertPercent != null);
         setBucketPercent(result.bucketUsageAlertPercent != null ? String(result.bucketUsageAlertPercent) : '');
         setNotifyClient(result.notifyClientOnPrepaidAlert && hasPolicy);
@@ -97,7 +111,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, clientId]);
+  }, [enabled, loading, clientId]);
 
   if (loading || !enabled) {
     return null;

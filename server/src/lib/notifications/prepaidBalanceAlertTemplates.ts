@@ -68,3 +68,17 @@ export function buildBucketAlertContext(clientName: string, values: BucketAlertT
     },
   };
 }
+
+/**
+ * Flat Handlebars context for the INTERNAL notification channel. The internal
+ * renderer substitutes only top-level `\w+` keys (no dotted paths), so the
+ * resulting keys must match the seeded internal template placeholders exactly
+ * ({{clientName}}, {{available}}, {{currency}}, {{threshold}}, {{percent}},
+ * {{usedPercent}}, {{capacity}}, {{used}}, {{link}}).
+ */
+export function buildInternalAlertContext(
+  clientName: string,
+  values: Record<string, string | number>
+): Record<string, unknown> {
+  return { clientName, ...values };
+}

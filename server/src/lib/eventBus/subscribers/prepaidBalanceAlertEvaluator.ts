@@ -153,6 +153,19 @@ async function nextCreditEpisode(
   return Number(row?.maxEpisode ?? 0) + 1;
 }
 
+async function nextBucketEpisode(
+  db: ReturnType<typeof tenantDb>,
+  tenantId: string,
+  clientId: string,
+  bucketUsageId: string
+): Promise<number> {
+  const row = await db.table('prepaid_balance_alerts')
+    .where({ tenant: tenantId, client_id: clientId, alert_type: 'bucket', bucket_usage_id: bucketUsageId })
+    .max({ maxEpisode: 'episode' })
+    .first();
+  return Number(row?.maxEpisode ?? 0) + 1;
+}
+
 async function resolveAlert(db: ReturnType<typeof tenantDb>, alert: OpenAlert, reason: string): Promise<void> {
   await db.table('prepaid_balance_alerts')
     .where({ alert_id: alert.alert_id })
@@ -200,10 +213,15 @@ async function resolveCurrentBucketSubjects(
     },
   });
   db.tenantJoin(query, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
+  // Contract lines can be shared across clients (system-managed default
+  // contracts), so the usage row must be pinned to the evaluated client —
+  // matching billingEngine / getRemainingBucketUnits. Without it client A
+  // would alert on client B's bucket usage.
   db.tenantJoin(query, 'bucket_usage as bu', 'bu.contract_line_id', 'cl.contract_line_id', {
     rootTenantColumn: 'cc.tenant',
     on(join) {
       join.andOn('bu.service_catalog_id', '=', 'psc.service_id');
+      join.andOn('bu.client_id', '=', 'cc.client_id');
     },
   });
   query
@@ -335,45 +353,79 @@ async function evaluateClientBuckets(
   const subjects = await resolveCurrentBucketSubjects(trx, tenantId, client.client_id, todayISO);
 
   for (const subject of subjects) {
-    summary.bucketSubjects += 1;
-    const capacity = bucketCapacity(subject);
-    if (!hasValidBucketCapacity(subject)) {
-      summary.invalidSubjects += 1;
-      summary.warnings.push({
-        code: 'non_positive_capacity',
-        clientId: client.client_id,
-        clientName: client.client_name,
-        bucketUsageId: subject.usage_id,
-        message: `Bucket usage ${subject.usage_id} has non-positive capacity (${capacity}); skipped`,
-      });
-      continue;
-    }
-
-    const reached = bucketThresholdReached({ ...subject, configuredPercent: percent });
-    const open = await findOpenAlert(db, client.client_id, 'bucket', subject.usage_id);
-
-    if (open) {
-      if (bucketPolicyChanged(Number(open.bucket_percent), percent)) {
-        await resolveAlert(db, open, RESOLUTION_REASON_POLICY_CHANGED);
-        summary.bucketAlertsResolved += 1;
-      } else if (!reached) {
-        await resolveAlert(db, open, RESOLUTION_REASON_RECOVERED);
-        summary.bucketAlertsResolved += 1;
+    try {
+      summary.bucketSubjects += 1;
+      const capacity = bucketCapacity(subject);
+      if (!hasValidBucketCapacity(subject)) {
+        summary.invalidSubjects += 1;
+        summary.warnings.push({
+          code: 'non_positive_capacity',
+          clientId: client.client_id,
+          clientName: client.client_name,
+          bucketUsageId: subject.usage_id,
+          message: `Bucket usage ${subject.usage_id} has non-positive capacity (${capacity}); skipped`,
+        });
+        continue;
       }
-    }
 
-    if (!reached) {
-      continue;
-    }
+      const reached = bucketThresholdReached({ ...subject, configuredPercent: percent });
+      const open = await findOpenAlert(db, client.client_id, 'bucket', subject.usage_id);
 
-    const openAfterResolution = await findOpenAlert(db, client.client_id, 'bucket', subject.usage_id);
-    const usedPercent = bucketUsedPercent({ ...subject, configuredPercent: percent });
-    if (openAfterResolution) {
+      if (open) {
+        if (bucketPolicyChanged(Number(open.bucket_percent), percent)) {
+          await resolveAlert(db, open, RESOLUTION_REASON_POLICY_CHANGED);
+          summary.bucketAlertsResolved += 1;
+        } else if (!reached) {
+          await resolveAlert(db, open, RESOLUTION_REASON_RECOVERED);
+          summary.bucketAlertsResolved += 1;
+        }
+      }
+
+      if (!reached) {
+        continue;
+      }
+
+      const openAfterResolution = await findOpenAlert(db, client.client_id, 'bucket', subject.usage_id);
+      const usedPercent = bucketUsedPercent({ ...subject, configuredPercent: percent });
+      if (openAfterResolution) {
+        await db.table('prepaid_balance_alerts')
+          .where({ alert_id: openAfterResolution.alert_id })
+          .update({
+            observed_value: subject.minutesUsed,
+            observed_capacity: capacity,
+            payload: JSON.stringify({
+              minutesUsed: subject.minutesUsed,
+              capacity,
+              usedPercent,
+              percent,
+              periodStart: subject.period_start,
+              periodEnd: subject.period_end,
+            }),
+          });
+        summary.bucketAlertsDeduplicated += 1;
+        continue;
+      }
+
+      // Episode-aware key: re-opening the same (usage_id, percent) after a
+      // resolution must not collide with the resolved row under the
+      // (tenant, dedupe_key) unique constraint.
+      const episode = await nextBucketEpisode(db, tenantId, client.client_id, subject.usage_id);
       await db.table('prepaid_balance_alerts')
-        .where({ alert_id: openAfterResolution.alert_id })
-        .update({
+        .insert({
+          tenant: tenantId,
+          alert_id: randomUUID(),
+          client_id: client.client_id,
+          alert_type: 'bucket',
+          dedupe_key: bucketDedupeKey(subject.usage_id, percent, episode),
+          episode,
+          bucket_percent: percent,
           observed_value: subject.minutesUsed,
           observed_capacity: capacity,
+          bucket_usage_id: subject.usage_id,
+          service_catalog_id: subject.service_catalog_id,
+          contract_line_id: subject.contract_line_id,
+          period_start: subject.period_start,
+          period_end: subject.period_end,
           payload: JSON.stringify({
             minutesUsed: subject.minutesUsed,
             capacity,
@@ -383,36 +435,18 @@ async function evaluateClientBuckets(
             periodEnd: subject.period_end,
           }),
         });
-      summary.bucketAlertsDeduplicated += 1;
-      continue;
-    }
-
-    await db.table('prepaid_balance_alerts')
-      .insert({
-        tenant: tenantId,
-        alert_id: randomUUID(),
-        client_id: client.client_id,
-        alert_type: 'bucket',
-        dedupe_key: bucketDedupeKey(subject.usage_id, percent),
-        episode: 1,
-        bucket_percent: percent,
-        observed_value: subject.minutesUsed,
-        observed_capacity: capacity,
-        bucket_usage_id: subject.usage_id,
-        service_catalog_id: subject.service_catalog_id,
-        contract_line_id: subject.contract_line_id,
-        period_start: subject.period_start,
-        period_end: subject.period_end,
-        payload: JSON.stringify({
-          minutesUsed: subject.minutesUsed,
-          capacity,
-          usedPercent,
-          percent,
-          periodStart: subject.period_start,
-          periodEnd: subject.period_end,
-        }),
+      summary.bucketAlertsOpened += 1;
+    } catch (error) {
+      // One bucket subject's failure never aborts the client's other buckets
+      // or (via the separate transaction) its credit evaluation.
+      summary.warnings.push({
+        code: 'evaluation_error',
+        clientId: client.client_id,
+        clientName: client.client_name,
+        bucketUsageId: subject.usage_id,
+        message: `Bucket subject ${subject.usage_id} evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
       });
-    summary.bucketAlertsOpened += 1;
+    }
   }
 
   // A period rollover (or removed bucket) leaves the old subject open; resolve
@@ -432,62 +466,99 @@ export async function evaluatePrepaidBalanceAlertsForTenant(
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  for (const client of configured) {
-    try {
-      await knex.transaction(async (trx) => {
-        const db = tenantDb(trx, tenantId);
-        const lockRow = await db.table('client_billing_settings')
-          .where({ client_id: client.client_id })
-          .forUpdate()
-          .first();
-        if (!lockRow) {
-          summary.warnings.push({
-            code: 'client_not_found',
-            clientId: client.client_id,
-            clientName: client.client_name,
-            message: `Client billing settings row missing for ${client.client_id}`,
-          });
-          return;
-        }
+  const creditConfiguredFor = (c: ConfiguredClient) =>
+    c.prepaid_credit_alert_threshold != null && c.prepaid_credit_alert_currency_code != null;
+  const bucketConfiguredFor = (c: ConfiguredClient) => c.bucket_usage_alert_percent != null;
 
-        const creditConfigured =
-          client.prepaid_credit_alert_threshold != null && client.prepaid_credit_alert_currency_code != null;
-        const bucketConfigured = client.bucket_usage_alert_percent != null;
-
-        if (!creditConfigured) {
-          // Policy disabled: resolve any open credit episode as policy_changed.
-          const open = await db.table('prepaid_balance_alerts')
-            .where({ client_id: client.client_id, alert_type: 'credit', resolved_at: null })
-            .select('alert_id');
-          for (const alert of open) {
-            await resolveAlert(db, alert, RESOLUTION_REASON_POLICY_CHANGED);
-            summary.creditAlertsResolved += 1;
-          }
-        } else {
-          await evaluateClientCredit(trx, tenantId, client, summary);
-        }
-
-        if (!bucketConfigured) {
-          const open = await db.table('prepaid_balance_alerts')
-            .where({ client_id: client.client_id, alert_type: 'bucket', resolved_at: null })
-            .select('alert_id');
-          for (const alert of open) {
-            await resolveAlert(db, alert, RESOLUTION_REASON_POLICY_CHANGED);
-            summary.bucketAlertsResolved += 1;
-          }
-        } else {
-          await evaluateClientBuckets(trx, tenantId, client, summary, todayISO);
-        }
-      });
-    } catch (error) {
-      // One client's evaluation failure never aborts the other configured
-      // clients in the same tenant scan.
+  const lockSettingsRow = async (trx: Knex.Transaction, client: ConfiguredClient): Promise<boolean> => {
+    const db = tenantDb(trx, tenantId);
+    const lockRow = await db.table('client_billing_settings')
+      .where({ client_id: client.client_id })
+      .forUpdate()
+      .first();
+    if (!lockRow) {
       summary.warnings.push({
-        code: 'evaluation_error',
+        code: 'client_not_found',
         clientId: client.client_id,
         clientName: client.client_name,
-        message: `Client evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Client billing settings row missing for ${client.client_id}`,
       });
+      return false;
+    }
+    return true;
+  };
+
+  const resolveOpenTypeAsPolicyChanged = async (
+    client: ConfiguredClient,
+    alertType: 'credit' | 'bucket'
+  ): Promise<number> => {
+    const db = tenantDb(knex, tenantId);
+    const open = await db.table('prepaid_balance_alerts')
+      .where({ client_id: client.client_id, alert_type: alertType, resolved_at: null })
+      .select('alert_id');
+    for (const alert of open) {
+      await resolveAlert(db, alert, RESOLUTION_REASON_POLICY_CHANGED);
+    }
+    return open.length;
+  };
+
+  for (const client of configured) {
+    // Credit and bucket evaluation run in SEPARATE transactions so a failure
+    // in one subject type can never roll back the other's already-committed
+    // writes (e.g. a bucket dedupe collision must not discard a credit alert).
+    if (creditConfiguredFor(client)) {
+      try {
+        await knex.transaction(async (trx) => {
+          if (!(await lockSettingsRow(trx, client))) return;
+          await evaluateClientCredit(trx, tenantId, client, summary);
+        });
+      } catch (error) {
+        summary.warnings.push({
+          code: 'evaluation_error',
+          clientId: client.client_id,
+          clientName: client.client_name,
+          message: `Credit evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    } else {
+      // Policy disabled: resolve any open credit episode as policy_changed.
+      try {
+        summary.creditAlertsResolved += await resolveOpenTypeAsPolicyChanged(client, 'credit');
+      } catch (error) {
+        summary.warnings.push({
+          code: 'evaluation_error',
+          clientId: client.client_id,
+          clientName: client.client_name,
+          message: `Credit policy resolution failed: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }
+
+    if (bucketConfiguredFor(client)) {
+      try {
+        await knex.transaction(async (trx) => {
+          if (!(await lockSettingsRow(trx, client))) return;
+          await evaluateClientBuckets(trx, tenantId, client, summary, todayISO);
+        });
+      } catch (error) {
+        summary.warnings.push({
+          code: 'evaluation_error',
+          clientId: client.client_id,
+          clientName: client.client_name,
+          message: `Bucket evaluation failed: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    } else {
+      try {
+        summary.bucketAlertsResolved += await resolveOpenTypeAsPolicyChanged(client, 'bucket');
+      } catch (error) {
+        summary.warnings.push({
+          code: 'evaluation_error',
+          clientId: client.client_id,
+          clientName: client.client_name,
+          message: `Bucket policy resolution failed: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     }
   }
 

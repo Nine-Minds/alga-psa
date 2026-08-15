@@ -104,7 +104,6 @@ export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Pr
           tenantId,
           code: warning.code,
           clientId: warning.clientId,
-          clientName: warning.clientName,
           bucketUsageId: warning.bucketUsageId,
           currencyCode: warning.currencyCode,
           alertId: warning.alertId,

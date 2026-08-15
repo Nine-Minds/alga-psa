@@ -98,9 +98,14 @@ export function creditDedupeKey(clientId: string, currencyCode: string, episode:
   return `credit:${clientId}:${currencyCode}:ep${episode}`;
 }
 
-/** Stable dedupe key for one bucket_usage period + configured percentage. */
-export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number): string {
-  return `bucket:${bucketUsageId}:${configuredPercent}pct`;
+/**
+ * Stable dedupe key for one bucket_usage period + configured percentage. The
+ * episode is monotonically increasing per (usage_id, percent): re-opening the
+ * same period/percentage after a resolution never collides with the resolved
+ * row under the (tenant, dedupe_key) unique constraint.
+ */
+export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number, episode = 1): string {
+  return `bucket:${bucketUsageId}:${configuredPercent}pct:ep${episode}`;
 }
 
 /** A threshold or currency change resolves the prior episode as policy_changed. */
