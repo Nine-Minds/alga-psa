@@ -184,6 +184,25 @@ const secondaryOverrides = `
 `;
 
 /**
+ * Side panel tint for the client portal. Scoped to the portal sidebar element so
+ * the MSP sidebar (which sits next to the settings preview) never recolors.
+ * Sidebar text stays light — the panel is dark in both themes.
+ */
+const sidebarOverrides = (shades: Record<number, string>): string => `
+
+    [data-automation-id="client-portal-sidebar"] {
+      --color-sidebar-bg: rgb(${shades[800]});
+      --color-sidebar-hover: rgb(${shades[700]});
+      --color-sidebar-icon: rgb(${shades[300]});
+    }
+
+    html.dark [data-automation-id="client-portal-sidebar"] {
+      --color-sidebar-bg: rgb(${shades[900]});
+      --color-sidebar-hover: rgb(${shades[800]});
+      --color-sidebar-icon: rgb(${shades[300]});
+    }`;
+
+/**
  * Generate CSS styles for tenant branding.
  * Each color is applied independently — if only one is set, the other falls
  * back to the globals.css palette rather than a hardcoded default.
@@ -209,6 +228,13 @@ export function generateBrandingStyles(branding: TenantBranding | null): string 
     secondaryDarkShades ? paletteVars('secondary', secondaryDarkShades) : '',
   ].filter(Boolean).join('\n');
 
+  const sidebarShades = branding?.portalSidebarStyle === 'primary'
+    ? primaryShades
+    : branding?.portalSidebarStyle === 'secondary'
+      ? secondaryShades
+      : null;
+  const sidebarBody = sidebarShades ? sidebarOverrides(sidebarShades) : '';
+
   return `
     :root {${rootBody}
     }
@@ -216,6 +242,6 @@ export function generateBrandingStyles(branding: TenantBranding | null): string 
     html.dark {${darkBody}
     }
     ${primaryShades ? primaryOverrides : ''}
-    ${secondaryShades ? secondaryOverrides : ''}
+    ${secondaryShades ? secondaryOverrides : ''}${sidebarBody}
   `;
 }

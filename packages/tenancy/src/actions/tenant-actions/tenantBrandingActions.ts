@@ -8,9 +8,15 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
+export type PortalSidebarStyle = 'default' | 'primary' | 'secondary';
 
 export interface TenantBranding {
   logoUrl: string;
+  /**
+   * Optional logo for dark surfaces (portal side panel, dark-themed auth
+   * pages). Absent means every surface keeps using `logoUrl`.
+   */
+  logoDarkUrl?: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
@@ -19,6 +25,11 @@ export interface TenantBranding {
    * original primary-500 -> primary-700 behavior for existing tenants.
    */
   portalHeroGradient?: PortalHeroGradient;
+  /**
+   * Tints the client portal side panel with the primary/secondary palette.
+   * Missing or 'default' keeps the stock slate side panel.
+   */
+  portalSidebarStyle?: PortalSidebarStyle;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
@@ -44,12 +55,18 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
 
   const existingSettings = existingRecord?.settings || {};
 
+  // Carry forward optional fields the caller didn't send so an older client or
+  // another settings tab can never wipe them.
+  const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
+  const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
+
   // Precompute CSS styles for performance
   const computedStyles = generateBrandingStyles({
     logoUrl: branding.logoUrl,
     primaryColor: branding.primaryColor,
     secondaryColor: branding.secondaryColor,
     clientName: branding.clientName,
+    portalSidebarStyle,
   });
 
   // Build updated settings with branding and computed styles.
@@ -61,10 +78,12 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     supportPhone: branding.supportPhone ?? existingSettings.supportPhone ?? '',
     branding: {
       logoUrl: branding.logoUrl,
+      logoDarkUrl,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
       portalHeroGradient: branding.portalHeroGradient,
+      portalSidebarStyle,
       computedStyles, // Store precomputed CSS
     }
   };
