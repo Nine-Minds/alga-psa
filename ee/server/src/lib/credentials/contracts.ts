@@ -36,6 +36,31 @@ export interface CredentialAttachment {
   entityId: string;
 }
 
+/**
+ * Caller-seen visible baseline for a replacement save (entity-scoped).
+ *
+ * The entity-list resolution that rendered the caller's snapshot yields, for
+ * every Hudu row the caller actually SAW, the association-row identity
+ * (`association_id`) that row was rendered from. A full-set replacement
+ * (`setEntityCredentials`) submits the desired credential set together with
+ * this baseline so a Hudu ref is detached only when the caller demonstrably
+ * saw THIS exact association row and then omitted it:
+ *
+ *  - a ref that was hidden at list load (inactive integration, transport/API
+ *    failure, permission hiccup, attached after the snapshot) is absent from
+ *    the baseline and can never be detached by the replacement — fail-closed
+ *    even if it would resolve visible at save time;
+ *  - the delete is keyed to the baseline's exact association row identity
+ *    inside the transaction, so a row reattached under the same ref string
+ *    (fresh `association_id`) after the snapshot is never removed.
+ */
+export interface CredentialReplaceBaseline {
+  /** Hudu ref (`hudu:{company_id}:{password_id}`) the caller saw in the list. */
+  ref: string;
+  /** The `credential_associations.association_id` the ref was rendered from. */
+  associationId: string;
+}
+
 /** Metadata-only projection; never carries value-bearing fields. */
 export interface CredentialSummary {
   /** Native uuid, or `hudu:{company_id}:{password_id}`. */
@@ -58,6 +83,12 @@ export interface CredentialSummary {
   externalUrl: string | null;
   /** Entity attachments (both sources); metadata only. */
   attachments: CredentialAttachment[];
+  /**
+   * Entity-scoped lists only: the `credential_associations.association_id` the
+   * visible row was rendered from, so the UI's rendered snapshot can be echoed
+   * back as the replacement-save baseline. Absent on non-entity-scoped rows.
+   */
+  associationId?: string;
   createdAt: string | null;
   updatedAt: string | null;
 }

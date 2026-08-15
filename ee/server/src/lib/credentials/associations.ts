@@ -23,12 +23,16 @@
  */
 
 import type { Knex } from 'knex';
-import type { CredentialAssociationEntityType, CredentialAttachment, CredentialSourceContext } from './contracts';
+import type {
+  CredentialAssociationEntityType,
+  CredentialAttachment,
+  CredentialReplaceBaseline,
+  CredentialSourceContext,
+} from './contracts';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { isHuduCredentialId, huduCredentialSource } from './huduSource';
 import { nativeCredentialSource } from './nativeSource';
-import { getHuduIntegration } from '../integrations/hudu/huduIntegrationRepository';
 import { writeCredentialAudit } from './audit';
 
 /** Entity types whose owning client must match the credential's owning client. */
@@ -42,6 +46,7 @@ export const CLIENT_BOUND_ENTITY_TYPES: ReadonlySet<CredentialAssociationEntityT
 ]);
 
 export interface CredentialAssociationRow {
+  association_id: string;
   credential_id: string | null;
   credential_ref: string | null;
   entity_id: string;
@@ -151,7 +156,7 @@ export async function loadAssociationsForEntity(
     .table<CredentialAssociationRow>('credential_associations')
     .where('entity_type', entityType)
     .where('entity_id', entityId)
-    .select('credential_id', 'credential_ref', 'entity_id', 'entity_type');
+    .select('association_id', 'credential_id', 'credential_ref', 'entity_id', 'entity_type');
 }
 
 /** Owning client of the credential (both sources), null when the caller cannot see it. */
@@ -275,111 +280,66 @@ export async function removeCredentialFromEntity(
 }
 
 /**
- * Live-visibility verdict for a Hudu association ref on the replace path.
- * 'visible' means the integration is active AND a live Hudu lookup at save
- * time positively confirmed the record exists and was resolvable for this
- * caller; 'gone' is a Hudu-confirmed 404 (pruned only by the list/prune path);
- * 'unknown' is every other outcome — integration inactive/not connected,
- * credentials missing, transport/API/permission failure, unmapped company, or
- * out-of-bundle scope — and is fail-closed: preserved, never detached.
- */
-type HuduVisibilityVerdict = 'visible' | 'gone' | 'unknown';
-
-/**
- * Probe live Hudu visibility for association refs the caller omitted, BEFORE
- * the replace transaction opens (live Hudu HTTP calls must not sit inside the
- * knex window that holds credential row locks). Mirrors the entity-list
- * resolution — the same `resolveByIds` live-GET-confirm machinery the list
- * path uses — so "would this ref have appeared in the caller's list?" is
- * answered the way the list was actually built. A ref is only ever 'visible'
- * when the integration is active AND the live lookup positively confirms it.
- * Fail-closed: any probe failure (client construction, transport/API errors,
- * DB hiccup) leaves every not-otherwise-confirmed ref 'unknown', so the
- * replace preserves it.
- */
-async function probeHuduVisibility(
-  ctx: CredentialSourceContext,
-  refs: string[]
-): Promise<ReadonlyMap<string, HuduVisibilityVerdict>> {
-  const verdicts = new Map<string, HuduVisibilityVerdict>();
-  if (refs.length === 0) return verdicts;
-  const { knex } = await createTenantKnex(ctx.tenant);
-  try {
-    const integration = await getHuduIntegration(knex, ctx.tenant);
-    if (integration?.is_active !== true) {
-      // Inactive/disconnected integration: the caller's list shows no Hudu
-      // rows at all, so no omission can express intent about a ref — every
-      // candidate is 'unknown' and preserved (list-path parity).
-      for (const ref of refs) verdicts.set(ref, 'unknown');
-      return verdicts;
-    }
-    const resolved = await huduCredentialSource.resolveByIds(ctx, refs);
-    for (const { ref, summary, prune } of resolved) {
-      verdicts.set(ref, summary ? 'visible' : prune ? 'gone' : 'unknown');
-    }
-  } catch {
-    // Probe failed entirely (e.g. credentials not configured despite an active
-    // integration, or an error reading the integration state): nothing was
-    // positively confirmed — every ref is 'unknown' and preserved.
-  }
-  for (const ref of refs) {
-    if (!verdicts.has(ref)) verdicts.set(ref, 'unknown');
-  }
-  return verdicts;
-}
-
-/**
- * Filter association rows down to those whose credential the CALLER is
+ * Filter NATIVE association rows down to those whose credential the CALLER is
  * confirmed to see right now. Restricted native credentials are hidden from
- * the caller's list, and Hudu refs are removable only when the pre-transaction
- * live probe positively confirmed them 'visible'. Everything else — native
- * rows the caller cannot see, and Hudu refs that are 'gone' or 'unknown' —
- * is preserved: the caller never formed intent about rows they did not see,
- * and removing one would both leak its existence and destroy it. Batched for
- * native ids; Hudu verdicts come from the pre-transaction probe, never from a
- * second live round-trip inside the transaction.
+ * the caller's list; a row the caller cannot see is preserved: the caller
+ * never formed intent about it, and removing one would both leak its existence
+ * and destroy it. Batched via listByIds (DB-only kernel scope — no external
+ * HTTP), which is what the caller's entity list itself is built from.
  */
-async function filterRowsVisibleToCaller(
+async function filterVisibleNativeRows(
   ctx: CredentialSourceContext,
-  rows: CredentialAssociationRow[],
-  huduVisibility: ReadonlyMap<string, HuduVisibilityVerdict>
+  rows: CredentialAssociationRow[]
 ): Promise<CredentialAssociationRow[]> {
-  if (rows.length === 0) return rows;
-  const nativeIds = rows.flatMap((row) => (row.credential_id ? [row.credential_id] : []));
+  const nativeRows = rows.filter((row) => row.credential_id);
+  if (nativeRows.length === 0) return [];
+  const nativeIds = nativeRows.map((row) => row.credential_id as string);
   const visibleNativeIds = new Set(
     (await nativeCredentialSource.listByIds(ctx, nativeIds)).map((summary) => summary.id)
   );
-  return rows.filter((row) =>
-    row.credential_id
-      ? visibleNativeIds.has(row.credential_id)
-      : row.credential_ref
-        ? huduVisibility.get(row.credential_ref) === 'visible'
-        : false
-  );
+  return nativeRows.filter((row) => visibleNativeIds.has(row.credential_id as string));
 }
 
-/** Replace the full credential set attached to an entity (link-existing save). */
+/**
+ * Replace the full credential set attached to an entity (link-existing save).
+ *
+ * Removal intent is anchored to the CALLER's rendered snapshot, not to any
+ * save-time visibility probe:
+ *
+ *  - NATIVE rows are removable only when the caller is confirmed to see them
+ *    right now (in-transaction kernel filter — DB-only, no external HTTP).
+ *  - HUDU refs are removable only when the exact association row the caller
+ *    saw (ref + association_id from the `baseline` it renders against) still
+ *    exists at mutation time. The delete is keyed to that row identity inside
+ *    the transaction. A ref hidden at list load (absent from the baseline) is
+ *    preserved even if it would resolve visible at save time, and a row
+ *    concurrently reattached under the same ref string (fresh association_id)
+ *    is untouched because the stale baseline names the old row.
+ *
+ * A save invoked WITHOUT a baseline (older callers, CE stubs) is fail-closed:
+ * every Hudu ref is preserved, never detached. Confirmed-404 cleanup stays
+ * solely on the list/prune path (pruneAssociationRefs); this path never prunes
+ * on 404.
+ */
 export async function setEntityCredentials(
   ctx: CredentialSourceContext,
   entityType: CredentialAssociationEntityType,
   entityId: string,
-  credentialIds: string[]
+  credentialIds: string[],
+  baseline: CredentialReplaceBaseline[] = []
 ): Promise<void> {
   const unique = Array.from(new Set(credentialIds));
   const { knex } = await createTenantKnex(ctx.tenant);
 
-  // Probe Hudu visibility BEFORE the transaction: live Hudu HTTP calls must
-  // not sit inside the knex window that holds credential row locks. The probe
-  // verdicts are the visibility lens inside the transaction; any ref the probe
-  // did not positively confirm as 'visible' is preserved. That stays fail-closed
-  // even against a race — a ref attached after this probe is not in the map,
-  // reads as 'unknown', and survives.
+  // The caller's rendered snapshot, keyed by the association-row identity each
+  // Hudu ref was rendered from. Absent/empty (no baseline) => no Hudu row is
+  // removable — the replacement can only ever detach what the caller proves it
+  // saw.
+  const huduBaselineByAssociationId = new Map(
+    baseline.filter((entry) => isHuduCredentialId(entry.ref)).map((entry) => [entry.associationId, entry.ref])
+  );
+
   const desiredKeys = new Set(unique.map((id) => (isHuduCredentialId(id) ? `ref:${id}` : `id:${id}`)));
-  const preExisting = await loadAssociationsForEntity(knex, ctx.tenant, entityType, entityId);
-  const omittedHuduRefs = preExisting
-    .filter((row) => row.credential_ref && !desiredKeys.has(`ref:${row.credential_ref}`))
-    .map((row) => row.credential_ref as string);
-  const huduVisibility = await probeHuduVisibility(ctx, omittedHuduRefs);
 
   await withTransaction(knex, async (trx) => {
     // Lock EVERY native credential the set touches (deterministic order) up
@@ -400,24 +360,54 @@ export async function setEntityCredentials(
     );
 
     // Diff-based application: only rows the caller explicitly omitted AND is
-    // CONFIRMED to see are removed. Native rows the caller cannot see survive
-    // untouched, and Hudu refs survive unless the pre-transaction live probe
-    // positively confirmed them currently visible — a ref that was merely
-    // bundle-mapped but hidden (inactive integration, transport/API/permission
-    // failure, confirmed 404) is preserved because the caller never saw it in
-    // their live list, so omission never expresses intent about it.
+    // PROVEN to have seen are removed. Native rows the caller cannot see
+    // survive untouched; Hudu refs survive unless the exact association row the
+    // caller's snapshot named still exists and was deliberately omitted.
     const toRemove = existing.filter((row) => {
       const key = row.credential_id ? `id:${row.credential_id}` : `ref:${row.credential_ref}`;
       return !desiredKeys.has(key);
     });
-    const removable = await filterRowsVisibleToCaller(ctx, toRemove, huduVisibility);
+
+    // Hudu refs: detach ONLY the exact association row the caller saw — its
+    // baseline entry must name this row identity AND the same ref. The delete
+    // is keyed by association_id inside the transaction, so a reattached row
+    // under the same ref string (fresh association_id) is missed untouched.
+    const huduToRemove = toRemove.filter(
+      (row) => row.credential_ref && huduBaselineByAssociationId.get(row.association_id) === row.credential_ref
+    );
+
+    // Native rows: removable only when the caller can see them right now
+    // (batched in-transaction kernel filter — DB-only, no external HTTP).
+    const nativeVisible = await filterVisibleNativeRows(
+      ctx,
+      toRemove.filter((row) => row.credential_id)
+    );
+
+    // Disjoint by construction: ref rows vs id rows.
+    const removable = [...huduToRemove, ...nativeVisible];
     for (const row of removable) {
       const db = tenantDb(trx, ctx.tenant).table('credential_associations');
-      if (row.credential_id) {
-        await db.where('credential_id', row.credential_id).where('entity_type', entityType).where('entity_id', entityId).del();
+      if (row.credential_ref) {
+        await db
+          .where('association_id', row.association_id)
+          .where('credential_ref', row.credential_ref)
+          .where('entity_type', entityType)
+          .where('entity_id', entityId)
+          .del();
       } else {
-        await db.where('credential_ref', row.credential_ref).where('entity_type', entityType).where('entity_id', entityId).del();
+        await db
+          .where('credential_id', row.credential_id)
+          .where('entity_type', entityType)
+          .where('entity_id', entityId)
+          .del();
       }
+      const credentialId = (row.credential_ref ?? row.credential_id) as string;
+      const ownerClientId = await resolveCredentialOwnerClientId(ctx, credentialId);
+      await writeCredentialAudit(trx, ctx.tenant, 'credential_detached', {
+        userId: ctx.userId,
+        credentialId,
+        clientId: ownerClientId ?? '',
+      }, { entity_type: entityType, entity_id: entityId });
     }
 
     const toAdd = unique.filter((id) => !existingKeys.has(isHuduCredentialId(id) ? `ref:${id}` : `id:${id}`));

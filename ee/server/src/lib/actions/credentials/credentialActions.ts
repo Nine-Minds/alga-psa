@@ -38,6 +38,7 @@ import type {
   CredentialDetail,
   CredentialGrant,
   CredentialListFilter,
+  CredentialReplaceBaseline,
   CredentialRevealResult,
   CredentialSourceContext,
   CredentialSummary,
@@ -162,6 +163,16 @@ async function aggregateList(
     const nativeIds = rows.flatMap((row) => (row.credential_id ? [row.credential_id] : []));
     const huduRefs = rows.flatMap((row) => (row.credential_ref ? [row.credential_ref] : []));
 
+    // Visible rows carry the association-row identity they were rendered from,
+    // so a replacement save can echo this snapshot back as its baseline: a
+    // Hudu ref is only ever detachable when the caller proves it saw THIS row.
+    const nativeAssocIdByCredentialId = new Map<string, string>();
+    const huduAssocIdByRef = new Map<string, string>();
+    for (const row of rows) {
+      if (row.credential_id) nativeAssocIdByCredentialId.set(row.credential_id, row.association_id);
+      if (row.credential_ref) huduAssocIdByRef.set(row.credential_ref, row.association_id);
+    }
+
     const native = wantNative ? await nativeCredentialSource.listByIds(ctx, nativeIds) : [];
 
     let hudu: CredentialSummary[] = [];
@@ -177,7 +188,10 @@ async function aggregateList(
       }
       // Hudu inactive: refs are un-resolvable this response; omit, never prune.
     }
-    return [...native, ...hudu];
+    return [
+      ...native.map((summary) => ({ ...summary, associationId: nativeAssocIdByCredentialId.get(summary.id) })),
+      ...hudu.map((summary) => ({ ...summary, associationId: huduAssocIdByRef.get(summary.id) })),
+    ];
   }
 
   if (filter.clientId) {
@@ -458,9 +472,10 @@ export const setEntityCredentials = withCredentialAccess(
     { tenant },
     entityType: CredentialAssociationEntityType,
     entityId: string,
-    credentialIds: string[]
+    credentialIds: string[],
+    baseline: CredentialReplaceBaseline[] = []
   ): Promise<void> => {
-    await serviceSetEntityCredentials(sourceContext(user, tenant), entityType, entityId, credentialIds);
+    await serviceSetEntityCredentials(sourceContext(user, tenant), entityType, entityId, credentialIds, baseline);
     revalidatePath('/msp/credentials');
   }
 );

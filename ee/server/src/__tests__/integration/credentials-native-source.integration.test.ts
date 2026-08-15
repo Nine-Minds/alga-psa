@@ -61,11 +61,14 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
-// The setEntityCredentials Hudu visibility probe resolves refs LIVE through
-// huduSource.resolveByIds (the same machinery the entity-list path uses). This
-// suite has no live Hudu, so stub the single HTTP boundary — createHuduClient —
-// and drive getAssetPassword per test; everything else (resolveByIds, the
-// company mapping, bundle scope, the probe's integration gate) stays real.
+// The setEntityCredentials replace path anchors Hudu-ref removal to the
+// CALLER's rendered snapshot (the baseline it submits), never to a save-time
+// live probe: a ref the caller did not see at list load is preserved even if
+// it would resolve visible at save time, and a concurrently reattached row
+// (new association_id) survives a stale baseline. This suite has no live Hudu,
+// so stub the single HTTP boundary — createHuduClient — and drive
+// getAssetPassword per test; everything else (resolveByIds, the company
+// mapping, bundle scope, the list path's integration gate) stays real.
 const { createHuduClientMock } = vi.hoisted(() => ({ createHuduClientMock: vi.fn() }));
 
 vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
@@ -1388,14 +1391,17 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:998:12', open.id].sort());
   });
 
-  // ---- mapped-but-temporarily-hidden Hudu refs (defect 29.8.44 mitigation) ----
+  // ---- Hudu refs: removal anchored to the caller's rendered snapshot (defect 29.8.44 mitigation round) ----
   //
   // A bundle-mapped ref can be ABSENT from the caller-visible live list even
-  // though the mapping resolves (integration inactive, live lookup failure, or
-  // confirmed 404). The caller never formed intent about it, so a replace that
-  // omits it must preserve it — only a positively confirmed-visible omission
-  // may detach. Each test discriminates against the pre-fix code, which judged
-  // "mapped" as "visible" and detached the row.
+  // though the mapping resolves (integration inactive, live lookup failure at
+  // list load, or confirmed 404). The caller never formed intent about it, so
+  // a replace that omits it must preserve it. The replace path's only detach
+  // authority is the caller's rendered snapshot (the baseline: ref +
+  // association-row identity); absent a baseline, or when the row identity has
+  // moved, the ref is preserved. Each race test discriminates against the
+  // pre-fix save-time probe, which detached whatever a save-time lookup found
+  // visible.
 
   it('setEntityCredentials preserves a bundle-mapped hudu ref when the integration is inactive (no detach, no audit)', async () => {
     const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
@@ -1413,7 +1419,10 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
     });
 
-    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+    // The caller's rendered snapshot showed no Hudu rows at all (the
+    // integration is inactive), so the baseline is empty and the omission
+    // expresses no intent.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
 
     // Preserved, and no detach audit was written.
     const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
@@ -1421,12 +1430,12 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     const detachAudits = await assocDb('audit_logs')
       .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
     expect(detachAudits).toHaveLength(0);
-    // The probe must short-circuit on the integration gate — no Hudu client was
-    // ever constructed (no HTTP round-trip on an inactive integration).
+    // The replace path performs NO Hudu HTTP round-trip — removal intent is
+    // anchored to the rendered snapshot, never to a save-time probe.
     expect(createHuduClientMock).not.toHaveBeenCalled();
   });
 
-  it('setEntityCredentials preserves a bundle-mapped hudu ref when the live lookup fails (transport/API error)', async () => {
+  it('setEntityCredentials preserves a bundle-mapped hudu ref when the live lookup failed at list load (transport/API error)', async () => {
     const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
     const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
     const ref = 'hudu:501:78';
@@ -1434,6 +1443,9 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
 
     await mapHuduCompany('501', clientA);
     await upsertHuduIntegration(true);
+    // The caller's list load hit a transport error, so the ref was never in
+    // its rendered snapshot (empty baseline); the ref below is what a save-time
+    // lookup would see.
     createHuduClientMock.mockResolvedValue({
       getAssetPassword: vi.fn(async () => {
         throw new HuduRequestError({ kind: 'server_error', status: 503, message: 'Hudu unavailable' });
@@ -1445,13 +1457,13 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
     });
 
-    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
 
     const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
     expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
   });
 
-  it('setEntityCredentials detaches a hudu ref Hudu confirms visible right now (positive control)', async () => {
+  it('setEntityCredentials detaches a hudu ref the caller saw and deliberately omitted (positive control, with audit)', async () => {
     const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
     const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
     const ref = 'hudu:502:79';
@@ -1464,16 +1476,22 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     });
 
     const ticketForA = await seedEntity('ticket', clientA);
-    await assocDb('credential_associations').insert({
+    const [row] = await assocDb('credential_associations').insert({
       tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
-    });
+    }).returning('association_id');
 
-    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+    // The caller's rendered snapshot: the entity list resolved the ref live and
+    // yielded its exact association-row identity. Deliberately omitting a row it
+    // saw is the only detach the replace path may perform.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], [{ ref, associationId: row.association_id }]);
 
-    // The live lookup positively confirmed the record for this caller, so the
-    // omission expresses real intent and the replace detaches it.
+    // The row is gone, and the detach is audited with the same
+    // credential_detached semantics as the per-row detach path.
     const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
     expect(rows.map((r) => r.credential_ref)).toEqual([]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(1);
   });
 
   it('setEntityCredentials preserves a hudu ref Hudu confirms gone (404); pruning stays on the list/prune path', async () => {
@@ -1498,6 +1516,102 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     // Confirmed 404 must NOT be detached by the replace path — the row is left
     // for the list path's lazy-prune (pruneAssociationRefs), the sole remover
     // of confirmed-gone refs.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+  });
+
+  it('Race A: a hudu ref hidden at caller list load but visible at save time is preserved (no detach, no audit)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:510:90';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('510', clientA);
+    await upsertHuduIntegration(true);
+    // At SAVE time the ref resolves positively visible — a save-time probe
+    // would mark it removable. But the caller's list load (T0) happened while
+    // the row was hidden (transport blip / attached after the snapshot), so its
+    // rendered snapshot shows no Hudu rows and the baseline is empty.
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 90, company_id: 510, name: 'Race A Visible Now' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // The caller never saw the ref (empty baseline); its save omits it only
+    // because it did not know the row existed. Pre-fix, the save-time probe
+    // confirms it visible and detaches — wrong, and this test fails there.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(0);
+  });
+
+  it('Race B: a hudu ref concurrently detached and reattached between snapshot and save survives (fresh row untouched)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:511:91';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('511', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 91, company_id: 511, name: 'Race B Reattached' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    const [snapshotRow] = await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    }).returning('association_id');
+
+    // Between the caller's snapshot (T0) and its save (T1) another actor
+    // detaches that association row and reattaches the SAME ref as a NEW row.
+    await assocDb('credential_associations').where({ tenant: assocTenant, association_id: snapshotRow.association_id }).del();
+    const [reattachedRow] = await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    }).returning('association_id');
+    expect(reattachedRow.association_id).not.toBe(snapshotRow.association_id);
+
+    // The stale replacement names the OLD row identity. Pre-fix, the save-time
+    // probe marks the ref visible and the delete (keyed by ref string) destroys
+    // the fresh row; the fix keys the delete to the snapshot's row identity, so
+    // the fresh row survives.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [], [{ ref, associationId: snapshotRow.association_id }]);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => ({ ref: r.credential_ref, associationId: r.association_id }))).toEqual([
+      { ref, associationId: reattachedRow.association_id },
+    ]);
+  });
+
+  it('setEntityCredentials invoked without a baseline preserves a visible hudu ref (fail-closed degradation for older callers)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:512:92';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('512', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 92, company_id: 512, name: 'No Baseline Visible' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // A caller that never rendered the entity list (or a legacy integration)
+    // has no baseline; the fail-closed degradation is "preserve every Hudu
+    // ref", never "detach". Pre-fix, the save-time probe detaches it here.
     await setEntityCredentials(ctx, 'ticket', ticketForA, []);
 
     const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
