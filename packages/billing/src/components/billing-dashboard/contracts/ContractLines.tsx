@@ -35,6 +35,9 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
+import { BucketPoolEditor } from './BucketPoolEditor';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getBusinessHoursSchedules } from '@alga-psa/sla/actions';
 import {
   ServiceSelectionDialog,
   type ContractLineServiceSelection,
@@ -134,6 +137,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
+  // Flag-on line-level bucket pools (weighted-burn model). Flag off keeps the
+  // existing per-service overlay UI served by the compat layer.
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1.5-feature', {
+    defaultValue: false,
+  });
+  const [bucketSchedules, setBucketSchedules] = useState<Array<{
+    schedule_id: string;
+    schedule_name: string;
+    is_default: boolean;
+  }>>([]);
   const billingTimingOptions = [
     {
       value: 'advance',
@@ -186,6 +199,30 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       void fetchData();
     }
   }, [contract.contract_id]);
+
+  useEffect(() => {
+    if (!bucketPoolEditorEnabled) return;
+    let isActive = true;
+    void (async () => {
+      try {
+        const schedules = await getBusinessHoursSchedules();
+        if (isActive && Array.isArray(schedules)) {
+          setBucketSchedules(schedules.map((schedule) => ({
+            schedule_id: schedule.schedule_id,
+            schedule_name: schedule.schedule_name,
+            is_default: Boolean(schedule.is_default),
+          })));
+        }
+      } catch {
+        // The schedule list is a convenience for the after-hours rule; if it
+        // cannot be loaded, the rule simply has no schedule to pick from.
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucketPoolEditorEnabled]);
 
   useEffect(() => {
     let isActive = true;
@@ -1677,6 +1714,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               </div>
                             )}
                           </div>
+                        </div>
+                      )}
+                      {/* Flag-on line-level bucket pools (weighted-burn model). */}
+                      {bucketPoolEditorEnabled && (
+                        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+                          <BucketPoolEditor
+                            contractLineId={line.contract_line_id}
+                            lineServices={services
+                              .map((serviceConfig) => ({
+                                service_id: serviceConfig.service.service_id,
+                                service_name: serviceConfig.service.service_name,
+                              }))}
+                            allServices={services.map((serviceConfig) => ({
+                              service_id: serviceConfig.service.service_id,
+                              service_name: serviceConfig.service.service_name,
+                            }))}
+                            schedules={bucketSchedules}
+                            onChanged={() => {
+                              void loadServicesForLine(line.contract_line_id, true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>

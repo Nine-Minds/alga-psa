@@ -117,6 +117,17 @@ export interface BucketOverlayInput {
   billing_period?: "monthly" | "weekly";
 }
 
+export interface BucketPoolDraft {
+  bucket_name?: string | null;
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean;
+  covers_all_services: boolean;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+  members: Array<{ service_id: string; burn_multiplier: number }>;
+}
+
 export interface ContractWizardData {
   client_id: string;
   contract_name: string;
@@ -167,6 +178,8 @@ export interface ContractWizardData {
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Flag-on line-level bucket pools (weighted-burn model), materialized after the line is created. */
+  bucket_pools?: BucketPoolDraft[];
   contract_id?: string;
   is_draft?: boolean;
   template_id?: string;
@@ -194,6 +207,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   minimum_billable_time: undefined,
   round_up_to_nearest: undefined,
   usage_services: [],
+  bucket_pools: [],
   template_id: undefined,
 });
 

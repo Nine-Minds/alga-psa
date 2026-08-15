@@ -460,32 +460,31 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
 
-    // Query for bucket-type contract lines and their time tracking
-    // Note: We're working with contracts that have bucket-type lines
-    // For now, we'll show all bucket contracts without specific hour allocations
-    // (as the bucket config is stored separately and not directly linked to contract_line_id)
+    // Weighted-burn pools: one row per contract line with a bucket pool, using
+    // the pool's real included minutes (from the pool + usage) instead of the
+    // old hardcoded 40-hour default.
     const dataQuery = db.table('contracts as c')
-      .where({ 'cl_line.contract_line_type': 'Bucket' })
       .select(
         'c.contract_id',
         'c.contract_name',
         'cl.client_id',
         'cl.client_name',
-        knex.raw('COALESCE(SUM(te.billable_duration), 0) as used_minutes')
+        knex.raw('COALESCE(SUM(te.billable_duration), 0) as used_minutes'),
+        'clb.total_minutes as pool_total_minutes',
+        'clb.bucket_name'
       )
-      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_id', 'cl.client_name');
+      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_id', 'cl.client_name', 'clb.total_minutes', 'clb.bucket_name');
     db.tenantJoin(dataQuery, 'contract_lines as cl_line', 'c.contract_id', 'cl_line.contract_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'contract_line_buckets as clb', 'cl_line.contract_line_id', 'clb.contract_line_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'time_entries as te', 'cl_line.contract_line_id', 'te.contract_line_id', { type: 'left' });
     const data = await dataQuery;
 
     const bucketUsages: BucketUsage[] = data
-      .filter((row: any) => row.contract_name) // Filter out null results
+      .filter((row: any) => row.contract_name && row.pool_total_minutes != null) // Only lines that actually have a pool
       .map((row: any) => {
-        // For bucket contracts, use a default allocation if not specified
-        // This is a reasonable default of 40 hours per week
-        const totalHours = 40;
+        const totalHours = Number(row.pool_total_minutes) / 60;
         const usedHours = row.used_minutes ? Math.round(row.used_minutes / 60) : 0;
         const remainingHours = Math.max(0, totalHours - usedHours);
         const utilizationPercentage = totalHours > 0 ? Math.round((usedHours / totalHours) * 100) : 0;
