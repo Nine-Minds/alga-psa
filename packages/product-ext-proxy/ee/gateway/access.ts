@@ -90,6 +90,7 @@ function isSupportedMethod(method: string): method is Method {
 function normalizeMethod(value: unknown): Method | null {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toUpperCase();
+  if (normalized === 'HEAD') return 'GET';
   return isSupportedMethod(normalized) ? normalized : null;
 }
 

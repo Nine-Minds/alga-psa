@@ -342,6 +342,51 @@ describe('extension gateway canonical access resolver', () => {
     });
   });
 
+  it('10. HEAD authorizes as extension:read: a read-only MSP user passes and a write-only user is denied', async () => {
+    mocks.getCurrentUser.mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-a',
+      user_type: 'internal',
+    } as any);
+
+    // Read-only principal: the policy must succeed for HEAD using only the
+    // 'read' action, resolving the request against the GET-declared endpoint.
+    mocks.hasPermission.mockImplementation(
+      async (_user: unknown, _resource: string, action: string) => action === 'read',
+    );
+
+    const access = await assertAccess(input({ method: 'HEAD', path: '/agreements' }));
+    expect(access.principal).toEqual({ kind: 'msp', userId: 'user-1' });
+    expect(access.endpoint).toEqual({
+      method: 'GET',
+      path: '/agreements',
+      handler: 'handlers.list',
+    });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1' }),
+      'extension',
+      'read',
+      expect.anything(),
+    );
+
+    // Write-only principal: HEAD must never satisfy on extension:write, which
+    // pins the mapping rather than merely proving some permission suffices.
+    mocks.hasPermission.mockImplementation(
+      async (_user: unknown, _resource: string, action: string) => action === 'write',
+    );
+
+    await expect(assertAccess(input({ method: 'HEAD', path: '/agreements' }))).rejects.toMatchObject({
+      code: 'forbidden',
+      status: 403,
+    });
+    expect(mocks.hasPermission).toHaveBeenLastCalledWith(
+      expect.anything(),
+      'extension',
+      'read',
+      expect.anything(),
+    );
+  });
+
   it('9. DB and RBAC dependency failures never resolve access', async () => {
     mocks.getCurrentUser.mockResolvedValue({
       user_id: 'user-1',
