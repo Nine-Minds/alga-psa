@@ -171,6 +171,38 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({
+    id,
+    isOpen,
+    onConfirm,
+    onClose,
+    title,
+    message,
+    confirmLabel,
+  }: {
+    id?: string;
+    isOpen: boolean;
+    onConfirm: () => void;
+    onClose: () => void;
+    title: string;
+    message: React.ReactNode;
+    confirmLabel?: string;
+  }) =>
+    isOpen ? (
+      <div id={id ?? 'confirmation-dialog'} role="alertdialog">
+        <div>{title}</div>
+        <div>{message}</div>
+        <button id={`${id ?? 'confirmation-dialog'}-confirm`} onClick={() => onConfirm()}>
+          {confirmLabel ?? 'Confirm'}
+        </button>
+        <button id={`${id ?? 'confirmation-dialog'}-cancel`} onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
   SwitchWithLabel: ({ label, checked, onCheckedChange }: { label: string; checked: boolean; onCheckedChange: (c: boolean) => void }) => (
     <label>
@@ -641,7 +673,6 @@ describe('CredentialsScreen — entity-scoped (association-driven) lists', () =>
 
 describe('CredentialsScreen — link existing (entity side)', () => {
   it('lists same-client candidates and calls addCredentialToEntity on link', async () => {
-    window.confirm = vi.fn(() => true);
     listCredentialsMock.mockImplementation(async (input: Record<string, unknown>) => {
       if (input?.entityType) return [];
       return [credential()];
@@ -668,7 +699,6 @@ describe('CredentialsScreen — link existing (entity side)', () => {
   });
 
   it('detaches a row via removeCredentialFromEntity', async () => {
-    window.confirm = vi.fn(() => true);
     listCredentialsMock.mockResolvedValue([credential()]);
 
     render(<CredentialsScreen entityType="asset" entityId="asset-1" defaultClientId={CLIENT_ID} />);
@@ -677,6 +707,12 @@ describe('CredentialsScreen — link existing (entity side)', () => {
     });
 
     fireEvent.click(document.getElementById('credentials-row-detach-22222222-2222-2222-2222-222222222222')!);
+
+    // Detach confirms through the in-app dialog, not window.confirm.
+    await waitFor(() => {
+      expect(document.getElementById('credentials-confirm-dialog-confirm')).toBeTruthy();
+    });
+    fireEvent.click(document.getElementById('credentials-confirm-dialog-confirm')!);
 
     await waitFor(() => {
       expect(removeCredentialFromEntityMock).toHaveBeenCalledWith('asset', 'asset-1', '22222222-2222-2222-2222-222222222222');

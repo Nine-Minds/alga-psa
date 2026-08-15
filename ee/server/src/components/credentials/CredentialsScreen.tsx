@@ -59,6 +59,7 @@ import type {
 import { CredentialFormDialog, type CredentialFormValue } from './CredentialFormDialog';
 import { CredentialLinkDialog } from './CredentialLinkDialog';
 import { CredentialRestrictDialog } from './CredentialRestrictDialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { TotpCountdown } from './TotpCountdown';
 import { useCredentialsList, type RevealErrorKey } from './useCredentialsList';
 
@@ -157,6 +158,10 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<{
+    kind: 'detach' | 'delete';
+    credential: CredentialSummary;
+  } | null>(null);
 
   const applyFilters = useCallback(
     (items: CredentialSummary[]) => {
@@ -227,28 +232,33 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     await load();
   };
 
-  const handleDetach = async (credential: CredentialSummary) => {
-    if (!entityType || !entityId) return;
-    if (!window.confirm(t('credentials.screen.confirmDetach', { name: credential.name }))) {
-      return;
-    }
-    try {
-      await removeCredentialFromEntity(entityType, entityId, credential.id);
-      await load();
-    } catch {
-      toast.error(t('credentials.screen.detachFailed'));
-    }
+  const handleDetach = (credential: CredentialSummary) => {
+    setConfirmTarget({ kind: 'detach', credential });
   };
 
-  const handleDelete = async (credential: CredentialSummary) => {
-    if (!window.confirm(t('credentials.screen.confirmDelete', { name: credential.name }))) {
-      return;
-    }
-    try {
-      await deleteCredential(credential.id, credential.clientId);
-      await load();
-    } catch {
-      toast.error(t('credentials.screen.deleteFailed'));
+  const handleDelete = (credential: CredentialSummary) => {
+    setConfirmTarget({ kind: 'delete', credential });
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmTarget) return;
+    const { kind, credential } = confirmTarget;
+    setConfirmTarget(null);
+    if (kind === 'detach') {
+      if (!entityType || !entityId) return;
+      try {
+        await removeCredentialFromEntity(entityType, entityId, credential.id);
+        await load();
+      } catch {
+        toast.error(t('credentials.screen.detachFailed'));
+      }
+    } else {
+      try {
+        await deleteCredential(credential.id, credential.clientId);
+        await load();
+      } catch {
+        toast.error(t('credentials.screen.deleteFailed'));
+      }
     }
   };
 
@@ -621,6 +631,27 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         credential={restrictTarget}
         onClose={() => setRestrictTarget(null)}
         onSaved={handleRestrictSaved}
+      />
+
+      <ConfirmationDialog
+        id="credentials-confirm-dialog"
+        isOpen={confirmTarget !== null}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={handleConfirm}
+        title={t(
+          confirmTarget?.kind === 'detach'
+            ? 'credentials.screen.confirmDetachTitle'
+            : 'credentials.screen.confirmDeleteTitle'
+        )}
+        message={t(
+          confirmTarget?.kind === 'detach'
+            ? 'credentials.screen.confirmDetach'
+            : 'credentials.screen.confirmDelete',
+          { name: confirmTarget?.credential.name ?? '' }
+        )}
+        confirmLabel={
+          confirmTarget?.kind === 'detach' ? t('credentials.screen.detach') : t('credentials.table.delete')
+        }
       />
     </div>
   );
