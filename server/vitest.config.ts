@@ -25,6 +25,7 @@ export default defineConfig({
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
     include: [
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       // shared/ carries ~120 test files (inbound email, billing schedule,
       // workflow actions) that gated nothing before this line: the CI job

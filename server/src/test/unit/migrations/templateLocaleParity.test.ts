@@ -192,13 +192,22 @@ function emailTemplateDefs() {
   // Modules not yet folded into the pt migration's getter list.
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/opportunities/opportunityWeeklyDigest.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/rmm/rmmAlertTriggered.cjs')).getTemplate());
+  const prepaidEmail = require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBalanceAlerts.cjs'));
+  defs.push(prepaidEmail.getCreditTemplate());
+  defs.push(prepaidEmail.getBucketTemplate());
   return defs;
 }
 
 function internalTemplateDefs() {
   const { ALL_TEMPLATES } = require(path.join(migrationsDir, '20260625121000_add_portuguese_internal_notification_templates.cjs'));
   const load = (module: string) => require(path.join(migrationsDir, `utils/templates/internal/${module}.cjs`)).TEMPLATES;
-  return [...ALL_TEMPLATES, ...load('opportunities'), ...load('rmm'), ...load('inventory')];
+  return [
+    ...ALL_TEMPLATES,
+    ...load('opportunities'),
+    ...load('rmm'),
+    ...load('inventory'),
+    ...load('prepaidBalanceAlerts'),
+  ];
 }
 
 /**
