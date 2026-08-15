@@ -169,7 +169,18 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic concurrency (live Redis)', () 
   beforeAll(async () => {
     try {
       const { createClient } = await import('redis');
-      const candidate = createClient({ url: REDIS_URL });
+      const candidate = createClient({
+        url: REDIS_URL,
+        // Fail closed and fast when no live Redis is reachable (e.g. CI): a short
+        // connect timeout plus a non-retrying reconnect strategy makes connect()
+        // reject promptly instead of hanging on node-redis's default infinite
+        // reconnect until the beforeAll hook times out. On rejection the suite
+        // sets client=null and every test skips.
+        socket: {
+          connectTimeout: 2000,
+          reconnectStrategy: () => new Error('no live Redis for extension gateway rate-limit test'),
+        },
+      });
       candidate.on('error', () => undefined);
       await candidate.connect();
       if (typeof (candidate as any).ping !== 'function') {
@@ -235,7 +246,18 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic corrupt state (live Redis)', (
   beforeAll(async () => {
     try {
       const { createClient } = await import('redis');
-      const candidate = createClient({ url: REDIS_URL });
+      const candidate = createClient({
+        url: REDIS_URL,
+        // Fail closed and fast when no live Redis is reachable (e.g. CI): a short
+        // connect timeout plus a non-retrying reconnect strategy makes connect()
+        // reject promptly instead of hanging on node-redis's default infinite
+        // reconnect until the beforeAll hook times out. On rejection the suite
+        // sets client=null and every test skips.
+        socket: {
+          connectTimeout: 2000,
+          reconnectStrategy: () => new Error('no live Redis for extension gateway rate-limit test'),
+        },
+      });
       candidate.on('error', () => undefined);
       await candidate.connect();
       if (typeof (candidate as any).ping !== 'function') {
