@@ -61,6 +61,7 @@ describe.runIf(enabled)('getHourBlockDetail user-name composition', () => {
 
   async function cleanup() {
     await db('hour_block_time_allocations').where({ tenant }).delete();
+    await db('hour_block_service_scopes').where({ tenant }).delete();
     await db('hour_block_audit').where({ tenant }).delete();
     await db('hour_blocks').where({ tenant }).delete();
     await db('time_entries').where({ tenant }).delete();
@@ -149,6 +150,52 @@ describe.runIf(enabled)('getHourBlockDetail user-name composition', () => {
       expect(block.source_type).toBe('grant');
       expect(block.source_invoice_id).toBeNull();
       expect(block.invoice_number).toBeNull();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('carries the catalog service name (not a bare UUID) in the detail payload and scope rows', async () => {
+    const clientId = uuidv4();
+    const blockId = uuidv4();
+    const serviceTypeId = uuidv4();
+    const serviceId = uuidv4();
+    const scopeServiceId = uuidv4();
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB Detail Tenant', email: 'hbdet@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Detail Client' });
+      await db('service_types').insert({ id: serviceTypeId, tenant, name: 'HB Detail Type', is_active: true, order_number: 1 });
+      for (const [id, name] of [[serviceId, 'Basic Support'], [scopeServiceId, 'Scope Svc']] as const) {
+        await db('service_catalog').insert({
+          service_id: id, tenant, service_name: name,
+          custom_service_type_id: serviceTypeId, billing_method: 'hourly', default_rate: 10000,
+          unit_of_measure: 'hour', category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
+        });
+      }
+      await db('hour_blocks').insert({
+        block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
+        total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
+        currency_code: 'USD', status: 'active', purchased_at: new Date().toISOString(),
+        source_invoice_id: null, source_type: 'grant',
+      });
+      await db('hour_block_service_scopes').insert({
+        tenant, block_id: blockId, service_id: scopeServiceId,
+      });
+
+      const { getHourBlockDetail } = await import('../src/actions/hourBlockActions');
+      const result = await getHourBlockDetail(blockId);
+
+      expect('block' in result).toBe(true);
+      const detail = result as {
+        block: { service_name?: string; service_id: string };
+        scopes: Array<{ service_id: string; service_name?: string }>;
+      };
+      expect(detail.block.service_name).toBe('Basic Support');
+      // The human name must be present instead of the raw UUID leaking through.
+      expect(detail.block.service_name).not.toMatch(/^[0-9a-f]{8}-/);
+      expect(detail.scopes).toHaveLength(1);
+      expect(detail.scopes[0].service_name).toBe('Scope Svc');
     } finally {
       await cleanup();
     }

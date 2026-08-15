@@ -39,6 +39,42 @@ export function formatDateOnly(date: Date, formatString: string = 'yyyy-MM-dd'):
   return format(date, formatString);
 }
 
+/**
+ * Build a Date from a calendar-date value that displays the same day in every
+ * timezone, by anchoring at local noon (the contracts screens' established
+ * pattern for date-only values like `expiration_date`). Without the noon anchor,
+ * `new Date('2026-08-31')` becomes UTC midnight and shifts back a day in
+ * negative-offset timezones (and forward a day at UTC+12 and beyond). Returns
+ * null for empty or unparseable input.
+ */
+export function toCalendarDisplayDate(
+  value: string | Date | Temporal.PlainDate | null | undefined,
+): Date | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  try {
+    const plainDate = toPlainDate(value);
+    return new Date(plainDate.year, plainDate.month - 1, plainDate.day, 12);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format a calendar-date value for display without a timezone round-trip.
+ * Returns null for empty or unparseable input. Use for date-only values
+ * (e.g. `expiration_date`); true instants like `created_at` should keep going
+ * through {@link formatDateOnly} so they render in local time.
+ */
+export function formatCalendarDate(
+  value: string | Date | Temporal.PlainDate | null | undefined,
+  formatString: string = 'yyyy-MM-dd',
+): string | null {
+  const displayDate = toCalendarDisplayDate(value);
+  return displayDate ? formatDateOnly(displayDate, formatString) : null;
+}
+
 export function formatUtcDateNoTime(date: Date): string {
   return (
     date.getUTCFullYear() +

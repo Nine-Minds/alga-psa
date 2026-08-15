@@ -638,19 +638,23 @@ export const getHourBlockDetail = withAuth(async (
       const scopedDb = tenantDb(trx, tenant);
       const blockQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blockQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
       const block = await blockQuery
         .where({ 'hb.block_id': blockId })
         .select(
           'hb.*',
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
+          'sc.service_name as service_name',
         )
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
 
-      const scopes = await tenantScopedTable(trx, tenant, 'hour_block_service_scopes')
-        .where({ block_id: blockId, tenant })
-        .select('block_id', 'service_id', 'created_at');
+      const scopesQuery = scopedDb.table('hour_block_service_scopes') as Knex.QueryBuilder;
+      scopedDb.tenantJoin(scopesQuery, 'service_catalog as sc', 'hour_block_service_scopes.service_id', 'sc.service_id', { type: 'left' });
+      const scopes = await scopesQuery
+        .where({ 'hour_block_service_scopes.block_id': blockId, 'hour_block_service_scopes.tenant': tenant })
+        .select('hour_block_service_scopes.block_id', 'hour_block_service_scopes.service_id', 'hour_block_service_scopes.created_at', 'sc.service_name as service_name');
 
       const allocationsQuery = tenantScopedTable<any>(trx, tenant, 'hour_block_time_allocations as hba')
         .where({ 'hba.block_id': blockId, 'hba.tenant': tenant })

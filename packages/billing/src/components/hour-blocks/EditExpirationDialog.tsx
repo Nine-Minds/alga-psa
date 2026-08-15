@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { toCalendarDisplayDate } from '@alga-psa/core';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IHourBlock } from '@alga-psa/types';
@@ -21,7 +22,7 @@ interface EditExpirationDialogProps {
 export default function EditExpirationDialog({ block, onClose, onChanged }: EditExpirationDialogProps) {
   const { t } = useTranslation('msp/hour-blocks');
 
-  const [value, setValue] = useState<Date | undefined>(block?.expiration_date ? new Date(block.expiration_date) : undefined);
+  const [value, setValue] = useState<Date | undefined>(block?.expiration_date ? toCalendarDisplayDate(block.expiration_date) ?? undefined : undefined);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,7 +30,7 @@ export default function EditExpirationDialog({ block, onClose, onChanged }: Edit
   const [syncedKey, setSyncedKey] = useState<string | null>(null);
   if (block && block.block_id !== syncedKey) {
     setSyncedKey(block.block_id);
-    setValue(block.expiration_date ? new Date(block.expiration_date) : undefined);
+    setValue(block.expiration_date ? toCalendarDisplayDate(block.expiration_date) ?? undefined : undefined);
     setError(null);
   }
 

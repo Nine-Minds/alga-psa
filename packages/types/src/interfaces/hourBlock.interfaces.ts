@@ -66,6 +66,8 @@ export interface IHourBlockServiceScope extends TenantEntity {
   block_id: string;
   service_id: string;
   created_at: string;
+  // Join populated by the list/detail actions.
+  service_name?: string;
 }
 
 export interface IHourBlockAllocation extends TenantEntity {

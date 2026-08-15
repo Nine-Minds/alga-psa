@@ -15,7 +15,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
+import { formatCalendarDate, formatCurrencyFromMinorUnits, getCurrentDateInUserTimeZone, toPlainDate } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition, IHourBlock } from '@alga-psa/types';
 import { listHourBlocks } from '@alga-psa/billing/actions/hourBlockActions';
@@ -46,8 +46,7 @@ function getStatusBadge(t: TranslateFn, block: IHourBlock) {
       return <Badge variant="default-muted">{t('status.voided', { defaultValue: 'Voided' })}</Badge>;
     default:
       if (block.expiration_date) {
-        const expDate = new Date(block.expiration_date);
-        const days = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const days = toPlainDate(block.expiration_date).since(toPlainDate(getCurrentDateInUserTimeZone())).days;
         if (days <= EXPIRING_SOON_DAYS) {
           return (
             <Badge variant="warning">
@@ -160,7 +159,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
         if (!value) {
           return <span className="text-sm text-[rgb(var(--color-text-500))]">{t('status.never', { defaultValue: 'Never' })}</span>;
         }
-        return <span className="text-sm text-[rgb(var(--color-text-900))]">{formatDateOnly(new Date(value))}</span>;
+        return <span className="text-sm text-[rgb(var(--color-text-900))]">{formatCalendarDate(value)}</span>;
       },
     },
     {
@@ -318,6 +317,7 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
       />
       <GrantHourBlockDialog
         clientId={clientId}
+        currencyCode={currencyCode}
         isOpen={isGrantOpen}
         onClose={() => setIsGrantOpen(false)}
         onCreated={reload}

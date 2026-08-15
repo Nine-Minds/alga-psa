@@ -19,12 +19,13 @@ import { getServices } from '@alga-psa/billing/actions/serviceActions';
 
 interface GrantHourBlockDialogProps {
   clientId: string;
+  currencyCode: string;
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export default function GrantHourBlockDialog({ clientId, isOpen, onClose, onCreated }: GrantHourBlockDialogProps) {
+export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, onClose, onCreated }: GrantHourBlockDialogProps) {
   const { t } = useTranslation('msp/hour-blocks');
 
   const [services, setServices] = useState<IService[]>([]);
@@ -184,7 +185,7 @@ export default function GrantHourBlockDialog({ clientId, isOpen, onClose, onCrea
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hb-grant-rate">{t('sell.rateLabel', { defaultValue: 'Rate per hour' })}</Label>
+              <Label htmlFor="hb-grant-rate">{t('sell.rateLabel', { defaultValue: 'Rate per hour ({{currency}})', currency: currencyCode })}</Label>
               <Input
                 id="hb-grant-rate"
                 type="number"

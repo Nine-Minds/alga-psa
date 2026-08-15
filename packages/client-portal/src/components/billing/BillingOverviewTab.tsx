@@ -243,7 +243,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {invoiceCard}
           {quotesCard}
           <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
-          <HourBlocksCard formatDate={formatDate} />
+          <HourBlocksCard />
         </div>
 
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}

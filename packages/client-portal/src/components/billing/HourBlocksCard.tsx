@@ -7,14 +7,11 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Clock } from 'lucide-react';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCalendarDate } from '@alga-psa/core';
 import type {
   ClientPortalHourBlock,
   ClientPortalHourBlockBurnEntry,
 } from '../../actions/client-portal-actions/client-billing';
-
-interface HourBlocksCardProps {
-  formatDate: (date: string | { toString(): string } | undefined | null) => string;
-}
 
 function isActionError(value: unknown): boolean {
   const candidate = value as Record<string, unknown> | null;
@@ -31,7 +28,7 @@ function isActionError(value: unknown): boolean {
  * with remaining meters, expiration, and a recent-burn list. Renders nothing
  * unless the release flag is on and the client has at least one active block.
  */
-export default function HourBlocksCard({ formatDate }: HourBlocksCardProps) {
+export default function HourBlocksCard() {
   const { t } = useTranslation('features/billing');
   const { enabled: widgetEnabled } = useFeatureFlag('release-v1.5-feature', {
     defaultValue: false,
@@ -114,7 +111,7 @@ export default function HourBlocksCard({ formatDate }: HourBlocksCardProps) {
                     </div>
                     {block.expiration_date && (
                       <p className="mt-1 text-xs text-gray-500">
-                        {t('hourBlocks.expires', { date: formatDate(block.expiration_date), defaultValue: 'Expires {{date}}' })}
+                        {t('hourBlocks.expires', { date: formatCalendarDate(block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}
                       </p>
                     )}
                   </li>
@@ -133,7 +130,7 @@ export default function HourBlocksCard({ formatDate }: HourBlocksCardProps) {
                   <li key={entry.allocation_id} className="flex items-center justify-between gap-2 text-sm text-gray-600">
                     <span className="truncate">
                       {entry.work_item_title || t('hourBlocks.timeEntry', 'Time entry')}
-                      {entry.entry_date ? ` · ${formatDate(entry.entry_date)}` : ''}
+                      {entry.entry_date ? ` · ${formatCalendarDate(entry.entry_date) ?? ''}` : ''}
                     </span>
                     <span className="shrink-0 tabular-nums">-{entry.hours.toFixed(1)}h</span>
                   </li>

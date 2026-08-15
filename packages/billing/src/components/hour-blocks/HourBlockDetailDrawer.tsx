@@ -5,7 +5,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatCalendarDate, formatDateOnly } from '@alga-psa/core';
 import type { IHourBlock, IHourBlockAllocation, IHourBlockAuditEntry } from '@alga-psa/types';
 import { getHourBlockDetail } from '@alga-psa/billing/actions/hourBlockActions';
 
@@ -42,7 +42,7 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
 
   const [data, setData] = useState<{
     block: IHourBlock;
-    scopes: Array<{ service_id: string }>;
+    scopes: Array<{ service_id: string; service_name?: string }>;
     allocations: IHourBlockAllocation[];
     audit: IHourBlockAuditEntry[];
   } | null>(null);
@@ -123,12 +123,12 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                 <span className="text-[rgb(var(--color-text-900))]">
                   {data.scopes.length === 0
                     ? t('detail.allLabor', { defaultValue: 'All labor' })
-                    : data.scopes.map((scope) => scope.service_id).join(', ')}
+                    : data.scopes.map((scope) => scope.service_name ?? scope.service_id).join(', ')}
                 </span>
               </p>
               {data.block.expiration_date && (
                 <p className="text-[rgb(var(--color-text-500))]">
-                  {t('detail.expires', { date: formatDateOnly(new Date(data.block.expiration_date)), defaultValue: 'Expires {{date}}' })}
+                  {t('detail.expires', { date: formatCalendarDate(data.block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}
                 </p>
               )}
               {data.block.source_invoice_id && data.block.invoice_number ? (
