@@ -768,6 +768,7 @@
       "workflow-id",
       "workflow.event",
       "| null",
+      "×",
       "—"
     ],
     "caseInsensitive": [

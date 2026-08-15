@@ -2326,41 +2326,41 @@
     }
   },
   "bucketPools": {
-    "heading": "Bucket Pools",
+    "heading": "Pacchetti ore",
     "actions": {
-      "addPool": "Add Pool",
-      "create": "Create pool",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "applyRule": "Apply after-hours rule"
+      "addPool": "Aggiungi pacchetto",
+      "create": "Crea pacchetto",
+      "cancel": "Annulla",
+      "remove": "Rimuovi",
+      "applyRule": "Applica regola fuori orario"
     },
-    "loading": "Loading bucket pools…",
-    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "loading": "Caricamento dei pacchetti ore…",
+    "empty": "Nessun pacchetto ore su questa linea. Aggiungi un pacchetto per includere ore prepagate.",
     "labels": {
-      "catchAll": "All services on this line",
-      "pool": "Bucket pool",
-      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
-      "scopeMembers": "Member services only",
-      "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
-      "rollover": "Allow rollover",
-      "afterHours": "After-hours burn multiplier",
-      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
-      "schedule": "Business hours schedule",
-      "default": "default",
-      "members": "Member services",
+      "catchAll": "Tutti i servizi di questa linea",
+      "pool": "Pacchetto ore",
+      "scopeCatchAll": "Copre tutti i servizi della linea (i servizi membri sostituiscono il moltiplicatore)",
+      "scopeMembers": "Solo servizi membri",
+      "totalHours": "Ore totali",
+      "overageRate": "Tariffa di superamento ($/ora)",
+      "rollover": "Consenti riporto",
+      "afterHours": "Moltiplicatore di consumo fuori orario",
+      "afterHoursMultiplier": "Moltiplicatore (es. 1,5)",
+      "schedule": "Pianificazione dell'orario lavorativo",
+      "default": "predefinita",
+      "members": "Servizi membri",
       "multiplier": "×",
-      "noMembers": "No member services attached.",
-      "selectService": "Select a service…",
-      "poolName": "Pool name (optional)",
-      "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "noMembers": "Nessun servizio membro associato.",
+      "selectService": "Seleziona un servizio…",
+      "poolName": "Nome del pacchetto (facoltativo)",
+      "poolNamePlaceholder": "es. Ore standard",
+      "coversAll": "Copre tutti i servizi di questa linea"
     },
     "badges": {
-      "dormant": "no services attached — nothing burns from this pool"
+      "dormant": "nessun servizio associato — nulla viene consumato da questo pacchetto"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "Questa linea ha già un pacchetto generale."
     }
   }
 }

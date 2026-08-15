@@ -848,6 +848,7 @@
       "workflow.event",
       "{{destination}} in AlgaPSA",
       "| null",
+      "×",
       "—",
       "• Desktop/Laptop",
       "• Malware/Virus",

@@ -2326,41 +2326,41 @@
     }
   },
   "bucketPools": {
-    "heading": "Bucket Pools",
+    "heading": "Bancos de horas",
     "actions": {
-      "addPool": "Add Pool",
-      "create": "Create pool",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "applyRule": "Apply after-hours rule"
+      "addPool": "Adicionar banco",
+      "create": "Criar banco",
+      "cancel": "Cancelar",
+      "remove": "Remover",
+      "applyRule": "Aplicar regra fora do horário"
     },
-    "loading": "Loading bucket pools…",
-    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "loading": "Carregando bancos de horas…",
+    "empty": "Nenhum banco de horas nesta linha. Adicione um banco para incluir horas pré-pagas.",
     "labels": {
-      "catchAll": "All services on this line",
-      "pool": "Bucket pool",
-      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
-      "scopeMembers": "Member services only",
-      "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
-      "rollover": "Allow rollover",
-      "afterHours": "After-hours burn multiplier",
-      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
-      "schedule": "Business hours schedule",
-      "default": "default",
-      "members": "Member services",
+      "catchAll": "Todos os serviços desta linha",
+      "pool": "Banco de horas",
+      "scopeCatchAll": "Cobre todos os serviços da linha (os serviços membros substituem o multiplicador)",
+      "scopeMembers": "Somente serviços membros",
+      "totalHours": "Horas totais",
+      "overageRate": "Taxa de excedente ($/h)",
+      "rollover": "Permitir transferência de saldo",
+      "afterHours": "Multiplicador de consumo fora do horário",
+      "afterHoursMultiplier": "Multiplicador (ex.: 1,5)",
+      "schedule": "Agenda de horário comercial",
+      "default": "padrão",
+      "members": "Serviços membros",
       "multiplier": "×",
-      "noMembers": "No member services attached.",
-      "selectService": "Select a service…",
-      "poolName": "Pool name (optional)",
-      "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "noMembers": "Nenhum serviço membro vinculado.",
+      "selectService": "Selecione um serviço…",
+      "poolName": "Nome do banco (opcional)",
+      "poolNamePlaceholder": "ex.: Horas padrão",
+      "coversAll": "Cobre todos os serviços desta linha"
     },
     "badges": {
-      "dormant": "no services attached — nothing burns from this pool"
+      "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "Esta linha já tem um banco abrangente."
     }
   }
 }

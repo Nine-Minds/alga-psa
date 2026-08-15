@@ -2326,41 +2326,41 @@
     }
   },
   "bucketPools": {
-    "heading": "Bucket Pools",
+    "heading": "Stundenkontingente",
     "actions": {
-      "addPool": "Add Pool",
-      "create": "Create pool",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "applyRule": "Apply after-hours rule"
+      "addPool": "Kontingent hinzufügen",
+      "create": "Kontingent erstellen",
+      "cancel": "Abbrechen",
+      "remove": "Entfernen",
+      "applyRule": "Regel für Zeiten außerhalb der Geschäftszeiten anwenden"
     },
-    "loading": "Loading bucket pools…",
-    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "loading": "Stundenkontingente werden geladen…",
+    "empty": "Keine Stundenkontingente auf dieser Vertragslinie. Fügen Sie ein Kontingent hinzu, um vorausbezahlte Stunden aufzunehmen.",
     "labels": {
-      "catchAll": "All services on this line",
-      "pool": "Bucket pool",
-      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
-      "scopeMembers": "Member services only",
-      "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
-      "rollover": "Allow rollover",
-      "afterHours": "After-hours burn multiplier",
-      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
-      "schedule": "Business hours schedule",
-      "default": "default",
-      "members": "Member services",
+      "catchAll": "Alle Dienste dieser Vertragslinie",
+      "pool": "Stundenkontingent",
+      "scopeCatchAll": "Deckt alle Dienste der Vertragslinie ab (zugeordnete Dienste überschreiben den Multiplikator)",
+      "scopeMembers": "Nur zugeordnete Dienste",
+      "totalHours": "Gesamtstunden",
+      "overageRate": "Überschreitungstarif ($/Std.)",
+      "rollover": "Übertrag erlauben",
+      "afterHours": "Verbrauchsmultiplikator außerhalb der Geschäftszeiten",
+      "afterHoursMultiplier": "Multiplikator (z. B. 1,5)",
+      "schedule": "Geschäftszeitenplan",
+      "default": "Standard",
+      "members": "Zugeordnete Dienste",
       "multiplier": "×",
-      "noMembers": "No member services attached.",
-      "selectService": "Select a service…",
-      "poolName": "Pool name (optional)",
-      "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "noMembers": "Keine Dienste zugeordnet.",
+      "selectService": "Dienst auswählen…",
+      "poolName": "Kontingentname (optional)",
+      "poolNamePlaceholder": "z. B. Standardstunden",
+      "coversAll": "Deckt alle Dienste dieser Vertragslinie ab"
     },
     "badges": {
-      "dormant": "no services attached — nothing burns from this pool"
+      "dormant": "keine Dienste zugeordnet — aus diesem Kontingent wird nichts verbraucht"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "Diese Vertragslinie hat bereits ein Sammelkontingent."
     }
   }
 }

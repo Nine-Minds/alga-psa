@@ -2326,41 +2326,41 @@
     }
   },
   "bucketPools": {
-    "heading": "Bucket Pools",
+    "heading": "Urenbundels",
     "actions": {
-      "addPool": "Add Pool",
-      "create": "Create pool",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "applyRule": "Apply after-hours rule"
+      "addPool": "Bundel toevoegen",
+      "create": "Bundel aanmaken",
+      "cancel": "Annuleren",
+      "remove": "Verwijderen",
+      "applyRule": "Regel buiten kantooruren toepassen"
     },
-    "loading": "Loading bucket pools…",
-    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "loading": "Urenbundels laden…",
+    "empty": "Geen urenbundels op deze contractregel. Voeg een bundel toe om vooruitbetaalde uren op te nemen.",
     "labels": {
-      "catchAll": "All services on this line",
-      "pool": "Bucket pool",
-      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
-      "scopeMembers": "Member services only",
-      "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
-      "rollover": "Allow rollover",
-      "afterHours": "After-hours burn multiplier",
-      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
-      "schedule": "Business hours schedule",
-      "default": "default",
-      "members": "Member services",
+      "catchAll": "Alle services op deze contractregel",
+      "pool": "Urenbundel",
+      "scopeCatchAll": "Dekt alle services op de contractregel (aangesloten services overschrijven de vermenigvuldigingsfactor)",
+      "scopeMembers": "Alleen aangesloten services",
+      "totalHours": "Totaal aantal uren",
+      "overageRate": "Overschrijdingstarief ($/uur)",
+      "rollover": "Overdracht toestaan",
+      "afterHours": "Verbruiksfactor buiten kantooruren",
+      "afterHoursMultiplier": "Factor (bijv. 1,5)",
+      "schedule": "Kantoorurenplanning",
+      "default": "standaard",
+      "members": "Aangesloten services",
       "multiplier": "×",
-      "noMembers": "No member services attached.",
-      "selectService": "Select a service…",
-      "poolName": "Pool name (optional)",
-      "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "noMembers": "Geen services aangesloten.",
+      "selectService": "Selecteer een service…",
+      "poolName": "Bundelnaam (optioneel)",
+      "poolNamePlaceholder": "bijv. Standaarduren",
+      "coversAll": "Dekt alle services op deze contractregel"
     },
     "badges": {
-      "dormant": "no services attached — nothing burns from this pool"
+      "dormant": "geen services aangesloten — er wordt niets uit deze bundel verbruikt"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "Deze contractregel heeft al een algemene bundel."
     }
   }
 }

@@ -2326,41 +2326,41 @@
     }
   },
   "bucketPools": {
-    "heading": "Bucket Pools",
+    "heading": "Forfaits d’heures",
     "actions": {
-      "addPool": "Add Pool",
-      "create": "Create pool",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "applyRule": "Apply after-hours rule"
+      "addPool": "Ajouter un forfait",
+      "create": "Créer le forfait",
+      "cancel": "Annuler",
+      "remove": "Retirer",
+      "applyRule": "Appliquer la règle hors horaires"
     },
-    "loading": "Loading bucket pools…",
-    "empty": "No bucket pools on this line. Add a pool to include prepaid hours.",
+    "loading": "Chargement des forfaits d’heures…",
+    "empty": "Aucun forfait d’heures sur cette ligne. Ajoutez un forfait pour inclure des heures prépayées.",
     "labels": {
-      "catchAll": "All services on this line",
-      "pool": "Bucket pool",
-      "scopeCatchAll": "Covers all services on the line (members are multiplier overrides)",
-      "scopeMembers": "Member services only",
-      "totalHours": "Total hours",
-      "overageRate": "Overage rate ($/hr)",
-      "rollover": "Allow rollover",
-      "afterHours": "After-hours burn multiplier",
-      "afterHoursMultiplier": "Multiplier (e.g. 1.5)",
-      "schedule": "Business hours schedule",
-      "default": "default",
-      "members": "Member services",
+      "catchAll": "Tous les services de cette ligne",
+      "pool": "Forfait d’heures",
+      "scopeCatchAll": "Couvre tous les services de la ligne (les services membres remplacent le multiplicateur)",
+      "scopeMembers": "Services membres uniquement",
+      "totalHours": "Heures totales",
+      "overageRate": "Tarif de dépassement ($/h)",
+      "rollover": "Autoriser le report",
+      "afterHours": "Multiplicateur de consommation hors horaires",
+      "afterHoursMultiplier": "Multiplicateur (p. ex. 1,5)",
+      "schedule": "Planning des heures ouvrées",
+      "default": "par défaut",
+      "members": "Services membres",
       "multiplier": "×",
-      "noMembers": "No member services attached.",
-      "selectService": "Select a service…",
-      "poolName": "Pool name (optional)",
-      "poolNamePlaceholder": "e.g. Standard hours",
-      "coversAll": "Covers all services on this line"
+      "noMembers": "Aucun service membre associé.",
+      "selectService": "Sélectionner un service…",
+      "poolName": "Nom du forfait (facultatif)",
+      "poolNamePlaceholder": "p. ex. Heures standard",
+      "coversAll": "Couvre tous les services de cette ligne"
     },
     "badges": {
-      "dormant": "no services attached — nothing burns from this pool"
+      "dormant": "aucun service associé — rien n’est décompté de ce forfait"
     },
     "errors": {
-      "catchAllExists": "This line already has a catch-all pool."
+      "catchAllExists": "Cette ligne possède déjà un forfait global."
     }
   }
 }
