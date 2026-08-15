@@ -168,7 +168,7 @@ async function cloneServiceConfiguration(
     });
 
     if (configuration.configuration_type === 'Bucket') {
-      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
     }
 
     if (configuration.configuration_type === 'Hourly') {
@@ -196,7 +196,9 @@ async function cloneBucketConfig(
   trx: Knex.Transaction,
   tenant: string,
   sourceConfigId: string,
-  targetConfigId: string
+  targetConfigId: string,
+  contractLineId: string,
+  serviceId: string
 ) {
   const bucketConfig = await tenantDb(trx, tenant).table('contract_template_line_service_bucket_config')
     .where('config_id', sourceConfigId)
@@ -204,13 +206,29 @@ async function cloneBucketConfig(
 
   if (!bucketConfig) return;
 
-  await tenantDb(trx, tenant).table('contract_line_service_bucket_config').insert({
+  // Weighted-burn model: clone into the line-owned pool tables (single-member
+  // 1x pool) rather than the frozen legacy per-service bucket config.
+  await tenantDb(trx, tenant).table('contract_line_buckets').insert({
     tenant,
-    config_id: targetConfigId,
+    bucket_id: targetConfigId,
+    contract_line_id: contractLineId,
+    bucket_name: null,
     total_minutes: bucketConfig.total_minutes,
-    billing_period: bucketConfig.billing_period,
     overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
+    billing_period: bucketConfig.billing_period,
+    after_hours_multiplier: null,
+    business_hours_schedule_id: null,
+    covers_all_services: false,
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+  await tenantDb(trx, tenant).table('contract_line_bucket_services').insert({
+    tenant,
+    bucket_id: targetConfigId,
+    service_id: serviceId,
+    contract_line_id: contractLineId,
+    burn_multiplier: 1,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

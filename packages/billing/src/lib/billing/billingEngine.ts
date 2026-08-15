@@ -4679,7 +4679,8 @@ export class BillingEngine {
           .join("service_catalog as sc", function (this: any) {
             this.on("sc.service_id", "=", "clbs.service_id")
               .andOn("sc.tenant", "=", "clbs.tenant");
-          });
+          })
+          .orderBy("clbs.service_id", "asc");
         const serviceName = pool.bucket_name
           ? pool.bucket_name
           : members.length === 1
@@ -4694,10 +4695,20 @@ export class BillingEngine {
         const memberMultipliers = await db
           .table("contract_line_bucket_services")
           .where({ tenant: client.tenant, bucket_id: pool.bucket_id })
-          .select("burn_multiplier");
+          .select("burn_multiplier")
+          .orderBy("service_id", "asc");
         const isWeighted =
           Number(pool.after_hours_multiplier) !== 0 ||
           memberMultipliers.some((member) => Number(member.burn_multiplier) !== 1);
+
+        // A zero-member pool (dormant catch-all or emptied member-scoped pool)
+        // still covers the line but has no member to key the charge on. Use the
+        // pool as its own identifier and null the tax/member-derived fields so
+        // nothing flows into service/tax lookups incorrectly.
+        const chargeServiceId = firstMemberServiceId ?? pool.bucket_id;
+        const chargeTaxRateId = members.length > 0 ? firstMemberTaxRateId : null;
+        const chargeUnitOfMeasure = members.length > 0 ? firstMemberUnitOfMeasure : null;
+        const chargeBillingMethod = members.length > 0 ? firstMemberBillingMethod : null;
 
         const result = await computeBucketCharges(
           {
@@ -4706,11 +4717,11 @@ export class BillingEngine {
             client,
             config: {
               config_id: pool.bucket_id,
-              service_id: firstMemberServiceId ?? pool.bucket_id,
+              service_id: chargeServiceId,
               service_name: serviceName,
-              tax_rate_id: firstMemberTaxRateId,
-              unit_of_measure: firstMemberUnitOfMeasure,
-              billing_method: firstMemberBillingMethod,
+              tax_rate_id: chargeTaxRateId,
+              unit_of_measure: chargeUnitOfMeasure,
+              billing_method: chargeBillingMethod,
               total_minutes: pool.total_minutes,
               overage_rate: pool.overage_rate,
               allow_rollover: pool.allow_rollover,
@@ -4724,7 +4735,7 @@ export class BillingEngine {
             locationId: contractLine.location_id,
             services: [{
               ...pool,
-              tax_rate_id: firstMemberTaxRateId,
+              tax_rate_id: chargeTaxRateId,
             }],
           }),
         );

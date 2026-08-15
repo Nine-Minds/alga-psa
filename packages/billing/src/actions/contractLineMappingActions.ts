@@ -248,27 +248,35 @@ export async function ensureTemplateLineSnapshot(
   if (configs.length > 0) {
     const configIds = (configs as any[]).map((c: any) => c.config_id);
 
-    const bucketConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_bucket_config')
-      .whereIn('config_id', configIds);
+    // Weighted-burn pools: map each single-member member-scoped pool into the
+    // per-service template bucket config. Catch-all / multi-member pools cannot
+    // be represented in the legacy template shape and are skipped.
+    const pools = await tenantScopedTable(knex, tenant, 'contract_line_buckets')
+      .where({ contract_line_id: contractLineId });
 
-    for (const bucket of bucketConfigs) {
+    for (const pool of pools) {
+      if (pool.covers_all_services) continue;
+      const members = await tenantScopedTable(knex, tenant, 'contract_line_bucket_services')
+        .where({ bucket_id: pool.bucket_id });
+      if (members.length !== 1) continue;
+
       await tenantScopedTable(knex, tenant, 'contract_template_line_service_bucket_config')
         .insert({
           tenant,
-          config_id: bucket.config_id,
-          total_minutes: bucket.total_minutes,
-          billing_period: bucket.billing_period,
-          overage_rate: bucket.overage_rate,
-          allow_rollover: bucket.allow_rollover,
-          created_at: bucket.created_at ?? now,
+          config_id: pool.bucket_id,
+          total_minutes: pool.total_minutes,
+          billing_period: pool.billing_period,
+          overage_rate: pool.overage_rate,
+          allow_rollover: pool.allow_rollover,
+          created_at: now,
           updated_at: now,
         })
         .onConflict(['tenant', 'config_id'])
         .merge({
-          total_minutes: bucket.total_minutes,
-          billing_period: bucket.billing_period,
-          overage_rate: bucket.overage_rate,
-          allow_rollover: bucket.allow_rollover,
+          total_minutes: pool.total_minutes,
+          billing_period: pool.billing_period,
+          overage_rate: pool.overage_rate,
+          allow_rollover: pool.allow_rollover,
           updated_at: now,
         });
     }

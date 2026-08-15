@@ -555,12 +555,12 @@ export const saveTimeEntry = withAuth(async (
       const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
       let oldDuration = 0; // Initialize oldDuration
-      let oldEntrySpan: { service_id?: string | null; start_time?: string | Date; end_time?: string | Date } | null = null;
+      let oldEntrySpan: { service_id?: string | null; start_time?: string | Date; end_time?: string | Date; contract_line_id?: string | null } | null = null;
       if (entry_id) {
         // Fetch original entry before update to calculate delta
         const originalEntryForUpdate = await trxTenantDb.table('time_entries')
           .where({ entry_id })
-          .select('billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time')
+          .select('billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time', 'contract_line_id')
           .first();
         // If original entry not found, maybe throw error or handle gracefully?
         // Throwing error for now as update shouldn't happen if original is gone.
@@ -721,88 +721,75 @@ export const saveTimeEntry = withAuth(async (
         }
       }
       // --- Bucket Usage Update Logic ---
-      // Check if billable based on duration > 0
-      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-        // Ensure work_item_id and work_item_type exist and call helper
-        let clientId: string | null = null;
-        if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
-            // Now TypeScript knows both are strings here
-            clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+      // Two independent draws, each resolved from its own (service, span, line):
+      // reverse the OLD entry's burn first, then apply the NEW entry's burn.
+      // This is correct when the entry moves between services/lines/periods and
+      // when a bucket-linked entry becomes plain hourly (old burn is still
+      // reversed even though the new side resolves no bucket).
+      let clientId: string | null = null;
+      if (resultingEntry?.work_item_id && resultingEntry.work_item_type) {
+        clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+      }
+      if (clientId) {
+        const resolvedClientId = clientId;
+
+        // Old side (updates only): reverse the previous entry's burn against
+        // the pool it actually drew from.
+        if (entry_id && oldEntrySpan?.service_id && oldEntrySpan.start_time) {
+          const oldWeighted = await computeEntryWeightedBurn(
+            trx,
+            tenant,
+            resolvedClientId,
+            {
+              service_id: oldEntrySpan.service_id,
+              start_time: oldEntrySpan.start_time,
+              end_time: oldEntrySpan.end_time ?? oldEntrySpan.start_time,
+              billable_duration: oldDuration,
+            },
+          );
+          if (oldWeighted !== null && oldWeighted !== 0) {
+            try {
+              const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+                trx,
+                resolvedClientId,
+                oldEntrySpan.service_id,
+                new Date(oldEntrySpan.start_time).toISOString(),
+                oldEntrySpan.contract_line_id ?? null,
+              );
+              await updateBucketUsageMinutes(trx, bucketUsageRecord.usage_id, -oldWeighted);
+              console.log(`Reversed old bucket usage for entry ${resultingEntry?.entry_id} (weighted -${oldWeighted})`);
+            } catch (bucketError) {
+              if (isBucketUsageError(bucketError)) throw bucketError;
+              throw new Error(`Bucket usage reversal failed for time entry ${resultingEntry?.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+            }
+          }
         }
 
-        if (clientId && resultingEntry.service_id) {
-          const resolvedClientId = clientId;
-          // Scope-resolution gate: explicit membership, else line catch-all,
-          // else no bucket (plain hourly). Replaces the legacy
-          // configuration_type='Bucket' config lookup.
+        // New side: apply the saved entry's burn when it resolves to a pool.
+        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
           const newWeighted = await computeEntryWeightedBurn(
             trx,
             tenant,
             resolvedClientId,
             resultingEntry,
           );
-
-          if (newWeighted !== null) {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to a bucket pool. Updating usage.`);
-
-            // Old side (updates only): the previous entry's own span through the
-            // same weighted calculator, so a span/multiplier change is a delta
-            // of weighted minutes, not raw minutes.
-            let oldWeighted = 0;
-            if (entry_id && oldEntrySpan?.service_id && oldEntrySpan.start_time) {
-              const oldWeightedResult = await computeEntryWeightedBurn(
+          if (newWeighted !== null && newWeighted !== 0) {
+            try {
+              const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
                 trx,
-                tenant,
                 resolvedClientId,
-                {
-                  service_id: oldEntrySpan.service_id,
-                  start_time: oldEntrySpan.start_time,
-                  end_time: oldEntrySpan.end_time ?? oldEntrySpan.start_time,
-                  billable_duration: oldDuration,
-                },
+                resultingEntry.service_id,
+                resultingEntry.start_time,
+                resultingEntry.contract_line_id ?? null,
               );
-              oldWeighted = oldWeightedResult ?? 0;
+              await updateBucketUsageMinutes(trx, bucketUsageRecord.usage_id, newWeighted);
+              console.log(`Applied new bucket usage for entry ${resultingEntry.entry_id} (weighted ${newWeighted})`);
+            } catch (bucketError) {
+              if (isBucketUsageError(bucketError)) throw bucketError;
+              throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
             }
-
-            const weightedDelta = newWeighted - oldWeighted;
-
-            // Pass the WEIGHTED delta to bucket usage service
-            if (weightedDelta !== 0) {
-              try {
-                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-                  trx,
-                  resolvedClientId,
-                  resultingEntry.service_id,
-                  resultingEntry.start_time // Use entry's start time to find the correct period
-                );
-
-                await updateBucketUsageMinutes(
-                  trx,
-                  bucketUsageRecord.usage_id,
-                  weightedDelta // Pass the weighted delta
-                );
-                console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id} (weighted delta ${weightedDelta})`);
-              } catch (bucketError) {
-                console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
-                // Re-throwing ensures data consistency. Keep the typed failure
-                // intact — the action guard maps its code to a message the user
-                // can actually act on.
-                if (isBucketUsageError(bucketError)) {
-                  throw bucketError;
-                }
-                throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-              }
-            } else {
-               console.log(`No weighted duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
-            }
-          } else {
-             console.log(`Time entry ${resultingEntry.entry_id} service draws from no bucket pool.`);
           }
-        } else {
-           console.log(`Could not determine client ID for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
         }
-      } else {
-         console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
       }
       // --- End Bucket Usage Update Logic ---
 
@@ -1184,7 +1171,8 @@ export const deleteTimeEntry = withAuth(async (
                 trx,
                 clientId,
                 timeEntry.service_id,
-                timeEntry.start_time // Use entry's start time to find the correct period
+                timeEntry.start_time, // Use entry's start time to find the correct period
+                timeEntry.contract_line_id ?? null, // Prefer the deleted entry's own line
               );
 
               await updateBucketUsageMinutes(

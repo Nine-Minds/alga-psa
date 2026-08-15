@@ -345,17 +345,25 @@ export async function deleteBucketOverlayInTransaction(
     .where({ tenant, bucket_id: member.bucket_id, service_id: serviceId })
     .delete();
 
-  // If the pool has no members left, delete it too (dormant pools created by
-  // the compat layer are not kept around — the old overlay is gone).
+  // If the pool has no members left, delete it too — unless it has usage
+  // history, in which case the bucket_usage RESTRICT FK would abort (a legacy
+  // flag-off regression: deleting an overlay always succeeded). Keep the pool
+  // row dormant instead; its history stays intact.
   const memberCountRow = await db.table('contract_line_bucket_services')
     .where({ tenant, bucket_id: member.bucket_id })
     .count<{ count: string }>('* as count')
     .first();
   const memberCount = Number(memberCountRow?.count ?? 0);
   if (memberCount === 0) {
-    await db.table('contract_line_buckets')
+    const usageCountRow = await db.table('bucket_usage')
       .where({ tenant, bucket_id: member.bucket_id })
-      .delete();
+      .count<{ count: string }>('* as count')
+      .first();
+    if (Number(usageCountRow?.count ?? 0) === 0) {
+      await db.table('contract_line_buckets')
+        .where({ tenant, bucket_id: member.bucket_id })
+        .delete();
+    }
   }
 }
 

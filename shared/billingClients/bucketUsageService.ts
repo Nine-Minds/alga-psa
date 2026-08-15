@@ -65,6 +65,27 @@ interface IBucketUsage {
 
 type DbNumeric = number | string | null | undefined;
 
+/**
+ * Resolve the tenant for a bucket operation.
+ *
+ * `explicitTenant` wins when supplied (multi-tenant workers must pass it rather
+ * than mutate the shared transaction config). Otherwise fall back to the
+ * transaction's tenant context, then to `createTenantKnex()`.
+ */
+async function resolveTenant(
+    trx: Knex.Transaction,
+    explicitTenant?: string | null
+): Promise<string> {
+    if (explicitTenant) {
+        return explicitTenant;
+    }
+    const resolved = trx.client?.config?.tenant || (await createTenantKnex()).tenant;
+    if (!resolved) {
+        throw new Error("Tenant context could not be determined for bucket usage operation.");
+    }
+    return resolved;
+}
+
 function toBucketNumber(value: DbNumeric, fieldName: string): number {
     const normalized = value == null ? 0 : Number(value);
     if (!Number.isFinite(normalized)) {
@@ -237,23 +258,22 @@ export async function resolveBucketDraw(
     trx: Knex.Transaction,
     clientId: string,
     serviceCatalogId: string,
-    date: ISO8601String
+    date: ISO8601String,
+    preferredContractLineId?: string | null,
+    explicitTenant?: string | null
 ): Promise<BucketDraw | null> {
-    const tenant = trx.client?.config?.tenant || (await createTenantKnex()).tenant;
-    if (!tenant) {
-        throw new Error("Tenant context could not be determined for bucket usage operation.");
-    }
+    const tenant = await resolveTenant(trx, explicitTenant);
 
     const db = tenantDb(trx, tenant);
     const targetDate = toPlainDate(date);
     const targetDateISO = toISODate(targetDate);
 
-    // Find the active client-owned contract line that covers the target date.
+    // Find the active client-owned contract lines that cover the target date.
     const clientPlanQuery = db.table('client_contracts as cc');
     db.tenantJoin(clientPlanQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
     db.tenantJoin(clientPlanQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
 
-    const clientPlan = await clientPlanQuery
+    const clientPlans = await clientPlanQuery
         .where('cc.client_id', clientId)
         .andWhere('cc.is_active', true)
         .andWhere('cc.start_date', '<=', targetDateISO)
@@ -269,75 +289,68 @@ export async function resolveBucketDraw(
             'cl.billing_frequency',
             'cl.cadence_owner',
          )
-        .orderBy('cc.start_date', 'desc')
-        .first<{
-            client_contract_id: string;
-            client_contract_line_id: string;
-            contract_line_id: string;
-            start_date: ISO8601String;
-            billing_frequency: string;
-            cadence_owner: 'client' | 'contract' | null;
-        } | undefined>();
-
-    if (!clientPlan) {
-        return null;
-    }
-
-    // Conflicting-assignment guard: if another active client plan also draws
-    // from a pool for this service on this date, refuse rather than guess.
-    const conflictingClientPlanQuery = db.table('client_contracts as cc');
-    db.tenantJoin(conflictingClientPlanQuery, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
-    db.tenantJoin(conflictingClientPlanQuery, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-
-    const conflictingCandidates = await conflictingClientPlanQuery
-        .where('cc.client_id', clientId)
-        .andWhere('cc.is_active', true)
-        .andWhere('cc.start_date', '<=', targetDateISO)
-        .andWhere(function() {
-            this.where('cc.end_date', '>=', targetDateISO)
-                .orWhereNull('cc.end_date');
-        })
-        .select('cc.client_contract_id', 'cl.contract_line_id')
         .orderBy('cc.start_date', 'desc');
 
-    for (const candidate of conflictingCandidates) {
-        if (candidate.client_contract_id === clientPlan.client_contract_id) {
-            continue;
-        }
-        const conflictingResolved = await resolveBucketForLine(trx, tenant, candidate.contract_line_id, serviceCatalogId);
-        if (conflictingResolved) {
-            throw new BucketUsageError(
-                'AMBIGUOUS_ASSIGNMENT',
-                `Ambiguous bucket usage assignment resolution for client ${clientId}, service ${serviceCatalogId}, date ${targetDateISO}. `
-                + `Matched assignments: ${clientPlan.client_contract_id}, ${candidate.client_contract_id}. `
-                + 'Provide explicit assignment identity before bucket billing.',
-                {
-                    tenant,
-                    clientId,
-                    serviceCatalogId,
-                    date: targetDateISO,
-                    matchedAssignments: [
-                        clientPlan.client_contract_id,
-                        candidate.client_contract_id,
-                    ],
-                },
-            );
-        }
-    }
-
-    // Resolve the pool for this (line, service) via the scope rule.
-    const resolved = await resolveBucketForLine(trx, tenant, clientPlan.contract_line_id, serviceCatalogId);
-    if (!resolved) {
+    if (!clientPlans || clientPlans.length === 0) {
         return null;
     }
 
-    const { bucket, multiplier } = resolved;
+    // Resolve the pool for every active line so we can prefer the line whose
+    // bucket actually serves this service (membership, then line catch-all).
+    interface LineMatch {
+        plan: (typeof clientPlans)[number];
+        bucket: BucketRow;
+        multiplier: number;
+    }
+    const matches: LineMatch[] = [];
+    for (const plan of clientPlans) {
+        const resolved = await resolveBucketForLine(trx, tenant, plan.contract_line_id, serviceCatalogId);
+        if (resolved) {
+            matches.push({ plan, bucket: resolved.bucket, multiplier: resolved.multiplier });
+        }
+    }
+
+    if (matches.length === 0) {
+        return null;
+    }
+
+    // Prefer the entry's own line when provided and it actually holds the bucket
+    // — this keeps the write path and reconcile reading the same pool.
+    if (preferredContractLineId) {
+        const preferred = matches.find((m) => m.plan.contract_line_id === preferredContractLineId);
+        if (preferred) {
+            matches.length = 1;
+            matches[0] = preferred;
+        }
+    }
+
+    // Conflicting-assignment guard: two distinct active assignments both serving
+    // a pool for this service on this date → refuse rather than guess.
+    const distinctAssignments = new Set(matches.map((m) => m.plan.client_contract_id));
+    if (distinctAssignments.size > 1) {
+        const matchedAssignments = Array.from(distinctAssignments);
+        throw new BucketUsageError(
+            'AMBIGUOUS_ASSIGNMENT',
+            `Ambiguous bucket usage assignment resolution for client ${clientId}, service ${serviceCatalogId}, date ${targetDateISO}. `
+            + `Matched assignments: ${matchedAssignments.join(', ')}. `
+            + 'Provide explicit assignment identity before bucket billing.',
+            {
+                tenant,
+                clientId,
+                serviceCatalogId,
+                date: targetDateISO,
+                matchedAssignments,
+            },
+        );
+    }
+
+    const { plan, bucket, multiplier } = matches[0];
 
     return {
         bucketId: bucket.bucket_id,
-        contractLineId: clientPlan.contract_line_id,
-        clientContractLineId: clientPlan.client_contract_line_id,
-        clientContractId: clientPlan.client_contract_id,
+        contractLineId: plan.contract_line_id,
+        clientContractLineId: plan.client_contract_line_id,
+        clientContractId: plan.client_contract_id,
         serviceId: serviceCatalogId,
         memberMultiplier: multiplier,
         coversAllServices: bucket.covers_all_services,
@@ -538,16 +551,16 @@ export async function findOrCreateCurrentBucketUsageRecord(
     trx: Knex.Transaction,
     clientId: string,
     serviceCatalogId: string,
-    date: ISO8601String
+    date: ISO8601String,
+    preferredContractLineId?: string | null,
+    explicitTenant?: string | null
 ): Promise<IBucketUsage> {
 
-    const tenant = trx.client?.config?.tenant || (await createTenantKnex()).tenant;
-    if (!tenant) {
-        throw new Error("Tenant context could not be determined for bucket usage operation.");
-    }
+    const tenant = await resolveTenant(trx, explicitTenant);
 
-    // 1. Resolve the pool via the scope rule (membership, else line catch-all).
-    const draw = await resolveBucketDraw(trx, clientId, serviceCatalogId, date);
+    // 1. Resolve the pool via the scope rule (membership, else line catch-all),
+    //    preferring the entry's own line when one is supplied.
+    const draw = await resolveBucketDraw(trx, clientId, serviceCatalogId, date, preferredContractLineId, tenant);
 
     if (!draw) {
         throw new BucketUsageError(
@@ -729,16 +742,14 @@ export async function findOrCreateCurrentBucketUsageRecord(
 export async function updateBucketUsageMinutes(
     trx: Knex.Transaction,
     bucketUsageId: string,
-    weightedMinutesDelta: number
+    weightedMinutesDelta: number,
+    explicitTenant?: string | null
 ): Promise<void> {
     if (weightedMinutesDelta === 0) {
         return;
     }
 
-    const tenant = trx.client?.config?.tenant || (await createTenantKnex()).tenant;
-    if (!tenant) {
-        throw new Error("Tenant context could not be determined for bucket usage update.");
-    }
+    const tenant = await resolveTenant(trx, explicitTenant);
 
     const db = tenantDb(trx, tenant);
     const currentUsageQuery = db.table('bucket_usage as bu');
@@ -795,14 +806,12 @@ export async function updateBucketUsageMinutes(
  */
 export async function reconcileBucketUsageRecord(
    trx: Knex.Transaction,
-   bucketUsageId: string
-): Promise<void> {
+   bucketUsageId: string,
+   explicitTenant?: string | null
+ ): Promise<void> {
    console.log(`Starting reconciliation for bucket usage ID: ${bucketUsageId}`);
 
-   const tenant = trx.client?.config?.tenant || (await createTenantKnex()).tenant;
-   if (!tenant) {
-       throw new Error("Tenant context could not be determined for bucket usage reconciliation.");
-   }
+   const tenant = await resolveTenant(trx, explicitTenant);
 
    const db = tenantDb(trx, tenant);
 
@@ -882,8 +891,21 @@ export async function reconcileBucketUsageRecord(
    //    weighted calculator with that service's multiplier + the after-hours rule.
    let timeEntriesWeighted = 0;
 
+   // Membership on another pool beats the catch-all (no double-draw): when this
+   // is a catch-all, exclude services that are explicit members of a different
+   // bucket on the same line.
+   let servicesClaimedByOtherBuckets: Set<string> | null = null;
    if (usageRecord.covers_all_services) {
-       // Catch-all: every billable entry on the line draws; members override the multiplier.
+       const otherMembers = await db.table('contract_line_bucket_services')
+           .where({ tenant, contract_line_id })
+           .whereNot('bucket_id', bucket_id)
+           .select('service_id');
+       servicesClaimedByOtherBuckets = new Set(otherMembers.map((m) => m.service_id));
+   }
+
+   if (usageRecord.covers_all_services) {
+       // Catch-all: every billable entry on the line draws (except services that
+       // are explicit members of another pool); members override the multiplier.
        const entries = await db.table('time_entries')
            .where({ tenant, contract_line_id })
            .where('start_time', '>=', periodStartTs)
@@ -891,6 +913,7 @@ export async function reconcileBucketUsageRecord(
            .select('entry_id', 'service_id', 'start_time', 'end_time', 'billable_duration');
 
        for (const entry of entries) {
+           if (servicesClaimedByOtherBuckets?.has(entry.service_id)) continue;
            const multiplier = memberMultiplierByService.get(entry.service_id) ?? 1;
            const duration = toBucketNumber(entry.billable_duration, 'time_entries.billable_duration');
            if (duration <= 0) continue;
@@ -949,6 +972,7 @@ export async function reconcileBucketUsageRecord(
            .select('service_id', 'quantity');
 
        for (const usage of usageRecords) {
+           if (servicesClaimedByOtherBuckets?.has(usage.service_id)) continue;
            const multiplier = memberMultiplierByService.get(usage.service_id) ?? 1;
            usageTrackingWeighted += toBucketNumber(usage.quantity, 'usage_tracking.quantity') * multiplier;
        }

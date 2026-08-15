@@ -98,10 +98,13 @@ describe('workflow time domain tenant-scoped query contract', () => {
 
     expect(source).not.toContain('async function resolveBucketUsagePeriod');
     expect(source).not.toContain('async function findOrCreateBucketUsageForEntry');
-    expect(source).toContain("resolveBucketDraw(trx, clientId, serviceId, startTimeIso)");
+    // Tenant is threaded explicitly into the canonical service — the runtime
+    // must never mutate the shared transaction config on a multi-tenant worker.
+    expect(source).toContain("resolveBucketDraw(trx, clientId, serviceId, startTimeIso, contractLineId, tenantId)");
     expect(source).toContain("loadAfterHoursRuleForBucket(trx, tenantId, draw.bucketId)");
     expect(source).toContain("findOrCreateCurrentBucketUsageRecord(");
-    expect(source).toContain("updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta)");
+    expect(source).toContain("updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta, tenantId)");
+    expect(usageSection).not.toContain('client.config.tenant');
     // The canonical service owns the bucket_usage tenant scoping; the workflow
     // runtime must not write it directly (that is what the rekey made unsafe).
     expect(source).not.toMatch(/tenantScopedTable\(trx, 'bucket_usage'/);

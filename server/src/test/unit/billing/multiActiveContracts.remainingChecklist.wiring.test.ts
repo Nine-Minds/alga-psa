@@ -40,9 +40,9 @@ describe('multi-active remaining checklist wiring coverage', () => {
     const serviceSource = readRepo('shared/billingClients/bucketUsageService.ts');
     const testSource = readRepo('server/src/test/unit/billing/bucketUsageService.periods.test.ts');
     expect(serviceSource).toContain('Ambiguous bucket usage assignment resolution for client');
-    // The pool-keyed rewrite resolves the conflicting assignment inside
-    // resolveBucketDraw, which names the matched assignments identically.
-    expect(serviceSource).toMatch(/Matched assignments: \$\{(clientPlan|conflictingClientPlan|candidate)\.client_contract_id\}/);
+    // The pool-keyed rewrite resolves every active assignment's pool inside
+    // resolveBucketDraw and names ALL matched assignments in the failure.
+    expect(serviceSource).toMatch(/Matched assignments: \$\{matchedAssignments\.join\(', '\)\}/);
     expect(testSource).toContain('Matched assignments: assignment-1, assignment-2');
     expect(testSource).toContain('Provide explicit assignment identity before bucket billing.');
   });

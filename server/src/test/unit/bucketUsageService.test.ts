@@ -78,7 +78,12 @@ function buildBucketUsageTransaction(config: {
   // Adds a second assignment whose line also pools the service → ambiguity.
   conflictingAssignment?: boolean;
 }) {
-  const members = config.members ?? [DEFAULT_MEMBER];
+  const members = config.members
+    ?? (config.conflictingAssignment
+      // The second assignment's line also pools the service — both lines
+      // resolve a bucket, so the ambiguity guard must fire.
+      ? [DEFAULT_MEMBER, { ...DEFAULT_MEMBER, contract_line_id: "contract-line-2" }]
+      : [DEFAULT_MEMBER]);
   const state = {
     bucketUsageFirstCalls: 0,
     clientContractFirstCalls: 0,
@@ -88,17 +93,22 @@ function buildBucketUsageTransaction(config: {
   };
 
   const listRowsFor = (tableName: string): unknown[] => {
-    if (tableName === "client_contracts as cc" && config.conflictingAssignment) {
-      return [
-        PRIMARY_ASSIGNMENT,
-        {
-          client_contract_id: "assignment-2",
-          contract_line_id: "contract-line-2",
-          start_date: "2025-01-01",
-          billing_frequency: "monthly",
-          cadence_owner: "client",
-        },
-      ];
+    if (tableName === "client_contracts as cc") {
+      // The service reads the active assignments as a list and resolves each
+      // line's pool itself (scope rule per line, then the ambiguity guard).
+      if (config.conflictingAssignment) {
+        return [
+          PRIMARY_ASSIGNMENT,
+          {
+            client_contract_id: "assignment-2",
+            contract_line_id: "contract-line-2",
+            start_date: "2025-01-01",
+            billing_frequency: "monthly",
+            cadence_owner: "client",
+          },
+        ];
+      }
+      return [PRIMARY_ASSIGNMENT];
     }
     return [];
   };
@@ -137,7 +147,6 @@ function buildBucketUsageTransaction(config: {
     // List reads are awaited directly (`await q.select(...)`): make the
     // builder thenable. Chainable `.orderBy(...).first()` still works.
     builder.then = (resolve: (value: unknown[]) => void, reject: (reason?: unknown) => void) => {
-      if (tableName === "contract_line_bucket_services") { console.log("THEN clbs", tableName, "firstErr=", config.firstErrorTable); }
       if (tableName === config.firstErrorTable) {
         reject(new Error(`${tableName} aggregation failed`));
         return;
@@ -179,6 +188,12 @@ function buildBucketUsageTransaction(config: {
         const requestedBucketId = appliedWhere.bucket_id as string | undefined;
         const bucket = config.bucket ?? { ...DEFAULT_BUCKET, allow_rollover: config.allowRollover ?? false };
         if (requestedBucketId && requestedBucketId !== bucket.bucket_id) {
+          return undefined;
+        }
+        // Catch-all lookups filter on covers_all_services — honor it so a
+        // member-scoped bucket never answers a catch-all probe.
+        if (appliedWhere.covers_all_services !== undefined
+            && Boolean(bucket.covers_all_services) !== Boolean(appliedWhere.covers_all_services)) {
           return undefined;
         }
         return bucket;

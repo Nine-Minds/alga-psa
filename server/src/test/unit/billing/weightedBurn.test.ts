@@ -164,6 +164,41 @@ describe('computeWeightedMinutes', () => {
     expect(result.segments[0].isBusinessHours).toBe(true);
   });
 
+  // Mon–Fri 09:00–17:00 schedule in America/New_York, span crossing the
+  // spring-forward boundary (2026-03-08 07:00Z) plus a full business day.
+  // Must produce identical proration under any process timezone (TZ=UTC and
+  // TZ=America/Los_Angeles both verified).
+  it('Mon-Fri schedule crossing spring-forward prorates deterministically', () => {
+    const schedule: BusinessHoursScheduleInput = {
+      timezone: 'America/New_York',
+      is_24x7: false,
+      entries: [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+        day_of_week: dayOfWeek,
+        start_time: dayOfWeek >= 1 && dayOfWeek <= 5 ? '09:00' : '00:00',
+        end_time: dayOfWeek >= 1 && dayOfWeek <= 5 ? '17:00' : '00:00',
+        is_enabled: dayOfWeek >= 1 && dayOfWeek <= 5,
+      })),
+      holidays: [],
+    };
+    // Sun 2026-03-08 22:00Z (17:00 EST) → Mon 2026-03-09 15:00Z (11:00 EDT,
+    // after the transition). In-hours: Mon 09:00–11:00 EDT = 13:00Z–15:00Z.
+    const result = computeWeightedMinutes(
+      input('2026-03-08T22:00:00Z', '2026-03-09T15:00:00Z', 1020),
+      1,
+      afterHoursRule(2, schedule)
+    );
+    const inMinutes = result.segments
+      .filter((s) => s.isBusinessHours)
+      .reduce((sum, s) => sum + s.billableMinutes, 0);
+    const outMinutes = result.segments
+      .filter((s) => !s.isBusinessHours)
+      .reduce((sum, s) => sum + s.billableMinutes, 0);
+    // 1020 wall minutes: Mon 13:00Z–15:00Z (120) in-hours, the rest out.
+    expect(inMinutes).toBeCloseTo(120, 6);
+    expect(outMinutes).toBeCloseTo(900, 6);
+    expect(result.weightedMinutes).toBe(Math.round((120 * 1 + 900 * 2) * 100) / 100);
+  });
+
   // Zero-length span with positive billable duration classifies by start_time.
   it('zero-length span classifies by start_time', () => {
     const inHours = computeWeightedMinutes(

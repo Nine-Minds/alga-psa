@@ -47,23 +47,27 @@ function buildBucketUsageTransaction(config: {
 
   const members = config.members ?? [{ bucket_id: "bucket-1", contract_line_id: config.contractLineId, service_id: "service-1", burn_multiplier: 1 }];
   const listRowsFor = (tableName: string): unknown[] => {
-    if (tableName === "client_contracts as cc" && config.conflictingClientContractId) {
-      return [
-        {
-          client_contract_id: config.clientContractId ?? "assignment-1",
-          contract_line_id: config.contractLineId,
-          start_date: "2024-12-15",
-          billing_frequency: "monthly",
-          cadence_owner: config.cadenceOwner,
-        },
-        {
-          client_contract_id: config.conflictingClientContractId,
-          contract_line_id: config.contractLineId,
-          start_date: "2024-12-15",
-          billing_frequency: "monthly",
-          cadence_owner: config.cadenceOwner,
-        },
-      ];
+    if (tableName === "client_contracts as cc") {
+      // The service reads active assignments as a list (no `.first()`); the
+      // primary assignment row must come back for the draw to resolve.
+      const primary = {
+        client_contract_id: config.clientContractId ?? "assignment-1",
+        client_contract_line_id: config.clientContractLineId,
+        contract_line_id: config.contractLineId,
+        start_date: "2024-12-15",
+        billing_frequency: "monthly",
+        cadence_owner: config.cadenceOwner,
+      };
+      if (config.conflictingClientContractId) {
+        return [
+          primary,
+          {
+            ...primary,
+            client_contract_id: config.conflictingClientContractId,
+          },
+        ];
+      }
+      return [primary];
     }
     return [];
   };

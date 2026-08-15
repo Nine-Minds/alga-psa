@@ -19,6 +19,11 @@
  * Down-migration drops the new tables and the `bucket_usage.bucket_id` column
  * and reverts the numeric types; the frozen legacy tables still describe the
  * old world.
+ *
+ * Re-runnability: every DDL step is guarded (hasTable / hasColumn /
+ * IF NOT EXISTS / constraint-existence checks) so a failed run — including the
+ * deliberate hard-fail on orphaned usage rows — can be re-run after the data
+ * is fixed.
  */
 
 exports.config = { transaction: false };
@@ -27,113 +32,175 @@ exports.config = { transaction: false };
 // (the same colocation group bucket_usage lives in). No-op on plain Postgres
 // and on already-distributed tables.
 async function distributeColocatedWithContractLines(knex, tableName) {
-  const citusFn = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table'
-    ) AS exists;
-  `);
-  if (!citusFn.rows?.[0]?.exists) return;
+  let citusAvailable = false;
+  try {
+    const citusFn = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table'
+      ) AS exists;
+    `);
+    citusAvailable = Boolean(citusFn.rows?.[0]?.exists);
+  } catch {
+    citusAvailable = false;
+  }
+  if (!citusAvailable) return;
 
-  const alreadyDistributed = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_dist_partition
-      WHERE logicalrelid = '${tableName}'::regclass
-    ) AS is_distributed;
-  `);
-  if (alreadyDistributed.rows?.[0]?.is_distributed) return;
+  try {
+    const alreadyDistributed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition
+        WHERE logicalrelid = '${tableName}'::regclass
+      ) AS is_distributed;
+    `);
+    if (alreadyDistributed.rows?.[0]?.is_distributed) return;
+  } catch {
+    return; // pg_dist_partition unavailable on plain Postgres
+  }
 
   await knex.raw(
     `SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'contract_lines')`
   );
 }
 
+async function isCitusDistributed(knex, tableName) {
+  try {
+    const probe = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition WHERE logicalrelid = '${tableName}'::regclass
+      ) AS is_distributed
+    `);
+    return Boolean(probe.rows[0]?.is_distributed);
+  } catch {
+    return false; // pg_dist_partition does not exist on plain Postgres
+  }
+}
+
+async function constraintExists(knex, tableName, constraintName) {
+  const rows = await knex.raw(`
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_name = '${tableName}'
+      AND constraint_name = '${constraintName}'
+  `);
+  return rows.rows.length > 0;
+}
+
+async function indexExists(knex, tableName, indexName) {
+  const rows = await knex.raw(`
+    SELECT indexname FROM pg_indexes
+    WHERE tablename = '${tableName}' AND indexname = '${indexName}'
+  `);
+  return rows.rows.length > 0;
+}
+
 exports.up = async function up(knex) {
   // -------------------------------------------------------------------------
   // 1. contract_line_buckets — the pool
   // -------------------------------------------------------------------------
-  await knex.schema.createTable('contract_line_buckets', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('bucket_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
-    table.uuid('contract_line_id').notNullable();
-    table.text('bucket_name').nullable();
-    table.integer('total_minutes').notNullable();
-    table.decimal('overage_rate', 10, 2).notNullable().defaultTo(0);
-    table.boolean('allow_rollover').notNullable().defaultTo(false);
-    table.text('billing_period').notNullable().defaultTo('monthly');
-    table.decimal('after_hours_multiplier', 6, 3).nullable();
-    table.uuid('business_hours_schedule_id').nullable();
-    table.boolean('covers_all_services').notNullable().defaultTo(false);
-    table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
-    table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
+  if (!(await knex.schema.hasTable('contract_line_buckets'))) {
+    await knex.schema.createTable('contract_line_buckets', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('bucket_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+      table.uuid('contract_line_id').notNullable();
+      table.text('bucket_name').nullable();
+      table.integer('total_minutes').notNullable();
+      table.decimal('overage_rate', 10, 2).notNullable().defaultTo(0);
+      table.boolean('allow_rollover').notNullable().defaultTo(false);
+      table.text('billing_period').notNullable().defaultTo('monthly');
+      table.decimal('after_hours_multiplier', 6, 3).nullable();
+      table.uuid('business_hours_schedule_id').nullable();
+      table.boolean('covers_all_services').notNullable().defaultTo(false);
+      table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
+      table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
 
-    table.primary(['tenant', 'bucket_id']);
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'contract_line_id'])
-      .references(['tenant', 'contract_line_id'])
-      .inTable('contract_lines')
-      .onDelete('CASCADE');
-    table.foreign(['tenant', 'business_hours_schedule_id'])
-      .references(['tenant', 'schedule_id'])
-      .inTable('business_hours_schedules')
-      .onDelete('RESTRICT');
-  });
+      table.primary(['tenant', 'bucket_id']);
+      table.foreign('tenant').references('tenants.tenant');
+      table.foreign(['tenant', 'contract_line_id'])
+        .references(['tenant', 'contract_line_id'])
+        .inTable('contract_lines')
+        .onDelete('CASCADE');
+      table.foreign(['tenant', 'business_hours_schedule_id'])
+        .references(['tenant', 'schedule_id'])
+        .inTable('business_hours_schedules')
+        .onDelete('RESTRICT');
+    });
+  }
 
   // Rule inert without a schedule; multipliers strictly positive.
-  await knex.raw(`
-    ALTER TABLE contract_line_buckets
-    ADD CONSTRAINT contract_line_buckets_after_hours_rule_check
-    CHECK (
-      after_hours_multiplier IS NULL OR business_hours_schedule_id IS NOT NULL
-    )
-  `);
-  await knex.raw(`
-    ALTER TABLE contract_line_buckets
-    ADD CONSTRAINT contract_line_buckets_after_hours_multiplier_check
-    CHECK (after_hours_multiplier IS NULL OR after_hours_multiplier > 0)
-  `);
+  if (!(await constraintExists(knex, 'contract_line_buckets', 'contract_line_buckets_after_hours_rule_check'))) {
+    await knex.raw(`
+      ALTER TABLE contract_line_buckets
+      ADD CONSTRAINT contract_line_buckets_after_hours_rule_check
+      CHECK (
+        after_hours_multiplier IS NULL OR business_hours_schedule_id IS NOT NULL
+      )
+    `);
+  }
+  if (!(await constraintExists(knex, 'contract_line_buckets', 'contract_line_buckets_after_hours_multiplier_check'))) {
+    await knex.raw(`
+      ALTER TABLE contract_line_buckets
+      ADD CONSTRAINT contract_line_buckets_after_hours_multiplier_check
+      CHECK (after_hours_multiplier IS NULL OR after_hours_multiplier > 0)
+    `);
+  }
   // At most one catch-all bucket per contract line.
-  await knex.raw(`
-    CREATE UNIQUE INDEX contract_line_buckets_one_catch_all_uidx
-    ON contract_line_buckets (tenant, contract_line_id)
-    WHERE covers_all_services
-  `);
+  if (!(await indexExists(knex, 'contract_line_buckets', 'contract_line_buckets_one_catch_all_uidx'))) {
+    await knex.raw(`
+      CREATE UNIQUE INDEX contract_line_buckets_one_catch_all_uidx
+      ON contract_line_buckets (tenant, contract_line_id)
+      WHERE covers_all_services
+    `);
+  }
 
   // -------------------------------------------------------------------------
   // 2. contract_line_bucket_services — membership + per-service multiplier
   // -------------------------------------------------------------------------
-  await knex.schema.createTable('contract_line_bucket_services', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('bucket_id').notNullable();
-    table.uuid('service_id').notNullable();
-    table.uuid('contract_line_id').notNullable();
-    table.decimal('burn_multiplier', 6, 3).notNullable().defaultTo(1);
-    table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
-    table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
+  if (!(await knex.schema.hasTable('contract_line_bucket_services'))) {
+    await knex.schema.createTable('contract_line_bucket_services', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('bucket_id').notNullable();
+      table.uuid('service_id').notNullable();
+      table.uuid('contract_line_id').notNullable();
+      table.decimal('burn_multiplier', 6, 3).notNullable().defaultTo(1);
+      table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
+      table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
 
-    table.primary(['tenant', 'bucket_id', 'service_id']);
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'bucket_id'])
-      .references(['tenant', 'bucket_id'])
-      .inTable('contract_line_buckets')
-      .onDelete('CASCADE');
-    table.foreign(['tenant', 'service_id'])
-      .references(['tenant', 'service_id'])
-      .inTable('service_catalog')
-      .onDelete('CASCADE');
-    table.foreign(['tenant', 'contract_line_id'])
-      .references(['tenant', 'contract_line_id'])
-      .inTable('contract_lines')
-      .onDelete('CASCADE');
-    // One bucket per (line, service) — the successor of the alga0002175
-    // invariant documented in shared/billingClients/bucketUsageService.ts.
-    table.unique(['tenant', 'contract_line_id', 'service_id']);
-  });
+      table.primary(['tenant', 'bucket_id', 'service_id']);
+      table.foreign('tenant').references('tenants.tenant');
+      table.foreign(['tenant', 'bucket_id'])
+        .references(['tenant', 'bucket_id'])
+        .inTable('contract_line_buckets')
+        .onDelete('CASCADE');
+      table.foreign(['tenant', 'service_id'])
+        .references(['tenant', 'service_id'])
+        .inTable('service_catalog')
+        .onDelete('CASCADE');
+      table.foreign(['tenant', 'contract_line_id'])
+        .references(['tenant', 'contract_line_id'])
+        .inTable('contract_lines')
+        .onDelete('CASCADE');
+      // One bucket per (line, service) — the successor of the alga0002175
+      // invariant documented in shared/billingClients/bucketUsageService.ts.
+      table.unique(['tenant', 'contract_line_id', 'service_id']);
+    });
+  }
 
-  await knex.raw(`
-    ALTER TABLE contract_line_bucket_services
-    ADD CONSTRAINT contract_line_bucket_services_burn_multiplier_check
-    CHECK (burn_multiplier > 0)
-  `);
+  if (!(await constraintExists(knex, 'contract_line_bucket_services', 'contract_line_bucket_services_burn_multiplier_check'))) {
+    await knex.raw(`
+      ALTER TABLE contract_line_bucket_services
+      ADD CONSTRAINT contract_line_bucket_services_burn_multiplier_check
+      CHECK (burn_multiplier > 0)
+    `);
+  }
+
+  // -------------------------------------------------------------------------
+  // 2b. Distribute the new tables BEFORE bucket_usage references them: on Citus
+  //     a foreign key between a local table and a not-yet-distributed table
+  //     fails, so the pool tables must be distributed (colocated with
+  //     contract_lines) before the FK is added below.
+  // -------------------------------------------------------------------------
+  await distributeColocatedWithContractLines(knex, 'contract_line_buckets');
+  await distributeColocatedWithContractLines(knex, 'contract_line_bucket_services');
 
   // -------------------------------------------------------------------------
   // 3. bucket_usage — add bucket_id, backfill, pin NOT NULL, widen numerics
@@ -194,6 +261,41 @@ exports.up = async function up(knex) {
   //     deliberately keys on client rather than bucket_usage.contract_line_id,
   //     which the old write path was known to populate unreliably (the
   //     write-under-one-line/read-under-another mismatch the rekey kills).
+  //
+  //     Ambiguity guard: client_contracts is many-to-many (a client may hold
+  //     several overlapping assignments on the same line), so a usage row can
+  //     match several pools. That would silently pick an arbitrary bucket —
+  //     fail loudly instead.
+  const ambiguousMatches = await knex.raw(`
+    SELECT bu.usage_id, COUNT(DISTINCT psc.config_id) AS pool_count
+    FROM bucket_usage bu
+    JOIN contract_line_service_configuration psc
+      ON psc.tenant = bu.tenant
+      AND psc.service_id = bu.service_catalog_id
+    JOIN contract_line_service_bucket_config psbc
+      ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+    JOIN client_contracts cc
+      ON cc.tenant = psc.tenant
+      AND cc.contract_id = (
+        SELECT cl.contract_id FROM contract_lines cl
+        WHERE cl.tenant = psc.tenant AND cl.contract_line_id = psc.contract_line_id
+      )
+    WHERE psc.configuration_type = 'Bucket'
+      AND bu.bucket_id IS NULL
+      AND bu.client_id = cc.client_id
+    GROUP BY bu.usage_id
+    HAVING COUNT(DISTINCT psc.config_id) > 1
+    LIMIT 5
+  `);
+  if (ambiguousMatches.rows.length > 0) {
+    const sample = ambiguousMatches.rows.map((row) => row.usage_id).join(', ');
+    throw new Error(
+      `[create_contract_line_buckets] ${ambiguousMatches.rows.length} bucket_usage rows map to multiple legacy Bucket configs ` +
+      `(sample usage_ids: ${sample}). A bucket_usage row must belong to exactly one pool; ` +
+      'resolve the duplicate client assignments before re-running.'
+    );
+  }
+
   await knex.raw(`
     UPDATE bucket_usage bu
     SET bucket_id = psc.config_id
@@ -227,16 +329,31 @@ exports.up = async function up(knex) {
     );
   }
 
-  // 3e. FK + NOT NULL on bucket_id. Citus distributed tables need the
-  //     run_command_on_shards form for the NOT NULL ALTER.
-  const fkExists = await knex.raw(`
-    SELECT constraint_name
-    FROM information_schema.table_constraints
-    WHERE table_name = 'bucket_usage'
-      AND constraint_type = 'FOREIGN KEY'
-      AND constraint_name = 'bucket_usage_bucket_id_fk'
+  // 3e. Pre-check the new unique key against duplicate (bucket_id, period_start)
+  //     rows. client_contracts is many-to-many; two usage rows for the same pool
+  //     and period would make the unique index creation fail late with a cryptic
+  //     error. Fail early with a descriptive one instead.
+  const duplicatePeriodRows = await knex.raw(`
+    SELECT tenant, bucket_id, period_start, COUNT(*) AS row_count
+    FROM bucket_usage
+    WHERE bucket_id IS NOT NULL
+    GROUP BY tenant, bucket_id, period_start
+    HAVING COUNT(*) > 1
+    LIMIT 5
   `);
-  if (fkExists.rows.length === 0) {
+  if (duplicatePeriodRows.rows.length > 0) {
+    const sample = duplicatePeriodRows.rows
+      .map((row) => `${row.tenant}/${row.bucket_id}/${row.period_start} (${row.row_count} rows)`)
+      .join(', ');
+    throw new Error(
+      `[create_contract_line_buckets] duplicate (tenant, bucket_id, period_start) rows exist in bucket_usage ` +
+      `(sample: ${sample}). The new unique key cannot be created until these are resolved.`
+    );
+  }
+
+  // 3f. FK + NOT NULL on bucket_id. Citus distributed tables need the
+  //     run_command_on_shards form for the NOT NULL ALTER.
+  if (!(await constraintExists(knex, 'bucket_usage', 'bucket_usage_bucket_id_fk'))) {
     await knex.raw(`
       ALTER TABLE bucket_usage
       ADD CONSTRAINT bucket_usage_bucket_id_fk
@@ -246,18 +363,8 @@ exports.up = async function up(knex) {
     `);
   }
 
-  let isCitusDistributed = false;
-  try {
-    const probe = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'bucket_usage'::regclass
-      ) AS is_distributed
-    `);
-    isCitusDistributed = Boolean(probe.rows[0]?.is_distributed);
-  } catch {
-    // pg_dist_partition does not exist on plain Postgres.
-  }
-  if (isCitusDistributed) {
+  const usageCitusDistributed = await isCitusDistributed(knex, 'bucket_usage');
+  if (usageCitusDistributed) {
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
         'bucket_usage',
@@ -275,32 +382,38 @@ exports.up = async function up(knex) {
     await knex.raw(`ALTER TABLE bucket_usage ALTER COLUMN bucket_id SET NOT NULL`);
   }
 
-  // 3f. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
-  //     minutes are fractional).
-  await knex.schema.alterTable('bucket_usage', (table) => {
-    table.decimal('minutes_used', 12, 2).notNullable().alter();
-    table.decimal('overage_minutes', 12, 2).notNullable().alter();
-  });
+  // 3g. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
+  //     minutes are fractional). Distributed tables need the shard-aware form.
+  if (usageCitusDistributed) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'bucket_usage',
+        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE NUMERIC(12,2) USING minutes_used::NUMERIC(12,2);
+          ALTER TABLE %s ALTER COLUMN overage_minutes TYPE NUMERIC(12,2) USING overage_minutes::NUMERIC(12,2)$$
+      )
+    `);
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET atttypid = 'numeric'::regtype::oid,
+          atttypmod = ((12 + 4) << 16) | (2 + 4)
+      WHERE attrelid = 'bucket_usage'::regclass
+        AND attname IN ('minutes_used', 'overage_minutes')
+    `);
+  } else {
+    await knex.schema.alterTable('bucket_usage', (table) => {
+      table.decimal('minutes_used', 12, 2).notNullable().alter();
+      table.decimal('overage_minutes', 12, 2).notNullable().alter();
+    });
+  }
 
-  // 3g. New unique key — kills the duplicate-period hazard and the
+  // 3h. New unique key — kills the duplicate-period hazard and the
   //     write-under-one-line/read-under-another mismatch.
-  const periodUnique = await knex.raw(`
-    SELECT indexname FROM pg_indexes
-    WHERE tablename = 'bucket_usage'
-      AND indexname = 'bucket_usage_tenant_bucket_period_uidx'
-  `);
-  if (periodUnique.rows.length === 0) {
+  if (!(await indexExists(knex, 'bucket_usage', 'bucket_usage_tenant_bucket_period_uidx'))) {
     await knex.raw(`
       CREATE UNIQUE INDEX bucket_usage_tenant_bucket_period_uidx
       ON bucket_usage (tenant, bucket_id, period_start)
     `);
   }
-
-  // -------------------------------------------------------------------------
-  // 4. Distribute on Citus (colocated with contract_lines, like bucket_usage).
-  // -------------------------------------------------------------------------
-  await distributeColocatedWithContractLines(knex, 'contract_line_buckets');
-  await distributeColocatedWithContractLines(knex, 'contract_line_bucket_services');
 };
 
 exports.down = async function down(knex) {
@@ -319,10 +432,28 @@ exports.down = async function down(knex) {
     });
   }
 
-  await knex.schema.alterTable('bucket_usage', (table) => {
-    table.bigInteger('minutes_used').notNullable().alter();
-    table.bigInteger('overage_minutes').notNullable().alter();
-  });
+  const usageCitusDistributed = await isCitusDistributed(knex, 'bucket_usage');
+  if (usageCitusDistributed) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'bucket_usage',
+        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE BIGINT USING minutes_used::BIGINT;
+          ALTER TABLE %s ALTER COLUMN overage_minutes TYPE BIGINT USING overage_minutes::BIGINT$$
+      )
+    `);
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET atttypid = 'int8'::regtype::oid,
+          atttypmod = -1
+      WHERE attrelid = 'bucket_usage'::regclass
+        AND attname IN ('minutes_used', 'overage_minutes')
+    `);
+  } else {
+    await knex.schema.alterTable('bucket_usage', (table) => {
+      table.bigInteger('minutes_used').notNullable().alter();
+      table.bigInteger('overage_minutes').notNullable().alter();
+    });
+  }
 
   // Drop membership before pools (FK order), pools after.
   await knex.schema.dropTableIfExists('contract_line_bucket_services');

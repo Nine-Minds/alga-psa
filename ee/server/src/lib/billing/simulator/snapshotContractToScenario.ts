@@ -765,7 +765,7 @@ function buildScenarioServiceConfig(
       if (!bucket) {
         throw new Error(
           `Bucket configuration ${configDetails.baseConfig.config_id} for service ` +
-            `${configDetails.serviceId} has no contract_line_service_bucket_config row`,
+            `${configDetails.serviceId} has no bucket pool (contract_line_buckets) row`,
         );
       }
       return {

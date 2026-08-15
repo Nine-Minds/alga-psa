@@ -9,6 +9,7 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   builder.leftJoin = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);
   builder.select = vi.fn().mockImplementation(() => builder);
+  builder.orderBy = vi.fn().mockImplementation(() => builder);
   builder.first = vi.fn().mockResolvedValue(firstResult);
   builder.then = vi.fn((onFulfilled?: any, onRejected?: any) =>
     Promise.resolve(selectResult).then(onFulfilled, onRejected),

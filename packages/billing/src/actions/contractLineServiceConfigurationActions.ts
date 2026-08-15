@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
+import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import {
   IContractLineServiceConfiguration,
@@ -294,8 +296,32 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
       throw new Error('tenant context not found');
     }
     await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
-    const service = new ContractLineServiceConfigurationService(knex, tenant);
-    return service.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, bucketConfigData);
+    // Route through the compat layer so the bucket overlay is materialized as
+    // the single-member pool the engine and burn service actually read. The
+    // legacy per-service tables are frozen; writing only those (as this action
+    // used to) silently produced buckets that never billed or burned.
+    const totalMinutes = bucketConfigData.total_minutes;
+    const overageRate = bucketConfigData.overage_rate;
+    if (totalMinutes == null || overageRate == null) {
+      return actionError('Missing required bucket overlay fields.');
+    }
+    await withTransaction(knex, async (trx) => {
+      await upsertBucketOverlayInTransaction(
+        trx,
+        tenant,
+        contractLineId,
+        serviceId,
+        {
+          total_minutes: totalMinutes,
+          overage_rate: overageRate,
+          allow_rollover: bucketConfigData.allow_rollover ?? false,
+          billing_period: (bucketConfigData.billing_period ?? 'monthly') as 'weekly' | 'monthly',
+        },
+        null,
+        null,
+      );
+    });
+    return;
   } catch (error) {
     console.error(`Error upserting bucket configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);

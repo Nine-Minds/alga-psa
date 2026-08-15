@@ -152,7 +152,8 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
             trx,
             record.client_id,
             record.service_id,
-            record.usage_date // Use usage record's date
+            record.usage_date, // Use usage record's date
+            record.contract_line_id ?? null,
           );
 
           await updateBucketUsageMinutes(
@@ -247,17 +248,12 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     }
 
     // --- Bucket Usage Update Logic ---
-    // Weighted delta = newQuantity × resolved multiplier − oldQuantity ×
-    // resolved multiplier (each side through the scope rule; usage draws have
-    // no time span so no after-hours proration).
+    // Two independent draws, each resolved from its own record: reverse the OLD
+    // record's burn against the pool it actually drew from, then apply the NEW
+    // record's burn only when it resolves to a pool. This is correct when the
+    // record moves off a bucketed service (old burn reversed even though the
+    // new side resolves no bucket) and when quantity changes.
 
-    const newWeighted = await computeUsageWeightedBurn(
-      trx,
-      updatedRecord.client_id,
-      updatedRecord.service_id,
-      updatedRecord.quantity || 0,
-      updatedRecord.usage_date,
-    );
     const oldWeighted = await computeUsageWeightedBurn(
       trx,
       originalRecord.client_id,
@@ -266,23 +262,48 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
       originalRecord.usage_date,
     );
 
-    const weightedDelta = (newWeighted ?? 0) - (oldWeighted ?? 0);
+    if (oldWeighted !== null && oldWeighted !== 0) {
+      try {
+        const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+          trx,
+          originalRecord.client_id,
+          originalRecord.service_id,
+          originalRecord.usage_date,
+          originalRecord.contract_line_id ?? null,
+        );
+        await updateBucketUsageMinutes(trx, bucketUsageRecord.usage_id, -oldWeighted);
+        console.log(`Reversed bucket usage for usage record ${updatedRecord.usage_id} (weighted -${oldWeighted})`);
+      } catch (bucketError) {
+        console.error(`Error reversing bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage reversal failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+      }
+    }
 
-    if (weightedDelta !== 0 && updatedRecord.client_id) {
-      console.log(`Updated usage record ${updatedRecord.usage_id} linked to a bucket pool. Updating usage (weighted delta ${weightedDelta}).`);
+    const newWeighted = await computeUsageWeightedBurn(
+      trx,
+      updatedRecord.client_id,
+      updatedRecord.service_id,
+      updatedRecord.quantity || 0,
+      updatedRecord.usage_date,
+    );
+
+    if (newWeighted !== null && newWeighted !== 0 && updatedRecord.client_id) {
+      console.log(`Updated usage record ${updatedRecord.usage_id} linked to a bucket pool. Updating usage (weighted ${newWeighted}).`);
 
       try {
         const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
           trx,
           updatedRecord.client_id,
           updatedRecord.service_id,
-          updatedRecord.usage_date // Use updated usage date
+          updatedRecord.usage_date,
+          updatedRecord.contract_line_id ?? null,
         );
 
         await updateBucketUsageMinutes(
           trx,
           bucketUsageRecord.usage_id,
-          weightedDelta
+          newWeighted
         );
         console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
       } catch (bucketError) {
@@ -343,7 +364,8 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
             trx,
             recordToDelete.client_id,
             recordToDelete.service_id,
-            recordToDelete.usage_date // Use record's usage date
+            recordToDelete.usage_date, // Use record's usage date
+            recordToDelete.contract_line_id ?? null,
           );
 
           await updateBucketUsageMinutes(

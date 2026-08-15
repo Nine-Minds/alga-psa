@@ -129,7 +129,7 @@ async function cloneServiceConfiguration(
     });
 
     if (configuration.configuration_type === 'Bucket') {
-      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
     }
 
     if (configuration.configuration_type === 'Hourly') {
@@ -153,7 +153,14 @@ type TemplateBucketConfigRow = {
   allow_rollover: boolean;
 };
 
-async function cloneBucketConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
+async function cloneBucketConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string,
+  contractLineId: string,
+  serviceId: string
+) {
   const db = tenantDb(trx, tenant);
   const bucketConfig = await db.table<TemplateBucketConfigRow>('contract_template_line_service_bucket_config')
     .where('config_id', sourceConfigId)
@@ -161,13 +168,30 @@ async function cloneBucketConfig(trx: Knex.Transaction, tenant: string, sourceCo
 
   if (!bucketConfig) return;
 
-  await db.table('contract_line_service_bucket_config').insert({
+  // Weighted-burn model: a bucket is a line-owned pool with a single-member 1x
+  // member row. The legacy contract_line_service_bucket_config table is frozen;
+  // cloning into it would produce a bucket that never bills or burns.
+  await db.table('contract_line_buckets').insert({
     tenant,
-    config_id: targetConfigId,
+    bucket_id: targetConfigId,
+    contract_line_id: contractLineId,
+    bucket_name: null,
     total_minutes: bucketConfig.total_minutes,
-    billing_period: bucketConfig.billing_period,
     overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
+    billing_period: bucketConfig.billing_period,
+    after_hours_multiplier: null,
+    business_hours_schedule_id: null,
+    covers_all_services: false,
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+  await db.table('contract_line_bucket_services').insert({
+    tenant,
+    bucket_id: targetConfigId,
+    service_id: serviceId,
+    contract_line_id: contractLineId,
+    burn_multiplier: 1,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

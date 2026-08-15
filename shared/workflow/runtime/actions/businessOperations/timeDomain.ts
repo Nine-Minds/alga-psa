@@ -670,18 +670,10 @@ async function applyBucketUsageDeltaForEntry(params: {
     return;
   }
 
-  // The canonical service derives tenant from the transaction config (the
-  // reconcile handler sets the same field). The workflow runtime otherwise
-  // scopes via the app.current_tenant session GUC.
-  if (!trx.client?.config?.tenant) {
-    (trx as any).client = (trx as any).client ?? {};
-    (trx as any).client.config = (trx as any).client.config ?? {};
-    (trx as any).client.config.tenant = tenantId;
-  }
-
   // Scope-resolution gate: explicit membership, else line catch-all, else no
-  // bucket (plain hourly). Replaces the legacy configuration_type='Bucket' check.
-  const draw = await resolveBucketDraw(trx, clientId, serviceId, startTimeIso);
+  // bucket (plain hourly). Tenant is threaded explicitly — never mutate the
+  // shared transaction config on a multi-tenant worker.
+  const draw = await resolveBucketDraw(trx, clientId, serviceId, startTimeIso, contractLineId, tenantId);
   if (!draw) {
     return;
   }
@@ -704,9 +696,11 @@ async function applyBucketUsageDeltaForEntry(params: {
     clientId,
     serviceId,
     startTimeIso,
+    contractLineId,
+    tenantId,
   );
 
-  await updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta);
+  await updateBucketUsageMinutes(trx, usageRecord.usage_id, weightedDelta, tenantId);
 }
 
 async function resolveOrCreateTimeSheet(params: {

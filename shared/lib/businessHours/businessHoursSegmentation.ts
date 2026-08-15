@@ -143,6 +143,11 @@ export function segmentSpanByBusinessHours(
  * Collect every instant in [start, end] where the in/out classification can
  * change: the span's own endpoints plus each enabled non-holiday day's
  * business-hour start/end edges (in the schedule's timezone).
+ *
+ * The calendar-day cursor and the wall-clock instants are built with the local
+ * Date constructor (whose getters return exactly the components supplied) and
+ * consumed by getters on that same representation — so the math is independent
+ * of the process's system timezone.
  */
 function collectBusinessHourBoundaries(
   schedule: BusinessHoursScheduleInput,
@@ -153,15 +158,17 @@ function collectBusinessHourBoundaries(
   const tz = schedule.timezone;
   const holidays = schedule.holidays || [];
 
+  // toZonedTime returns a Date whose local getters reflect the schedule's
+  // wall clock — the calendar-day cursor is derived from those components.
   const localStart = toZonedTime(start, tz);
   const localEnd = toZonedTime(end, tz);
 
-  let cursor = new Date(Date.UTC(localStart.getFullYear(), localStart.getMonth(), localStart.getDate()));
-  const lastDay = new Date(Date.UTC(localEnd.getFullYear(), localEnd.getMonth(), localEnd.getDate()));
+  let cursor = new Date(localStart.getFullYear(), localStart.getMonth(), localStart.getDate());
+  const lastDay = new Date(localEnd.getFullYear(), localEnd.getMonth(), localEnd.getDate());
 
   while (cursor.getTime() <= lastDay.getTime()) {
     if (!isHoliday(holidays, cursor)) {
-      const dayOfWeek = cursor.getUTCDay();
+      const dayOfWeek = cursor.getDay();
       const entry = schedule.entries.find((e) => e.day_of_week === dayOfWeek);
       if (entry && entry.is_enabled) {
         const entryStart = wallClockInstant(cursor, entry.start_time, tz);
@@ -174,16 +181,24 @@ function collectBusinessHourBoundaries(
         }
       }
     }
-    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), cursor.getUTCDate() + 1));
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1);
   }
 
   return boundaries;
 }
 
-/** Build the UTC instant for a wall-clock HH:MM on a given local calendar day. */
+/**
+ * Build the UTC instant for a wall-clock HH:MM on a given local calendar day.
+ *
+ * `day` is a local-constructor Date whose getters give the calendar day.
+ * `new Date(y, m, d, h, min)` is built the same way, so its local getters
+ * return exactly those wall-clock components regardless of the process's
+ * system timezone; `fromZonedTime` then interprets them as the schedule's
+ * wall clock and yields the UTC instant.
+ */
 function wallClockInstant(day: Date, time: string, tz: string): Date {
   const [hours, minutes] = time.split(':').map(Number);
-  const local = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hours, minutes));
+  const local = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes, 0);
   return fromZonedTime(local, tz);
 }
 
