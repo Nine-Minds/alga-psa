@@ -71,6 +71,17 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * Returns `{1, remaining, 0}` when allowed and `{0, remaining, retryAfterMs}`
  * when denied, so check + consume + refill + TTL management happen in one
  * atomic round trip with no read-modify-write race.
+ *
+ * Fail-closed guarantees (the caller must treat a `{0, -1, 0}` reply as an
+ * abnormal denial, distinguishable from genuine exhaustion via `remaining`):
+ * - Invalid call parameters (non-finite or non-positive ARGV) deny without
+ *   touching the stored bucket.
+ * - Corrupt stored state (unparseable JSON, missing/wrong-shape fields,
+ *   non-finite or negative tokens, tokens above capacity, absent/future refill
+ *   timestamps) denies and discards the bucket (`DEL`) so the next request
+ *   re-establishes a valid one. The in-flight request is never credited.
+ * - A computed refill that leaves tokens non-finite or above capacity denies
+ *   and discards the bucket.
  */
 const ATOMIC_TRY_CONSUME_SCRIPT = `
 local key = KEYS[1]
@@ -80,21 +91,50 @@ local tokensNeeded = tonumber(ARGV[3])
 local nowMs = tonumber(ARGV[4])
 local ttlSeconds = tonumber(ARGV[5])
 
+if not maxTokens or not refillRate or not tokensNeeded or not nowMs or not ttlSeconds
+   or maxTokens <= 0 or refillRate <= 0 or tokensNeeded <= 0 or nowMs <= 0 or ttlSeconds <= 0
+   or maxTokens ~= maxTokens or refillRate ~= refillRate or tokensNeeded ~= tokensNeeded
+   or nowMs ~= nowMs or ttlSeconds ~= ttlSeconds then
+  return { 0, -1, 0 }
+end
+
 local tokens = maxTokens
 local lastRefillMs = nowMs
 
 local state = redis.call('GET', key)
 if state then
+  local corrupt = false
   local ok, decoded = pcall(cjson.decode, state)
-  if ok and type(decoded) == 'table' then
-    tokens = tonumber(decoded.tokens) or maxTokens
-    lastRefillMs = tonumber(decoded.lastRefillMs) or nowMs
+  if not (ok and type(decoded) == 'table') then
+    corrupt = true
+  else
+    local storedTokens = tonumber(decoded.tokens)
+    local storedLastRefill = tonumber(decoded.lastRefillMs)
+    if not storedTokens or not storedLastRefill
+       or storedTokens < 0 or storedTokens > maxTokens
+       or storedTokens ~= storedTokens
+       or storedLastRefill <= 0 or storedLastRefill > nowMs
+       or storedLastRefill ~= storedLastRefill then
+      corrupt = true
+    else
+      tokens = storedTokens
+      lastRefillMs = storedLastRefill
+    end
+  end
+  if corrupt then
+    redis.call('DEL', key)
+    return { 0, -1, 0 }
   end
 end
 
 local elapsedSec = (nowMs - lastRefillMs) / 1000
 if elapsedSec > 0 then
   tokens = math.min(maxTokens, tokens + elapsedSec * refillRate)
+end
+
+if tokens ~= tokens or tokens > maxTokens then
+  redis.call('DEL', key)
+  return { 0, -1, 0 }
 end
 
 if tokens >= tokensNeeded then
@@ -371,10 +411,30 @@ export class TokenBucketRateLimiter {
 
     const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
     const config = await this.getBucketConfig(namespace, tenantId, subjectId);
+
+    if (
+      !Number.isFinite(config.maxTokens) || config.maxTokens <= 0 ||
+      !Number.isFinite(config.refillRate) || config.refillRate <= 0 ||
+      !Number.isFinite(tokens) || tokens <= 0
+    ) {
+      // A broken bucket config or consume size is a policy dependency
+      // failure: deny rather than grant tokens against a corrupt budget.
+      logger.error('[TokenBucketRateLimiter] Invalid bucket config or consume size; denying (fail closed)', {
+        namespace,
+        tenantId,
+        subjectId,
+        maxTokens: config.maxTokens,
+        refillRate: config.refillRate,
+        tokens,
+      });
+      return { allowed: false, remaining: -1 };
+    }
+
     const now = Date.now();
 
+    let reply: unknown;
     try {
-      const reply = await this.redis.eval(ATOMIC_TRY_CONSUME_SCRIPT, {
+      reply = await this.redis.eval(ATOMIC_TRY_CONSUME_SCRIPT, {
         keys: [bucketKey],
         arguments: [
           String(config.maxTokens),
@@ -384,56 +444,105 @@ export class TokenBucketRateLimiter {
           String(this.bucketTtlSeconds),
         ],
       });
-
-      if (!Array.isArray(reply) || reply.length < 2) {
-        logger.error('[TokenBucketRateLimiter] Unexpected atomic consume reply', {
-          namespace,
-          tenantId,
-          subjectId,
-          reply: reply == null ? String(reply) : JSON.stringify(reply),
-        });
-        return { allowed: true, remaining: -1 };
-      }
-
-      const allowed = Number(reply[0]) === 1;
-      const remaining = Number(reply[1]);
-      const retryAfterMs = Number(reply[2]) || 0;
-
-      if (allowed) {
-        logger.debug('[TokenBucketRateLimiter] Token consumed (atomic)', {
-          namespace,
-          tenantId,
-          subjectId,
-          remaining,
-          consumed: tokens,
-        });
-        return { allowed: true, remaining };
-      }
-
-      logger.debug('[TokenBucketRateLimiter] Rate limit exceeded (atomic)', {
-        namespace,
-        tenantId,
-        subjectId,
-        remaining,
-        needed: tokens,
-        retryAfterMs,
-      });
-      return {
-        allowed: false,
-        remaining,
-        ...(retryAfterMs > 0 ? { retryAfterMs } : {}),
-      };
     } catch (error) {
-      // On error, fail open (allow the request); callers treat the negative
-      // `remaining` sentinel as unavailable rather than as success.
-      logger.error('[TokenBucketRateLimiter] Error checking rate limit atomically:', {
+      // EVAL threw or Redis returned an error reply: fail closed. Deny the
+      // request and never reset the bucket, which would credit the in-flight
+      // request; the negative `remaining` marks this as an abnormal denial.
+      logger.error('[TokenBucketRateLimiter] Atomic EVAL failed; denying (fail closed)', {
         error: error instanceof Error ? error.message : 'Unknown error',
         namespace,
         tenantId,
         subjectId,
       });
-      return { allowed: true, remaining: -1 };
+      return { allowed: false, remaining: -1 };
     }
+
+    const parsed = this.parseAtomicReply(reply);
+    if (!parsed) {
+      logger.error('[TokenBucketRateLimiter] Malformed atomic consume reply; denying (fail closed)', {
+        namespace,
+        tenantId,
+        subjectId,
+        reply: reply == null ? String(reply) : JSON.stringify(reply),
+      });
+      return { allowed: false, remaining: -1 };
+    }
+
+    if (parsed.allowed) {
+      logger.debug('[TokenBucketRateLimiter] Token consumed (atomic)', {
+        namespace,
+        tenantId,
+        subjectId,
+        remaining: parsed.remaining,
+        consumed: tokens,
+      });
+      return parsed;
+    }
+
+    logger.debug('[TokenBucketRateLimiter] Rate limit exceeded (atomic)', {
+      namespace,
+      tenantId,
+      subjectId,
+      remaining: parsed.remaining,
+      needed: tokens,
+      retryAfterMs: parsed.retryAfterMs,
+    });
+    return parsed;
+  }
+
+  /**
+   * Strictly validate the EVAL reply before accepting it. Any wrong arity,
+   * non-numeric entry, nil where a number is expected, non-array reply, or
+   * internally contradictory shape (e.g. allowed with a negative remaining) is
+   * rejected so the caller denies rather than mis-granting. Numeric strings are
+   * accepted because Redis clients may return Lua integers as bulk strings.
+   */
+  private parseAtomicReply(reply: unknown): RateLimitResult | null {
+    if (!Array.isArray(reply) || reply.length < 3) {
+      return null;
+    }
+    const allowedFlag = this.toFiniteNumber(reply[0]);
+    const remaining = this.toFiniteNumber(reply[1]);
+    const retryAfterMs = this.toFiniteNumber(reply[2]);
+    if (allowedFlag === null || remaining === null || retryAfterMs === null) {
+      return null;
+    }
+    if (allowedFlag !== 0 && allowedFlag !== 1) {
+      return null;
+    }
+    if (retryAfterMs < 0) {
+      return null;
+    }
+    if (allowedFlag === 1) {
+      if (remaining < 0) {
+        return null;
+      }
+      return { allowed: true, remaining: Math.floor(remaining) };
+    }
+    if (remaining < -1) {
+      return null;
+    }
+    return {
+      allowed: false,
+      remaining: Math.floor(remaining),
+      ...(retryAfterMs > 0 ? { retryAfterMs } : {}),
+    };
+  }
+
+  /**
+   * Coerce an EVAL reply element to a finite number, rejecting null, booleans,
+   * objects, arrays, and non-numeric strings (where the Lua script only ever
+   * returns numbers). `Infinity`/`NaN` are rejected as non-finite.
+   */
+  private toFiniteNumber(value: unknown): number | null {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
   }
 
   /**
