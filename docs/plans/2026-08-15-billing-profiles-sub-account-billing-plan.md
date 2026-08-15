@@ -12,8 +12,8 @@ behind each decision. The execution ledger lives alongside it as an ALGA plan:
 | Artifact | Purpose |
 |---|---|
 | [`ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md) | Product requirements, personas, acceptance criteria |
-| [`.../features.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/features.json) | **127 features**, each atomic and testable, `implemented` flipped as work lands |
-| [`.../tests.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/tests.json) | **43 Pareto-selected tests** mapped back to feature IDs |
+| [`.../features.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/features.json) | **132 features**, each atomic and testable, `implemented` flipped as work lands |
+| [`.../tests.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/tests.json) | **46 Pareto-selected tests** mapped back to feature IDs |
 | [`.../SCRATCHPAD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/SCRATCHPAD.md) | Decisions, code discoveries, gotchas, runbook |
 
 Slice → feature-ID mapping is in §9. The PRD is the scope authority; this document is
@@ -65,6 +65,7 @@ during implementation.
 | D6 | **Invisible until a second profile exists.** Every client gets a system-managed default profile at backfill; no UI appears while `count == 1`. |
 | D7 | **Credits, prepayments, aging and statements are profile-scoped**, with client-level rollup for reporting. A credit against one profile cannot pay a sibling profile's invoice. |
 | D8 | **Attribution is explainable.** Every charge records *which chain step won*; every time entry records *how its contract line was picked*. |
+| D9 | **Tax splits in two.** The region chain is unchanged and a profile does not join it. Exemption, exemption certificate, tax ID, and reverse charge become profile-scoped with client fallback. See §6.2. |
 
 ---
 
@@ -92,15 +93,22 @@ INDEX (tenant, client_id, is_active)
 Phase 2 adds to the same table (all nullable, all falling back to the client when unset):
 
 ```
-bills_separately        bool NOT NULL default false
-bill_to_name            text
-bill_to_location_id     uuid   -- FK client_locations
-billing_contact_id      uuid   -- invoice recipient
-tax_settings            jsonb  -- see §6.2 for precedence
+bills_separately          bool NOT NULL default false
+bill_to_name              text
+bill_to_location_id       uuid   -- FK client_locations
+billing_contact_id        uuid   -- invoice recipient
+is_tax_exempt             bool   -- nullable; NULL = inherit client (see §6.2)
+tax_exemption_certificate text
+tax_id_number             text
 po_number / po_required
-invoice_delivery_prefs  jsonb
-billing_cycle_frequency -- per-profile frequency (falls back to client)
+invoice_delivery_prefs    jsonb
+billing_cycle_frequency   -- per-profile frequency (falls back to client)
 ```
+
+Tax attributes are **nullable booleans/strings, not a `jsonb` blob** — each inherits
+the client value when NULL, which is what makes the single-profile case provably
+identical to today. Reverse-charge applicability stays in `client_tax_settings`, re-keyed
+to include the profile. See §6.2 — the region chain is deliberately untouched.
 
 `is_system_managed_default` follows the precedent set by
 `server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`.
@@ -397,28 +405,84 @@ otherwise — never a baseline to be updated. If a slice genuinely must change o
 single-profile clients, that is a scope change requiring an explicit decision recorded
 in `SCRATCHPAD.md`, not a quiet baseline refresh.
 
-### 6.2 Tax precedence
+### 6.2 Tax — SETTLED
 
-`contract_lines.location_id` is **not presentation-only** — it resolves tax region via
-`getLocationTaxRegionCode` (`billingEngine.ts:546-572`), consumed through
-`loadChargeComputeTaxContext` (`billingEngine.ts:628-690`). Current precedence:
+"Profile tax settings" is not one thing. Tax state today decomposes into four
+attributes, all client-scoped, and they do **not** share an answer:
+
+| Attribute | Location | Answers |
+|---|---|---|
+| Region code chain | `compute/*.ts` (a `??` expression per module) | **Where** tax applies |
+| `clients.is_tax_exempt`, `clients.tax_exemption_certificate` | `20241004080400` | **Whether** this entity pays tax at all |
+| `clients.tax_id_number` | `20241004163300` | The entity's registration number |
+| `client_tax_settings.is_reverse_charge_applicable` | PK `(tenant, client_id)` | VAT treatment |
+
+#### The region chain does NOT change
+
+Current chain, resolved identically in every compute module:
+
+```ts
+const effectiveTaxRegion =
+  serviceTaxRegion ??
+  taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+  taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+  undefined;
+```
+
+**A billing profile does not participate in this chain.** Considered and rejected:
+profile region could only ever differ from contract-line location region when a
+profile's *bill-to* jurisdiction differs from the *delivery* jurisdiction. In all three
+target customer shapes the two agree by construction — 1:1 site/profile mapping, or a
+single shared site, or a single legal entity. And where they could diverge
+(sites across jurisdictions billed centrally), destination sourcing means the delivery
+location should govern regardless. Adding the rung buys a knob that fires in almost no
+real configuration. F089 exists to hold this chain still.
+
+#### Exemption, tax ID, and reverse charge DO become profile-scoped
+
+This is the load-bearing half. `is_tax_exempt` lives on `clients`, so today:
+
+> **One client cannot express "this entity is exempt, that one is not."**
+
+The one-site-many-legal-entities shape is precisely a mix of exempt and non-exempt
+entities — a religious organisation and its affiliated school and preschool, each with
+its own registration and its own exemption status, at one address in one jurisdiction.
+Region is identical for all of them; exemption is not. Billing that shape correctly
+today requires splitting into separate clients, which is the exact outcome this feature
+exists to prevent. So this is not a refinement — without it the shape stays unbillable.
+
+Moved to the profile with client fallback (F083, F129, F130):
 
 ```
-service tax region  ->  contract-line location region  ->  client default region
+is_tax_exempt
+tax_exemption_certificate
+tax_id_number
+client_tax_settings.is_reverse_charge_applicable
+    PK  (tenant, client_id)  ->  (tenant, client_id, billing_profile_id)
 ```
 
-Profile tax settings must slot in **deliberately**. Proposed:
+Note this is a **scope change, not a precedence question** — there is no chain to slot
+into. It follows the same fallback pattern as every other profile-level bill-to field.
 
-```
-service tax region
-  -> contract-line location region
-  -> PROFILE tax settings          <-- new
-  -> client default region
-```
+#### Structural consequence — do not underestimate this (F131, F132)
 
-Rationale: a contract line pinned to a physical location is a stronger statement about
-where the service was delivered than the profile's billing identity. This is a genuine
-judgement call and should be confirmed with a tax-aware reviewer before Slice 7 lands.
+`loadChargeComputeTaxContext` (`billingEngine.ts:628-690`) currently reads
+`input.client.is_tax_exempt` and builds **one tax context per client**. Once exemption
+is profile-scoped, the context must be built **per resolved profile**, because a single
+invoice can legitimately contain both exempt and non-exempt lines. That changes the
+function's contract, not just a field it reads, and it is the part of this slice most
+likely to be underestimated.
+
+The `createDefaultTaxSettings` provisioning side effect at `billingEngine.ts:668` also
+fires against `client_tax_settings` and must provision for the resolved profile (F132).
+
+#### Phasing
+
+All of this lands in **S7**, unchanged from the original sequencing. Consistent, because
+the shape that needs it needs separate invoices anyway. In phase 1 a multi-profile
+client receives one invoice with client-level exemption applied — no worse than today,
+since today those entities would be one client regardless. **No regression, so the T013
+gate is unaffected.**
 
 ### 6.3 Feature flagging
 
@@ -479,7 +543,7 @@ unrelated to this feature, and both deserve their own cards:
 | **S4** | spend-by-profile reporting | S2 | F053–F060 | T022–T024 |
 | **S5** | attribution explainability | S2 | F061–F070 | T025–T028 |
 | **S6** | portal consolidated + segmented | S2, S3 | F071–F078 | T029–T031 |
-| **S7** | profile bill-to identity | S3 | F079–F089 | T032–T033 |
+| **S7** | profile bill-to identity + tax scoping | S3 | F079–F089, F129–F132 | T032–T033, T044–T046 |
 | **S8** | per-profile billing cycles ← *largest* | S7 | F090–F101 | T034–T037 |
 | **S9** | profile-scoped payment methods | S7 | F102–F106 | T038–T039 |
 | **S10** | profile-scoped AR | S8 | F107–F115 | T040–T041 |

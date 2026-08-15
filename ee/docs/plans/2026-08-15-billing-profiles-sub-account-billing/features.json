@@ -81,13 +81,13 @@
   {"id":"F080","description":"A profile can carry its own bill-to name.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F081","description":"A profile can carry its own bill-to location reference.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F082","description":"A profile can carry its own billing contact and invoice recipient.","implemented":false,"prdRefs":["Goals"]},
-  {"id":"F083","description":"A profile can carry its own tax settings.","implemented":false,"prdRefs":["Open Questions"]},
+  {"id":"F083","description":"A billing profile can carry its own tax exemption status and exemption certificate, falling back to the client when unset.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F084","description":"A profile can carry its own PO number and PO-required setting.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F085","description":"A profile can carry its own invoice delivery preferences.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F086","description":"A profile can carry its own billing cycle frequency overriding the client's.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F087","description":"Every profile-level billing field falls back to the client value when unset.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F088","description":"A UI lets a user edit a profile's bill-to identity, tax, PO, and delivery settings.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F089","description":"Tax region precedence places profile tax settings below contract-line location and above the client default.","implemented":false,"prdRefs":["Open Questions"]},
+  {"id":"F089","description":"The tax region resolution chain is unchanged - service region, then contract-line location region, then client default - and a billing profile does not participate in it.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F090","description":"client_billing_cycles gains a non-null billing_profile_id column.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F091","description":"Existing billing cycle rows are backfilled to their client's default profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F092","description":"A unique constraint covers tenant, client, billing profile, and period start.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
@@ -126,5 +126,9 @@
   {"id":"F125","description":"A restricted portal user's organization-wide totals reflect only their permitted segments.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F126","description":"An admin UI sets which profiles a portal user may see.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F127","description":"Profile restriction is enforced server-side on portal data queries, not only in the UI.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F128","description":"A golden-output baseline harness captures invoice totals, line amounts, tax figures, credit application, and export output from the existing billing suite, and can diff a later run against it. Must be captured BEFORE S1 lands.","implemented":false,"prdRefs":["Backward-compatibility gate (T013) \u2014 runs after every slice"]}
+  {"id":"F128","description":"A golden-output baseline harness captures invoice totals, line amounts, tax figures, credit application, and export output from the existing billing suite, and can diff a later run against it. Must be captured BEFORE S1 lands.","implemented":false,"prdRefs":["Backward-compatibility gate (T013) \u2014 runs after every slice"]},
+  {"id":"F129","description":"A billing profile can carry its own tax ID number, falling back to the client when unset.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
+  {"id":"F130","description":"client_tax_settings is re-keyed to (tenant, client_id, billing_profile_id) so reverse-charge applicability is per profile, with existing rows backfilled to the client's default profile.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
+  {"id":"F131","description":"Charge tax context is built per resolved billing profile rather than per client, so a single invoice can carry both exempt and non-exempt lines.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
+  {"id":"F132","description":"Default tax settings provisioning creates a row for the resolved billing profile rather than only for the client.","implemented":false,"prdRefs":["Data Model / Integration Notes"]}
 ]

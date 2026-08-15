@@ -20,6 +20,7 @@ as they come up; revise earlier notes when decisions change.
 | D6 | Invisible until a second profile exists | ~All clients will only ever have one profile. Gating on `count == 1` is self-disabling and strictly better than a feature flag for phase 1 |
 | D7 | Credits, prepayments, aging, statements are profile-scoped with client-level rollup | Sibling profiles often have different cards and different owners; a credit silently paying another entity's invoice is a real AR defect |
 | D8 | Attribution is explainable — every charge records which chain step won | The chain has five steps and the pre-existing disambiguation already fails silently |
+| D9 | Tax **region chain** unchanged (profile does not participate); tax **exemption / certificate / tax ID / reverse charge** become profile-scoped | Region and exemption are different questions. Region only diverges when bill-to and delivery jurisdictions differ, which none of the target shapes produce, and destination sourcing favours delivery anyway. Exemption is per legal entity, and `is_tax_exempt` living on `clients` is what currently makes the one-site-many-entities shape unbillable inside one client |
 
 ### Constraint that shaped the whole model
 
@@ -59,10 +60,30 @@ The same seven sites are where `billing_profile_id` must be stamped.
 
 It resolves tax region via `getLocationTaxRegionCode` (`billingEngine.ts:546-572`),
 consumed through `loadChargeComputeTaxContext` (`billingEngine.ts:628-690`). Current
-precedence: **service tax region → contract-line location region → client default region**.
+precedence: **service tax region → contract-line location region → client default region**,
+expressed as a `??` chain repeated in each compute module (e.g.
+`computeTimeBasedCharges.ts:219-222`).
 
-Profile tax settings must slot into this deliberately — see the open question below.
 Migration for the column: `server/migrations/20260415120200_add_location_to_contract_lines.cjs`.
+
+**Per D9 this chain does not change.** Profile does not join it. F089 exists specifically
+to hold it still, and T033 proves profile assignment cannot perturb it.
+
+### Tax state is four separate client-scoped things
+
+| Attribute | Defined in | Scope after D9 |
+|---|---|---|
+| Region chain | `compute/*.ts` `??` expressions | unchanged, client/location |
+| `clients.is_tax_exempt`, `clients.tax_exemption_certificate` | `20241004080400` | **profile**, client fallback |
+| `clients.tax_id_number` | `20241004163300` | **profile**, client fallback |
+| `client_tax_settings.is_reverse_charge_applicable`, PK `(tenant, client_id)` | `20241004163300`, re-created `20251003000004:1002` | **profile**, PK gains `billing_profile_id` |
+
+**The structural trap:** `loadChargeComputeTaxContext` (`billingEngine.ts:628-690`) reads
+`input.client.is_tax_exempt` and builds **one context per client**. Profile-scoped
+exemption means it must build **per resolved profile** — one invoice can legitimately
+carry exempt and non-exempt lines. That is a change to the function's contract, not a
+field swap. The `createDefaultTaxSettings` side effect at `billingEngine.ts:668` must
+likewise provision for the resolved profile.
 
 ### Time entries have no client and no location
 
@@ -151,6 +172,9 @@ diff stays mechanical rather than 59 hand edits.
 - **`persistProjectScheduleCharges` stamps no segment today.** Easy to miss because
   there is no existing `location_id` line to copy — there is nothing there at all.
 - **Backfill must be idempotent** (F005). It will be re-run across environments.
+- **Profile tax fields are nullable scalars, not a `jsonb` blob.** NULL means inherit
+  from the client, which is what makes the single-profile case provably identical.
+  A blob defaults to `{}` and silently stops inheriting.
 - **T013 is a gate that runs after EVERY slice, S1 through S12** — not a phase-1
   checkbox and not owned by any single slice. A slice is not done until it passes.
   Capture the golden baseline **before S1 lands**; after that the baseline is
@@ -180,11 +204,7 @@ Both appear to under-bill silently. Raise as their own cards.
 
 ## Open questions
 
-1. **Tax precedence.** Proposed: `service region → contract-line location region →
-   profile tax settings → client default region`. Rationale: a contract line pinned to a
-   physical location is a stronger claim about where the service was delivered than the
-   profile's billing identity. **Needs a tax-aware reviewer before Slice 7 lands.**
-2. Should the unresolved-contract-line queue (F068–F069) ship here or as its own card?
+1. Should the unresolved-contract-line queue (F068–F069) ship here or as its own card?
    It fixes a pre-existing defect and delivers value independently of billing profiles.
 
 ---

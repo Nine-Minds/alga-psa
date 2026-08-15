@@ -167,14 +167,34 @@ design source §6.1 for what it must prove at each boundary.
 Phase 1 needs no feature flag — the `count == 1` invisibility rule is a better gate,
 because it is self-disabling.
 
+## Tax scoping (settled)
+
+"Profile tax settings" decomposes into four client-scoped attributes that do not share
+an answer. Full analysis in design source §6.2.
+
+- **The tax region chain does not change.** `service region → contract-line location
+  region → client default region` stands, and a billing profile does not participate.
+  A profile's bill-to jurisdiction could only differ from the delivery jurisdiction in
+  configurations none of the target shapes produce, and destination sourcing says
+  delivery governs anyway. F089 holds the chain still.
+- **Exemption, exemption certificate, tax ID, and reverse-charge applicability become
+  profile-scoped** with client fallback (F083, F129, F130). This is load-bearing, not a
+  refinement: `is_tax_exempt` lives on `clients`, so today one client cannot express
+  "this entity is exempt, that one is not" — and the one-site-many-legal-entities shape
+  is exactly a mix of exempt and non-exempt entities at one address. Without this, that
+  shape stays unbillable inside a single client, defeating the feature's purpose.
+- **Structural consequence:** charge tax context must be built **per resolved profile**
+  rather than per client, because one invoice can legitimately carry both exempt and
+  non-exempt lines (F131, F132). This changes the contract of
+  `loadChargeComputeTaxContext`, not just a field it reads — the most
+  underestimation-prone part of S7.
+- **Phasing unchanged** — all of it lands in S7. Phase 1 applies client-level exemption
+  to a multi-profile client's single invoice, which is no worse than today, since those
+  entities would be one client regardless. The T013 gate is unaffected.
+
 ## Open Questions
 
-1. **Tax precedence.** Proposed: `service region → contract-line location region →
-   profile tax settings → client default region`. Rationale: a contract line pinned to
-   a physical location is a stronger claim about where service was delivered than the
-   profile's billing identity. Needs confirmation from a tax-aware reviewer before
-   Slice 7.
-2. Should the unresolved-contract-line queue (F063–F064) ship as part of this effort or
+1. Should the unresolved-contract-line queue (F068–F069) ship as part of this effort or
    as its own card? It addresses a pre-existing defect and delivers value independently.
 
 ## Acceptance Criteria / Definition of Done
