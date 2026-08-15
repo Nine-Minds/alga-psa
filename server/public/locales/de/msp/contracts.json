@@ -826,6 +826,7 @@
         "editPricingSchedule": "Preisplan bearbeiten"
       },
       "validation": {
+        "currencySettingsLoading": "Währungseinstellungen werden noch geladen; bitte versuchen Sie es gleich erneut",
         "customRatePositive": "Benutzerdefinierter Tarif muss eine positive Zahl sein",
         "customRateRequired": "Benutzerdefinierter Tarif ist erforderlich, wenn der Standardtarif nicht verwendet wird",
         "durationPositive": "Dauer muss eine positive Zahl sein",
