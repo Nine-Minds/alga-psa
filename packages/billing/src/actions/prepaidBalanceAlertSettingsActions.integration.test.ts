@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -33,6 +33,25 @@ const otherTenantId = uuidv4();
 const otherTenantClientId = uuidv4();
 
 let db: Knex;
+
+async function deleteFixtureBillingSettings(): Promise<void> {
+  await db('client_billing_settings').where({ tenant: tenantId, client_id: clientId }).del();
+  await db('client_billing_settings')
+    .where({ tenant: otherTenantId, client_id: otherTenantClientId })
+    .del();
+}
+
+async function seedBillingSettings(overrides: Record<string, unknown> = {}): Promise<void> {
+  await db('client_billing_settings').insert({
+    tenant: tenantId,
+    client_id: clientId,
+    zero_dollar_invoice_handling: 'normal',
+    suppress_zero_dollar_invoices: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+    ...overrides,
+  });
+}
 
 beforeAll(async () => {
   wireLocalTestDbEnv();
@@ -73,18 +92,20 @@ beforeAll(async () => {
   ]);
 });
 
+beforeEach(async () => {
+  await deleteFixtureBillingSettings();
+  (isFeatureFlagEnabled as Mock).mockReset().mockResolvedValue(true);
+  (hasPermission as Mock).mockReset().mockResolvedValue(true);
+});
+
 afterAll(async () => {
-  await db('client_billing_settings').where({ tenant: tenantId }).del();
+  await deleteFixtureBillingSettings();
   await db('clients').where({ tenant: tenantId }).orWhere({ tenant: otherTenantId }).del();
   await db('tenants').where({ tenant: tenantId }).orWhere({ tenant: otherTenantId }).del();
   await db.destroy().catch(() => undefined);
 });
 
-// This suite shares module-level tenant/client fixtures and mutates one
-// client_billing_settings row across tests, so its cases are order-dependent.
-// The server vitest config runs with `sequence.shuffle: true`; pin declaration
-// order so a shuffled seed cannot turn a valid run red.
-describe.sequential('prepaid balance alert settings actions (DB-backed)', () => {
+describe('prepaid balance alert settings actions (DB-backed)', () => {
   it('read rejects when the feature flag is disabled or the checker is unavailable', async () => {
     (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(false);
     const result = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
@@ -128,15 +149,11 @@ describe.sequential('prepaid balance alert settings actions (DB-backed)', () => 
   });
 
   it('partial upsert changes only the four prepaid-alert columns', async () => {
-    await db('client_billing_settings').insert({
-      tenant: tenantId,
-      client_id: clientId,
+    await seedBillingSettings({
       zero_dollar_invoice_handling: 'finalized',
       suppress_zero_dollar_invoices: true,
       enable_credit_expiration: true,
       credit_expiration_days: 90,
-      created_at: db.fn.now(),
-      updated_at: db.fn.now(),
     });
 
     (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
@@ -171,6 +188,13 @@ describe.sequential('prepaid balance alert settings actions (DB-backed)', () => 
   });
 
   it('rejects invalid pairs, nonpositive amounts, out-of-range percents, and lowercase currency', async () => {
+    await seedBillingSettings({
+      prepaid_credit_alert_threshold: 5000,
+      prepaid_credit_alert_currency_code: 'USD',
+      bucket_usage_alert_percent: 80,
+      notify_client_on_prepaid_alert: false,
+    });
+
     const base = {
       clientId,
       prepaidCreditAlertThreshold: 5000,
@@ -221,6 +245,13 @@ describe.sequential('prepaid balance alert settings actions (DB-backed)', () => 
   });
 
   it('forces client opt-in off when both alert types are disabled', async () => {
+    await seedBillingSettings({
+      prepaid_credit_alert_threshold: 5000,
+      prepaid_credit_alert_currency_code: 'USD',
+      bucket_usage_alert_percent: 80,
+      notify_client_on_prepaid_alert: true,
+    });
+
     (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const result = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       clientId,
