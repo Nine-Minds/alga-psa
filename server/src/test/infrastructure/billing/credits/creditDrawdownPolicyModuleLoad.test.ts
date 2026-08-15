@@ -173,6 +173,7 @@ describe('credit draw-down policy module load', () => {
         suppress_zero_dollar_invoices: false,
         credit_auto_apply_enabled: false,
         credit_application_order: 'newest_first',
+        credit_service_type_restriction_mode: 'restricted',
         credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
         created_at: now,
         updated_at: now,
@@ -185,6 +186,7 @@ describe('credit draw-down policy module load', () => {
     expect(inherited).toEqual({
       autoApplyEnabled: false,
       applicationOrder: 'newest_first',
+      serviceTypeRestrictionMode: 'restricted',
       eligibleServiceTypeIds: [laborTypeId],
     });
 
@@ -206,6 +208,7 @@ describe('credit draw-down policy module load', () => {
     expect(overridden).toEqual({
       autoApplyEnabled: false,
       applicationOrder: 'oldest_first',
+      serviceTypeRestrictionMode: 'restricted',
       eligibleServiceTypeIds: [laborTypeId],
     });
   });

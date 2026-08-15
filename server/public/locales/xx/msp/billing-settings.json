@@ -105,7 +105,11 @@
           "label": "11111",
           "help": "11111",
           "empty": "11111",
-          "restricted": "11111"
+          "restricted": "11111",
+          "mode": {
+            "all": "11111",
+            "restricted": "11111"
+          }
         }
       },
       "options": {

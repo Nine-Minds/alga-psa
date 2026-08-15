@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "In aanmerking komende servicetypen",
-          "help": "Beperk krediettoepassing tot de geselecteerde servicetypen. Laat alles uitgevinkt om krediet op alle kosten toe te passen.",
+          "help": "Kies of krediet kan worden toegepast op alle kosten of alleen op kosten voor de geselecteerde servicetypen.",
           "empty": "Geen servicetypen geconfigureerd.",
-          "restricted": "Krediet is beperkt tot de geselecteerde servicetypen."
+          "restricted": "Krediet is beperkt tot de geselecteerde servicetypen.",
+          "mode": {
+            "all": "Alle servicetypen",
+            "restricted": "Alleen geselecteerde typen"
+          }
         }
       },
       "options": {

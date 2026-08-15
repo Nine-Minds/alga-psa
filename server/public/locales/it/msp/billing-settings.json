@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "Tipi di servizio idonei",
-          "help": "Limita l'applicazione del credito ai tipi di servizio selezionati. Lascia tutto deselezionato per applicare il credito a tutti gli addebiti.",
+          "help": "Scegli se il credito può essere applicato a tutti gli addebiti o solo agli addebiti dei tipi di servizio selezionati.",
           "empty": "Nessun tipo di servizio configurato.",
-          "restricted": "Il credito è limitato ai tipi di servizio selezionati."
+          "restricted": "Il credito è limitato ai tipi di servizio selezionati.",
+          "mode": {
+            "all": "Tutti i tipi di servizio",
+            "restricted": "Solo i tipi selezionati"
+          }
         }
       },
       "options": {

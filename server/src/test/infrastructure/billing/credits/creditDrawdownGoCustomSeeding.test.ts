@@ -146,6 +146,7 @@ describe('Credit Draw-Down "Go Custom" Seeding Fix', () => {
       suppress_zero_dollar_invoices: false,
       credit_auto_apply_enabled: false,
       credit_application_order: 'newest_first',
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([tenantEligibleTypeId]),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -174,6 +175,7 @@ describe('Credit Draw-Down "Go Custom" Seeding Fix', () => {
     const before = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);
     expect(before.autoApplyEnabled).toBe(false);
     expect(before.applicationOrder).toBe('newest_first');
+    expect(before.serviceTypeRestrictionMode).toBe('restricted');
     expect(before.eligibleServiceTypeIds).toEqual([tenantEligibleTypeId]);
 
     // The exact payload the fixed UI sends when toggling "Use Default Settings"
@@ -181,6 +183,7 @@ describe('Credit Draw-Down "Go Custom" Seeding Fix', () => {
     await updateClientBillingSettings(context.db, context.tenantId, clientId, {
       creditAutoApplyEnabled: before.autoApplyEnabled,
       creditApplicationOrder: before.applicationOrder,
+      creditServiceTypeRestrictionMode: before.serviceTypeRestrictionMode,
       creditEligibleServiceTypeIds: before.eligibleServiceTypeIds,
     });
 
@@ -188,6 +191,7 @@ describe('Credit Draw-Down "Go Custom" Seeding Fix', () => {
     const after = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);
     expect(after.autoApplyEnabled).toBe(false);
     expect(after.applicationOrder).toBe('newest_first');
+    expect(after.serviceTypeRestrictionMode).toBe('restricted');
     expect(after.eligibleServiceTypeIds).toEqual([tenantEligibleTypeId]);
 
     // Unrelated overrides survive the go-custom write.

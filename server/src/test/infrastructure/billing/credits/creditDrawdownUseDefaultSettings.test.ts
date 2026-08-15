@@ -148,6 +148,7 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
       suppress_zero_dollar_invoices: false,
       credit_auto_apply_enabled: false,
       credit_application_order: 'oldest_first',
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([tenantEligibleTypeId]),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -166,6 +167,7 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
       external_credit_note: 'Paid through Dec 2026 by check',
       credit_auto_apply_enabled: true,
       credit_application_order: 'newest_first',
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([clientEligibleTypeId]),
       created_at: now,
       updated_at: now,
@@ -175,7 +177,7 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
     await updateClientBillingSettings(context.db, context.tenantId, clientId, {
       creditAutoApplyEnabled: null,
       creditApplicationOrder: null,
-      creditEligibleServiceTypeIds: null,
+      creditServiceTypeRestrictionMode: null,
     });
 
     const row = await tenantTable(context, 'client_billing_settings')
@@ -196,12 +198,14 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
     // The three draw-down fields revert to inherit.
     expect(row.credit_auto_apply_enabled).toBeNull();
     expect(row.credit_application_order).toBeNull();
+    expect(row.credit_service_type_restriction_mode).toBeNull();
     expect(row.credit_eligible_service_type_ids).toBeNull();
 
     // The resolved policy now follows the tenant defaults.
     const policy = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);
     expect(policy.autoApplyEnabled).toBe(false);
     expect(policy.applicationOrder).toBe('oldest_first');
+    expect(policy.serviceTypeRestrictionMode).toBe('restricted');
     expect(policy.eligibleServiceTypeIds).toEqual([tenantEligibleTypeId]);
 
     // A subsequent single-field draw-down edit (e.g. toggling auto-apply) must
@@ -224,6 +228,7 @@ describe('Credit Draw-Down "Use Default Settings" Data-Loss Fix', () => {
 
     expect(rowAfterEdit.credit_auto_apply_enabled).toBe(true);
     expect(rowAfterEdit.credit_application_order).toBeNull();
+    expect(rowAfterEdit.credit_service_type_restriction_mode).toBeNull();
     expect(rowAfterEdit.credit_eligible_service_type_ids).toBeNull();
 
     const policyAfterEdit = await resolveCreditDrawdownPolicy(context.db, context.tenantId, clientId);

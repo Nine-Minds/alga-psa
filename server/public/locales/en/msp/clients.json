@@ -921,8 +921,18 @@
     "selectOrder": "Select credit order",
     "orderHelp": "Choose the order in which credits are consumed",
     "serviceTypesLabel": "Eligible service types",
-    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
+    "serviceTypesHelp": "Choose whether credit can be applied to all charges or only to charges for the selected service types.",
     "noServiceTypes": "No service types configured.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Use tenant default",
+        "all": "All service types",
+        "restricted": "Only selected types",
+        "placeholder": "Select service type restriction"
+      },
+      "inheritedRestricted": "Tenant default: only selected types ({{types}}).",
+      "restricted": "Credit is restricted to the selected service types. Select at least one to save."
+    },
     "order": {
       "expirationFirst": "Expiring soonest first",
       "oldestFirst": "Oldest credit first",

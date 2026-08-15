@@ -921,8 +921,18 @@
     "selectOrder": "Selecteer kredietvolgorde",
     "orderHelp": "Kies de volgorde waarin kredieten worden verbruikt",
     "serviceTypesLabel": "In aanmerking komende servicetypen",
-    "serviceTypesHelp": "Beperk krediettoepassing tot de geselecteerde servicetypen. Laat alles uitgevinkt om krediet op alle kosten toe te passen.",
+    "serviceTypesHelp": "Kies of krediet kan worden toegepast op alle kosten of alleen op kosten voor de geselecteerde servicetypen.",
     "noServiceTypes": "Geen servicetypen geconfigureerd.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Standaard van de tenant gebruiken",
+        "all": "Alle servicetypen",
+        "restricted": "Alleen geselecteerde typen",
+        "placeholder": "Selecteer servicetype-beperking"
+      },
+      "inheritedRestricted": "Standaard van de tenant: alleen geselecteerde typen ({{types}}).",
+      "restricted": "Krediet is beperkt tot de geselecteerde servicetypen. Selecteer er minstens één om op te slaan."
+    },
     "order": {
       "expirationFirst": "Eerst het snelst vervallende",
       "oldestFirst": "Oudste krediet eerst",

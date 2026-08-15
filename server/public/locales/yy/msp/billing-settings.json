@@ -105,7 +105,11 @@
           "label": "55555",
           "help": "55555",
           "empty": "55555",
-          "restricted": "55555"
+          "restricted": "55555",
+          "mode": {
+            "all": "55555",
+            "restricted": "55555"
+          }
         }
       },
       "options": {

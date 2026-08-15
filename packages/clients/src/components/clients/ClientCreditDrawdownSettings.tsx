@@ -23,6 +23,7 @@ interface BillingSettings {
   creditExpirationNotificationDays?: number[];
   creditAutoApplyEnabled?: boolean | null;
   creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
+  creditServiceTypeRestrictionMode?: 'all' | 'restricted' | null;
   creditEligibleServiceTypeIds?: string[] | null;
 }
 
@@ -32,6 +33,7 @@ interface ResolvedDrawdownPolicy {
   autoApplyEnabled: boolean;
   applicationOrder: 'expiration_first' | 'oldest_first' | 'newest_first';
   eligibleServiceTypeIds: string[] | null;
+  serviceTypeRestrictionMode: 'all' | 'restricted';
 }
 
 // A client is "using defaults" when none of the three draw-down fields carry a
@@ -44,7 +46,7 @@ function hasDrawdownOverrides(settings: BillingSettings | null): boolean {
   return (
     settings.creditAutoApplyEnabled != null ||
     settings.creditApplicationOrder != null ||
-    settings.creditEligibleServiceTypeIds != null
+    settings.creditServiceTypeRestrictionMode != null
   );
 }
 
@@ -121,20 +123,78 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
     }
   };
 
+  const handleServiceTypeModeChange = async (value: string) => {
+    try {
+      if (value === 'inherit') {
+        // Revert only this field to the tenant default.
+        const result = await updateClientContractLineSettingsAsync(clientId, {
+          creditServiceTypeRestrictionMode: null,
+        });
+        if (result.success) {
+          setSettings((prev) => ({
+            ...prev,
+            creditServiceTypeRestrictionMode: null,
+            creditEligibleServiceTypeIds: null,
+          }));
+          toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
+        }
+      } else if (value === 'all') {
+        // Explicit unrestricted override.
+        const result = await updateClientContractLineSettingsAsync(clientId, {
+          creditServiceTypeRestrictionMode: 'all',
+        });
+        if (result.success) {
+          setSettings((prev) => ({
+            ...prev,
+            creditServiceTypeRestrictionMode: 'all',
+            creditEligibleServiceTypeIds: null,
+          }));
+          setUseDefault(false);
+          toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
+        }
+      } else {
+        // "Only selected types": enter selection without persisting yet — a
+        // restricted mode requires a non-empty list, so it is committed together
+        // with the first selection below.
+        setSettings((prev) => ({ ...prev, creditServiceTypeRestrictionMode: 'restricted' }));
+        setUseDefault(false);
+      }
+    } catch (error) {
+      handleError(error, t('clientCreditDrawdownSettings.saveError', { defaultValue: 'Failed to save settings' }));
+    }
+  };
+
   const handleServiceTypeToggle = async (serviceTypeId: string, checked: boolean) => {
     try {
       const current = settings?.creditEligibleServiceTypeIds ?? [];
       const next = checked
         ? Array.from(new Set([...current, serviceTypeId]))
         : current.filter((id) => id !== serviceTypeId);
-      const nextValue = next.length === 0 ? null : next;
-      // Send only the field being changed; the shared update path leaves every
-      // unrelated override untouched.
+      if (next.length === 0) {
+        // Deselecting the last type reverts to the tenant default.
+        const result = await updateClientContractLineSettingsAsync(clientId, {
+          creditServiceTypeRestrictionMode: null,
+        });
+        if (result.success) {
+          setSettings((prev) => ({
+            ...prev,
+            creditServiceTypeRestrictionMode: null,
+            creditEligibleServiceTypeIds: null,
+          }));
+          toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
+        }
+        return;
+      }
       const result = await updateClientContractLineSettingsAsync(clientId, {
-        creditEligibleServiceTypeIds: nextValue,
+        creditServiceTypeRestrictionMode: 'restricted',
+        creditEligibleServiceTypeIds: next,
       });
       if (result.success) {
-        setSettings((prev) => ({ ...prev, creditEligibleServiceTypeIds: nextValue }));
+        setSettings((prev) => ({
+          ...prev,
+          creditServiceTypeRestrictionMode: 'restricted',
+          creditEligibleServiceTypeIds: next,
+        }));
         setUseDefault(false);
         toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
       }
@@ -152,7 +212,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         const result = await updateClientContractLineSettingsAsync(clientId, {
           creditAutoApplyEnabled: null,
           creditApplicationOrder: null,
-          creditEligibleServiceTypeIds: null,
+          creditServiceTypeRestrictionMode: null,
         });
         if (result.success) {
           setSettings(null);
@@ -175,10 +235,12 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
           autoApplyEnabled: true,
           applicationOrder: 'expiration_first',
           eligibleServiceTypeIds: null,
+          serviceTypeRestrictionMode: 'all',
         };
         const newSettings: BillingSettings = {
           creditAutoApplyEnabled: seed.autoApplyEnabled,
           creditApplicationOrder: seed.applicationOrder,
+          creditServiceTypeRestrictionMode: seed.serviceTypeRestrictionMode,
           creditEligibleServiceTypeIds: seed.eligibleServiceTypeIds,
         };
         const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
@@ -208,9 +270,27 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   const effectiveOrder = useDefault
     ? (resolvedPolicy?.applicationOrder ?? 'expiration_first')
     : (settings?.creditApplicationOrder ?? 'expiration_first');
-  const effectiveEligibleIds = useDefault
-    ? (resolvedPolicy?.eligibleServiceTypeIds ?? [])
-    : (settings?.creditEligibleServiceTypeIds ?? []);
+
+  // The service-type restriction is an explicit three-way choice. When the
+  // master "Use Default Settings" is active the control is disabled and shows
+  // "inherit"; otherwise it reflects the client's own mode.
+  const serviceTypeChoice = useDefault
+    ? 'inherit'
+    : (settings?.creditServiceTypeRestrictionMode === 'all'
+        ? 'all'
+        : settings?.creditServiceTypeRestrictionMode === 'restricted'
+          ? 'restricted'
+          : 'inherit');
+  const selectedEligibleIds = settings?.creditEligibleServiceTypeIds ?? [];
+  const inheritedRestrictedNames = (resolvedPolicy?.eligibleServiceTypeIds ?? [])
+    .map((id) => serviceTypes.find((st) => st.id === id)?.name ?? id)
+    .join(', ');
+
+  const serviceTypeModeOptions = [
+    { value: 'inherit', label: t('clientCreditDrawdownSettings.serviceTypes.mode.inherit', { defaultValue: 'Use tenant default' }) },
+    { value: 'all', label: t('clientCreditDrawdownSettings.serviceTypes.mode.all', { defaultValue: 'All service types' }) },
+    { value: 'restricted', label: t('clientCreditDrawdownSettings.serviceTypes.mode.restricted', { defaultValue: 'Only selected types' }) },
+  ];
 
   return (
     <div className="mt-6">
@@ -267,28 +347,48 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
             </div>
 
             <div className="space-y-2">
-              <Label>{t('clientCreditDrawdownSettings.serviceTypesLabel', { defaultValue: 'Eligible service types' })}</Label>
+              <CustomSelect
+                id="client-credit-service-type-restriction-mode"
+                options={serviceTypeModeOptions}
+                value={serviceTypeChoice}
+                onValueChange={handleServiceTypeModeChange}
+                placeholder={t('clientCreditDrawdownSettings.serviceTypes.mode.placeholder', { defaultValue: 'Select service type restriction' })}
+                label={t('clientCreditDrawdownSettings.serviceTypesLabel', { defaultValue: 'Eligible service types' })}
+                disabled={useDefault}
+              />
               <p className="text-sm text-muted-foreground">
-                {t('clientCreditDrawdownSettings.serviceTypesHelp', { defaultValue: 'Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.' })}
+                {t('clientCreditDrawdownSettings.serviceTypesHelp', { defaultValue: 'Choose whether credit can be applied to all charges or only to charges for the selected service types.' })}
               </p>
-              <div className="space-y-2 rounded-md border border-[rgb(var(--color-border-200))] p-3">
-                {serviceTypes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t('clientCreditDrawdownSettings.noServiceTypes', { defaultValue: 'No service types configured.' })}
+              {useDefault && resolvedPolicy?.serviceTypeRestrictionMode === 'restricted' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('clientCreditDrawdownSettings.serviceTypes.inheritedRestricted', {
+                    defaultValue: 'Tenant default: only selected types ({{types}}).',
+                    types: inheritedRestrictedNames,
+                  })}
+                </p>
+              )}
+              {serviceTypeChoice === 'restricted' && (
+                <div className="space-y-2 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+                  {serviceTypes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t('clientCreditDrawdownSettings.noServiceTypes', { defaultValue: 'No service types configured.' })}
+                    </p>
+                  ) : (
+                    serviceTypes.map((serviceType) => (
+                      <Checkbox
+                        key={serviceType.id}
+                        id={`client-credit-eligible-service-type-${serviceType.id}`}
+                        label={serviceType.name}
+                        checked={selectedEligibleIds.includes(serviceType.id)}
+                        onChange={(event) => handleServiceTypeToggle(serviceType.id, event.target.checked)}
+                      />
+                    ))
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {t('clientCreditDrawdownSettings.serviceTypes.restricted', { defaultValue: 'Credit is restricted to the selected service types. Select at least one to save.' })}
                   </p>
-                ) : (
-                  serviceTypes.map((serviceType) => (
-                    <Checkbox
-                      key={serviceType.id}
-                      id={`client-credit-eligible-service-type-${serviceType.id}`}
-                      label={serviceType.name}
-                      checked={effectiveEligibleIds.includes(serviceType.id)}
-                      disabled={useDefault}
-                      onChange={(event) => handleServiceTypeToggle(serviceType.id, event.target.checked)}
-                    />
-                  ))
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

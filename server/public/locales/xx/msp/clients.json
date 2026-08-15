@@ -923,6 +923,16 @@
     "serviceTypesLabel": "11111",
     "serviceTypesHelp": "11111",
     "noServiceTypes": "11111",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "11111",
+        "all": "11111",
+        "restricted": "11111",
+        "placeholder": "11111"
+      },
+      "inheritedRestricted": "11111",
+      "restricted": "11111"
+    },
     "order": {
       "expirationFirst": "11111",
       "oldestFirst": "11111",

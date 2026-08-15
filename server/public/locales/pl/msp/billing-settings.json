@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "Kwalifikujące się typy usług",
-          "help": "Ogranicz stosowanie kredytu do wybranych typów usług. Pozostaw wszystkie odznaczone, aby stosować kredyt do wszystkich opłat.",
+          "help": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
           "empty": "Nie skonfigurowano typów usług.",
-          "restricted": "Kredyt jest ograniczony do wybranych typów usług."
+          "restricted": "Kredyt jest ograniczony do wybranych typów usług.",
+          "mode": {
+            "all": "Wszystkie typy usług",
+            "restricted": "Tylko wybrane typy"
+          }
         }
       },
       "options": {

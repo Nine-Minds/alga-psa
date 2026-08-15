@@ -921,8 +921,18 @@
     "selectOrder": "Sélectionnez l'ordre du crédit",
     "orderHelp": "Choisissez l'ordre dans lequel les crédits sont consommés",
     "serviceTypesLabel": "Types de services éligibles",
-    "serviceTypesHelp": "Limitez l'application du crédit aux types de services sélectionnés. Laissez tout décoché pour appliquer le crédit à tous les frais.",
+    "serviceTypesHelp": "Choisissez si le crédit peut être appliqué à tous les frais ou uniquement aux frais des types de services sélectionnés.",
     "noServiceTypes": "Aucun type de service configuré.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Utiliser la valeur par défaut du locataire",
+        "all": "Tous les types de services",
+        "restricted": "Uniquement les types sélectionnés",
+        "placeholder": "Sélectionner la restriction de type de service"
+      },
+      "inheritedRestricted": "Valeur par défaut du locataire : uniquement les types sélectionnés ({{types}}).",
+      "restricted": "Le crédit est limité aux types de services sélectionnés. Sélectionnez-en au moins un pour enregistrer."
+    },
     "order": {
       "expirationFirst": "Expirant le plus tôt en premier",
       "oldestFirst": "Crédit le plus ancien en premier",

@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "Tipos de serviço elegíveis",
-          "help": "Restrinja a aplicação de crédito aos tipos de serviço selecionados. Deixe todos desmarcados para aplicar o crédito a todas as cobranças.",
+          "help": "Escolha se o crédito pode ser aplicado a todas as cobranças ou apenas às cobranças dos tipos de serviço selecionados.",
           "empty": "Nenhum tipo de serviço configurado.",
-          "restricted": "O crédito está restrito aos tipos de serviço selecionados."
+          "restricted": "O crédito está restrito aos tipos de serviço selecionados.",
+          "mode": {
+            "all": "Todos os tipos de serviço",
+            "restricted": "Somente os tipos selecionados"
+          }
         }
       },
       "options": {

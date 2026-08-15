@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "Eligible service types",
-          "help": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
+          "help": "Choose whether credit can be applied to all charges or only to charges for the selected service types.",
           "empty": "No service types configured.",
-          "restricted": "Credit is restricted to the selected service types."
+          "restricted": "Credit is restricted to the selected service types.",
+          "mode": {
+            "all": "All service types",
+            "restricted": "Only selected types"
+          }
         }
       },
       "options": {

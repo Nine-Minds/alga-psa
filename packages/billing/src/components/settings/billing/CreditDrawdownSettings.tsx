@@ -23,6 +23,7 @@ const CreditDrawdownSettings = (): React.JSX.Element => {
     suppressZeroDollarInvoices: false,
     creditAutoApplyEnabled: true,
     creditApplicationOrder: 'expiration_first',
+    creditServiceTypeRestrictionMode: 'all',
     creditEligibleServiceTypeIds: null,
   });
   const [serviceTypes, setServiceTypes] = React.useState<ServiceTypeOption[]>([]);
@@ -82,29 +83,71 @@ const CreditDrawdownSettings = (): React.JSX.Element => {
     }
   };
 
-  const handleServiceTypeToggle = async (serviceTypeId: string, checked: boolean) => {
+  const handleModeChange = async (value: string) => {
     try {
-      const current = settings.creditEligibleServiceTypeIds ?? [];
-      const next = checked
-        ? Array.from(new Set([...current, serviceTypeId]))
-        : current.filter((id) => id !== serviceTypeId);
-      // No selection = no restriction (null).
-      const nextValue = next.length === 0 ? null : next;
-      if (await persist({ creditEligibleServiceTypeIds: nextValue })) {
-        setSettings((prev) => ({ ...prev, creditEligibleServiceTypeIds: nextValue }));
+      if (value === 'all') {
+        if (await persist({ creditServiceTypeRestrictionMode: 'all' })) {
+          setSettings((prev) => ({
+            ...prev,
+            creditServiceTypeRestrictionMode: 'all',
+            creditEligibleServiceTypeIds: null,
+          }));
+        }
+      } else {
+        // Enter "Only selected types" without persisting yet: a restricted mode
+        // must carry a non-empty ids list, so it is committed together with the
+        // first selection below.
+        setSettings((prev) => ({
+          ...prev,
+          creditServiceTypeRestrictionMode: 'restricted',
+        }));
       }
     } catch (error) {
       handleError(error, t('general.creditDrawdown.errors.save', { defaultValue: 'Failed to save settings' }));
     }
   };
 
+  const handleServiceTypeToggle = async (serviceTypeId: string, checked: boolean) => {
+    try {
+      const current = settings.creditEligibleServiceTypeIds ?? [];
+      const next = checked
+        ? Array.from(new Set([...current, serviceTypeId]))
+        : current.filter((id) => id !== serviceTypeId);
+      if (next.length === 0) {
+        // Deselecting the last type returns to "All service types".
+        if (await persist({ creditServiceTypeRestrictionMode: 'all' })) {
+          setSettings((prev) => ({
+            ...prev,
+            creditServiceTypeRestrictionMode: 'all',
+            creditEligibleServiceTypeIds: null,
+          }));
+        }
+        return;
+      }
+      if (await persist({ creditServiceTypeRestrictionMode: 'restricted', creditEligibleServiceTypeIds: next })) {
+        setSettings((prev) => ({
+          ...prev,
+          creditServiceTypeRestrictionMode: 'restricted',
+          creditEligibleServiceTypeIds: next,
+        }));
+      }
+    } catch (error) {
+      handleError(error, t('general.creditDrawdown.errors.save', { defaultValue: 'Failed to save settings' }));
+    }
+  };
+
+  const restrictionMode = settings.creditServiceTypeRestrictionMode === 'restricted' ? 'restricted' : 'all';
   const selectedIds = settings.creditEligibleServiceTypeIds ?? [];
-  const restricted = Array.isArray(settings.creditEligibleServiceTypeIds);
 
   const orderOptions = [
     { value: 'expiration_first', label: t('general.creditDrawdown.options.expirationFirst', { defaultValue: 'Expiring soonest first' }) },
     { value: 'oldest_first', label: t('general.creditDrawdown.options.oldestFirst', { defaultValue: 'Oldest credit first' }) },
     { value: 'newest_first', label: t('general.creditDrawdown.options.newestFirst', { defaultValue: 'Newest credit first' }) },
+  ];
+
+  const restrictionModeOptions = [
+    { value: 'all', label: t('general.creditDrawdown.fields.serviceTypes.mode.all', { defaultValue: 'All service types' }) },
+    { value: 'restricted', label: t('general.creditDrawdown.fields.serviceTypes.mode.restricted', { defaultValue: 'Only selected types' }) },
   ];
 
   return (
@@ -151,42 +194,47 @@ const CreditDrawdownSettings = (): React.JSX.Element => {
       </div>
 
       <div className="space-y-2">
-        <Label>
-          {t('general.creditDrawdown.fields.serviceTypes.label', {
+        <CustomSelect
+          id="credit-service-type-restriction-mode"
+          options={restrictionModeOptions}
+          value={restrictionMode}
+          onValueChange={handleModeChange}
+          label={t('general.creditDrawdown.fields.serviceTypes.label', {
             defaultValue: 'Eligible service types'
           })}
-        </Label>
+          className="!w-fit"
+        />
         <p className="text-sm text-muted-foreground">
           {t('general.creditDrawdown.fields.serviceTypes.help', {
-            defaultValue: 'Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.'
+            defaultValue: 'Choose whether credit can be applied to all charges or only to charges for the selected service types.'
           })}
         </p>
-        <div className="space-y-2 rounded-md border border-[rgb(var(--color-border-200))] p-3">
-          {serviceTypes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t('general.creditDrawdown.fields.serviceTypes.empty', {
-                defaultValue: 'No service types configured.'
-              })}
-            </p>
-          ) : (
-            serviceTypes.map((serviceType) => (
-              <Checkbox
-                key={serviceType.id}
-                id={`credit-eligible-service-type-${serviceType.id}`}
-                label={serviceType.name}
-                checked={selectedIds.includes(serviceType.id)}
-                onChange={(event) => handleServiceTypeToggle(serviceType.id, event.target.checked)}
-              />
-            ))
-          )}
-          {restricted && (
+        {restrictionMode === 'restricted' && (
+          <div className="space-y-2 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            {serviceTypes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t('general.creditDrawdown.fields.serviceTypes.empty', {
+                  defaultValue: 'No service types configured.'
+                })}
+              </p>
+            ) : (
+              serviceTypes.map((serviceType) => (
+                <Checkbox
+                  key={serviceType.id}
+                  id={`credit-eligible-service-type-${serviceType.id}`}
+                  label={serviceType.name}
+                  checked={selectedIds.includes(serviceType.id)}
+                  onChange={(event) => handleServiceTypeToggle(serviceType.id, event.target.checked)}
+                />
+              ))
+            )}
             <p className="text-xs text-muted-foreground">
               {t('general.creditDrawdown.fields.serviceTypes.restricted', {
                 defaultValue: 'Credit is restricted to the selected service types.'
               })}
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

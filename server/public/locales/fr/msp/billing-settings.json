@@ -103,9 +103,13 @@
         },
         "serviceTypes": {
           "label": "Types de services éligibles",
-          "help": "Limitez l'application du crédit aux types de services sélectionnés. Laissez tout décoché pour appliquer le crédit à tous les frais.",
+          "help": "Choisissez si le crédit peut être appliqué à tous les frais ou uniquement aux frais des types de services sélectionnés.",
           "empty": "Aucun type de service configuré.",
-          "restricted": "Le crédit est limité aux types de services sélectionnés."
+          "restricted": "Le crédit est limité aux types de services sélectionnés.",
+          "mode": {
+            "all": "Tous les types de services",
+            "restricted": "Uniquement les types sélectionnés"
+          }
         }
       },
       "options": {

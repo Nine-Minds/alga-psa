@@ -349,6 +349,7 @@ describe('Credit Draw-Down Policy Controls', () => {
       suppress_zero_dollar_invoices: false,
       credit_auto_apply_enabled: false,
       credit_application_order: 'newest_first',
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -437,6 +438,7 @@ describe('Credit Draw-Down Policy Controls', () => {
     const hardwareTypeId = await createServiceType('Hardware');
 
     await ensureClientBillingSettings(clientId, {
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
     });
 
@@ -506,6 +508,7 @@ describe('Credit Draw-Down Policy Controls', () => {
     // gates every manual application.
     await ensureClientBillingSettings(clientId, {
       credit_auto_apply_enabled: false,
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
     });
 
@@ -587,6 +590,7 @@ describe('Credit Draw-Down Policy Controls', () => {
 
     // Auto-apply on (default): finalize draws down the eligible labor subtotal.
     await ensureClientBillingSettings(clientId, {
+      credit_service_type_restriction_mode: 'restricted',
       credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
     });
 

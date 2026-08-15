@@ -61,6 +61,8 @@ export interface BillingSettings {
   creditAutoApplyEnabled?: boolean | null;
   /** undefined = leave unchanged; an order = client override; null = revert to tenant default. */
   creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
+  /** undefined = leave unchanged; 'all'/'restricted' = override; null = revert to tenant default (client) / coerced to 'all' (tenant). */
+  creditServiceTypeRestrictionMode?: 'all' | 'restricted' | null;
   /** null = no restriction; array = restrict credit application to these service type ids. */
   creditEligibleServiceTypeIds?: string[] | null;
 }
@@ -133,6 +135,9 @@ export const getDefaultBillingSettings = withAuth(async (
       recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
       creditAutoApplyEnabled: settings.credit_auto_apply_enabled ?? true,
       creditApplicationOrder: settings.credit_application_order ?? 'expiration_first',
+      creditServiceTypeRestrictionMode: settings.credit_service_type_restriction_mode === 'restricted'
+        ? 'restricted'
+        : 'all',
       creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
     };
   });
@@ -200,10 +205,30 @@ export const updateDefaultBillingSettings = withAuth(async (
     if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
     if (has('creditAutoApplyEnabled')) columnValues.credit_auto_apply_enabled = data.creditAutoApplyEnabled ?? true;
     if (has('creditApplicationOrder')) columnValues.credit_application_order = data.creditApplicationOrder ?? 'expiration_first';
-    if (has('creditEligibleServiceTypeIds')) {
-      columnValues.credit_eligible_service_type_ids = data.creditEligibleServiceTypeIds === null || data.creditEligibleServiceTypeIds === undefined
-        ? null
-        : JSON.stringify(data.creditEligibleServiceTypeIds);
+
+    // Service-type restriction: mode is the source of truth; derive a single
+    // consistent mode + ids pair so the DB CHECK constraints always hold.
+    const creditRestriction = (() => {
+      const modeProvided = has('creditServiceTypeRestrictionMode');
+      const idsProvided = has('creditEligibleServiceTypeIds');
+      const ids = data.creditEligibleServiceTypeIds;
+      const idsArray = Array.isArray(ids) && ids.length > 0 ? ids : null;
+
+      if (modeProvided) {
+        const mode = data.creditServiceTypeRestrictionMode === 'restricted' ? 'restricted' as const : 'all' as const;
+        return { mode, ids: mode === 'restricted' && idsArray ? JSON.stringify(idsArray) : null };
+      }
+      if (idsProvided) {
+        return idsArray
+          ? { mode: 'restricted' as const, ids: JSON.stringify(idsArray) }
+          : { mode: 'all' as const, ids: null };
+      }
+      return null;
+    })();
+
+    if (creditRestriction) {
+      columnValues.credit_service_type_restriction_mode = creditRestriction.mode;
+      columnValues.credit_eligible_service_type_ids = creditRestriction.ids;
     }
 
     if (existingSettings) {
@@ -231,9 +256,8 @@ export const updateDefaultBillingSettings = withAuth(async (
         renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
         credit_auto_apply_enabled: data.creditAutoApplyEnabled ?? true,
         credit_application_order: data.creditApplicationOrder ?? 'expiration_first',
-        credit_eligible_service_type_ids: data.creditEligibleServiceTypeIds === null || data.creditEligibleServiceTypeIds === undefined
-          ? null
-          : JSON.stringify(data.creditEligibleServiceTypeIds),
+        credit_service_type_restriction_mode: creditRestriction?.mode ?? 'all',
+        credit_eligible_service_type_ids: creditRestriction?.ids ?? null,
       });
     }
     });
@@ -282,6 +306,9 @@ export const getClientContractLineSettings = withAuth(async (
     recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
     creditAutoApplyEnabled: settings.credit_auto_apply_enabled ?? undefined,
     creditApplicationOrder: settings.credit_application_order ?? undefined,
+    creditServiceTypeRestrictionMode: settings.credit_service_type_restriction_mode === 'all' || settings.credit_service_type_restriction_mode === 'restricted'
+      ? settings.credit_service_type_restriction_mode
+      : undefined,
     creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
   };
 });
@@ -313,6 +340,7 @@ export const updateClientContractLineSettings = withAuth(async (
             externalCreditNote: data.externalCreditNote,
             creditAutoApplyEnabled: data.creditAutoApplyEnabled,
             creditApplicationOrder: data.creditApplicationOrder,
+            creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
             creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
           }
         : null

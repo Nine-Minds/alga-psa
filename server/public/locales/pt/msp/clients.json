@@ -921,8 +921,18 @@
     "selectOrder": "Selecione a ordem de crédito",
     "orderHelp": "Escolha a ordem em que os créditos são consumidos",
     "serviceTypesLabel": "Tipos de serviço elegíveis",
-    "serviceTypesHelp": "Restrinja a aplicação de crédito aos tipos de serviço selecionados. Deixe todos desmarcados para aplicar o crédito a todas as cobranças.",
+    "serviceTypesHelp": "Escolha se o crédito pode ser aplicado a todas as cobranças ou apenas às cobranças dos tipos de serviço selecionados.",
     "noServiceTypes": "Nenhum tipo de serviço configurado.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usar o padrão do locatário",
+        "all": "Todos os tipos de serviço",
+        "restricted": "Somente os tipos selecionados",
+        "placeholder": "Selecionar a restrição de tipo de serviço"
+      },
+      "inheritedRestricted": "Padrão do locatário: somente os tipos selecionados ({{types}}).",
+      "restricted": "O crédito está restrito aos tipos de serviço selecionados. Selecione pelo menos um para salvar."
+    },
     "order": {
       "expirationFirst": "Vencimento mais próximo primeiro",
       "oldestFirst": "Crédito mais antigo primeiro",

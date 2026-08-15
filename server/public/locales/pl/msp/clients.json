@@ -971,8 +971,18 @@
     "selectOrder": "Wybierz kolejność kredytu",
     "orderHelp": "Wybierz kolejność, w jakiej kredyty są wykorzystywane",
     "serviceTypesLabel": "Kwalifikujące się typy usług",
-    "serviceTypesHelp": "Ogranicz stosowanie kredytu do wybranych typów usług. Pozostaw wszystkie odznaczone, aby stosować kredyt do wszystkich opłat.",
+    "serviceTypesHelp": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
     "noServiceTypes": "Nie skonfigurowano typów usług.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Użyj wartości domyślnej dzierżawcy",
+        "all": "Wszystkie typy usług",
+        "restricted": "Tylko wybrane typy",
+        "placeholder": "Wybierz ograniczenie typu usługi"
+      },
+      "inheritedRestricted": "Wartość domyślna dzierżawcy: tylko wybrane typy ({{types}}).",
+      "restricted": "Kredyt jest ograniczony do wybranych typów usług. Wybierz co najmniej jeden, aby zapisać."
+    },
     "order": {
       "expirationFirst": "Najpierw wygasające najwcześniej",
       "oldestFirst": "Najpierw najstarszy kredyt",
