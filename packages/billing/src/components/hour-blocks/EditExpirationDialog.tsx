@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { toCalendarDisplayDate } from '@alga-psa/core';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IHourBlock } from '@alga-psa/types';
@@ -39,7 +39,7 @@ export default function EditExpirationDialog({ block, onClose, onChanged }: Edit
     setSubmitting(true);
     setError(null);
     try {
-      const result = await updateHourBlockExpiration(block.block_id, value ? value.toISOString() : null);
+      const result = await updateHourBlockExpiration(block.block_id, value ? toCalendarDateString(value) : null);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         setError(getErrorMessage(result));
         return;

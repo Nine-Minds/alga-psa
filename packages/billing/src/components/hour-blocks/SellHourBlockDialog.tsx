@@ -13,7 +13,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, toCalendarDateString } from '@alga-psa/core';
 import type { IService } from '@alga-psa/types';
 import { createHourBlockPurchaseInvoice } from '@alga-psa/billing/actions/hourBlockActions';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
@@ -142,7 +142,7 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
         serviceId: selectedServiceId,
         hours: hoursNumber,
         hourlyRate: Math.round(rateNumber * 100),
-        expirationDate: expirationDate ? expirationDate.toISOString() : null,
+        expirationDate: expirationDate ? toCalendarDateString(expirationDate) : null,
         scopeServiceIds: Array.from(scopeServiceIds),
         notes: notes.trim() || undefined,
       });

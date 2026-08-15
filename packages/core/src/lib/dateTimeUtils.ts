@@ -75,6 +75,51 @@ export function formatCalendarDate(
   return displayDate ? formatDateOnly(displayDate, formatString) : null;
 }
 
+/**
+ * Convert a DatePicker-produced local-midnight `Date` (or any date-like value)
+ * to a plain calendar-date string (YYYY-MM-DD), reading LOCAL calendar
+ * components. Never round-trips through `toISOString()`: a local-midnight Date
+ * at UTC+2 serializes as the previous UTC day, which is how selected dates
+ * drifted backwards on persist. This is the safe inverse of
+ * {@link toCalendarDisplayDate} — keep the two in step.
+ *
+ * - `Date` → local getFullYear/getMonth/getDate. Safe both for DatePicker
+ *   selections and for pg DATE columns, which node-postgres materializes as
+ *   local-midnight Date objects.
+ * - `YYYY-MM-DD` string → validated via `Temporal.PlainDate.from` and passed
+ *   through byte-for-byte.
+ * - Full ISO instant string → existing UTC calendar-date semantics (legacy
+ *   callers; date-only values never take this branch).
+ * - `Temporal.PlainDate` → its calendar date.
+ * - `null`/`undefined`/`''` → `null`.
+ *
+ * Throws on invalid values; callers treat that as a validation failure.
+ */
+export function toCalendarDateString(
+  value: Date | string | Temporal.PlainDate | null | undefined,
+): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(`Invalid date value: ${String(value)}`);
+    }
+    return (
+      String(value.getFullYear()) +
+      '-' +
+      String(value.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(value.getDate()).padStart(2, '0')
+    );
+  }
+  if (value instanceof Temporal.PlainDate) {
+    return value.toString();
+  }
+  if (value.length === 10) {
+    return Temporal.PlainDate.from(value).toString();
+  }
+  return toPlainDate(value).toString();
+}
+
 export function formatUtcDateNoTime(date: Date): string {
   return (
     date.getUTCFullYear() +

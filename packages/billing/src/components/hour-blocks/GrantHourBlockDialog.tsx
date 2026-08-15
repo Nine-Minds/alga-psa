@@ -13,6 +13,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { toCalendarDateString } from '@alga-psa/core';
 import type { IService } from '@alga-psa/types';
 import { grantHourBlock } from '@alga-psa/billing/actions/hourBlockActions';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
@@ -130,7 +131,7 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
         serviceId: selectedServiceId,
         hours: hoursNumber,
         hourlyRate: Number(rate) > 0 ? Math.round(Number(rate) * 100) : undefined,
-        expirationDate: expirationDate ? expirationDate.toISOString() : null,
+        expirationDate: expirationDate ? toCalendarDateString(expirationDate) : null,
         scopeServiceIds: Array.from(scopeServiceIds),
         reason: reason.trim(),
       });

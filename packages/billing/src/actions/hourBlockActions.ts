@@ -15,6 +15,7 @@ import type {
   IHourBlockGrantInput,
 } from '@alga-psa/types';
 import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
+import { toCalendarDateString } from '@alga-psa/core';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
@@ -261,7 +262,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         currency_code: currencyCode,
         status: 'pending',
         purchased_at: null,
-        expiration_date: expirationDate ? new Date(expirationDate).toISOString().slice(0, 10) : null,
+        expiration_date: toCalendarDateString(expirationDate),
         source_invoice_id: invoiceId,
         source_type: 'purchase',
         created_by: user.user_id,
@@ -324,7 +325,7 @@ export const grantHourBlock = withAuth(async (
         currency_code: client.default_currency_code || 'USD',
         status: 'active',
         purchased_at: now,
-        expiration_date: expirationDate ? new Date(expirationDate).toISOString().slice(0, 10) : null,
+        expiration_date: toCalendarDateString(expirationDate),
         source_invoice_id: null,
         source_type: 'grant',
         created_by: user.user_id,
@@ -422,7 +423,7 @@ export const updateHourBlockExpiration = withAuth(async (
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status === 'voided') throw new Error('Cannot update expiration of a voided hour block');
 
-      const normalized = newDate ? new Date(newDate).toISOString().slice(0, 10) : null;
+      const normalized = toCalendarDateString(newDate);
       await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
         .update({ expiration_date: normalized, updated_at: new Date().toISOString() });
@@ -433,7 +434,7 @@ export const updateHourBlockExpiration = withAuth(async (
         createdBy: user.user_id,
         reason: null,
         metadata: {
-          previous_expiration_date: block.expiration_date ? new Date(block.expiration_date).toISOString().slice(0, 10) : null,
+          previous_expiration_date: toCalendarDateString(block.expiration_date),
           new_expiration_date: normalized,
         },
       });
@@ -607,7 +608,7 @@ export const listHourBlocks = withAuth(async (
         scope_service_ids: scopesByBlock.get(row.block_id)?.map((scope) => scope.service_id) ?? [],
         scope_services: scopesByBlock.get(row.block_id) ?? [],
         has_allocations: Boolean(row.has_allocations),
-        expiration_date: row.expiration_date ? new Date(row.expiration_date).toISOString().slice(0, 10) : null,
+        expiration_date: toCalendarDateString(row.expiration_date),
         remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
       })) as IHourBlock[];
     });
@@ -691,7 +692,7 @@ export const getHourBlockDetail = withAuth(async (
       return {
         block: {
           ...block,
-          expiration_date: block.expiration_date ? new Date(block.expiration_date).toISOString().slice(0, 10) : null,
+          expiration_date: toCalendarDateString(block.expiration_date),
           remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],
