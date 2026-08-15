@@ -98,7 +98,7 @@ function ListChrome({
 }) {
   if (entityScoped) {
     return (
-      <ul id="credentials-screen-list" className="divide-y divide-gray-100">
+      <ul id="credentials-screen-list" className="divide-y divide-[rgb(var(--color-border-100))]">
         {children}
       </ul>
     );
@@ -115,7 +115,7 @@ function ListChrome({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y divide-gray-100">{children}</ul>
+        <ul className="divide-y divide-[rgb(var(--color-border-100))]">{children}</ul>
       </CardContent>
     </Card>
   );
@@ -277,7 +277,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
   if (isLoading && !credentials) {
     return (
-      <p id="credentials-screen-loading" className="text-sm text-gray-500">
+      <p id="credentials-screen-loading" className="text-sm text-[rgb(var(--color-text-500))]">
         {t('credentials.screen.loading')}
       </p>
     );
@@ -318,7 +318,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             an entity embed's scope already fixes the client and the list is
             association-driven (a handful of rows), so none of them inform. */}
         {!entityScoped && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+          <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]">
             <KeyRound className="h-4 w-4 shrink-0" />
             <span>{t('credentials.screen.subtitle')}</span>
           </div>
@@ -373,7 +373,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           {!clientId && (
             <select
               id="credentials-screen-client-filter"
-              className="h-9 rounded-md border border-gray-200 px-2 text-sm"
+              className="h-9 rounded-md border border-[rgb(var(--color-border-200))] px-2 text-sm"
               value={clientFilter}
               onChange={(event) => setClientFilter(event.target.value)}
             >
@@ -387,7 +387,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           )}
           <select
             id="credentials-screen-source-filter"
-            className="h-9 rounded-md border border-gray-200 px-2 text-sm"
+            className="h-9 rounded-md border border-[rgb(var(--color-border-200))] px-2 text-sm"
             value={sourceFilter}
             onChange={(event) => setSourceFilter(event.target.value)}
           >
@@ -406,13 +406,13 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
       {credentials && visibleRows.length === 0 && (
         entityScoped ? (
-          <p id="credentials-screen-empty" className="text-sm text-gray-500 py-1">
+          <p id="credentials-screen-empty" className="text-sm text-[rgb(var(--color-text-500))] py-1">
             {t('credentials.section.empty')}
           </p>
         ) : (
           <Card id="credentials-screen-empty">
             <CardContent>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[rgb(var(--color-text-500))]">
                 {search || clientFilter !== 'all' || sourceFilter !== 'all'
                   ? t('credentials.screen.empty')
                   : t('credentials.screen.emptyNoFilters')}
@@ -431,7 +431,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                 return (
                   <li key={id} className="flex items-start justify-between gap-4 py-2">
                     <div className="flex min-w-0 flex-col gap-1">
-                      <span className="flex items-center gap-2 font-medium text-gray-900">
+                      <span className="flex items-center gap-2 font-medium text-[rgb(var(--color-text-900))]">
                         <span id={`credentials-row-name-${id}`}>{item.name}</span>
                         {/* Badge the marked case only: native vault rows are
                             the default and a label on every row marks nothing. */}
@@ -454,7 +454,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                         )}
                       </span>
                       {item.username && (
-                        <span id={`credentials-row-username-${id}`} className="text-xs text-gray-500">
+                        <span id={`credentials-row-username-${id}`} className="text-xs text-[rgb(var(--color-text-500))]">
                           {item.username}
                         </span>
                       )}
@@ -462,7 +462,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           client tab and client-bound entity embeds already fix
                           the client, so the label would repeat the page. */}
                       {!clientId && !defaultClientId && (item.clientName ?? clientName(item.clientId)) && (
-                        <span id={`credentials-row-client-${id}`} className="text-xs text-gray-500">
+                        <span id={`credentials-row-client-${id}`} className="text-xs text-[rgb(var(--color-text-500))]">
                           {item.clientName ?? clientName(item.clientId)}
                         </span>
                       )}
@@ -471,7 +471,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           {revealed.password !== '' && (
                             <code
                               id={`credentials-row-value-${id}`}
-                              className="rounded bg-gray-100 px-2 py-1 font-mono text-sm text-gray-900"
+                              className="rounded bg-[rgb(var(--color-border-100))] px-2 py-1 font-mono text-sm text-[rgb(var(--color-text-900))]"
                             >
                               {revealed.password}
                             </code>
@@ -492,7 +492,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                         <span
                           id={`credentials-row-reveal-error-${id}`}
                           role="alert"
-                          className="text-xs text-red-600"
+                          className="text-xs text-red-600 dark:text-red-400"
                         >
                           {revealErrorText[errorKey]}
                         </span>
@@ -573,7 +573,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           size="sm"
                           onClick={() => handleDelete(item)}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                         </Button>
                       )}
                       {entityScoped && (
@@ -583,7 +583,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           size="sm"
                           onClick={() => handleDetach(item)}
                         >
-                          <Unlink className="h-3.5 w-3.5 text-red-600" />
+                          <Unlink className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                         </Button>
                       )}
                     </div>
