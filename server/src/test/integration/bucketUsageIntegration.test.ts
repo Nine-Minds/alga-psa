@@ -16,6 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import knexFactory, { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import {
+  computePoolContributionsByService,
   findOrCreateCurrentBucketUsageRecord,
   loadAfterHoursRuleForBucket,
   reconcileBucketUsageRecord,
@@ -1061,6 +1062,91 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       expect(chargeB.tax_region).toBe('US-TESTB');
       expect(chargeB.tax_rate).toBe(5);
       expect(chargeB.tax_amount).toBe(500);
+    });
+  });
+
+  it('excludes a service not configured on the line from a catch-all pool\'s overage contributions', async () => {
+    await withCatchAllOverageFixture(async ({ trx, tenant, clientId, serviceA, contractLineId, bucketId, userId }) => {
+      const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
+
+      // Service X exists in the catalog and has a (mis-routed) time entry on
+      // the line, but is NOT configured on the line and is NOT a pool member.
+      // A catch-all pool only covers the line's own services, so X must never
+      // earn a portion of this pool's overage.
+      const serviceX = randomUUID();
+      const serviceTypeId = (await trx('service_types').where({ tenant }).first('id'))?.id;
+      await trx('service_catalog').insert({
+        tenant, service_id: serviceX, service_name: `off-line-${serviceX.slice(0, 6)}`,
+        billing_method: 'hourly', custom_service_type_id: serviceTypeId,
+      });
+
+      // A contributes 480 weighted minutes; X's entry would be 480 too were the
+      // catch-all draw not line-membership scoped (720 consumed → 120 overage).
+      await trx('time_entries').insert([
+        {
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T10:00:00Z'),
+          end_time: new Date('2026-03-10T18:00:00Z'),
+          billable_duration: 480, service_id: serviceA, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+        {
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T10:00:00Z'),
+          end_time: new Date('2026-03-10T18:00:00Z'),
+          billable_duration: 480, service_id: serviceX, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+      ]);
+
+      await trx('bucket_usage').insert({
+        tenant, usage_id: randomUUID(), client_id: clientId,
+        contract_line_id: contractLineId, service_catalog_id: serviceA,
+        bucket_id: bucketId, period_start: '2026-03-01', period_end: '2026-03-31',
+        minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+      });
+
+      // The draw set is line-membership scoped: X is not among the contributors.
+      const contributions = await computePoolContributionsByService(
+        trx,
+        tenant,
+        {
+          bucketId,
+          contractLineId,
+          coversAllServices: true,
+          periodStart: new Date('2026-03-01T00:00:00.000Z'),
+          periodEndExclusive: new Date('2026-04-01T00:00:00.000Z'),
+        },
+      );
+      expect(contributions).toEqual([{ serviceId: serviceA, weightedMinutes: 480 }]);
+
+      const engine = new BillingEngine();
+      (engine as any).knex = trx;
+      (engine as any).tenant = tenant;
+
+      const charges = await (engine as any).calculateBucketPlanCharges(
+        clientId,
+        { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
+        {
+          contract_line_id: contractLineId,
+          client_contract_line_id: contractLineId,
+          client_contract_id: contractLineId,
+          contract_name: 'Line-Scoped Contribution Contract',
+          contract_line_type: 'Bucket',
+          currency_code: 'USD',
+          location_id: null,
+        },
+      );
+
+      // One charge for A only; X never earns a portion (no invented service FK).
+      expect(charges).toHaveLength(1);
+      const charge = charges[0];
+      expect(charge.serviceId).toBe(serviceA);
+      expect(charge.service_catalog_id).toBe(serviceA);
+      expect(charge.config_id).toBe(bucketId);
+      expect(charge.total).toBe(30000);
+      expect(charge.overageHours).toBe(2);
+      expect(charge.tax_region).toBe('US-TESTA');
     });
   });
 
