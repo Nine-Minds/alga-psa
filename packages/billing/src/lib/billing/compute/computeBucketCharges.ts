@@ -412,7 +412,13 @@ export function computeBucketCharges(
         }
       }
 
-      const hoursUsed = state.consumedQuantity / 60;
+      // Every per-portion quantity is share-scaled so the portion reads as its
+      // own slice of the pool period: hoursUsed/overageHours and (for usage
+      // buckets) unitsUsed/includedUnits/overageUnits all carry the same
+      // `share`, so the invoice-line derivation `hoursUsed − overageHours`
+      // equals this service's prorated included+rollover and the portions sum
+      // to the pool-period truth (rather than each claiming the full pool).
+      const hoursUsed = (state.consumedQuantity / 60) * portion.share;
       const overageHours = (state.overageQuantity / 60) * portion.share;
       charges.push({
         type: "bucket",
@@ -427,8 +433,8 @@ export function computeBucketCharges(
         quantity: isUsageBucket ? state.overageQuantity * portion.share : undefined,
         isUsageBucket,
         unitOfMeasure: portion.unitOfMeasure ?? null,
-        unitsUsed: isUsageBucket ? state.consumedQuantity : undefined,
-        includedUnits: isUsageBucket ? state.availableQuantity : undefined,
+        unitsUsed: isUsageBucket ? state.consumedQuantity * portion.share : undefined,
+        includedUnits: isUsageBucket ? state.availableQuantity * portion.share : undefined,
         overageUnits: isUsageBucket ? state.overageQuantity * portion.share : undefined,
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion,
@@ -449,9 +455,11 @@ export function computeBucketCharges(
       // When any multiplier ≠ 1 or an after-hours rule contributed, the consumed
       // minutes are weighted — name the unit so readers know the burn is weighted.
       const unit = config.isWeighted && !isUsageBucket ? "weighted hrs" : baseUnit;
-      const used = state.consumedQuantity / displayDivisor;
-      const included = state.includedQuantity / displayDivisor;
-      const rollover = state.rolledOverQuantity / displayDivisor;
+      // Share-scaled display values keep the printed equation true for the
+      // portion: used − (included + rollover) = overage.
+      const used = (state.consumedQuantity / displayDivisor) * portion.share;
+      const included = (state.includedQuantity / displayDivisor) * portion.share;
+      const rollover = (state.rolledOverQuantity / displayDivisor) * portion.share;
       const overage = (state.overageQuantity / displayDivisor) * portion.share;
       explanations.push({
         chargeKey: `${config.config_id}:${portion.serviceId}:${period.periodStart}:${period.periodEnd}`,

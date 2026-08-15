@@ -1038,6 +1038,21 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
       expect(chargeA.total).toBe(20000);
       expect(chargeB.total).toBe(10000);
 
+      // Per-portion quantities are share-scaled: hoursUsed sums to the pool's
+      // consumed hours (720 / 60 = 12), and the invoice-style derivation
+      // hoursUsed − overageHours is non-negative and sums to the pool's
+      // included hours (600 / 60 = 10) — no invoice line claims the full pool.
+      expect(chargeA.hoursUsed).toBeCloseTo(12 * (2 / 3), 10);
+      expect(chargeB.hoursUsed).toBeCloseTo(12 * (1 / 3), 10);
+      expect(charges.reduce((sum: number, charge: any) => sum + charge.hoursUsed, 0)).toBeCloseTo(12, 10);
+      const includedA = chargeA.hoursUsed - chargeA.overageHours;
+      const includedB = chargeB.hoursUsed - chargeB.overageHours;
+      expect(includedA).toBeGreaterThanOrEqual(0);
+      expect(includedB).toBeGreaterThanOrEqual(0);
+      expect(includedA).toBeCloseTo(10 * (2 / 3), 10);
+      expect(includedB).toBeCloseTo(10 * (1 / 3), 10);
+      expect(includedA + includedB).toBeCloseTo(10, 10);
+
       // Per-service tax metadata: each portion uses ITS service's tax region and
       // rate (8.25% on $200 → $16.50; 5% on $100 → $5.00).
       expect(chargeA.tax_region).toBe('US-TESTA');
