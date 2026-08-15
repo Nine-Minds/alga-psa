@@ -23,6 +23,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import {
+  ArrowLeft,
   Copy,
   Eye,
   EyeOff,
@@ -157,7 +158,10 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
-  const [linkOpen, setLinkOpen] = useState(false);
+  // Entity embeds swap the body between views instead of stacking overlay
+  // dialogs (the embed often already lives inside the tile's manager dialog,
+  // and a dialog on a dialog reads as broken chrome).
+  const [entityView, setEntityView] = useState<'list' | 'attach' | 'create'>('list');
   const [confirmTarget, setConfirmTarget] = useState<{
     kind: 'detach' | 'delete';
     credential: CredentialSummary;
@@ -222,13 +226,14 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     }
     setFormOpen(false);
     setEditing(null);
+    setEntityView('list');
     await load();
   };
 
   const handleLink = async (credential: CredentialSummary) => {
     if (!entityType || !entityId) return;
     await addCredentialToEntity(entityType, entityId, credential.id);
-    setLinkOpen(false);
+    setEntityView('list');
     await load();
   };
 
@@ -323,6 +328,8 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
   return (
     <div id="credentials-screen" className={entityScoped ? 'space-y-3' : 'space-y-4'}>
+      {(!entityScoped || entityView === 'list') && (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* The vault subtitle, search, and filters are global-screen chrome:
             an entity embed's scope already fixes the client and the list is
@@ -339,7 +346,11 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             size="sm"
             onClick={() => {
               setEditing(null);
-              setFormOpen(true);
+              if (entityScoped) {
+                setEntityView('create');
+              } else {
+                setFormOpen(true);
+              }
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -350,7 +361,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               id="credentials-screen-link"
               variant="outline"
               size="sm"
-              onClick={() => setLinkOpen(true)}
+              onClick={() => setEntityView('attach')}
             >
               <Link2 className="mr-2 h-4 w-4" />
               {t('credentials.screen.linkExisting')}
@@ -602,30 +613,72 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               })}
         </ListChrome>
       )}
+        </>
+      )}
 
-      <CredentialFormDialog
-        isOpen={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(null);
-        }}
-        onSubmit={handleFormSubmit}
-        editing={editing}
-        defaultClientId={defaultClientId ?? clientId ?? null}
-        clients={clients}
-        entityType={entityType ?? null}
-        entityId={entityId ?? null}
-        context={context}
-        onError={() => setLoadError(true)}
-      />
+      {/* Swapped-in views for entity embeds: back affordance + heading, then
+          the picker/form content in place of the list. */}
+      {entityScoped && entityView !== 'list' && (
+        <div id="credentials-screen-subview" className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Button
+              id="credentials-screen-back"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              aria-label={t('credentials.screen.back')}
+              title={t('credentials.screen.back')}
+              onClick={() => setEntityView('list')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+              {entityView === 'attach' ? t('credentials.link.title') : t('credentials.form.title')}
+            </h3>
+          </div>
+          {entityView === 'attach' ? (
+            <CredentialLinkDialog
+              inline
+              isOpen
+              onClose={() => setEntityView('list')}
+              clientId={defaultClientId ?? clientId ?? null}
+              excludeCredentialIds={credentials?.map((c) => c.id) ?? []}
+              onSelect={handleLink}
+            />
+          ) : (
+            <CredentialFormDialog
+              inline
+              isOpen
+              onClose={() => setEntityView('list')}
+              onSubmit={handleFormSubmit}
+              editing={null}
+              defaultClientId={defaultClientId ?? clientId ?? null}
+              clients={clients}
+              entityType={entityType ?? null}
+              entityId={entityId ?? null}
+              context={context}
+            />
+          )}
+        </div>
+      )}
 
-      <CredentialLinkDialog
-        isOpen={linkOpen}
-        onClose={() => setLinkOpen(false)}
-        clientId={entityScoped ? (defaultClientId ?? clientId ?? null) : null}
-        excludeCredentialIds={credentials?.map((c) => c.id) ?? []}
-        onSelect={handleLink}
-      />
+      {/* Global/client-tab surfaces keep the conventional overlay dialog. */}
+      {!entityScoped && (
+        <CredentialFormDialog
+          isOpen={formOpen}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+          onSubmit={handleFormSubmit}
+          editing={editing}
+          defaultClientId={defaultClientId ?? clientId ?? null}
+          clients={clients}
+          entityType={entityType ?? null}
+          entityId={entityId ?? null}
+          context={context}
+        />
+      )}
 
       <CredentialRestrictDialog
         credential={restrictTarget}

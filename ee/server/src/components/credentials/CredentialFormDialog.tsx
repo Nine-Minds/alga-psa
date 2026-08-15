@@ -50,6 +50,12 @@ export interface CredentialFormValue {
 interface CredentialFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Render as swap-in-place content instead of an overlay Dialog. Used by
+   * entity-scoped surfaces (the tile's manager dialog swaps its body to this
+   * view) — a dialog stacked on a dialog reads as broken chrome.
+   */
+  inline?: boolean;
   onSubmit: (value: CredentialFormValue) => Promise<void>;
   /** When set, prefill client (unified client tab / entity sections). */
   defaultClientId?: string | null;
@@ -114,6 +120,7 @@ function associationSummaryLabel(
 export function CredentialFormDialog({
   isOpen,
   onClose,
+  inline = false,
   onSubmit,
   defaultClientId,
   entityType,
@@ -249,25 +256,18 @@ export function CredentialFormDialog({
     }
   };
 
-  return (
-    // Shell owns the chrome: title bar, X, scrollable body, sticky footer.
-    <Dialog
-      id="credential-form-dialog"
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
-      className="max-w-lg"
-      footer={
-        <>
-          <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
-            {t('credentials.form.cancel')}
-          </Button>
-          <Button id="credential-form-submit" onClick={handleSubmit} disabled={isSaving}>
-            {isSaving ? t('credentials.form.saving') : t('credentials.form.save')}
-          </Button>
-        </>
-      }
-    >
+  const cancelButton = (
+    <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+      {t('credentials.form.cancel')}
+    </Button>
+  );
+  const submitButton = (
+    <Button id="credential-form-submit" onClick={handleSubmit} disabled={isSaving}>
+      {isSaving ? t('credentials.form.saving') : t('credentials.form.save')}
+    </Button>
+  );
+
+  const body = (
         <div className="space-y-4">
           <div className="space-y-1">
             <Label htmlFor="credential-form-name">{t('credentials.form.name')}</Label>
@@ -458,6 +458,39 @@ export function CredentialFormDialog({
             </Alert>
           )}
         </div>
+  );
+
+  // Swap-in-place variant: the hosting view provides the heading/back
+  // affordance; actions close out the content instead of a shell footer.
+  if (inline) {
+    if (!isOpen) return null;
+    return (
+      <div id="credential-form-inline">
+        {body}
+        <div className="mt-4 flex justify-end gap-2">
+          {cancelButton}
+          {submitButton}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    // Shell owns the chrome: title bar, X, scrollable body, sticky footer.
+    <Dialog
+      id="credential-form-dialog"
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
+      className="max-w-lg"
+      footer={
+        <>
+          {cancelButton}
+          {submitButton}
+        </>
+      }
+    >
+      {body}
     </Dialog>
   );
 }

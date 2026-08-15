@@ -30,6 +30,12 @@ import type { CredentialSummary } from '../../lib/credentials/contracts';
 interface CredentialLinkDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Render as swap-in-place content instead of an overlay Dialog. Used by
+   * entity-scoped surfaces (the tile's manager dialog swaps its body to this
+   * view) — a dialog stacked on a dialog reads as broken chrome.
+   */
+  inline?: boolean;
   /** Same-client filter: the entity's owning client (null = all clients). */
   clientId?: string | null;
   /** Rows already attached to the entity; excluded from the pool. */
@@ -40,6 +46,7 @@ interface CredentialLinkDialogProps {
 export function CredentialLinkDialog({
   isOpen,
   onClose,
+  inline = false,
   clientId,
   excludeCredentialIds = [],
   onSelect,
@@ -100,22 +107,7 @@ export function CredentialLinkDialog({
     }
   };
 
-  return (
-    // The Dialog shell owns the chrome: title bar, close X, scrollable body,
-    // sticky footer. Sizing lives on the shell (not an inner wrapper), so the
-    // panel and its content agree on width, and Cancel can't scroll away.
-    <Dialog
-      id="credential-link-dialog"
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t('credentials.link.title')}
-      className="max-w-lg"
-      footer={
-        <Button id="credential-link-cancel" variant="outline" onClick={onClose}>
-          {t('credentials.link.cancel')}
-        </Button>
-      }
-    >
+  const body = (
       <div className="space-y-3">
         <Input
           id="credential-link-search"
@@ -169,6 +161,32 @@ export function CredentialLinkDialog({
           </ul>
         )}
       </div>
+  );
+
+  // Swap-in-place variant: the hosting view provides the heading/back
+  // affordance, which doubles as cancel.
+  if (inline) {
+    if (!isOpen) return null;
+    return <div id="credential-link-inline">{body}</div>;
+  }
+
+  return (
+    // The Dialog shell owns the chrome: title bar, close X, scrollable body,
+    // sticky footer. Sizing lives on the shell (not an inner wrapper), so the
+    // panel and its content agree on width, and Cancel can't scroll away.
+    <Dialog
+      id="credential-link-dialog"
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('credentials.link.title')}
+      className="max-w-lg"
+      footer={
+        <Button id="credential-link-cancel" variant="outline" onClick={onClose}>
+          {t('credentials.link.cancel')}
+        </Button>
+      }
+    >
+      {body}
     </Dialog>
   );
 }
