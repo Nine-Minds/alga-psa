@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
 import { IHourBlock } from '@alga-psa/types';
-import { toPlainDate, toISODate } from '../handler-utils/dateTimeUtils';
+import { toCalendarDateString } from '@alga-psa/core';
 
 export interface ExpiredHourBlocksJobData extends Record<string, unknown> {
   tenantId: string;
@@ -37,7 +37,14 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
         await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
-        const today = toISODate(toPlainDate(new Date().toISOString()));
+        // "Today" for expiration eligibility is the server's LOCAL calendar date:
+        // expiration_date is a DATE column holding the user-local calendar date, so
+        // a block expiring 2026-08-31 is expired the moment local time enters
+        // 2026-09-01 — even while UTC still reads 2026-08-31. UTC-today (the old
+        // `toISODate(toPlainDate(new Date().toISOString()))`) delayed auto-expiration
+        // by up to 24h in positive-offset zones. Matches the shared burn engine
+        // (hourBlockService.getAvailableHourBlockMinutes).
+        const today = toCalendarDateString(new Date());
 
         let query = (tenantScopedTable(trx, 'hour_blocks', tenantId) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
           .where('status', 'active')
@@ -68,7 +75,7 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
             reason: 'Auto-expired by nightly job',
             created_by: null,
             metadata: {
-              expiration_date: block.expiration_date,
+              expiration_date: toCalendarDateString(block.expiration_date),
               remaining_minutes_at_expiration: Number(block.remaining_minutes),
             },
           });
