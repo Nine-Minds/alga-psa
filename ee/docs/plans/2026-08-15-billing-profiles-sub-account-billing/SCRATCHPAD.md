@@ -1,0 +1,200 @@
+# SCRATCHPAD — Billing Profiles (Sub-Account Billing Within a Client)
+
+Working memory for this effort. Append discoveries, decisions, commands, and gotchas
+as they come up; revise earlier notes when decisions change.
+
+- Design source: [`docs/plans/2026-08-15-billing-profiles-sub-account-billing-plan.md`](../../../../docs/plans/2026-08-15-billing-profiles-sub-account-billing-plan.md)
+- PRD: [`PRD.md`](./PRD.md) · Features: [`features.json`](./features.json) · Tests: [`tests.json`](./tests.json)
+
+---
+
+## Decisions (with rationale)
+
+| # | Decision | Why |
+|---|---|---|
+| D1 | One entity across both phases — the profile ships in phase 1 as a reporting segment and gains billing powers in phase 2 | The alternative (location-based reporting now, a separate AR entity later) leaves two segmentation dimensions with duplicated rollup logic and a reconciliation problem |
+| D2 | Per-charge resolution, not contract-line granularity | The one-legal-entity-many-facilities shape runs a single shared contract; contract-line granularity would force them to restructure contracts, re-creating the exact pain the feature exists to remove |
+| D3 | The work item carries the profile, not the time entry; soft-defaulted, never required | A technician logging time does not think about billing profiles. They already state which site the work was for. Requiring a per-entry choice guarantees bad data |
+| D4 | A contract assigned to a profile always beats the work item | Billing correctness: a charge cannot land on Profile A's invoice when Profile B's contract priced it. Also makes all three customer shapes fall out of one chain with no mode flag |
+| D5 | Billing cycle becomes per-profile rather than fanning out at generation time | Invoice generation keeps its shape and simply runs more times. Fanning out would complicate credit/prepayment application and every one-invoice-per-cycle assumption in AR. Per-profile billing frequency comes free |
+| D6 | Invisible until a second profile exists | ~All clients will only ever have one profile. Gating on `count == 1` is self-disabling and strictly better than a feature flag for phase 1 |
+| D7 | Credits, prepayments, aging, statements are profile-scoped with client-level rollup | Sibling profiles often have different cards and different owners; a credit silently paying another entity's invoice is a real AR defect |
+| D8 | Attribution is explainable — every charge records which chain step won | The chain has five steps and the pre-existing disambiguation already fails silently |
+
+### Constraint that shaped the whole model
+
+A billing profile **must be its own entity, not a property of location**. One customer
+shape is N locations mapping 1:1 to N profiles; another is *one* location carrying *N*
+profiles. Any model hanging billing off location cannot express both. Locations and
+profiles are independent layers that point at each other.
+
+---
+
+## Discoveries about existing code
+
+Established by a full trace of the time-entry → charge path. These are the facts the
+design rests on; re-verify before relying on a line number, as the tree moves.
+
+### The charge attribution choke point
+
+`invoice_charges.location_id` is derived **100% from `clientContractLine.location_id`**.
+Seven stamp sites in `packages/billing/src/lib/billing/compute/*.ts` funnel into
+`invoiceService.ts:1038`:
+
+```
+computeTimeBasedCharges.ts:306
+computeUsageBasedCharges.ts:229
+computeFixedCharges.ts:411, 555, 656
+computeBucketCharges.ts:277
+computeRecurringQuantityCharges.ts:155
+```
+
+**Consequence:** two time entries on tickets at *different* sites, billed through the
+same hourly line, get the **same** `location_id`. Existing location reporting is
+contract-line-granular, not per-work-item. This is why D2 exists.
+
+The same seven sites are where `billing_profile_id` must be stamped.
+
+### `contract_lines.location_id` is not presentation-only
+
+It resolves tax region via `getLocationTaxRegionCode` (`billingEngine.ts:546-572`),
+consumed through `loadChargeComputeTaxContext` (`billingEngine.ts:628-690`). Current
+precedence: **service tax region → contract-line location region → client default region**.
+
+Profile tax settings must slot into this deliberately — see the open question below.
+Migration for the column: `server/migrations/20260415120200_add_location_to_contract_lines.cjs`.
+
+### Time entries have no client and no location
+
+`time_entries` carries `work_item_id` + `work_item_type` (polymorphic, no ticket FK),
+`service_id`, and a nullable `contract_line_id`. Client is derived at query time via
+`work_item → tickets.client_id` or `→ project_tasks → project_phases → projects.client_id`.
+
+**`tickets.location_id` already exists** (`20250613190110_add_location_to_tickets.cjs`)
+and the billing engine **already joins `tickets`** at `billingEngine.ts:3739-3745` —
+but selects only `title`. Adding the work-item profile to that select is a one-line
+change, which is what makes step 4 of the chain cheap.
+
+### Which charge types can carry a segment at all
+
+| Charge type | Source record | Segment-bearing field? |
+|---|---|---|
+| Hourly / time | `time_entries` | Via ticket (`location_id`) or asset→location — reachable |
+| Manual / ad-hoc | none (request payload) | Caller already passes `location_id` at `invoiceService.ts:478` |
+| Fixed / recurring | none (contract line + recurring periods) | **No per-occurrence record exists** |
+| Usage | `usage_tracking` | Has `client_id` but **no location/segment field** |
+| Bucket | `bucket_usage` | **None** |
+| Project schedule | `project_billing_schedule_entries` | **None** — and `persistProjectScheduleCharges` (`invoiceGeneration.ts:430-446`) sets no `location_id` at all today |
+
+So only time and manual charges can reach chain step 4. Everything else stops at the
+contract. This limitation is documented in the UI rather than hidden (F070).
+
+### The disambiguation insertion point
+
+`determineDefaultContractLine` → `getEligibleContractLines` →
+`resolveDeterministicContractLineSelection` in
+`packages/billing/src/lib/contractLineDisambiguation.ts` already picks a contract line
+by `service_id` at time-entry create (`packages/scheduling/src/actions/timeEntryCrudActions.ts:449-491`),
+returning **null when more than one line matches**.
+
+Rule today: 1 candidate → pick it; >1 → pick the single one with a Bucket overlay;
+otherwise null. A null entry may later be swept up by
+`calculateUnresolvedNonContractCharges` (`billingEngine.ts:1956`, updates at 2100-2110)
+— or not at all. **This silent failure is invisible to users today** and is what
+F068/F069 surface.
+
+### Blast radius of the phase-2 cycle change
+
+11 non-test consumers of `client_billing_cycles`:
+
+```
+server/src/lib/api/services/ClientService.ts
+server/src/lib/api/services/InvoiceService.ts
+packages/billing/src/actions/billingCycleActions.ts
+packages/billing/src/actions/billingAndTax.ts
+packages/billing/src/actions/invoiceGeneration.ts
+packages/billing/src/lib/billing/createBillingCycles.ts
+packages/billing/src/lib/billing/billingEngine.ts
+packages/clients/src/actions/clientContractActions.ts
+packages/clients/src/actions/clientActions.ts
+packages/db/src/lib/tenantTableMetadata.ts
+ee/temporal-workflows/src/activities/tenant-deletion-activities.ts
+```
+
+Plus ~59 test files. Most need only a default profile in fixtures — F100 exists so that
+diff stays mechanical rather than 59 hand edits.
+
+### Tables the phase-2 work touches
+
+- `payment_methods` — `server/migrations/20241117193906_create_payment_methods_table.cjs`,
+  currently keyed `(tenant, payment_method_id)` with index `[tenant, company_id, is_deleted]`.
+- AR — `transactions` + `credit_allocations` (`20241125124900`, `20241125125000`),
+  `credit_tracking` (`20250226125411`). Note `20260728120000_derive_credit_balance_drop_cache_and_reconciliation.cjs`:
+  balance is **derived**, so the derivation query becomes profile-aware — there is no
+  cache to migrate.
+- QBO — mappings in `tenant_external_entity_mappings` (`20250502173321`), keyed
+  `(tenant_id, integration_type, external_entity_id, external_realm_id)`. Client code
+  in `packages/integrations/src/lib/qbo/qboClientService.ts`; routes under
+  `server/src/app/api/v1/integrations/quickbooks/customers/`.
+- Precedent for the backfill marker:
+  `server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`.
+
+---
+
+## Gotchas
+
+- **Do not model profile as a location property.** It is the one modelling mistake that
+  looks reasonable and cannot represent one-location-many-entities. See the constraint above.
+- **The `count == 1` invisibility rule must live in exactly one hook** (F042). Scattered
+  `profiles.length > 1` checks will drift and leak the feature into single-profile
+  clients.
+- **`persistProjectScheduleCharges` stamps no segment today.** Easy to miss because
+  there is no existing `location_id` line to copy — there is nothing there at all.
+- **Backfill must be idempotent** (F005). It will be re-run across environments.
+- **Assert the identity property, don't assume it** (T013). It is the safety guarantee
+  for the entire effort and the only defence against a silent money bug.
+
+---
+
+## Pre-existing bugs found during the trace (NOT in scope — separate cards)
+
+1. **Per-`user_type` hourly rates are never applied.** `computeTimeBasedCharges.ts:164-175`
+   reads `entry.user_type`, but the production loader never selects it — the `users`
+   join at `billingEngine.ts:3687` contributes no columns to the select list
+   (`billingEngine.ts:3812-3823`). Only unit tests injecting `user_type` directly reach
+   that branch. The `user_type_rates` table (`20250318200000`) is effectively dead in
+   real billing.
+2. **`custom_rate` is read from a column that does not exist.** `computeTimeBasedCharges.ts`
+   reads `entry.custom_rate`; `time_entries` has no such column, and
+   `serviceConfig.config.custom_rate` (loaded at `billingEngine.ts:3634`) is never
+   consulted in rate resolution.
+
+Both appear to under-bill silently. Raise as their own cards.
+
+---
+
+## Open questions
+
+1. **Tax precedence.** Proposed: `service region → contract-line location region →
+   profile tax settings → client default region`. Rationale: a contract line pinned to a
+   physical location is a stronger claim about where the service was delivered than the
+   profile's billing identity. **Needs a tax-aware reviewer before Slice 7 lands.**
+2. Should the unresolved-contract-line queue (F068–F069) ship here or as its own card?
+   It fixes a pre-existing defect and delivers value independently of billing profiles.
+
+---
+
+## Commands / runbook
+
+```bash
+# find every site that stamps a segment onto a charge
+grep -rn "location_id:" packages/billing/src/lib/billing/compute/
+
+# blast radius of the phase-2 cycle change (non-test only)
+grep -rln "client_billing_cycles" --include=*.ts --include=*.tsx server/src packages ee \
+  | grep -v "/test/" | grep -v "\.test\."
+
+# plan artifact validation
+python3 ~/.claude/skills/alga-plan/scripts/validate_plan.py \
+  ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing
+```
