@@ -201,7 +201,7 @@
   },
   {
     "id": "F024",
-    "description": "Manager and client addresses are trim/lowercase normalized, collapse to one email delivery when equal, and retain both roles in delivery metadata.",
+    "description": "Manager and client addresses are trim/lowercase normalized and collapse to one email delivery when equal; preferences are evaluated per role so a disabled manager preference can fall back to the opted-in client route.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Recipient semantics"
@@ -217,7 +217,7 @@
   },
   {
     "id": "F026",
-    "description": "Credit-low and bucket-threshold email/internal subtypes and complete localized templates are registered with warning internal type, high default priority, required values, and role-safe links.",
+    "description": "Credit-low and bucket-threshold email/internal subtypes and complete localized templates are registered with warning internal type, high default priority, required values including the localized bucket usage period, and role-safe links.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Notification definitions"
@@ -293,7 +293,7 @@
   },
   {
     "id": "F035",
-    "description": "Preference-disabled deliveries are terminal skipped records, while missing or invalid recipients remain auditable and may be resolved on a later scan when no successful role delivery exists.",
+    "description": "Preferences are applied independently to each authorized role on a collapsed delivery; a row is terminal skipped only when no role remains deliverable, while missing or invalid recipients remain auditable.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Recipient semantics",

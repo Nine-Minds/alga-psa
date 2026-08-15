@@ -143,7 +143,7 @@
   },
   {
     "id": "T016",
-    "description": "DB-backed recipient integration: client delivery is absent by default, opt-in uses the canonical invoice-recipient precedence with recipientClientId, and an address shared with the manager yields one normalized email delivery retaining both roles.",
+    "description": "DB-backed recipient integration: client delivery is absent by default, opt-in uses the canonical invoice-recipient precedence with recipientClientId, and a shared address sends once using the client route/locale when the manager user preference is disabled.",
     "implemented": true,
     "featureIds": [
       "F023",
@@ -161,7 +161,7 @@
   },
   {
     "id": "T018",
-    "description": "Registry completeness: both email and internal subtypes exist for credit and bucket alerts, internal templates are warning/high by default, every billing-email locale is present, every msp/clients locale including xx/yy has settings copy, and links differ safely by recipient role.",
+    "description": "Registry completeness: both email and internal subtypes exist for credit and bucket alerts, localized bucket templates include period start/end in both channels, every supported locale is present, and links differ safely by recipient role.",
     "implemented": true,
     "featureIds": [
       "F026",
@@ -198,7 +198,7 @@
   },
   {
     "id": "T022",
-    "description": "DB-backed lease integration: two drainers claim disjoint deliveries with SKIP LOCKED, stale processing leases are reclaimed, transient failures increment attempts, and the fifth failure becomes exhausted and remains auditable.",
+    "description": "DB-backed lease integration: two drainers claim disjoint deliveries with SKIP LOCKED, one run drains more than the 50-row claim batch, same-run failures are not immediately reclaimed, stale leases are reclaimed, and the fifth later failure becomes exhausted.",
     "implemented": true,
     "featureIds": [
       "F011",

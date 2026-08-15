@@ -14,7 +14,6 @@ const CREDIT_SUBTYPE_NAME = 'prepaid-credit-low-balance';
 const BUCKET_TEMPLATE_NAME = 'prepaid-bucket-threshold-reached';
 const BUCKET_SUBTYPE_NAME = 'prepaid-bucket-threshold-reached';
 
-/* eslint-disable max-len */
 const CREDIT_SUBJECTS = {
   en: 'Prepaid credit running low: {{client.name}}',
   fr: 'Cr\u00e9dit pr\u00e9pay\u00e9 faible : {{client.name}}',
@@ -144,6 +143,7 @@ const BUCKET_COPY = {
     used: 'Used',
     consumedPercent: 'Consumed',
     configuredPercent: 'Configured threshold',
+    period: 'Usage period',
     closingNote: 'Review the bucket so usage does not turn into overage.',
     viewButton: 'View Client',
     footer: 'Powered by AlgaPSA &middot; Keeping teams aligned',
@@ -159,6 +159,7 @@ const BUCKET_COPY = {
     used: 'Utilis\u00e9',
     consumedPercent: 'Consomm\u00e9',
     configuredPercent: 'Seuil configur\u00e9',
+    period: 'P\u00e9riode d\u2019utilisation',
     closingNote: 'V\u00e9rifiez le bloc afin d\u2019\u00e9viter les d\u00e9passements.',
     viewButton: 'Voir le client',
     footer: 'Powered by AlgaPSA &middot; Gardons les \u00e9quipes align\u00e9es',
@@ -174,6 +175,7 @@ const BUCKET_COPY = {
     used: 'Usado',
     consumedPercent: 'Consumido',
     configuredPercent: 'Umbral configurado',
+    period: 'Per\u00edodo de uso',
     closingNote: 'Revise el paquete para que el uso no se convierta en exceso.',
     viewButton: 'Ver cliente',
     footer: 'Powered by AlgaPSA &middot; Manteniendo a los equipos alineados',
@@ -189,6 +191,7 @@ const BUCKET_COPY = {
     used: 'Verbraucht',
     consumedPercent: 'Verbrauch',
     configuredPercent: 'Konfigurierter Schwellenwert',
+    period: 'Nutzungszeitraum',
     closingNote: 'Pr\u00fcfen Sie das Paket, damit \u00dcberstunden nicht zum \u00dcberhang werden.',
     viewButton: 'Kunde anzeigen',
     footer: 'Powered by AlgaPSA &middot; Teams auf Kurs halten',
@@ -204,6 +207,7 @@ const BUCKET_COPY = {
     used: 'Verbruikt',
     consumedPercent: 'Verbruik',
     configuredPercent: 'Geconfigureerde drempel',
+    period: 'Gebruiksperiode',
     closingNote: 'Controleer het pakket zodat verbruik geen overschrijding wordt.',
     viewButton: 'Klant bekijken',
     footer: 'Powered by AlgaPSA &middot; Teams op \u00e9\u00e9n lijn houden',
@@ -219,6 +223,7 @@ const BUCKET_COPY = {
     used: 'Utilizzato',
     consumedPercent: 'Consumato',
     configuredPercent: 'Soglia configurata',
+    period: 'Periodo di utilizzo',
     closingNote: 'Controllare il pacchetto affinch\u00e9 l\u2019uso non diventi un superamento.',
     viewButton: 'Visualizza cliente',
     footer: 'Powered by AlgaPSA &middot; Manteniamo i team allineati',
@@ -234,6 +239,7 @@ const BUCKET_COPY = {
     used: 'Wykorzystano',
     consumedPercent: 'Zu\u017cycie',
     configuredPercent: 'Skonfigurowany pr\u00f3g',
+    period: 'Okres u\u017cytkowania',
     closingNote: 'Sprawd\u017a pakiet, aby zu\u017cycie nie zamieni\u0142o si\u0119 w nadwy\u017ck\u0119.',
     viewButton: 'Zobacz klienta',
     footer: 'Powered by AlgaPSA',
@@ -243,8 +249,6 @@ const BUCKET_COPY = {
     textView: 'Zobacz klienta pod adresem',
   },
 };
-/* eslint-enable max-len */
-
 CREDIT_SUBJECTS.pt = 'Crédito pré-pago baixo: {{client.name}}';
 CREDIT_COPY.pt = {
   headerLabel: 'Crédito pré-pago baixo',
@@ -269,6 +273,7 @@ BUCKET_COPY.pt = {
   used: 'Usado',
   consumedPercent: 'Consumido',
   configuredPercent: 'Limite configurado',
+  period: 'Per\u00edodo de uso',
   closingNote: 'Revise o pacote para que o uso não vire excedente.',
   viewButton: 'Ver cliente',
   footer: 'Powered by AlgaPSA &middot; Mantendo as equipes alinhadas',
@@ -328,8 +333,12 @@ function buildBucketBodyHtml(c) {
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.usedPercent}}%</td>
                   </tr>
                   <tr>
-                    <td style="padding:12px 0;font-weight:600;color:#475467;">${c.configuredPercent}</td>
-                    <td style="padding:12px 0;">{{alert.percent}}%</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.configuredPercent}</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{alert.percent}}%</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-weight:600;color:#475467;">${c.period}</td>
+                    <td style="padding:12px 0;">{{alert.periodStart}} &ndash; {{alert.periodEnd}}</td>
                   </tr>
                 </table>
                 <p style="margin:20px 0 16px 0;font-size:14px;color:#475467;">${c.closingNote}</p>
@@ -345,6 +354,7 @@ ${c.capacity}: {{alert.capacity}}
 ${c.used}: {{alert.used}}
 ${c.consumedPercent}: {{alert.usedPercent}}%
 ${c.configuredPercent}: {{alert.percent}}%
+${c.period}: {{alert.periodStart}} - {{alert.periodEnd}}
 
 ${c.textClosingNote}
 

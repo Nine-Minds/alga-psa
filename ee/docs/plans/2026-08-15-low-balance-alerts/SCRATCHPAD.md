@@ -55,6 +55,8 @@
 - (2026-08-15) Delivery authorization re-resolves the current active internal account manager and the current opt-in/canonical client billing recipient at planning and pre-send time. Billing contacts must belong to the client and be active. Recipient locale is resolved once and passed explicitly with the matching localized context/template send.
 - (2026-08-15) The pre-existing uncommitted `package-lock.json` churn had no corresponding manifest change and was removed in full; no lockfile change is required by task 29.8.20.
 - (2026-08-15) Next.js `"use server"` modules may export only async functions. The billing alert settings action no longer re-exports its shared schema/constants/types; consumers import those directly from the horizontal shared policy module, and the aggregate community build succeeds.
+- (2026-08-15) Shared manager/client email rows evaluate preferences per role. Manager user opt-out removes only that route; an authorized opted-in client role still sends once with client locale/link/recipientClientId. The delivery drain loops through distinct 50-row claims while excluding IDs attempted earlier in the invocation.
+- (2026-08-15) The shared settings reader returns `null` when its tenant-scoped client lookup fails, distinguishing a missing/cross-tenant client from an existing client with no policy. Bucket email and internal contexts now carry locale-formatted period start/end snapshots.
 
 ## Commands / Runbooks
 

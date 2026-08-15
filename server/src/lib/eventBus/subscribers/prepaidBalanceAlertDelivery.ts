@@ -87,6 +87,8 @@ interface AlertForDelivery {
   bucket_percent: number | string | null;
   observed_value: number | string | null;
   observed_capacity: number | string | null;
+  period_start: string | Date | null;
+  period_end: string | Date | null;
   notify_client_on_prepaid_alert: boolean;
   account_manager_id: string | null;
   billing_email: string | null;
@@ -154,6 +156,8 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
       'a.bucket_percent',
       'a.observed_value',
       'a.observed_capacity',
+      'a.period_start',
+      'a.period_end',
       'cbs.notify_client_on_prepaid_alert',
       'cl.account_manager_id',
       'cl.billing_email',
@@ -383,7 +387,8 @@ interface ClaimedDelivery {
 async function claimDeliveries(
   knex: Knex,
   tenantId: string,
-  summary: DeliverySummary
+  summary: DeliverySummary,
+  attemptedDeliveryIds: ReadonlySet<string>
 ): Promise<Array<ClaimedDelivery & { alert: AlertForDelivery }>> {
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenantId);
@@ -428,6 +433,8 @@ async function claimDeliveries(
         'a.bucket_percent',
         'a.observed_value',
         'a.observed_capacity',
+        'a.period_start',
+        'a.period_end',
         'cl.account_manager_id',
         'cl.billing_email',
         'cl.billing_contact_id',
@@ -451,6 +458,9 @@ async function claimDeliveries(
       .limit(CLAIM_BATCH_SIZE)
       .forUpdate()
       .skipLocked();
+    if (attemptedDeliveryIds.size > 0) {
+      query.whereNotIn('d.delivery_id', [...attemptedDeliveryIds]);
+    }
 
     const rows = (await query) as Array<Record<string, unknown> & {
       delivery_id: string;
@@ -528,6 +538,8 @@ async function claimDeliveries(
           bucket_percent: row.bucket_percent as number | string | null,
           observed_value: row.observed_value as number | string | null,
           observed_capacity: row.observed_capacity as number | string | null,
+          period_start: row.period_start as string | Date | null,
+          period_end: row.period_end as string | Date | null,
           notify_client_on_prepaid_alert: true,
           account_manager_id: row.account_manager_id as string | null,
           billing_email: row.billing_email as string | null,
@@ -694,6 +706,64 @@ async function emailPreferencesEnabled(
   return { enabled: true, subtypeId: subtype.id };
 }
 
+interface EmailRoleResolution {
+  authorizedRoles: string[];
+  deliverableRoles: string[];
+  selectedRole: typeof RECIPIENT_ROLE_ACCOUNT_MANAGER | typeof RECIPIENT_ROLE_CLIENT_BILLING | null;
+  subtypeId?: number;
+}
+
+async function resolveEmailRoles(
+  knex: Knex,
+  tenantId: string,
+  delivery: ClaimedDelivery & { alert: AlertForDelivery },
+  subtypeName: string
+): Promise<EmailRoleResolution> {
+  const authorizedRoles = await authorizedRolesForClaim(knex, tenantId, delivery);
+  const deliverableRoles: string[] = [];
+  let managerSubtypeId: number | undefined;
+  let clientSubtypeId: number | undefined;
+
+  if (authorizedRoles.includes(RECIPIENT_ROLE_ACCOUNT_MANAGER)) {
+    const managerPreferences = await emailPreferencesEnabled(
+      knex,
+      tenantId,
+      subtypeName,
+      delivery.recipient_user_id
+    );
+    if (managerPreferences.enabled) {
+      deliverableRoles.push(RECIPIENT_ROLE_ACCOUNT_MANAGER);
+      managerSubtypeId = managerPreferences.subtypeId;
+    }
+  }
+
+  if (authorizedRoles.includes(RECIPIENT_ROLE_CLIENT_BILLING)) {
+    // Client delivery has tenant/subtype/category preferences but must not
+    // inherit an internal user's personal email preference merely because the
+    // two roles normalize to the same address.
+    const clientPreferences = await emailPreferencesEnabled(knex, tenantId, subtypeName);
+    if (clientPreferences.enabled) {
+      deliverableRoles.push(RECIPIENT_ROLE_CLIENT_BILLING);
+      clientSubtypeId = clientPreferences.subtypeId;
+    }
+  }
+
+  const selectedRole = deliverableRoles.includes(RECIPIENT_ROLE_ACCOUNT_MANAGER)
+    ? RECIPIENT_ROLE_ACCOUNT_MANAGER
+    : deliverableRoles.includes(RECIPIENT_ROLE_CLIENT_BILLING)
+      ? RECIPIENT_ROLE_CLIENT_BILLING
+      : null;
+
+  return {
+    authorizedRoles,
+    deliverableRoles,
+    selectedRole,
+    subtypeId: selectedRole === RECIPIENT_ROLE_ACCOUNT_MANAGER
+      ? managerSubtypeId
+      : clientSubtypeId,
+  };
+}
+
 function subtypeAndTemplateFor(alertType: 'credit' | 'bucket'): { subtypeName: string; templateName: string } {
   if (alertType === 'credit') {
     return { subtypeName: CREDIT_LOW_BALANCE_SUBTYPE, templateName: CREDIT_LOW_BALANCE_TEMPLATE };
@@ -708,6 +778,15 @@ function formatHours(minutes: number, locale: string): string {
 
 function formatPercent(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
+}
+
+function formatPeriodDate(value: string | Date | null, locale: string): string {
+  if (!value) return '';
+  const date = value instanceof Date
+    ? value
+    : new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
 }
 
 async function buildEmailContext(
@@ -735,6 +814,8 @@ async function buildEmailContext(
     usedPercent: formatPercent(usedPercent, locale),
     capacity: formatHours(capacity, locale),
     used: formatHours(used, locale),
+    periodStart: formatPeriodDate(alert.period_start, locale),
+    periodEnd: formatPeriodDate(alert.period_end, locale),
     link,
   });
 }
@@ -769,6 +850,8 @@ function buildInternalAlertContextForDelivery(
     usedPercent: formatPercent(usedPercent, locale),
     capacity: formatHours(capacity, locale),
     used: formatHours(used, locale),
+    periodStart: formatPeriodDate(alert.period_start, locale),
+    periodEnd: formatPeriodDate(alert.period_end, locale),
     link,
   });
 }
@@ -939,29 +1022,10 @@ async function processDelivery(
   }
 
   // Email channel.
-  const authorizedRoles = await authorizedRolesForClaim(knex, tenantId, delivery);
-  if (authorizedRoles.length === 0) {
-    await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
-    return;
-  }
-  const isManager = authorizedRoles.includes(RECIPIENT_ROLE_ACCOUNT_MANAGER);
-  const recipientUserId = isManager ? delivery.recipient_user_id : null;
-  const prefs = await emailPreferencesEnabled(knex, tenantId, subtypeName, recipientUserId);
-  if (!prefs.enabled || !delivery.recipient_email) {
+  if (!delivery.recipient_email) {
     await markSkipped();
     return;
   }
-
-  const locale = await resolveEmailLocale(tenantId, {
-    email: delivery.recipient_email,
-    ...(recipientUserId ? { userId: recipientUserId } : {}),
-    ...(isManager ? {} : { clientId: delivery.alert.client_id }),
-  });
-
-  const link = isManager
-    ? managerAlertLink(delivery.alert.client_id)
-    : clientAlertLink();
-  const context = await buildEmailContext(delivery.alert, locale, link);
 
   try {
     // Claiming and sending are intentionally separate for durable, leased
@@ -970,12 +1034,57 @@ async function processDelivery(
     // recipient-authorization change observed after claim cannot produce a
     // stale send. Terminal status writes below are worker-CAS updates and can
     // never overwrite a concurrent superseded transition.
-    const finalAuthorizedRoles = await authorizedRolesForClaim(knex, tenantId, delivery);
-    if (
-      !(await claimedAlertIsOpen(knex, tenantId, delivery)) ||
-      finalAuthorizedRoles.length === 0 ||
-      finalAuthorizedRoles.includes(RECIPIENT_ROLE_ACCOUNT_MANAGER) !== isManager
-    ) {
+    if (!(await claimedAlertIsOpen(knex, tenantId, delivery))) {
+      await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
+      return;
+    }
+    let roleResolution = await resolveEmailRoles(knex, tenantId, delivery, subtypeName);
+    if (roleResolution.authorizedRoles.length === 0) {
+      await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
+      return;
+    }
+    if (!roleResolution.selectedRole) {
+      await markSkipped();
+      return;
+    }
+    const prepareForRole = async (selectedRole: string) => {
+      const isManager = selectedRole === RECIPIENT_ROLE_ACCOUNT_MANAGER;
+      const recipientUserId = isManager ? delivery.recipient_user_id : null;
+      const locale = await resolveEmailLocale(tenantId, {
+        email: delivery.recipient_email as string,
+        ...(recipientUserId ? { userId: recipientUserId } : {}),
+        ...(isManager ? {} : { clientId: delivery.alert.client_id }),
+      });
+      const link = isManager
+        ? managerAlertLink(delivery.alert.client_id)
+        : clientAlertLink();
+      return {
+        isManager,
+        recipientUserId,
+        locale,
+        context: await buildEmailContext(delivery.alert, locale, link),
+      };
+    };
+    let prepared = await prepareForRole(roleResolution.selectedRole);
+
+    // Preferences and role authorization are independently mutable. Resolve
+    // them again after formatting and, if the manager role stopped being
+    // deliverable while the opted-in client role remains, switch the one send
+    // to the client route rather than skipping the shared-address row.
+    const finalRoleResolution = await resolveEmailRoles(knex, tenantId, delivery, subtypeName);
+    if (finalRoleResolution.authorizedRoles.length === 0) {
+      await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
+      return;
+    }
+    if (!finalRoleResolution.selectedRole) {
+      await markSkipped();
+      return;
+    }
+    if (finalRoleResolution.selectedRole !== roleResolution.selectedRole) {
+      prepared = await prepareForRole(finalRoleResolution.selectedRole);
+    }
+    roleResolution = finalRoleResolution;
+    if (!(await claimedAlertIsOpen(knex, tenantId, delivery))) {
       await supersedeClaimedDelivery(knex, tenantId, delivery, summary);
       return;
     }
@@ -987,11 +1096,11 @@ async function processDelivery(
       to: delivery.recipient_email,
       subject: 'Prepaid balance alert',
       template: templateName,
-      context,
-      locale,
-      notificationSubtypeId: prefs.subtypeId,
-      recipientUserId: recipientUserId ?? undefined,
-      recipientClientId: isManager ? undefined : delivery.alert.client_id,
+      context: prepared.context,
+      locale: prepared.locale,
+      notificationSubtypeId: roleResolution.subtypeId,
+      recipientUserId: prepared.recipientUserId ?? undefined,
+      recipientClientId: prepared.isManager ? undefined : delivery.alert.client_id,
       entityType: 'prepaid-balance-alert',
       entityId: delivery.alert.alert_id,
     });
@@ -1021,20 +1130,29 @@ export async function planAndDrainDeliveriesForTenant(knex: Knex, tenantId: stri
     }
   }
 
-  const claimed = await claimDeliveries(knex, tenantId, summary);
-  for (const delivery of claimed) {
-    try {
-      await processDelivery(knex, tenantId, delivery, summary);
-    } catch (error) {
-      summary.warnings.push({
-        code: 'exhausted',
-        clientId: delivery.alert.client_id,
-        clientName: delivery.alert.client_name,
-        alertId: delivery.alert.alert_id,
-        deliveryId: delivery.delivery_id,
-        channel: delivery.channel,
-        message: `Unexpected delivery processing failure: ${error instanceof Error ? error.message : String(error)}`,
-      });
+  // Drain every delivery that was eligible at the start of this invocation,
+  // not just the first claim batch. Remember attempted IDs so a failure whose
+  // lease is cleared for a future run is not immediately reclaimed by the next
+  // batch in this same run.
+  const attemptedDeliveryIds = new Set<string>();
+  while (true) {
+    const claimed = await claimDeliveries(knex, tenantId, summary, attemptedDeliveryIds);
+    if (claimed.length === 0) break;
+    for (const delivery of claimed) {
+      attemptedDeliveryIds.add(delivery.delivery_id);
+      try {
+        await processDelivery(knex, tenantId, delivery, summary);
+      } catch (error) {
+        summary.warnings.push({
+          code: 'exhausted',
+          clientId: delivery.alert.client_id,
+          clientName: delivery.alert.client_name,
+          alertId: delivery.alert.alert_id,
+          deliveryId: delivery.delivery_id,
+          channel: delivery.channel,
+          message: `Unexpected delivery processing failure: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     }
   }
 

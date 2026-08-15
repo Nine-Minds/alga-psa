@@ -59,42 +59,42 @@ const TEMPLATES = [
       en: {
         title: 'Prepaid hour bucket threshold reached: {{clientName}}',
         message:
-          'A prepaid hour bucket for {{clientName}} has reached {{usedPercent}}% of capacity (configured threshold: {{percent}}%). Used: {{used}} of {{capacity}}. [View client]({{link}}).',
+          'A prepaid hour bucket for {{clientName}} has reached {{usedPercent}}% of capacity (configured threshold: {{percent}}%). Used: {{used}} of {{capacity}}. Usage period: {{periodStart}} - {{periodEnd}}. [View client]({{link}}).',
       },
       fr: {
         title: 'Seuil du bloc d\u2019heures prépayées atteint : {{clientName}}',
         message:
-          'Un bloc d\u2019heures prépayées de {{clientName}} a atteint {{usedPercent}} % de sa capacité (seuil configuré : {{percent}} %). Utilisé : {{used}} sur {{capacity}}. [Voir le client]({{link}}).',
+          'Un bloc d\u2019heures prépayées de {{clientName}} a atteint {{usedPercent}} % de sa capacité (seuil configuré : {{percent}} %). Utilisé : {{used}} sur {{capacity}}. Période d\u2019utilisation : {{periodStart}} - {{periodEnd}}. [Voir le client]({{link}}).',
       },
       es: {
         title: 'Umbral del paquete de horas prepagado alcanzado: {{clientName}}',
         message:
-          'Un paquete de horas prepagado de {{clientName}} ha alcanzado el {{usedPercent}}% de su capacidad (umbral configurado: {{percent}}%). Usado: {{used}} de {{capacity}}. [Ver cliente]({{link}}).',
+          'Un paquete de horas prepagado de {{clientName}} ha alcanzado el {{usedPercent}}% de su capacidad (umbral configurado: {{percent}}%). Usado: {{used}} de {{capacity}}. Período de uso: {{periodStart}} - {{periodEnd}}. [Ver cliente]({{link}}).',
       },
       de: {
         title: 'Schwellenwert des Prepaid-Stundenpakets erreicht: {{clientName}}',
         message:
-          'Ein Prepaid-Stundenpaket von {{clientName}} hat {{usedPercent}}% der Kapazität erreicht (konfigurierter Schwellenwert: {{percent}}%). Verbraucht: {{used}} von {{capacity}}. [Kunde anzeigen]({{link}}).',
+          'Ein Prepaid-Stundenpaket von {{clientName}} hat {{usedPercent}}% der Kapazität erreicht (konfigurierter Schwellenwert: {{percent}}%). Verbraucht: {{used}} von {{capacity}}. Nutzungszeitraum: {{periodStart}} - {{periodEnd}}. [Kunde anzeigen]({{link}}).',
       },
       nl: {
         title: 'Drempel prepaid-urenpakket bereikt: {{clientName}}',
         message:
-          'Een prepaid-urenpakket van {{clientName}} heeft {{usedPercent}}% van de capaciteit bereikt (geconfigureerde drempel: {{percent}}%). Verbruikt: {{used}} van {{capacity}}. [Klant bekijken]({{link}}).',
+          'Een prepaid-urenpakket van {{clientName}} heeft {{usedPercent}}% van de capaciteit bereikt (geconfigureerde drempel: {{percent}}%). Verbruikt: {{used}} van {{capacity}}. Gebruiksperiode: {{periodStart}} - {{periodEnd}}. [Klant bekijken]({{link}}).',
       },
       it: {
         title: 'Soglia del pacchetto ore prepagato raggiunta: {{clientName}}',
         message:
-          'Un pacchetto ore prepagato di {{clientName}} ha raggiunto il {{usedPercent}}% della capacità (soglia configurata: {{percent}}%). Utilizzato: {{used}} di {{capacity}}. [Visualizza cliente]({{link}}).',
+          'Un pacchetto ore prepagato di {{clientName}} ha raggiunto il {{usedPercent}}% della capacità (soglia configurata: {{percent}}%). Utilizzato: {{used}} di {{capacity}}. Periodo di utilizzo: {{periodStart}} - {{periodEnd}}. [Visualizza cliente]({{link}}).',
       },
       pl: {
         title: 'Osiągnięto próg pakietu godzin przedpłaconych: {{clientName}}',
         message:
-          'Pakiet godzin przedpłaconych dla {{clientName}} osiągnął {{usedPercent}}% pojemności (skonfigurowany próg: {{percent}}%). Wykorzystano: {{used}} z {{capacity}}. [Zobacz klienta]({{link}}).',
+          'Pakiet godzin przedpłaconych dla {{clientName}} osiągnął {{usedPercent}}% pojemności (skonfigurowany próg: {{percent}}%). Wykorzystano: {{used}} z {{capacity}}. Okres użytkowania: {{periodStart}} - {{periodEnd}}. [Zobacz klienta]({{link}}).',
       },
       pt: {
         title: 'Limite do pacote de horas pré-pago atingido: {{clientName}}',
         message:
-          'Um pacote de horas pré-pago de {{clientName}} atingiu {{usedPercent}}% da capacidade (limite configurado: {{percent}}%). Usado: {{used}} de {{capacity}}. [Ver cliente]({{link}}).',
+          'Um pacote de horas pré-pago de {{clientName}} atingiu {{usedPercent}}% da capacidade (limite configurado: {{percent}}%). Usado: {{used}} de {{capacity}}. Período de uso: {{periodStart}} - {{periodEnd}}. [Ver cliente]({{link}}).',
       },
     },
   },

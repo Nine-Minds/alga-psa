@@ -297,6 +297,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantDb(db, tenantId).table('contract_lines').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('client_contracts').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('contracts').where({ tenant: tenantId }).del();
+  await tenantDb(db, tenantId).table('user_notification_preferences').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('user_preferences').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('internal_notifications').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('users').where({ tenant: tenantId }).del();
@@ -912,6 +913,51 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
   });
 
+  it('applies shared-address email preferences per role and falls back to the opted-in client route', async () => {
+    const tenantId = await createTenant('recipient-collapse-preferences');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId, {
+      billing_email: 'shared-preferences@example.com',
+      properties: JSON.stringify({ defaultLocale: 'de' }),
+    });
+    const managerId = await createManager(tenantId, { email: 'shared-preferences@example.com' });
+    await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, {
+      threshold: 5000,
+      currency: 'USD',
+      notifyClient: true,
+    });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    const subtype = await db('notification_subtypes')
+      .where({ name: 'prepaid-credit-low-balance' })
+      .first('id');
+    await db('user_notification_preferences').insert({
+      tenant: tenantId,
+      user_id: managerId,
+      subtype_id: subtype.id,
+      is_enabled: false,
+      frequency: 'realtime',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    const send = sendEmailMock.mock.calls[0][0];
+    expect(send.to).toBe('shared-preferences@example.com');
+    expect(send.locale).toBe('de');
+    expect(send.recipientUserId).toBeUndefined();
+    expect(send.recipientClientId).toBe(clientId);
+    expect(send.context.alert.link).toContain('/client-portal/billing');
+    expect(send.context.alert.link).not.toContain('/msp/clients/');
+
+    const emailRows = (await deliveries(tenantId)).filter((row) => row.channel === 'email');
+    expect(emailRows).toHaveLength(1);
+    expect(emailRows[0].status).toBe('sent');
+  });
+
   it('isolates an inactive/email-less manager without failing the scan', async () => {
     const tenantId = await createTenant('recipient-inactive');
     createdTenants.push(tenantId);
@@ -1071,6 +1117,79 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
     const reclaimed = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').where({ delivery_id: deliveryId }).first();
     expect(reclaimed.status).toBe('sent');
+  });
+
+  it('drains more than one claim batch without retrying same-run failures', async () => {
+    const tenantId = await createTenant('multi-batch-drain');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId, { email: 'batch-manager@example.com' });
+    await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+
+    const alertRows: Array<Record<string, unknown> & { alert_id: string }> = Array.from(
+      { length: 51 },
+      (_, index) => ({
+        tenant: tenantId,
+        alert_id: randomUUID(),
+        client_id: clientId,
+        alert_type: 'credit',
+        dedupe_key: `batch-credit:${clientId}:${index}`,
+        episode: index + 1,
+        credit_threshold: 5000,
+        credit_currency_code: 'USD',
+        observed_value: 100,
+        payload: JSON.stringify({ batch: index }),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      })
+    );
+    await tenantDb(db, tenantId).table('prepaid_balance_alerts').insert(alertRows);
+
+    const deliveryRows: Array<Record<string, unknown>> = alertRows.flatMap((alert) => [
+      {
+        tenant: tenantId,
+        delivery_id: randomUUID(),
+        alert_id: alert.alert_id,
+        channel: 'internal',
+        recipient_roles: JSON.stringify(['account_manager']),
+        recipient_key: `user:${managerId}`,
+        recipient_user_id: managerId,
+        recipient_email: null,
+        status: 'sent',
+        attempt_count: 1,
+        sent_at: db.fn.now(),
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      },
+      {
+        tenant: tenantId,
+        delivery_id: randomUUID(),
+        alert_id: alert.alert_id,
+        channel: 'email',
+        recipient_roles: JSON.stringify(['account_manager']),
+        recipient_key: 'batch-manager@example.com',
+        recipient_user_id: managerId,
+        recipient_email: 'batch-manager@example.com',
+        status: 'pending',
+        attempt_count: 0,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      },
+    ]);
+    await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').insert(deliveryRows);
+
+    sendEmailMock.mockRejectedValueOnce(new Error('first attempt fails'));
+    sendEmailMock.mockResolvedValue(undefined);
+    const { knex } = await (await import('@alga-psa/db')).createTenantKnex();
+    await planAndDrainDeliveriesForTenant(knex, tenantId);
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(51);
+    const emailRows = (await deliveries(tenantId)).filter((row) => row.channel === 'email');
+    expect(emailRows.filter((row) => row.status === 'sent')).toHaveLength(50);
+    const failed = emailRows.filter((row) => row.status === 'failed');
+    expect(failed).toHaveLength(1);
+    expect(Number(failed[0].attempt_count)).toBe(1);
   });
 
   // -------------------------------------------------------------------------
@@ -1420,6 +1539,64 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     expect(notification).toBeDefined();
     expect(notification.language_code).toBe('nl');
     expect(String(notification.message)).toContain(`€\u00A050,00`);
+  });
+
+  it('includes locale-formatted bucket usage periods in manager, client, and internal contexts', async () => {
+    const tenantId = await createTenant('bucket-period-localization');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId, {
+      billing_email: 'period-client@example.com',
+      properties: JSON.stringify({ defaultLocale: 'de' }),
+    });
+    const managerId = await createManager(tenantId, { email: 'period-manager@example.com' });
+    await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
+    await db('user_preferences').insert({
+      tenant: tenantId,
+      user_id: managerId,
+      setting_name: 'locale',
+      setting_value: '"nl"',
+      updated_at: db.fn.now(),
+    });
+    await createBillingSettings(tenantId, clientId, { percent: 80, notifyClient: true });
+
+    const today = new Date();
+    const year = today.getUTCFullYear();
+    const month = today.getUTCMonth();
+    const periodStartDate = new Date(Date.UTC(year, month, 1));
+    const periodEndDate = new Date(Date.UTC(year, month + 1, 0));
+    const periodStart = periodStartDate.toISOString().slice(0, 10);
+    const periodEnd = periodEndDate.toISOString().slice(0, 10);
+    await createBucketFixture(tenantId, clientId, {
+      totalMinutes: 1000,
+      minutesUsed: 800,
+      periodStart,
+      periodEnd,
+    });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const managerCall = sendEmailMock.mock.calls.find((call) => call[0].to === 'period-manager@example.com');
+    const clientCall = sendEmailMock.mock.calls.find((call) => call[0].to === 'period-client@example.com');
+    expect(managerCall).toBeDefined();
+    expect(clientCall).toBeDefined();
+
+    const nlStart = new Intl.DateTimeFormat('nl', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodStartDate);
+    const nlEnd = new Intl.DateTimeFormat('nl', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodEndDate);
+    const deStart = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodStartDate);
+    const deEnd = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodEndDate);
+
+    expect(managerCall[0].locale).toBe('nl');
+    expect(managerCall[0].context.alert).toMatchObject({ periodStart: nlStart, periodEnd: nlEnd });
+    expect(clientCall[0].locale).toBe('de');
+    expect(clientCall[0].context.alert).toMatchObject({ periodStart: deStart, periodEnd: deEnd });
+
+    const notification = await tenantDb(db, tenantId).table('internal_notifications')
+      .where({ tenant: tenantId, user_id: managerId })
+      .orderBy('created_at', 'desc')
+      .first();
+    expect(notification.language_code).toBe('nl');
+    expect(String(notification.message)).toContain(nlStart);
+    expect(String(notification.message)).toContain(nlEnd);
   });
 
   // -------------------------------------------------------------------------

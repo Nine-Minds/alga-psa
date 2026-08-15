@@ -39,6 +39,8 @@ export interface BucketAlertTemplateValues {
   usedPercent: string;
   capacity: string;
   used: string;
+  periodStart: string;
+  periodEnd: string;
   link: string;
 }
 
@@ -64,6 +66,8 @@ export function buildBucketAlertContext(clientName: string, values: BucketAlertT
       usedPercent: values.usedPercent,
       capacity: values.capacity,
       used: values.used,
+      periodStart: values.periodStart,
+      periodEnd: values.periodEnd,
       link: values.link,
     },
   };
@@ -74,7 +78,8 @@ export function buildBucketAlertContext(clientName: string, values: BucketAlertT
  * renderer substitutes only top-level `\w+` keys (no dotted paths), so the
  * resulting keys must match the seeded internal template placeholders exactly
  * ({{clientName}}, {{available}}, {{currency}}, {{threshold}}, {{percent}},
- * {{usedPercent}}, {{capacity}}, {{used}}, {{link}}).
+ * {{usedPercent}}, {{capacity}}, {{used}}, {{periodStart}}, {{periodEnd}},
+ * {{link}}).
  */
 export function buildInternalAlertContext(
   clientName: string,

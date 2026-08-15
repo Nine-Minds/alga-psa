@@ -37,6 +37,23 @@ describe('prepaid balance alert delivery wiring contract', () => {
     expect(processBlock).toContain('worker_id: delivery.worker_id');
   });
 
+  it('evaluates collapsed-address preferences per role and can select the client route', () => {
+    const roleBlock = source.slice(source.indexOf('async function resolveEmailRoles'), source.indexOf('function subtypeAndTemplateFor'));
+    expect(roleBlock).toContain('delivery.recipient_user_id');
+    expect(roleBlock).toContain('emailPreferencesEnabled(knex, tenantId, subtypeName)');
+    expect(roleBlock).toContain('RECIPIENT_ROLE_CLIENT_BILLING');
+    const processBlock = source.slice(source.indexOf('async function processDelivery'));
+    expect(processBlock).toContain('recipientClientId: prepared.isManager ? undefined : delivery.alert.client_id');
+    expect(processBlock).toContain('clientAlertLink()');
+  });
+
+  it('drains distinct claim batches without reclaiming IDs attempted in the same run', () => {
+    const drainBlock = source.slice(source.indexOf('export async function planAndDrainDeliveriesForTenant'));
+    expect(drainBlock).toContain('while (true)');
+    expect(drainBlock).toContain('attemptedDeliveryIds.add(delivery.delivery_id)');
+    expect(source).toContain("query.whereNotIn('d.delivery_id', [...attemptedDeliveryIds])");
+  });
+
   it('applies the tenant predicate to every delivery-status update, including the internal-channel transaction', () => {
     const internalBlock = source.slice(source.indexOf('if (delivery.channel === DELIVERY_CHANNEL_INTERNAL)'));
     expect(internalBlock).toContain('const db = tenantDb(trx, tenantId);');

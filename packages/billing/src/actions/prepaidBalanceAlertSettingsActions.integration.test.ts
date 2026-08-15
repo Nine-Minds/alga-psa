@@ -249,6 +249,24 @@ describe.sequential('prepaid balance alert settings actions (DB-backed)', () => 
     expect(result).toMatchObject({ actionError: expect.any(String) });
   });
 
+  it('rejects reads for cross-tenant and nonexistent client IDs', async () => {
+    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
+    const crossTenant = await (getPrepaidBalanceAlertSettings as any)(
+      user,
+      { tenant: tenantId },
+      otherTenantClientId
+    );
+    expect(crossTenant).toMatchObject({ actionError: expect.any(String) });
+
+    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
+    const nonexistent = await (getPrepaidBalanceAlertSettings as any)(
+      user,
+      { tenant: tenantId },
+      uuidv4()
+    );
+    expect(nonexistent).toMatchObject({ actionError: expect.any(String) });
+  });
+
   it('input schema rejects a mismatched credit amount/currency pair by validation', () => {
     const valid = prepaidBalanceAlertSettingsInputSchema.safeParse({
       clientId: 'c1',

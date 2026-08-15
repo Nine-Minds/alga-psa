@@ -39,6 +39,16 @@ describe('prepaid balance alert notification definitions', () => {
     }
   });
 
+  it('renders the localized bucket usage-period values in every email variant', () => {
+    const template = emailModule.getBucketTemplate();
+    for (const translation of template.translations as Array<{ htmlContent: string; textContent: string }>) {
+      expect(translation.htmlContent).toContain('{{alert.periodStart}}');
+      expect(translation.htmlContent).toContain('{{alert.periodEnd}}');
+      expect(translation.textContent).toContain('{{alert.periodStart}}');
+      expect(translation.textContent).toContain('{{alert.periodEnd}}');
+    }
+  });
+
   it('ships every locale for both internal templates', () => {
     const names = internalModule.TEMPLATES.map((t: { templateName: string }) => t.templateName);
     expect(names).toContain(CREDIT_LOW_BALANCE_TEMPLATE);
@@ -71,6 +81,8 @@ describe('prepaid balance alert notification definitions', () => {
       usedPercent: '92.5',
       capacity: '100 h',
       used: '92.5 h',
+      periodStart: 'Jan 1, 2026',
+      periodEnd: 'Jan 31, 2026',
       link: 'https://app.example/msp/clients/c1?tab=billing',
     });
 
@@ -103,9 +115,18 @@ describe('prepaid balance alert notification definitions', () => {
       usedPercent: '92.5',
       capacity: '100 h',
       used: '92.5 h',
+      periodStart: 'Jan 1, 2026',
+      periodEnd: 'Jan 31, 2026',
       link: 'https://portal.example/client-portal/billing',
     }) as { client: { name: string }; alert: Record<string, unknown> };
     expect(bucket.client.name).toBe('Acme');
-    expect(bucket.alert).toMatchObject({ percent: 80, usedPercent: '92.5', capacity: '100 h', used: '92.5 h' });
+    expect(bucket.alert).toMatchObject({
+      percent: 80,
+      usedPercent: '92.5',
+      capacity: '100 h',
+      used: '92.5 h',
+      periodStart: 'Jan 1, 2026',
+      periodEnd: 'Jan 31, 2026',
+    });
   });
 });

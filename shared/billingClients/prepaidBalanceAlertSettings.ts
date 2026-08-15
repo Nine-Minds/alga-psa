@@ -59,6 +59,12 @@ export async function getPrepaidBalanceAlertSettingsDb(
     db.table('clients').where({ client_id: clientId }).first('default_currency_code'),
   ]);
 
+  // A missing tenant-scoped client is not equivalent to a real client with no
+  // policy row. Callers use null to reject nonexistent and cross-tenant IDs.
+  if (!client) {
+    return null;
+  }
+
   const result: PrepaidBalanceAlertSettingsWithDefault = {
     prepaidCreditAlertThreshold:
       settings?.prepaid_credit_alert_threshold != null
