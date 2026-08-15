@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
-import type { CreditApplicationOrder, CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
+import type { CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -461,7 +461,6 @@ export async function resolveCreditExpirationDate(
 }
 
 export { resolveCreditDrawdownPolicy };
-export type { CreditApplicationOrder, CreditDrawdownPolicy };
 
 /**
  * Server-action wrapper over resolveCreditDrawdownPolicy so client components

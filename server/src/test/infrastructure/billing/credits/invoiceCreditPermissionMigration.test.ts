@@ -150,5 +150,52 @@ describe('invoice:credit permission migration', () => {
     expect(grantedSet.has(adminRoleId)).toBe(true);
     expect(grantedSet.has(financeRoleId)).toBe(true);
     expect(grantedSet.has(technicianRoleId)).toBe(false);
+
+    // Idempotency: a second run must not create duplicate permission or grant rows.
+    await migration.up(context.db);
+
+    const permissionCount = await tenantTable(context, 'permissions')
+      .where({ tenant: context.tenantId, resource: 'invoice', action: 'credit' })
+      .count('* as count')
+      .first();
+    expect(Number(permissionCount?.count ?? 0)).toBe(1);
+
+    const grantCount = await tenantTable(context, 'role_permissions')
+      .where({ tenant: context.tenantId, permission_id: permission.permission_id })
+      .count('* as count')
+      .first();
+    expect(Number(grantCount?.count ?? 0)).toBe(grantedSet.size);
+  });
+
+  it('seed path: the bootstrapped tenant is provisioned with invoice:credit granted to Admin and Finance', async () => {
+    // The TestContext bootstrap runs `migrate.latest` (no tenants exist yet, so
+    // the backfill migration inserts nothing) followed by the dev seeds
+    // (47_permissions + 48_role_permissions), which must provision the
+    // permission and role grants for a fresh tenant. This is the regression
+    // guard for the seed gap that left POST /api/v1/invoices/{id}/credit with a
+    // 403 on every fresh-install tenant.
+    const permission = await tenantTable(context, 'permissions')
+      .where({ tenant: context.tenantId, resource: 'invoice', action: 'credit' })
+      .first();
+    expect(permission).toBeDefined();
+    expect(permission.msp).toBe(true);
+    expect(permission.client).toBe(false);
+
+    const adminRole = await tenantTable(context, 'roles')
+      .where({ tenant: context.tenantId, role_name: 'Admin', msp: true, client: false })
+      .first();
+    const financeRole = await tenantTable(context, 'roles')
+      .where({ tenant: context.tenantId, role_name: 'Finance', msp: true, client: false })
+      .first();
+    expect(adminRole).toBeDefined();
+    expect(financeRole).toBeDefined();
+
+    const grantedRoleIds = await tenantTable(context, 'role_permissions')
+      .where({ tenant: context.tenantId, permission_id: permission.permission_id })
+      .select('role_id');
+    const grantedSet = new Set(grantedRoleIds.map((row) => row.role_id));
+
+    expect(grantedSet.has(adminRole.role_id)).toBe(true);
+    expect(grantedSet.has(financeRole.role_id)).toBe(true);
   });
 });
