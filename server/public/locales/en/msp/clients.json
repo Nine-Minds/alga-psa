@@ -1567,5 +1567,28 @@
       "notFound": "Contact not found.",
       "loadFailed": "Failed to load contact."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid Balance Alerts",
+    "scheduleHelp": "Checks run daily at 09:00 UTC. Saving does not send anything immediately.",
+    "creditSwitch": "Prepaid credit alerts",
+    "creditSwitchHelp": "Alert when available prepaid credit drops below the configured threshold",
+    "creditThreshold": "Credit threshold",
+    "creditThresholdPlaceholder": "e.g. 500.00",
+    "creditThresholdHelp": "Remaining prepaid credit that triggers an alert",
+    "creditCurrency": "Currency",
+    "creditAmountError": "Enter a positive credit threshold",
+    "bucketSwitch": "Bucket usage alerts",
+    "bucketSwitchHelp": "Alert when a prepaid hour bucket reaches the configured consumption",
+    "bucketPercent": "Consumption threshold (%)",
+    "bucketPercentPlaceholder": "e.g. 80",
+    "bucketPercentHelp": "Percentage of bucket capacity that triggers an alert",
+    "percentRangeError": "Enter a whole number from 1 to 100",
+    "notifyClient": "Also email the client billing recipient",
+    "notifyClientHelp": "Sends the alert to the client’s canonical invoice billing recipient",
+    "save": "Save",
+    "saveSuccess": "Prepaid balance alert settings saved",
+    "saveError": "Failed to save prepaid balance alert settings",
+    "loadError": "Failed to load prepaid balance alert settings"
   }
 }

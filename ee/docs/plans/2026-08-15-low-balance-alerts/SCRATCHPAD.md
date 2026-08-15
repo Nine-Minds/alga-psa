@@ -3,7 +3,7 @@
 - Plan slug: `2026-08-15-low-balance-alerts`
 - Card: `29.8.20`
 - Created: `2026-08-15`
-- Status: Design complete; implementation not started
+- Status: Implemented; awaiting review
 
 ## Decisions
 
@@ -24,6 +24,15 @@
 - (2026-08-15) Canonical invoice-recipient precedence is billing contact, client billing email, active billing-location email, active default-location email, then none. Reuse it rather than duplicating contact queries.
 - (2026-08-15) Credit equality is recovery (`available >= threshold`); bucket equality is alerting (`consumed * 100 >= threshold * capacity`). Keep these asymmetric boundaries explicit in code and tests.
 - (2026-08-15) No new client-portal in-app notification, immediate/event-driven evaluation, FX conversion, tenant defaults, per-bucket overrides, or exactly-once email guarantee belongs in this card.
+- (2026-08-15) Migration filename was renamed `20260815090000_add_prepaid_balance_alerts.cjs` → `20260815000000_add_prepaid_balance_alerts.cjs`: the `custom-rules/migration-filename` lint rule rejects timestamps later than the authoring machine clock (09:00 UTC was ~3.5h in the future at implementation time). The new name keeps the same date and still sorts after the last existing migration.
+- (2026-08-15) `packages/clients` cannot import `@alga-psa/billing` (custom lint rule `no-feature-to-feature-imports`). The policy read/update DB logic therefore lives in a horizontal module `shared/billingClients/prepaidBalanceAlertSettings.ts`; `packages/billing/src/actions/prepaidBalanceAlertSettingsActions.ts` and clients-local `getPrepaidBalanceAlertSettingsAsync`/`updatePrepaidBalanceAlertSettingsAsync` in `packages/clients/src/lib/billingHelpers.ts` both delegate to it and independently gate on the flag + `billing_settings` read/update permissions.
+- (2026-08-15) Decision: a bucket alert whose period is no longer current (rollover / removed bucket) is resolved as `recovered` so only current subjects carry an open alert. This is an implementation decision beyond the PRD's literal text; the delivery/audit tables preserve the historical episode.
+- (2026-08-15) Decision: disabling a policy type (credit threshold or bucket percent set to null) resolves that type's open episodes as `policy_changed`, so a later re-enable starts a fresh episode.
+- (2026-08-15) Credit dedupe keys embed a monotonically increasing `episode` column (`credit:{client}:{currency}:ep{n}`) so a rearm + re-drop never collides with the prior resolved row under the `(tenant, dedupe_key)` unique constraint. The evaluator computes `max(episode)+1` inside the per-client locked transaction.
+- (2026-08-15) Email delivery format: bucket capacity/used are presented in hours (minutes/60); `contract_line_service_bucket_config.total_minutes` is always minutes. `usedPercent` is rounded for display only; the exact integer cross-multiplication decides the alert.
+- (2026-08-15) The dev-stack Postgres (localhost:5472, plain PG, not Citus) was used to verify migration up/down and all DB-backed tests. Citus distribution (`ensureTenantDistribution`) is exercised only by the migrated-DB integration test's existence checks on plain PG; real Citus shard/colocation behavior was NOT directly verified here and should be confirmed in the Citus CI smoke before rollout.
+- (2026-08-15) The repo's DB-backed test bootstrap (`server/test-utils/dbConfig.createTestDbConnection`) drops/recreates `test_database` and runs every migration; a pre-existing migration (`20251214120000_time_entry_work_date.cjs`) with a 3s Citus-propagation wait can lose its connection under rapid back-to-back bootstraps on the shared dev server, making the bootstrap occasionally flaky (retry once; `server/vitest.config.ts` runs files sequentially in a single fork).
+- (2026-08-15) Client email is sent through `server/src/lib/notifications/sendEventEmail` with `recipientClientId` for locale resolution and `notificationSubtypeId` for preference linkage. The provider-acceptance/process-crash window before the `sent` mark is documented as at-least-once (bounded by `MAX_DELIVERY_ATTEMPTS = 5`).
 
 ## Commands / Runbooks
 

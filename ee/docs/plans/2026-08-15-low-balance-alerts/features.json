@@ -2,229 +2,328 @@
   {
     "id": "F001",
     "description": "The prepaid balance alert settings card is absent, without residual layout, while release-v1.5-feature is loading, unavailable, or disabled.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Feature gating", "UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Feature gating",
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F002",
     "description": "The dedicated settings read and update actions independently fail closed behind release-v1.5-feature and retain billing_settings.read and billing_settings.update permissions.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Feature gating", "Requirements > Settings and validation", "Security / Permissions"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Feature gating",
+      "Requirements > Settings and validation",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F003",
     "description": "The scan subscriber performs no evaluation, alert, delivery, or notification write when release-v1.5-feature is disabled or its checker is unavailable.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Feature gating", "Acceptance Criteria"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Feature gating",
+      "Acceptance Criteria"
+    ]
   },
   {
     "id": "F004",
     "description": "An authorized MSP user sees a Prepaid balance alerts card after Credit Expiration Settings and before External Credit Settings on a client's Billing > General tab.",
-    "implemented": false,
-    "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F005",
     "description": "The settings card independently configures a positive minor-unit credit threshold with ISO currency and an integer bucket threshold from 1 through 100 percent.",
-    "implemented": false,
-    "prdRefs": ["Users and Primary Flows", "Requirements > Settings and validation"]
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Settings and validation"
+    ]
   },
   {
     "id": "F006",
     "description": "The settings card defaults a new credit policy to the client's default currency, offers client-recipient opt-in only when an alert type is enabled, and explains that checks run daily at 09:00 UTC without an immediate send.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
   },
   {
     "id": "F007",
     "description": "The dedicated settings update validates paired credit amount and uppercase ISO currency, valid threshold ranges, tenant/client scope, and forces client opt-in off when both alert types are disabled.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Settings and validation", "Security / Permissions"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Settings and validation",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F008",
     "description": "The settings update partially upserts only the four new alert-policy columns and never invokes broad null-delete billing-settings behavior.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Settings and validation"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Settings and validation"
+    ]
   },
   {
     "id": "F009",
     "description": "The migration adds nullable credit amount/currency and bucket-percent settings plus a false-by-default client opt-in with database range and pairing constraints.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations > Migration shape"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Migration shape"
+    ]
   },
   {
     "id": "F010",
     "description": "The migration creates tenant-distributed prepaid_balance_alerts with composite tenant keys, a tenant-unique dedupe key, lifecycle snapshots, payload, resolution fields, and scan indexes.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Alert lifecycle and deduplication", "Data / API / Integrations > Migration shape"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Alert lifecycle and deduplication",
+      "Data / API / Integrations > Migration shape"
+    ]
   },
   {
     "id": "F011",
     "description": "The migration creates tenant-distributed prepaid_balance_alert_deliveries with unique per-alert channel/recipient identity, role metadata, attempts, leases, errors, terminal timestamps, and a claim index.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency", "Data / API / Integrations > Migration shape"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency",
+      "Data / API / Integrations > Migration shape"
+    ]
   },
   {
     "id": "F012",
     "description": "Both new tenant tables are registered in runtime and migration tenant metadata, and the down migration drops deliveries before alerts before removing settings columns and checks.",
-    "implemented": false,
-    "prdRefs": ["Data / API / Integrations > Migration shape"]
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations > Migration shape"
+    ]
   },
   {
     "id": "F013",
     "description": "Credit evaluation sums only non-expired credit_tracking.remaining_amount for the configured client and currency using canonical credit-balance semantics.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Credit evaluation"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Credit evaluation"
+    ]
   },
   {
     "id": "F014",
     "description": "Credit evaluation skips a configured client/currency with no credit history but treats a historically funded zero balance as eligible.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Credit evaluation"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Credit evaluation"
+    ]
   },
   {
     "id": "F015",
     "description": "Credit opens one alert only when available value is strictly below the threshold, deduplicates while low, and resolves/rearms at equality or above.",
-    "implemented": false,
-    "prdRefs": ["Users and Primary Flows > Daily scan identifies low prepaid credit", "Requirements > Credit evaluation"]
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows > Daily scan identifies low prepaid credit",
+      "Requirements > Credit evaluation"
+    ]
   },
   {
     "id": "F016",
     "description": "Changing the credit amount or currency resolves the prior episode with policy_changed and evaluates the replacement policy as a new episode.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Credit evaluation", "Requirements > Alert lifecycle and deduplication"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Credit evaluation",
+      "Requirements > Alert lifecycle and deduplication"
+    ]
   },
   {
     "id": "F017",
     "description": "Bucket evaluation resolves current client-owned Bucket configurations through client_contracts, contracts, contract_lines, and contract_line_service_configuration without using client_contract_lines.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Bucket evaluation"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Bucket evaluation"
+    ]
   },
   {
     "id": "F018",
     "description": "Each current bucket period evaluates minutes_used against total_minutes plus rolled_over_minutes using exact cross-multiplication, inclusive threshold equality, and unclamped overage.",
-    "implemented": false,
-    "prdRefs": ["Users and Primary Flows > Daily scan identifies a consumed bucket", "Requirements > Bucket evaluation"]
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows > Daily scan identifies a consumed bucket",
+      "Requirements > Bucket evaluation"
+    ]
   },
   {
     "id": "F019",
     "description": "A non-positive bucket capacity is skipped with a structured warning and cannot open an alert.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Bucket evaluation", "Observability"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Bucket evaluation",
+      "Observability"
+    ]
   },
   {
     "id": "F020",
     "description": "A bucket alert is sent once per bucket_usage period and configured percentage; a new period is eligible and a percentage change closes and re-evaluates the prior policy alert.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Bucket evaluation", "Requirements > Alert lifecycle and deduplication"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Bucket evaluation",
+      "Requirements > Alert lifecycle and deduplication"
+    ]
   },
   {
     "id": "F021",
     "description": "Per-client evaluation locks client_billing_settings in a short transaction, while tenant-unique alert and delivery constraints make replayed or concurrent scans harmless.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Alert lifecycle and deduplication", "Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Alert lifecycle and deduplication",
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F022",
     "description": "An active assigned account manager receives a preference-aware high-priority internal warning and, when valid, email; missing or inactive managers do not abort the scan.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Recipient semantics", "Notification definitions"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Recipient semantics",
+      "Notification definitions"
+    ]
   },
   {
     "id": "F023",
     "description": "Client email is planned only after per-client opt-in and resolves exactly one canonical invoice billing recipient with recipientClientId locale behavior.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Recipient semantics"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Recipient semantics"
+    ]
   },
   {
     "id": "F024",
     "description": "Manager and client addresses are trim/lowercase normalized, collapse to one email delivery when equal, and retain both roles in delivery metadata.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Recipient semantics"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Recipient semantics"
+    ]
   },
   {
     "id": "F025",
     "description": "Enabling client opt-in during an open alert may add its absent delivery, while manager reassignment or recipient changes never resend a role that already succeeded for that alert.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Alert lifecycle and deduplication"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Alert lifecycle and deduplication"
+    ]
   },
   {
     "id": "F026",
     "description": "Credit-low and bucket-threshold email/internal subtypes and complete localized templates are registered with warning internal type, high default priority, required values, and role-safe links.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Notification definitions"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Notification definitions"
+    ]
   },
   {
     "id": "F027",
     "description": "All settings copy is added to every msp/clients locale including pseudo-locales, without adding a new preference screen.",
-    "implemented": false,
-    "prdRefs": ["UX / UI Notes", "Requirements > Notification definitions"]
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Notification definitions"
+    ]
   },
   {
     "id": "F028",
     "description": "CE schedules the separate prepaid-balance-alert-scan job per tenant at 0 9 * * * through the existing singleton scheduled-job path.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F029",
     "description": "EE reuses the global maintenance fanout to invoke prepaid-balance-alert-scan at 09:00 UTC with overlap policy SKIP and the existing short catch-up convention.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F030",
     "description": "The server-free jobs handler rejects missing tenant context and publishes PREPAID_BALANCE_ALERT_SCAN_REQUESTED without importing server billing, PostHog, or notification code.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency", "Data / API / Integrations > Code boundaries"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency",
+      "Data / API / Integrations > Code boundaries"
+    ]
   },
   {
     "id": "F031",
     "description": "The server subscriber owns flag evaluation, canonical ledger queries, client locking, alert lifecycle, recipient planning, delivery claims, and per-tenant error isolation.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency", "Data / API / Integrations > Code boundaries"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency",
+      "Data / API / Integrations > Code boundaries"
+    ]
   },
   {
     "id": "F032",
     "description": "Pending and retryable deliveries are claimed with FOR UPDATE SKIP LOCKED, worker leases, stale-lease reclamation, and a maximum of five attempts.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F033",
     "description": "Internal notification creation and delivery success are committed together through createNotificationFromTemplateInternal(trx, ...), making replay transactionally idempotent.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F034",
     "description": "Email sends outside the claim transaction, records success afterward, retries transient failures within the five-attempt bound, and documents the provider-acceptance crash window as at-least-once.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Scheduling, idempotency, and concurrency", "Risks and Mitigations"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Scheduling, idempotency, and concurrency",
+      "Risks and Mitigations"
+    ]
   },
   {
     "id": "F035",
     "description": "Preference-disabled deliveries are terminal skipped records, while missing or invalid recipients remain auditable and may be resolved on a later scan when no successful role delivery exists.",
-    "implemented": false,
-    "prdRefs": ["Requirements > Recipient semantics", "Requirements > Scheduling, idempotency, and concurrency"]
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Recipient semantics",
+      "Requirements > Scheduling, idempotency, and concurrency"
+    ]
   },
   {
     "id": "F036",
     "description": "Every tenant scan emits a structured summary of evaluated subjects, lifecycle decisions, delivery outcomes, retries, exhaustion, and invalid subjects.",
-    "implemented": false,
-    "prdRefs": ["Observability"]
+    "implemented": true,
+    "prdRefs": [
+      "Observability"
+    ]
   },
   {
     "id": "F037",
     "description": "Structured warnings identify actionable tenant/client/alert/delivery/bucket/currency context without logging raw recipient addresses or template bodies.",
-    "implemented": false,
-    "prdRefs": ["Observability", "Security / Permissions"]
+    "implemented": true,
+    "prdRefs": [
+      "Observability",
+      "Security / Permissions"
+    ]
   },
   {
     "id": "F038",
     "description": "Disabling release-v1.5-feature after rollout makes scheduling effects inert without deleting nullable policy settings, alert history, or delivery audit rows.",
-    "implemented": false,
-    "prdRefs": ["Rollout / Migration", "Acceptance Criteria"]
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria"
+    ]
   }
 ]

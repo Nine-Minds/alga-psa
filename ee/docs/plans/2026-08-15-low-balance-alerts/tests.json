@@ -2,163 +2,263 @@
   {
     "id": "T001",
     "description": "Component: while release-v1.5-feature is loading, unavailable, or false, BillingConfiguration has no prepaid-alert card, spacer, heading, or changed surrounding order; when true, the card is between credit-expiration and external-credit settings.",
-    "implemented": false,
-    "featureIds": ["F001", "F003", "F004"]
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F004"
+    ]
   },
   {
     "id": "T002",
     "description": "Component: the card initializes credit currency from the client default, validates money and whole-percent inputs, disables client opt-in when no alert is enabled, and says the next check is the daily 09:00 UTC scan.",
-    "implemented": false,
-    "featureIds": ["F005", "F006", "F027"]
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F027"
+    ]
   },
   {
     "id": "T003",
     "description": "Action integration: read/update reject a disabled or unavailable feature flag, enforce their separate billing-settings permissions and tenant/client scope, and leave all policy columns unchanged on rejection.",
-    "implemented": false,
-    "featureIds": ["F002", "F007"]
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F007"
+    ]
   },
   {
     "id": "T004",
     "description": "DB-backed action integration: a valid partial upsert changes only the four prepaid-alert columns; invalid paired currency/amount, nonpositive amount, out-of-range percent, lowercase/non-ISO currency, and client opt-in without an alert are rejected without invoking broad null-delete behavior.",
-    "implemented": false,
-    "featureIds": ["F005", "F007", "F008"]
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F007",
+      "F008"
+    ]
   },
   {
     "id": "T005",
     "description": "Migrated-DB integration: the new settings checks accept each valid disabled/enabled combination and reject invalid ranges or unpaired credit fields using real inserts/updates.",
-    "implemented": false,
-    "featureIds": ["F009"]
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
   },
   {
     "id": "T006",
     "description": "Migrated-DB integration: alert/delivery composite tenant foreign keys and unique keys prevent cross-tenant references, duplicate dedupe keys, and duplicate per-alert channel/recipient deliveries; both tables are present in runtime and migration tenant metadata.",
-    "implemented": false,
-    "featureIds": ["F010", "F011", "F012", "F021"]
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F021"
+    ]
   },
   {
     "id": "T007",
     "description": "Migration integration: Citus distribution succeeds, required scan/claim indexes exist, defaults are inert, and down removes deliveries before alerts and then the four policy columns/checks without rewriting existing client data.",
-    "implemented": false,
-    "featureIds": ["F009", "F010", "F011", "F012"]
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T008",
     "description": "Unit: credit aggregation includes only non-expired rows in the configured currency, never converts or mixes currencies, and supports a consumed historical balance of zero.",
-    "implemented": false,
-    "featureIds": ["F013", "F014"]
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
   },
   {
     "id": "T009",
     "description": "DB-backed subscriber integration: no credit history produces no zero-balance alert; relevant history below threshold opens one; equality resolves it; repeated low scans deduplicate; recovery followed by another drop opens a new episode.",
-    "implemented": false,
-    "featureIds": ["F014", "F015", "F021", "F031"]
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F021",
+      "F031"
+    ]
   },
   {
     "id": "T010",
     "description": "DB-backed subscriber integration: changing credit threshold or currency resolves the open alert with policy_changed and evaluates the replacement policy as a distinct episode.",
-    "implemented": false,
-    "featureIds": ["F016"]
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T011",
     "description": "Unit: bucket math uses minutes_used over total_minutes plus rolled_over_minutes, does not alert one unit below the exact boundary, alerts at equality, preserves observations above 100 percent, and skips non-positive capacity.",
-    "implemented": false,
-    "featureIds": ["F018", "F019"]
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019"
+    ]
   },
   {
     "id": "T012",
     "description": "DB-backed subscriber integration: only current Bucket configurations owned through client_contracts -> contracts -> contract_lines are evaluated; unrelated clients, non-Bucket configurations, removed client_contract_lines relationships, and noncurrent periods are excluded.",
-    "implemented": false,
-    "featureIds": ["F017", "F031"]
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F031"
+    ]
   },
   {
     "id": "T013",
     "description": "DB-backed subscriber integration: repeated scans of one bucket_usage/configured-percent pair produce one alert, a new usage period is independently eligible, and a percentage change resolves/re-evaluates the old policy alert.",
-    "implemented": false,
-    "featureIds": ["F020", "F021"]
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021"
+    ]
   },
   {
     "id": "T014",
     "description": "DB-backed concurrency integration: duplicate events and concurrent workers contending for one client create one logical alert and one delivery identity because the client lock and unique constraints converge.",
-    "implemented": false,
-    "featureIds": ["F021", "F031"]
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F031"
+    ]
   },
   {
     "id": "T015",
     "description": "DB-backed recipient integration: an active account manager gets a preference-aware high-priority internal delivery plus email when valid; an inactive, missing, or email-less manager is isolated and the email-less active manager still gets internal delivery.",
-    "implemented": false,
-    "featureIds": ["F022", "F035"]
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F035"
+    ]
   },
   {
     "id": "T016",
     "description": "DB-backed recipient integration: client delivery is absent by default, opt-in uses the canonical invoice-recipient precedence with recipientClientId, and an address shared with the manager yields one normalized email delivery retaining both roles.",
-    "implemented": false,
-    "featureIds": ["F023", "F024"]
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024"
+    ]
   },
   {
     "id": "T017",
     "description": "DB-backed recipient integration: enabling client opt-in during an open alert adds only the missing client delivery; manager reassignment and recipient email changes do not resend any already-successful role delivery, but an unresolved role may be retried on a later scan.",
-    "implemented": false,
-    "featureIds": ["F025", "F035"]
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F035"
+    ]
   },
   {
     "id": "T018",
     "description": "Registry completeness: both email and internal subtypes exist for credit and bucket alerts, internal templates are warning/high by default, every billing-email locale is present, every msp/clients locale including xx/yy has settings copy, and links differ safely by recipient role.",
-    "implemented": false,
-    "featureIds": ["F026", "F027"]
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
   },
   {
     "id": "T019",
     "description": "Scheduling contract: CE registers only the prepaid-balance-alert-scan singleton at 0 9 * * * for each tenant, while EE skips that CE path and defines one 09:00 UTC global maintenance fanout schedule with overlap SKIP and the established catch-up window.",
-    "implemented": false,
-    "featureIds": ["F028", "F029"]
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
   },
   {
     "id": "T020",
     "description": "Jobs boundary contract: the prepaid scan handler rejects missing tenant context, publishes PREPAID_BALANCE_ALERT_SCAN_REQUESTED for a valid tenant, is registered in both the job registry and maintenance fanout, and has no server, PostHog, billing-orchestration, or notification imports.",
-    "implemented": false,
-    "featureIds": ["F029", "F030"]
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
   },
   {
     "id": "T021",
     "description": "DB-backed feature-flag guard: with release-v1.5-feature false, throwing, or unregistered, a scan against configured low credit and bucket data creates zero alerts, deliveries, internal notifications, and email-provider calls.",
-    "implemented": false,
-    "featureIds": ["F003", "F031", "F038"]
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F031",
+      "F038"
+    ]
   },
   {
     "id": "T022",
     "description": "DB-backed lease integration: two drainers claim disjoint deliveries with SKIP LOCKED, stale processing leases are reclaimed, transient failures increment attempts, and the fifth failure becomes exhausted and remains auditable.",
-    "implemented": false,
-    "featureIds": ["F011", "F032", "F034"]
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F032",
+      "F034"
+    ]
   },
   {
     "id": "T023",
     "description": "DB-backed delivery integration: internal notification insertion and sent status commit together and roll back together; a preference-disabled delivery is terminal skipped and replay cannot create another internal notification.",
-    "implemented": false,
-    "featureIds": ["F033", "F035"]
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F035"
+    ]
   },
   {
     "id": "T024",
     "description": "Delivery integration: email runs outside the database transaction, records sent after provider success, retains a retryable error after transient failure, and never exceeds the bounded retry policy; the acceptance-before-status crash window is documented as at-least-once rather than asserted exactly-once.",
-    "implemented": false,
-    "featureIds": ["F032", "F034"]
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F034"
+    ]
   },
   {
     "id": "T025",
     "description": "Observability integration: one tenant run with opened, deduplicated, resolved, skipped, retried, invalid-capacity, missing-history, and unroutable cases emits a complete summary and structured warnings containing identifiers but no raw email or template body.",
-    "implemented": false,
-    "featureIds": ["F019", "F036", "F037"]
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F036",
+      "F037"
+    ]
   },
   {
     "id": "T026",
     "description": "Behavioral end-to-end: an authorized user saves both alert types and client opt-in from Billing > General, no immediate send occurs, the next enabled daily scan creates credit and bucket alerts, routes manager/client deliveries, and a second scan sends nothing again.",
-    "implemented": false,
-    "featureIds": ["F004", "F005", "F006", "F013", "F018", "F022", "F023", "F031"]
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F013",
+      "F018",
+      "F022",
+      "F023",
+      "F031"
+    ]
   },
   {
     "id": "T027",
     "description": "Tenant-isolation integration: a scan event for one tenant cannot read another tenant's settings, ledger rows, alert history, deliveries, users, or client recipients, and one client's query/delivery failure does not abort other configured clients.",
-    "implemented": false,
-    "featureIds": ["F007", "F010", "F011", "F031", "F037"]
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F010",
+      "F011",
+      "F031",
+      "F037"
+    ]
   }
 ]
