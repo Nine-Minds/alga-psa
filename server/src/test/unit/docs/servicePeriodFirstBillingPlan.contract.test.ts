@@ -111,6 +111,9 @@ const persistedReaderExclusions = new Set([
 // check so the inventory remains an accurate record of its point in time.
 const billingCycleAlignmentPostInventoryRefs = new Set([
   'packages/billing/src/services/quoteConversionService.ts',
+  // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
+  // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
+  'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',

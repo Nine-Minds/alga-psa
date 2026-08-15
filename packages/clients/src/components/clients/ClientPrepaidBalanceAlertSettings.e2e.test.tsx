@@ -142,9 +142,13 @@ describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', ()
     await waitFor(() => expect(screen.getByText('Prepaid Balance Alerts')).toBeDefined());
 
     await userEvent.click(screen.getByRole('switch', { name: /prepaid credit alerts/i }));
-    await userEvent.type(screen.getByLabelText(/credit threshold/i), '250');
+    // Query the numeric inputs by placeholder rather than label: the server
+    // unit suite globally mocks useAutomationIdAndRegister to return empty
+    // automation props, which strips the `id` off @alga-psa/ui Input, so the
+    // Label htmlFor association that getByLabelText relies on is absent there.
+    await userEvent.type(screen.getByPlaceholderText('e.g. 500.00'), '250');
     await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
-    await userEvent.type(screen.getByLabelText(/consumption threshold/i), '85');
+    await userEvent.type(screen.getByPlaceholderText('e.g. 80'), '85');
     await userEvent.click(screen.getByRole('switch', { name: /client billing recipient/i }));
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
