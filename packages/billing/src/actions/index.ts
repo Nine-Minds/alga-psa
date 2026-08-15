@@ -29,6 +29,7 @@ export * from './contractWizardActions';
 export * from './costRateActions';
 export * from './creditActions';
 export * from './creditExpirationSettingsActions';
+export * from './prepaidBalanceAlertSettingsActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
 export * from './invoiceCogsActions';
