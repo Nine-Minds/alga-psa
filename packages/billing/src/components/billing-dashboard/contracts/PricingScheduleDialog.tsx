@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -42,7 +42,7 @@ export function PricingScheduleDialog({
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const { symbol, fractionDigits } = useCurrencyFormat();
-  const { enabled: contractCurrencyEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1.5-feature', {
     defaultValue: false,
   });
   // Flag off preserves the legacy ambient-currency behavior: two decimals, /100, ambient symbol.
@@ -62,11 +62,17 @@ export function PricingScheduleDialog({
   const [durationUnit, setDurationUnit] = useState<'days' | 'weeks' | 'months' | 'years'>(
     schedule?.duration_unit || 'months'
   );
-  const [customRate, setCustomRate] = useState<string>(
-    schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
+  // The rate input only ever renders minor units converted with a *resolved*
+  // flag's factor: initialize empty while the flag is still loading and let the
+  // effect below fill it in on resolution.
+  const [customRate, setCustomRate] = useState<string>(() =>
+    !flagLoading && schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
       ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
       : ''
   );
+  // Once the user has touched the rate, no flag resolution or schedule re-sync
+  // may overwrite what they typed.
+  const userEditedRateRef = useRef(false);
   const [useDefaultRate, setUseDefaultRate] = useState(
     schedule?.custom_rate === undefined || schedule?.custom_rate === null
   );
@@ -79,17 +85,26 @@ export function PricingScheduleDialog({
       setEffectiveDate(schedule.effective_date ? new Date(schedule.effective_date) : undefined);
       setEndDate(schedule.end_date ? new Date(schedule.end_date) : undefined);
       setHasEndDate(!!schedule.end_date);
-      setCustomRate(
-        schedule.custom_rate !== undefined && schedule.custom_rate !== null
-          ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
-          : ''
-      );
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
+      userEditedRateRef.current = false;
     }
-    // rateMinorUnitFactor/rateFractionDigits are deps so a late feature-flag
-    // resolution re-derives the input from the stored minor-unit value.
-  }, [schedule, rateMinorUnitFactor, rateFractionDigits]);
+  }, [schedule]);
+
+  // Derive the rate input from the stored minor units only once the feature
+  // flag has resolved, so the minor-unit factor is never taken from an
+  // unresolved flag; skip entirely once the user has typed, so a late
+  // resolution can't clobber their input.
+  useEffect(() => {
+    if (flagLoading || userEditedRateRef.current) {
+      return;
+    }
+    setCustomRate(
+      schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
+        ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
+        : ''
+    );
+  }, [schedule, flagLoading, rateMinorUnitFactor, rateFractionDigits]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +143,14 @@ export function PricingScheduleDialog({
       return;
     }
 
+    // Never convert with an unresolved flag: the minor-unit factor isn't known yet.
+    if (!useDefaultRate && flagLoading) {
+      setError(t('pricingSchedules.dialog.validation.currencySettingsLoading', {
+        defaultValue: 'Currency settings are still loading; try again in a moment',
+      }));
+      return;
+    }
+
     if (!useDefaultRate && !customRate) {
       setError(t('pricingSchedules.dialog.validation.customRateRequired', {
         defaultValue: 'Custom rate is required when not using default rate',
@@ -151,7 +174,8 @@ export function PricingScheduleDialog({
         end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
-        custom_rate: useDefaultRate ? undefined : Math.round(parseFloat(customRate) * rateMinorUnitFactor),
+        // Explicit null — undefined is dropped by Knex on update, silently keeping the old rate.
+        custom_rate: useDefaultRate ? null : Math.round(parseFloat(customRate) * rateMinorUnitFactor),
         notes: notes || undefined
       };
 
@@ -328,6 +352,7 @@ export function PricingScheduleDialog({
               onCheckedChange={(checked) => {
                 setUseDefaultRate(checked);
                 if (checked) {
+                  userEditedRateRef.current = true;
                   setCustomRate('');
                 }
               }}
@@ -349,7 +374,10 @@ export function PricingScheduleDialog({
                   min="0"
                   step={contractCurrencyEnabled ? String(1 / rateMinorUnitFactor) : '0.01'}
                   value={customRate}
-                  onChange={(e) => setCustomRate(e.target.value)}
+                  onChange={(e) => {
+                    userEditedRateRef.current = true;
+                    setCustomRate(e.target.value);
+                  }}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   placeholder={contractCurrencyEnabled
                     ? (0).toFixed(rateFractionDigits)

@@ -167,7 +167,8 @@ export interface IContractPricingSchedule extends TenantEntity {
   end_date?: ISO8601String | null;
   duration_value?: number;
   duration_unit?: 'days' | 'weeks' | 'months' | 'years';
-  custom_rate?: number;
+  /** Integer minor-unit amount; explicit null clears the rate back to the contract default. */
+  custom_rate?: number | null;
   notes?: string;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;

@@ -112,7 +112,7 @@ function renderDialog(props: {
 }) {
   const onClose = vi.fn();
   const onSave = vi.fn();
-  const utils = render(
+  const tree = () => (
     <CurrencyFormatProvider currencyCode={props.ambientCurrency ?? 'USD'}>
       <PricingScheduleDialog
         contractId="contract-1"
@@ -123,7 +123,15 @@ function renderDialog(props: {
       />
     </CurrencyFormatProvider>
   );
-  return { ...utils, onClose, onSave };
+  const utils = render(tree());
+  return {
+    ...utils,
+    onClose,
+    onSave,
+    // Re-render the same tree so the component re-reads the (mutated) mocked
+    // feature-flag state — simulates a late flag resolution.
+    rerenderDialog: () => utils.rerender(tree()),
+  };
 }
 
 function rateInput(): HTMLInputElement {
@@ -215,6 +223,87 @@ describe('PricingScheduleDialog contract-currency custom rate (release-v1.5-feat
     expect(updatePricingScheduleMock).toHaveBeenCalledWith(
       'schedule-1',
       expect.objectContaining({ custom_rate: 5100 })
+    );
+  });
+
+  it('flag on: switching back to the default rate submits an explicit custom_rate null', async () => {
+    featureFlagState.enabled = true;
+    const { onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 12345 }),
+      currencyCode: 'EUR',
+    });
+
+    fireEvent.click(screen.getByLabelText('Use default rate'));
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [scheduleId, payload] = updatePricingScheduleMock.mock.calls[0];
+    expect(scheduleId).toBe('schedule-1');
+    // null, not undefined — Knex drops undefined keys from updates, which
+    // silently kept the old rate.
+    expect(payload.custom_rate).toBeNull();
+  });
+
+  it('flag off: switching back to the default rate also submits an explicit custom_rate null', async () => {
+    featureFlagState.enabled = false;
+    const { onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+    });
+
+    fireEvent.click(screen.getByLabelText('Use default rate'));
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock.mock.calls[0][1].custom_rate).toBeNull();
+  });
+
+  it('flag loading: keeps the rate uninitialized instead of exposing legacy units, then derives with the resolved factor', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { rerenderDialog } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+      currencyCode: 'JPY',
+    });
+
+    // Unresolved flag: no legacy /100 rendering of the stored minor units.
+    expect(rateInput().value).toBe('');
+
+    featureFlagState.loading = false;
+    featureFlagState.enabled = true;
+    rerenderDialog();
+
+    await waitFor(() => expect(rateInput().value).toBe('5000'));
+  });
+
+  it('flag loading: refuses to submit a custom rate and never clobbers input typed before resolution', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { rerenderDialog, onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+      currencyCode: 'JPY',
+    });
+
+    fireEvent.change(rateInput(), { target: { value: '600' } });
+    submitForm();
+
+    // Unit math must not run against an unresolved flag.
+    expect(
+      await screen.findByText('Currency settings are still loading; try again in a moment')
+    ).toBeInTheDocument();
+    expect(updatePricingScheduleMock).not.toHaveBeenCalled();
+
+    featureFlagState.loading = false;
+    featureFlagState.enabled = true;
+    rerenderDialog();
+
+    // Late resolution must not overwrite what the user typed.
+    expect(rateInput().value).toBe('600');
+
+    submitForm();
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ custom_rate: 600 })
     );
   });
 });
