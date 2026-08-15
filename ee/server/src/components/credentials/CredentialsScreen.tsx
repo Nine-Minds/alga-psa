@@ -16,7 +16,7 @@
  * and the unified client Passwords tab (`clientId` scopes it).
  */
 
-import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -49,22 +49,18 @@ import {
   addCredentialToEntity,
   createCredential,
   deleteCredential,
-  getCredentialsContext,
-  listCredentials,
   removeCredentialFromEntity,
-  revealCredential,
   updateCredential,
 } from '../../lib/actions/credentials/credentialActions';
-import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
 import type {
   CredentialAssociationEntityType,
-  CredentialRevealResult,
   CredentialSummary,
 } from '../../lib/credentials/contracts';
 import { CredentialFormDialog, type CredentialFormValue } from './CredentialFormDialog';
 import { CredentialLinkDialog } from './CredentialLinkDialog';
 import { CredentialRestrictDialog } from './CredentialRestrictDialog';
 import { TotpCountdown } from './TotpCountdown';
+import { useCredentialsList, type RevealErrorKey } from './useCredentialsList';
 
 export interface CredentialsScreenProps {
   /** When set, scope the list to one client (unified client Passwords tab). */
@@ -83,13 +79,6 @@ export interface CredentialsScreenProps {
    */
   defaultClientId?: string | null;
 }
-
-type RevealState = {
-  password: string;
-  otpCode: CredentialRevealResult['otpCode'];
-};
-
-type RevealErrorKey = 'failed' | 'noAccess' | 'notFound';
 
 /**
  * List container: the global screen needs its own titled Card on a bare
@@ -139,17 +128,26 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
   const entityScoped = Boolean(entityType && entityId);
 
-  const [context, setContext] = useState<CredentialsContext | null>(null);
-  const [credentials, setCredentials] = useState<CredentialSummary[] | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, startRefreshTransition] = useTransition();
-  const [loadError, setLoadError] = useState(false);
 
-  // SECURITY: the only place revealed values ever live.
-  const [revealedValues, setRevealedValues] = useState<Record<string, RevealState>>({});
-  const [revealingIds, setRevealingIds] = useState<Record<string, boolean>>({});
-  const [revealErrors, setRevealErrors] = useState<Record<string, RevealErrorKey>>({});
+  // Load + reveal state lives in the shared hook (single home for the
+  // security-sensitive reveal handling; the bento tile body uses it too).
+  const {
+    context,
+    credentials,
+    isLoading,
+    isRefreshing,
+    loadError,
+    load,
+    refresh: handleRefresh,
+    revealedValues,
+    revealingIds,
+    revealErrors,
+    reveal: handleReveal,
+    hide: handleHide,
+    copyPassword: handleCopy,
+    copyOtp: handleCopyOtp,
+  } = useCredentialsList({ enabled: flagEnabled, clientId, entityType, entityId });
 
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -159,26 +157,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
-
-  const load = useCallback(
-    async (refresh: boolean) => {
-      setLoadError(false);
-      setRevealedValues({});
-      setRevealErrors({});
-      try {
-        const ctx = await getCredentialsContext();
-        setContext(ctx);
-        if (!ctx.tierOk) {
-          setCredentials([]);
-          return;
-        }
-        setCredentials(await listCredentials({ clientId, entityType, entityId }));
-      } catch {
-        setLoadError(true);
-      }
-    },
-    [clientId, entityType, entityId]
-  );
 
   const applyFilters = useCallback(
     (items: CredentialSummary[]) => {
@@ -196,18 +174,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     [search, clientFilter, sourceFilter]
   );
 
-  useEffect(() => {
-    if (!flagEnabled) return;
-    let cancelled = false;
-    setIsLoading(true);
-    void load(false).finally(() => {
-      if (!cancelled) setIsLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [flagEnabled, load]);
-
   // Tenant client list backs the global screen's client filter and row
   // labels. Entity embeds never render either (the scope already fixes the
   // client), so skip the fetch there; the form dialog self-fetches when it
@@ -224,69 +190,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       cancelled = true;
     };
   }, [flagEnabled, entityScoped]);
-
-  const handleRefresh = () => {
-    startRefreshTransition(async () => {
-      await load(true);
-    });
-  };
-
-  const handleReveal = async (id: string) => {
-    setRevealingIds((prev) => ({ ...prev, [id]: true }));
-    setRevealErrors((prev) => {
-      const { [id]: _removed, ...rest } = prev;
-      return rest;
-    });
-    try {
-      const result = await revealCredential(id);
-      if (result.state === 'ok') {
-        setRevealedValues((prev) => ({
-          ...prev,
-          [id]: { password: result.password ?? '', otpCode: result.otpCode ?? null },
-        }));
-      } else {
-        setRevealErrors((prev) => ({
-          ...prev,
-          [id]:
-            result.state === 'no_access'
-              ? 'noAccess'
-              : result.state === 'not_found'
-                ? 'notFound'
-                : 'failed',
-        }));
-      }
-    } catch {
-      setRevealErrors((prev) => ({ ...prev, [id]: 'failed' }));
-    } finally {
-      setRevealingIds((prev) => {
-        const { [id]: _removed, ...rest } = prev;
-        return rest;
-      });
-    }
-  };
-
-  const handleHide = (id: string) => {
-    setRevealedValues((prev) => {
-      const { [id]: _removed, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  const handleCopy = (id: string) => {
-    const value = revealedValues[id]?.password;
-    if (value !== undefined) {
-      void navigator.clipboard.writeText(value);
-      toast.success(t('credentials.table.copied'));
-    }
-  };
-
-  const handleCopyOtp = (id: string) => {
-    const code = revealedValues[id]?.otpCode?.code;
-    if (code !== undefined) {
-      void navigator.clipboard.writeText(code);
-      toast.success(t('credentials.table.copied'));
-    }
-  };
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
     if (editing) {
@@ -314,14 +217,14 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     }
     setFormOpen(false);
     setEditing(null);
-    await load(true);
+    await load();
   };
 
   const handleLink = async (credential: CredentialSummary) => {
     if (!entityType || !entityId) return;
     await addCredentialToEntity(entityType, entityId, credential.id);
     setLinkOpen(false);
-    await load(true);
+    await load();
   };
 
   const handleDetach = async (credential: CredentialSummary) => {
@@ -331,7 +234,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     }
     try {
       await removeCredentialFromEntity(entityType, entityId, credential.id);
-      await load(true);
+      await load();
     } catch {
       toast.error(t('credentials.screen.detachFailed'));
     }
@@ -343,7 +246,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     }
     try {
       await deleteCredential(credential.id, credential.clientId);
-      await load(true);
+      await load();
     } catch {
       toast.error(t('credentials.screen.deleteFailed'));
     }
@@ -351,7 +254,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
   const handleRestrictSaved = async () => {
     setRestrictTarget(null);
-    await load(true);
+    await load();
   };
 
   const revealErrorText: Record<RevealErrorKey, string> = {
@@ -504,7 +407,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       {credentials && visibleRows.length === 0 && (
         entityScoped ? (
           <p id="credentials-screen-empty" className="text-sm text-gray-500 py-1">
-            {t('credentials.screen.emptyNoFilters')}
+            {t('credentials.section.empty')}
           </p>
         ) : (
           <Card id="credentials-screen-empty">
