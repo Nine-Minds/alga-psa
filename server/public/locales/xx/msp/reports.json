@@ -153,6 +153,10 @@
         "title": "11111",
         "description": "11111"
       },
+      "deferredRevenue": {
+        "title": "11111",
+        "description": "11111"
+      },
       "inventoryMargin": {
         "title": "11111",
         "description": "11111"
@@ -164,10 +168,6 @@
       "inventoryGhostUsage": {
         "title": "11111",
         "description": "11111"
-      },
-      "deferredRevenue": {
-        "title": "Deferred Revenue",
-        "description": "Prepaid liability across clients: credit balances and unburned bucket hours by month."
       }
     },
     "table": {
@@ -446,64 +446,64 @@
     }
   },
   "deferredRevenue": {
-    "title": "Deferred revenue / prepaid liability",
-    "description": "Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.",
-    "printSubtitle": "Month {{month}}",
-    "printTable": "Per-client rollforward",
-    "empty": "No prepaid liability for this month.",
+    "title": "11111",
+    "description": "11111",
+    "printSubtitle": "11111 {{month}} 11111",
+    "printTable": "11111",
+    "empty": "11111",
     "actions": {
-      "csv": "Download CSV"
+      "csv": "11111"
     },
     "errors": {
-      "load": "Failed to load the deferred revenue report."
+      "load": "11111"
     },
     "summary": {
-      "totalLiability": "Total prepaid liability",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "delta": "Change vs prior month"
+      "totalLiability": "11111",
+      "credits": "11111",
+      "hours": "11111",
+      "delta": "11111"
     },
     "table": {
-      "client": "Client",
-      "credits": "Credits",
-      "hours": "Prepaid hours",
-      "total": "Total closing",
-      "opening": "Opening",
-      "issued": "Issued",
-      "applied": "Applied",
-      "expired": "Expired",
-      "adjustments": "Adj.",
-      "closing": "Closing",
-      "currencyHeading": "Currency",
-      "noClients": "No clients with prepaid balances this month.",
-      "tenantTotal": "Tenant total"
+      "client": "11111",
+      "credits": "11111",
+      "hours": "11111",
+      "total": "11111",
+      "opening": "11111",
+      "issued": "11111",
+      "applied": "11111",
+      "expired": "11111",
+      "adjustments": "11111",
+      "closing": "11111",
+      "currencyHeading": "11111",
+      "noClients": "11111",
+      "tenantTotal": "11111"
     },
     "detail": {
-      "credits": "Credit balances",
-      "noCredits": "No credit entries.",
-      "date": "Issued",
-      "description": "Description",
-      "remaining": "Remaining",
-      "expires": "Expires",
-      "qbo": "QBO",
-      "reachable": "Synced",
-      "notReachable": "Not in QBO",
-      "notReachableTitle": "Prepayment / project-deposit credits never export to QuickBooks — Alga is the system of record.",
-      "buckets": "Prepaid bucket hours",
-      "noBuckets": "No prepaid bucket periods.",
-      "line": "Line",
-      "period": "Period",
-      "included": "Included",
-      "used": "Used",
-      "value": "Value",
-      "feeSource": "Fee",
-      "rollover": "rollover",
-      "notBilled": "Not yet billed",
-      "billed": "Billed"
+      "credits": "11111",
+      "noCredits": "11111",
+      "date": "11111",
+      "description": "11111",
+      "remaining": "11111",
+      "expires": "11111",
+      "qbo": "11111",
+      "reachable": "11111",
+      "notReachable": "11111",
+      "notReachableTitle": "11111",
+      "buckets": "11111",
+      "noBuckets": "11111",
+      "line": "11111",
+      "period": "11111",
+      "included": "11111",
+      "used": "11111",
+      "value": "11111",
+      "feeSource": "11111",
+      "rollover": "11111",
+      "notBilled": "11111",
+      "billed": "11111"
     },
     "csv": {
-      "client": "Client",
-      "currency": "Currency"
+      "client": "11111",
+      "currency": "11111"
     }
   }
 }
