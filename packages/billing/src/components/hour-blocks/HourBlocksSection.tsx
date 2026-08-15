@@ -174,6 +174,13 @@ export default function HourBlocksSection({ clientId, currencyCode = 'USD' }: Ho
             </span>
           );
         }
+        if (record.source_type === 'purchase') {
+          return (
+            <span className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('detail.invoiceDeleted', { defaultValue: 'Invoice (deleted)' })}
+            </span>
+          );
+        }
         return (
           <span className="text-sm text-[rgb(var(--color-text-500))]">
             {t('detail.directGrant', { defaultValue: 'Direct grant' })}

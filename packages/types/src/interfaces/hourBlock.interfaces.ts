@@ -38,6 +38,13 @@ export interface IHourBlock extends TenantEntity {
   expiration_date?: string | null;
   /** Null ⇒ direct grant. */
   source_invoice_id?: string | null;
+  /**
+   * Immutable origin of the block — 'purchase' (via an invoice) or 'grant'
+   * (comped hours, no invoice). Set at mint time and never cleared: it keeps
+   * purchase provenance even when the source invoice is later deleted, so the
+   * UI can distinguish "purchase, invoice deleted" from a true grant.
+   */
+  source_type?: 'purchase' | 'grant';
   voided_at?: string | null;
   voided_by?: string | null;
   void_reason?: string | null;

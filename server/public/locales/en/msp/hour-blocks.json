@@ -105,6 +105,7 @@
     "audit": "Audit trail",
     "noAudit": "No audit entries.",
     "sourceInvoice": "Source invoice",
+    "invoiceDeleted": "Invoice (deleted)",
     "directGrant": "Direct grant",
     "expires": "Expires {{date}}",
     "allLabor": "All labor",

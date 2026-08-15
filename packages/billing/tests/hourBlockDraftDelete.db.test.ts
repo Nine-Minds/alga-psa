@@ -84,8 +84,31 @@ describe.runIf(enabled)('hardDeleteInvoice hour-block voiding', () => {
       block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
       total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
       currency_code: 'USD', status: blockStatus, purchased_at: null, source_invoice_id: invoiceId,
+      source_type: 'purchase',
     });
-    return { invoiceId, blockId };
+    return { invoiceId, blockId, clientId };
+  }
+
+  async function seedGrant() {
+    const clientId = uuidv4();
+    const blockId = uuidv4();
+    await db('tenants').insert({ tenant, client_name: 'HB Grant Tenant', email: 'hbg@test.local', billing_source: 'test' });
+    await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Grant Client' });
+    const serviceTypeId = uuidv4();
+    const serviceId = uuidv4();
+    await db('service_types').insert({ id: serviceTypeId, tenant, name: 'HB Grant Type', is_active: true, order_number: 1 });
+    await db('service_catalog').insert({
+      service_id: serviceId, tenant, service_name: 'Grant Svc',
+      custom_service_type_id: serviceTypeId, billing_method: 'hourly', default_rate: 10000,
+      unit_of_measure: 'hour', category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
+    });
+    await db('hour_blocks').insert({
+      block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
+      total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 0,
+      currency_code: 'USD', status: 'active', purchased_at: new Date().toISOString(),
+      source_invoice_id: null, source_type: 'grant',
+    });
+    return { blockId, clientId };
   }
 
   async function cleanup() {
@@ -113,6 +136,7 @@ describe.runIf(enabled)('hardDeleteInvoice hour-block voiding', () => {
       expect(block.voided_by).toBe(userId);
       expect(block.void_reason).toBe('Draft purchase invoice deleted');
       expect(block.source_invoice_id).toBeNull();
+      expect(block.source_type).toBe('purchase');
 
       const audit = await db('hour_block_audit').where({ tenant, block_id: blockId }).first();
       expect(audit).toBeTruthy();
@@ -145,6 +169,44 @@ describe.runIf(enabled)('hardDeleteInvoice hour-block voiding', () => {
 
       const invoice = await db('invoices').where({ tenant, invoice_id: invoiceId }).first();
       expect(invoice).toBeTruthy();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('keeps purchase provenance through listHourBlocks after the draft invoice is deleted', async () => {
+    const { invoiceId, blockId, clientId } = await seedInvoice('pending');
+
+    try {
+      const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+      const result = await hardDeleteInvoice(invoiceId);
+      expect(result).toEqual({ success: true });
+
+      const { listHourBlocks } = await import('../src/actions/hourBlockActions');
+      const rows = await listHourBlocks(clientId);
+
+      expect(Array.isArray(rows)).toBe(true);
+      const row = (rows as Array<Record<string, any>>).find((r) => r.block_id === blockId);
+      expect(row).toBeTruthy();
+      expect(row.source_type).toBe('purchase');
+      expect(row.invoice_number).toBeNull();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('reads a direct grant as grant through listHourBlocks', async () => {
+    const { blockId, clientId } = await seedGrant();
+
+    try {
+      const { listHourBlocks } = await import('../src/actions/hourBlockActions');
+      const rows = await listHourBlocks(clientId);
+
+      expect(Array.isArray(rows)).toBe(true);
+      const row = (rows as Array<Record<string, any>>).find((r) => r.block_id === blockId);
+      expect(row).toBeTruthy();
+      expect(row.source_type).toBe('grant');
+      expect(row.invoice_number).toBeNull();
     } finally {
       await cleanup();
     }

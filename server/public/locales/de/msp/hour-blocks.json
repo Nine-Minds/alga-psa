@@ -105,6 +105,7 @@
     "audit": "Prüfprotokoll",
     "noAudit": "Keine Protokolleinträge.",
     "sourceInvoice": "Quellrechnung",
+    "invoiceDeleted": "Rechnung (gelöscht)",
     "directGrant": "Direkte Gewährung",
     "expires": "Läuft am {{date}} ab",
     "allLabor": "Alle Leistungen",

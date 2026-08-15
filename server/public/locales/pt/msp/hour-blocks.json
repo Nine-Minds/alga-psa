@@ -105,6 +105,7 @@
     "audit": "Trilha de auditoria",
     "noAudit": "Nenhum registro de auditoria.",
     "sourceInvoice": "Fatura de origem",
+    "invoiceDeleted": "Fatura (excluída)",
     "directGrant": "Concessão direta",
     "expires": "Expira em {{date}}",
     "allLabor": "Toda a mão de obra",

@@ -135,6 +135,10 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.sourceInvoice', { defaultValue: 'Source invoice' })} #{data.block.invoice_number}
                 </p>
+              ) : data.block.source_type === 'purchase' ? (
+                <p className="text-[rgb(var(--color-text-500))]">
+                  {t('detail.invoiceDeleted', { defaultValue: 'Invoice (deleted)' })}
+                </p>
               ) : (
                 <p className="text-[rgb(var(--color-text-500))]">{t('detail.directGrant', { defaultValue: 'Direct grant' })}</p>
               )}

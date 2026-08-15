@@ -105,6 +105,7 @@
     "audit": "Dziennik audytu",
     "noAudit": "Brak wpisów audytu.",
     "sourceInvoice": "Faktura źródłowa",
+    "invoiceDeleted": "Faktura (usunięta)",
     "directGrant": "Przyznanie bezpośrednie",
     "expires": "Wygasa {{date}}",
     "allLabor": "Wszystkie prace",

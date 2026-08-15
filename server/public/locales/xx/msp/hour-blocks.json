@@ -105,6 +105,7 @@
     "audit": "11111",
     "noAudit": "11111",
     "sourceInvoice": "11111",
+    "invoiceDeleted": "11111",
     "directGrant": "11111",
     "expires": "11111 {{date}} 11111",
     "allLabor": "11111",

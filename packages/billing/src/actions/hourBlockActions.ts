@@ -263,6 +263,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         purchased_at: null,
         expiration_date: expirationDate ? new Date(expirationDate).toISOString().slice(0, 10) : null,
         source_invoice_id: invoiceId,
+        source_type: 'purchase',
         created_by: user.user_id,
         notes: notes?.trim() || null,
       });
@@ -325,6 +326,7 @@ export const grantHourBlock = withAuth(async (
         purchased_at: now,
         expiration_date: expirationDate ? new Date(expirationDate).toISOString().slice(0, 10) : null,
         source_invoice_id: null,
+        source_type: 'grant',
         created_by: user.user_id,
         notes: notes?.trim() || null,
       });
@@ -654,12 +656,22 @@ export const getHourBlockDetail = withAuth(async (
           'te.work_item_type',
           'te.work_date',
           'te.start_time',
-          'u.full_name as user_name',
+          'u.first_name as user_first_name',
+          'u.last_name as user_last_name',
+          'u.username as user_username',
         );
       const scopedDb = tenantDb(trx, tenant);
       scopedDb.tenantJoin(allocationsQuery, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
       scopedDb.tenantJoin(allocationsQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
       const allocations = await allocationsQuery;
+
+      const allocationsWithUser = (allocations as DbRow[]).map((a) => {
+        const { user_first_name, user_last_name, user_username, ...rest } = a;
+        return {
+          ...rest,
+          user_name: [user_first_name, user_last_name].filter(Boolean).join(' ').trim() || user_username || null,
+        };
+      });
 
       const audit = await tenantScopedTable(trx, tenant, 'hour_block_audit')
         .where({ block_id: blockId, tenant })
@@ -672,7 +684,7 @@ export const getHourBlockDetail = withAuth(async (
           remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],
-        allocations: allocations as IHourBlockAllocation[],
+        allocations: allocationsWithUser as IHourBlockAllocation[],
         audit: audit as IHourBlockAuditEntry[],
       };
     });

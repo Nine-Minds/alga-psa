@@ -105,6 +105,7 @@
     "audit": "Registro di audit",
     "noAudit": "Nessuna voce di audit.",
     "sourceInvoice": "Fattura di origine",
+    "invoiceDeleted": "Fattura (eliminata)",
     "directGrant": "Concessione diretta",
     "expires": "Scade il {{date}}",
     "allLabor": "Tutta la manodopera",

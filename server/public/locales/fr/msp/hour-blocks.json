@@ -105,6 +105,7 @@
     "audit": "Journal d'audit",
     "noAudit": "Aucune entrée d'audit.",
     "sourceInvoice": "Facture d'origine",
+    "invoiceDeleted": "Facture (supprimée)",
     "directGrant": "Octroi direct",
     "expires": "Expire le {{date}}",
     "allLabor": "Toute la main-d'œuvre",
