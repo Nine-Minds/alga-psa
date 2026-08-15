@@ -69,6 +69,10 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenuItem: ({ children }: any) => <div>{children}</div>,
 }));
 
+vi.mock('@alga-psa/ui/components/Skeleton', () => ({
+  Skeleton: () => <div data-testid="custom-rate-skeleton" />,
+}));
+
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import PricingSchedules from './PricingSchedules';
@@ -89,11 +93,18 @@ function schedule(overrides: Partial<IContractPricingSchedule> = {}): IContractP
 }
 
 function renderList(props: { currencyCode?: string } = {}) {
-  return render(
+  const tree = () => (
     <CurrencyFormatProvider currencyCode="USD">
       <PricingSchedules contractId="contract-1" currencyCode={props.currencyCode} />
     </CurrencyFormatProvider>
   );
+  const utils = render(tree());
+  return {
+    ...utils,
+    // Re-render the same tree so the component re-reads the (mutated) mocked
+    // feature-flag state — simulates a late flag resolution.
+    rerenderList: () => utils.rerender(tree()),
+  };
 }
 
 describe('PricingSchedules contract-currency custom rate (release-v1.5-feature)', () => {
@@ -137,5 +148,45 @@ describe('PricingSchedules contract-currency custom rate (release-v1.5-feature)'
 
     expect((await screen.findAllByText('$50.00')).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('¥5,000')).not.toBeInTheDocument();
+  });
+
+  it('flag loading: shows the neutral placeholder instead of any formatted value, then resolves flag-on', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
+
+    const { rerenderList } = renderList({ currencyCode: 'JPY' });
+
+    // Once the rows arrive, both the timeline and the table cell render the
+    // neutral skeleton for the custom rate.
+    expect((await screen.findAllByTestId('custom-rate-skeleton')).length).toBe(2);
+    // While the flag is unresolved the stored minor units must not be rendered
+    // through the ambient-USD /100 formatting (nor the contract currency).
+    expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('¥5,000')).not.toBeInTheDocument();
+
+    featureFlagState.loading = false;
+    featureFlagState.enabled = true;
+    rerenderList();
+
+    expect((await screen.findAllByText('¥5,000')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByTestId('custom-rate-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('flag loading: keeps the custom rate neutral until the flag resolves to the flag-off legacy rendering', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    getPricingSchedulesByContractMock.mockResolvedValue([schedule({ custom_rate: 5000 })]);
+
+    const { rerenderList } = renderList({ currencyCode: 'JPY' });
+
+    expect((await screen.findAllByTestId('custom-rate-skeleton')).length).toBe(2);
+    expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
+
+    featureFlagState.loading = false;
+    rerenderList();
+
+    expect((await screen.findAllByText('$50.00')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByTestId('custom-rate-skeleton')).not.toBeInTheDocument();
   });
 });

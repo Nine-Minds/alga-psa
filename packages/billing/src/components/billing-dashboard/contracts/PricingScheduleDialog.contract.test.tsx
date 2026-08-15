@@ -86,6 +86,10 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ id, ...props }: any) => <input id={id} {...props} />,
 }));
 
+vi.mock('@alga-psa/ui/components/Skeleton', () => ({
+  Skeleton: () => <div data-testid="rate-symbol-skeleton" />,
+}));
+
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
@@ -255,6 +259,59 @@ describe('PricingScheduleDialog contract-currency custom rate (release-v1.5-feat
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(updatePricingScheduleMock.mock.calls[0][1].custom_rate).toBeNull();
+  });
+
+  it('flag loading: disables the rate input with no legacy semantics and blocks submission', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+      currencyCode: 'JPY',
+    });
+
+    const input = rateInput();
+    // Non-editable while the currency interpretation is unknown.
+    expect(input).toBeDisabled();
+    // No legacy symbol/step/placeholder semantics may be shown.
+    expect(screen.queryByText('$')).not.toBeInTheDocument();
+    expect(screen.queryByText('¥')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('step', 'any');
+    expect(input).toHaveAttribute('placeholder', '');
+    // The neutral symbol placeholder replaces the currency adornment.
+    expect(screen.getByTestId('rate-symbol-skeleton')).toBeInTheDocument();
+    // Stored minor units are not exposed through any conversion.
+    expect(input.value).toBe('');
+
+    submitForm();
+
+    expect(
+      await screen.findByText('Currency settings are still loading; try again in a moment')
+    ).toBeInTheDocument();
+    expect(updatePricingScheduleMock).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('flag loading: restores editability and contract-currency semantics after resolution', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { rerenderDialog } = renderDialog({
+      schedule: schedule({ custom_rate: 12345 }),
+      currencyCode: 'EUR',
+    });
+
+    expect(rateInput()).toBeDisabled();
+
+    featureFlagState.loading = false;
+    featureFlagState.enabled = true;
+    rerenderDialog();
+
+    const input = rateInput();
+    await waitFor(() => expect(input).toBeEnabled());
+    expect(input.value).toBe('123.45');
+    expect(input).toHaveAttribute('step', '0.01');
+    expect(input).toHaveAttribute('placeholder', '0.00');
+    expect(screen.getByText('€')).toBeInTheDocument();
+    expect(screen.queryByTestId('rate-symbol-skeleton')).not.toBeInTheDocument();
   });
 
   it('flag loading: keeps the rate uninitialized instead of exposing legacy units, then derives with the resolved factor', async () => {

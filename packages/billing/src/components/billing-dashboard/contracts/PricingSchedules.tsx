@@ -23,6 +23,7 @@ import { PricingScheduleDialog } from './PricingScheduleDialog';
 import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -43,12 +44,17 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
   const { t } = useTranslation('msp/contracts');
   const { locale } = useFormatters();
   const { money } = useCurrencyFormat();
-  const { enabled: contractCurrencyEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1.5-feature', {
     defaultValue: false,
   });
   // Flag off preserves the legacy ambient-currency two-decimal rendering.
   const formatCustomRate = (minorUnits: number): string =>
     contractCurrencyEnabled ? money(minorUnits, currencyCode) : formatCurrency(minorUnits / 100);
+  // While the flag is unresolved the minor-unit interpretation is unknown, so
+  // the stored rate must never be formatted through any currency assumption
+  // (the legacy /100 ambient-USD rendering included) — show a neutral skeleton.
+  const renderCustomRateValue = (customRate: number): React.ReactNode =>
+    flagLoading ? <Skeleton className="inline-block h-4 w-16" /> : formatCustomRate(customRate);
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +157,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value) => value !== undefined && value !== null
-        ? formatCustomRate(value as number)
+        ? renderCustomRateValue(value as number)
         : (
           <span className="text-muted-foreground">
             {t('pricingSchedules.list.values.useDefaultRate', { defaultValue: 'Use default rate' })}
@@ -292,7 +298,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
                                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                     <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
-                                      ? formatCustomRate(schedule.custom_rate)
+                                      ? renderCustomRateValue(schedule.custom_rate)
                                       : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
                                 </div>

@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { IContractPricingSchedule } from '@alga-psa/types';
 import {
   createPricingSchedule,
@@ -365,23 +366,30 @@ export function PricingScheduleDialog({
                 {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
               </Label>
               <div className="relative">
+                {/* While the flag is unresolved no currency semantics may be
+                    shown — not even the legacy ambient ones. */}
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                  {contractCurrencyEnabled ? symbol(currencyCode) : symbol()}
+                  {flagLoading
+                    ? <Skeleton className="h-4 w-4" />
+                    : contractCurrencyEnabled ? symbol(currencyCode) : symbol()}
                 </span>
                 <Input
                   id="custom-rate"
                   type="number"
                   min="0"
-                  step={contractCurrencyEnabled ? String(1 / rateMinorUnitFactor) : '0.01'}
+                  step={flagLoading ? 'any' : contractCurrencyEnabled ? String(1 / rateMinorUnitFactor) : '0.01'}
                   value={customRate}
+                  disabled={flagLoading}
                   onChange={(e) => {
                     userEditedRateRef.current = true;
                     setCustomRate(e.target.value);
                   }}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder={contractCurrencyEnabled
-                    ? (0).toFixed(rateFractionDigits)
-                    : t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
+                  placeholder={flagLoading
+                    ? ''
+                    : contractCurrencyEnabled
+                      ? (0).toFixed(rateFractionDigits)
+                      : t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
                 />
               </div>
             </div>
