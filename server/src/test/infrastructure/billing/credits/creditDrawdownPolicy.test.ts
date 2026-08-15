@@ -489,6 +489,163 @@ describe('Credit Draw-Down Policy Controls', () => {
     expect(remainingCredit).toBe(4000);
   });
 
+  it('caps cumulative applications at the eligible subtotal across repeated manual applications', async () => {
+    const clientId = await createClient(context.db, context.tenantId, 'Repeated Application Client', {
+      billing_cycle: 'monthly',
+      region_code: 'US-NY',
+      is_tax_exempt: false,
+      credit_balance: 0,
+    });
+
+    await setupDefaultTax(clientId);
+
+    const laborTypeId = await createServiceType('Labor');
+    const hardwareTypeId = await createServiceType('Hardware');
+
+    // Auto-apply off so finalize leaves the invoice clean; eligibility still
+    // gates every manual application.
+    await ensureClientBillingSettings(clientId, {
+      credit_auto_apply_enabled: false,
+      credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
+    });
+
+    const now = createTestDate();
+    const periodStart = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const periodEnd = Temporal.PlainDate.from(now).toString();
+
+    const anchorServiceId = await createTestService(context, {
+      service_name: 'Contract Line Anchor Service',
+    });
+    await createFixedPlanAssignment(context, anchorServiceId, {
+      clientId,
+      startDate: periodStart,
+      planName: 'Drawdown Test Plan',
+    });
+
+    const laborService = await createTestService(context, {
+      service_name: 'Labor Service',
+      billing_method: 'fixed',
+      default_rate: 6000,
+      custom_service_type_id: laborTypeId,
+    });
+    const hardwareService = await createTestService(context, {
+      service_name: 'Hardware Service',
+      billing_method: 'fixed',
+      default_rate: 4000,
+      custom_service_type_id: hardwareTypeId,
+    });
+
+    const billingCycleId = await createBillingCycle(clientId, periodStart, periodEnd);
+
+    const prepaymentInvoice = await createPrepaymentInvoice(clientId, 10000);
+    await finalizeInvoice(prepaymentInvoice.invoice_id);
+
+    const { invoiceId } = await generateInvoiceFromChargesForClient(clientId, billingCycleId, [
+      makeCharge(laborService, 'Labor Service', 6000, periodStart, periodEnd),
+      makeCharge(hardwareService, 'Hardware Service', 4000, periodStart, periodEnd),
+    ]);
+
+    await finalizeInvoice(invoiceId);
+
+    const finalizedInvoice = await tenantTable(context, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    expect(Number(finalizedInvoice.credit_applied)).toBe(0);
+
+    // First application consumes the full eligible subtotal (labor only).
+    await applyCreditToInvoice(clientId, invoiceId, 6000);
+    const afterFirst = await tenantTable(context, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    expect(Number(afterFirst.credit_applied)).toBe(6000);
+
+    // Second application requests another 6000. The remaining eligible headroom
+    // is 0, so it must be clamped to nothing rather than drawing against the
+    // ineligible hardware subtotal.
+    await applyCreditToInvoice(clientId, invoiceId, 6000);
+    const afterSecond = await tenantTable(context, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    expect(Number(afterSecond.credit_applied)).toBe(6000);
+
+    const remainingCredit = await ClientContractLine.getClientCredit(clientId);
+    expect(remainingCredit).toBe(4000);
+  });
+
+  it('caps a manual application after auto-apply so the cumulative total never exceeds the eligible subtotal', async () => {
+    const clientId = await createClient(context.db, context.tenantId, 'Auto Then Manual Client', {
+      billing_cycle: 'monthly',
+      region_code: 'US-NY',
+      is_tax_exempt: false,
+      credit_balance: 0,
+    });
+
+    await setupDefaultTax(clientId);
+
+    const laborTypeId = await createServiceType('Labor');
+    const hardwareTypeId = await createServiceType('Hardware');
+
+    // Auto-apply on (default): finalize draws down the eligible labor subtotal.
+    await ensureClientBillingSettings(clientId, {
+      credit_eligible_service_type_ids: JSON.stringify([laborTypeId]),
+    });
+
+    const now = createTestDate();
+    const periodStart = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const periodEnd = Temporal.PlainDate.from(now).toString();
+
+    const anchorServiceId = await createTestService(context, {
+      service_name: 'Contract Line Anchor Service',
+    });
+    await createFixedPlanAssignment(context, anchorServiceId, {
+      clientId,
+      startDate: periodStart,
+      planName: 'Drawdown Test Plan',
+    });
+
+    const laborService = await createTestService(context, {
+      service_name: 'Labor Service',
+      billing_method: 'fixed',
+      default_rate: 6000,
+      custom_service_type_id: laborTypeId,
+    });
+    const hardwareService = await createTestService(context, {
+      service_name: 'Hardware Service',
+      billing_method: 'fixed',
+      default_rate: 4000,
+      custom_service_type_id: hardwareTypeId,
+    });
+
+    const billingCycleId = await createBillingCycle(clientId, periodStart, periodEnd);
+
+    const prepaymentInvoice = await createPrepaymentInvoice(clientId, 10000);
+    await finalizeInvoice(prepaymentInvoice.invoice_id);
+
+    const { invoiceId } = await generateInvoiceFromChargesForClient(clientId, billingCycleId, [
+      makeCharge(laborService, 'Labor Service', 6000, periodStart, periodEnd),
+      makeCharge(hardwareService, 'Hardware Service', 4000, periodStart, periodEnd),
+    ]);
+
+    await finalizeInvoice(invoiceId);
+
+    const finalizedInvoice = await tenantTable(context, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    // Auto-apply consumed the full eligible (labor) subtotal.
+    expect(Number(finalizedInvoice.credit_applied)).toBe(6000);
+
+    // A manual follow-up must be clamped to the remaining eligible headroom
+    // (0) rather than drawing against the ineligible hardware subtotal.
+    await applyCreditToInvoice(clientId, invoiceId, 4000);
+    const afterManual = await tenantTable(context, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+    expect(Number(afterManual.credit_applied)).toBe(6000);
+
+    const remainingCredit = await ClientContractLine.getClientCredit(clientId);
+    expect(remainingCredit).toBe(4000);
+  });
+
   it('excludes opted-out contract charges; a fully opted-out invoice gets no auto-apply', async () => {
     const clientId = await createClient(context.db, context.tenantId, 'Contract Opt Out Client', {
       billing_cycle: 'monthly',

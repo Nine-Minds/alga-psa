@@ -55,7 +55,6 @@ type CreditTrackingRow = Omit<ICreditTracking, 'expiration_date'> & DbRow & {
 };
 type CreditAllocationRow = DbRow & {
     amount: number;
-    total_applied?: string | number | null;
 };
 
 type CreditActionTableRows = {
@@ -883,16 +882,14 @@ export async function applyCreditToInvoiceInternal(
 
         const invoiceCurrency = invoice.currency_code || 'USD';
         
-        // Check if credit has already been applied to this invoice
-        const existingCreditAllocations = await tenantScopedTable(trx, tenant, 'credit_allocations')
-            .where({
-                invoice_id: invoiceId,
-                tenant
-            })
-            .sum('amount as total_applied')
-            .first();
-        
-        const alreadyAppliedCredit = Number(existingCreditAllocations?.total_applied || 0);
+        // Credit already applied to this invoice. Read the canonical
+        // `credit_applied` column rather than summing `credit_allocations`:
+        // allocation rows are append-only and survive a reversal/void, so a
+        // gross sum would permanently consume eligible headroom after a
+        // reversal. The column is zeroed by the reversal path
+        // (reverseCreditApplicationsForInvoice), so it correctly frees the
+        // headroom.
+        const alreadyAppliedCredit = Number(invoice.credit_applied || 0);
         
         // If credit has already been applied, check if we're trying to apply more
         if (alreadyAppliedCredit > 0) {
@@ -942,8 +939,12 @@ export async function applyCreditToInvoiceInternal(
         // clamp-to-remaining-invoice behavior above), not error.
         const policy = await resolveCreditDrawdownPolicy(trx, tenant, clientId);
         const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
-        if (requestedAmount > eligibleAmount) {
-            requestedAmount = eligibleAmount;
+        // Cap against the *remaining* eligible headroom so repeated applications
+        // cannot cumulatively exceed the eligible subtotal (each prior
+        // allocation already consumes part of it).
+        const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
+        if (requestedAmount > remainingEligible) {
+            requestedAmount = remainingEligible;
         }
         if (requestedAmount <= 0) {
             console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
