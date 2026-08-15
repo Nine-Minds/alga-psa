@@ -9,7 +9,7 @@
  * (no enforceable per-item ACL) — the screen disables the affordance.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
@@ -42,15 +42,29 @@ export function CredentialRestrictDialog({
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [detailLoadFailed, setDetailLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The credential whose authoritative grant detail has successfully loaded.
+  // Save is only possible while this equals the credential currently shown, so
+  // a stale flag can never unlock Save for the seed's empty grant list.
+  const [loadedForId, setLoadedForId] = useState<string | null>(null);
+  // Always the credential the dialog is currently showing, written synchronously
+  // at the top of the load effect. A late response for a previously shown
+  // credential is structurally discarded against this, not just via the effect
+  // cleanup's cancelled flag.
+  const displayedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!credential) return;
-    setIsRestricted(credential.isRestricted);
+    displayedIdRef.current = credential?.id ?? null;
+    // Close (credential === null) and every credential switch re-arm the whole
+    // dialog from scratch: nothing from a previously shown credential may
+    // survive into the next open.
+    setIsRestricted(false);
     setGrants([]);
     setError(null);
-    setDetailLoadFailed(false);
+    setIsLoadingDetail(false);
+    setLoadedForId(null);
+    if (!credential) return;
+    setIsRestricted(credential.isRestricted);
     getAllUsers(false)
       .then(setUsers)
       .catch(() => undefined);
@@ -64,38 +78,39 @@ export function CredentialRestrictDialog({
     if (credential.source !== 'alga') {
       // Hudu rows carry no per-item grants; there is nothing to load and Save
       // is disabled for them anyway.
-      setIsLoadingDetail(false);
       return;
     }
     // Save must stay inert until the authoritative detail (real grant list)
     // for THIS credential has loaded: clicking Save before it resolves would
     // replace the stored grants with the seed's empty list. A failure to load
-    // is surfaced instead of silently proceeding, and Save stays blocked. The
-    // cancelled flag + id capture discard any in-flight response from a
-    // previously shown credential.
+    // is surfaced instead of silently proceeding, and Save stays blocked.
     setIsLoadingDetail(true);
     const credentialId = credential.id;
     let cancelled = false;
     getCredential(credentialId)
       .then((detail) => {
-        if (cancelled) return;
-        if (detail) {
-          setIsRestricted(detail.isRestricted);
-          setGrants(detail.grants);
+        if (cancelled || displayedIdRef.current !== credentialId) return;
+        if (!detail) {
+          // A resolved-but-empty response is still a failed load: without the
+          // real grants a save would wipe them.
+          setError(t('credentials.restrict.loadFailed'));
+          setIsLoadingDetail(false);
+          return;
         }
+        setIsRestricted(detail.isRestricted);
+        setGrants(detail.grants);
+        setLoadedForId(credentialId);
         setIsLoadingDetail(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || displayedIdRef.current !== credentialId) return;
         setError(t('credentials.restrict.loadFailed'));
-        // Without the real grants a save would wipe them, so Save stays blocked.
-        setDetailLoadFailed(true);
         setIsLoadingDetail(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [credential]);
+  }, [credential?.id]);
 
   if (!credential) {
     return null;
@@ -115,12 +130,19 @@ export function CredentialRestrictDialog({
     );
   };
 
+  // Save may only act on the successfully loaded detail of the credential
+  // currently on screen; nothing else may unlock it.
+  const detailReady = credential.source === 'alga' && loadedForId === credential.id;
+
   const handleSave = async () => {
-    if (!credential || isLoadingDetail || detailLoadFailed) return;
+    if (!detailReady || isSaving) return;
+    // Capture the id the guard validated so the mutation can never diverge
+    // from what was checked.
+    const targetId = credential.id;
     setIsSaving(true);
     setError(null);
     try {
-      await setCredentialRestriction(credential.id, { isRestricted, grants });
+      await setCredentialRestriction(targetId, { isRestricted, grants });
       await onSaved();
     } catch {
       setError(t('credentials.restrict.saveFailed'));
@@ -156,7 +178,7 @@ export function CredentialRestrictDialog({
           <Button
             id="credential-restrict-save"
             onClick={handleSave}
-            disabled={isSaving || isLoadingDetail || detailLoadFailed || credential.source === 'hudu'}
+            disabled={isSaving || !detailReady}
           >
             {isSaving
               ? t('credentials.restrict.saving')
