@@ -13,7 +13,7 @@ import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
-import { formatDate } from '@alga-psa/core/formatters';
+import { formatCalendarDate } from '@alga-psa/core';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import type { Knex } from 'knex';
 
@@ -120,11 +120,14 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
 
         const blockItems = blocks.map((block) => {
           const row = blockRows.find((candidate) => candidate.block_id === block.blockId);
+          // LEVERAGE: pattern expiring-date-email-render — creditExpiringSubscriber.ts
+          // still renders date-only strings through formatDate (UTC-midnight reparse);
+          // converge it onto formatCalendarDate when next touched.
           return {
             blockId: block.blockId,
             serviceName: row?.service_id ? (serviceNameByServiceId[row.service_id] ?? 'Prepaid hours') : 'Prepaid hours',
             remainingHours: (Number(block.remainingMinutes) / 60).toFixed(1),
-            expirationDate: formatDate(block.expirationDate),
+            expirationDate: formatCalendarDate(block.expirationDate, 'M/d/yyyy') ?? '',
           };
         });
 
@@ -135,7 +138,7 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
           },
           hourBlocks: {
             totalRemainingHours: (totalMinutesRemaining / 60).toFixed(1),
-            expirationDate: formatDate(blocks[0].expirationDate),
+            expirationDate: formatCalendarDate(blocks[0].expirationDate, 'M/d/yyyy') ?? '',
             daysRemaining: daysBeforeExpiration,
             items: blockItems,
             url: `${process.env.APP_URL}/client-portal/billing`,

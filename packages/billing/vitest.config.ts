@@ -57,6 +57,10 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
       {
+        find: /^@alga-psa\/jobs\/handlers\/expiringHourBlocksNotificationHandler$/,
+        replacement: path.resolve(__dirname, '../jobs/src/lib/handlers/expiringHourBlocksNotificationHandler.ts'),
+      },
+      {
         find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
       },

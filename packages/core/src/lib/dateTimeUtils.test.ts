@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { formatCalendarDate, toCalendarDisplayDate } from './dateTimeUtils';
+import { formatDate } from './formatters';
 
 const originalTz = process.env.TZ;
 
@@ -47,5 +48,20 @@ describe('calendar-date display helpers', () => {
     expect(date!.getDate()).toBe(31);
     expect(date!.getHours()).toBe(12);
     expect(toCalendarDisplayDate(null)).toBeNull();
+  });
+
+  // The HOUR_BLOCK_EXPIRING subscriber renders expirationDate (a YYYY-MM-DD
+  // string from the event payload) for the email template. It used to go through
+  // formatDate, which reparses date-only strings as UTC midnight and therefore
+  // rendered the PREVIOUS day in negative-offset timezones. The subscriber now
+  // uses formatCalendarDate with the same 'M/d/yyyy' shape formatDate produced
+  // for en-US; this pins the exact rendering in a negative-offset zone.
+  it('renders the calendar date the way the hour-block email subscriber does (America/New_York)', () => {
+    process.env.TZ = 'America/New_York';
+    // Old path: new Date('2026-08-31') is UTC midnight, which lands on 08-30
+    // in a negative-offset zone.
+    expect(formatDate('2026-08-31')).toBe('8/30/2026');
+    // New path: anchored at local noon, same calendar day in every zone.
+    expect(formatCalendarDate('2026-08-31', 'M/d/yyyy')).toBe('8/31/2026');
   });
 });

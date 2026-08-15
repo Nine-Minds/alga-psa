@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { runWithTenant, getConnection, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { IHourBlock } from '@alga-psa/types';
-import { toPlainDate, toISODate } from '../handler-utils/dateTimeUtils';
+import { toCalendarDateString } from '@alga-psa/core';
 
 export interface ExpiringHourBlocksNotificationJobData extends Record<string, unknown> {
   tenantId: string;
@@ -65,23 +65,20 @@ async function processNotificationsForThreshold(
   daysBeforeExpiration: number,
   clientId?: string,
 ): Promise<void> {
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + daysBeforeExpiration);
-
-  const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Target the exact LOCAL calendar date, never a UTC round-trip. expiration_date
+  // is a DATE column holding the calendar date the user picked, so the window
+  // must be built from local calendar components (toCalendarDateString, which
+  // never touches toISOString). A DATE column spans one day, so equality on
+  // YYYY-MM-DD is the correct predicate.
+  const target = new Date();
+  target.setDate(target.getDate() + daysBeforeExpiration);
+  const targetDate = toCalendarDateString(target);
 
   let query = (tenantScopedTable(knex, 'hour_blocks', tenant) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
     .where('status', 'active')
     .whereNotNull('expiration_date')
     .where('remaining_minutes', '>', 0)
-    .whereBetween('expiration_date', [
-      startOfDay.toISOString().slice(0, 10),
-      endOfDay.toISOString().slice(0, 10),
-    ]);
+    .where('expiration_date', targetDate);
 
   if (clientId) {
     query = query.where('client_id', clientId);
@@ -125,7 +122,7 @@ async function publishExpiringEvent(
         blocks: blocks.map((block) => ({
           blockId: block.block_id,
           remainingMinutes: Number(block.remaining_minutes),
-          expirationDate: toISODate(toPlainDate(block.expiration_date)),
+          expirationDate: toCalendarDateString(block.expiration_date) ?? '',
         })),
       },
     });
