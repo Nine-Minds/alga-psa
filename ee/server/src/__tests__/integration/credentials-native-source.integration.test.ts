@@ -1150,6 +1150,103 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     }
   });
 
+  it('reassign/replace race: the credential row lock serializes reassignment against setEntityCredentials (same-client invariant)', async () => {
+    const { setEntityCredentials } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const existing = await createCredentialFor(clientA, 'Replace Existing');
+    const fresh = await createCredentialFor(clientA, 'Replace Fresh');
+    const ticketForA = await seedEntity('ticket', clientA);
+    await (await import('@ee/lib/credentials/associations')).addCredentialToEntity(ctx, 'ticket', ticketForA, existing);
+
+    // Control connection gates the replace's association INSERT (the NEW row
+    // for `fresh`) with SHARE ROW EXCLUSIVE: the replace pauses AFTER its
+    // same-client pre-check but BEFORE the insert lands, while its
+    // lockCredentialRowsForWrite row lock on `fresh` is held for the whole
+    // mutation. SRE is compatible with every SELECT the replace/reassign run.
+    const control = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: 5472,
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: readPostgresPassword(),
+        database: process.env.DB_NAME_SERVER || 'server',
+      },
+      pool: { min: 1, max: 1 },
+    });
+    const waitForBlockedLock = async (relname: string, timeoutMs = 6000): Promise<boolean> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const res = await control.raw(
+          `SELECT count(*)::int AS c
+             FROM pg_locks l
+             LEFT JOIN pg_class c ON c.oid = l.relation
+            WHERE l.pid <> pg_backend_pid() AND l.granted = false AND c.relname = ?`,
+          [relname]
+        );
+        if (Number(res.rows?.[0]?.c ?? 0) > 0) return true;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      return false;
+    };
+
+    try {
+      await control.raw('BEGIN');
+      await control.raw('LOCK TABLE credential_associations IN SHARE ROW EXCLUSIVE MODE');
+
+      // Start the REPLACE first: with the fix it takes the credential row FOR
+      // UPDATE on `fresh` immediately (held for the whole mutation) and is
+      // parked at its association INSERT by the SRE gate.
+      const replacePromise = setEntityCredentials(ctx, 'ticket', ticketForA, [existing, fresh]).then(
+        () => 'replaced' as const,
+        (error: unknown) => `replace-failed:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      expect(await waitForBlockedLock('credential_associations')).toBe(true);
+
+      // Start the reassignment of `fresh`. With the fix its FIRST statement
+      // (FOR UPDATE on the credential row the replace holds) blocks; WITHOUT
+      // the fix it is a plain read that does not block and commits client B
+      // while the replace still believes the owner is A.
+      const reassignPromise = source.update(ctx, fresh, { clientId: clientB }).then(
+        () => 'reassigned' as const,
+        (error: unknown) => `reassign-rejected:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      const reassignStayedPending = await Promise.race([
+        reassignPromise.then(() => false, () => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 500)),
+      ]);
+
+      // Release the gate: the replace's insert lands, then the reassignment
+      // proceeds against committed state. Well inside the 8s lock_timeout.
+      await control.raw('COMMIT');
+
+      const replaceOutcome = await replacePromise;
+      const reassignOutcome = await reassignPromise;
+
+      // The serialize point must have been exercised (fails against the pre-fix
+      // code, whose reassignment never blocks).
+      expect(reassignStayedPending).toBe(true);
+
+      // Same-client invariant after the race: a credential owned by B must
+      // never be associated with the client-A ticket.
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: fresh }).first();
+      const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: fresh });
+      const crossClient =
+        row.client_id === clientB &&
+        associations.some((a) => a.entity_type === 'ticket' && a.entity_id === ticketForA);
+      expect(crossClient).toBe(false);
+
+      // Deterministic outcome in this orchestration: the replace committed first,
+      // so the reassignment is rejected against the now-visible association.
+      expect(replaceOutcome).toBe('replaced');
+      expect(reassignOutcome).toBe('reassign-rejected:CREDENTIAL_CLIENT_MISMATCH');
+    } finally {
+      await control.raw('ROLLBACK').catch(() => undefined);
+      await control.destroy();
+    }
+  });
+
   it('setEntityCredentials preserves associations to restricted credentials the caller cannot see (no silent detach, no existence leak)', async () => {
     const { addCredentialToEntity, setEntityCredentials, loadAssociationsForEntity } = await import(
       '@ee/lib/credentials/associations'
@@ -1184,5 +1281,72 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     // returns void, and the hidden row was neither removed nor reported).
     const strangerEntityList = await source.listByIds(strangerCtx, [hidden.id, open.id]);
     expect(strangerEntityList.map((r) => r.id)).toEqual([open.id]);
+  });
+
+  it('setEntityCredentials preserves hudu ref associations the caller cannot resolve (no silent detach, no existence leak)', async () => {
+    const { addCredentialToEntity, setEntityCredentials, loadAssociationsForEntity } = await import(
+      '@ee/lib/credentials/associations'
+    );
+    const { huduCredentialSource } = await import('@ee/lib/credentials/huduSource');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    // An open native credential the caller CAN see, plus a ref-only
+    // association row pointing at an UNMAPPED Hudu company. resolveOwnerClientId
+    // is bundle-scope-only (no live Hudu round-trip), so for this tenant the
+    // ref resolves null for every caller — hidden exactly like a restricted
+    // row, the way the entity-list lens would omit it.
+    const open = await source.create(ctx, { clientId: clientA, name: 'Open Ref Neighbor', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, open.id);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: null,
+      credential_ref: 'hudu:999:77',
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // The caller cannot see the ref (fail-closed null — indistinguishable from
+    // out-of-scope, so the replace below must not treat it as removable).
+    expect(await huduCredentialSource.resolveOwnerClientId(ctx, 'hudu:999:77')).toBeNull();
+
+    // Replace the full set with only the visible native credential.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, [open.id]);
+
+    // The hidden ref row survives untouched; the visible native one stays
+    // because it is in the desired set.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:999:77', open.id].sort());
+
+    // A replace that drops the visible native row must still preserve the ref.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+    const after = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(after.map((r) => r.credential_ref ?? r.credential_id)).toEqual(['hudu:999:77']);
+  });
+
+  it('updateCredential (read-only associations summary) never detaches hidden hudu ref rows', async () => {
+    const { addCredentialToEntity, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+
+    const open = await source.create(ctx, { clientId: clientA, name: 'Edit Ref Neighbor', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ctx, 'ticket', ticketForA, open.id);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant,
+      credential_id: null,
+      credential_ref: 'hudu:998:12',
+      entity_id: ticketForA,
+      entity_type: 'ticket',
+    });
+
+    // Editing the credential (no association input on the update path) must
+    // leave the hidden ref association in place — the read-only summary in the
+    // edit dialog cannot detach rows the caller never saw.
+    await source.update(ctx, open.id, { name: 'Edit Ref Neighbor (renamed)' });
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:998:12', open.id].sort());
   });
 });
