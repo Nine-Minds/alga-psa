@@ -11,6 +11,7 @@ import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
   type PortalHeroGradient,
+  type PortalSidebarStyle,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
 import {
   getTenantLocaleSettingsAction,
@@ -42,6 +43,7 @@ import {
 
 const UNSET_LOCALE_VALUE = '__inherit__';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
+const DEFAULT_PORTAL_SIDEBAR_STYLE: PortalSidebarStyle = 'default';
 
 const hexToRgb = (hex: string): [number, number, number] | null => {
   const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -64,15 +66,28 @@ const getPrimaryShadeEnd = (primary: string, isDark: boolean): string => {
   )) as [number, number, number]);
 };
 
+/** Mirror the sidebar tint generateBrandingStyles emits (800 light / 900 dark). */
+const getSidebarShade = (hex: string, isDark: boolean): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+
+  const factor = isDark ? 0.3 : 0.5;
+  return rgbToCss(rgb.map((channel) => Math.max(0, Math.round(channel * factor))) as [number, number, number]);
+};
+
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
+  const [logoDarkUrl, setLogoDarkUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
   const [portalHeroGradient, setPortalHeroGradient] = useState<PortalHeroGradient>(
     DEFAULT_PORTAL_HERO_GRADIENT,
+  );
+  const [portalSidebarStyle, setPortalSidebarStyle] = useState<PortalSidebarStyle>(
+    DEFAULT_PORTAL_SIDEBAR_STYLE,
   );
   const [clientName, setClientName] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
@@ -142,9 +157,11 @@ const ClientPortalSettings = () => {
 
         if (brandingSettings) {
           setLogoUrl(brandingSettings.logoUrl || '');
+          setLogoDarkUrl(brandingSettings.logoDarkUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
           setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
+          setPortalSidebarStyle(brandingSettings.portalSidebarStyle ?? DEFAULT_PORTAL_SIDEBAR_STYLE);
           setClientName(brandingSettings.clientName || '');
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
@@ -242,15 +259,18 @@ const ClientPortalSettings = () => {
     primaryColor: string;
     secondaryColor: string;
     portalHeroGradient: PortalHeroGradient;
+    portalSidebarStyle: PortalSidebarStyle;
     clientName: string;
     supportEmail: string;
     supportPhone: string;
   }>) => {
     const brandingData = {
       logoUrl: logoUrl, // Keep existing logo URL
+      logoDarkUrl: logoDarkUrl, // Keep existing dark logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
       portalHeroGradient: updates.portalHeroGradient ?? portalHeroGradient,
+      portalSidebarStyle: updates.portalSidebarStyle ?? portalSidebarStyle,
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
       supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
       supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
@@ -267,6 +287,7 @@ const ClientPortalSettings = () => {
         primaryColor,
         secondaryColor,
         portalHeroGradient,
+        portalSidebarStyle,
         clientName,
         supportEmail,
         supportPhone,
@@ -303,6 +324,23 @@ const ClientPortalSettings = () => {
     const result = await deleteTenantLogo(entityId);
     if (result.success) {
       // Refresh branding context after successful delete
+      await refreshBranding();
+    }
+    return result;
+  };
+
+  // Same wrappers for the optional dark-surface logo variant
+  const handleDarkLogoUpload = async (entityId: string, formData: FormData) => {
+    const result = await uploadTenantLogo(entityId, formData, 'dark');
+    if (result.success) {
+      await refreshBranding();
+    }
+    return result;
+  };
+
+  const handleDarkLogoDelete = async (entityId: string) => {
+    const result = await deleteTenantLogo(entityId, 'dark');
+    if (result.success) {
       await refreshBranding();
     }
     return result;
@@ -488,6 +526,34 @@ const ClientPortalSettings = () => {
               </p>
             </div>
 
+            {/* Dark-surface Logo Upload (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('clientPortal.branding.fields.companyLogoDark', {
+                  defaultValue: 'Logo for dark backgrounds',
+                })}
+              </label>
+              {tenantId && (
+                <EntityImageUpload
+                  entityType="tenant"
+                  entityId={tenantId}
+                  entityName={clientName || 'Client Portal'}
+                  imageUrl={logoDarkUrl}
+                  uploadAction={handleDarkLogoUpload}
+                  deleteAction={handleDarkLogoDelete}
+                  onImageChange={(newLogoUrl) => {
+                    setLogoDarkUrl(newLogoUrl || '');
+                  }}
+                  size="lg"
+                />
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                {t('clientPortal.branding.help.companyLogoDark', {
+                  defaultValue: 'Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.',
+                })}
+              </p>
+            </div>
+
             {/* Color Palette */}
             <div className="space-y-4">
               <label className="block text-sm font-medium text-gray-700">
@@ -590,6 +656,43 @@ const ClientPortalSettings = () => {
                   })}
                 </p>
               </div>
+
+              <div>
+                <CustomSelect
+                  id="client-portal-sidebar-style"
+                  label={t('clientPortal.branding.fields.sidebarStyle', { defaultValue: 'Side panel color' })}
+                  options={[
+                    {
+                      value: 'default',
+                      label: t('clientPortal.branding.sidebarStyle.default', {
+                        defaultValue: 'Default (dark slate)',
+                      }),
+                    },
+                    {
+                      value: 'primary',
+                      label: t('clientPortal.branding.sidebarStyle.primary', {
+                        defaultValue: 'Primary color',
+                      }),
+                    },
+                    {
+                      value: 'secondary',
+                      label: t('clientPortal.branding.sidebarStyle.secondary', {
+                        defaultValue: 'Secondary color',
+                      }),
+                    },
+                  ]}
+                  value={portalSidebarStyle}
+                  onValueChange={(value) => setPortalSidebarStyle(value as PortalSidebarStyle)}
+                  className="!w-fit"
+                  disabled={brandingLoading || brandingSaving}
+                  data-automation-id="client-portal-sidebar-style-select"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('clientPortal.branding.help.sidebarStyle', {
+                    defaultValue: 'Tints the client portal side panel with your primary or secondary color.',
+                  })}
+                </p>
+              </div>
             </div>
 
             {/* Preview Selection Buttons */}
@@ -667,6 +770,12 @@ const ClientPortalSettings = () => {
                 const sidebarInactiveText = isDark ? '#94a3b8' : '#cbd5e1';
                 const previewPrimary = primaryColor || (isDark ? '#9855EE' : '#8A4DEA');
                 const previewSecondary = secondaryColor || (isDark ? '#53D7FA' : '#40CFF9');
+                const sidebarTint = portalSidebarStyle === 'primary'
+                  ? getSidebarShade(previewPrimary, isDark)
+                  : portalSidebarStyle === 'secondary'
+                    ? getSidebarShade(previewSecondary, isDark)
+                    : null;
+                const previewSidebarLogo = logoDarkUrl || logoUrl;
                 const heroGradientEnd = portalHeroGradient === 'primary-secondary'
                   ? previewSecondary
                   : primaryColor
@@ -679,10 +788,13 @@ const ClientPortalSettings = () => {
                   <div className={`border ${borderCls} rounded-lg overflow-hidden ${pageBg} max-h-[560px] overflow-y-auto`}>
                     <div className="flex">
                       {/* Sidebar */}
-                      <aside className="w-40 shrink-0 bg-slate-900 text-white py-3">
+                      <aside
+                        className={`w-40 shrink-0 text-white py-3 ${sidebarTint ? '' : 'bg-slate-900'}`}
+                        style={sidebarTint ? { backgroundColor: sidebarTint } : undefined}
+                      >
                         <div className="px-3 flex items-center gap-2">
-                          {logoUrl ? (
-                            <img src={logoUrl} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                          {previewSidebarLogo ? (
+                            <img src={previewSidebarLogo} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
                           ) : (
                             <div
                               className="h-6 w-6 rounded-full"
@@ -846,6 +958,7 @@ const ClientPortalSettings = () => {
                   <SignInPagePreview
                     branding={{
                       logoUrl,
+                      logoDarkUrl,
                       primaryColor: primaryColor || '#8B5CF6',
                       secondaryColor: secondaryColor || '#6366F1',
                       clientName

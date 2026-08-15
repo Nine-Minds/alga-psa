@@ -1109,25 +1109,34 @@
       "fields": {
         "companyName": "Nome dell'azienda",
         "companyLogo": "Logo dell'azienda",
+        "companyLogoDark": "Logo per sfondi scuri",
         "colorPalette": "Palette di colori",
         "primaryColor": "Colore primario",
         "secondaryColor": "Colore secondario",
         "supportEmail": "E-mail di supporto",
         "supportPhone": "Telefono di supporto",
-        "heroGradient": "Gradiente dell’intestazione della dashboard"
+        "heroGradient": "Gradiente dell’intestazione della dashboard",
+        "sidebarStyle": "Colore del pannello laterale"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
         "companyLogo": "Consigliato: PNG o SVG, massimo 2 MB, sfondo trasparente",
+        "companyLogoDark": "Facoltativo. Utilizzato nel pannello laterale del portale e nelle schermate in modalità scura. Se vuoto, viene usato il logo dell'azienda.",
         "primaryColor": "Utilizzato per pulsanti, link e evidenziazioni",
         "secondaryColor": "Utilizzato per accenti e azioni secondarie",
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
         "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti.",
-        "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente."
+        "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente.",
+        "sidebarStyle": "Applica il colore primario o secondario al pannello laterale del portale clienti."
       },
       "heroGradient": {
         "primaryShades": "Dal colore primario a una tonalità primaria",
         "primarySecondary": "Dal colore primario al colore secondario"
+      },
+      "sidebarStyle": {
+        "default": "Predefinito (ardesia scura)",
+        "primary": "Colore primario",
+        "secondary": "Colore secondario"
       },
       "preview": "Anteprima",
       "previewDarkMode": "Anteprima modalita scura",

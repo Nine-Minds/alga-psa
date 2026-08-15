@@ -1115,25 +1115,34 @@
       "fields": {
         "companyName": "Nazwa firmy",
         "companyLogo": "Logo firmy",
+        "companyLogoDark": "Logo na ciemne tło",
         "colorPalette": "Paleta kolorów",
         "primaryColor": "Kolor główny",
         "secondaryColor": "Kolor dodatkowy",
         "supportEmail": "E-mail wsparcia",
         "supportPhone": "Telefon wsparcia",
-        "heroGradient": "Gradient nagłówka pulpitu"
+        "heroGradient": "Gradient nagłówka pulpitu",
+        "sidebarStyle": "Kolor panelu bocznego"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
+        "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
         "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów.",
-        "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta."
+        "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta.",
+        "sidebarStyle": "Nadaje panelowi bocznemu portalu klienta kolor główny lub dodatkowy."
       },
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
+      },
+      "sidebarStyle": {
+        "default": "Domyślny (ciemny grafit)",
+        "primary": "Kolor główny",
+        "secondary": "Kolor dodatkowy"
       },
       "preview": "Podgląd",
       "previewDarkMode": "Podgląd trybu ciemnego",

@@ -1109,25 +1109,34 @@
       "fields": {
         "companyName": "Company Name",
         "companyLogo": "Company Logo",
+        "companyLogoDark": "Logo for dark backgrounds",
         "colorPalette": "Color Palette",
         "primaryColor": "Primary Color",
         "secondaryColor": "Secondary Color",
         "supportEmail": "Support Email",
         "supportPhone": "Support Phone",
-        "heroGradient": "Dashboard hero gradient"
+        "heroGradient": "Dashboard hero gradient",
+        "sidebarStyle": "Side panel color"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
+        "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
         "supportPhone": "Optional. Shown alongside the support email in client-facing emails.",
-        "heroGradient": "Controls the welcome banner gradient on the client dashboard."
+        "heroGradient": "Controls the welcome banner gradient on the client dashboard.",
+        "sidebarStyle": "Tints the client portal side panel with your primary or secondary color."
       },
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
         "primarySecondary": "Primary color to secondary color"
+      },
+      "sidebarStyle": {
+        "default": "Default (dark slate)",
+        "primary": "Primary color",
+        "secondary": "Secondary color"
       },
       "preview": "Preview",
       "previewDarkMode": "Preview dark mode",

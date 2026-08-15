@@ -1109,25 +1109,34 @@
       "fields": {
         "companyName": "Bedrijfsnaam",
         "companyLogo": "Bedrijfslogo",
+        "companyLogoDark": "Logo voor donkere achtergronden",
         "colorPalette": "Kleurenpalet",
         "primaryColor": "Primaire kleur",
         "secondaryColor": "Secundaire kleur",
         "supportEmail": "Support-e-mail",
         "supportPhone": "Support-telefoonnummer",
-        "heroGradient": "Verloop van dashboardkop"
+        "heroGradient": "Verloop van dashboardkop",
+        "sidebarStyle": "Kleur van zijpaneel"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
+        "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
         "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten.",
-        "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard."
+        "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard.",
+        "sidebarStyle": "Geeft het zijpaneel van het klantenportaal uw primaire of secundaire kleur."
       },
       "heroGradient": {
         "primaryShades": "Primaire kleur naar primaire tint",
         "primarySecondary": "Primaire kleur naar secundaire kleur"
+      },
+      "sidebarStyle": {
+        "default": "Standaard (donker leigrijs)",
+        "primary": "Primaire kleur",
+        "secondary": "Secundaire kleur"
       },
       "preview": "Voorbeeld",
       "previewDarkMode": "Voorbeeld donkere modus",

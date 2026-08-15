@@ -1109,25 +1109,34 @@
       "fields": {
         "companyName": "Firmenname",
         "companyLogo": "Firmenlogo",
+        "companyLogoDark": "Logo für dunkle Hintergründe",
         "colorPalette": "Farbpalette",
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
         "supportEmail": "Support-E-Mail",
         "supportPhone": "Support-Telefon",
-        "heroGradient": "Dashboard-Hintergrundverlauf"
+        "heroGradient": "Dashboard-Hintergrundverlauf",
+        "sidebarStyle": "Farbe der Seitenleiste"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
+        "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
         "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
-        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard."
+        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard.",
+        "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe."
       },
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
+      },
+      "sidebarStyle": {
+        "default": "Standard (dunkles Schiefergrau)",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",
