@@ -100,6 +100,7 @@ describe('credentials associations expand migration — down preflight-abort (is
 
   let admin: Knex;
   let db: Knex;
+  let db2: Knex;
   let dbName: string;
   let tenantId: string;
   let clientId: string;
@@ -112,6 +113,7 @@ describe('credentials associations expand migration — down preflight-abort (is
     dbName = `credentials_migration_test_${randomUUID().slice(0, 8)}`;
     await admin.raw(`CREATE DATABASE "${dbName}"`);
     db = connectTo(dbName);
+    db2 = connectTo(dbName);
     await db.raw('select 1');
 
     // Bootstrap the full CE migration chain so all prerequisite tables (tenants,
@@ -123,6 +125,7 @@ describe('credentials associations expand migration — down preflight-abort (is
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    await db2?.destroy().catch(() => undefined);
     await db?.destroy().catch(() => undefined);
     await admin?.raw(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE);`).catch(() => undefined);
     await admin?.destroy().catch(() => undefined);
@@ -313,4 +316,123 @@ describe('credentials associations expand migration — down preflight-abort (is
     const rows = await db('credential_associations').select('credential_id', 'entity_type');
     expect(rows).toEqual([{ credential_id: credentialId, entity_type: 'asset' }]);
   });
+
+  it('down ATOMIC preflight: the count runs under an ACCESS EXCLUSIVE lock, so a concurrent ref write is never silently absorbed', async () => {
+    await ensureMigrated();
+    await clearAssociations();
+    await seedParentFixtures();
+    await db('credential_associations').insert({
+      tenant: tenantId,
+      credential_id: credentialId,
+      entity_id: assetId,
+      entity_type: 'asset',
+    });
+
+    // Gate the table with a SHARE UPDATE EXCLUSIVE lock the test holds: SUE
+    // conflicts with ACCESS EXCLUSIVE (the fixed down's explicit preflight lock
+    // AND every DDL lock) but is compatible with plain SELECT, so it does NOT
+    // block the pre-fix count — it only blocks the pre-fix down at its FIRST
+    // DDL, AFTER the count already ran.
+    let releaseGate!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseGate = resolve;
+    });
+    let gateError: unknown = null;
+    const holder = db
+      .transaction(async (trx) => {
+        await trx.raw('LOCK TABLE credential_associations IN SHARE UPDATE EXCLUSIVE MODE');
+        await gate;
+      })
+      .catch((error: unknown) => {
+        gateError = error;
+      });
+
+    try {
+      const downPromise = expandMigration.down(db);
+
+      // The fixed down blocks at its PREFLIGHT lock (its first statement),
+      // BEFORE the count runs. Pre-fix down never issues a LOCK TABLE, so this
+      // observation cannot match: the pre-fix down is gated only at its first
+      // DDL, after an unlocked count. The atomicity of the preflight is exactly
+      // what the fix adds.
+      const preflightLockObserved = await waitForDownPreflightLock();
+
+      // Concurrent ref-only write on a SEPARATE connection. While down is
+      // gated at its preflight lock, Postgres's lock queue blocks this write
+      // until down finishes; it then lands on the narrowed schema and is
+      // rejected — it is never silently absorbed by DROP COLUMN. Start it as a
+      // promise (it stays queued) and await it AFTER down has completed.
+      const insertOutcomeP = db2('credential_associations')
+        .insert({
+          tenant: tenantId,
+          credential_id: null,
+          credential_ref: 'hudu:5:99',
+          entity_id: assetId,
+          entity_type: 'asset',
+        })
+        .then(() => 'committed' as const, () => 'rejected' as const);
+
+      releaseGate();
+      await holder;
+      expect(gateError).toBeNull();
+      expect(preflightLockObserved).toBe(true);
+
+      // The race has exactly two FAIL-CLOSED outcomes, and which one occurs is
+      // a genuine scheduling matter (whether the concurrent INSERT's request
+      // reaches the server before or after down's guard DDL). Both must be
+      // accepted — the invariant under test is that a ref-only row is never
+      // SILENTLY dropped, never absorbed by the credential_ref DROP COLUMN:
+      //   (a) down succeeds   => guard 1 (SET NOT NULL) won the race, the
+      //       concurrent insert is REJECTED against the narrowed schema, the
+      //       column is gone, only the representable row remains; or
+      //   (b) the insert lands => guard 1 fails, down is REFUSED, the ref-only
+      //       row and the credential_ref column both survive untouched.
+      let downRefused = false;
+      try {
+        await downPromise;
+      } catch {
+        downRefused = true;
+      }
+      const insertOutcome = await insertOutcomeP;
+
+      if (insertOutcome === 'rejected') {
+        expect(downRefused).toBe(false);
+        expect(await db.schema.hasColumn('credential_associations', 'credential_ref')).toBe(false);
+        const rows = await db('credential_associations').select('credential_id', 'entity_type');
+        expect(rows).toEqual([{ credential_id: credentialId, entity_type: 'asset' }]);
+      } else {
+        expect(insertOutcome).toBe('committed');
+        // The concurrent write was NOT silently destroyed: the down must have
+        // been refused by a guard BEFORE the destructive drop, and the ref-only
+        // row (plus its column) must still be there.
+        expect(downRefused).toBe(true);
+        expect(await db.schema.hasColumn('credential_associations', 'credential_ref')).toBe(true);
+        const rows = await db('credential_associations').select('credential_id', 'credential_ref', 'entity_type');
+        expect(rows).toContainEqual({ credential_id: null, credential_ref: 'hudu:5:99', entity_type: 'asset' });
+      }
+    } finally {
+      releaseGate();
+      await holder;
+    }
+  });
+
+  /** Poll pg_stat_activity until the down connection is waiting on the preflight LOCK TABLE. */
+  async function waitForDownPreflightLock(timeoutMs = 10_000): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    const probeSql = `
+      SELECT count(*)::int AS c
+      FROM pg_stat_activity
+      WHERE datname = current_database()
+        AND pid <> pg_backend_pid()
+        AND state = 'active'
+        AND wait_event_type = 'Lock'
+        AND query ILIKE '%LOCK TABLE credential_associations IN ACCESS EXCLUSIVE MODE%';
+    `;
+    while (Date.now() < deadline) {
+      const result = await db.raw(probeSql);
+      if (Number(result.rows?.[0]?.c ?? 0) > 0) return true;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    return false;
+  }
 });
