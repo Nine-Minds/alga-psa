@@ -120,8 +120,8 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
     const percent = screen.getByPlaceholderText('e.g. 80');
     await userEvent.type(percent, '150');
-    await userEvent.click(screen.getByRole('button', { name: /save/i }));
 
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
     expect(updateSettingsMock).not.toHaveBeenCalled();
     expect(screen.getByText(/whole number from 1 to 100/i)).toBeDefined();
   });
@@ -146,10 +146,35 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     );
   });
 
-  it('surfaces a read-action error via toast without crashing', async () => {
+  it('keeps the policy not loaded and prevents saving when the read action returns an error', async () => {
     getSettingsMock.mockResolvedValueOnce({ actionError: 'Prepaid balance alerts are not enabled for this workspace' });
     render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
     await waitFor(() => expect(toastMock).toHaveBeenCalledWith('error', expect.any(String)));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/failed to load prepaid balance alert settings/i);
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+    expect(screen.queryByRole('switch', { name: /prepaid credit alerts/i })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /bucket usage alerts/i })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(updateSettingsMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps Save disabled when the settings read rejects or returns an unusable result', async () => {
+    getSettingsMock.mockRejectedValueOnce(new Error('read unavailable'));
+    const { rerender } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeDefined());
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+    expect(updateSettingsMock).not.toHaveBeenCalled();
+
+    getSettingsMock.mockResolvedValueOnce(null);
+    rerender(<ClientPrepaidBalanceAlertSettings clientId="c2" />);
+
+    await waitFor(() => expect(getSettingsMock).toHaveBeenCalledWith('c2'));
+    expect(screen.getByRole('alert')).toHaveTextContent(/failed to load prepaid balance alert settings/i);
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+    expect(updateSettingsMock).not.toHaveBeenCalled();
   });
 
   it('pre-populates existing policy values and resets opt-in when both alerts are disabled', async () => {

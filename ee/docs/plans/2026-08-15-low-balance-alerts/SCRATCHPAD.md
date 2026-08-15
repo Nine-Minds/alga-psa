@@ -58,6 +58,12 @@
 - (2026-08-15) Shared manager/client email rows evaluate preferences per role. Manager user opt-out removes only that route; an authorized opted-in client role still sends once with client locale/link/recipientClientId. The delivery drain loops through distinct 50-row claims while excluding IDs attempted earlier in the invocation.
 - (2026-08-15) The shared settings reader returns `null` when its tenant-scoped client lookup fails, distinguishing a missing/cross-tenant client from an existing client with no policy. Bucket email and internal contexts now carry locale-formatted period start/end snapshots.
 
+## Task 29.8.20 review mitigation
+
+- (2026-08-15) `ClientPrepaidBalanceAlertSettings` now distinguishes not-loaded/loading/loaded/failed reads, validates the returned policy shape before hydrating controls, and renders only a disabled Save plus a visible error until the current client's policy has loaded successfully.
+- (2026-08-15) Migration `20260812090200` owns one deterministic `default_folder_id` per tenant. Its rollback deletes only that tenant-scoped identifier, so a matching Sales Orders folder that predated `up` survives `down`.
+- (2026-08-15) Regression proof ran against the defective implementation first: the component suite failed because no alert existed and Save unlocked, and the DB-backed migration test failed because the pre-existing folder was deleted. Both pass after the mitigation.
+
 ## Commands / Runbooks
 
 - Validate the ALGA plan: `python3 /home/robert/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-08-15-low-balance-alerts`

@@ -7,6 +7,10 @@
  * @returns { Promise<void> }
  */
 const FOLDER_PATH = '/Clients/Sales Orders';
+// The table key is (tenant, default_folder_id), so this migration-owned UUID
+// can identify the row it inserted for each tenant without matching on mutable
+// folder attributes or claiming a pre-existing folder at the same path.
+const MIGRATION_FOLDER_ID = '20260812-0902-4000-8000-000000000001';
 
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('document_default_folders'))) return;
@@ -22,7 +26,7 @@ exports.up = async function up(knex) {
     if (existing) continue;
 
     await knex('document_default_folders').insert({
-      default_folder_id: knex.raw('gen_random_uuid()'),
+      default_folder_id: MIGRATION_FOLDER_ID,
       tenant,
       entity_type: 'client',
       folder_path: FOLDER_PATH,
@@ -42,7 +46,8 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   if (!(await knex.schema.hasTable('document_default_folders'))) return;
 
-  await knex('document_default_folders')
-    .where({ entity_type: 'client', folder_path: FOLDER_PATH })
-    .del();
+  const tenants = await knex('tenants').select('tenant');
+  for (const { tenant } of tenants) {
+    await knex('document_default_folders').where({ tenant, default_folder_id: MIGRATION_FOLDER_ID }).del();
+  }
 };

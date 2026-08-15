@@ -30,8 +30,43 @@ interface ClientPrepaidBalanceAlertSettingsProps {
   defaultCurrencyCode?: string | null;
 }
 
+type SettingsLoadState = 'not-loaded' | 'loading' | 'loaded' | 'failed';
+
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+const isUsableSettingsResult = (value: unknown): value is {
+  prepaidCreditAlertThreshold: number | null;
+  prepaidCreditAlertCurrencyCode: string | null;
+  bucketUsageAlertPercent: number | null;
+  notifyClientOnPrepaidAlert: boolean;
+  defaultCurrencyCode?: string;
+} => {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as Record<string, unknown>;
+  const threshold = result.prepaidCreditAlertThreshold;
+  const currency = result.prepaidCreditAlertCurrencyCode;
+  const bucketPercent = result.bucketUsageAlertPercent;
+  const defaultCurrency = result.defaultCurrencyCode;
+
+  const validThreshold =
+    threshold === null || (typeof threshold === 'number' && Number.isInteger(threshold) && threshold > 0);
+  const validCurrency = currency === null || (typeof currency === 'string' && /^[A-Z]{3}$/.test(currency));
+  const validBucketPercent =
+    bucketPercent === null ||
+    (typeof bucketPercent === 'number' && Number.isInteger(bucketPercent) && bucketPercent >= 1 && bucketPercent <= 100);
+  const validDefaultCurrency =
+    defaultCurrency === undefined || (typeof defaultCurrency === 'string' && /^[A-Z]{3}$/.test(defaultCurrency));
+
+  return (
+    validThreshold &&
+    validCurrency &&
+    (threshold === null) === (currency === null) &&
+    validBucketPercent &&
+    typeof result.notifyClientOnPrepaidAlert === 'boolean' &&
+    validDefaultCurrency
+  );
+};
 
 /**
  * Per-client prepaid balance alert policy. Fully gated behind
@@ -46,7 +81,8 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
   const { t } = useTranslation('msp/clients');
   const { enabled, loading } = useFeatureFlag(PREPAID_BALANCE_ALERT_FLAG, { defaultValue: false });
 
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [settingsLoadState, setSettingsLoadState] = useState<SettingsLoadState>('not-loaded');
+  const [loadedClientId, setLoadedClientId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [creditEnabled, setCreditEnabled] = useState(false);
   const [creditAmount, setCreditAmount] = useState('');
@@ -58,27 +94,42 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
 
   useEffect(() => {
     if (!clientId) {
-      setLoadingSettings(false);
+      setLoadedClientId(null);
+      setSettingsLoadState('failed');
       return;
     }
     // Keep the card busy while the flag itself is still resolving so a user
     // cannot Save empty defaults in the window before the async fetch runs.
     if (loading) {
-      setLoadingSettings(true);
+      setLoadedClientId(null);
+      setSettingsLoadState('not-loaded');
       return;
     }
     if (!enabled) {
-      setLoadingSettings(false);
+      setLoadedClientId(null);
+      setSettingsLoadState('not-loaded');
       return;
     }
     let cancelled = false;
-    setLoadingSettings(true);
+    setLoadedClientId(null);
+    setSettingsLoadState('loading');
     (async () => {
       try {
         const result = await getPrepaidBalanceAlertSettingsAsync(clientId);
         if (cancelled) return;
         if (isReturnedActionError(result)) {
           handleError(result, t('clientPrepaidBalanceAlertSettings.loadError', { defaultValue: 'Failed to load settings' }));
+          setLoadedClientId(null);
+          setSettingsLoadState('failed');
+          return;
+        }
+        if (!isUsableSettingsResult(result)) {
+          handleError(
+            new Error('Prepaid balance alert settings returned an unusable result'),
+            t('clientPrepaidBalanceAlertSettings.loadError', { defaultValue: 'Failed to load settings' })
+          );
+          setLoadedClientId(null);
+          setSettingsLoadState('failed');
           return;
         }
         const hasPolicy =
@@ -99,12 +150,14 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
         setBucketEnabled(result.bucketUsageAlertPercent != null);
         setBucketPercent(result.bucketUsageAlertPercent != null ? String(result.bucketUsageAlertPercent) : '');
         setNotifyClient(result.notifyClientOnPrepaidAlert && hasPolicy);
+        setLoadedClientId(clientId);
+        setSettingsLoadState('loaded');
       } catch (error) {
         if (!cancelled) {
           handleError(error, t('clientPrepaidBalanceAlertSettings.loadError', { defaultValue: 'Failed to load settings' }));
+          setLoadedClientId(null);
+          setSettingsLoadState('failed');
         }
-      } finally {
-        if (!cancelled) setLoadingSettings(false);
       }
     })();
     return () => {
@@ -122,7 +175,8 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     const value = parseFloat(creditAmount);
     if (!Number.isFinite(value) || value <= 0) return null;
     const fractionDigits = currencyFractionDigits(creditCurrency);
-    return Math.round(value * 10 ** fractionDigits);
+    const minorUnits = Math.round(value * 10 ** fractionDigits);
+    return minorUnits > 0 ? minorUnits : null;
   };
 
   const validate = (): boolean => {
@@ -147,8 +201,16 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     return Object.keys(errors).length === 0;
   };
 
+  const isBucketPercentValid =
+    !bucketEnabled ||
+    (/^\d+$/.test(bucketPercent.trim()) && Number(bucketPercent) >= 1 && Number(bucketPercent) <= 100);
+  const formIsValid = (!creditEnabled || parseCreditMinorUnits() != null) && isBucketPercentValid;
+  const showCreditError = creditEnabled && creditAmount.trim() !== '' && parseCreditMinorUnits() == null;
+  const showBucketError = bucketEnabled && bucketPercent.trim() !== '' && !isBucketPercentValid;
+  const settingsLoadedForClient = settingsLoadState === 'loaded' && loadedClientId === clientId;
+
   const handleSave = async () => {
-    if (saving || !validate()) return;
+    if (!settingsLoadedForClient || saving || !formIsValid || !validate()) return;
     setSaving(true);
     try {
       const input: PrepaidBalanceAlertSettingsInput = {
@@ -176,6 +238,35 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
   };
 
   const anyAlertEnabled = creditEnabled || bucketEnabled;
+
+  if (!settingsLoadedForClient) {
+    return (
+      <div className="mt-6">
+        <div>
+          <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
+            {t('clientPrepaidBalanceAlertSettings.title', { defaultValue: 'Prepaid Balance Alerts' })}
+          </Text>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('clientPrepaidBalanceAlertSettings.scheduleHelp', {
+                defaultValue: 'Checks run daily at 09:00 UTC. Saving does not send anything immediately.',
+              })}
+            </p>
+            {settingsLoadState === 'failed' && (
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                {t('clientPrepaidBalanceAlertSettings.loadError', {
+                  defaultValue: 'Failed to load prepaid balance alert settings',
+                })}
+              </p>
+            )}
+            <Button id="save-prepaid-balance-alert-settings" disabled>
+              {t('clientPrepaidBalanceAlertSettings.save', { defaultValue: 'Save' })}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6">
@@ -236,7 +327,13 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                     defaultValue: 'Remaining prepaid credit that triggers an alert',
                   })}
                 </p>
-                {fieldErrors.credit && <p className="text-sm text-red-600">{fieldErrors.credit}</p>}
+                {(fieldErrors.credit || showCreditError) && (
+                  <p className="text-sm text-red-600">
+                    {fieldErrors.credit || t('clientPrepaidBalanceAlertSettings.creditAmountError', {
+                      defaultValue: 'Enter a positive credit threshold',
+                    })}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <CustomSelect
@@ -295,7 +392,13 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                   defaultValue: 'Percentage of bucket capacity that triggers an alert',
                 })}
               </p>
-              {fieldErrors.bucket && <p className="text-sm text-red-600">{fieldErrors.bucket}</p>}
+              {(fieldErrors.bucket || showBucketError) && (
+                <p className="text-sm text-red-600">
+                  {fieldErrors.bucket || t('clientPrepaidBalanceAlertSettings.percentRangeError', {
+                    defaultValue: 'Enter a whole number from 1 to 100',
+                  })}
+                </p>
+              )}
             </div>
           )}
 
@@ -323,7 +426,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
             <Button
               id="save-prepaid-balance-alert-settings"
               onClick={handleSave}
-              disabled={saving || loadingSettings}
+              disabled={saving || !settingsLoadedForClient || !formIsValid}
             >
               {saving
                 ? t('common.actions.saving', { defaultValue: 'Saving...' })
