@@ -31,6 +31,7 @@ vi.mock('next/cache', () => ({
 vi.mock('../src/services/bucketUsageService', () => ({
   findOrCreateCurrentBucketUsageRecord: vi.fn(),
   updateBucketUsageMinutes: vi.fn(),
+  resolveBucketDraw: vi.fn(),
 }));
 
 vi.mock('../src/lib/authHelpers', () => ({
