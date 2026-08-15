@@ -57,8 +57,10 @@ export interface BillingSettings {
   defaultRecurringCadenceOwner?: CadenceOwner;
   recurringCadenceRolloutState?: RecurringCadenceRolloutState;
   recurringCadenceRolloutMessage?: string;
-  creditAutoApplyEnabled?: boolean;
-  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first';
+  /** undefined = leave unchanged; true/false = client override; null = revert to tenant default. */
+  creditAutoApplyEnabled?: boolean | null;
+  /** undefined = leave unchanged; an order = client override; null = revert to tenant default. */
+  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
   /** null = no restriction; array = restrict credit application to these service type ids. */
   creditEligibleServiceTypeIds?: string[] | null;
 }

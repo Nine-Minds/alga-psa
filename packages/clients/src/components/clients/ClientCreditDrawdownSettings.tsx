@@ -20,9 +20,23 @@ interface BillingSettings {
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
-  creditAutoApplyEnabled?: boolean;
-  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first';
+  creditAutoApplyEnabled?: boolean | null;
+  creditApplicationOrder?: 'expiration_first' | 'oldest_first' | 'newest_first' | null;
   creditEligibleServiceTypeIds?: string[] | null;
+}
+
+// A client is "using defaults" when none of the three draw-down fields carry a
+// client-level override. This keys off the fields being null/undefined, not off
+// the row existing, so a row that keeps unrelated billing overrides (zero-dollar,
+// expiration, external credit) but has cleared draw-down fields still reads as
+// inheriting.
+function hasDrawdownOverrides(settings: BillingSettings | null): boolean {
+  if (!settings) return false;
+  return (
+    settings.creditAutoApplyEnabled != null ||
+    settings.creditApplicationOrder != null ||
+    settings.creditEligibleServiceTypeIds != null
+  );
 }
 
 interface ClientCreditDrawdownSettingsProps {
@@ -44,7 +58,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         ]);
         if (clientSettings) {
           setSettings(clientSettings);
-          setUseDefault(false);
+          setUseDefault(!hasDrawdownOverrides(clientSettings));
         } else {
           setSettings(null);
           setUseDefault(true);
@@ -132,7 +146,14 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   const handleUseDefaultChange = async (checked: boolean) => {
     try {
       if (checked) {
-        const result = await updateClientContractLineSettingsAsync(clientId, null);
+        // Revert only the three draw-down fields to inherit; the shared update
+        // path nulls them while leaving every unrelated override (zero-dollar
+        // handling, expiration, external credit) intact.
+        const result = await updateClientContractLineSettingsAsync(clientId, {
+          creditAutoApplyEnabled: null,
+          creditApplicationOrder: null,
+          creditEligibleServiceTypeIds: null,
+        });
         if (result.success) {
           setSettings(null);
           setUseDefault(true);
