@@ -17,6 +17,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -26,6 +27,8 @@ import {
 interface PricingScheduleDialogProps {
   contractId: string;
   schedule?: IContractPricingSchedule | null;
+  /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
+  currencyCode?: string;
   onClose: () => void;
   onSave: () => void;
 }
@@ -33,11 +36,18 @@ interface PricingScheduleDialogProps {
 export function PricingScheduleDialog({
   contractId,
   schedule,
+  currencyCode,
   onClose,
   onSave
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, fractionDigits } = useCurrencyFormat();
+  const { enabled: contractCurrencyEnabled } = useFeatureFlag('release-v1.5-feature', {
+    defaultValue: false,
+  });
+  // Flag off preserves the legacy ambient-currency behavior: two decimals, /100, ambient symbol.
+  const rateFractionDigits = contractCurrencyEnabled ? fractionDigits(currencyCode) : 2;
+  const rateMinorUnitFactor = 10 ** rateFractionDigits;
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
     schedule?.effective_date ? new Date(schedule.effective_date) : undefined
   );
@@ -54,7 +64,7 @@ export function PricingScheduleDialog({
   );
   const [customRate, setCustomRate] = useState<string>(
     schedule?.custom_rate !== undefined && schedule?.custom_rate !== null
-      ? (schedule.custom_rate / 100).toFixed(2)
+      ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
       : ''
   );
   const [useDefaultRate, setUseDefaultRate] = useState(
@@ -71,13 +81,15 @@ export function PricingScheduleDialog({
       setHasEndDate(!!schedule.end_date);
       setCustomRate(
         schedule.custom_rate !== undefined && schedule.custom_rate !== null
-          ? (schedule.custom_rate / 100).toFixed(2)
+          ? (schedule.custom_rate / rateMinorUnitFactor).toFixed(rateFractionDigits)
           : ''
       );
       setUseDefaultRate(schedule.custom_rate === undefined || schedule.custom_rate === null);
       setNotes(schedule.notes || '');
     }
-  }, [schedule]);
+    // rateMinorUnitFactor/rateFractionDigits are deps so a late feature-flag
+    // resolution re-derives the input from the stored minor-unit value.
+  }, [schedule, rateMinorUnitFactor, rateFractionDigits]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +151,7 @@ export function PricingScheduleDialog({
         end_date: !useDuration && hasEndDate && endDate ? endDate.toISOString() : null,
         duration_value: useDuration ? parseInt(durationValue) : undefined,
         duration_unit: useDuration ? durationUnit : undefined,
-        custom_rate: useDefaultRate ? undefined : Math.round(parseFloat(customRate) * 100),
+        custom_rate: useDefaultRate ? undefined : Math.round(parseFloat(customRate) * rateMinorUnitFactor),
         notes: notes || undefined
       };
 
@@ -328,16 +340,20 @@ export function PricingScheduleDialog({
                 {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  {contractCurrencyEnabled ? symbol(currencyCode) : symbol()}
+                </span>
                 <Input
                   id="custom-rate"
                   type="number"
                   min="0"
-                  step="0.01"
+                  step={contractCurrencyEnabled ? String(1 / rateMinorUnitFactor) : '0.01'}
                   value={customRate}
                   onChange={(e) => setCustomRate(e.target.value)}
                   className="pl-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder={t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
+                  placeholder={contractCurrencyEnabled
+                    ? (0).toFixed(rateFractionDigits)
+                    : t('pricingSchedules.dialog.fields.customRatePlaceholder', { defaultValue: '0.00' })}
                 />
               </div>
             </div>

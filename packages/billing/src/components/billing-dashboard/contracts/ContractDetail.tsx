@@ -2595,7 +2595,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         </TabsContent>
 
         <TabsContent value="pricing">
-          <PricingSchedules contractId={contract.contract_id} isReadOnly={isSystemManagedDefault} />
+          <PricingSchedules
+            contractId={contract.contract_id}
+            currencyCode={currencyMeta.currencyCode}
+            isReadOnly={isSystemManagedDefault}
+          />
         </TabsContent>
 
         <TabsContent value="documents">

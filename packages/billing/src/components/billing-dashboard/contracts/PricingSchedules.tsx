@@ -24,6 +24,8 @@ import { formatCurrency } from '@alga-psa/core';
 import { toPlainDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -32,12 +34,21 @@ import {
 
 interface PricingSchedulesProps {
   contractId: string;
+  /** Currency the owning contract is denominated in; custom_rate is stored in its minor units. */
+  currencyCode?: string;
   isReadOnly?: boolean;
 }
 
-const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadOnly = false }) => {
+const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currencyCode, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
   const { locale } = useFormatters();
+  const { money } = useCurrencyFormat();
+  const { enabled: contractCurrencyEnabled } = useFeatureFlag('release-v1.5-feature', {
+    defaultValue: false,
+  });
+  // Flag off preserves the legacy ambient-currency two-decimal rendering.
+  const formatCustomRate = (minorUnits: number): string =>
+    contractCurrencyEnabled ? money(minorUnits, currencyCode) : formatCurrency(minorUnits / 100);
   const [schedules, setSchedules] = useState<IContractPricingSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +151,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       title: t('pricingSchedules.list.columns.customRate', { defaultValue: 'Custom Rate' }),
       dataIndex: 'custom_rate',
       render: (value) => value !== undefined && value !== null
-        ? formatCurrency(value / 100)
+        ? formatCustomRate(value as number)
         : (
           <span className="text-muted-foreground">
             {t('pricingSchedules.list.values.useDefaultRate', { defaultValue: 'Use default rate' })}
@@ -281,7 +292,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
                                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                     <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
-                                      ? formatCurrency(schedule.custom_rate / 100)
+                                      ? formatCustomRate(schedule.custom_rate)
                                       : t('pricingSchedules.list.values.defaultRate', { defaultValue: 'Default rate' })}
                                   </div>
                                 </div>
@@ -315,9 +326,10 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, isReadO
       </Card>
 
       {showDialog && !isReadOnly && (
-          <PricingScheduleDialog 
+          <PricingScheduleDialog
             contractId={contractId}
             schedule={editingSchedule}
+            currencyCode={currencyCode}
             onClose={handleDialogClose}
             onSave={handleSaveSuccess}
           />
