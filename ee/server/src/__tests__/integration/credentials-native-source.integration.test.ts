@@ -61,6 +61,20 @@ vi.mock('@alga-psa/core/logger', () => ({
   default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
+// The setEntityCredentials Hudu visibility probe resolves refs LIVE through
+// huduSource.resolveByIds (the same machinery the entity-list path uses). This
+// suite has no live Hudu, so stub the single HTTP boundary — createHuduClient —
+// and drive getAssetPassword per test; everything else (resolveByIds, the
+// company mapping, bundle scope, the probe's integration gate) stays real.
+const { createHuduClientMock } = vi.hoisted(() => ({ createHuduClientMock: vi.fn() }));
+
+vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  createHuduClient: createHuduClientMock,
+}));
+
+import { HuduRequestError } from '../../lib/integrations/hudu/huduClient';
+
 let db: Knex;
 let tenantId: string;
 let clientId: string;
@@ -697,6 +711,30 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       { clientId: client, name, password: 'pw' }
     );
     return summary.id;
+  }
+
+  /** One hudu_integrations row per tenant — upsert the active flag, never a second insert. */
+  async function upsertHuduIntegration(isActive: boolean): Promise<void> {
+    await assocDb('hudu_integrations')
+      .insert({ tenant: assocTenant, is_active: isActive, updated_at: new Date() })
+      .onConflict('tenant')
+      .merge(['is_active', 'updated_at']);
+  }
+
+  /** Bundle-map a Hudu company to a client so the ref resolves in the caller's scope. */
+  async function mapHuduCompany(companyId: string, client: string): Promise<void> {
+    // The mapping is one-to-one per client; drop any prior hudu mapping for this
+    // tenant before inserting this test's own.
+    await assocDb('tenant_external_entity_mappings')
+      .where({ tenant: assocTenant, integration_type: 'hudu', alga_entity_type: 'client' })
+      .del();
+    await assocDb('tenant_external_entity_mappings').insert({
+      tenant: assocTenant,
+      integration_type: 'hudu',
+      alga_entity_type: 'client',
+      alga_entity_id: client,
+      external_entity_id: companyId,
+    });
   }
 
   beforeAll(async () => {
@@ -1348,5 +1386,121 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
 
     const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
     expect(rows.map((r) => r.credential_ref ?? r.credential_id).sort()).toEqual(['hudu:998:12', open.id].sort());
+  });
+
+  // ---- mapped-but-temporarily-hidden Hudu refs (defect 29.8.44 mitigation) ----
+  //
+  // A bundle-mapped ref can be ABSENT from the caller-visible live list even
+  // though the mapping resolves (integration inactive, live lookup failure, or
+  // confirmed 404). The caller never formed intent about it, so a replace that
+  // omits it must preserve it — only a positively confirmed-visible omission
+  // may detach. Each test discriminates against the pre-fix code, which judged
+  // "mapped" as "visible" and detached the row.
+
+  it('setEntityCredentials preserves a bundle-mapped hudu ref when the integration is inactive (no detach, no audit)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:500:77';
+    createHuduClientMock.mockReset();
+
+    // Bundle-mapped (company 500 → clientA) so the caller's scope includes it —
+    // pre-fix, resolveOwnerClientId resolves it and the replace detaches it.
+    await mapHuduCompany('500', clientA);
+    await upsertHuduIntegration(false);
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+
+    // Preserved, and no detach audit was written.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+    const detachAudits = await assocDb('audit_logs')
+      .where({ tenant: assocTenant, operation: 'credential_detached', record_id: ref });
+    expect(detachAudits).toHaveLength(0);
+    // The probe must short-circuit on the integration gate — no Hudu client was
+    // ever constructed (no HTTP round-trip on an inactive integration).
+    expect(createHuduClientMock).not.toHaveBeenCalled();
+  });
+
+  it('setEntityCredentials preserves a bundle-mapped hudu ref when the live lookup fails (transport/API error)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:501:78';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('501', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => {
+        throw new HuduRequestError({ kind: 'server_error', status: 503, message: 'Hudu unavailable' });
+      }),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
+  });
+
+  it('setEntityCredentials detaches a hudu ref Hudu confirms visible right now (positive control)', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:502:79';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('502', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => ({ id: 79, company_id: 502, name: 'Visible Hudu Cred' })),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+
+    // The live lookup positively confirmed the record for this caller, so the
+    // omission expresses real intent and the replace detaches it.
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([]);
+  });
+
+  it('setEntityCredentials preserves a hudu ref Hudu confirms gone (404); pruning stays on the list/prune path', async () => {
+    const { setEntityCredentials, loadAssociationsForEntity } = await import('@ee/lib/credentials/associations');
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const ref = 'hudu:503:80';
+    createHuduClientMock.mockReset();
+
+    await mapHuduCompany('503', clientA);
+    await upsertHuduIntegration(true);
+    createHuduClientMock.mockResolvedValue({
+      getAssetPassword: vi.fn(async () => {
+        throw new HuduRequestError({ kind: 'not_found', status: 404, message: 'Hudu record gone' });
+      }),
+    });
+
+    const ticketForA = await seedEntity('ticket', clientA);
+    await assocDb('credential_associations').insert({
+      tenant: assocTenant, credential_id: null, credential_ref: ref, entity_id: ticketForA, entity_type: 'ticket',
+    });
+
+    // Confirmed 404 must NOT be detached by the replace path — the row is left
+    // for the list path's lazy-prune (pruneAssociationRefs), the sole remover
+    // of confirmed-gone refs.
+    await setEntityCredentials(ctx, 'ticket', ticketForA, []);
+
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_ref)).toEqual([ref]);
   });
 });
