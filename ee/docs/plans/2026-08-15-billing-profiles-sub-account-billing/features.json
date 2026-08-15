@@ -14,7 +14,6 @@
   {"id":"F013","description":"client_billing_profiles is registered in tenant table metadata so Citus distributes it correctly.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F014","description":"client_billing_profiles is included in the tenant deletion activity so tenant teardown removes it.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F015","description":"All phase-1 migrations have working down migrations that restore the prior schema.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-
   {"id":"F016","description":"A pure resolveChargeProfile function implements the five-step resolution chain.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F017","description":"The resolver returns a source value identifying which chain step produced the profile.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F018","description":"The resolver always terminates at the client default profile and never returns null.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
@@ -34,7 +33,6 @@
   {"id":"F032","description":"The sales-order invoicing path stamps a billing profile on generated charges.","implemented":false,"prdRefs":["Problem"]},
   {"id":"F033","description":"The invoice modification path stamps a billing profile on generated charges.","implemented":false,"prdRefs":["Problem"]},
   {"id":"F034","description":"Invoice totals and tax figures are unchanged for clients with a single billing profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-
   {"id":"F035","description":"A billing profiles section on the client detail page lists the client's profiles.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F036","description":"A user can create a billing profile under a client.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F037","description":"A user can rename a billing profile.","implemented":false,"prdRefs":["Users and Primary Flows"]},
@@ -53,7 +51,6 @@
   {"id":"F050","description":"Ticket creation is never blocked by a missing or ambiguous billing profile.","implemented":false,"prdRefs":["UX / UI Notes"]},
   {"id":"F051","description":"A billing profile assigned to a ticket is validated to belong to the ticket's client.","implemented":false,"prdRefs":["UX / UI Notes"]},
   {"id":"F052","description":"Profile assignment changes are recorded with actor and timestamp on the affected record.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-
   {"id":"F053","description":"A spend-by-profile report shows total spend per profile over a selected period.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F054","description":"A user can drill from a profile total into the individual charges behind it.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F055","description":"The report supports comparing two periods.","implemented":false,"prdRefs":["Users and Primary Flows"]},
@@ -62,7 +59,6 @@
   {"id":"F058","description":"The spend-by-profile report is not offered for single-profile clients.","implemented":false,"prdRefs":["UX / UI Notes"]},
   {"id":"F059","description":"Charges that resolved via the client-default fallback are distinguishable in the report.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F060","description":"Access to the spend-by-profile report is governed by an RBAC permission.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-
   {"id":"F061","description":"billing_profile_source records which chain step won, across explicit, contract line, contract, work item, and client default.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F062","description":"contract_line_source records how a time entry's contract line was chosen, including the unresolved case.","implemented":false,"prdRefs":["Problem"]},
   {"id":"F063","description":"contract_line_source is set when a time entry is created or updated.","implemented":false,"prdRefs":["Problem"]},
@@ -73,7 +69,6 @@
   {"id":"F068","description":"A queue lists time entries whose contract line could not be resolved because a service matched more than one line.","implemented":false,"prdRefs":["Problem"]},
   {"id":"F069","description":"A user can resolve a queued entry by assigning a contract line to it.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F070","description":"The inspector states the contract-line granularity limitation for usage, bucket, fixed, and project-schedule charges.","implemented":false,"prdRefs":["UX / UI Notes"]},
-
   {"id":"F071","description":"The client portal shows organization-wide spend across all of a client's profiles.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F072","description":"A segment selector appears in the portal when the client has more than one profile.","implemented":false,"prdRefs":["UX / UI Notes"]},
   {"id":"F073","description":"A portal user can drill into spend for a single profile.","implemented":false,"prdRefs":["Users and Primary Flows"]},
@@ -82,7 +77,6 @@
   {"id":"F076","description":"A portal user can view services and contracts filtered to a single profile.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F077","description":"The portal is visually and functionally identical to today for single-profile clients.","implemented":false,"prdRefs":["UX / UI Notes"]},
   {"id":"F078","description":"Portal segment views respect existing client portal RBAC and tenant scoping.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-
   {"id":"F079","description":"client_billing_profiles gains a bills_separately flag defaulting to false.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F080","description":"A profile can carry its own bill-to name.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F081","description":"A profile can carry its own bill-to location reference.","implemented":false,"prdRefs":["Goals"]},
@@ -94,7 +88,6 @@
   {"id":"F087","description":"Every profile-level billing field falls back to the client value when unset.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F088","description":"A UI lets a user edit a profile's bill-to identity, tax, PO, and delivery settings.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F089","description":"Tax region precedence places profile tax settings below contract-line location and above the client default.","implemented":false,"prdRefs":["Open Questions"]},
-
   {"id":"F090","description":"client_billing_cycles gains a non-null billing_profile_id column.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F091","description":"Existing billing cycle rows are backfilled to their client's default profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F092","description":"A unique constraint covers tenant, client, billing profile, and period start.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
@@ -107,13 +100,11 @@
   {"id":"F099","description":"All non-test consumers of client_billing_cycles are updated for the new profile dimension.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F100","description":"A shared test fixture helper supplies a default billing profile so existing billing tests need only mechanical changes.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F101","description":"Per-profile cycle generation is gated behind a per-tenant feature flag.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-
   {"id":"F102","description":"payment_methods gains a non-null billing_profile_id column.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F103","description":"Existing payment methods are backfilled to their client's default profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
   {"id":"F104","description":"Default payment method uniqueness is scoped to tenant, client, and profile.","implemented":false,"prdRefs":["Goals"]},
   {"id":"F105","description":"Payment method management UI is scoped to a billing profile.","implemented":false,"prdRefs":["Users and Primary Flows"]},
   {"id":"F106","description":"Payment collection for an invoice uses the payment method of that invoice's profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-
   {"id":"F107","description":"transactions gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F108","description":"credit_tracking gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F109","description":"credit_allocations gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
@@ -123,7 +114,6 @@
   {"id":"F113","description":"Aging is computed and displayed per billing profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F114","description":"Statements are produced per billing profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F115","description":"Client-level AR views sum balances, aging, and credits across the client's profiles.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-
   {"id":"F116","description":"External entity mappings can address a billing profile as the Alga-side entity.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F117","description":"A client maps to a QuickBooks parent customer.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F118","description":"A separately-billing profile maps to a QuickBooks sub-customer referencing the client's parent customer.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
@@ -131,10 +121,10 @@
   {"id":"F120","description":"Customer sync creates and updates sub-customers for separately-billing profiles.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F121","description":"Invoice export targets the sub-customer corresponding to the invoice's profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F122","description":"The customer mapping UI displays and allows editing profile-level mappings.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-
   {"id":"F123","description":"A portal user's permitted billing profiles can be stored and defaults to all profiles.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F124","description":"A restricted portal user sees only their permitted segments in every portal view.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F125","description":"A restricted portal user's organization-wide totals reflect only their permitted segments.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F126","description":"An admin UI sets which profiles a portal user may see.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F127","description":"Profile restriction is enforced server-side on portal data queries, not only in the UI.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]}
+  {"id":"F127","description":"Profile restriction is enforced server-side on portal data queries, not only in the UI.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
+  {"id":"F128","description":"A golden-output baseline harness captures invoice totals, line amounts, tax figures, credit application, and export output from the existing billing suite, and can diff a later run against it. Must be captured BEFORE S1 lands.","implemented":false,"prdRefs":["Backward-compatibility gate (T013) \u2014 runs after every slice"]}
 ]

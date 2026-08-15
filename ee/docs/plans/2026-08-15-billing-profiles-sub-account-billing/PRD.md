@@ -142,11 +142,27 @@ relationship."
 | Silent mis-attribution | `billing_profile_source` recorded on every charge; unresolved queue surfaces failures |
 | Per-profile invoice split going wrong in production | Gated behind a per-tenant feature flag for phase 2 |
 
-**Backward-compatibility property** — the safety property for the whole effort:
+### Backward-compatibility gate (T013) — runs after every slice
 
 > For any client with exactly one billing profile, every invoice, total, tax figure,
 > credit application, portal view, and accounting export is **identical** to
 > pre-change output.
+
+This is the single safety property for the whole effort. Because the S1 backfill makes
+every existing client single-profile, the property must hold *continuously*, not only
+at the end.
+
+**T013 is a gate, not a slice deliverable.** It is asserted at the completion of
+**every slice, S1 through S12**, and a slice is not done until it passes. It is
+deliberately mapped to no single slice for that reason. See the per-slice table in the
+design source §6.1 for what it must prove at each boundary.
+
+- **Run it first at S1**, where the backfill is the only possible cause of a diff.
+- **S8 is the highest-risk gate** — the point at which invoice production actually changes.
+- Capture a golden-output baseline from the existing billing suite *before* S1 lands.
+  A diff against it is a defect until proven otherwise — **never a baseline to refresh.**
+  A genuine intended change to single-profile output is a scope change requiring an
+  explicit decision recorded in `SCRATCHPAD.md`.
 
 Phase 1 needs no feature flag — the `count == 1` invisibility rule is a better gate,
 because it is self-disabling.

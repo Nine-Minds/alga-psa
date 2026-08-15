@@ -151,8 +151,13 @@ diff stays mechanical rather than 59 hand edits.
 - **`persistProjectScheduleCharges` stamps no segment today.** Easy to miss because
   there is no existing `location_id` line to copy — there is nothing there at all.
 - **Backfill must be idempotent** (F005). It will be re-run across environments.
-- **Assert the identity property, don't assume it** (T013). It is the safety guarantee
-  for the entire effort and the only defence against a silent money bug.
+- **T013 is a gate that runs after EVERY slice, S1 through S12** — not a phase-1
+  checkbox and not owned by any single slice. A slice is not done until it passes.
+  Capture the golden baseline **before S1 lands**; after that the baseline is
+  unobtainable without reverting. Run it first at S1, where the backfill is the only
+  possible cause of a diff. S8 is the highest-risk gate. **A diff is a defect, never a
+  baseline to refresh** — if single-profile output genuinely must change, that is a
+  scope change and gets recorded here with rationale before the baseline moves.
 
 ---
 

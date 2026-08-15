@@ -170,6 +170,11 @@ simply knows which segment it belongs to.
 
 ### 4.1 Slice 1 — schema + backfill
 
+**Step 0, before any migration is written (F128).** Stand up the golden-output baseline
+harness and capture a baseline from the existing billing suite. This must happen while
+the tree is still unmodified — once S1 lands, an honest baseline cannot be obtained
+without reverting. Every subsequent slice diffs against it (§6.1).
+
 - Migration creating `client_billing_profiles`.
 - Migration adding the nullable assignment columns from §3.3 (phase-1 rows only).
 - **Backfill**: for every existing client, insert one profile
@@ -359,12 +364,38 @@ MSP deliberately restricts.
 
 ## 6. Cross-cutting concerns
 
-### 6.1 Backward compatibility
+### 6.1 Backward compatibility — the T013 gate
 
-The safety property, asserted in tests at every slice boundary:
+> **For any client with exactly one billing profile, every invoice, total, tax figure,
+> credit application, portal view, and accounting export is identical to pre-change
+> output.**
 
-> For any client with exactly one billing profile, every invoice, total, tax figure,
-> credit application, portal view, and QBO export is **identical** to pre-change output.
+This is the single safety property for the entire effort. Because every client is
+single-profile immediately after the S1 backfill, this property must hold *continuously*
+— not just at the end.
+
+**T013 is a gate, not a slice deliverable.** It runs at the completion of every slice,
+S1 through S12, and a slice is not done until it passes. It is deliberately not listed
+under any one slice in §9 for exactly this reason.
+
+| After | T013 must prove |
+|---|---|
+| **S1** | The backfill alone perturbs nothing. Schema added, one default profile per client, invoice output unchanged. **This is the cheapest possible moment to catch a backfill defect — run it here first.** |
+| **S2** | The resolver stamps a profile on every charge without changing any amount, tax figure, or line. Stamping is additive only. |
+| **S3** | Assignment UI and soft-defaulting change no billing output for a single-profile client. |
+| **S4–S6** | Reporting and portal are read-only over existing data; totals still reconcile to invoices. |
+| **S7** | Profile-level bill-to/tax/PO/delivery fields, all unset, fall back to client values and reproduce prior output exactly. |
+| **S8** | With one profile per client, one cycle per period still produces one identical invoice. **Highest-risk gate in the plan** — this is where invoice production actually changes. |
+| **S9** | Payment method re-keying leaves single-profile collection behaviour unchanged. |
+| **S10** | AR re-keying leaves balances, credit application, aging, and statements unchanged. |
+| **S11** | Single-profile clients still export to a plain customer, not a sub-customer. |
+| **S12** | Unrestricted portal users see exactly what they saw before. |
+
+**Method.** Capture a golden-output baseline from the existing billing suite *before*
+S1 lands, and diff against it after every slice. A diff is a defect until proven
+otherwise — never a baseline to be updated. If a slice genuinely must change output for
+single-profile clients, that is a scope change requiring an explicit decision recorded
+in `SCRATCHPAD.md`, not a quiet baseline refresh.
 
 ### 6.2 Tax precedence
 
@@ -441,7 +472,8 @@ unrelated to this feature, and both deserve their own cards:
 
 | Slice | Scope | Depends on | Features | Tests |
 |---|---|---|---|---|
-| **S1** | schema + backfill | — | F001–F015 | T006–T009 |
+| **S0** | golden-output baseline harness ← *must precede S1* | — | F128 | T013 baseline capture |
+| **S1** | schema + backfill | S0 | F001–F015 | T006–T009 |
 | **S2** | resolver + engine wiring | S1 | F016–F034 | T001–T005, T010–T017 |
 | **S3** | profile CRUD + assignment UI | S1 | F035–F052 | T018–T021 |
 | **S4** | spend-by-profile reporting | S2 | F053–F060 | T022–T024 |
@@ -461,6 +493,11 @@ S1–S6 are phase 1 (segment dimension, no invoicing change); S7–S12 are phase
 concurrently once S7 lands. S11 is the clean split point if phase 2 needs to shed
 scope — nothing else depends on it.
 
-**T013 is not a slice test.** The backward-compatibility identity property (§6.1) must
-be re-asserted at *every* slice boundary, phase 1 and phase 2 alike. It is the only
-defence against a silent money bug.
+> ### ⚠ T013 runs after EVERY slice — it is a gate, not a row in this table
+>
+> The backward-compatibility identity property (**§6.1**) must be re-asserted at the
+> completion of S1 through S12, phase 1 and phase 2 alike. It is the only defence
+> against a silent money bug, and it is why T013 appears in no slice's test column
+> above. **Run it first at S1**, where the backfill is the only thing that could have
+> broken it and the diff is therefore unambiguous. A slice is not complete until T013
+> passes.
