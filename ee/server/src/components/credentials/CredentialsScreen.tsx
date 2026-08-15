@@ -38,6 +38,7 @@ import {
   Plus,
   Users,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
@@ -90,6 +91,47 @@ type RevealState = {
 
 type RevealErrorKey = 'failed' | 'noAccess' | 'notFound';
 
+/**
+ * List container: the global screen needs its own titled Card on a bare
+ * page; an entity embed already sits inside a titled section shell, so a
+ * second Card there is a border around a border restating the same title.
+ */
+function ListChrome({
+  entityScoped,
+  title,
+  count,
+  children,
+}: {
+  entityScoped: boolean;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  if (entityScoped) {
+    return (
+      <ul id="credentials-screen-list" className="divide-y divide-gray-100">
+        {children}
+      </ul>
+    );
+  }
+  return (
+    <Card id="credentials-screen-list">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <KeyRound className="h-4 w-4 shrink-0" />
+          {title}
+          <Badge id="credentials-screen-count" variant="secondary">
+            {count}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y divide-gray-100">{children}</ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
   const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
@@ -130,9 +172,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           setCredentials([]);
           return;
         }
-        setCredentials(
-          await listCredentials({ clientId, entityType, entityId, search: refresh ? undefined : undefined })
-        );
+        setCredentials(await listCredentials({ clientId, entityType, entityId }));
       } catch {
         setLoadError(true);
       }
@@ -168,8 +208,12 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     };
   }, [flagEnabled, load]);
 
+  // Tenant client list backs the global screen's client filter and row
+  // labels. Entity embeds never render either (the scope already fixes the
+  // client), so skip the fetch there; the form dialog self-fetches when it
+  // needs a picker.
   useEffect(() => {
-    if (!flagEnabled) return;
+    if (!flagEnabled || entityScoped) return;
     let cancelled = false;
     getAllClients(false)
       .then((list) => {
@@ -179,7 +223,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     return () => {
       cancelled = true;
     };
-  }, [flagEnabled]);
+  }, [flagEnabled, entityScoped]);
 
   const handleRefresh = () => {
     startRefreshTransition(async () => {
@@ -232,6 +276,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     const value = revealedValues[id]?.password;
     if (value !== undefined) {
       void navigator.clipboard.writeText(value);
+      toast.success(t('credentials.table.copied'));
     }
   };
 
@@ -239,6 +284,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     const code = revealedValues[id]?.otpCode?.code;
     if (code !== undefined) {
       void navigator.clipboard.writeText(code);
+      toast.success(t('credentials.table.copied'));
     }
   };
 
@@ -287,7 +333,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       await removeCredentialFromEntity(entityType, entityId, credential.id);
       await load(true);
     } catch {
-      setLoadError(true);
+      toast.error(t('credentials.screen.detachFailed'));
     }
   };
 
@@ -299,7 +345,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       await deleteCredential(credential.id, credential.clientId);
       await load(true);
     } catch {
-      setLoadError(true);
+      toast.error(t('credentials.screen.deleteFailed'));
     }
   };
 
@@ -363,13 +409,18 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   }
 
   return (
-    <div id="credentials-screen" className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <KeyRound className="h-4 w-4 shrink-0" />
-          <span>{t('credentials.screen.subtitle')}</span>
-        </div>
-        <div className="flex items-center gap-2">
+    <div id="credentials-screen" className={entityScoped ? 'space-y-3' : 'space-y-4'}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* The vault subtitle, search, and filters are global-screen chrome:
+            an entity embed's scope already fixes the client and the list is
+            association-driven (a handful of rows), so none of them inform. */}
+        {!entityScoped && (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <KeyRound className="h-4 w-4 shrink-0" />
+            <span>{t('credentials.screen.subtitle')}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             id="credentials-screen-new"
             size="sm"
@@ -392,53 +443,57 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               {t('credentials.screen.linkExisting')}
             </Button>
           )}
-          <Button
-            id="credentials-screen-refresh"
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
-            aria-label={t('credentials.screen.refresh')}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
+          {!entityScoped && (
+            <Button
+              id="credentials-screen-refresh"
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading || isRefreshing}
+              aria-label={t('credentials.screen.refresh')}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          id="credentials-screen-search"
-          className="max-w-xs"
-          placeholder={t('credentials.screen.searchPlaceholder')}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        {!clientId && (
+      {!entityScoped && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id="credentials-screen-search"
+            className="max-w-xs"
+            placeholder={t('credentials.screen.searchPlaceholder')}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          {!clientId && (
+            <select
+              id="credentials-screen-client-filter"
+              className="h-9 rounded-md border border-gray-200 px-2 text-sm"
+              value={clientFilter}
+              onChange={(event) => setClientFilter(event.target.value)}
+            >
+              <option value="all">{t('credentials.screen.allClients')}</option>
+              {clients.map((client) => (
+                <option key={client.client_id} value={client.client_id}>
+                  {client.client_name}
+                </option>
+              ))}
+            </select>
+          )}
           <select
-            id="credentials-screen-client-filter"
+            id="credentials-screen-source-filter"
             className="h-9 rounded-md border border-gray-200 px-2 text-sm"
-            value={clientFilter}
-            onChange={(event) => setClientFilter(event.target.value)}
+            value={sourceFilter}
+            onChange={(event) => setSourceFilter(event.target.value)}
           >
-            <option value="all">{t('credentials.screen.allClients')}</option>
-            {clients.map((client) => (
-              <option key={client.client_id} value={client.client_id}>
-                {client.client_name}
-              </option>
-            ))}
+            <option value="all">{t('credentials.screen.allSources')}</option>
+            <option value="alga">{t('credentials.screen.sourceAlga')}</option>
+            <option value="hudu">{t('credentials.screen.sourceHudu')}</option>
           </select>
-        )}
-        <select
-          id="credentials-screen-source-filter"
-          className="h-9 rounded-md border border-gray-200 px-2 text-sm"
-          value={sourceFilter}
-          onChange={(event) => setSourceFilter(event.target.value)}
-        >
-          <option value="all">{t('credentials.screen.allSources')}</option>
-          <option value="alga">{t('credentials.screen.sourceAlga')}</option>
-          <option value="hudu">{t('credentials.screen.sourceHudu')}</option>
-        </select>
-      </div>
+        </div>
+      )}
 
       {loadError && (
         <Alert id="credentials-screen-error" variant="destructive">
@@ -447,30 +502,25 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       )}
 
       {credentials && visibleRows.length === 0 && (
-        <Card id="credentials-screen-empty">
-          <CardContent>
-            <p className="text-sm text-gray-500">
-              {search || clientFilter !== 'all' || sourceFilter !== 'all'
-                ? t('credentials.screen.empty')
-                : t('credentials.screen.emptyNoFilters')}
-            </p>
-          </CardContent>
-        </Card>
+        entityScoped ? (
+          <p id="credentials-screen-empty" className="text-sm text-gray-500 py-1">
+            {t('credentials.screen.emptyNoFilters')}
+          </p>
+        ) : (
+          <Card id="credentials-screen-empty">
+            <CardContent>
+              <p className="text-sm text-gray-500">
+                {search || clientFilter !== 'all' || sourceFilter !== 'all'
+                  ? t('credentials.screen.empty')
+                  : t('credentials.screen.emptyNoFilters')}
+              </p>
+            </CardContent>
+          </Card>
+        )
       )}
 
       {visibleRows.length > 0 && (
-        <Card id="credentials-screen-list">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <KeyRound className="h-4 w-4 shrink-0" />
-              {t('credentials.pageTitle')}
-              <Badge id="credentials-screen-count" variant="secondary">
-                {visibleRows.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-gray-100">
+        <ListChrome entityScoped={entityScoped} title={t('credentials.pageTitle')} count={visibleRows.length}>
               {visibleRows.map((item) => {
                 const id = item.id;
                 const revealed = revealedValues[id];
@@ -503,9 +553,12 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           {item.username}
                         </span>
                       )}
-                      {!clientId && clientName(item.clientId) && (
+                      {/* Only informative when the surface spans clients: the
+                          client tab and client-bound entity embeds already fix
+                          the client, so the label would repeat the page. */}
+                      {!clientId && !defaultClientId && (item.clientName ?? clientName(item.clientId)) && (
                         <span id={`credentials-row-client-${id}`} className="text-xs text-gray-500">
-                          {clientName(item.clientId)}
+                          {item.clientName ?? clientName(item.clientId)}
                         </span>
                       )}
                       {revealed && (
@@ -574,7 +627,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           {t('credentials.table.hide')}
                         </Button>
                       )}
-                      {revealed?.password !== '' && (
+                      {revealed !== undefined && revealed.password !== '' && (
                         <Button
                           id={`credentials-row-copy-${id}`}
                           variant="ghost"
@@ -632,9 +685,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                   </li>
                 );
               })}
-            </ul>
-          </CardContent>
-        </Card>
+        </ListChrome>
       )}
 
       <CredentialFormDialog
