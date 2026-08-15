@@ -6,8 +6,16 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   const builder: any = {};
   builder.where = vi.fn().mockImplementation(() => builder);
   builder.andWhere = vi.fn().mockImplementation(() => builder);
+  builder.orWhere = vi.fn().mockImplementation(() => builder);
+  builder.whereIn = vi.fn().mockImplementation(() => builder);
+  builder.whereNot = vi.fn().mockImplementation(() => builder);
+  builder.whereNull = vi.fn().mockImplementation(() => builder);
+  builder.whereNotIn = vi.fn().mockImplementation(() => builder);
+  builder.whereNotNull = vi.fn().mockImplementation(() => builder);
   builder.leftJoin = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);
+  builder.andOn = vi.fn().mockImplementation(() => builder);
+  builder.andOnVal = vi.fn().mockImplementation(() => builder);
   builder.select = vi.fn().mockImplementation(() => builder);
   builder.orderBy = vi.fn().mockImplementation(() => builder);
   builder.first = vi.fn().mockResolvedValue(firstResult);
@@ -20,7 +28,9 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
 /**
  * Builds the knex fake for the pool-keyed calculateBucketPlanCharges:
  * `contract_line_buckets as clb` → pools, `contract_line_bucket_services as
- * clbs` → members, `contract_line_bucket_services` → multiplier rows.
+ * clbs` → members, `contract_line_bucket_services` → multiplier rows. A
+ * `time_entries` row gives the pool's single member a real weighted
+ * contribution so the overage charge is attributed to it.
  */
 const buildPoolKnex = (
   base: any,
@@ -36,9 +46,17 @@ const buildPoolKnex = (
   const membersBuilder = buildQuery(null, options.members ?? []);
   const multipliersBuilder = buildQuery(
     null,
-    (options.members ?? []).map((member) => ({ burn_multiplier: member.burn_multiplier ?? 1 })),
+    (options.members ?? []).map((member) => ({ service_id: member.service_id, burn_multiplier: member.burn_multiplier ?? 1 })),
   );
   const bucketUsageBuilder = buildQuery(null, options.usageRows ?? []);
+  const timeEntriesBuilder = buildQuery(null, [
+    {
+      service_id: options.members?.[0]?.service_id ?? "service-bucket",
+      start_time: new Date("2025-01-05T10:00:00Z"),
+      end_time: new Date("2025-01-05T11:00:00Z"),
+      billable_duration: 60,
+    },
+  ]);
   const fallbackBuilder = buildQuery(null);
 
   const mockKnex = vi.fn().mockImplementation((tableName: string) => {
@@ -47,6 +65,7 @@ const buildPoolKnex = (
     if (tableName.startsWith("contract_line_bucket_services as clbs")) return membersBuilder;
     if (tableName === "contract_line_bucket_services") return multipliersBuilder;
     if (tableName === "bucket_usage") return bucketUsageBuilder;
+    if (tableName === "time_entries") return timeEntriesBuilder;
     return fallbackBuilder;
   });
   return { mockKnex, bucketUsageBuilder };

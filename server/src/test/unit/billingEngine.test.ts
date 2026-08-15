@@ -1001,6 +1001,8 @@ describe('BillingEngine', () => {
           contract_line_id: 'test_contract_line_id',
           service_catalog_id: 'service_bucket',
           bucket_id: 'bucket-config-1',
+          period_start: '2023-01-01',
+          period_end: '2023-01-31',
           minutes_used: 45 * 60,
           overage_minutes: 5 * 60
         }
@@ -1030,8 +1032,25 @@ describe('BillingEngine', () => {
       });
 
       const multipliersBuilder = buildChainableQuery({
-        selectResult: [{ burn_multiplier: 1 }],
-        thenResult: [{ burn_multiplier: 1 }]
+        selectResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }],
+        thenResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }]
+      });
+
+      // The engine attributes overage by actual contribution: a real 60-minute
+      // entry for the member service, inside the period.
+      const timeEntriesBuilder = buildChainableQuery({
+        selectResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2023-01-05T10:00:00Z'),
+          end_time: new Date('2023-01-05T11:00:00Z'),
+          billable_duration: 60
+        }],
+        thenResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2023-01-05T10:00:00Z'),
+          end_time: new Date('2023-01-05T11:00:00Z'),
+          billable_duration: 60
+        }]
       });
 
       const taxRatesBuilder = buildChainableQuery({
@@ -1055,6 +1074,9 @@ describe('BillingEngine', () => {
         }
         if (tableName === 'contract_line_bucket_services') {
           return multipliersBuilder;
+        }
+        if (tableName === 'time_entries') {
+          return timeEntriesBuilder;
         }
         if (tableName === 'tax_rates') {
           return taxRatesBuilder;
@@ -1186,8 +1208,25 @@ describe('BillingEngine', () => {
       });
 
       const multipliersBuilder = buildChainableQuery({
-        selectResult: [{ burn_multiplier: 1 }],
-        thenResult: [{ burn_multiplier: 1 }]
+        selectResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }],
+        thenResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }]
+      });
+
+      // The engine attributes overage by actual contribution: a real 60-minute
+      // entry for the member service, inside both periods.
+      const timeEntriesBuilder = buildChainableQuery({
+        selectResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2025-01-05T10:00:00Z'),
+          end_time: new Date('2025-01-05T11:00:00Z'),
+          billable_duration: 60
+        }],
+        thenResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2025-01-05T10:00:00Z'),
+          end_time: new Date('2025-01-05T11:00:00Z'),
+          billable_duration: 60
+        }]
       });
 
       const taxRatesBuilder = buildChainableQuery({
@@ -1211,6 +1250,9 @@ describe('BillingEngine', () => {
         }
         if (tableName === 'contract_line_bucket_services') {
           return multipliersBuilder;
+        }
+        if (tableName === 'time_entries') {
+          return timeEntriesBuilder;
         }
         if (tableName === 'tax_rates') {
           return taxRatesBuilder;

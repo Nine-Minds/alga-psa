@@ -26,8 +26,11 @@
  *
  * Draw resolution for an entry (client, service, date):
  *   explicit membership on any line bucket wins, else the line's catch-all
- *   bucket, else no bucket — plain hourly billing as today. A catch-all bucket's
- *   member rows are multiplier overrides; non-members burn at 1x.
+ *   bucket, else no bucket — plain hourly billing as today. A catch-all
+ *   bucket's member rows are multiplier overrides; non-members burn at 1x. A
+ *   catch-all bucket only covers the services configured on ITS line
+ *   (`contract_line_service_configuration`) — it never hijacks a service the
+ *   line does not offer, even if another line of the same client pools it.
  *
  * Weighted minutes are the single unit of account: per-member burn_multiplier
  * plus an optional after-hours schedule rule, combined max-wins (never
@@ -143,6 +146,25 @@ interface MemberRow {
 }
 
 /**
+ * The services configured on a contract line — the line's own membership
+ * roster (`contract_line_service_configuration`). A line catch-all pool covers
+ * "all line services", i.e. exactly this roster; a service that is not
+ * configured on the line must never draw from that line's catch-all pool, even
+ * if some other line (or assignment) of the same client pools it.
+ */
+async function loadLineConfiguredServiceIds(
+    trx: Knex.Transaction,
+    tenant: string,
+    contractLineId: string,
+): Promise<Set<string>> {
+    const db = tenantDb(trx, tenant);
+    const rows = await db.table('contract_line_service_configuration')
+        .where({ tenant, contract_line_id: contractLineId })
+        .select('service_id');
+    return new Set(rows.map((row) => row.service_id));
+}
+
+/**
  * Load a pool row (and its member multiplier for the given service) by the
  * scope-resolution rule: explicit membership first, then the line catch-all.
  * Returns null when the service draws from no bucket on the given line.
@@ -181,6 +203,15 @@ async function resolveBucketForLine(
         .first<BucketRow | undefined>();
 
     if (catchAll) {
+        // A catch-all pool only covers services the LINE offers: the design rule
+        // is "covers-all-line-services", not "covers anything this client
+        // bills". Without this check, a time entry for a service on ANOTHER
+        // line (which happens to have no pool) would be hijacked by this line's
+        // catch-all pool even though the line does not offer that service.
+        const lineServices = await loadLineConfiguredServiceIds(trx, tenant, contractLineId);
+        if (!lineServices.has(serviceCatalogId)) {
+            return null;
+        }
         return { bucket: catchAll, multiplier: 1 };
     }
 
@@ -895,12 +926,17 @@ export async function reconcileBucketUsageRecord(
    // is a catch-all, exclude services that are explicit members of a different
    // bucket on the same line.
    let servicesClaimedByOtherBuckets: Set<string> | null = null;
+   let lineConfiguredServices: Set<string> | null = null;
    if (usageRecord.covers_all_services) {
        const otherMembers = await db.table('contract_line_bucket_services')
            .where({ tenant, contract_line_id })
            .whereNot('bucket_id', bucket_id)
            .select('service_id');
        servicesClaimedByOtherBuckets = new Set(otherMembers.map((m) => m.service_id));
+       // The catch-all draw set is the services the LINE actually offers
+       // (contract_line_service_configuration) — an entry for a service not
+       // configured on this line must not inflate this pool's usage.
+       lineConfiguredServices = await loadLineConfiguredServiceIds(trx, tenant, contract_line_id);
    }
 
    if (usageRecord.covers_all_services) {
@@ -914,6 +950,7 @@ export async function reconcileBucketUsageRecord(
 
        for (const entry of entries) {
            if (servicesClaimedByOtherBuckets?.has(entry.service_id)) continue;
+           if (!lineConfiguredServices?.has(entry.service_id)) continue;
            const multiplier = memberMultiplierByService.get(entry.service_id) ?? 1;
            const duration = toBucketNumber(entry.billable_duration, 'time_entries.billable_duration');
            if (duration <= 0) continue;
@@ -973,6 +1010,7 @@ export async function reconcileBucketUsageRecord(
 
        for (const usage of usageRecords) {
            if (servicesClaimedByOtherBuckets?.has(usage.service_id)) continue;
+           if (!lineConfiguredServices?.has(usage.service_id)) continue;
            const multiplier = memberMultiplierByService.get(usage.service_id) ?? 1;
            usageTrackingWeighted += toBucketNumber(usage.quantity, 'usage_tracking.quantity') * multiplier;
        }
@@ -1018,4 +1056,123 @@ export async function reconcileBucketUsageRecord(
    }
 
    console.log(`Successfully reconciled bucket usage ID: ${bucketUsageId}. New minutes_used: ${totalMinutesUsed}, overage_minutes: ${newOverageMinutes}`);
+}
+
+/**
+ * Per-service weighted burn contributions for a pool within a period — the draw
+ * set and math `reconcileBucketUsageRecord` uses, exposed so the billing engine
+ * can attribute pool overage to the services that actually burned it.
+ *
+ * Draw set (identical to the reconciliation):
+ *  - member-scoped pool: the pool's member services;
+ *  - catch-all pool: the services configured on the line
+ *    (`contract_line_service_configuration`), with members acting as multiplier
+ *    overrides, minus services claimed by another pool's explicit membership.
+ */
+export interface PoolPeriodContribution {
+    serviceId: string;
+    weightedMinutes: number;
+}
+
+export async function computePoolContributionsByService(
+    connection: Knex | Knex.Transaction,
+    tenant: string,
+    opts: {
+        bucketId: string;
+        contractLineId: string;
+        coversAllServices: boolean;
+        periodStart: Date;
+        periodEndExclusive: Date;
+    },
+): Promise<PoolPeriodContribution[]> {
+    const db = tenantDb(connection, tenant);
+
+    const members = await db.table('contract_line_bucket_services')
+        .where({ tenant, bucket_id: opts.bucketId })
+        .select('service_id', 'burn_multiplier');
+    const memberMultiplierByService = new Map<string, number>();
+    for (const member of members) {
+        memberMultiplierByService.set(
+            member.service_id,
+            toBucketNumber(member.burn_multiplier, 'contract_line_bucket_services.burn_multiplier'),
+        );
+    }
+
+    let servicesClaimedByOtherBuckets: Set<string> | null = null;
+    let lineConfiguredServices: Set<string> | null = null;
+    if (opts.coversAllServices) {
+        const otherMembers = await db.table('contract_line_bucket_services')
+            .where({ tenant, contract_line_id: opts.contractLineId })
+            .whereNot('bucket_id', opts.bucketId)
+            .select('service_id');
+        servicesClaimedByOtherBuckets = new Set(otherMembers.map((m) => m.service_id));
+        const configuredRows = await db.table('contract_line_service_configuration')
+            .where({ tenant, contract_line_id: opts.contractLineId })
+            .select('service_id');
+        lineConfiguredServices = new Set(configuredRows.map((row) => row.service_id));
+    }
+
+    const afterHoursRule = await loadAfterHoursRuleForBucket(connection as Knex.Transaction, tenant, opts.bucketId);
+
+    const isLineScoped = opts.coversAllServices;
+    const memberServiceIds = Array.from(memberMultiplierByService.keys());
+    const canDraw = (serviceId: string): boolean => {
+        if (servicesClaimedByOtherBuckets?.has(serviceId)) return false;
+        if (isLineScoped) return Boolean(lineConfiguredServices?.has(serviceId));
+        return true;
+    };
+
+    const contributions = new Map<string, number>();
+    const addContribution = (serviceId: string, weightedMinutes: number) => {
+        contributions.set(serviceId, (contributions.get(serviceId) ?? 0) + weightedMinutes);
+    };
+
+    // Time entries: entries on the line inside the period, each run through the
+    // weighted calculator with that service's multiplier + the after-hours rule.
+    if (isLineScoped || memberServiceIds.length > 0) {
+        const entriesQuery = db.table('time_entries')
+            .where({ tenant, contract_line_id: opts.contractLineId })
+            .where('start_time', '>=', opts.periodStart)
+            .where('start_time', '<', opts.periodEndExclusive);
+        if (!isLineScoped) {
+            entriesQuery.whereIn('service_id', memberServiceIds);
+        }
+        const entries = await entriesQuery.select('service_id', 'start_time', 'end_time', 'billable_duration');
+        for (const entry of entries) {
+            if (!canDraw(entry.service_id)) continue;
+            const multiplier = memberMultiplierByService.get(entry.service_id) ?? 1;
+            const duration = toBucketNumber(entry.billable_duration, 'time_entries.billable_duration');
+            if (duration <= 0) continue;
+            const result = computeWeightedMinutes(
+                {
+                    startTime: entry.start_time instanceof Date ? entry.start_time : new Date(entry.start_time),
+                    endTime: entry.end_time instanceof Date ? entry.end_time : new Date(entry.end_time),
+                    billableDuration: duration,
+                },
+                multiplier,
+                afterHoursRule,
+            );
+            addContribution(entry.service_id, result.weightedMinutes);
+        }
+    }
+
+    // Usage tracking: quantities at member multiplier (no time span).
+    if (isLineScoped || memberServiceIds.length > 0) {
+        const usageQuery = db.table('usage_tracking')
+            .where({ tenant, contract_line_id: opts.contractLineId })
+            .where('usage_date', '>=', opts.periodStart)
+            .where('usage_date', '<', opts.periodEndExclusive);
+        if (!isLineScoped) {
+            usageQuery.whereIn('service_id', memberServiceIds);
+        }
+        const usageRows = await usageQuery.select('service_id', 'quantity');
+        for (const usage of usageRows) {
+            if (!canDraw(usage.service_id)) continue;
+            const multiplier = memberMultiplierByService.get(usage.service_id) ?? 1;
+            addContribution(usage.service_id, toBucketNumber(usage.quantity, 'usage_tracking.quantity') * multiplier);
+        }
+    }
+
+    return Array.from(contributions.entries())
+        .map(([serviceId, weightedMinutes]) => ({ serviceId, weightedMinutes }));
 }

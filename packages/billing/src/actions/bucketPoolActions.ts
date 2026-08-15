@@ -114,8 +114,11 @@ async function loadPoolSnapshot(
 
   const snapshots: BucketPoolSnapshot[] = [];
   for (const pool of pools) {
+    // The predicates MUST be qualified: `service_catalog as sc` also carries a
+    // `tenant` column, so an unqualified `where({ tenant, ... })` is an
+    // ambiguous column reference in Postgres and the pool list 500s.
     const members = await db.table('contract_line_bucket_services as clbs')
-      .where({ tenant, bucket_id: pool.bucket_id })
+      .where({ 'clbs.tenant': tenant, 'clbs.bucket_id': pool.bucket_id })
       .select('clbs.service_id', 'clbs.burn_multiplier', 'sc.service_name')
       .leftJoin('service_catalog as sc', function (this: any) {
         this.on('sc.service_id', '=', 'clbs.service_id')

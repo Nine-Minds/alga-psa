@@ -51,6 +51,7 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
+import { computePoolContributionsByService } from "@alga-psa/shared/billingClients/bucketUsageService";
 import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
@@ -4681,6 +4682,17 @@ export class BillingEngine {
               .andOn("sc.tenant", "=", "clbs.tenant");
           })
           .orderBy("clbs.service_id", "asc");
+        const memberMetadataByService = new Map(
+          members.map((member) => [
+            member.service_id,
+            {
+              service_name: member.service_name as string,
+              tax_rate_id: (member.tax_rate_id as string | null) ?? null,
+              unit_of_measure: (member.unit_of_measure as string | null) ?? null,
+              billing_method: (member.billing_method as string | null) ?? null,
+            },
+          ]),
+        );
         const serviceName = pool.bucket_name
           ? pool.bucket_name
           : members.length === 1
@@ -4711,6 +4723,98 @@ export class BillingEngine {
         const chargeUnitOfMeasure = members.length > 0 ? firstMemberUnitOfMeasure : null;
         const chargeBillingMethod = members.length > 0 ? firstMemberBillingMethod : null;
 
+        // Per-period weighted contributions: the SAME draw set and weighted math
+        // the reconciliation uses. Overage is attributed to the services that
+        // actually burned it (pro-rata by weighted minutes), never an arbitrary
+        // member. A catch-all non-member contributor still earns its own
+        // portion with its own catalog tax metadata.
+        const contributionsByPeriod = new Map<
+          string,
+          Array<{ serviceId: string; weightedMinutes: number }>
+        >();
+        for (const usage of usageRecords) {
+          const startIso = toISODate(toPlainDate(usage.period_start));
+          const endIso = toISODate(toPlainDate(usage.period_end));
+          const key = `${startIso}:${endIso}`;
+          if (contributionsByPeriod.has(key)) continue;
+          const endExclusive = new Date(`${endIso}T00:00:00.000Z`);
+          endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+          const contributions = await computePoolContributionsByService(
+            this.knex,
+            client.tenant,
+            {
+              bucketId: pool.bucket_id,
+              contractLineId: pool.contract_line_id,
+              coversAllServices: Boolean(pool.covers_all_services),
+              periodStart: new Date(`${startIso}T00:00:00.000Z`),
+              periodEndExclusive: endExclusive,
+            },
+          );
+          contributionsByPeriod.set(key, contributions);
+        }
+
+        // Catalog metadata for contributors that are not explicit members of the
+        // pool (a catch-all non-member burns at 1x and still contributes).
+        const contributorServiceIds = Array.from(contributionsByPeriod.values())
+          .flat()
+          .map((contribution) => contribution.serviceId);
+        const catalogServiceIds = Array.from(new Set(
+          contributorServiceIds.filter((id) => !memberMetadataByService.has(id)),
+        ));
+        const catalogMetadataByService = new Map<
+          string,
+          {
+            service_name: string;
+            tax_rate_id: string | null;
+            unit_of_measure: string | null;
+            billing_method: string | null;
+          }
+        >();
+        if (catalogServiceIds.length > 0) {
+          const catalogRows = await db
+            .table("service_catalog as sc")
+            .where({ "sc.tenant": client.tenant })
+            .whereIn("sc.service_id", catalogServiceIds)
+            .select(
+              "sc.service_id",
+              "sc.service_name",
+              "sc.tax_rate_id",
+              "sc.unit_of_measure",
+              "sc.billing_method",
+            );
+          for (const row of catalogRows) {
+            catalogMetadataByService.set(row.service_id, {
+              service_name: row.service_name as string,
+              tax_rate_id: (row.tax_rate_id as string | null) ?? null,
+              unit_of_measure: (row.unit_of_measure as string | null) ?? null,
+              billing_method: (row.billing_method as string | null) ?? null,
+            });
+          }
+        }
+        const metadataFor = (serviceId: string) =>
+          memberMetadataByService.get(serviceId) ?? catalogMetadataByService.get(serviceId);
+
+        const serviceContributions = Array.from(contributionsByPeriod.entries()).map(
+          ([key, contributions]) => {
+            const [periodStart, periodEnd] = key.split(":");
+            return {
+              periodStart,
+              periodEnd,
+              services: contributions.map((contribution) => {
+                const metadata = metadataFor(contribution.serviceId);
+                return {
+                  service_id: contribution.serviceId,
+                  service_name: pool.bucket_name ?? metadata?.service_name ?? undefined,
+                  tax_rate_id: metadata?.tax_rate_id ?? null,
+                  unit_of_measure: metadata?.unit_of_measure ?? null,
+                  billing_method: metadata?.billing_method ?? null,
+                  weightedMinutes: contribution.weightedMinutes,
+                };
+              }),
+            };
+          },
+        );
+
         const result = await computeBucketCharges(
           {
             billingPeriod,
@@ -4730,14 +4834,17 @@ export class BillingEngine {
             },
             usageRecords,
             contractCurrency: contractLine.currency_code || "USD",
+            serviceContributions,
           },
           await this.loadChargeComputeTaxContext({
             client,
             locationId: contractLine.location_id,
-            services: [{
-              ...pool,
-              tax_rate_id: chargeTaxRateId,
-            }],
+            services: [
+              ...contributorServiceIds.map((serviceId) => ({
+                tax_rate_id: metadataFor(serviceId)?.tax_rate_id ?? null,
+              })),
+              { tax_rate_id: chargeTaxRateId },
+            ],
           }),
         );
         return result.charges;

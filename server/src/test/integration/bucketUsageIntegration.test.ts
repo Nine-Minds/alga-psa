@@ -464,7 +464,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
   });
 
   it('member pool charges carry a real service_id and keep the pool identity separately on config_id', async () => {
-    await withSeededPool(async ({ trx, tenant, clientId, serviceId1x, serviceId2x, contractLineId, bucketId }) => {
+    await withSeededPool(async ({ trx, tenant, clientId, serviceId1x, serviceId2x, contractLineId, bucketId, userId }) => {
       const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
       const { persistInvoiceCharges } = await import('@alga-psa/billing/services/invoiceService');
 
@@ -473,6 +473,17 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
         contract_line_id: contractLineId, service_catalog_id: serviceId2x,
         bucket_id: bucketId, period_start: '2026-03-01', period_end: '2026-03-31',
         minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+      });
+
+      // Real contribution from the 2x member so the overage charge is
+      // attributed to the service that actually burned it (120 in-hours minutes
+      // at 2x → 240 weighted minutes).
+      await trx('time_entries').insert({
+        tenant: tenantOf(trx), entry_id: randomUUID(), user_id: userId,
+        start_time: new Date('2026-03-10T10:00:00Z'),
+        end_time: new Date('2026-03-10T12:00:00Z'),
+        billable_duration: 120, service_id: serviceId2x, contract_line_id: contractLineId,
+        work_date: '2026-03-10', work_timezone: 'UTC',
       });
 
       const engine = new BillingEngine();
@@ -495,12 +506,9 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
 
       expect(charges).toHaveLength(1);
       const charge = charges[0];
-      // The pool has two members and the engine keys the charge on the member
-      // ordered by service_id asc (both are freshly random UUIDs, so either may
-      // sort first). Deterministically model that documented pick instead of
-      // assuming a specific member won.
-      const expectedServiceId = [serviceId1x, serviceId2x].sort()[0];
-      expect(charge.serviceId).toBe(expectedServiceId);
+      // Only the 2x member contributed, so the charge is keyed on THAT service
+      // (attribution by actual burn, never member-list position).
+      expect(charge.serviceId).toBe(serviceId2x);
       // The charge must carry a REAL member service — never the pool id, and
       // never a stranger.
       expect(charge.serviceId).not.toBe(bucketId);
@@ -531,7 +539,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
         .select('service_id');
       expect(invoiceRows.length).toBeGreaterThan(0);
       for (const row of invoiceRows) {
-        expect(row.service_id).toBe(expectedServiceId);
+        expect(row.service_id).toBe(serviceId2x);
         expect(row.service_id).not.toBe(bucketId);
         expect([serviceId1x, serviceId2x]).toContain(row.service_id);
       }
@@ -541,7 +549,7 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
         .select('service_id', 'config_id');
       expect(detailRows.length).toBeGreaterThan(0);
       for (const row of detailRows) {
-        expect(row.service_id).toBe(expectedServiceId);
+        expect(row.service_id).toBe(serviceId2x);
         expect(row.service_id).not.toBe(bucketId);
         expect([serviceId1x, serviceId2x]).toContain(row.service_id);
         expect(row.config_id).toBe(bucketId);
@@ -555,3 +563,545 @@ function tenantOf(trx: Knex.Transaction): string {
   if (!tenant) throw new Error('tenant not set on transaction');
   return tenant;
 }
+
+/**
+ * Catch-all scope regression: a line's catch-all pool only covers the services
+ * the LINE offers (contract_line_service_configuration membership). A service
+ * on another line must never be hijacked by it.
+ */
+describe.skipIf(!ENABLED)('catch-all scope is line-service membership scoped (real DB)', () => {
+  beforeAll(() => {
+    db = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
+        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
+        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
+        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
+        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
+      },
+      pool: { min: 0, max: 2 },
+    });
+  });
+
+  afterAll(async () => {
+    if (db) await db.destroy();
+  });
+
+  /**
+   * Two active lines under one client/contract: line A carries a catch-all pool
+   * (member A at 1x), line B carries no pool. Service X is configured on line B
+   * only — line A does not offer it. Before the fix, a draw for X was hijacked
+   * by line A's catch-all even though line A does not offer X.
+   */
+  async function withCatchAllHijackFixture(
+    body: (ctx: {
+      trx: Knex.Transaction;
+      tenant: string;
+      clientId: string;
+      serviceX: string;
+      serviceA: string;
+      lineA: string;
+      lineB: string;
+    }) => Promise<void>,
+  ) {
+    const tenant: string = (await db('tenants').first('tenant')).tenant;
+
+    await db
+      .transaction(async (trx) => {
+        (trx as any).client.config.tenant = tenant;
+
+        const serviceTypeId = (
+          await trx('service_types').where({ tenant }).first('id')
+        )?.id ?? (await trx('service_types').first('id'))?.id;
+
+        const clientId = randomUUID();
+        const serviceA = randomUUID();
+        const serviceX = randomUUID();
+        const contractId = randomUUID();
+        const lineA = randomUUID();
+        const lineB = randomUUID();
+        const bucketId = randomUUID();
+
+        await trx('clients').insert({
+          tenant, client_id: clientId, client_name: `catchall-hijack-${clientId.slice(0, 8)}`,
+        });
+        for (const [serviceId, tag] of [[serviceA, 'svc-a'], [serviceX, 'svc-x']] as const) {
+          await trx('service_catalog').insert({
+            tenant, service_id: serviceId,
+            service_name: `catchall-${tag}-${serviceId.slice(0, 6)}`,
+            billing_method: 'hourly', custom_service_type_id: serviceTypeId,
+          });
+        }
+        await trx('contracts').insert({
+          tenant, contract_id: contractId, contract_name: 'Catch-all hijack (test)',
+        });
+        await trx('contract_lines').insert([
+          {
+            tenant, contract_line_id: lineA, contract_id: contractId,
+            contract_line_name: 'Line A', contract_line_type: 'Hourly',
+            billing_frequency: 'monthly', cadence_owner: 'client',
+            is_template: false, is_active: true,
+          },
+          {
+            tenant, contract_line_id: lineB, contract_id: contractId,
+            contract_line_name: 'Line B', contract_line_type: 'Hourly',
+            billing_frequency: 'monthly', cadence_owner: 'client',
+            is_template: false, is_active: true,
+          },
+        ]);
+        await trx('client_contracts').insert({
+          tenant, client_contract_id: randomUUID(), client_id: clientId,
+          contract_id: contractId, start_date: '2026-01-01', end_date: null,
+          is_active: true,
+        });
+
+        // Line-service membership: A on line A, X on line B — NOT on line A.
+        await trx('contract_line_service_configuration').insert([
+          { tenant, config_id: randomUUID(), contract_line_id: lineA, service_id: serviceA, configuration_type: 'Hourly' },
+          { tenant, config_id: randomUUID(), contract_line_id: lineB, service_id: serviceX, configuration_type: 'Hourly' },
+        ]);
+
+        // Line A's catch-all pool. Line B has no pool at all.
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: bucketId, contract_line_id: lineA,
+          total_minutes: 600, overage_rate: 15000,
+          allow_rollover: false, covers_all_services: true,
+        });
+        await trx('contract_line_bucket_services').insert({
+          tenant, bucket_id: bucketId, contract_line_id: lineA,
+          service_id: serviceA, burn_multiplier: 1,
+        });
+
+        await body({ trx, tenant, clientId, serviceX, serviceA, lineA, lineB });
+
+        throw new Error('__rollback__');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === '__rollback__') return;
+        throw error;
+      });
+  }
+
+  it('does not route a service to the catch-all pool of a line that does not offer it', async () => {
+    await withCatchAllHijackFixture(async ({ trx, clientId, serviceX, lineB }) => {
+      const draw = await resolveBucketDraw(
+        trx, clientId, serviceX, '2026-03-10T10:00:00Z', lineB,
+      );
+
+      // X is a plain hourly service on line B (which has no pool); line A's
+      // catch-all must NOT hijack it even though line A pools its own services.
+      expect(draw).toBeNull();
+    });
+  });
+
+  /**
+   * One line with a catch-all pool. Service A is configured on the line and is
+   * a pool member; service X exists in the catalog and has a time entry on the
+   * line but is NOT configured on the line. Reconcile must not let X inflate
+   * the catch-all pool.
+   */
+  async function withCatchAllReconcileFixture(
+    body: (ctx: {
+      trx: Knex.Transaction;
+      tenant: string;
+      clientId: string;
+      serviceA: string;
+      serviceX: string;
+      contractLineId: string;
+      bucketId: string;
+      userId: string;
+    }) => Promise<void>,
+  ) {
+    const tenant: string = (await db('tenants').first('tenant')).tenant;
+
+    await db
+      .transaction(async (trx) => {
+        (trx as any).client.config.tenant = tenant;
+
+        const serviceTypeId = (
+          await trx('service_types').where({ tenant }).first('id')
+        )?.id ?? (await trx('service_types').first('id'))?.id;
+
+        const clientId = randomUUID();
+        const serviceA = randomUUID();
+        const serviceX = randomUUID();
+        const contractId = randomUUID();
+        const contractLineId = randomUUID();
+        const bucketId = randomUUID();
+
+        await trx('clients').insert({
+          tenant, client_id: clientId, client_name: `catchall-reconcile-${clientId.slice(0, 8)}`,
+        });
+        for (const [serviceId, tag] of [[serviceA, 'svc-a'], [serviceX, 'svc-x']] as const) {
+          await trx('service_catalog').insert({
+            tenant, service_id: serviceId,
+            service_name: `catchall-${tag}-${serviceId.slice(0, 6)}`,
+            billing_method: 'hourly', custom_service_type_id: serviceTypeId,
+          });
+        }
+        await trx('contracts').insert({
+          tenant, contract_id: contractId, contract_name: 'Catch-all reconcile (test)',
+        });
+        await trx('contract_lines').insert({
+          tenant, contract_line_id: contractLineId, contract_id: contractId,
+          contract_line_name: 'Catch-all reconcile line',
+          contract_line_type: 'Hourly', billing_frequency: 'monthly',
+          cadence_owner: 'client', is_template: false, is_active: true,
+        });
+        await trx('client_contracts').insert({
+          tenant, client_contract_id: randomUUID(), client_id: clientId,
+          contract_id: contractId, start_date: '2026-01-01', end_date: null,
+          is_active: true,
+        });
+
+        // Only service A is configured on the line; X is catalog-only.
+        await trx('contract_line_service_configuration').insert({
+          tenant, config_id: randomUUID(), contract_line_id: contractLineId,
+          service_id: serviceA, configuration_type: 'Hourly',
+        });
+
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: bucketId, contract_line_id: contractLineId,
+          total_minutes: 600, overage_rate: 15000,
+          allow_rollover: false, covers_all_services: true,
+        });
+        await trx('contract_line_bucket_services').insert({
+          tenant, bucket_id: bucketId, contract_line_id: contractLineId,
+          service_id: serviceA, burn_multiplier: 1,
+        });
+
+        const userId = (
+          await trx('users').where({ tenant, user_type: 'internal' }).first('user_id')
+        )?.user_id ?? (await trx('users').first('user_id'))?.user_id;
+        if (!userId) {
+          throw new Error('No user available for time_entries seeding');
+        }
+
+        await body({ trx, tenant, clientId, serviceA, serviceX, contractLineId, bucketId, userId });
+
+        throw new Error('__rollback__');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === '__rollback__') return;
+        throw error;
+      });
+  }
+
+  it('does not let an entry for a non-line service inflate a catch-all pool on reconcile', async () => {
+    await withCatchAllReconcileFixture(async ({ trx, tenant, clientId, serviceA, serviceX, contractLineId, bucketId, userId }) => {
+      const record = await findOrCreateCurrentBucketUsageRecord(
+        trx, clientId, serviceA, '2026-03-10T10:00:00Z',
+      );
+      expect(record.bucket_id).toBe(bucketId);
+
+      await trx('time_entries').insert([
+        {
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T10:00:00Z'),
+          end_time: new Date('2026-03-10T11:00:00Z'),
+          billable_duration: 60, service_id: serviceA, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+        {
+          // 300 billable minutes of service X — present on the line but NOT
+          // configured on it. Must not draw from the catch-all pool.
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T11:00:00Z'),
+          end_time: new Date('2026-03-10T16:00:00Z'),
+          billable_duration: 300, service_id: serviceX, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+      ]);
+
+      await trx('bucket_usage').where({ usage_id: record.usage_id }).update({ minutes_used: 999, overage_minutes: 999 });
+      await reconcileBucketUsageRecord(trx, record.usage_id);
+
+      const after = await trx('bucket_usage').where({ usage_id: record.usage_id }).first();
+      expect(Number(after.minutes_used)).toBe(60);
+      expect(Number(after.overage_minutes)).toBe(0);
+    });
+  });
+});
+
+/**
+ * Overage attribution regression: pool overage metadata comes from the services
+ * that actually burned the pool, not an arbitrary member.
+ */
+describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by contribution (real DB)', () => {
+  beforeAll(() => {
+    db = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.BUCKET_TEST_DB_HOST || process.env.DB_HOST || '127.0.0.1',
+        port: Number(process.env.BUCKET_TEST_DB_PORT || process.env.DB_PORT || 5432),
+        database: process.env.BUCKET_TEST_DB_NAME || process.env.DB_NAME_SERVER || 'server',
+        user: process.env.BUCKET_TEST_DB_USER || process.env.DB_USER_SERVER || 'app_user',
+        password: process.env.BUCKET_TEST_DB_PASSWORD || process.env.DB_PASSWORD_SERVER,
+      },
+      pool: { min: 0, max: 2 },
+    });
+  });
+
+  afterAll(async () => {
+    if (db) await db.destroy();
+  });
+
+  /**
+   * One Bucket line with a catch-all pool (600 min @ $150/hr). Services A (1x)
+   * and B (2x) are configured on the line and are pool members; each carries a
+   * distinct tax rate/region. A user is seeded for time_entries.
+   */
+  async function withCatchAllOverageFixture(
+    body: (ctx: {
+      trx: Knex.Transaction;
+      tenant: string;
+      clientId: string;
+      serviceA: string;
+      serviceB: string;
+      contractLineId: string;
+      bucketId: string;
+      userId: string;
+    }) => Promise<void>,
+  ) {
+    const tenant: string = (await db('tenants').first('tenant')).tenant;
+
+    await db
+      .transaction(async (trx) => {
+        (trx as any).client.config.tenant = tenant;
+
+        const serviceTypeId = (
+          await trx('service_types').where({ tenant }).first('id')
+        )?.id ?? (await trx('service_types').first('id'))?.id;
+
+        const clientId = randomUUID();
+        const serviceA = randomUUID();
+        const serviceB = randomUUID();
+        const contractId = randomUUID();
+        const contractLineId = randomUUID();
+        const bucketId = randomUUID();
+
+        await trx('clients').insert({
+          tenant, client_id: clientId, client_name: `overage-attr-${clientId.slice(0, 8)}`,
+        });
+
+        // Distinct tax regions + rates so per-service tax attribution is provable.
+        for (const [region, percentage] of [['US-TESTA', 8.25], ['US-TESTB', 5]] as const) {
+          await trx('tax_regions').insert({
+            tenant, region_code: region, region_name: `Test region ${region}`, is_active: true,
+          });
+        }
+        const taxRateA = randomUUID();
+        const taxRateB = randomUUID();
+        await trx('tax_rates').insert([
+          {
+            tenant, tax_rate_id: taxRateA, region_code: 'US-TESTA', tax_percentage: 8.25,
+            tax_type: 'Sales Tax', start_date: '2026-01-01', is_active: true,
+            description: 'Test rate A',
+          },
+          {
+            tenant, tax_rate_id: taxRateB, region_code: 'US-TESTB', tax_percentage: 5,
+            tax_type: 'Sales Tax', start_date: '2026-01-01', is_active: true,
+            description: 'Test rate B',
+          },
+        ]);
+        // Pre-seed client tax settings so the engine's tax load phase does not
+        // try to provision defaults through a host-run createTenantKnex().
+        await trx('client_tax_settings').insert({
+          tenant, client_id: clientId, is_reverse_charge_applicable: false,
+        });
+
+        for (const [serviceId, tag, taxRateId] of [
+          [serviceA, 'svc-a', taxRateA],
+          [serviceB, 'svc-b', taxRateB],
+        ] as const) {
+          await trx('service_catalog').insert({
+            tenant, service_id: serviceId,
+            service_name: `overage-${tag}-${serviceId.slice(0, 6)}`,
+            billing_method: 'hourly', custom_service_type_id: serviceTypeId,
+            tax_rate_id: taxRateId,
+          });
+        }
+        await trx('contracts').insert({
+          tenant, contract_id: contractId, contract_name: 'Overage attribution (test)',
+        });
+        await trx('contract_lines').insert({
+          tenant, contract_line_id: contractLineId, contract_id: contractId,
+          contract_line_name: 'Overage attribution line',
+          contract_line_type: 'Bucket', billing_frequency: 'monthly',
+          cadence_owner: 'client', is_template: false, is_active: true,
+        });
+        await trx('client_contracts').insert({
+          tenant, client_contract_id: randomUUID(), client_id: clientId,
+          contract_id: contractId, start_date: '2026-01-01', end_date: null,
+          is_active: true,
+        });
+
+        await trx('contract_line_service_configuration').insert([
+          { tenant, config_id: randomUUID(), contract_line_id: contractLineId, service_id: serviceA, configuration_type: 'Bucket' },
+          { tenant, config_id: randomUUID(), contract_line_id: contractLineId, service_id: serviceB, configuration_type: 'Bucket' },
+        ]);
+
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: bucketId, contract_line_id: contractLineId,
+          bucket_name: 'Overage catch-all', total_minutes: 600, overage_rate: 15000,
+          allow_rollover: false, covers_all_services: true,
+        });
+        await trx('contract_line_bucket_services').insert([
+          { tenant, bucket_id: bucketId, contract_line_id: contractLineId, service_id: serviceA, burn_multiplier: 1 },
+          { tenant, bucket_id: bucketId, contract_line_id: contractLineId, service_id: serviceB, burn_multiplier: 2 },
+        ]);
+
+        const userId = (
+          await trx('users').where({ tenant, user_type: 'internal' }).first('user_id')
+        )?.user_id ?? (await trx('users').first('user_id'))?.user_id;
+        if (!userId) {
+          throw new Error('No user available for time_entries seeding');
+        }
+
+        await body({ trx, tenant, clientId, serviceA, serviceB, contractLineId, bucketId, userId });
+
+        throw new Error('__rollback__');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === '__rollback__') return;
+        throw error;
+      });
+  }
+
+  it('apportions overage per contributing service with per-service tax metadata and amounts summing to the pool charge', async () => {
+    await withCatchAllOverageFixture(async ({ trx, tenant, clientId, serviceA, serviceB, contractLineId, bucketId, userId }) => {
+      const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
+
+      // A contributes 480 weighted minutes (1x), B contributes 240 (2x → 120
+      // billable). Pool is 600, so 720 consumed → 120 overage → 2 overage hours
+      // at $150/hr = $300.00 total, split 2/3 : 1/3.
+      await trx('time_entries').insert([
+        {
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T10:00:00Z'),
+          end_time: new Date('2026-03-10T18:00:00Z'),
+          billable_duration: 480, service_id: serviceA, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+        {
+          tenant, entry_id: randomUUID(), user_id: userId,
+          start_time: new Date('2026-03-10T10:00:00Z'),
+          end_time: new Date('2026-03-10T12:00:00Z'),
+          billable_duration: 120, service_id: serviceB, contract_line_id: contractLineId,
+          work_date: '2026-03-10', work_timezone: 'UTC',
+        },
+      ]);
+
+      await trx('bucket_usage').insert({
+        tenant, usage_id: randomUUID(), client_id: clientId,
+        contract_line_id: contractLineId, service_catalog_id: serviceA,
+        bucket_id: bucketId, period_start: '2026-03-01', period_end: '2026-03-31',
+        minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+      });
+
+      const engine = new BillingEngine();
+      (engine as any).knex = trx;
+      (engine as any).tenant = tenant;
+
+      const charges = await (engine as any).calculateBucketPlanCharges(
+        clientId,
+        { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
+        {
+          contract_line_id: contractLineId,
+          client_contract_line_id: contractLineId,
+          client_contract_id: contractLineId,
+          contract_name: 'Overage Attribution Contract',
+          contract_line_type: 'Bucket',
+          currency_code: 'USD',
+          location_id: null,
+        },
+      );
+
+      expect(charges).toHaveLength(2);
+      const byService = new Map(charges.map((charge: any) => [charge.serviceId, charge] as const));
+      const chargeA = byService.get(serviceA);
+      const chargeB = byService.get(serviceB);
+      expect(chargeA).toBeDefined();
+      expect(chargeB).toBeDefined();
+
+      for (const charge of charges) {
+        expect(charge.config_id).toBe(bucketId);
+        expect(charge.service_catalog_id).not.toBe(bucketId);
+        expect([serviceA, serviceB]).toContain(charge.service_catalog_id);
+      }
+
+      // Amounts sum exactly to overage/60 × rate: 2 weighted hrs × $150 = $300.
+      expect(charges.reduce((sum: number, charge: any) => sum + charge.total, 0)).toBe(30000);
+      expect(charges.reduce((sum: number, charge: any) => sum + charge.overageHours, 0)).toBe(2);
+      // Pro-rata by weighted minutes: A 480 (2/3), B 240 (1/3).
+      expect(chargeA.total).toBe(20000);
+      expect(chargeB.total).toBe(10000);
+
+      // Per-service tax metadata: each portion uses ITS service's tax region and
+      // rate (8.25% on $200 → $16.50; 5% on $100 → $5.00).
+      expect(chargeA.tax_region).toBe('US-TESTA');
+      expect(chargeA.tax_rate).toBe(8.25);
+      expect(chargeA.tax_amount).toBe(1650);
+      expect(chargeB.tax_region).toBe('US-TESTB');
+      expect(chargeB.tax_rate).toBe(5);
+      expect(chargeB.tax_amount).toBe(500);
+    });
+  });
+
+  it('a single-member pool produces unchanged charge output (one charge, that member metadata)', async () => {
+    await withCatchAllOverageFixture(async ({ trx, tenant, clientId, serviceA, contractLineId, bucketId, userId }) => {
+      const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
+
+      // Only service A contributes (480 weighted minutes).
+      await trx('time_entries').insert({
+        tenant, entry_id: randomUUID(), user_id: userId,
+        start_time: new Date('2026-03-10T10:00:00Z'),
+        end_time: new Date('2026-03-10T18:00:00Z'),
+        billable_duration: 480, service_id: serviceA, contract_line_id: contractLineId,
+        work_date: '2026-03-10', work_timezone: 'UTC',
+      });
+
+      await trx('bucket_usage').insert({
+        tenant, usage_id: randomUUID(), client_id: clientId,
+        contract_line_id: contractLineId, service_catalog_id: serviceA,
+        bucket_id: bucketId, period_start: '2026-03-01', period_end: '2026-03-31',
+        minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+      });
+
+      const engine = new BillingEngine();
+      (engine as any).knex = trx;
+      (engine as any).tenant = tenant;
+
+      const charges = await (engine as any).calculateBucketPlanCharges(
+        clientId,
+        { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
+        {
+          contract_line_id: contractLineId,
+          client_contract_line_id: contractLineId,
+          client_contract_id: contractLineId,
+          contract_name: 'Single Member Contract',
+          contract_line_type: 'Bucket',
+          currency_code: 'USD',
+          location_id: null,
+        },
+      );
+
+      // One charge, keyed on the single contributing member — the shape every
+      // migrated legacy config relies on.
+      expect(charges).toHaveLength(1);
+      const charge = charges[0];
+      expect(charge.serviceId).toBe(serviceA);
+      expect(charge.service_catalog_id).toBe(serviceA);
+      expect(charge.serviceName).toBe('Overage catch-all');
+      expect(charge.config_id).toBe(bucketId);
+      expect(charge.total).toBe(30000);
+      expect(charge.overageHours).toBe(2);
+      expect(charge.hoursUsed).toBe(12);
+      expect(charge.tax_region).toBe('US-TESTA');
+      expect(charge.tax_rate).toBe(8.25);
+      expect(charge.tax_amount).toBe(2475);
+      expect(charge.rate).toBe(15000);
+    });
+  });
+});

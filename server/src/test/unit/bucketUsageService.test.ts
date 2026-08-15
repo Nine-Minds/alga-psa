@@ -77,6 +77,9 @@ function buildBucketUsageTransaction(config: {
   members?: MemberRow[];
   // Adds a second assignment whose line also pools the service → ambiguity.
   conflictingAssignment?: boolean;
+  // The services configured on the line (contract_line_service_configuration).
+  // Defaults to the known service so a catch-all draw legitimately resolves.
+  lineConfiguredServices?: string[];
 }) {
   const members = config.members
     ?? (config.conflictingAssignment
@@ -84,6 +87,7 @@ function buildBucketUsageTransaction(config: {
       // resolve a bucket, so the ambiguity guard must fire.
       ? [DEFAULT_MEMBER, { ...DEFAULT_MEMBER, contract_line_id: "contract-line-2" }]
       : [DEFAULT_MEMBER]);
+  const lineConfiguredServices = config.lineConfiguredServices ?? [DEFAULT_MEMBER.service_id];
   const state = {
     bucketUsageFirstCalls: 0,
     clientContractFirstCalls: 0,
@@ -93,6 +97,10 @@ function buildBucketUsageTransaction(config: {
   };
 
   const listRowsFor = (tableName: string): unknown[] => {
+    if (tableName === "contract_line_service_configuration") {
+      // The line's roster of configured services — the catch-all draw set.
+      return lineConfiguredServices.map((service_id) => ({ service_id }));
+    }
     if (tableName === "client_contracts as cc") {
       // The service reads the active assignments as a list and resolves each
       // line's pool itself (scope rule per line, then the ambiguity guard).
@@ -118,7 +126,7 @@ function buildBucketUsageTransaction(config: {
     if (baseTableName === "client_contract_lines") {
       throw new Error('relation "client_contract_lines" does not exist');
     }
-    if (baseTableName === "contract_line_service_configuration" || baseTableName === "contract_line_service_bucket_config") {
+    if (baseTableName === "contract_line_service_bucket_config") {
       throw new Error("legacy bucket configuration should not be queried by the pool-keyed service");
     }
 
@@ -372,6 +380,21 @@ describe("resolveBucketDraw", () => {
       memberMultiplier: 1,
       coversAllServices: true,
     });
+  });
+
+  it("does not resolve the line catch-all pool for a service the line does not offer", async () => {
+    // The line's catch-all pool exists, but service-1 is NOT configured on this
+    // line (contract_line_service_configuration membership) — a catch-all
+    // covers all LINE services, never anything this client bills elsewhere.
+    const { trx } = buildBucketUsageTransaction({
+      bucket: { ...DEFAULT_BUCKET, covers_all_services: true },
+      members: [],
+      lineConfiguredServices: ["service-other-line"],
+    });
+
+    const draw = await resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z");
+
+    expect(draw).toBeNull();
   });
 
   it("returns null when the service draws from no bucket (plain hourly)", async () => {
