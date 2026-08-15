@@ -20,6 +20,7 @@ as they come up; revise earlier notes when decisions change.
 | D6 | Invisible until a second profile exists | ~All clients will only ever have one profile. Gating on `count == 1` is self-disabling and strictly better than a feature flag for phase 1 |
 | D7 | Credits, prepayments, aging, statements are profile-scoped with client-level rollup | Sibling profiles often have different cards and different owners; a credit silently paying another entity's invoice is a real AR defect |
 | D8 | Attribution is explainable — every charge records which chain step won | The chain has five steps and the pre-existing disambiguation already fails silently |
+| D10 | Profiles must ship profile-aware contract-line disambiguation; ambiguous items stop being silently billed at catalog rate | Parallel per-profile contracts carrying the same service are exactly the >1-eligible-line case, so this plan *creates* ambiguity. Shipping it without the remedy would degrade billing accuracy for the customers the feature targets. Sole authorised T013 carve-out, bounded by T052 |
 | D9 | Tax **region chain** unchanged (profile does not participate); tax **exemption / certificate / tax ID / reverse charge** become profile-scoped | Region and exemption are different questions. Region only diverges when bill-to and delivery jurisdictions differ, which none of the target shapes produce, and destination sourcing favours delivery anyway. Exemption is per legal entity, and `is_tax_exempt` living on `clients` is what currently makes the one-site-many-entities shape unbillable inside one client |
 
 ### Constraint that shaped the whole model
@@ -118,11 +119,29 @@ contract. This limitation is documented in the UI rather than hidden (F070).
 by `service_id` at time-entry create (`packages/scheduling/src/actions/timeEntryCrudActions.ts:449-491`),
 returning **null when more than one line matches**.
 
-Rule today: 1 candidate → pick it; >1 → pick the single one with a Bucket overlay;
-otherwise null. A null entry may later be swept up by
-`calculateUnresolvedNonContractCharges` (`billingEngine.ts:1956`, updates at 2100-2110)
-— or not at all. **This silent failure is invisible to users today** and is what
-F068/F069 surface.
+Rule today (`contractLineDisambiguation.shared.ts:8-51`): 1 candidate → pick it;
+>1 → pick the single one carrying a Bucket overlay; otherwise **null**.
+
+**CORRECTION to an earlier reading in this file.** Unresolved entries are *not*
+invisible to users. `AutomaticInvoices.tsx:354` already renders them as selectable
+"Unresolved time entry" / "Unresolved usage record" rows, and they are billed opt-in
+per item via `include: selectedNonContractSelections.length > 0`
+(`invoiceGeneration.ts:1414`). The real defects are narrower:
+
+1. **Unresolved items bill at `service_catalog.default_rate`**
+   (`billingEngine.ts:2170-2176`) — no contract rate, no rounding config, no minimums,
+   no overtime, no pricing schedule. The comment at `billingEngine.ts:2156-2159`
+   acknowledges the rounding gap outright.
+2. **The reason is computed and discarded.** `ambiguous` (>1 line) vs `no_match`
+   (0 lines) is decided at `billingEngine.ts:2137-2151` and written to `console.info`
+   only. The dashboard just says "Unresolved."
+
+**This plan makes defect 1 worse (D10).** A multi-profile client with parallel
+per-profile contracts each carrying the same service *is* the >1 case, so profiles
+generate ambiguity. Profile-aware narrowing (F133–F136) is mandatory, and the fix to
+the catalog-rate fallback (F137–F142) keys off the ambiguous/no_match distinction:
+no_match keeps catalog rate (honest — nothing covers it), ambiguous never gets it
+silently.
 
 ### Blast radius of the phase-2 cycle change
 
@@ -172,6 +191,13 @@ diff stays mechanical rather than 59 hand edits.
 - **`persistProjectScheduleCharges` stamps no segment today.** Easy to miss because
   there is no existing `location_id` line to copy — there is nothing there at all.
 - **Backfill must be idempotent** (F005). It will be re-run across environments.
+- **Do not ship profile assignment without F133–F136.** Parallel per-profile contracts
+  make contract-line selection ambiguous; without profile-aware narrowing the targeted
+  customers get *worse* billing accuracy than before the feature.
+- **T052 bounds the only authorised T013 carve-out.** The permitted diff is exactly the
+  today-ambiguous population. A diff anywhere else is still a defect. The carve-out
+  authorises no other deviation, and further pressure to change single-profile output
+  needs the same treatment: bounded, boundary-tested, recorded here first.
 - **Profile tax fields are nullable scalars, not a `jsonb` blob.** NULL means inherit
   from the client, which is what makes the single-profile case provably identical.
   A blob defaults to `{}` and silently stops inheriting.
@@ -204,8 +230,11 @@ Both appear to under-bill silently. Raise as their own cards.
 
 ## Open questions
 
-1. Should the unresolved-contract-line queue (F068–F069) ship here or as its own card?
-   It fixes a pre-existing defect and delivers value independently of billing profiles.
+None outstanding. Settled during the design session and recorded as D1–D10 above.
+
+Resolved most recently: whether the unresolved-item work splits into its own card. It
+does **not** — investigation showed the work is coupled rather than orthogonal, because
+this plan generates the ambiguity that the work exists to handle (D10).
 
 ---
 

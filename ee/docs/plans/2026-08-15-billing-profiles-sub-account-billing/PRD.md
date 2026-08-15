@@ -192,10 +192,45 @@ an answer. Full analysis in design source §6.2.
   to a multi-profile client's single invoice, which is no worse than today, since those
   entities would be one client regardless. The T013 gate is unaffected.
 
+## Unresolved charge handling (settled)
+
+Investigation corrected an earlier reading: unresolved items are **not** invisible.
+The billing dashboard already renders them as selectable rows, opt-in per item. Two
+narrower defects are real, and this effort makes the first of them worse.
+
+**This plan is an ambiguity generator.** Contract-line disambiguation returns null
+whenever more than one line is eligible for a service. A multi-profile client holding
+parallel per-profile contracts that each carry the same service is exactly that case —
+so without a remedy, the customers this feature targets would get *worse* billing
+accuracy than before. Profile-aware narrowing (F133–F136) is therefore mandatory, not
+an enhancement: pass the work item's resolved profile into disambiguation and prefer
+the line whose contract belongs to it. Segment attribution and contract selection turn
+out to be the same question.
+
+**Unresolved items bill at catalog rate**, ignoring contract rate, rounding, minimums,
+overtime, and pricing schedules — and the engine computes *why* an item is unresolved
+but writes it only to logs. The fix turns on that distinction:
+
+- **No eligible line** — no contract covers the service, so catalog rate is honest.
+  Unchanged behaviour, now labelled as uncovered (F140).
+- **More than one eligible line** — a contract *does* cover it and the customer has a
+  negotiated rate, so catalog pricing is simply wrong. Never silently applied. The
+  biller assigns a line inline and it bills at contract pricing; catalog pricing
+  becomes an explicit per-item choice (F138–F139).
+
+Nothing becomes unbillable — a silent default becomes a deliberate decision. Applies
+symmetrically to usage records (F141).
+
+**This is the sole authorised carve-out to the T013 gate.** It changes invoice amounts
+for single-profile tenants that have ambiguous items today, which was accepted
+knowingly. T052 is the boundary test and proves the changed population is *exactly* the
+today-ambiguous set. Everything else stays byte-identical, and the carve-out authorises
+no other deviation.
+
 ## Open Questions
 
-1. Should the unresolved-contract-line queue (F068–F069) ship as part of this effort or
-   as its own card? It addresses a pre-existing defect and delivers value independently.
+None outstanding. All design questions raised during the design session have been
+settled and recorded in the design source §2 (D1–D10).
 
 ## Acceptance Criteria / Definition of Done
 

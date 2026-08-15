@@ -12,8 +12,8 @@ behind each decision. The execution ledger lives alongside it as an ALGA plan:
 | Artifact | Purpose |
 |---|---|
 | [`ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md) | Product requirements, personas, acceptance criteria |
-| [`.../features.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/features.json) | **132 features**, each atomic and testable, `implemented` flipped as work lands |
-| [`.../tests.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/tests.json) | **46 Pareto-selected tests** mapped back to feature IDs |
+| [`.../features.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/features.json) | **142 features**, each atomic and testable, `implemented` flipped as work lands |
+| [`.../tests.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/tests.json) | **52 Pareto-selected tests** mapped back to feature IDs |
 | [`.../SCRATCHPAD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/SCRATCHPAD.md) | Decisions, code discoveries, gotchas, runbook |
 
 Slice → feature-ID mapping is in §9. The PRD is the scope authority; this document is
@@ -66,6 +66,7 @@ during implementation.
 | D7 | **Credits, prepayments, aging and statements are profile-scoped**, with client-level rollup for reporting. A credit against one profile cannot pay a sibling profile's invoice. |
 | D8 | **Attribution is explainable.** Every charge records *which chain step won*; every time entry records *how its contract line was picked*. |
 | D9 | **Tax splits in two.** The region chain is unchanged and a profile does not join it. Exemption, exemption certificate, tax ID, and reverse charge become profile-scoped with client fallback. See §6.2. |
+| D10 | **Profiles must ship their own disambiguation remedy, and the catalog-rate fallback gets fixed.** Parallel per-profile contracts make contract-line selection ambiguous, so profile-aware narrowing is mandatory (§4.2). Ambiguous items stop being silently billed at catalog rate (§4.5). This is the sole authorised carve-out to the T013 gate, bounded by T052 (§6.1). |
 
 ---
 
@@ -221,6 +222,32 @@ Also fill the two attribution gaps found in the trace:
   `location_id` today — it must set the profile.
 - Sales-order invoicing and `invoiceModification.ts` set neither.
 
+#### Profile-aware contract-line disambiguation (F133–F136) — mandatory, not optional
+
+**This plan is an ambiguity generator, and must ship its own remedy.**
+
+`resolveDeterministicContractLineSelection`
+(`packages/billing/src/lib/contractLineDisambiguation.shared.ts:8-51`) returns null
+whenever more than one line is eligible, unless exactly one carries a bucket overlay:
+
+```ts
+const overlayContractLines = eligibleContractLines.filter(cl => cl.bucket_overlay?.config_id);
+if (overlayContractLines.length === 1) { /* pick it */ }
+return { selectedContractLineId: null, decision: 'ambiguous_or_unresolved', ... };
+```
+
+A multi-profile client holding parallel per-profile contracts — each carrying a line
+for the same service — **is exactly the >1 case**. Without this feature, every such
+client pushes time into catalog-rate billing. The very customers this feature targets
+would get worse billing accuracy than before.
+
+The remedy: pass the work item's resolved billing profile into disambiguation and
+prefer the eligible line whose contract belongs to that profile. Segment attribution
+and contract selection are the same question, so the profile that answers one answers
+the other. Applied at both entry-create (`timeEntryCrudActions.ts:449-491`) and the
+generation-time reconcile path (`billingEngine.ts:2093-2110`). If the profile still
+does not narrow to one, report ambiguity — never pick arbitrarily (F136).
+
 **Exit criteria:** every row written to `invoice_charges` has a non-null
 `billing_profile_id` and a `billing_profile_source`. Existing invoice totals are
 byte-identical (assert this in tests — it is the safety property of phase 1).
@@ -245,10 +272,46 @@ byte-identical (assert this in tests — it is the safety property of phase 1).
 - Comparison across periods; export.
 - Hidden for single-profile clients.
 
-### 4.5 Slice 5 — attribution explainability
+### 4.5 Slice 5 — attribution explainability + unresolved-item correctness
 
-The chain has five steps and the *existing* contract-line disambiguation already
-fails silently. This slice makes the machine's reasoning legible.
+> **Correction to an earlier reading.** Unresolved items are *not* invisible today.
+> `AutomaticInvoices.tsx:354` already renders them as selectable "Unresolved time
+> entry" / "Unresolved usage record" rows, opt-in via
+> `include: selectedNonContractSelections.length > 0` (`invoiceGeneration.ts:1414`).
+> There is a surface and a path to billing them. The defect is narrower and worse than
+> "invisible" — see below.
+
+#### What is actually wrong with unresolved items
+
+1. **They bill at `service_catalog.default_rate`** (`billingEngine.ts:2170-2176`) — no
+   contract rate, no rounding config, no minimums, no overtime, no pricing schedule.
+   The code comment at `billingEngine.ts:2156-2159` acknowledges the missing rounding
+   config outright.
+2. **The reason is computed and then thrown away.** The engine distinguishes
+   `ambiguous` (>1 eligible line) from `no_match` (0 eligible lines) at
+   `billingEngine.ts:2137-2151` — and writes it to `console.info` only. The dashboard
+   says just "Unresolved."
+
+So a biller sees an item, includes it, and silently receives non-contract pricing with
+no indication of why or how to fix it.
+
+#### The fix (F137–F142)
+
+The distinction between the two reasons is the whole design:
+
+| Reason | Meaning | Behaviour |
+|---|---|---|
+| `no_match` — 0 eligible lines | **No contract covers this service.** Catalog rate is honest; there is nothing else to bill at. | **Unchanged.** Bills at catalog rate, now labelled "not covered by any contract" (F140). |
+| `ambiguous` — >1 eligible line | **A contract does cover it.** The customer has a negotiated rate, and billing catalog rate is simply wrong. | **Changed.** Never silently billed at catalog rate. The biller assigns a line inline (F138) and it bills at contract pricing; falling back to catalog rate becomes an explicit per-item choice (F139). |
+
+The behaviour change is therefore narrow and specific: **the current silent default
+becomes an explicit decision.** Nothing becomes unbillable — the biller can still
+choose catalog pricing, but must choose it. Applies symmetrically to usage records
+(F141).
+
+#### Attribution explainability
+
+The chain has five steps. This part makes the machine's reasoning legible.
 
 - `invoice_charges.billing_profile_source` enum:
   `explicit | contract_line | contract | work_item | client_default`
@@ -405,6 +468,30 @@ otherwise — never a baseline to be updated. If a slice genuinely must change o
 single-profile clients, that is a scope change requiring an explicit decision recorded
 in `SCRATCHPAD.md`, not a quiet baseline refresh.
 
+#### The one authorised carve-out (D10, T052)
+
+Exactly one deliberate exception exists. Fixing the catalog-rate fallback (§4.5, F139)
+changes invoice amounts for **single-profile tenants that have ambiguous items today** —
+so it cannot satisfy T013 as literally stated. This was decided knowingly, not
+discovered late, and it is bounded as follows:
+
+**In scope for the carve-out — the only permitted diffs:**
+- Invoices containing items that resolve as `ambiguous` (>1 eligible contract line)
+  under today's rules.
+
+**Out of scope — must remain byte-identical:**
+- Everything else, without exception. Invoices with fully resolved items. Invoices with
+  `no_match` items, which keep billing at catalog rate (F140). Tax, credits, aging,
+  statements, portal, exports.
+
+**T052 is the boundary test and is itself a gate.** It proves the changed population is
+*exactly* the today-ambiguous set and nothing broader. A diff outside that population
+remains a defect under the ordinary T013 rule.
+
+This carve-out authorises **no other** deviation. Any further pressure to change
+single-profile output is a new decision requiring the same treatment: bounded, tested
+at its boundary, and recorded here before the baseline moves.
+
 ### 6.2 Tax — SETTLED
 
 "Profile tax settings" is not one thing. Tax state today decomposes into four
@@ -538,10 +625,10 @@ unrelated to this feature, and both deserve their own cards:
 |---|---|---|---|---|
 | **S0** | golden-output baseline harness ← *must precede S1* | — | F128 | T013 baseline capture |
 | **S1** | schema + backfill | S0 | F001–F015 | T006–T009 |
-| **S2** | resolver + engine wiring | S1 | F016–F034 | T001–T005, T010–T017 |
+| **S2** | resolver + engine wiring + profile-aware disambiguation | S1 | F016–F034, F133–F136 | T001–T005, T010–T017, T047–T048 |
 | **S3** | profile CRUD + assignment UI | S1 | F035–F052 | T018–T021 |
 | **S4** | spend-by-profile reporting | S2 | F053–F060 | T022–T024 |
-| **S5** | attribution explainability | S2 | F061–F070 | T025–T028 |
+| **S5** | attribution explainability + unresolved-item correctness | S2 | F061–F070, F137–F142 | T025–T028, T049–T052 |
 | **S6** | portal consolidated + segmented | S2, S3 | F071–F078 | T029–T031 |
 | **S7** | profile bill-to identity + tax scoping | S3 | F079–F089, F129–F132 | T032–T033, T044–T046 |
 | **S8** | per-profile billing cycles ← *largest* | S7 | F090–F101 | T034–T037 |
