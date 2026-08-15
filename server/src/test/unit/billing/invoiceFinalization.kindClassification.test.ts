@@ -88,6 +88,11 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
   applyCreditToInvoice: mocks.applyCreditToInvoice,
   resolveCreditExpirationDate: vi.fn(async () => undefined),
+  resolveCreditDrawdownPolicy: vi.fn(async () => ({
+    autoApplyEnabled: true,
+    applicationOrder: 'expiration_first',
+    eligibleServiceTypeIds: null,
+  })),
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/creditBalance', () => ({

@@ -119,7 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "Klantcontract-ID: {{id}}",
-      "creditDrawdownOptOut": "Exclude from credit draw-down",
+      "creditDrawdownOptOut": "Uitsluiten van kredietopname",
       "empty": "Dit contract is nog niet aan een klant toegewezen.",
       "endDate": "Einddatum",
       "endDateLabel": "Einddatum toewijzing",

@@ -960,28 +960,28 @@
     "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wygaśnięcia kredytu."
   },
   "clientCreditDrawdownSettings": {
-    "title": "Credit Draw-Down Settings",
-    "useDefault": "Use Default Settings",
-    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
-    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
-    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
-    "autoApply": "Automatically apply credit at finalization",
-    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
-    "orderLabel": "Credit application order",
-    "selectOrder": "Select credit order",
-    "orderHelp": "Choose the order in which credits are consumed",
-    "serviceTypesLabel": "Eligible service types",
-    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-    "noServiceTypes": "No service types configured.",
+    "title": "Ustawienia wykorzystania kredytu",
+    "useDefault": "Użyj ustawień domyślnych",
+    "useDefaultHelp": "Użyj domyślnych ustawień wykorzystania kredytu obowiązujących w całym systemie",
+    "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wykorzystania kredytu.",
+    "clientSpecificEnabled": "Włączono ustawienia wykorzystania kredytu specyficzne dla klienta.",
+    "autoApply": "Automatycznie stosuj kredyt przy finalizacji",
+    "autoApplyHelp": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury",
+    "orderLabel": "Kolejność stosowania kredytu",
+    "selectOrder": "Wybierz kolejność kredytu",
+    "orderHelp": "Wybierz kolejność, w jakiej kredyty są wykorzystywane",
+    "serviceTypesLabel": "Kwalifikujące się typy usług",
+    "serviceTypesHelp": "Ogranicz stosowanie kredytu do wybranych typów usług. Pozostaw wszystkie odznaczone, aby stosować kredyt do wszystkich opłat.",
+    "noServiceTypes": "Nie skonfigurowano typów usług.",
     "order": {
-      "expirationFirst": "Expiring soonest first",
-      "oldestFirst": "Oldest credit first",
-      "newestFirst": "Newest credit first"
+      "expirationFirst": "Najpierw wygasające najwcześniej",
+      "oldestFirst": "Najpierw najstarszy kredyt",
+      "newestFirst": "Najpierw najnowszy kredyt"
     },
-    "updatedSuccess": "Credit draw-down settings have been updated.",
-    "loadError": "Failed to load settings",
-    "saveError": "Failed to save settings",
-    "updateError": "Failed to update settings"
+    "updatedSuccess": "Ustawienia wykorzystania kredytu zostały zaktualizowane.",
+    "loadError": "Nie udało się załadować ustawień",
+    "saveError": "Nie udało się zapisać ustawień",
+    "updateError": "Nie udało się zaktualizować ustawień"
   },
   "clientExternalCreditSettings": {
     "title": "Kredyt zewnętrzny w ewidencji",

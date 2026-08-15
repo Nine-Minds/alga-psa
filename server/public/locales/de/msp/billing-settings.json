@@ -89,36 +89,36 @@
       }
     },
     "creditDrawdown": {
-      "title": "Credit Draw-Down",
-      "description": "Control when client credits are applied to invoices and how they are consumed.",
+      "title": "Guthabenverrechnung",
+      "description": "Legen Sie fest, wann Kundenguthaben mit Rechnungen verrechnet wird und wie es verbraucht wird.",
       "fields": {
         "autoApply": {
-          "label": "Automatically apply credit at finalization",
-          "help": "When enabled, available credit is applied automatically when an invoice is finalized"
+          "label": "Guthaben beim Abschluss automatisch verrechnen",
+          "help": "Wenn aktiviert, wird verfügbares Guthaben automatisch verrechnet, sobald eine Rechnung abgeschlossen wird"
         },
         "order": {
-          "label": "Credit application order",
-          "placeholder": "Select credit order",
-          "help": "Choose the order in which credits are consumed"
+          "label": "Reihenfolge der Guthabenverrechnung",
+          "placeholder": "Guthabenreihenfolge auswählen",
+          "help": "Wählen Sie die Reihenfolge, in der Guthaben verbraucht wird"
         },
         "serviceTypes": {
-          "label": "Eligible service types",
-          "help": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-          "empty": "No service types configured.",
-          "restricted": "Credit is restricted to the selected service types."
+          "label": "Berechtigte Servicetypen",
+          "help": "Beschränken Sie die Guthabenverrechnung auf die ausgewählten Servicetypen. Lassen Sie alle deaktiviert, um Guthaben auf alle Gebühren anzuwenden.",
+          "empty": "Keine Servicetypen konfiguriert.",
+          "restricted": "Guthaben ist auf die ausgewählten Servicetypen beschränkt."
         }
       },
       "options": {
-        "expirationFirst": "Expiring soonest first",
-        "oldestFirst": "Oldest credit first",
-        "newestFirst": "Newest credit first"
+        "expirationFirst": "Bald ablaufende zuerst",
+        "oldestFirst": "Ältestes Guthaben zuerst",
+        "newestFirst": "Neuestes Guthaben zuerst"
       },
       "toast": {
-        "updated": "Credit draw-down settings have been updated."
+        "updated": "Die Einstellungen für die Guthabenverrechnung wurden aktualisiert."
       },
       "errors": {
-        "load": "Failed to load settings",
-        "save": "Failed to save settings"
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
       }
     },
     "renewal": {

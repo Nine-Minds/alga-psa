@@ -934,22 +934,11 @@ export async function applyCreditToInvoiceInternal(
         }
 
         // Resolve the draw-down policy (auto-apply toggle is enforced only in
-        // finalize; here we honor eligibility + ordering) and cap the request at
-        // the eligible amount. Over-cap requests clamp (mirroring the existing
-        // clamp-to-remaining-invoice behavior above), not error.
+        // finalize; here we honor eligibility + ordering). The eligible-amount
+        // clamp itself is deferred until after the cross-currency validation
+        // below, so an invoice with no eligible charges cannot silently swallow
+        // the explicit currency-mismatch error.
         const policy = await resolveCreditDrawdownPolicy(trx, tenant, clientId);
-        const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
-        // Cap against the *remaining* eligible headroom so repeated applications
-        // cannot cumulatively exceed the eligible subtotal (each prior
-        // allocation already consumes part of it).
-        const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
-        if (requestedAmount > remainingEligible) {
-            requestedAmount = remainingEligible;
-        }
-        if (requestedAmount <= 0) {
-            console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
-            return;
-        }
 
         const creditOrderBy: Array<{ column: string; order: 'asc' | 'desc'; nulls?: 'last' }> =
             policy.applicationOrder === 'oldest_first'
@@ -1046,6 +1035,22 @@ export async function applyCreditToInvoiceInternal(
             }
         }
         
+        // Cap the request at the eligible amount now that same-currency credits
+        // are confirmed to exist. Over-cap requests clamp (mirroring the existing
+        // clamp-to-remaining-invoice behavior above), not error. The cap is the
+        // *remaining* eligible headroom so repeated applications cannot
+        // cumulatively exceed the eligible subtotal (each prior allocation
+        // already consumes part of it).
+        const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
+        const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
+        if (requestedAmount > remainingEligible) {
+            requestedAmount = remainingEligible;
+        }
+        if (requestedAmount <= 0) {
+            console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
+            return;
+        }
+
         let remainingRequestedAmount = requestedAmount;
         let totalAppliedAmount = 0;
         const appliedCredits: { creditId: string, amount: number, transactionId: string }[] = [];

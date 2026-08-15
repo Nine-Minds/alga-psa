@@ -89,36 +89,36 @@
       }
     },
     "creditDrawdown": {
-      "title": "Credit Draw-Down",
-      "description": "Control when client credits are applied to invoices and how they are consumed.",
+      "title": "Kredietopname",
+      "description": "Bepaal wanneer klantkrediet op facturen wordt toegepast en hoe het wordt verbruikt.",
       "fields": {
         "autoApply": {
-          "label": "Automatically apply credit at finalization",
-          "help": "When enabled, available credit is applied automatically when an invoice is finalized"
+          "label": "Krediet automatisch toepassen bij finalisatie",
+          "help": "Indien ingeschakeld, wordt beschikbaar krediet automatisch toegepast wanneer een factuur wordt gefinaliseerd"
         },
         "order": {
-          "label": "Credit application order",
-          "placeholder": "Select credit order",
-          "help": "Choose the order in which credits are consumed"
+          "label": "Volgorde van krediettoepassing",
+          "placeholder": "Selecteer kredietvolgorde",
+          "help": "Kies de volgorde waarin kredieten worden verbruikt"
         },
         "serviceTypes": {
-          "label": "Eligible service types",
-          "help": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-          "empty": "No service types configured.",
-          "restricted": "Credit is restricted to the selected service types."
+          "label": "In aanmerking komende servicetypen",
+          "help": "Beperk krediettoepassing tot de geselecteerde servicetypen. Laat alles uitgevinkt om krediet op alle kosten toe te passen.",
+          "empty": "Geen servicetypen geconfigureerd.",
+          "restricted": "Krediet is beperkt tot de geselecteerde servicetypen."
         }
       },
       "options": {
-        "expirationFirst": "Expiring soonest first",
-        "oldestFirst": "Oldest credit first",
-        "newestFirst": "Newest credit first"
+        "expirationFirst": "Eerst het snelst vervallende",
+        "oldestFirst": "Oudste krediet eerst",
+        "newestFirst": "Nieuwste krediet eerst"
       },
       "toast": {
-        "updated": "Credit draw-down settings have been updated."
+        "updated": "De instellingen voor kredietopname zijn bijgewerkt."
       },
       "errors": {
-        "load": "Failed to load settings",
-        "save": "Failed to save settings"
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
       }
     },
     "renewal": {

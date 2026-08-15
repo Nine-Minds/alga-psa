@@ -89,36 +89,36 @@
       }
     },
     "creditDrawdown": {
-      "title": "Credit Draw-Down",
-      "description": "Control when client credits are applied to invoices and how they are consumed.",
+      "title": "Consumo de crédito",
+      "description": "Controle quando os créditos do cliente são aplicados às faturas e como são consumidos.",
       "fields": {
         "autoApply": {
-          "label": "Automatically apply credit at finalization",
-          "help": "When enabled, available credit is applied automatically when an invoice is finalized"
+          "label": "Aplicar crédito automaticamente na finalização",
+          "help": "Quando ativado, o crédito disponível é aplicado automaticamente quando uma fatura é finalizada"
         },
         "order": {
-          "label": "Credit application order",
-          "placeholder": "Select credit order",
-          "help": "Choose the order in which credits are consumed"
+          "label": "Ordem de aplicação de crédito",
+          "placeholder": "Selecione a ordem de crédito",
+          "help": "Escolha a ordem em que os créditos são consumidos"
         },
         "serviceTypes": {
-          "label": "Eligible service types",
-          "help": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-          "empty": "No service types configured.",
-          "restricted": "Credit is restricted to the selected service types."
+          "label": "Tipos de serviço elegíveis",
+          "help": "Restrinja a aplicação de crédito aos tipos de serviço selecionados. Deixe todos desmarcados para aplicar o crédito a todas as cobranças.",
+          "empty": "Nenhum tipo de serviço configurado.",
+          "restricted": "O crédito está restrito aos tipos de serviço selecionados."
         }
       },
       "options": {
-        "expirationFirst": "Expiring soonest first",
-        "oldestFirst": "Oldest credit first",
-        "newestFirst": "Newest credit first"
+        "expirationFirst": "Vencimento mais próximo primeiro",
+        "oldestFirst": "Crédito mais antigo primeiro",
+        "newestFirst": "Crédito mais recente primeiro"
       },
       "toast": {
-        "updated": "Credit draw-down settings have been updated."
+        "updated": "As configurações de consumo de crédito foram atualizadas."
       },
       "errors": {
-        "load": "Failed to load settings",
-        "save": "Failed to save settings"
+        "load": "Falha ao carregar as configurações",
+        "save": "Falha ao salvar as configurações"
       }
     },
     "renewal": {

@@ -119,7 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID du contrat client : {{id}}",
-      "creditDrawdownOptOut": "Exclude from credit draw-down",
+      "creditDrawdownOptOut": "Exclure de la consommation du crédit",
       "empty": "Ce contrat n'est pas encore affecté à un client.",
       "endDate": "Date de fin",
       "endDateLabel": "Date de fin d'affectation",

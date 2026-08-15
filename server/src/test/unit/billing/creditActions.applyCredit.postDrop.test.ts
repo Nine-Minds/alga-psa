@@ -220,6 +220,42 @@ function createCreditApplicationTrx() {
       return builder;
     }
 
+    if (tableName === 'client_billing_settings') {
+      // No client-specific draw-down override: policy falls back to defaults.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => undefined),
+      };
+      return builder;
+    }
+
+    if (tableName === 'default_billing_settings') {
+      // No tenant default row: resolver keeps its behavior-preserving defaults.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        first: vi.fn(async () => undefined),
+      };
+      return builder;
+    }
+
+    if (tableName === 'invoice_charges') {
+      // A single unrestricted charge covering the invoice total, so the eligible
+      // amount does not clamp the requested credit in this scenario.
+      const builder: any = {
+        where: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
+        select: vi.fn(async () => [
+          {
+            total_price: 10000,
+            net_amount: 10000,
+            service_id: null,
+            client_contract_id: null,
+          },
+        ]),
+      };
+      return builder;
+    }
+
     throw new Error(`Unexpected table ${tableName}`);
   };
 

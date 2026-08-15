@@ -910,28 +910,28 @@
     "useDefaultSuccess": "O cliente agora usará as configurações padrão de expiração de crédito."
   },
   "clientCreditDrawdownSettings": {
-    "title": "Credit Draw-Down Settings",
-    "useDefault": "Use Default Settings",
-    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
-    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
-    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
-    "autoApply": "Automatically apply credit at finalization",
-    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
-    "orderLabel": "Credit application order",
-    "selectOrder": "Select credit order",
-    "orderHelp": "Choose the order in which credits are consumed",
-    "serviceTypesLabel": "Eligible service types",
-    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-    "noServiceTypes": "No service types configured.",
+    "title": "Configurações de consumo de crédito",
+    "useDefault": "Usar configurações padrão",
+    "useDefaultHelp": "Use as configurações padrão de todo o sistema para consumo de crédito",
+    "useDefaultSuccess": "O cliente agora usará as configurações padrão de consumo de crédito.",
+    "clientSpecificEnabled": "Configurações de consumo de crédito específicas do cliente habilitadas.",
+    "autoApply": "Aplicar crédito automaticamente na finalização",
+    "autoApplyHelp": "Quando ativado, o crédito disponível é aplicado automaticamente quando uma fatura é finalizada",
+    "orderLabel": "Ordem de aplicação de crédito",
+    "selectOrder": "Selecione a ordem de crédito",
+    "orderHelp": "Escolha a ordem em que os créditos são consumidos",
+    "serviceTypesLabel": "Tipos de serviço elegíveis",
+    "serviceTypesHelp": "Restrinja a aplicação de crédito aos tipos de serviço selecionados. Deixe todos desmarcados para aplicar o crédito a todas as cobranças.",
+    "noServiceTypes": "Nenhum tipo de serviço configurado.",
     "order": {
-      "expirationFirst": "Expiring soonest first",
-      "oldestFirst": "Oldest credit first",
-      "newestFirst": "Newest credit first"
+      "expirationFirst": "Vencimento mais próximo primeiro",
+      "oldestFirst": "Crédito mais antigo primeiro",
+      "newestFirst": "Crédito mais recente primeiro"
     },
-    "updatedSuccess": "Credit draw-down settings have been updated.",
-    "loadError": "Failed to load settings",
-    "saveError": "Failed to save settings",
-    "updateError": "Failed to update settings"
+    "updatedSuccess": "As configurações de consumo de crédito foram atualizadas.",
+    "loadError": "Falha ao carregar as configurações",
+    "saveError": "Falha ao salvar as configurações",
+    "updateError": "Falha ao atualizar as configurações"
   },
   "clientExternalCreditSettings": {
     "title": "Crédito externo registrado",

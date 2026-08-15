@@ -910,28 +910,28 @@
     "useDefaultSuccess": "Le client utilisera désormais les paramètres d'expiration du crédit par défaut."
   },
   "clientCreditDrawdownSettings": {
-    "title": "Credit Draw-Down Settings",
-    "useDefault": "Use Default Settings",
-    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
-    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
-    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
-    "autoApply": "Automatically apply credit at finalization",
-    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
-    "orderLabel": "Credit application order",
-    "selectOrder": "Select credit order",
-    "orderHelp": "Choose the order in which credits are consumed",
-    "serviceTypesLabel": "Eligible service types",
-    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-    "noServiceTypes": "No service types configured.",
+    "title": "Paramètres de consommation du crédit",
+    "useDefault": "Utiliser les paramètres par défaut",
+    "useDefaultHelp": "Utiliser les paramètres par défaut du système pour la consommation du crédit",
+    "useDefaultSuccess": "Le client utilisera désormais les paramètres de consommation du crédit par défaut.",
+    "clientSpecificEnabled": "Paramètres de consommation du crédit spécifiques au client activés.",
+    "autoApply": "Appliquer automatiquement le crédit à la finalisation",
+    "autoApplyHelp": "Lorsque cette option est activée, le crédit disponible est appliqué automatiquement lors de la finalisation d'une facture",
+    "orderLabel": "Ordre d'application du crédit",
+    "selectOrder": "Sélectionnez l'ordre du crédit",
+    "orderHelp": "Choisissez l'ordre dans lequel les crédits sont consommés",
+    "serviceTypesLabel": "Types de services éligibles",
+    "serviceTypesHelp": "Limitez l'application du crédit aux types de services sélectionnés. Laissez tout décoché pour appliquer le crédit à tous les frais.",
+    "noServiceTypes": "Aucun type de service configuré.",
     "order": {
-      "expirationFirst": "Expiring soonest first",
-      "oldestFirst": "Oldest credit first",
-      "newestFirst": "Newest credit first"
+      "expirationFirst": "Expirant le plus tôt en premier",
+      "oldestFirst": "Crédit le plus ancien en premier",
+      "newestFirst": "Crédit le plus récent en premier"
     },
-    "updatedSuccess": "Credit draw-down settings have been updated.",
-    "loadError": "Failed to load settings",
-    "saveError": "Failed to save settings",
-    "updateError": "Failed to update settings"
+    "updatedSuccess": "Les paramètres de consommation du crédit ont été mis à jour.",
+    "loadError": "Échec du chargement des paramètres",
+    "saveError": "Échec de l'enregistrement des paramètres",
+    "updateError": "Échec de la mise à jour des paramètres"
   },
   "clientExternalCreditSettings": {
     "title": "Crédit externe enregistré",

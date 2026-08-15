@@ -910,28 +910,28 @@
     "useDefaultSuccess": "Der Kunde verwendet nun die Standardeinstellungen für den Ablauf des Guthabens."
   },
   "clientCreditDrawdownSettings": {
-    "title": "Credit Draw-Down Settings",
-    "useDefault": "Use Default Settings",
-    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
-    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
-    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
-    "autoApply": "Automatically apply credit at finalization",
-    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
-    "orderLabel": "Credit application order",
-    "selectOrder": "Select credit order",
-    "orderHelp": "Choose the order in which credits are consumed",
-    "serviceTypesLabel": "Eligible service types",
-    "serviceTypesHelp": "Restrict credit application to the selected service types. Leave all unchecked to apply credit to all charges.",
-    "noServiceTypes": "No service types configured.",
+    "title": "Einstellungen für die Guthabenverrechnung",
+    "useDefault": "Standardeinstellungen verwenden",
+    "useDefaultHelp": "Verwenden Sie die systemweiten Standardeinstellungen für die Guthabenverrechnung",
+    "useDefaultSuccess": "Der Kunde verwendet jetzt die Standardeinstellungen für die Guthabenverrechnung.",
+    "clientSpecificEnabled": "Kundenspezifische Einstellungen für die Guthabenverrechnung aktiviert.",
+    "autoApply": "Guthaben beim Abschluss automatisch verrechnen",
+    "autoApplyHelp": "Wenn aktiviert, wird verfügbares Guthaben automatisch verrechnet, sobald eine Rechnung abgeschlossen wird",
+    "orderLabel": "Reihenfolge der Guthabenverrechnung",
+    "selectOrder": "Guthabenreihenfolge auswählen",
+    "orderHelp": "Wählen Sie die Reihenfolge, in der Guthaben verbraucht wird",
+    "serviceTypesLabel": "Berechtigte Servicetypen",
+    "serviceTypesHelp": "Beschränken Sie die Guthabenverrechnung auf die ausgewählten Servicetypen. Lassen Sie alle deaktiviert, um Guthaben auf alle Gebühren anzuwenden.",
+    "noServiceTypes": "Keine Servicetypen konfiguriert.",
     "order": {
-      "expirationFirst": "Expiring soonest first",
-      "oldestFirst": "Oldest credit first",
-      "newestFirst": "Newest credit first"
+      "expirationFirst": "Bald ablaufende zuerst",
+      "oldestFirst": "Ältestes Guthaben zuerst",
+      "newestFirst": "Neuestes Guthaben zuerst"
     },
-    "updatedSuccess": "Credit draw-down settings have been updated.",
-    "loadError": "Failed to load settings",
-    "saveError": "Failed to save settings",
-    "updateError": "Failed to update settings"
+    "updatedSuccess": "Die Einstellungen für die Guthabenverrechnung wurden aktualisiert.",
+    "loadError": "Die Einstellungen konnten nicht geladen werden",
+    "saveError": "Einstellungen konnten nicht gespeichert werden",
+    "updateError": "Einstellungen konnten nicht aktualisiert werden"
   },
   "clientExternalCreditSettings": {
     "title": "Externes Guthaben vorhanden",
