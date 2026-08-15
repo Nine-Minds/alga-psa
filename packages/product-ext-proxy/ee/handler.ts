@@ -202,12 +202,13 @@ async function handle(
   }
 
   let tenantId: string | null = null;
+  let extensionId: string | null = null;
   let logId: string | null = null;
   const startedAt = Date.now();
 
   try {
     const routeParams = await ctx.params;
-    const extensionId = routeParams.extensionId;
+    extensionId = routeParams.extensionId;
     const pathParts = Array.isArray(routeParams.path) ? routeParams.path : [];
     const pathname = pathnameFromParts(pathParts);
     const url = new URL(req.url);
@@ -399,13 +400,30 @@ async function handle(
     });
     return applyCorsHeaders(proxyResponse, corsOrigin);
   } catch (error: any) {
+    // Runner-derived errors never carry their message into logs: an upstream
+    // body must not surface through a diagnostic channel. Status/backend plus
+    // the request id stay, so operator triage is preserved.
+    const isRunnerError =
+      error instanceof RunnerRequestError || error instanceof RunnerConfigError;
     console.error('[ext-proxy] Handler exception', {
       name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
-      request_id: getRequestId(req)
+      ...(isRunnerError
+        ? {}
+        : { message: error?.message, stack: error?.stack }),
+      ...(error instanceof RunnerRequestError
+        ? { runnerStatus: error.status, runnerBackend: error.backend }
+        : {}),
+      request_id: getRequestId(req),
     });
-    logDebug('ext-proxy:error', { message: error?.message, name: error?.name, stack: error?.stack });
+    logDebug('ext-proxy:error', {
+      name: error?.name,
+      ...(isRunnerError
+        ? {}
+        : { message: error?.message, stack: error?.stack }),
+      ...(error instanceof RunnerRequestError
+        ? { runnerStatus: error.status, runnerBackend: error.backend }
+        : {}),
+    });
     if (error instanceof ExtensionGatewayAccessError) {
       const response = json(error.status, { error: error.code });
       if (error.code === 'rate_limited' && error.retryAfterSeconds) {
@@ -426,11 +444,17 @@ async function handle(
       });
     }
     if (error instanceof RunnerConfigError) {
-      console.error('[ext-proxy] Runner configuration error:', error.message);
+      console.error('[ext-proxy] Runner configuration error', { requestId, tenantId, extensionId });
       return applyCorsHeaders(json(500, { error: 'bad_gateway', requestId }), corsOrigin);
     }
     if (error instanceof RunnerRequestError) {
-      console.error('[ext-proxy] Runner request error:', error.message, { backend: error.backend, status: error.status });
+      console.error('[ext-proxy] Runner request error', {
+        requestId,
+        tenantId,
+        extensionId,
+        status: error.status,
+        backend: error.backend,
+      });
       const status = error.status || 502;
       return applyCorsHeaders(json(status, { error: 'bad_gateway', requestId }), corsOrigin);
     }

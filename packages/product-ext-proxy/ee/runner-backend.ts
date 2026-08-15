@@ -153,16 +153,17 @@ class HttpRunnerBackend implements RunnerBackend {
     }
 
     if (!response.ok) {
-      const text = await response.text().catch(() => undefined);
+      // Never embed the upstream response body in the error: the message is
+      // surfaced in gateway logs and must stay free of runner payload text.
       throw new RunnerRequestError(
-        `Runner responded with non-success status ${response.status}${text ? `: ${text}` : ''}`,
+        `Runner responded with non-success status ${response.status}`,
         this.kind,
         response.status,
       );
     }
 
-    const payloadJson: any = await response.json().catch((error) => {
-      throw new RunnerRequestError(`Runner returned invalid JSON: ${(error as Error).message}`, this.kind);
+    const payloadJson: any = await response.json().catch(() => {
+      throw new RunnerRequestError('Runner returned invalid JSON', this.kind);
     });
 
     const status = typeof payloadJson?.status === 'number' ? payloadJson.status : 200;

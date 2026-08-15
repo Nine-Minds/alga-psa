@@ -238,7 +238,7 @@ export async function assertAccess(input: AssertExtensionAccessInput): Promise<A
     principal = { kind: 'msp', userId: user.user_id };
   }
 
-  const rateLimit = await TokenBucketRateLimiter.getInstance().tryConsume(
+  const rateLimit = await TokenBucketRateLimiter.getInstance().tryConsumeAtomic(
     EXTENSION_GATEWAY_RATE_LIMIT_NAMESPACE,
     tenantId,
     install.registry_id,

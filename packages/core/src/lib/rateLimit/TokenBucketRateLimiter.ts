@@ -32,6 +32,11 @@ interface BucketState {
 export interface TokenBucketRedisClient {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, options?: { EX?: number }): Promise<unknown>;
+  /**
+   * Optional atomic script execution. `tryConsumeAtomic` requires it; clients
+   * that omit `eval` report the fail-open sentinel instead of racing.
+   */
+  eval?(script: string, options: { keys: string[]; arguments: string[] }): Promise<unknown>;
 }
 
 /**
@@ -52,6 +57,60 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
   maxTokens: 60,
   refillRate: 1,  // 1 token per second
 };
+
+/**
+ * Atomic token-bucket consume executed server-side in a single EVAL.
+ *
+ * KEYS[1] = bucket key
+ * ARGV[1] = maxTokens
+ * ARGV[2] = refillRate (tokens/second)
+ * ARGV[3] = tokens requested
+ * ARGV[4] = now (epoch ms)
+ * ARGV[5] = TTL seconds for the bucket key
+ *
+ * Returns `{1, remaining, 0}` when allowed and `{0, remaining, retryAfterMs}`
+ * when denied, so check + consume + refill + TTL management happen in one
+ * atomic round trip with no read-modify-write race.
+ */
+const ATOMIC_TRY_CONSUME_SCRIPT = `
+local key = KEYS[1]
+local maxTokens = tonumber(ARGV[1])
+local refillRate = tonumber(ARGV[2])
+local tokensNeeded = tonumber(ARGV[3])
+local nowMs = tonumber(ARGV[4])
+local ttlSeconds = tonumber(ARGV[5])
+
+local tokens = maxTokens
+local lastRefillMs = nowMs
+
+local state = redis.call('GET', key)
+if state then
+  local ok, decoded = pcall(cjson.decode, state)
+  if ok and type(decoded) == 'table' then
+    tokens = tonumber(decoded.tokens) or maxTokens
+    lastRefillMs = tonumber(decoded.lastRefillMs) or nowMs
+  end
+end
+
+local elapsedSec = (nowMs - lastRefillMs) / 1000
+if elapsedSec > 0 then
+  tokens = math.min(maxTokens, tokens + elapsedSec * refillRate)
+end
+
+if tokens >= tokensNeeded then
+  local remaining = tokens - tokensNeeded
+  redis.call('SET', key, cjson.encode({ tokens = remaining, lastRefillMs = nowMs }), 'EX', ttlSeconds)
+  return { 1, math.floor(remaining), 0 }
+end
+
+redis.call('SET', key, cjson.encode({ tokens = tokens, lastRefillMs = nowMs }), 'EX', ttlSeconds)
+local missing = tokensNeeded - tokens
+local retryAfterMs = 0
+if refillRate > 0 then
+  retryAfterMs = math.ceil((missing / refillRate) * 1000)
+end
+return { 0, math.floor(tokens), retryAfterMs }
+`;
 
 /**
  * TokenBucketRateLimiter - Redis-based token bucket rate limiter
@@ -274,6 +333,104 @@ export class TokenBucketRateLimiter {
         namespace,
         tenantId,
         subjectId
+      });
+      return { allowed: true, remaining: -1 };
+    }
+  }
+
+  /**
+   * Atomically try to consume a token from the bucket.
+   *
+   * Same contract as `tryConsume`, but check + consume + refill + TTL are a
+   * single Redis-side EVAL so concurrent requests cannot over-draw a bucket.
+   * `tryConsume` remains for consumers that do not require atomicity.
+   *
+   * @param namespace - Bucket namespace
+   * @param tenantId - The tenant ID
+   * @param subjectId - Optional subject ID for per-subject rate limiting
+   * @param tokens - Number of tokens to consume (default: 1)
+   * @returns RateLimitResult indicating if the request is allowed
+   */
+  async tryConsumeAtomic(
+    namespace: string,
+    tenantId: string,
+    subjectId?: string,
+    tokens: number = 1
+  ): Promise<RateLimitResult> {
+    if (!this.redis) {
+      // If Redis is not available, fail open (allow the request); callers that
+      // must fail closed treat the negative `remaining` sentinel as
+      // unavailable.
+      logger.warn('[TokenBucketRateLimiter] Redis not available, allowing request');
+      return { allowed: true, remaining: -1 };
+    }
+    if (typeof this.redis.eval !== 'function') {
+      logger.error('[TokenBucketRateLimiter] Redis client does not support EVAL; cannot enforce rate limit atomically');
+      return { allowed: true, remaining: -1 };
+    }
+
+    const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
+    const config = await this.getBucketConfig(namespace, tenantId, subjectId);
+    const now = Date.now();
+
+    try {
+      const reply = await this.redis.eval(ATOMIC_TRY_CONSUME_SCRIPT, {
+        keys: [bucketKey],
+        arguments: [
+          String(config.maxTokens),
+          String(config.refillRate),
+          String(tokens),
+          String(now),
+          String(this.bucketTtlSeconds),
+        ],
+      });
+
+      if (!Array.isArray(reply) || reply.length < 2) {
+        logger.error('[TokenBucketRateLimiter] Unexpected atomic consume reply', {
+          namespace,
+          tenantId,
+          subjectId,
+          reply: reply == null ? String(reply) : JSON.stringify(reply),
+        });
+        return { allowed: true, remaining: -1 };
+      }
+
+      const allowed = Number(reply[0]) === 1;
+      const remaining = Number(reply[1]);
+      const retryAfterMs = Number(reply[2]) || 0;
+
+      if (allowed) {
+        logger.debug('[TokenBucketRateLimiter] Token consumed (atomic)', {
+          namespace,
+          tenantId,
+          subjectId,
+          remaining,
+          consumed: tokens,
+        });
+        return { allowed: true, remaining };
+      }
+
+      logger.debug('[TokenBucketRateLimiter] Rate limit exceeded (atomic)', {
+        namespace,
+        tenantId,
+        subjectId,
+        remaining,
+        needed: tokens,
+        retryAfterMs,
+      });
+      return {
+        allowed: false,
+        remaining,
+        ...(retryAfterMs > 0 ? { retryAfterMs } : {}),
+      };
+    } catch (error) {
+      // On error, fail open (allow the request); callers treat the negative
+      // `remaining` sentinel as unavailable rather than as success.
+      logger.error('[TokenBucketRateLimiter] Error checking rate limit atomically:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        namespace,
+        tenantId,
+        subjectId,
       });
       return { allowed: true, remaining: -1 };
     }

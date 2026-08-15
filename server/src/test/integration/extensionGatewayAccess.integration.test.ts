@@ -29,7 +29,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
 
 vi.mock('@alga-psa/core/rateLimit', () => ({
   TokenBucketRateLimiter: {
-    getInstance: () => ({ tryConsume: mocks.tryConsume }),
+    getInstance: () => ({ tryConsumeAtomic: mocks.tryConsume }),
   },
 }));
 
@@ -197,6 +197,22 @@ describe('extension gateway access policy (DB-backed)', () => {
     expect(await getInstallConfigByInstallId(installA)).toBeNull();
 
     await db('tenant_extension_install').where({ id: installA }).update({ status: 'enabled' });
+  });
+
+  it('the direct-install fallback resolver also denies status-disabled/pending installs, not just is_enabled=false', async () => {
+    const { getTenantInstall } = await import('@/lib/extensions/gateway/registry');
+
+    // is_enabled stays true throughout: only `status` changes.
+    await db('tenant_extension_install').where({ id: installA }).update({ is_enabled: true, status: 'disabled' });
+    expect(await getTenantInstall(tenantA, registryId)).toBeNull();
+
+    await db('tenant_extension_install').where({ id: installA }).update({ is_enabled: true, status: 'pending' });
+    expect(await getTenantInstall(tenantA, registryId)).toBeNull();
+
+    await db('tenant_extension_install').where({ id: installA }).update({ is_enabled: true, status: 'enabled' });
+    const resolved = await getTenantInstall(tenantA, registryId);
+    expect(resolved?.install_id).toBe(installA);
+    expect(resolved?.version_id).toBe(versionV1);
   });
 
   it('the installed version controls endpoint access; switching versions invalidates the old path', async () => {

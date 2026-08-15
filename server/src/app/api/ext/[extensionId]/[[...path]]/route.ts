@@ -430,7 +430,6 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           requestId,
           tenantId,
           extensionId,
-          bodyPreview: rawBody.slice(0, 500),
         });
         await finishExtensionExecution(logId, tenantId, {
           outcome: 'error',
@@ -450,7 +449,6 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
           requestId,
           tenantId,
           extensionId,
-          bodyPreview: rawBody.slice(0, 500),
         });
         await finishExtensionExecution(logId, tenantId, {
           outcome: 'error',

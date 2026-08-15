@@ -11,13 +11,13 @@ const mocks = vi.hoisted(() => {
   const getAdminConnection = vi.fn();
   const tenantDb = vi.fn();
   const hasPermission = vi.fn();
-  const tryConsume = vi.fn();
+  const tryConsumeAtomic = vi.fn();
   return {
     getCurrentUser,
     getAdminConnection,
     tenantDb,
     hasPermission,
-    tryConsume,
+    tryConsumeAtomic,
   };
 });
 
@@ -43,7 +43,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/core/rateLimit', () => ({
   TokenBucketRateLimiter: {
-    getInstance: () => ({ tryConsume: mocks.tryConsume }),
+    getInstance: () => ({ tryConsumeAtomic: mocks.tryConsumeAtomic }),
   },
 }));
 
@@ -138,7 +138,7 @@ describe('extension gateway canonical access resolver', () => {
       stubDb({ install: buildInstall({}) })
     );
     mocks.hasPermission.mockResolvedValue(true);
-    mocks.tryConsume.mockResolvedValue({ allowed: true, remaining: 10 });
+    mocks.tryConsumeAtomic.mockResolvedValue({ allowed: true, remaining: 10 });
   });
 
   it('1. MSP GET on an active tenant-owned install and declared literal endpoint requires extension:read and returns canonical IDs', async () => {
@@ -166,7 +166,7 @@ describe('extension gateway canonical access resolver', () => {
       'read',
       expect.anything(),
     );
-    expect(mocks.tryConsume).toHaveBeenCalledWith('extension-gateway', 'tenant-a', 'registry-1');
+    expect(mocks.tryConsumeAtomic).toHaveBeenCalledWith('extension-gateway', 'tenant-a', 'registry-1');
   });
 
   it('2. MSP POST/DELETE requires extension:write; a read-only user is denied', async () => {
@@ -211,7 +211,7 @@ describe('extension gateway canonical access resolver', () => {
       status: 401,
     });
     expect(mocks.hasPermission).not.toHaveBeenCalled();
-    expect(mocks.tryConsume).not.toHaveBeenCalled();
+    expect(mocks.tryConsumeAtomic).not.toHaveBeenCalled();
     delete process.env.DEV_TENANT_ID;
   });
 
@@ -243,7 +243,7 @@ describe('extension gateway canonical access resolver', () => {
       status: 404,
     });
     expect(mocks.hasPermission).not.toHaveBeenCalled();
-    expect(mocks.tryConsume).not.toHaveBeenCalled();
+    expect(mocks.tryConsumeAtomic).not.toHaveBeenCalled();
   });
 
   it('6. Declared :param endpoint matches, while wrong method/segment/malformed/undeclared paths return endpoint_not_found', async () => {
@@ -329,13 +329,13 @@ describe('extension gateway canonical access resolver', () => {
       user_type: 'internal',
     } as any);
 
-    mocks.tryConsume.mockResolvedValue({ allowed: false, remaining: 0, retryAfterMs: 2500 });
+    mocks.tryConsumeAtomic.mockResolvedValue({ allowed: false, remaining: 0, retryAfterMs: 2500 });
     const limited = await assertAccess(input()).catch((error) => error);
     expect(limited).toBeInstanceOf(ExtensionGatewayAccessError);
     expect(limited).toMatchObject({ code: 'rate_limited', status: 429 });
     expect(limited.retryAfterSeconds).toBe(3);
 
-    mocks.tryConsume.mockResolvedValue({ allowed: true, remaining: -1 });
+    mocks.tryConsumeAtomic.mockResolvedValue({ allowed: true, remaining: -1 });
     await expect(assertAccess(input())).rejects.toMatchObject({
       code: 'access_policy_unavailable',
       status: 503,
@@ -354,6 +354,6 @@ describe('extension gateway canonical access resolver', () => {
 
     mocks.hasPermission.mockRejectedValueOnce(new Error('rbac down'));
     await expect(assertAccess(input())).rejects.toThrow('rbac down');
-    expect(mocks.tryConsume).not.toHaveBeenCalled();
+    expect(mocks.tryConsumeAtomic).not.toHaveBeenCalled();
   });
 });

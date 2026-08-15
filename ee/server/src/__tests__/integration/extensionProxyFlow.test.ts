@@ -2,8 +2,11 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { bootstrapIframe } from '../../lib/extensions/ui/iframeBridge';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
 
 // Gateway Handler tests: the ext-proxy handler consumes the package-local
 // gateway/auth module (which re-exports the canonical server access resolver),
@@ -112,11 +115,22 @@ function userInfoFixture(overrides: Record<string, unknown> = {}) {
 describe('Extension Proxy Flow Integration', () => {
   const extensionId = 'test-extension-id';
   const origin = 'http://localhost:3000';
+  const debugLogPath = path.join(os.tmpdir(), 'ext-proxy-debug-test.log');
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set before the handler module is first imported so its module-level
+    // debug log path points at a test-owned file.
+    process.env.EXT_PROXY_DEBUG_LOG = debugLogPath;
     // Reset window events
     window.location = { origin } as any;
+  });
+
+  afterAll(() => {
+    delete process.env.EXT_PROXY_DEBUG_LOG;
+    if (fs.existsSync(debugLogPath)) {
+      fs.unlinkSync(debugLogPath);
+    }
   });
 
   describe('Host Bridge (Client -> Host)', () => {
@@ -657,6 +671,55 @@ describe('Extension Proxy Flow Integration', () => {
         'tenant-1',
         expect.objectContaining({ outcome: 'error', status: 500 }),
       );
+    });
+
+    it('9. a runner failure body never reaches log output while request-id and status diagnostics do', async () => {
+      const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+      const { RunnerRequestError } = mocks;
+
+      const marker = 'UPSTREAM-MARKER-SECRET-BODY';
+      mocks.getRunnerBackend.mockReturnValue({
+        kind: 'docker',
+        getPublicBase: () => null,
+        execute: vi.fn().mockRejectedValue(
+          new RunnerRequestError(`Runner responded with non-success status 500: ${marker}`, 'docker', 500)
+        ),
+      } as any);
+      mocks.finishExtensionExecution.mockClear();
+
+      const logs: string[] = [];
+      const stringify = (value: unknown) =>
+        typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation((...args: unknown[]) => logs.push(args.map(stringify).join(' ')));
+      const errorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation((...args: unknown[]) => logs.push(args.map(stringify).join(' ')));
+
+      try {
+        const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets`, {
+          method: 'GET',
+          headers: { 'x-request-id': 'req-leak-check' },
+        });
+        const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+        expect(response.status).toBe(500);
+        expect(await response.json()).toEqual({ error: 'bad_gateway', requestId: expect.any(String) });
+
+        const allLogText = logs.join('\n');
+        expect(allLogText).not.toContain(marker);
+
+        const debugText = fs.existsSync(debugLogPath) ? fs.readFileSync(debugLogPath, 'utf8') : '';
+        expect(debugText).not.toContain(marker);
+
+        expect(allLogText).toContain('req-leak-check');
+        expect(allLogText).toContain('500');
+        expect(allLogText).toContain('runnerBackend');
+      } finally {
+        logSpy.mockRestore();
+        errorSpy.mockRestore();
+      }
     });
   });
 });
