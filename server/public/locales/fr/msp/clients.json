@@ -1567,5 +1567,28 @@
       "notFound": "Contact introuvable.",
       "loadFailed": "Échec du chargement du contact."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alertes de solde prépayé",
+    "scheduleHelp": "Les vérifications s’exécutent chaque jour à 09:00 UTC. L’enregistrement n’envoie rien immédiatement.",
+    "creditSwitch": "Alertes de crédit prépayé",
+    "creditSwitchHelp": "Alerter lorsque le crédit prépayé disponible passe sous le seuil configuré",
+    "creditThreshold": "Seuil de crédit",
+    "creditThresholdPlaceholder": "ex. 500,00",
+    "creditThresholdHelp": "Crédit prépayé restant déclenchant une alerte",
+    "creditCurrency": "Devise",
+    "creditAmountError": "Saisissez un seuil de crédit positif",
+    "bucketSwitch": "Alertes d’utilisation de bloc",
+    "bucketSwitchHelp": "Alerter lorsqu’un bloc d’heures prépayées atteint la consommation configurée",
+    "bucketPercent": "Seuil de consommation (%)",
+    "bucketPercentPlaceholder": "ex. 80",
+    "bucketPercentHelp": "Pourcentage de la capacité du bloc déclenchant une alerte",
+    "percentRangeError": "Saisissez un nombre entier de 1 à 100",
+    "notifyClient": "Envoyer également un courriel au destinataire de facturation du client",
+    "notifyClientHelp": "Envoie l’alerte au destinataire de facturation canonique du client",
+    "save": "Enregistrer",
+    "saveSuccess": "Paramètres d’alerte de solde prépayé enregistrés",
+    "saveError": "Impossible d’enregistrer les paramètres d’alerte de solde prépayé",
+    "loadError": "Impossible de charger les paramètres d’alerte de solde prépayé"
   }
 }

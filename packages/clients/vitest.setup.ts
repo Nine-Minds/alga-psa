@@ -6,6 +6,16 @@ if (typeof window !== 'undefined') {
     cleanup();
   });
 
+  // jsdom lacks ResizeObserver, which Radix Select/use-size needs to render.
+  if (typeof (globalThis as Record<string, unknown>).ResizeObserver === 'undefined') {
+    class ResizeObserverStub {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (globalThis as Record<string, unknown>).ResizeObserver = ResizeObserverStub;
+  }
+
   // CI runs the affected nx projects in parallel, so a saturated runner can
   // stretch renders past testing-library's 1s default async timeout (waitFor,
   // findBy*) and flake component suites that pass everywhere else. Configure

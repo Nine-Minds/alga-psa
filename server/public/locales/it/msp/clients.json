@@ -1567,5 +1567,28 @@
       "notFound": "Contatto non trovato.",
       "loadFailed": "Impossibile caricare il contatto."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Avvisi saldo prepagato",
+    "scheduleHelp": "I controlli vengono eseguiti ogni giorno alle 09:00 UTC. Il salvataggio non invia nulla immediatamente.",
+    "creditSwitch": "Avvisi credito prepagato",
+    "creditSwitchHelp": "Avvisa quando il credito prepagato disponibile scende sotto la soglia configurata",
+    "creditThreshold": "Soglia di credito",
+    "creditThresholdPlaceholder": "es. 500,00",
+    "creditThresholdHelp": "Credito prepagato residuo che attiva un avviso",
+    "creditCurrency": "Valuta",
+    "creditAmountError": "Inserire una soglia di credito positiva",
+    "bucketSwitch": "Avvisi utilizzo pacchetto",
+    "bucketSwitchHelp": "Avvisa quando un pacchetto ore prepagato raggiunge il consumo configurato",
+    "bucketPercent": "Soglia di consumo (%)",
+    "bucketPercentPlaceholder": "es. 80",
+    "bucketPercentHelp": "Percentuale di capacità del pacchetto che attiva un avviso",
+    "percentRangeError": "Inserire un numero intero da 1 a 100",
+    "notifyClient": "Invia anche un’e-mail al destinatario di fatturazione del cliente",
+    "notifyClientHelp": "Invia l’avviso al destinatario di fatturazione canonico del cliente",
+    "save": "Salva",
+    "saveSuccess": "Impostazioni avviso saldo prepagato salvate",
+    "saveError": "Impossibile salvare le impostazioni avviso saldo prepagato",
+    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato"
   }
 }

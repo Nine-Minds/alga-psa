@@ -28,7 +28,8 @@ export interface ResolveInvoiceBillingRecipientInput {
  * tenant-scoped precedence shared by email preview, direct delivery, scheduled
  * delivery, and Stripe customer creation:
  *
- *   1. Valid email on the billing contact (clients.billing_contact_id).
+ *   1. Valid email on the active billing contact belonging to the client
+ *      (clients.billing_contact_id).
  *   2. Valid clients.billing_email.
  *   3. Valid active billing-location email (is_billing_address = true),
  *      oldest created_at first with location_id as the stable tiebreaker.
@@ -84,7 +85,13 @@ export async function resolveInvoiceBillingRecipient(
   if (client.billing_contact_id) {
     const contact = await db
       .table('contacts')
-      .where({ contact_name_id: client.billing_contact_id })
+      .where({
+        contact_name_id: client.billing_contact_id,
+        client_id: client.client_id,
+      })
+      .andWhere((qb) => {
+        qb.where('is_inactive', false).orWhereNull('is_inactive');
+      })
       .first<{ email?: string | null; full_name?: string | null }>();
 
     const contactEmail = trimmedIfValid(contact?.email);

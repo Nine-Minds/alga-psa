@@ -1617,5 +1617,28 @@
       "notFound": "Nie znaleziono kontaktu.",
       "loadFailed": "Nie udało się załadować kontaktu."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alerty salda przedpłaconego",
+    "scheduleHelp": "Kontrole są uruchamiane codziennie o 09:00 UTC. Zapisanie nie wysyła niczego natychmiast.",
+    "creditSwitch": "Alerty kredytu przedpłaconego",
+    "creditSwitchHelp": "Alert, gdy dostępny kredyt przedpłacony spadnie poniżej skonfigurowanego progu",
+    "creditThreshold": "Próg kredytu",
+    "creditThresholdPlaceholder": "np. 500,00",
+    "creditThresholdHelp": "Pozostały kredyt przedpłacony, który wyzwala alert",
+    "creditCurrency": "Waluta",
+    "creditAmountError": "Wprowadź dodatni próg kredytu",
+    "bucketSwitch": "Alerty wykorzystania pakietu",
+    "bucketSwitchHelp": "Alert, gdy pakiet godzin przedpłaconych osiągnie skonfigurowane zużycie",
+    "bucketPercent": "Próg zużycia (%)",
+    "bucketPercentPlaceholder": "np. 80",
+    "bucketPercentHelp": "Procent pojemności pakietu, który wyzwala alert",
+    "percentRangeError": "Wprowadź liczbę całkowitą od 1 do 100",
+    "notifyClient": "Wyślij również e-mail do odbiorcy faktur klienta",
+    "notifyClientHelp": "Wysyła alert do kanonicznego odbiorcy faktur klienta",
+    "save": "Zapisz",
+    "saveSuccess": "Zapisano ustawienia alertu salda przedpłaconego",
+    "saveError": "Nie udało się zapisać ustawień alertu salda przedpłaconego",
+    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego"
   }
 }

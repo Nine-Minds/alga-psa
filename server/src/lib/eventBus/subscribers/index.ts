@@ -6,6 +6,10 @@ import { registerInternalNotificationSubscriber, unregisterInternalNotificationS
 import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber';
 import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
 import { registerCreditExpiringSubscriber, unregisterCreditExpiringSubscriber } from './creditExpiringSubscriber';
+import {
+  registerPrepaidBalanceAlertSubscriber,
+  unregisterPrepaidBalanceAlertSubscriber,
+} from './prepaidBalanceAlertSubscriber';
 import { registerTicketAutoCloseWarningSubscriber, unregisterTicketAutoCloseWarningSubscriber } from './ticketAutoCloseWarningSubscriber';
 import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
 import { registerSearchIndexSubscriber, unregisterSearchIndexSubscriber } from './searchIndexSubscriber';
@@ -33,6 +37,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'sla', register: registerSlaSubscriber },
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
   { name: 'creditExpiring', register: registerCreditExpiringSubscriber },
+  { name: 'prepaidBalanceAlert', register: registerPrepaidBalanceAlertSubscriber },
   { name: 'ticketAutoCloseWarning', register: registerTicketAutoCloseWarningSubscriber },
   { name: 'webhook', register: registerWebhookSubscriber },
   { name: 'searchIndex', register: registerSearchIndexSubscriber },
@@ -53,6 +58,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'sla', register: unregisterSlaSubscriber },
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
   { name: 'creditExpiring', register: unregisterCreditExpiringSubscriber },
+  { name: 'prepaidBalanceAlert', register: unregisterPrepaidBalanceAlertSubscriber },
   { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
   { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },

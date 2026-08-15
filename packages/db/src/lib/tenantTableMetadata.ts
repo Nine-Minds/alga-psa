@@ -328,6 +328,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   portal_domains: { scope: 'tenant' },
   portal_invitations: { scope: 'tenant' },
   printer_assets: { scope: 'tenant' },
+  prepaid_balance_alerts: { scope: 'tenant' },
+  prepaid_balance_alert_deliveries: { scope: 'tenant' },
   priorities: { scope: 'tenant' },
   product_inventory_settings: { scope: 'tenant' },
   project_billing_cap_usage: { scope: 'tenant' },

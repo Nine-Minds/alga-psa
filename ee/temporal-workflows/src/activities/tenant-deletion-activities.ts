@@ -275,6 +275,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
+  // Low-balance alert ledgers: deliveries FK to alerts, alerts FK to clients,
+  // so deliveries delete before alerts and both before client_billing_settings.
+  'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',

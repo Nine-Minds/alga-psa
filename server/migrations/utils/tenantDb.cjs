@@ -321,6 +321,8 @@ const TENANT_TABLE_METADATA = {
   portal_domains: { scope: 'tenant' },
   portal_invitations: { scope: 'tenant' },
   printer_assets: { scope: 'tenant' },
+  prepaid_balance_alerts: { scope: 'tenant' },
+  prepaid_balance_alert_deliveries: { scope: 'tenant' },
   priorities: { scope: 'tenant' },
   project_materials: { scope: 'tenant' },
   project_phases: { scope: 'tenant' },

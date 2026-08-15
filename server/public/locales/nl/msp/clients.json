@@ -1567,5 +1567,28 @@
       "notFound": "Contactpersoon niet gevonden.",
       "loadFailed": "Kan contactpersoon niet laden."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid-saldo-meldingen",
+    "scheduleHelp": "Controles draaien dagelijks om 09:00 UTC. Opslaan verzendt niets onmiddellijk.",
+    "creditSwitch": "Prepaid-tegoedmeldingen",
+    "creditSwitchHelp": "Waarschuwen wanneer het beschikbare prepaid-tegoed onder de geconfigureerde drempel komt",
+    "creditThreshold": "Tegoeddrempel",
+    "creditThresholdPlaceholder": "bijv. 500,00",
+    "creditThresholdHelp": "Resterend prepaid-tegoed dat een melding activeert",
+    "creditCurrency": "Valuta",
+    "creditAmountError": "Voer een positieve tegoeddrempel in",
+    "bucketSwitch": "Pakketgebruikmeldingen",
+    "bucketSwitchHelp": "Waarschuwen wanneer een prepaid-urenpakket het geconfigureerde verbruik bereikt",
+    "bucketPercent": "Verbruiksdrempel (%)",
+    "bucketPercentPlaceholder": "bijv. 80",
+    "bucketPercentHelp": "Percentage van de pakketcapaciteit dat een melding activeert",
+    "percentRangeError": "Voer een geheel getal van 1 tot 100 in",
+    "notifyClient": "De facturatie-ontvanger van de klant ook e-mailen",
+    "notifyClientHelp": "Verstuurt de melding naar de canonieke facturatie-ontvanger van de klant",
+    "save": "Opslaan",
+    "saveSuccess": "Prepaid-saldomeldinginstellingen opgeslagen",
+    "saveError": "Prepaid-saldomeldinginstellingen konden niet worden opgeslagen",
+    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen"
   }
 }

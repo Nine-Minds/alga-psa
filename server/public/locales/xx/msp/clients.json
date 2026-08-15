@@ -1567,5 +1567,28 @@
       "notFound": "11111",
       "loadFailed": "11111"
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "11111",
+    "scheduleHelp": "11111",
+    "creditSwitch": "11111",
+    "creditSwitchHelp": "11111",
+    "creditThreshold": "11111",
+    "creditThresholdPlaceholder": "11111",
+    "creditThresholdHelp": "11111",
+    "creditCurrency": "11111",
+    "creditAmountError": "11111",
+    "bucketSwitch": "11111",
+    "bucketSwitchHelp": "11111",
+    "bucketPercent": "11111",
+    "bucketPercentPlaceholder": "11111",
+    "bucketPercentHelp": "11111",
+    "percentRangeError": "11111",
+    "notifyClient": "11111",
+    "notifyClientHelp": "11111",
+    "save": "11111",
+    "saveSuccess": "11111",
+    "saveError": "11111",
+    "loadError": "11111"
   }
 }

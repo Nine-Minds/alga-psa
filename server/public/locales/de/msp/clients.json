@@ -1567,5 +1567,28 @@
       "notFound": "Kontakt nicht gefunden.",
       "loadFailed": "Kontakt konnte nicht geladen werden."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid-Saldo-Warnungen",
+    "scheduleHelp": "Die Prüfungen laufen täglich um 09:00 UTC. Beim Speichern wird nichts sofort gesendet.",
+    "creditSwitch": "Prepaid-Guthaben-Warnungen",
+    "creditSwitchHelp": "Warnen, wenn das verfügbare Prepaid-Guthaben unter den konfigurierten Schwellenwert fällt",
+    "creditThreshold": "Guthaben-Schwellenwert",
+    "creditThresholdPlaceholder": "z. B. 500,00",
+    "creditThresholdHelp": "Restliches Prepaid-Guthaben, das eine Warnung auslöst",
+    "creditCurrency": "Währung",
+    "creditAmountError": "Geben Sie einen positiven Guthaben-Schwellenwert ein",
+    "bucketSwitch": "Paketnutzungs-Warnungen",
+    "bucketSwitchHelp": "Warnen, wenn ein Prepaid-Stundenpaket den konfigurierten Verbrauch erreicht",
+    "bucketPercent": "Verbrauchsschwellenwert (%)",
+    "bucketPercentPlaceholder": "z. B. 80",
+    "bucketPercentHelp": "Prozentsatz der Paketkapazität, der eine Warnung auslöst",
+    "percentRangeError": "Geben Sie eine ganze Zahl von 1 bis 100 ein",
+    "notifyClient": "Auch den Rechnungsempfänger des Kunden per E-Mail benachrichtigen",
+    "notifyClientHelp": "Sendet die Warnung an den kanonischen Rechnungsempfänger des Kunden",
+    "save": "Speichern",
+    "saveSuccess": "Prepaid-Saldo-Warnungseinstellungen gespeichert",
+    "saveError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht gespeichert werden",
+    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden"
   }
 }

@@ -197,6 +197,16 @@ export const creditExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 
 export type CreditExpiringEventPayload = z.infer<typeof creditExpiringEventPayloadSchema>;
 
+// Emitted by the prepaid-balance-alert-scan maintenance handler to request the
+// server-side daily 09:00 UTC low-balance evaluation for one tenant. The
+// handler (Temporal worker / pg-boss) may only publish; the server subscriber
+// owns flag gating, ledger queries, alert lifecycle, and delivery draining.
+export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().optional().describe('Optional single-client scan for tests/backfills'),
+}).describe('Payload for PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
+
+export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
+
 export const contractCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contractId: contractIdSchema,
   clientId: clientIdSchema,

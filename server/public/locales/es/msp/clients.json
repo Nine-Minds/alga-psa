@@ -1567,5 +1567,28 @@
       "notFound": "Contacto no encontrado.",
       "loadFailed": "No se pudo cargar el contacto."
     }
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alertas de saldo prepagado",
+    "scheduleHelp": "Los controles se ejecutan a diario a las 09:00 UTC. Guardar no envía nada de inmediato.",
+    "creditSwitch": "Alertas de crédito prepagado",
+    "creditSwitchHelp": "Avisar cuando el crédito prepagado disponible baje del umbral configurado",
+    "creditThreshold": "Umbral de crédito",
+    "creditThresholdPlaceholder": "p. ej., 500,00",
+    "creditThresholdHelp": "Crédito prepagado restante que activa una alerta",
+    "creditCurrency": "Moneda",
+    "creditAmountError": "Introduzca un umbral de crédito positivo",
+    "bucketSwitch": "Alertas de uso de paquetes",
+    "bucketSwitchHelp": "Avisar cuando un paquete de horas prepagado alcance el consumo configurado",
+    "bucketPercent": "Umbral de consumo (%)",
+    "bucketPercentPlaceholder": "p. ej., 80",
+    "bucketPercentHelp": "Porcentaje de capacidad del paquete que activa una alerta",
+    "percentRangeError": "Introduzca un número entero del 1 al 100",
+    "notifyClient": "Enviar también un correo al destinatario de facturación del cliente",
+    "notifyClientHelp": "Envía la alerta al destinatario de facturación canónico del cliente",
+    "save": "Guardar",
+    "saveSuccess": "Parámetros de alerta de saldo prepagado guardados",
+    "saveError": "No se pudieron guardar los parámetros de alerta de saldo prepagado",
+    "loadError": "No se pudieron cargar los parámetros de alerta de saldo prepagado"
   }
 }
