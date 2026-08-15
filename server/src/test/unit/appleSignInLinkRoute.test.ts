@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // --- Hoisted mock state ----------------------------------------------------
@@ -148,6 +150,26 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('/api/v1/mobile/auth/apple/link — client-owned key boundary', () => {
+  it('locks authentication to the gated ApiKeyServiceForApi validator', async () => {
+    const source = readFileSync(
+      resolve(__dirname, '../../app/api/v1/mobile/auth/apple/link/route.ts'),
+      'utf8'
+    );
+    expect(source).toContain('ApiKeyServiceForApi.validateApiKeyForTenant');
+    expect(source).toContain('ApiKeyServiceForApi.validateApiKeyAnyTenant');
+    // The route must not load a user on its own (its boundary is the validator).
+    expect(source).not.toContain('findUserByIdForApi');
+  });
+
+  it('GET returns 401 when the validator rejects the key (a client-owned key)', async () => {
+    mockState.validateResult = null;
+    const route = await import('@/app/api/v1/mobile/auth/apple/link/route');
+    const res = await route.GET(makeRequest('GET') as never);
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('/api/v1/mobile/auth/apple/link — GET', () => {

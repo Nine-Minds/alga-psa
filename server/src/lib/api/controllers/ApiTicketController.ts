@@ -25,13 +25,14 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
+  assertInternalApiUser,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -50,7 +51,9 @@ import {
 import { ZodError } from 'zod';
 
 // Resolve a read-authorization predicate that mirrors the global authorization
-// kernel for ticket:read (no built-in relationship rules; bundle narrowing only —
+// kernel for ticket:read. The built-in rules come from the same subject-aware
+// default resolver the kernel factories use: client subjects resolve to a
+// same_client rule, internal subjects to an empty set (bundle narrowing only —
 // empty in CE, populated in EE). Returns null when a rule isn't representable in
 // SQL so the caller falls back to the per-row JS kernel. RBAC is gated upstream
 // by checkPermission('read'), exactly as the per-row path relies on.
@@ -69,12 +72,16 @@ async function resolveTicketReadAuthorizationApplier(
     resource: { type: 'ticket', action: 'read' },
     knex,
   });
+  const builtinRules = resolveDefaultBuiltinRelationshipRules({
+    subject,
+    resource: { type: 'ticket', action: 'read' },
+  });
   const adapter = createTicketRelationshipSqlAdapter(knex, subject.tenant);
   const compile = (query: TenantScopedQuery) =>
     compileTenantScopedResourceReadAuthorizationSql(query, {
       resourceType: 'ticket',
       action: 'read',
-      builtinRules: [],
+      builtinRules,
       bundleRules,
       ctx: { subject, adapter },
     });
@@ -415,9 +422,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -506,9 +511,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -574,9 +577,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1185,9 +1186,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1261,9 +1260,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
@@ -1348,9 +1345,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1437,9 +1432,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1581,9 +1574,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;

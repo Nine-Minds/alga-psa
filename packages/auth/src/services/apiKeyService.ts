@@ -26,21 +26,42 @@ export class ApiKeyService {
 
   /**
    * Why an otherwise-valid key must not authenticate: deactivated owning
-   * user (missing user counts as inactive) or suspended tenant. Errors
-   * propagate to validateApiKey's catch, which fails closed.
+   * user (missing user counts as inactive), client-portal owner, or
+   * suspended tenant. Errors propagate to validateApiKey's catch, which
+   * fails closed.
    */
   private static async getKeyGateReason(
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive');
+      .first('is_inactive', 'user_type');
     if (!user || user.is_inactive) return 'user_inactive';
+    if (user.user_type === 'client') return 'client_owner';
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
+  }
+
+  /**
+   * Best-effort security cleanup for a client-owned key detected during
+   * validation. A failure here must never turn the rejection into an allow,
+   * so errors are swallowed and the caller still returns null.
+   */
+  private static async deactivateClientOwnedKey(
+    knex: Knex,
+    tenant: string,
+    apiKeyId: string
+  ): Promise<void> {
+    try {
+      await this.apiKeysQuery(knex, tenant)
+        .where({ api_key_id: apiKeyId })
+        .update({ active: false, updated_at: knex.fn.now() });
+    } catch (error) {
+      console.error(`Failed to lazily deactivate client-owned API key ${apiKeyId} in tenant ${tenant}:`, error);
+    }
   }
 
   /**
@@ -84,6 +105,18 @@ export class ApiKeyService {
     
     if (!tenant) {
       throw new Error('Tenant context is required for API key creation');
+    }
+
+    // Second issuance boundary: only a present, active, internal owner may hold
+    // a tenant API key. Client-portal identities are denied here even when a
+    // caller bypasses the server-action guard. Internal mobile-session and
+    // temporary AI keys are backed by internal users, so they continue to work.
+    const owner = await tenantDb(knex, tenant)
+      .table('users')
+      .where({ user_id: userId })
+      .first('is_inactive', 'user_type');
+    if (!owner || owner.is_inactive || owner.user_type !== 'internal') {
+      throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
     }
 
     try {
@@ -152,12 +185,16 @@ export class ApiKeyService {
         return null;
       }
 
-      // A deactivated owner or a suspended tenant (cancelled, pending
-      // deletion) must not authenticate. Reversible: reactivation restores
-      // the same keys untouched.
+      // A deactivated owner, a client-portal owner, or a suspended tenant
+      // (cancelled, pending deletion) must not authenticate. Reversible:
+      // reactivation restores the same keys untouched. A client-owned key is
+      // additionally deactivated as best-effort cleanup before rejection.
       const gateReason = await this.getKeyGateReason(knex, tenant, record.user_id);
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${tenant}`);
+        if (gateReason === 'client_owner') {
+          await this.deactivateClientOwnedKey(knex, tenant, record.api_key_id);
+        }
         return null;
       }
 

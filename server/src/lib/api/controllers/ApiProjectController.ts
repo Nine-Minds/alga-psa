@@ -33,6 +33,7 @@ import { authorizeApiResourceRead } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
+  assertInternalApiUser,
   ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -598,9 +599,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -673,9 +672,7 @@ export class ApiProjectController extends ApiBaseController {
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
@@ -747,9 +744,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -850,9 +845,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -930,9 +923,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1010,9 +1001,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1090,9 +1079,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1168,9 +1155,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1250,9 +1235,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1335,9 +1318,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1412,9 +1393,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1490,9 +1469,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1584,9 +1561,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1665,9 +1640,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1759,9 +1732,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1836,9 +1807,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1969,9 +1938,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;

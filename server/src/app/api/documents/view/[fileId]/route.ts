@@ -6,6 +6,7 @@ import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 
@@ -90,9 +91,17 @@ export async function GET(
             tenant = keyRecord.tenant;
             const resolved = await runWithTenant(tenant!, async () => {
               const u = await findUserByIdForApi(keyRecord.user_id, tenant!);
+              try {
+                assertInternalApiUser(u);
+              } catch {
+                return null;
+              }
               const ctx = await createTenantKnex();
               return { user: u, knex: ctx.knex };
             });
+            if (!resolved) {
+              return new NextResponse('Unauthorized', { status: 401 });
+            }
             user = resolved.user;
             knex = resolved.knex;
           }

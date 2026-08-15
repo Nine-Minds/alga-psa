@@ -6,6 +6,8 @@
 import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
+import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
@@ -29,7 +31,7 @@ import {
 } from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
+import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -212,6 +214,54 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   /**
+   * Resolve the portal visibility context for a client-portal API subject, or
+   * return null for internal contexts (which keep the current tenant-scoped
+   * behavior). The resolved client ID is cross-checked against the context
+   * user's derived client scope; any missing, malformed, or mismatched
+   * relationship fails closed instead of falling back to tenant-wide access.
+   */
+  private async resolveClientTicketVisibility(
+    context: ServiceContext
+  ): Promise<ContactVisibilityContext | null> {
+    if (context.user?.user_type !== 'client') {
+      return null;
+    }
+
+    const contactId = context.user?.contact_id;
+    const expectedClientId = context.user?.clientId;
+    if (!contactId || !expectedClientId) {
+      throw new ForbiddenError('Permission denied: client scope is unavailable');
+    }
+
+    const { knex } = await this.getKnex();
+    let visibility: ContactVisibilityContext;
+    try {
+      visibility = await getClientContactVisibilityContext(
+        knex as Knex.Transaction,
+        context.tenant,
+        contactId
+      );
+    } catch (error) {
+      console.error(`Failed to resolve client ticket visibility for contact ${contactId}:`, error);
+      throw new ForbiddenError('Permission denied: client visibility is unavailable');
+    }
+
+    if (visibility.clientId !== expectedClientId) {
+      throw new ForbiddenError('Permission denied: client scope mismatch');
+    }
+
+    return visibility;
+  }
+
+  private applyClientTicketScope(
+    query: Knex.QueryBuilder,
+    visibility: ContactVisibilityContext
+  ): Knex.QueryBuilder {
+    query = query.where('t.client_id', visibility.clientId);
+    return applyVisibilityBoardFilter(query, visibility.visibleBoardIds, 't.board_id');
+  }
+
+  /**
    * Delete a ticket and all of its dependent rows.
    *
    * BaseService.delete() issues a bare `DELETE FROM tickets`, which both trips
@@ -294,6 +344,15 @@ export class TicketService extends BaseService<ITicket> {
     // Apply filters
     dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant);
     countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant);
+
+    // Client-portal scope: same-client AND visibility-board predicates on both
+    // the data and count builders, before limit/offset. Kept separate from the
+    // controller-supplied kernel predicate (an OR-group), never merged into it.
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      dataQuery = this.applyClientTicketScope(dataQuery, clientVisibility);
+      countQuery = this.applyClientTicketScope(countQuery, clientVisibility);
+    }
 
     // Push row-level read authorization into SQL (when the caller provides it)
     // so both the page and the total count reflect only authorized rows.
@@ -504,6 +563,10 @@ export class TicketService extends BaseService<ITicket> {
 
     const scopedDb = tenantDb(knex, context.tenant);
     const ticketQuery = tenantScopedTable(knex, 'tickets as t', context.tenant);
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      this.applyClientTicketScope(ticketQuery, clientVisibility);
+    }
     scopedDb.tenantJoin(ticketQuery, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'client_locations as cl', 't.client_id', 'cl.client_id', {
       type: 'left',
@@ -574,6 +637,13 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(documentQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
     scopedDb.tenantJoin(documentQuery, 'users as u', 'd.created_by', 'u.user_id', { type: 'left' });
     scopedDb.tenantJoin(documentQuery, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      // Client-portal contacts only ever receive client-visible documents.
+      documentQuery.where('d.is_client_visible', true);
+    }
+
     const documents = await documentQuery
       .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
       .where({
@@ -1035,6 +1105,13 @@ export class TicketService extends BaseService<ITicket> {
     const scopedDb = tenantDb(knex, context.tenant);
     const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
     scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      // A client-portal context may only download client-visible documents.
+      docQuery.where('d.is_client_visible', true);
+    }
+
     const doc = await docQuery
       .where({
         'da.entity_id': ticketId,
@@ -1816,6 +1893,21 @@ export class TicketService extends BaseService<ITicket> {
     const commentsQuery = tenantScopedTable(knex, 'comments as tc', context.tenant);
     scopedDb.tenantJoin(commentsQuery, 'users as u', 'tc.user_id', 'u.user_id', { type: 'left' });
     scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });
+
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      // Client-portal contacts never see internal comments or internal
+      // threads; this mirrors client-tickets.ts. The visibility filter runs
+      // before pagination so short pages cannot leak hidden rows.
+      scopedDb.tenantJoin(commentsQuery, 'comment_threads as ct', 'tc.thread_id', 'ct.thread_id', { type: 'left' });
+      commentsQuery
+        .where('tc.is_internal', false)
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('ct.is_internal')
+            .orWhere('ct.is_internal', false);
+        });
+    }
+
     const comments = await commentsQuery
       .select(
         'tc.*',
@@ -2149,6 +2241,13 @@ export class TicketService extends BaseService<ITicket> {
 
     const scopedDb = tenantDb(knex, context.tenant);
     let query = tenantScopedTable(knex, 'tickets as t', context.tenant);
+
+    // Client-portal scope applies before any search filters or result limits.
+    const clientVisibility = await this.resolveClientTicketVisibility(context);
+    if (clientVisibility) {
+      query = this.applyClientTicketScope(query, clientVisibility);
+    }
+
     query = scopedDb.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
     query = scopedDb.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
     query = scopedDb.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
@@ -2256,6 +2355,13 @@ export class TicketService extends BaseService<ITicket> {
   async getTicketStats(context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     const scopedDb = tenantDb(knex, context.tenant);
+
+    // A client-portal context must never reach this unscoped tenant aggregate;
+    // API stats for client subjects are derived from the already-scoped list
+    // path in the controller.
+    if ((await this.resolveClientTicketVisibility(context)) !== null) {
+      throw new ForbiddenError('Permission denied: client statistics are scoped to the list path');
+    }
 
     const [
       totalStats,

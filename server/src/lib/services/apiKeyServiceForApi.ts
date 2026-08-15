@@ -78,6 +78,9 @@ export class ApiKeyServiceForApi {
       const gateReason = await this.getKeyGateReason(knex, tenantId, record.user_id);
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${tenantId}`);
+        if (gateReason === 'client_owner') {
+          await this.deactivateClientOwnedKey(knex, tenantId, record.api_key_id);
+        }
         return null;
       }
 
@@ -152,6 +155,9 @@ export class ApiKeyServiceForApi {
       const gateReason = await this.getKeyGateReason(knex, record.tenant, record.user_id);
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${record.tenant}`);
+        if (gateReason === 'client_owner') {
+          await this.deactivateClientOwnedKey(knex, record.tenant, record.api_key_id);
+        }
         return null;
       }
 
@@ -186,22 +192,42 @@ export class ApiKeyServiceForApi {
 
   /**
    * Why an otherwise-valid key must not authenticate: deactivated owning
-   * user (missing user counts as inactive) or suspended tenant (cancelled,
-   * pending deletion). Errors propagate to the callers' catch blocks, which
-   * fail closed.
+   * user (missing user counts as inactive), client-portal owner, or
+   * suspended tenant (cancelled, pending deletion). Errors propagate to the
+   * callers' catch blocks, which fail closed.
    */
   private static async getKeyGateReason(
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive');
+      .first('is_inactive', 'user_type');
     if (!user || user.is_inactive) return 'user_inactive';
+    if (user.user_type === 'client') return 'client_owner';
     if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
     return null;
+  }
+
+  /**
+   * Best-effort security cleanup for a client-owned key detected during
+   * validation. A failure here must never turn the rejection into an allow,
+   * so errors are swallowed and the caller still returns null.
+   */
+  private static async deactivateClientOwnedKey(
+    knex: Knex,
+    tenant: string,
+    apiKeyId: string
+  ): Promise<void> {
+    try {
+      await tenantDb(knex, tenant).table('api_keys')
+        .where({ api_key_id: apiKeyId })
+        .update({ active: false, updated_at: knex.fn.now() });
+    } catch (error) {
+      console.error(`Failed to lazily deactivate client-owned API key ${apiKeyId} in tenant ${tenant}:`, error);
+    }
   }
 
   static async consumeApiKey(

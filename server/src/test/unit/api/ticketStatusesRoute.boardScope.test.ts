@@ -121,6 +121,8 @@ vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
 vi.mock('@alga-psa/users/actions', () => ({
   findUserByIdForApi: vi.fn(async () => ({
     user_id: 'user-1',
+    user_type: 'internal',
+    tenant: 'tenant-1',
   })),
 }));
 
