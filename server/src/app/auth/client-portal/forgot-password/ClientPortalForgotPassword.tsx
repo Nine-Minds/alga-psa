@@ -58,7 +58,24 @@ const ClientPortalForgotPassword: React.FC<ClientPortalForgotPasswordProps> = ({
       <div className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">
-            {branding?.logoUrl ? (
+            {branding?.logoUrl && branding?.logoDarkUrl ? (
+              <>
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.clientName || t('auth.forgotPasswordPage.logoAlt', 'Client Portal Logo')}
+                  width={60}
+                  height={60}
+                  className="h-[60px] w-[60px] rounded-full object-contain dark:hidden"
+                />
+                <img
+                  src={branding.logoDarkUrl}
+                  alt={branding.clientName || t('auth.forgotPasswordPage.logoAlt', 'Client Portal Logo')}
+                  width={60}
+                  height={60}
+                  className="h-[60px] w-[60px] rounded-full object-contain hidden dark:block"
+                />
+              </>
+            ) : branding?.logoUrl ? (
               <img
                 src={branding.logoUrl}
                 alt={branding.clientName || t('auth.forgotPasswordPage.logoAlt', 'Client Portal Logo')}

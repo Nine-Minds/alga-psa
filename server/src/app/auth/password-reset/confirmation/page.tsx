@@ -36,7 +36,24 @@ export default async function PasswordResetConfirmation({
       <PortalBrandingStyles branding={branding} />
       <div className="w-full max-w-md p-8 space-y-8 text-center">
         <div>
-          {branding?.logoUrl ? (
+          {branding?.logoUrl && branding?.logoDarkUrl ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}
+                width={60}
+                height={60}
+                className="mx-auto h-[60px] w-[60px] rounded-full object-contain dark:hidden"
+              />
+              <img
+                src={branding.logoDarkUrl}
+                alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}
+                width={60}
+                height={60}
+                className="mx-auto h-[60px] w-[60px] rounded-full object-contain hidden dark:block"
+              />
+            </>
+          ) : branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}

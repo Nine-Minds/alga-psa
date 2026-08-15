@@ -53,7 +53,24 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
     <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>
       <div className="w-full max-w-md">
         <div className="bg-card rounded-lg shadow-lg p-8">
-          {branding?.logoUrl && (
+          {branding?.logoUrl && branding?.logoDarkUrl ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
+                width={60}
+                height={60}
+                className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain dark:hidden"
+              />
+              <img
+                src={branding.logoDarkUrl}
+                alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
+                width={60}
+                height={60}
+                className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain hidden dark:block"
+              />
+            </>
+          ) : branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
@@ -61,7 +78,7 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
               height={60}
               className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain"
             />
-          )}
+          ) : null}
 
           {/* Title */}
           <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">
