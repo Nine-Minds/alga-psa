@@ -173,4 +173,68 @@ describe('HuduClient — create/update/delete asset_password', () => {
     };
     expect(error.hudu.kind).toBe('not_found');
   });
+
+  it('does NOT retry a create POST on 500 — the request may have been accepted server-side, so a blind retry must not risk a duplicate record', async () => {
+    // First attempt "succeeds" server-side but the response is lost (500).
+    requestMock.mockRejectedValueOnce(axiosError(500));
+    const { HuduClient, HuduRequestError } = await importClient();
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+
+    const error = (await client
+      .createAssetPassword({ company_id: 101, name: 'No Dup 500' })
+      .catch((e: unknown) => e)) as HuduRequestError;
+
+    expect(error).toBeInstanceOf(HuduRequestError);
+    expect(error.hudu.kind).toBe('server_error');
+    // The surfaced error is explicit that no retry happened and a duplicate
+    // must be avoided.
+    expect(error.message).toMatch(/NOT retried to avoid a duplicate/);
+
+    // Exactly ONE POST reached the wire — the second mocked success was never
+    // consumed because the client refused to re-send.
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    const call = requestMock.mock.calls[0][0];
+    expect(call.method).toBe('post');
+  });
+
+  it('does NOT retry a create POST on a network error (timeout) — the record may have been created server-side', async () => {
+    requestMock.mockRejectedValueOnce({ isAxiosError: true, message: 'timeout of 30000ms exceeded', code: 'ECONNABORTED' });
+    const { HuduClient, HuduRequestError } = await importClient();
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+
+    const error = (await client
+      .createAssetPassword({ company_id: 101, name: 'No Dup Timeout' })
+      .catch((e: unknown) => e)) as HuduRequestError;
+
+    expect(error).toBeInstanceOf(HuduRequestError);
+    expect(error.hudu.kind).toBe('network_error');
+    expect(error.message).toMatch(/NOT retried to avoid a duplicate/);
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('still retries a create POST on 429 — a rate-limit rejection happens BEFORE the request is accepted, so no duplicate is possible', async () => {
+    requestMock
+      .mockRejectedValueOnce(axiosError(429))
+      .mockRejectedValueOnce(axiosError(429))
+      .mockResolvedValueOnce({ data: createdRecord() });
+    const { HuduClient } = await importClient();
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+
+    const result = await client.createAssetPassword({ company_id: 101, name: 'Retry 429' });
+
+    // Three attempts total (two 429s then success) — POST is safe to retry on 429.
+    expect(requestMock).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({ id: 42, company_id: 101 });
+  });
+
+  it('keeps GET retry behavior unchanged (transient 500 retried, then succeeds)', async () => {
+    requestMock.mockRejectedValueOnce(axiosError(500)).mockResolvedValueOnce({ data: { asset_password: createdRecord().asset_password } });
+    const { HuduClient } = await importClient();
+    const client = new HuduClient({ credentials: VALID_CREDS, sleep: noopSleep });
+
+    const result = await client.getAssetPassword(42);
+
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ id: 42, company_id: 101 });
+  });
 });

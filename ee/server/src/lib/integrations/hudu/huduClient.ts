@@ -310,6 +310,14 @@ export class HuduClient {
   /**
    * Core request with rate-limit/transient retry and typed error mapping.
    * Throws HuduRequestError (carrying a redacted HuduError) on failure.
+   *
+   * RETRY SAFETY: POST is non-idempotent — a 5xx/timeout can mean the server
+   * accepted the record but the response was lost, so a blind retry would
+   * create a duplicate. POST therefore retries ONLY on 429 (a rate-limit
+   * rejection, raised before the request is accepted — the record cannot have
+   * been created). Any other POST failure fails immediately, surfaced with a
+   * clear no-retry message so the caller can verify/clean up instead of
+   * duplicating. GET/PUT/DELETE keep the full retry behavior.
    */
   private async request<T>(
     method: 'get' | 'post' | 'put' | 'delete',
@@ -328,8 +336,10 @@ export class HuduClient {
         const huduError = toHuduError(error);
         const status = huduError.status;
         const retryable = status === 429 || (status !== undefined && status >= 500);
+        // POST may only blind-retry a 429 (never accepted, so never processed).
+        const retryableForMethod = method === 'post' ? status === 429 : retryable;
 
-        if (retryable && attempt < this.retryOptions.maxAttempts) {
+        if (retryableForMethod && attempt < this.retryOptions.maxAttempts) {
           const delay = this.computeBackoffDelay(error, attempt, status);
           logger.warn('[HuduClient] retrying after retryable error', {
             ...this.redactLog(huduError),
@@ -338,6 +348,20 @@ export class HuduClient {
           });
           await this.sleep(delay);
           continue;
+        }
+
+        if (method === 'post' && !retryableForMethod) {
+          // Non-idempotent create: never re-send. The record may or may not
+          // exist in Hudu; fail loudly so the caller can verify rather than
+          // risk a duplicate.
+          logger.error('[HuduClient] create failed and was NOT retried', this.redactLog(huduError));
+          throw new HuduRequestError({
+            ...huduError,
+            message:
+              `${huduError.message} The create was NOT retried to avoid a duplicate Hudu record: ` +
+              `the request may have been accepted despite the failure. List Hudu passwords to confirm ` +
+              `whether the record exists, and delete any duplicate before retrying.`,
+          });
         }
 
         logger.error('[HuduClient] request failed', this.redactLog(huduError));
