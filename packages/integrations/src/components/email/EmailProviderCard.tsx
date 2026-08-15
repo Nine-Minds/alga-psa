@@ -348,7 +348,10 @@ export function EmailProviderCard({
           )}
         </div>
 
-        {provider.status === 'error' && provider.errorMessage && (
+        {/* The auth-failure banner already carries the actionable error
+            context; stacking the generic status-error alert on top of it is
+            redundant noise. */}
+        {provider.status === 'error' && provider.errorMessage && !authFailurePaused && (
           <Alert variant="destructive" className="mt-3">
             <AlertDescription>
               <strong>{t('providerCard.fields.error', { defaultValue: 'Error:' })}</strong> {provider.errorMessage}

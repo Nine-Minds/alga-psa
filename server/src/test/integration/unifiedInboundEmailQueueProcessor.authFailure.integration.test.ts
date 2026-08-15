@@ -282,8 +282,12 @@ describeDb('unified inbound queue processor auth-failure outcomes (DB-backed)', 
       .spyOn(processInboundEmailInAppModule, 'processInboundEmailInApp')
       .mockRejectedValueOnce(new Error('ticket processing exploded'));
 
+    // Restore the prototype patches in a finally: sequence.shuffle can run
+    // this before the empty-fetch test, and a leaked patch flips its outcome.
+    const { GmailAdapter } = await import('@alga-psa/shared/services/email/providers/GmailAdapter');
+    const originalList = (GmailAdapter.prototype as any).listMessagesSince;
+    const originalDetails = (GmailAdapter.prototype as any).getMessageDetails;
     try {
-      const { GmailAdapter } = await import('@alga-psa/shared/services/email/providers/GmailAdapter');
       (GmailAdapter.prototype as any).listMessagesSince = async () => ['gmail-msg-1'];
       (GmailAdapter.prototype as any).getMessageDetails = async () => ({
         id: 'gmail-msg-1',
@@ -311,6 +315,8 @@ describeDb('unified inbound queue processor auth-failure outcomes (DB-backed)', 
       const row = await tenantTable('email_providers').where({ id: providerId }).first();
       expect(row.inbound_paused_at).toBeNull();
     } finally {
+      (GmailAdapter.prototype as any).listMessagesSince = originalList;
+      (GmailAdapter.prototype as any).getMessageDetails = originalDetails;
       spy.mockRestore();
     }
   });

@@ -937,6 +937,15 @@ export const upsertEmailProvider = withAuth(async (
           provider.status = 'error';
         }
 
+        // A failed auth-failure recovery leaves the mailbox ingestion-paused
+        // even when the rest of the setup succeeded; never report connected.
+        if (gmailResult.authFailureRecovery === 'failed') {
+          provider.status = 'error';
+          if (!result.setupError) {
+            result.setupError = gmailResult.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+          }
+        }
+
         // Add any warnings
         if (gmailResult.warnings && gmailResult.warnings.length > 0) {
           result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
@@ -1084,6 +1093,15 @@ export const updateEmailProvider = withAuth(async (
           provider.status = 'error';
         }
 
+        // A failed auth-failure recovery leaves the mailbox ingestion-paused
+        // even when the rest of the setup succeeded; never report connected.
+        if (gmailResult.authFailureRecovery === 'failed') {
+          provider.status = 'error';
+          if (!result.setupError) {
+            result.setupError = gmailResult.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+          }
+        }
+
         // Add any warnings
         if (gmailResult.warnings && gmailResult.warnings.length > 0) {
           result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
@@ -1104,6 +1122,56 @@ export const updateEmailProvider = withAuth(async (
         result.setupError = microsoft365ActionErrorMessage(
           error,
           'Failed to initialize Microsoft webhook. Check Microsoft 365 settings and try again.'
+        );
+        provider.status = 'error';
+      }
+    }
+
+    if (!skipAutomation && data.providerType === 'microsoft') {
+      // An edited Microsoft configuration (e.g. a renewed client secret — the
+      // EQUIT scenario) is a reconnect path for a provider auto-paused on
+      // repeated auth failures. When the webhook initialization above ran, it
+      // already re-established delivery; recovery then reconciles the paused
+      // interval and only then clears the pause. Without this, the provider
+      // stays paused while its freshly registered webhook feeds gated jobs.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const webhookInitSucceeded = !result.setupError;
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            // When the webhook initialization above succeeded, the freshly
+            // saved credentials are proven and delivery is re-established;
+            // otherwise recovery re-validates the credentials itself and
+            // refuses to clear the pause if they still fail.
+            { credentialsValidated: webhookInitSucceeded, deliveryEstablished: webhookInitSucceeded }
+          );
+          if (!recovery.resumed) {
+            result.setupError = microsoft365ActionErrorMessage(
+              recovery.error,
+              'Microsoft reconnection failed. Verify the client secret and try again.'
+            );
+            provider.status = 'error';
+          } else if (recovery.reconciliation?.status === 'partial') {
+            result.setupWarnings = [
+              ...(result.setupWarnings || []),
+              recovery.reconciliation.warning || 'Reconnection resumed, but some paused-interval mail was not reconciled. Run a mailbox resync.',
+            ];
+          }
+        }
+      } catch (error) {
+        console.error('Microsoft auth-failure recovery after credential update failed:', error);
+        result.setupError = microsoft365ActionErrorMessage(
+          error,
+          'Microsoft reconnection failed. Verify the client secret and try again.'
         );
         provider.status = 'error';
       }

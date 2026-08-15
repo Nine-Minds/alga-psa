@@ -98,6 +98,10 @@ describe('EmailProviderCard auth_failure pause (UI)', () => {
 
     expect(byId('provider-paused-badge-provider-1')).not.toBeNull();
     expect(byId('provider-auth-failure-title-provider-1')).not.toBeNull();
+
+    // The generic status-error alert is suppressed under the auth banner —
+    // one authoritative destructive alert, not two stacked red boxes.
+    expect(screen.queryByText(/^Error:/)).toBeNull();
   });
 
   it('dispatches the threaded reconnect callback from the banner button', () => {

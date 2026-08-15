@@ -36,6 +36,34 @@ export function clearInboundAuthPauseNotifier(): void {
   registeredNotifier = null;
 }
 
+/**
+ * Whether a notifier implementation is registered in this process. Every
+ * runtime that can trigger the auto-pause (Next server, bin consumer,
+ * email-service container, Temporal worker) must register one at startup —
+ * a silent pause with no admin notification and no durable signal is the
+ * failure mode this feature exists to prevent.
+ */
+export function isInboundAuthPauseNotifierRegistered(): boolean {
+  return registeredNotifier !== null;
+}
+
+/**
+ * Startup guard for pause-triggering entrypoints: logs a loud error (never
+ * throws — startup must not depend on the notifier) when no notifier is
+ * registered, so a mis-wired deployment surfaces immediately in logs.
+ */
+export function assertInboundAuthPauseNotifierRegistered(entrypoint: string): boolean {
+  if (isInboundAuthPauseNotifierRegistered()) {
+    return true;
+  }
+  console.error('[EmailProviderLifecycle] NO inbound auth-pause notifier registered; auto-pauses would be silent', {
+    event: 'inbound_auth_pause_notifier_missing',
+    entrypoint,
+    remediation: 'Register a notifier (direct or event-publisher) at startup of every pause-triggering runtime.',
+  });
+  return false;
+}
+
 export async function dispatchInboundAuthPauseNotification(
   params: InboundAuthPauseNotificationParams
 ): Promise<void> {

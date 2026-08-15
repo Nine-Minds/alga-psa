@@ -84,7 +84,15 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
       return gmailAdapterMock.testConnection();
     }
     async registerWebhookSubscription() {
-      return gmailAdapterMock.registerWebhookSubscription();
+      await gmailAdapterMock.registerWebhookSubscription();
+      // Faithful to the real adapter: a new watch persists its own (newer)
+      // history cursor, overwriting the pre-watch one.
+      const { getAdminConnection } = await import('@alga-psa/db/admin');
+      const { tenantDb } = await import('@alga-psa/db');
+      const knex = await getAdminConnection();
+      await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
+        .where({ email_provider_id: this.config.id })
+        .update({ history_id: '9999' });
     }
     async listMessagesSince(startHistoryId: string) {
       return gmailAdapterMock.listMessagesSince(startHistoryId);
@@ -142,12 +150,15 @@ function tenantFixtureTable() {
   );
 }
 
-async function seedPausedProvider(providerType: 'microsoft' | 'google' | 'imap'): Promise<{
+async function seedPausedProvider(
+  providerType: 'microsoft' | 'google' | 'imap',
+  options: { pausedDaysAgo?: number } = {}
+): Promise<{
   providerId: string;
   pausedAt: Date;
 }> {
   const providerId = uuidv4();
-  const pausedAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const pausedAt = new Date(Date.now() - (options.pausedDaysAgo ?? 0) * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000);
   const now = new Date();
   await tenantTable('email_providers').insert({
     id: providerId,
@@ -358,14 +369,23 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
     it('uses the saved pre-watch history cursor, re-registers the watch, and clears the pause', async () => {
       const { providerId } = await seedPausedProvider('google');
 
+      // No options.savedHistoryId: recovery must snapshot the pre-watch
+      // cursor itself, BEFORE registerWebhookSubscription overwrites it with
+      // the new watch cursor (regression: this path used to reconcile from
+      // the post-watch cursor and silently drop the paused interval).
       const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant);
 
       expect(result.resumed).toBe(true);
       expect(result.webhookRegistered).toBe(true);
 
-      // The pre-watch cursor is the seeded history_id.
+      // The reconciliation read the PRE-watch cursor, not the new one.
       expect(gmailAdapterMock.listMessagesSince).toHaveBeenCalledWith('1500');
+      expect(gmailAdapterMock.listMessagesSince).not.toHaveBeenCalledWith('9999');
       expect(gmailAdapterMock.registerWebhookSubscription).toHaveBeenCalledTimes(1);
+      const cursorRow = await tenantTable('google_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .first('history_id');
+      expect(cursorRow.history_id).toBe('9999');
 
       // One durable enqueue per reconciled message id.
       expect(enqueueMock.enqueueUnifiedInboundEmailQueueJob).toHaveBeenCalledTimes(2);
@@ -376,6 +396,9 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
         provider: 'google',
       });
       expect(firstEnqueue.pointer.discoveredMessageIds).toEqual(['g-1']);
+      // The enqueued pointer carries the post-watch cursor so processing does
+      // not regress google_email_provider_config.history_id below the new watch.
+      expect(firstEnqueue.pointer.historyId).toBe('9999');
 
       const row = await getProviderRow(providerId);
       expect(row.inbound_paused_at).toBeNull();
@@ -399,6 +422,41 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       expect(
         enqueueMock.enqueueUnifiedInboundEmailQueueJob.mock.calls[0][0].pointer.discoveredMessageIds
       ).toEqual(['g-fb-1']);
+
+      const row = await getProviderRow(providerId);
+      expect(row.inbound_paused_at).toBeNull();
+    });
+
+    it('reports a partial reconciliation when the paused interval exceeds the batch cap', async () => {
+      const { providerId } = await seedPausedProvider('google');
+      // More message ids than the 200-message recovery cap.
+      gmailAdapterMock.listMessagesSince.mockResolvedValue(
+        Array.from({ length: 203 }, (_, index) => `g-overflow-${index}`)
+      );
+
+      const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant);
+
+      expect(result.resumed).toBe(true);
+      expect(result.reconciliation?.status).toBe('partial');
+      expect(result.reconciliation?.queuedMessages).toBe(200);
+      expect(result.reconciliation?.warning).toMatch(/more than 200 messages.*3 were not queued/i);
+      // The cap-bounded batch was still enqueued.
+      expect(enqueueMock.enqueueUnifiedInboundEmailQueueJob).toHaveBeenCalledTimes(200);
+    });
+
+    it('reports a partial reconciliation when the Microsoft window clamp truncates the pause interval', async () => {
+      const { providerId } = await seedPausedProvider('microsoft', { pausedDaysAgo: 9 });
+      reconcileMock.reconcileProviderMessages.mockResolvedValue({ queuedMessages: 5, truncated: true });
+
+      const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+        providerId,
+        testTenant,
+        { credentialsValidated: true, deliveryEstablished: true }
+      );
+
+      expect(result.resumed).toBe(true);
+      expect(result.reconciliation?.status).toBe('partial');
+      expect(result.reconciliation?.warning).toMatch(/most recent 7 days.*resync/i);
 
       const row = await getProviderRow(providerId);
       expect(row.inbound_paused_at).toBeNull();

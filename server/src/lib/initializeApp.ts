@@ -70,10 +70,15 @@ export async function initializeApp() {
         '../services/email/inboundAuthPauseNotificationService'
       );
       registerInboundAuthPauseNotifications();
+      const { assertInboundAuthPauseNotifierRegistered } = await import(
+        '@alga-psa/shared/services/email/inboundAuthPauseNotifier'
+      );
+      assertInboundAuthPauseNotifierRegistered('server/initializeApp');
       logger.info('Inbound auth-pause notifications registered');
     } catch (error) {
       logger.error('Failed to register inbound auth-pause notifications:', error);
     }
+
 
     // Validate secret uniqueness first (must succeed)
     try {

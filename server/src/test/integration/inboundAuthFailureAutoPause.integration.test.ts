@@ -271,6 +271,31 @@ describeDb('inbound auth-failure auto-pause lifecycle (DB-backed)', () => {
     expect(row.inbound_paused_at).toBeNull();
   });
 
+  it('resets stale auth-failure counters on manual resume so one later failure does not auto-pause', async () => {
+    const providerId = await seedGoogleProvider();
+    const service = new EmailProviderLifecycleService();
+
+    // Arm the counter to 2, then pause/resume manually (e.g. an operator
+    // pause during maintenance).
+    await service.recordUnrecoverableAuthFailure(providerId, testTenant, 'google:invalid_grant');
+    await service.recordUnrecoverableAuthFailure(providerId, testTenant, 'google:invalid_grant');
+    expect(await service.pauseProvider(providerId, testTenant, 'manual')).toBe(true);
+
+    const resumed = await service.resumeProvider(providerId, testTenant);
+    expect(resumed.resumed).toBe(true);
+
+    let row = await getProviderRow(providerId);
+    expect(Number(row.inbound_auth_failure_count)).toBe(0);
+    expect(row.inbound_auth_failure_last_at).toBeNull();
+    expect(row.inbound_auth_failure_code).toBeNull();
+
+    // A single later classified failure must NOT auto-pause anymore.
+    const outcome = await service.recordUnrecoverableAuthFailure(providerId, testTenant, 'google:invalid_grant');
+    expect(outcome.autoPaused).toBe(false);
+    row = await getProviderRow(providerId);
+    expect(row.inbound_paused_at).toBeNull();
+  });
+
   it('keeps manual pause semantics: recordUnrecoverableAuthFailure no-ops on an already-paused provider', async () => {
     const providerId = await seedGoogleProvider();
     const service = new EmailProviderLifecycleService();

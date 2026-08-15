@@ -36,6 +36,14 @@ export interface ConfigureGmailProviderResult {
   watchRegistered: boolean;
   error?: string;
   warnings: string[];
+  /**
+   * Outcome of the auth-failure recovery attempted when the provider was
+   * auto-paused: 'resumed' — pause cleared and reconciliation handed off;
+   * 'resumed_partial' — resumed but the paused interval was only partially
+   * reconciled (see warnings); 'failed' — still paused, reconnect required;
+   * undefined — no recovery was attempted (provider was not auth-paused).
+   */
+  authFailureRecovery?: 'resumed' | 'resumed_partial' | 'failed';
 }
 
 /**
@@ -255,6 +263,22 @@ export async function configureGmailProvider({
               reconciliation: recovery.reconciliation,
               error: recovery.error,
             });
+            // The recovery outcome is part of the action result: the caller
+            // must not toast success while the mailbox is still paused, and
+            // partial reconciliations must surface their warning.
+            if (!recovery.resumed) {
+              result.authFailureRecovery = 'failed';
+              result.success = false;
+              result.error = recovery.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+            } else if (recovery.reconciliation?.status === 'partial') {
+              result.authFailureRecovery = 'resumed_partial';
+              result.warnings.push(
+                recovery.reconciliation.warning ||
+                  'Reconnection resumed, but some paused-interval mail was not reconciled. Run a mailbox resync.'
+              );
+            } else {
+              result.authFailureRecovery = 'resumed';
+            }
           } catch (recoveryError) {
             console.warn('Gmail auth-failure recovery after reconnect failed (provider stays paused)', {
               tenant,
@@ -262,6 +286,9 @@ export async function configureGmailProvider({
               savedHistoryId,
               error: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
             });
+            result.authFailureRecovery = 'failed';
+            result.success = false;
+            result.error = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
           }
         }
       } catch (watchError) {

@@ -30,6 +30,8 @@ interface RenewalResult {
 interface ReconciliationResult {
   queuedMessages: number;
   switchedToPolling: boolean;
+  /** True when the effective `since` was clamped by the window cap and the requested interval was not fully covered. */
+  truncated?: boolean;
 }
 
 /**
@@ -584,12 +586,12 @@ export class EmailWebhookMaintenanceService {
     providerId: string;
     tenant: string;
     since: string | Date;
-  }): Promise<{ queuedMessages: number }> {
+  }): Promise<{ queuedMessages: number; truncated?: boolean }> {
     const config = await this.loadMicrosoftProviderIgnoringPauseGate(params.providerId, params.tenant);
     const resolvedConfig = await buildMicrosoftEmailProviderConfig(config);
     const adapter = new MicrosoftGraphAdapter(resolvedConfig);
     const result = await this.reconcileMissedMessages(adapter, resolvedConfig, false, new Date(params.since));
-    return { queuedMessages: result.queuedMessages };
+    return { queuedMessages: result.queuedMessages, truncated: result.truncated };
   }
 
   /** Like findActiveMicrosoftProviders but tenant-scoped, exact-provider, and without the paused gate. */
@@ -671,6 +673,23 @@ export class EmailWebhookMaintenanceService {
       ? sinceOverride.getTime() - RECONCILE_SAFETY_MARGIN_MS
       : lastReconciliationMs;
     const since = new Date(Math.max(sinceFloorMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    // No silent gaps: when the requested boundary predates the window cap,
+    // the reconciliation physically cannot cover the full paused interval —
+    // report truncation so the recovery result surfaces a partial status and
+    // logs what was left behind.
+    const windowClamped = sinceOverride
+      ? since.getTime() > sinceOverride.getTime()
+      : false;
+    if (windowClamped) {
+      logger.error('Microsoft reconciliation window clamped; older paused-interval mail will NOT be covered', {
+        tenant: config.tenant,
+        providerId: config.id,
+        requestedSince: sinceOverride!.toISOString(),
+        effectiveSince: since.toISOString(),
+        windowCapMs: RECONCILE_WINDOW_CAP_MS,
+        remediation: 'Run a mailbox resync for this provider to import the remaining paused-interval mail.',
+      });
+    }
     const maxCount = Math.max(
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
@@ -848,13 +867,13 @@ export class EmailWebhookMaintenanceService {
         tenant: config.tenant,
         observedLastReconciliationAt: reconciliationState?.last_reconciliation_at || null,
       });
-      return { queuedMessages: 0, switchedToPolling: false };
+      return { queuedMessages: 0, switchedToPolling: false, truncated: windowClamped };
     }
 
     const { queuedMessages, silenceEvidenceCount } = enqueueResult;
 
     if (!detectWebhookSilence || silenceEvidenceCount === 0) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, truncated: windowClamped };
     }
 
     const silenceUpdate = db.table('microsoft_email_provider_config')
@@ -876,14 +895,14 @@ export class EmailWebhookMaintenanceService {
       updated_at: completedAt,
     });
     if (Number(updatedSilenceRows) !== 1) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, truncated: windowClamped };
     }
     const latestSilenceState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .first('webhook_silent_runs');
     const silentRuns = Number(latestSilenceState?.webhook_silent_runs || 0);
     if (silentRuns < WEBHOOK_SILENT_RUN_THRESHOLD) {
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, truncated: windowClamped };
     }
 
     const nextProbeAt = new Date(Date.now() + SUBSCRIPTION_PROBE_INTERVAL_MS).toISOString();
@@ -910,7 +929,7 @@ export class EmailWebhookMaintenanceService {
     if (Number(transitionedRows) !== 1) {
       // A webhook reset or another mode transition won the race after the
       // increment. Never delete the subscription from stale state.
-      return { queuedMessages, switchedToPolling: false };
+      return { queuedMessages, switchedToPolling: false, truncated: windowClamped };
     }
 
     const reason = `${silentRuns} reconciliation runs imported messages without a webhook delivery`;
@@ -939,7 +958,7 @@ export class EmailWebhookMaintenanceService {
       reason,
       nextProbeAt,
     });
-    return { queuedMessages, switchedToPolling: true };
+    return { queuedMessages, switchedToPolling: true, truncated: windowClamped };
   }
 
   private async updateProviderConnectionStatus(
@@ -949,7 +968,29 @@ export class EmailWebhookMaintenanceService {
     errorMessage: string | null
   ): Promise<void> {
     const knex = await getAdminConnection();
-    await tenantDb(knex, tenant).table('email_providers')
+    const db = tenantDb(knex, tenant);
+
+    if (status === 'error') {
+      // The token-health failure may have just triggered the atomic
+      // auth-failure auto-pause, which already wrote the curated
+      // reconnect-required message. Overwriting it with the raw refresh-error
+      // text would leak provider error bodies onto the provider row and bury
+      // the actionable instruction.
+      const current = await db.table('email_providers')
+        .where({ id: providerId })
+        .first('inbound_paused_at', 'inbound_pause_reason') as
+        | { inbound_paused_at: string | null; inbound_pause_reason: string | null }
+        | undefined;
+      if (current?.inbound_paused_at && current.inbound_pause_reason === 'auth_failure') {
+        logger.info('Skipping connection-status overwrite for auth-failure auto-paused provider', {
+          providerId,
+          tenant,
+        });
+        return;
+      }
+    }
+
+    await db.table('email_providers')
       .where({ id: providerId })
       .update({
         status,

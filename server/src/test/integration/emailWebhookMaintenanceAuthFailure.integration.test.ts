@@ -181,6 +181,53 @@ describeDb('Microsoft maintenance token-health auth outcomes (DB-backed)', () =>
     expect(row.inbound_paused_at).toBeNull();
   });
 
+  it('flags reconciliation as truncated when the requested boundary predates the 7-day window cap', async () => {
+    const providerId = await seedPollingProvider();
+    tokenHealthMock.ensureTokenHealthy.mockResolvedValue(undefined);
+    tokenHealthMock.listMessagesReceivedSince.mockResolvedValue([]);
+
+    // The module-level vi.mock only stubs the adapter; the service class
+    // (and therefore the real reconciliation algorithm) runs against the DB.
+    const result = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
+      providerId,
+      tenant: testTenant,
+      since: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+    });
+
+    expect(result.truncated).toBe(true);
+
+    // Within the cap: no truncation flag.
+    const withinCap = await new EmailWebhookMaintenanceService().reconcileProviderMessages({
+      providerId,
+      tenant: testTenant,
+      since: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    });
+    expect(withinCap.truncated).toBeFalsy();
+  });
+
+  it('keeps the curated auto-pause error message when the token-health catch path runs after the pause', async () => {
+    const providerId = await seedPollingProvider();
+    // First two calls pause the provider; the third verifies the catch path.
+    tokenHealthMock.ensureTokenHealthy.mockRejectedValue(sanitizedInvalidClientError());
+    tokenHealthMock.listMessagesReceivedSince.mockResolvedValue([]);
+
+    const service = new EmailWebhookMaintenanceService();
+    await service.reconcilePollingProviders({ tenantId: testTenant, providerId });
+    await service.reconcilePollingProviders({ tenantId: testTenant, providerId });
+    await service.reconcilePollingProviders({ tenantId: testTenant, providerId });
+
+    const row = await tenantTable('email_providers')
+      .where({ id: providerId })
+      .first('inbound_paused_at', 'inbound_pause_reason', 'status', 'error_message');
+    expect(row.inbound_pause_reason).toBe('auth_failure');
+    expect(row.status).toBe('error');
+    // The catch block's raw refresh-error text must NOT replace the curated
+    // reconnect-required instruction written by the auto-pause transaction.
+    expect(row.error_message).toBe(
+      'Sign-in was rejected by the email provider. Reconnect the mailbox to resume inbound email.'
+    );
+  });
+
   it('does not count transient token-health failures', async () => {
     const providerId = await seedPollingProvider();
     const transient: any = new Error('timeout of 30000ms exceeded');

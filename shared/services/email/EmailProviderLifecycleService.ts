@@ -26,8 +26,18 @@ export interface ResumeProviderResult {
 }
 
 export interface InboundAuthPauseReconciliation {
-  status: 'started' | 'completed';
+  /**
+   * 'completed' — the whole paused interval was handed off durably.
+   * 'partial'  — some paused-interval mail could not be reconciled (batch cap
+   *              or window clamp); the operator must resync manually.
+   * 'started'  — provider-specific asynchronous reconciliation (IMAP cursor
+   *              rescan) has been kicked off; completion is not directly
+   *              observable here.
+   */
+  status: 'started' | 'completed' | 'partial';
   queuedMessages: number;
+  /** Present only on partial reconciliations; explains what was left behind. */
+  warning?: string;
 }
 
 export interface RecoverAuthPausedProviderOptions {
@@ -68,6 +78,16 @@ export const INBOUND_AUTH_FAILURE_PAUSE_ERROR_MESSAGE =
 
 /** Upper bound on Google recovery message ids enqueued per reconnect. */
 const GOOGLE_RECOVERY_MAX_MESSAGES = 200;
+
+/** Human label of the Microsoft reconciliation window cap (mirrors the maintenance service). */
+const MICROSOFT_RECONCILE_WINDOW_LABEL = '7 days';
+
+interface GooglePausedIntervalReconciliation {
+  queuedMessages: number;
+  truncated: boolean;
+  droppedMessages: number;
+  usedFallbackQuery: boolean;
+}
 
 /** IMAP credential validation timeouts (mirror the queue processor defaults). */
 const IMAP_VALIDATION_CONNECTION_TIMEOUT_MS = 10_000;
@@ -372,6 +392,11 @@ export class EmailProviderLifecycleService {
       .update({
         inbound_paused_at: null,
         inbound_pause_reason: null,
+        // A manual resume is a fresh start: any stale auth-failure count from
+        // before the pause must not arm the next single failure to auto-pause.
+        inbound_auth_failure_count: 0,
+        inbound_auth_failure_last_at: null,
+        inbound_auth_failure_code: null,
         updated_at: knex.fn.now(),
       });
     if (Number(updated) === 0) {
@@ -487,8 +512,18 @@ export class EmailProviderLifecycleService {
       return { resumed: false, webhookRegistered: false };
     }
 
-    // 1. Pause boundary snapshot — before any registration can overwrite cursors.
+    // 1. Pause boundary snapshot — before any registration can overwrite
+    //    cursors. For Google this MUST capture the pre-watch history_id: a
+    //    new watch registration persists its own newer cursor, and listing
+    //    from that cursor would silently accept the paused interval as empty.
     const pausedAt = new Date(provider.inbound_paused_at);
+    let savedHistoryId = options.savedHistoryId !== undefined ? options.savedHistoryId : null;
+    if (provider.provider_type === 'google' && savedHistoryId === null) {
+      const googleConfig = await db.table('google_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .first('history_id');
+      savedHistoryId = googleConfig?.history_id ? String(googleConfig.history_id) : null;
+    }
 
     const failRecovery = async (error: unknown): Promise<RecoverAuthPausedProviderResult> => {
       const message = error instanceof Error ? error.message : String(error);
@@ -552,15 +587,27 @@ export class EmailProviderLifecycleService {
           tenant,
           since: pausedAt,
         });
-        reconciliation = { status: 'completed', queuedMessages: result.queuedMessages };
+        reconciliation = {
+          status: result.truncated ? 'partial' : 'completed',
+          queuedMessages: result.queuedMessages,
+          warning: result.truncated
+            ? `Reconciliation covered only the most recent ${MICROSOFT_RECONCILE_WINDOW_LABEL} of the pause; older mail was not imported. Run a mailbox resync to cover the full paused interval.`
+            : undefined,
+        };
       } else if (provider.provider_type === 'google') {
         const result = await this.reconcileGooglePausedInterval({
           providerId,
           tenant,
           pausedAt,
-          savedHistoryId: options.savedHistoryId,
+          savedHistoryId,
         });
-        reconciliation = { status: 'completed', queuedMessages: result.queuedMessages };
+        reconciliation = {
+          status: result.truncated ? 'partial' : 'completed',
+          queuedMessages: result.queuedMessages,
+          warning: result.truncated
+            ? `The paused interval held more than ${GOOGLE_RECOVERY_MAX_MESSAGES} messages; ${result.droppedMessages} were not queued. Run a mailbox resync to import the remainder.`
+            : undefined,
+        };
       } else {
         const result = await this.reconcileImapPausedInterval({ providerId, tenant });
         reconciliation = { status: 'started', queuedMessages: result.queuedMessages };
@@ -699,25 +746,36 @@ export class EmailProviderLifecycleService {
    * enqueue the resulting message ids through the unified durable path. If
    * Gmail rejects the old cursor, fall back to a mailbox query bounded by the
    * pause timestamp rather than silently accepting a gap.
+   *
+   * The reconciliation batch is capped at GOOGLE_RECOVERY_MAX_MESSAGES; when
+   * the paused interval holds more mail than the cap, the overflow is dropped
+   * LOUDLY (error-level log naming the provider/tenant and dropped count) and
+   * the result reports a partial status so the UI cannot toast a clean
+   * success over an unreconciled gap.
    */
   private async reconcileGooglePausedInterval(params: {
     providerId: string;
     tenant: string;
     pausedAt: Date;
     savedHistoryId?: string | null;
-  }): Promise<{ queuedMessages: number }> {
+  }): Promise<GooglePausedIntervalReconciliation> {
     const loaded = await this.loadProvider(params.providerId, params.tenant);
     if (!loaded) throw new Error('Provider not found');
 
+    // LIST from the pre-watch cursor, but carry the CURRENT (post-watch)
+    // cursor on the enqueued pointers: the queue processor persists
+    // pointer.historyId after processing, and regressing it below the fresh
+    // watch cursor would make the next sync re-scan the whole interval.
     const currentHistoryId = loaded.vendorConfig?.history_id
       ? String(loaded.vendorConfig.history_id)
       : null;
     const savedHistoryId = params.savedHistoryId
       ? String(params.savedHistoryId)
-      : currentHistoryId;
+      : null;
 
     const adapter = new GmailAdapter(this.toAdapterConfig(loaded.provider, loaded.vendorConfig));
     let messageIds: string[] = [];
+    let usedFallbackQuery = false;
     if (savedHistoryId) {
       try {
         messageIds = await adapter.listMessagesSince(savedHistoryId);
@@ -728,13 +786,30 @@ export class EmailProviderLifecycleService {
           providerId: params.providerId,
           savedHistoryId,
         });
+        usedFallbackQuery = true;
         messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
       }
     } else {
+      usedFallbackQuery = true;
       messageIds = await adapter.listMessageIdsSinceTime(params.pausedAt, GOOGLE_RECOVERY_MAX_MESSAGES);
     }
 
+    const droppedMessages = Math.max(0, messageIds.length - GOOGLE_RECOVERY_MAX_MESSAGES);
     messageIds = messageIds.slice(0, GOOGLE_RECOVERY_MAX_MESSAGES);
+    if (droppedMessages > 0) {
+      // No silent gaps: the operator must learn that mail was left behind and
+      // resync manually. Logged at error level so alerting picks it up.
+      console.error('[EmailProviderLifecycle] Gmail auth-pause reconciliation hit its batch cap; overflow mail was NOT reconciled', {
+        event: 'inbound_auth_pause_reconcile_truncated',
+        tenant: params.tenant,
+        providerId: params.providerId,
+        cap: GOOGLE_RECOVERY_MAX_MESSAGES,
+        queued: messageIds.length,
+        dropped: droppedMessages,
+        pausedAt: params.pausedAt.toISOString(),
+        remediation: 'Run a mailbox resync for this provider to import the remaining paused-interval mail.',
+      });
+    }
 
     let queuedMessages = 0;
     for (const messageId of messageIds) {
@@ -764,7 +839,12 @@ export class EmailProviderLifecycleService {
       queuedMessages += 1;
     }
 
-    return { queuedMessages };
+    return {
+      queuedMessages,
+      truncated: droppedMessages > 0,
+      droppedMessages,
+      usedFallbackQuery,
+    };
   }
 
   /**

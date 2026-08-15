@@ -14,6 +14,12 @@ import {
   getWorkerConfig,
   type WorkerConfig,
 } from "./workerConfig.js";
+import {
+  registerInboundAuthPauseEventPublisher,
+} from "@alga-psa/shared/services/email/inboundAuthPauseEventNotifier";
+import {
+  assertInboundAuthPauseNotifierRegistered,
+} from "@alga-psa/shared/services/email/inboundAuthPauseNotifier";
 
 // Load environment variables
 dotenv.config();
@@ -149,6 +155,14 @@ function startHealthCheck(): void {
 async function main(): Promise<void> {
   try {
     logger.info("Starting Temporal worker for non-authored/domain workflows");
+
+    // This runtime executes the Microsoft webhook-maintenance activities that
+    // can perform the atomic auth-failure auto-pause, but it cannot load the
+    // @alga-psa/notifications vertical (stubbed in this build graph): publish
+    // the pause on the event bus and let the server-side subscriber deliver
+    // the admin notifications (same hand-off as MAINTENANCE_JOB_REQUESTED).
+    registerInboundAuthPauseEventPublisher();
+    assertInboundAuthPauseNotifierRegistered("ee/temporal-workflows/worker");
 
     // Run startup validations
     try {
