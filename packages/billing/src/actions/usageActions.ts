@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { findOrCreateCurrentBucketUsageRecord, resolveBucketDraw, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
   bucketUsageErrorMessage,
   findBucketUsageError,
@@ -29,25 +29,6 @@ function tenantScopedTable(
   table: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
-}
-
-/**
- * Weighted minutes a usage-tracking draw burns: usage draws have no time span,
- * so they burn at the member multiplier only (no after-hours proration).
- * `null` means the draw draws from no bucket (plain hourly).
- */
-async function computeUsageWeightedBurn(
-  trx: Knex.Transaction,
-  clientId: string,
-  serviceId: string,
-  quantity: number,
-  usageDate: string | Date,
-): Promise<number | null> {
-  const draw = await resolveBucketDraw(trx, clientId, serviceId, String(usageDate));
-  if (!draw) {
-    return null;
-  }
-  return quantity * draw.memberMultiplier;
 }
 
 function usageActionErrorFrom(error: unknown): UsageActionError | null {
@@ -134,39 +115,29 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
 
     // --- Bucket Usage Update Logic ---
     if (record.service_id && record.client_id) {
-      // Scope-resolution gate + weighted burn (quantity × member multiplier;
-      // usage draws have no time span).
-      const weightedDelta = await computeUsageWeightedBurn(
-        trx,
-        record.client_id,
-        record.service_id,
-        record.quantity || 0,
-        record.usage_date,
-      );
-
-      if (weightedDelta !== null && weightedDelta !== 0) {
-        console.log(`Usage record ${record.usage_id} linked to a bucket pool. Updating usage.`);
-
-        try {
-          const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-            trx,
-            record.client_id,
-            record.service_id,
-            record.usage_date, // Use usage record's date
-            record.contract_line_id ?? null,
-          );
-
-          await updateBucketUsageMinutes(
-            trx,
-            bucketUsageRecord.usage_id,
-            weightedDelta
-          );
-          console.log(`Successfully updated bucket usage for usage record ${record.usage_id} (weighted delta ${weightedDelta})`);
-        } catch (bucketError) {
-          console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
-          if (isBucketUsageError(bucketError)) throw bucketError;
-          throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+      // Scope-resolution gate + weighted burn, resolved under the record's own
+      // (client, line) context (usage draws have no time span — member
+      // multiplier only, no after-hours proration).
+      try {
+        const appliedDelta = await adjustQuantityDraw(
+          trx,
+          tenant,
+          record.client_id,
+          {
+            service_id: record.service_id,
+            quantity: record.quantity || 0,
+            usage_date: record.usage_date,
+            contract_line_id: record.contract_line_id ?? null,
+          },
+          1,
+        );
+        if (appliedDelta !== 0) {
+          console.log(`Successfully updated bucket usage for usage record ${record.usage_id} (weighted delta ${appliedDelta})`);
         }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
       }
     }
     // --- End Bucket Usage Update Logic ---
@@ -248,64 +219,51 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     }
 
     // --- Bucket Usage Update Logic ---
-    // Two independent draws, each resolved from its own record: reverse the OLD
-    // record's burn against the pool it actually drew from, then apply the NEW
-    // record's burn only when it resolves to a pool. This is correct when the
-    // record moves off a bucketed service (old burn reversed even though the
-    // new side resolves no bucket) and when quantity changes.
-
-    const oldWeighted = await computeUsageWeightedBurn(
-      trx,
-      originalRecord.client_id,
-      originalRecord.service_id,
-      oldQuantity,
-      originalRecord.usage_date,
-    );
-
-    if (oldWeighted !== null && oldWeighted !== 0) {
-      try {
-        const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-          trx,
-          originalRecord.client_id,
-          originalRecord.service_id,
-          originalRecord.usage_date,
-          originalRecord.contract_line_id ?? null,
-        );
-        await updateBucketUsageMinutes(trx, bucketUsageRecord.usage_id, -oldWeighted);
-        console.log(`Reversed bucket usage for usage record ${updatedRecord.usage_id} (weighted -${oldWeighted})`);
-      } catch (bucketError) {
-        console.error(`Error reversing bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
-        if (isBucketUsageError(bucketError)) throw bucketError;
-        throw new Error(`Bucket usage reversal failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+    // Two independent draws, each resolved from ITS OWN record side: reverse
+    // the OLD record's burn under the OLD record's own (client, line) context,
+    // then apply the NEW record's burn under the NEW record's own (client,
+    // line) context. This is correct when the record moves clients/lines and
+    // when the record moves off a bucketed service (old burn reversed even
+    // though the new side resolves no bucket).
+    try {
+      const reversedDelta = await adjustQuantityDraw(
+        trx,
+        tenant,
+        originalRecord.client_id,
+        {
+          service_id: originalRecord.service_id,
+          quantity: oldQuantity,
+          usage_date: originalRecord.usage_date,
+          contract_line_id: originalRecord.contract_line_id ?? null,
+        },
+        -1,
+      );
+      if (reversedDelta !== 0) {
+        console.log(`Reversed bucket usage for usage record ${updatedRecord.usage_id} (weighted ${reversedDelta})`);
       }
+    } catch (bucketError) {
+      console.error(`Error reversing bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+      if (isBucketUsageError(bucketError)) throw bucketError;
+      throw new Error(`Bucket usage reversal failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
     }
 
-    const newWeighted = await computeUsageWeightedBurn(
-      trx,
-      updatedRecord.client_id,
-      updatedRecord.service_id,
-      updatedRecord.quantity || 0,
-      updatedRecord.usage_date,
-    );
-
-    if (newWeighted !== null && newWeighted !== 0 && updatedRecord.client_id) {
-      console.log(`Updated usage record ${updatedRecord.usage_id} linked to a bucket pool. Updating usage (weighted ${newWeighted}).`);
-
+    if (updatedRecord.service_id && updatedRecord.client_id) {
       try {
-        const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+        const appliedDelta = await adjustQuantityDraw(
           trx,
+          tenant,
           updatedRecord.client_id,
-          updatedRecord.service_id,
-          updatedRecord.usage_date,
-          updatedRecord.contract_line_id ?? null,
+          {
+            service_id: updatedRecord.service_id,
+            quantity: updatedRecord.quantity || 0,
+            usage_date: updatedRecord.usage_date,
+            contract_line_id: updatedRecord.contract_line_id ?? null,
+          },
+          1,
         );
-
-        await updateBucketUsageMinutes(
-          trx,
-          bucketUsageRecord.usage_id,
-          newWeighted
-        );
-        console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
+        if (appliedDelta !== 0) {
+          console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id} (weighted delta ${appliedDelta})`);
+        }
       } catch (bucketError) {
         console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
         if (isBucketUsageError(bucketError)) throw bucketError;
@@ -344,41 +302,28 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     // --- Bucket Usage Update Logic (Before Delete) ---
     if (recordToDelete.service_id && recordToDelete.client_id) {
-      // Scope-resolution gate + weighted burn, negative on delete.
-      const weighted = await computeUsageWeightedBurn(
-        trx,
-        recordToDelete.client_id,
-        recordToDelete.service_id,
-        recordToDelete.quantity || 0,
-        recordToDelete.usage_date,
-      );
-
-      if (weighted !== null && weighted !== 0) {
-        console.log(`Usage record ${usageId} linked to a bucket pool. Updating usage before delete.`);
-
-        const weightedDelta = -weighted;
-
-        try {
-          // Find the record - it should exist if usage was previously logged
-          const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-            trx,
-            recordToDelete.client_id,
-            recordToDelete.service_id,
-            recordToDelete.usage_date, // Use record's usage date
-            recordToDelete.contract_line_id ?? null,
-          );
-
-          await updateBucketUsageMinutes(
-            trx,
-            bucketUsageRecord.usage_id,
-            weightedDelta // Apply negative weighted delta
-          );
-          console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
-        } catch (bucketError) {
-          console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
-          if (isBucketUsageError(bucketError)) throw bucketError;
-          throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+      // Scope-resolution gate + weighted burn, resolved under the deleted
+      // record's OWN (client, line) context, negative on delete.
+      try {
+        const reversedDelta = await adjustQuantityDraw(
+          trx,
+          tenant,
+          recordToDelete.client_id,
+          {
+            service_id: recordToDelete.service_id,
+            quantity: recordToDelete.quantity || 0,
+            usage_date: recordToDelete.usage_date,
+            contract_line_id: recordToDelete.contract_line_id ?? null,
+          },
+          -1,
+        );
+        if (reversedDelta !== 0) {
+          console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId} (weighted delta ${reversedDelta})`);
         }
+      } catch (bucketError) {
+        console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
+        if (isBucketUsageError(bucketError)) throw bucketError;
+        throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
       }
     }
     // --- End Bucket Usage Update Logic ---

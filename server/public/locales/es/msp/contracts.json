@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Esta línea ya tiene una bolsa general."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Bolsa de horas para esta línea",
+    "empty": "Aún no hay bolsas de horas en esta línea. Añada una bolsa para incluir horas prepagadas."
   }
 }

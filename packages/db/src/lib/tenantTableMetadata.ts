@@ -121,6 +121,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   contract_line_discounts: { scope: 'tenant' },
   contract_line_service_usage_config: { scope: 'tenant' },
   contract_line_services: { scope: 'tenant' },
+  contract_template_line_bucket_services: { scope: 'tenant' },
+  contract_template_line_buckets: { scope: 'tenant' },
   contract_template_line_defaults: { scope: 'tenant' },
   contract_template_line_fixed_config: { scope: 'tenant' },
   contract_template_line_service_bucket_config: { scope: 'tenant' },

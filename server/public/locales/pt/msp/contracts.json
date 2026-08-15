@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Esta linha já tem um banco abrangente."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Banco de horas para esta linha",
+    "empty": "Ainda não há bancos de horas nesta linha. Adicione um banco para incluir horas pré-pagas."
   }
 }

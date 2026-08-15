@@ -93,6 +93,51 @@ async function indexExists(knex, tableName, indexName) {
   return rows.rows.length > 0;
 }
 
+const NUMERIC_TYPE_OID = 1700; // pg_type.oid for 'numeric'
+
+/**
+ * atttypmod encoding for NUMERIC(p, s): ((p << 16) | s) + VARHDRSZ where
+ * VARHDRSZ = 4. For NUMERIC(12,2) that is ((12 << 16) | 2) + 4 = 786438.
+ */
+function numericAtttypmod(precision, scale) {
+  return ((precision << 16) | scale) + 4;
+}
+
+/**
+ * Detect and repair the coordinator's (catalog-level) atttypmod for a numeric
+ * column so it matches NUMERIC(precision, scale) exactly.
+ *
+ * On Citus the shard-side `ALTER COLUMN ... TYPE NUMERIC` does NOT propagate a
+ * matching `pg_attribute` entry on the coordinator; a wrong encoding there (or
+ * an entry missing entirely) makes catalog reads disagree with the shards.
+ * Runs unconditionally — on plain Postgres it is a cheap no-op when the DDL
+ * already produced the correct encoding, and it repairs a prior bad run.
+ */
+async function ensureCoordinatorNumericAtttypmod(knex, tableName, columnName, precision, scale) {
+  const expected = numericAtttypmod(precision, scale);
+  const rows = await knex.raw(`
+    SELECT atttypid, atttypmod
+    FROM pg_attribute
+    WHERE attrelid = '${tableName}'::regclass
+      AND attname = '${columnName}'
+      AND NOT attisdropped
+  `);
+  const current = rows.rows[0];
+  if (!current) {
+    return; // Column does not exist (yet) — nothing to repair.
+  }
+  if (current.atttypid !== NUMERIC_TYPE_OID || Number(current.atttypmod) !== expected) {
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET atttypid = ${NUMERIC_TYPE_OID},
+          atttypmod = ${expected}
+      WHERE attrelid = '${tableName}'::regclass
+        AND attname = '${columnName}'
+        AND NOT attisdropped
+    `);
+  }
+}
+
 exports.up = async function up(knex) {
   // -------------------------------------------------------------------------
   // 1. contract_line_buckets — the pool
@@ -383,7 +428,7 @@ exports.up = async function up(knex) {
   }
 
   // 3g. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
-  //     minutes are fractional). Distributed tables need the shard-aware form.
+  // minutes are fractional). Distributed tables need the shard-aware form.
   if (usageCitusDistributed) {
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
@@ -392,19 +437,20 @@ exports.up = async function up(knex) {
           ALTER TABLE %s ALTER COLUMN overage_minutes TYPE NUMERIC(12,2) USING overage_minutes::NUMERIC(12,2)$$
       )
     `);
-    await knex.raw(`
-      UPDATE pg_attribute
-      SET atttypid = 'numeric'::regtype::oid,
-          atttypmod = ((12 + 4) << 16) | (2 + 4)
-      WHERE attrelid = 'bucket_usage'::regclass
-        AND attname IN ('minutes_used', 'overage_minutes')
-    `);
   } else {
     await knex.schema.alterTable('bucket_usage', (table) => {
       table.decimal('minutes_used', 12, 2).notNullable().alter();
       table.decimal('overage_minutes', 12, 2).notNullable().alter();
     });
   }
+
+  // The coordinator's/catalog's atttypmod must match NUMERIC(12,2) exactly
+  // (encoded as ((12 << 16) | 2) + 4 = 786438). On Citus the shard ALTER above
+  // does not touch the coordinator's pg_attribute, and a prior buggy run wrote
+  // a wrong encoding there — detect the mismatch on rerun and repair it. On
+  // plain Postgres this is a no-op when the DDL already encoded it correctly.
+  await ensureCoordinatorNumericAtttypmod(knex, 'bucket_usage', 'minutes_used', 12, 2);
+  await ensureCoordinatorNumericAtttypmod(knex, 'bucket_usage', 'overage_minutes', 12, 2);
 
   // 3h. New unique key — kills the duplicate-period hazard and the
   //     write-under-one-line/read-under-another mismatch.

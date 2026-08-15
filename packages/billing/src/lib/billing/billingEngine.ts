@@ -4702,10 +4702,11 @@ export class BillingEngine {
           memberMultipliers.some((member) => Number(member.burn_multiplier) !== 1);
 
         // A zero-member pool (dormant catch-all or emptied member-scoped pool)
-        // still covers the line but has no member to key the charge on. Use the
-        // pool as its own identifier and null the tax/member-derived fields so
-        // nothing flows into service/tax lookups incorrectly.
-        const chargeServiceId = firstMemberServiceId ?? pool.bucket_id;
+        // still covers the line but has no member to key the charge on. The
+        // pool identity is carried honestly in config_id (= bucket_id); the
+        // service FK fields stay null so bucket_id NEVER masquerades as a
+        // service_catalog id on invoice rows.
+        const chargeServiceId = firstMemberServiceId;
         const chargeTaxRateId = members.length > 0 ? firstMemberTaxRateId : null;
         const chargeUnitOfMeasure = members.length > 0 ? firstMemberUnitOfMeasure : null;
         const chargeBillingMethod = members.length > 0 ? firstMemberBillingMethod : null;

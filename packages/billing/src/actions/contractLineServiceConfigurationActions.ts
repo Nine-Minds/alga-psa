@@ -305,8 +305,9 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
     if (totalMinutes == null || overageRate == null) {
       return actionError('Missing required bucket overlay fields.');
     }
+    let configId = '';
     await withTransaction(knex, async (trx) => {
-      await upsertBucketOverlayInTransaction(
+      configId = await upsertBucketOverlayInTransaction(
         trx,
         tenant,
         contractLineId,
@@ -321,7 +322,9 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
         null,
       );
     });
-    return;
+    // Backward-compatible success contract: the returned value must carry the
+    // configId (the pool identity serving this (line, service) overlay).
+    return { configId };
   } catch (error) {
     console.error(`Error upserting bucket configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);

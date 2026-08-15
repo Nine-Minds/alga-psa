@@ -55,6 +55,19 @@ export interface ScenarioBucketConfig {
   /** Cents per hour of overage. */
   overage_rate: number;
   allow_rollover: boolean;
+  /**
+   * Weighted-burn pool preservation: when the source pool is known, the
+   * scenario carries the pool's own identity and full configuration so a
+   * snapshot faithfully represents the line-owned shared pool — never the
+   * bucket id masquerading as a service. All fields optional so draft-shaped
+   * scenarios (which only know per-service totals) still typecheck.
+   */
+  pool_id?: string | null;
+  pool_name?: string | null;
+  covers_all_services?: boolean;
+  burn_multiplier?: number;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
 }
 
 export type ScenarioServiceConfig =

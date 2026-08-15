@@ -25,7 +25,9 @@ export interface BucketUsageComputeRow {
 
 export interface BucketServiceComputeConfig {
   config_id: string;
-  service_id: string;
+  /** Null when the pool is dormant (zero members): the pool identity lives on
+   * `config_id`, never here — a bucket_id must not masquerade as a service. */
+  service_id: string | null;
   service_name: string;
   tax_rate_id?: string | null;
   unit_of_measure?: string | null;
@@ -220,7 +222,7 @@ export function computeBucketCharges(
     const total = Math.ceil(billedOverage * overageRate);
     const { taxRegion: serviceTaxRegion, isTaxable } =
       taxPorts.getTaxInfoFromService({
-        service_id: config.service_id,
+        service_id: config.service_id ?? undefined,
         tax_rate_id: config.tax_rate_id,
       });
     const effectiveTaxRegion =
@@ -255,7 +257,7 @@ export function computeBucketCharges(
     const overageHours = state.overageQuantity / 60;
     charges.push({
       type: "bucket",
-      service_catalog_id: config.service_id,
+      service_catalog_id: config.service_id ?? null,
       serviceName: config.service_name,
       client_contract_line_id: clientContractLine.client_contract_line_id,
       rate: overageRate,
@@ -271,7 +273,7 @@ export function computeBucketCharges(
       overageUnits: isUsageBucket ? state.overageQuantity : undefined,
       tax_rate: taxRate,
       tax_region: effectiveTaxRegion,
-      serviceId: config.service_id,
+      serviceId: config.service_id ?? undefined,
       config_id: config.config_id,
       tax_amount: taxAmount,
       is_taxable: isTaxable,

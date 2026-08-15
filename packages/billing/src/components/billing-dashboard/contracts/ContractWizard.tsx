@@ -118,6 +118,8 @@ export interface BucketOverlayInput {
 }
 
 export interface BucketPoolDraft {
+  /** Which wizard line the pool belongs to ('hourly' | 'usage'). */
+  line_key?: 'hourly' | 'usage';
   bucket_name?: string | null;
   total_minutes: number;
   overage_rate: number;
@@ -125,7 +127,7 @@ export interface BucketPoolDraft {
   covers_all_services: boolean;
   after_hours_multiplier?: number | null;
   business_hours_schedule_id?: string | null;
-  members: Array<{ service_id: string; burn_multiplier: number }>;
+  members: Array<{ service_id: string; service_name?: string; burn_multiplier: number }>;
 }
 
 export interface ContractWizardData {
@@ -548,6 +550,7 @@ export function ContractWizard({
         billing_frequency: wizardData.billing_frequency,
         currency_code: wizardData.currency_code,
         template_id: wizardData.template_id,
+        bucket_pools: wizardData.bucket_pools ?? [],
       };
     };
 

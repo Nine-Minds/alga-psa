@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "11111"
     }
+  },
+  "wizardBucketPools": {
+    "heading": "11111",
+    "empty": "11111"
   }
 }

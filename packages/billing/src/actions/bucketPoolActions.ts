@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   actionError,
@@ -164,6 +164,34 @@ export const listBucketPoolsForLine = withAuth(async (
 });
 
 /**
+ * Create a bucket pool inside an existing transaction (used by the wizard's
+ * submission path and other transaction-aware writers).
+ *
+ * @returns the created pool's bucket_id
+ */
+export async function createBucketPoolInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  pool: BucketPoolInput,
+  members: BucketPoolMemberInput[],
+): Promise<string> {
+  const coversAllServices = pool.covers_all_services ?? false;
+  if (!coversAllServices && members.length === 0) {
+    throw new Error('Cannot create a member-scoped bucket pool without at least one service.');
+  }
+
+  const bucketId = pool.bucket_id ?? uuidv4();
+  await insertBucketPool(trx, tenant, contractLineId, bucketId, pool, coversAllServices);
+
+  for (const member of members) {
+    await insertBucketPoolMember(trx, tenant, contractLineId, bucketId, member);
+  }
+
+  return bucketId;
+}
+
+/**
  * Create a bucket pool on a line. Member-scoped pools require at least one
  * member; catch-all pools are limited to one per line.
  */
@@ -181,18 +209,7 @@ export const createBucketPool = withAuth(async (
         throw new Error('Permission denied: Cannot create bucket pools');
       }
 
-      const coversAllServices = pool.covers_all_services ?? false;
-      if (!coversAllServices && members.length === 0) {
-        throw new Error('Cannot create a member-scoped bucket pool without at least one service.');
-      }
-
-      const bucketId = pool.bucket_id ?? uuidv4();
-      await insertBucketPool(trx, tenant, contractLineId, bucketId, pool, coversAllServices);
-
-      for (const member of members) {
-        await insertBucketPoolMember(trx, tenant, contractLineId, bucketId, member);
-      }
-
+      const bucketId = await createBucketPoolInTransaction(trx, tenant, contractLineId, pool, members);
       const snapshots = await loadPoolSnapshot(trx, tenant, contractLineId);
       return snapshots.find((s) => s.bucket_id === bucketId)!;
     });

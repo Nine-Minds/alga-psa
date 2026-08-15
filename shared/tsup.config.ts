@@ -68,6 +68,8 @@ export default defineConfig({
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
+    'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
+    'billingClients/templateClone': 'billingClients/templateClone.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',

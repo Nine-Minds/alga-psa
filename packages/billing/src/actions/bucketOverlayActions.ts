@@ -205,6 +205,10 @@ export const upsertBucketOverlay = withAuth(async (
 /**
  * Internal function to upsert bucket overlay within a transaction.
  * Can be called from other transaction-aware code.
+ *
+ * @returns the pool's bucket_id that now serves this (line, service) overlay —
+ *          the pool identity is the successor of the legacy per-service
+ *          bucket config_id.
  */
 export async function upsertBucketOverlayInTransaction(
   trx: Knex.Transaction,
@@ -214,9 +218,9 @@ export async function upsertBucketOverlayInTransaction(
   overlay: BucketOverlayInput,
   quantity?: number | null,
   customRate?: number | null
-): Promise<void> {
+): Promise<string> {
   if (overlay.total_minutes == null || overlay.overage_rate == null) {
-    return;
+    throw new Error('Cannot upsert bucket overlay without total_minutes and overage_rate.');
   }
 
   const normalizedTotal = Math.max(0, Math.round(overlay.total_minutes));
@@ -251,7 +255,7 @@ export async function upsertBucketOverlayInTransaction(
         billing_period: billingPeriod,
         updated_at: trx.fn.now(),
       });
-    return;
+    return member.bucket_id;
   }
 
   // No pool yet: create a member-scoped single-member 1x pool.
@@ -292,6 +296,8 @@ export async function upsertBucketOverlayInTransaction(
       quantity: quantity ?? null,
       custom_rate: customRate ?? null,
     });
+
+  return bucketId;
 }
 
 /**

@@ -174,6 +174,79 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
       });
   }
 
+  /**
+   * Seeds a dormant pool (zero members) with historical overage usage inside
+   * the March 2026 billing period. A dormant pool still bills its overage even
+   * though nothing currently draws from it.
+   */
+  async function withDormantPool(
+    body: (ctx: {
+      trx: Knex.Transaction;
+      tenant: string;
+      clientId: string;
+      contractLineId: string;
+      bucketId: string;
+    }) => Promise<void>,
+  ) {
+    const tenant: string = (await db('tenants').first('tenant')).tenant;
+
+    await db
+      .transaction(async (trx) => {
+        (trx as any).client.config.tenant = tenant;
+
+        const clientId = randomUUID();
+        const contractId = randomUUID();
+        const contractLineId = randomUUID();
+        const bucketId = randomUUID();
+
+        await trx('clients').insert({
+          tenant, client_id: clientId, client_name: `dormant-${clientId.slice(0, 8)}`,
+        });
+
+        await trx('contracts').insert({
+          tenant, contract_id: contractId, contract_name: 'Dormant pool (test)',
+        });
+
+        await trx('contract_lines').insert({
+          tenant, contract_line_id: contractLineId, contract_id: contractId,
+          contract_line_name: 'Dormant pool (test)',
+          contract_line_type: 'Bucket', billing_frequency: 'monthly',
+          cadence_owner: 'client', is_template: false, is_active: true,
+        });
+
+        await trx('client_contracts').insert({
+          tenant, client_contract_id: randomUUID(), client_id: clientId,
+          contract_id: contractId, start_date: '2026-01-01', end_date: null,
+          is_active: true,
+        });
+
+        // Zero-member pool (dormant) that still carries overage history.
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: bucketId, contract_line_id: contractLineId,
+          total_minutes: 600, overage_rate: 15000,
+          allow_rollover: false, covers_all_services: false,
+          after_hours_multiplier: null, business_hours_schedule_id: null,
+        });
+
+        await trx('bucket_usage').insert({
+          tenant, usage_id: randomUUID(), client_id: clientId,
+          contract_line_id: contractLineId,
+          service_catalog_id: randomUUID(),
+          bucket_id: bucketId,
+          period_start: '2026-03-01', period_end: '2026-03-31',
+          minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+        });
+
+        await body({ trx, tenant, clientId, contractLineId, bucketId });
+
+        throw new Error('__rollback__');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === '__rollback__') return;
+        throw error;
+      });
+  }
+
   it('resolves the pool and per-member multipliers', async () => {
     await withSeededPool(async ({ trx, clientId, serviceId1x, serviceId2x, bucketId, contractLineId }) => {
       const draw1x = await resolveBucketDraw(trx, clientId, serviceId1x, '2026-03-10T10:00:00Z');
@@ -315,6 +388,164 @@ describe.skipIf(!ENABLED)('weighted bucket burn integration (real DB)', () => {
       // 60 (1x) + 120 (2x) = 180 weighted minutes; pool 600 → no overage.
       expect(Number(after.minutes_used)).toBe(180);
       expect(Number(after.overage_minutes)).toBe(0);
+    });
+  });
+
+  it('dormant pool overage charges a NULL service_id and keeps the pool identity on config_id (no bucket_id leak into service FKs)', async () => {
+    await withDormantPool(async ({ trx, tenant, clientId, contractLineId, bucketId }) => {
+      const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
+      const { persistInvoiceCharges } = await import('@alga-psa/billing/services/invoiceService');
+
+      const engine = new BillingEngine();
+      (engine as any).knex = trx;
+      (engine as any).tenant = tenant;
+
+      const charges = await (engine as any).calculateBucketPlanCharges(
+        clientId,
+        { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
+        {
+          contract_line_id: contractLineId,
+          client_contract_line_id: contractLineId,
+          client_contract_id: contractLineId,
+          contract_name: 'Dormant Pool Contract',
+          contract_line_type: 'Bucket',
+          currency_code: 'USD',
+          location_id: null,
+        },
+      );
+
+      // The dormant pool has zero members: its identity must NEVER masquerade
+      // as a service_catalog id. Distinct random UUIDs for pool and any
+      // service make an accidental swap impossible to miss.
+      expect(charges).toHaveLength(1);
+      const charge = charges[0];
+      expect(charge.serviceId).toBeUndefined();
+      expect(charge.service_catalog_id).toBeNull();
+      expect(charge.config_id).toBe(bucketId);
+      expect(charge.total).toBeGreaterThan(0);
+
+      // invoice_charges.invoice_id is a FK to invoices; seed a minimal invoice.
+      const invoiceId = randomUUID();
+      await trx('invoices').insert({
+        tenant, invoice_id: invoiceId, invoice_number: `DORMANT-${invoiceId.slice(0, 6)}`,
+        invoice_date: new Date('2026-03-31T00:00:00Z'),
+        due_date: new Date('2026-04-30T00:00:00Z'),
+        total_amount: 0, status: 'draft',
+        client_id: clientId, subtotal: 0, tax: 0,
+      });
+
+      // Persist the charge: invoice rows must carry a real (here: none) service
+      // id, with the pool identity carried separately on config_id.
+      await persistInvoiceCharges(
+        trx,
+        invoiceId,
+        charges,
+        { tax_region: null },
+        { user: { id: 'test-user' } } as any,
+        tenant,
+        { requireRecurringServicePeriodLinkage: false },
+      );
+
+      const invoiceRows = await trx('invoice_charges')
+        .where({ tenant, client_contract_id: contractLineId })
+        .select('service_id', 'description');
+      expect(invoiceRows.length).toBeGreaterThan(0);
+      for (const row of invoiceRows) {
+        expect(row.service_id).toBeNull();
+      }
+
+      // A dormant pool has no member service to key a detail row on (the pool
+      // identity travels on the charge's config_id, never in a service FK).
+      const detailRows = await trx('invoice_charge_details')
+        .where({ tenant, config_id: bucketId })
+        .select('service_id', 'config_id');
+      expect(detailRows).toHaveLength(0);
+    });
+  });
+
+  it('member pool charges carry a real service_id and keep the pool identity separately on config_id', async () => {
+    await withSeededPool(async ({ trx, tenant, clientId, serviceId1x, serviceId2x, contractLineId, bucketId }) => {
+      const { BillingEngine } = await import('@alga-psa/billing/lib/billing/billingEngine');
+      const { persistInvoiceCharges } = await import('@alga-psa/billing/services/invoiceService');
+
+      await trx('bucket_usage').insert({
+        tenant: tenantOf(trx), usage_id: randomUUID(), client_id: clientId,
+        contract_line_id: contractLineId, service_catalog_id: serviceId2x,
+        bucket_id: bucketId, period_start: '2026-03-01', period_end: '2026-03-31',
+        minutes_used: 720, overage_minutes: 120, rolled_over_minutes: 0,
+      });
+
+      const engine = new BillingEngine();
+      (engine as any).knex = trx;
+      (engine as any).tenant = tenant;
+
+      const charges = await (engine as any).calculateBucketPlanCharges(
+        clientId,
+        { startDate: '2026-03-01T00:00:00Z', endDate: '2026-04-01T00:00:00Z' },
+        {
+          contract_line_id: contractLineId,
+          client_contract_line_id: contractLineId,
+          client_contract_id: contractLineId,
+          contract_name: 'Member Pool Contract',
+          contract_line_type: 'Bucket',
+          currency_code: 'USD',
+          location_id: null,
+        },
+      );
+
+      expect(charges).toHaveLength(1);
+      const charge = charges[0];
+      // The pool has two members and the engine keys the charge on the member
+      // ordered by service_id asc (both are freshly random UUIDs, so either may
+      // sort first). Deterministically model that documented pick instead of
+      // assuming a specific member won.
+      const expectedServiceId = [serviceId1x, serviceId2x].sort()[0];
+      expect(charge.serviceId).toBe(expectedServiceId);
+      // The charge must carry a REAL member service — never the pool id, and
+      // never a stranger.
+      expect(charge.serviceId).not.toBe(bucketId);
+      expect([serviceId1x, serviceId2x]).toContain(charge.serviceId);
+      expect(charge.config_id).toBe(bucketId);
+
+      const invoiceId = randomUUID();
+      await trx('invoices').insert({
+        tenant, invoice_id: invoiceId, invoice_number: `MEMBER-${invoiceId.slice(0, 6)}`,
+        invoice_date: new Date('2026-03-31T00:00:00Z'),
+        due_date: new Date('2026-04-30T00:00:00Z'),
+        total_amount: 0, status: 'draft',
+        client_id: clientId, subtotal: 0, tax: 0,
+      });
+
+      await persistInvoiceCharges(
+        trx,
+        invoiceId,
+        charges,
+        { tax_region: null },
+        { user: { id: 'test-user' } } as any,
+        tenant,
+        { requireRecurringServicePeriodLinkage: false },
+      );
+
+      const invoiceRows = await trx('invoice_charges')
+        .where({ tenant, client_contract_id: contractLineId })
+        .select('service_id');
+      expect(invoiceRows.length).toBeGreaterThan(0);
+      for (const row of invoiceRows) {
+        expect(row.service_id).toBe(expectedServiceId);
+        expect(row.service_id).not.toBe(bucketId);
+        expect([serviceId1x, serviceId2x]).toContain(row.service_id);
+      }
+
+      const detailRows = await trx('invoice_charge_details')
+        .where({ tenant, config_id: bucketId })
+        .select('service_id', 'config_id');
+      expect(detailRows.length).toBeGreaterThan(0);
+      for (const row of detailRows) {
+        expect(row.service_id).toBe(expectedServiceId);
+        expect(row.service_id).not.toBe(bucketId);
+        expect([serviceId1x, serviceId2x]).toContain(row.service_id);
+        expect(row.config_id).toBe(bucketId);
+      }
     });
   });
 });

@@ -12,6 +12,7 @@ import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -345,6 +346,11 @@ async function cloneTemplateLineToContract(
   const templateServices = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
     .where('template_line_id', templateLineId);
 
+  // Full pool config round-trip: clone the line's template pools (scope incl.
+  // catch-all, membership, multipliers, schedule, after-hours rule) when the
+  // template carries them, and skip the legacy per-config bucket clone below.
+  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateLineId, newContractLineId);
+
   for (const service of templateServices) {
     await tenantScopedTable(trx, tenant, 'contract_line_services')
       .insert({
@@ -378,13 +384,16 @@ async function cloneTemplateLineToContract(
         updated_at: now,
       });
 
-      const bucketConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
-        .where('config_id', configuration.config_id)
-        .first();
+      const bucketConfig = !hasTemplatePools
+        ? await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+            .where('config_id', configuration.config_id)
+            .first()
+        : undefined;
 
       if (bucketConfig) {
-        // Weighted-burn model: clone into the line-owned pool tables (single
-        // member, 1x) rather than the frozen legacy per-service bucket config.
+        // Legacy template (pre-dates pool tables): clone into the line-owned
+        // pool tables (single member, 1x) rather than the frozen legacy
+        // per-service bucket config.
         await tenantScopedTable(trx, tenant, 'contract_line_buckets').insert({
           tenant,
           bucket_id: newConfigId,

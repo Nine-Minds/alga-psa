@@ -16,7 +16,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Knex } from 'knex';
+import knexFactory, { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
@@ -217,5 +217,79 @@ describe('contract_line_buckets migration (real DB)', () => {
 
     // Re-apply up() so the DB stays migrated for the remainder of the session.
     await migration.up(knex);
+  });
+
+  it('T003: up() keeps the catalog atttypmod at NUMERIC(12,2) and repairs a seeded mismatch on rerun', async () => {
+    // 20260814090000 runs after T002 leaves the DB migrated; up() is guarded
+    // and idempotent, so this also proves rerun-safety.
+    await migration.up(knex);
+
+    // atttypmod for NUMERIC(12,2) is ((12 << 16) | 2) + 4 = 786438.
+    const expectedAtttypmod = ((12 << 16) | 2) + 4;
+    const numericTypeOid = 1700;
+
+    const readCatalog = async (conn: Knex, columnName: string): Promise<{ atttypid: number; atttypmod: number }> => {
+      const rows = await conn.raw(`
+        SELECT atttypid, atttypmod
+        FROM pg_attribute
+        WHERE attrelid = 'bucket_usage'::regclass
+          AND attname = '${columnName}'
+          AND NOT attisdropped
+      `);
+      const row = rows.rows[0];
+      return { atttypid: Number(row.atttypid), atttypmod: Number(row.atttypmod) };
+    };
+
+    // Fresh run: the catalog encoding matches NUMERIC(12,2) exactly.
+    for (const column of ['minutes_used', 'overage_minutes']) {
+      const catalog = await readCatalog(knex, column);
+      expect(catalog.atttypmod).toBe(expectedAtttypmod);
+      expect(catalog.atttypid).toBe(numericTypeOid);
+    }
+
+    // Seeding a catalog mismatch (and triggering the repair) requires catalog
+    // write access the app role does not have, so do it through the admin role
+    // — the migration's detect-and-repair logic is role-agnostic.
+    const adminKnex = knexFactory({
+      client: 'pg',
+      connection: {
+        host: '127.0.0.1',
+        port: Number(process.env.DB_PORT || 5432),
+        database: 'test_database',
+        user: 'postgres',
+        password: process.env.DB_PASSWORD_ADMIN || 'postpass123',
+      },
+      pool: { min: 0, max: 1 },
+    });
+
+    try {
+      // A wrong encoding like the historic bug wrote for minutes_used, and a
+      // non-numeric type for overage_minutes.
+      await adminKnex.raw(`
+        UPDATE pg_attribute
+        SET atttypmod = ${((12 + 4) << 16) | (2 + 4)}
+        WHERE attrelid = 'bucket_usage'::regclass
+          AND attname = 'minutes_used'
+          AND NOT attisdropped
+      `);
+      await adminKnex.raw(`
+        UPDATE pg_attribute
+        SET atttypid = 23, atttypmod = -1
+        WHERE attrelid = 'bucket_usage'::regclass
+          AND attname = 'overage_minutes'
+          AND NOT attisdropped
+      `);
+
+      // Re-run up(): it must DETECT the mismatch and REPAIR the catalog.
+      await migration.up(adminKnex);
+    } finally {
+      await adminKnex.destroy().catch(() => undefined);
+    }
+
+    for (const column of ['minutes_used', 'overage_minutes']) {
+      const catalog = await readCatalog(knex, column);
+      expect(catalog.atttypmod).toBe(expectedAtttypmod);
+      expect(catalog.atttypid).toBe(numericTypeOid);
+    }
   });
 });

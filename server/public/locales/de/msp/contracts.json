@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Diese Vertragslinie hat bereits ein Sammelkontingent."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Stundenkontingente für diese Zeile",
+    "empty": "Noch keine Stundenkontingente auf dieser Zeile. Fügen Sie ein Kontingent hinzu, um vorausbezahlte Stunden einzuschließen."
   }
 }

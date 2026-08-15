@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "This line already has a catch-all pool."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Bucket pools for this line",
+    "empty": "No bucket pools on this line yet. Add a pool to include prepaid hours."
   }
 }

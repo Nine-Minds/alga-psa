@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Deze contractregel heeft al een algemene bundel."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Urenbundels voor deze regel",
+    "empty": "Nog geen urenbundels op deze regel. Voeg een bundel toe om vooruitbetaalde uren op te nemen."
   }
 }

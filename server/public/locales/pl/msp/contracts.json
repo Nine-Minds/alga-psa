@@ -2366,5 +2366,9 @@
     "errors": {
       "catchAllExists": "Ta linia ma już pakiet ogólny."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Pakiety godzin dla tej linii",
+    "empty": "Brak pakietów godzin w tej linii. Dodaj pakiet, aby uwzględnić godziny z góry opłacone."
   }
 }

@@ -113,6 +113,21 @@ interface TemplateBucketConfigRow {
   allow_rollover: boolean | null;
 }
 
+/** A live or template pool row (weighted-burn model). */
+interface PoolRow {
+  bucket_id: string;
+  template_line_id?: string | null;
+  contract_line_id?: string | null;
+  bucket_name: string | null;
+  total_minutes: number | string | null;
+  overage_rate: number | string | null;
+  allow_rollover: boolean | null;
+  billing_period: string | null;
+  after_hours_multiplier: number | string | null;
+  business_hours_schedule_id: string | null;
+  covers_all_services: boolean | null;
+}
+
 function toCents(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined) {
     return null;
@@ -292,6 +307,51 @@ export async function snapshotContractToScenario(
     ]),
   );
 
+  // Weighted-burn pool preservation: load the line's pools (with members) so
+  // the scenario snapshot carries scope, membership, multipliers, schedule,
+  // and after-hours settings instead of dropping them. Live contracts read
+  // contract_line_buckets; template contracts read the template pool tables.
+  const poolRows = lineRows.length > 0
+    ? ((await db
+        .table(isTemplate ? "contract_template_line_buckets" : "contract_line_buckets")
+        .whereIn(
+          isTemplate ? "template_line_id" : "contract_line_id",
+          lineRows.map((line) => line.contract_line_id),
+        )
+        .select("*")) as PoolRow[])
+    : [];
+  const poolRowsByLine = new Map<string, PoolRow[]>();
+  for (const row of poolRows) {
+    const lineId = String(row.template_line_id ?? row.contract_line_id ?? "");
+    const existing = poolRowsByLine.get(lineId) ?? [];
+    existing.push(row);
+    poolRowsByLine.set(lineId, existing);
+  }
+  const poolMemberRows = poolRows.length > 0
+    ? ((await db
+        .table(isTemplate ? "contract_template_line_bucket_services" : "contract_line_bucket_services")
+        .whereIn(
+          "bucket_id",
+          poolRows.map((row) => row.bucket_id),
+        )
+        .select(
+          "bucket_id",
+          "service_id",
+          "burn_multiplier",
+          isTemplate ? "template_line_id as contract_line_id" : "contract_line_id",
+        )) as Array<{ bucket_id: string; service_id: string; burn_multiplier: number | string | null; contract_line_id: string | null }>)
+    : [];
+  const poolMembersByBucket = new Map<string, Array<{ service_id: string; burn_multiplier: number }>>();
+  for (const member of poolMemberRows) {
+    const existing = poolMembersByBucket.get(member.bucket_id) ?? [];
+    existing.push({
+      service_id: member.service_id,
+      burn_multiplier: Number(member.burn_multiplier) || 1,
+    });
+    poolMembersByBucket.set(member.bucket_id, existing);
+  }
+  const templatePoolRowsByLine = isTemplate ? poolRowsByLine : new Map<string, PoolRow[]>();
+
   const templateConfigs = isTemplate
     ? ((await db
         .table("contract_template_line_service_configuration")
@@ -375,27 +435,37 @@ export async function snapshotContractToScenario(
     catalogByServiceId.set(row.service_id, row);
   }
 
-  const lines: ScenarioLine[] = lineRows.map((lineRow) =>
-    isTemplate
-      ? buildTemplateScenarioLine(
-          lineRow,
-          contract,
-          templateConfigs.filter(
-            (config) => config.template_line_id === lineRow.contract_line_id,
+  const lines: ScenarioLine[] = await Promise.all(
+    lineRows.map(async (lineRow) =>
+      isTemplate
+        ? buildTemplateScenarioLine(
+            lineRow,
+            contract,
+            templateConfigs.filter(
+              (config) => config.template_line_id === lineRow.contract_line_id,
+            ),
+            catalogByServiceId,
+            contractLineServiceByKey,
+            new Map(templateHourlyConfigs.map((row) => [row.config_id, row])),
+            new Map(templateUsageConfigs.map((row) => [row.config_id, row])),
+            new Map(templateBucketConfigs.map((row) => [row.config_id, row])),
+            templatePoolRowsByLine.get(lineRow.contract_line_id) ?? [],
+            db,
+            tenant,
+            poolMembersByBucket,
+          )
+        : buildScenarioLine(
+            lineRow,
+            contract,
+            configsByLine.get(lineRow.contract_line_id) ?? [],
+            catalogByServiceId,
+            contractLineServiceByKey,
+            db,
+            tenant,
+            poolRowsByLine,
+            poolMembersByBucket,
           ),
-          catalogByServiceId,
-          contractLineServiceByKey,
-          new Map(templateHourlyConfigs.map((row) => [row.config_id, row])),
-          new Map(templateUsageConfigs.map((row) => [row.config_id, row])),
-          new Map(templateBucketConfigs.map((row) => [row.config_id, row])),
-        )
-      : buildScenarioLine(
-          lineRow,
-          contract,
-          configsByLine.get(lineRow.contract_line_id) ?? [],
-          catalogByServiceId,
-          contractLineServiceByKey,
-        ),
+    ),
   );
 
   const pricingSchedules = await loadPricingSchedules(
@@ -468,13 +538,17 @@ export async function snapshotContractToScenario(
   };
 }
 
-function buildScenarioLine(
+async function buildScenarioLine(
   lineRow: ContractLineRow,
   contract: ContractRow,
   configs: ClientContractServiceConfigDetails[],
   catalogByServiceId: Map<string, CatalogRateRow>,
   contractLineServiceByKey: Map<string, ContractLineServiceRow>,
-): ScenarioLine {
+  db: ReturnType<typeof tenantDb>,
+  tenant: string,
+  poolRowsByLine: Map<string, PoolRow[]>,
+  poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+): Promise<ScenarioLine> {
   const contractLineType = lineRow.contract_line_type;
   if (
     contractLineType !== "Fixed" &&
@@ -487,50 +561,58 @@ function buildScenarioLine(
     );
   }
 
-  const services: ScenarioLineService[] = configs.map((configDetails) => {
-    const catalog = catalogByServiceId.get(configDetails.serviceId);
-    if (!catalog) {
-      throw new Error(
-        `Service ${configDetails.serviceId} referenced by contract line ` +
-          `${lineRow.contract_line_id} ("${lineRow.contract_line_name}") is missing from service_catalog`,
+  const services: ScenarioLineService[] = await Promise.all(
+    configs.map(async (configDetails) => {
+      const catalog = catalogByServiceId.get(configDetails.serviceId);
+      if (!catalog) {
+        throw new Error(
+          `Service ${configDetails.serviceId} referenced by contract line ` +
+            `${lineRow.contract_line_id} ("${lineRow.contract_line_name}") is missing from service_catalog`,
+        );
+      }
+
+      const serviceRow = contractLineServiceByKey.get(
+        `${lineRow.contract_line_id}:${configDetails.serviceId}`,
       );
-    }
+      const configurationQuantity =
+        configDetails.baseConfig.quantity != null
+          ? Number(configDetails.baseConfig.quantity)
+          : null;
+      const serviceQuantity =
+        serviceRow?.quantity != null ? Number(serviceRow.quantity) : null;
+      const configurationCustomRate = toCents(
+        configDetails.baseConfig.custom_rate ?? null,
+      );
+      const serviceCustomRate = toCents(serviceRow?.custom_rate ?? null);
 
-    const serviceRow = contractLineServiceByKey.get(
-      `${lineRow.contract_line_id}:${configDetails.serviceId}`,
-    );
-    const configurationQuantity =
-      configDetails.baseConfig.quantity != null
-        ? Number(configDetails.baseConfig.quantity)
-        : null;
-    const serviceQuantity =
-      serviceRow?.quantity != null ? Number(serviceRow.quantity) : null;
-    const configurationCustomRate = toCents(
-      configDetails.baseConfig.custom_rate ?? null,
-    );
-    const serviceCustomRate = toCents(serviceRow?.custom_rate ?? null);
-
-    return {
-      configuration_id: configDetails.baseConfig.config_id,
-      service_id: configDetails.serviceId,
-      service_name: catalog.service_name,
-      quantity: Math.max(
-        1,
-        Math.round(configurationQuantity ?? serviceQuantity ?? 1),
-      ),
-      custom_rate: configurationCustomRate ?? serviceCustomRate,
-      default_rate: toCents(catalog.currency_rate),
-      legacy_default_rate: toCents(catalog.default_rate),
-      service_quantity: serviceQuantity,
-      service_custom_rate: serviceCustomRate,
-      configuration_quantity: configurationQuantity,
-      configuration_custom_rate: configurationCustomRate,
-      tax_rate_id: catalog.tax_rate_id ?? null,
-      item_kind: catalog.item_kind ?? null,
-      is_license: Boolean(catalog.is_license),
-      configuration: buildScenarioServiceConfig(configDetails),
-    };
-  });
+      return {
+        configuration_id: configDetails.baseConfig.config_id,
+        service_id: configDetails.serviceId,
+        service_name: catalog.service_name,
+        quantity: Math.max(
+          1,
+          Math.round(configurationQuantity ?? serviceQuantity ?? 1),
+        ),
+        custom_rate: configurationCustomRate ?? serviceCustomRate,
+        default_rate: toCents(catalog.currency_rate),
+        legacy_default_rate: toCents(catalog.default_rate),
+        service_quantity: serviceQuantity,
+        service_custom_rate: serviceCustomRate,
+        configuration_quantity: configurationQuantity,
+        configuration_custom_rate: configurationCustomRate,
+        tax_rate_id: catalog.tax_rate_id ?? null,
+        item_kind: catalog.item_kind ?? null,
+        is_license: Boolean(catalog.is_license),
+        configuration: await buildScenarioServiceConfig(configDetails, {
+          db,
+          tenant,
+          contractLineId: lineRow.contract_line_id,
+          poolRowsByLine,
+          poolMembersByBucket,
+        }),
+      };
+    }),
+  );
 
   return {
     key: lineRow.contract_line_id,
@@ -564,6 +646,10 @@ function buildTemplateScenarioLine(
   hourlyByConfigId: Map<string, TemplateHourlyConfigRow>,
   usageByConfigId: Map<string, TemplateUsageConfigRow>,
   bucketByConfigId: Map<string, TemplateBucketConfigRow>,
+  templatePoolRows: PoolRow[],
+  db: ReturnType<typeof tenantDb>,
+  tenant: string,
+  poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
 ): ScenarioLine {
   const lineType = lineRow.contract_line_type;
   if (lineType !== "Fixed" && lineType !== "Hourly" && lineType !== "Usage") {
@@ -625,12 +711,32 @@ function buildTemplateScenarioLine(
       };
     } else if (configurationType === "Bucket") {
       const bucket = config ? bucketByConfigId.get(config.config_id) : undefined;
+      // A template pool row keyed by the legacy config_id (migrated templates
+      // reuse the pool id) carries the full pool config; preserve it.
+      const pool =
+        templatePoolRows.find((row) => row.bucket_id === config?.config_id) ??
+        null;
       configuration = {
         configuration_type: "Bucket",
-        total_minutes: Number(bucket?.total_minutes ?? 0),
-        billing_period: bucket?.billing_period || "monthly",
-        overage_rate: toCents(bucket?.overage_rate) ?? 0,
-        allow_rollover: Boolean(bucket?.allow_rollover),
+        total_minutes: Number(bucket?.total_minutes ?? pool?.total_minutes ?? 0),
+        billing_period: bucket?.billing_period || pool?.billing_period || "monthly",
+        overage_rate: toCents(bucket?.overage_rate ?? pool?.overage_rate) ?? 0,
+        allow_rollover: Boolean(bucket?.allow_rollover ?? pool?.allow_rollover),
+        pool_id: pool?.bucket_id ?? null,
+        pool_name: pool?.bucket_name ?? null,
+        covers_all_services: Boolean(pool?.covers_all_services),
+        after_hours_multiplier:
+          pool?.after_hours_multiplier != null
+            ? Number(pool.after_hours_multiplier)
+            : null,
+        business_hours_schedule_id: pool?.business_hours_schedule_id ?? null,
+        burn_multiplier: pool
+          ? Number(
+              poolMembersByBucket.get(pool.bucket_id)?.find(
+                (member) => member.service_id === membership.service_id,
+              )?.burn_multiplier ?? 1,
+            )
+          : 1,
       };
     } else {
       configuration = {
@@ -701,9 +807,16 @@ function buildTemplateScenarioLine(
   };
 }
 
-function buildScenarioServiceConfig(
+async function buildScenarioServiceConfig(
   configDetails: ClientContractServiceConfigDetails,
-): ScenarioServiceConfig {
+  poolContext: {
+    db: ReturnType<typeof tenantDb>;
+    tenant: string;
+    contractLineId: string;
+    poolRowsByLine: Map<string, PoolRow[]>;
+    poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>;
+  },
+): Promise<ScenarioServiceConfig> {
   const configurationType = configDetails.baseConfig.configuration_type;
 
   switch (configurationType) {
@@ -757,6 +870,7 @@ function buildScenarioServiceConfig(
     }
     case "Bucket": {
       const bucket = configDetails.typeConfig as {
+        config_id?: string;
         total_minutes?: number;
         billing_period?: string;
         overage_rate?: number;
@@ -768,12 +882,37 @@ function buildScenarioServiceConfig(
             `${configDetails.serviceId} has no bucket pool (contract_line_buckets) row`,
         );
       }
+      // Preserve the weighted-burn pool configuration: the pool for this
+      // (line, service) via the scope rule (membership, else line catch-all).
+      const linePools = poolContext.poolRowsByLine.get(poolContext.contractLineId) ?? [];
+      const memberPool =
+        linePools.find((pool) =>
+          poolMembersByBucketGet(poolContext.poolMembersByBucket, pool.bucket_id)
+            .some((member) => member.service_id === configDetails.serviceId),
+        ) ?? null;
+      const catchAllPool =
+        linePools.find((pool) => pool.covers_all_services) ?? null;
+      const pool = memberPool ?? catchAllPool ?? null;
+      const memberMultiplier = pool
+        ? poolMembersByBucketGet(poolContext.poolMembersByBucket, pool.bucket_id)
+            .find((member) => member.service_id === configDetails.serviceId)
+            ?.burn_multiplier ?? 1
+        : 1;
       return {
         configuration_type: "Bucket",
         total_minutes: Number(bucket.total_minutes ?? 0),
         billing_period: bucket.billing_period ?? "monthly",
         overage_rate: toCents(bucket.overage_rate ?? 0) ?? 0,
         allow_rollover: Boolean(bucket.allow_rollover),
+        pool_id: pool?.bucket_id ?? null,
+        pool_name: pool?.bucket_name ?? null,
+        covers_all_services: Boolean(pool?.covers_all_services),
+        after_hours_multiplier:
+          pool?.after_hours_multiplier != null
+            ? Number(pool.after_hours_multiplier)
+            : null,
+        business_hours_schedule_id: pool?.business_hours_schedule_id ?? null,
+        burn_multiplier: memberMultiplier,
       };
     }
     default:
@@ -782,6 +921,13 @@ function buildScenarioServiceConfig(
           `"${configurationType}" (config ${configDetails.baseConfig.config_id})`,
       );
   }
+}
+
+function poolMembersByBucketGet(
+  map: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  bucketId: string,
+): Array<{ service_id: string; burn_multiplier: number }> {
+  return map.get(bucketId) ?? [];
 }
 
 async function loadPricingSchedules(

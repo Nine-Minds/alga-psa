@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Questa linea ha già un pacchetto generale."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Pacchetti ore per questa riga",
+    "empty": "Nessun pacchetto ore su questa riga. Aggiungere un pacchetto per includere ore prepagate."
   }
 }

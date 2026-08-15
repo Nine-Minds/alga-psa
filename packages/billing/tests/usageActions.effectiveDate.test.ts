@@ -28,10 +28,8 @@ vi.mock('next/cache', () => ({
   revalidatePath: (...args: any[]) => revalidatePathMock(...args),
 }));
 
-vi.mock('../src/services/bucketUsageService', () => ({
-  findOrCreateCurrentBucketUsageRecord: vi.fn(),
-  updateBucketUsageMinutes: vi.fn(),
-  resolveBucketDraw: vi.fn(),
+vi.mock('@alga-psa/shared/billingClients/drawAdjustments', () => ({
+  adjustQuantityDraw: vi.fn(async () => 0),
 }));
 
 vi.mock('../src/lib/authHelpers', () => ({

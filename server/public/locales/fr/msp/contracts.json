@@ -2362,5 +2362,9 @@
     "errors": {
       "catchAllExists": "Cette ligne possède déjà un forfait global."
     }
+  },
+  "wizardBucketPools": {
+    "heading": "Forfaits d’heures pour cette ligne",
+    "empty": "Aucun forfait d’heures sur cette ligne pour le moment. Ajoutez un forfait pour inclure des heures prépayées."
   }
 }

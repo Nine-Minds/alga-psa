@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
+import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 
 interface CloneTemplateOptions {
   tenant: string;
@@ -62,7 +63,8 @@ export async function cloneTemplateContractLine(
   }
 
   // Clone services from template to contract_line_services
-  await cloneServices(trx, tenant, templateContractLineId, targetContractLineId);
+  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, targetContractLineId);
+  await cloneServices(trx, tenant, templateContractLineId, targetContractLineId, hasTemplatePools);
 
   // Resolve the custom rate to apply
   const templateCustomRate = await resolveTemplateCustomRate(
@@ -91,7 +93,8 @@ async function cloneServices(
   trx: Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  contractLineId: string
+  contractLineId: string,
+  hasTemplatePools = false
 ) {
   type TemplateServiceRow = {
     service_id: string;
@@ -127,7 +130,8 @@ async function cloneServices(
       tenant,
       templateContractLineId,
       contractLineId,
-      service.service_id
+      service.service_id,
+      hasTemplatePools
     );
   }
 }
@@ -144,7 +148,8 @@ async function cloneServiceConfiguration(
   tenant: string,
   templateContractLineId: string,
   contractLineId: string,
-  serviceId: string
+  serviceId: string,
+  hasTemplatePools = false
 ) {
   const configurations = await tenantDb(trx, tenant).table('contract_template_line_service_configuration')
     .where('template_line_id', templateContractLineId)
@@ -167,7 +172,10 @@ async function cloneServiceConfiguration(
       updated_at: trx.fn.now()
     });
 
-    if (configuration.configuration_type === 'Bucket') {
+    // When the template carries pool rows, the pools were already cloned in
+    // full by cloneTemplateLinePools — cloning the legacy per-config bucket
+    // here would mint a duplicate pool.
+    if (configuration.configuration_type === 'Bucket' && !hasTemplatePools) {
       await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
     }
 
