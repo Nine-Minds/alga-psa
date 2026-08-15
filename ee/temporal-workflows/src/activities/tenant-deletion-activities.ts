@@ -348,6 +348,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Document associations must come before documents
   'document_associations',
 
+  // Credentials (entity passwords): associations and access grants reference
+  // credentials with CASCADE, so they must be deleted before credentials.
+  // credentials itself references clients (client_id) and users (created_by),
+  // so it must be deleted before both (clients at LEVEL 4, users LAST).
+  'credential_associations', 'credential_access_grants', 'credentials',
+
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',
 
