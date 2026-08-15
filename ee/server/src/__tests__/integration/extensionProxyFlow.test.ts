@@ -13,9 +13,11 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(),
 }));
-// The handler imports the central session resolver from server/; keep the
-// real TenantAuthError so the handler's typed error handling is exercised.
-vi.mock('server/src/lib/extensions/gateway/auth', async (importOriginal) => {
+// The handler imports the session resolver from the package's own gateway/auth
+// (importing `server` here would cycle the project graph). Keep the real
+// TenantAuthError and getUserInfoFromAuth so the handler's typed error handling
+// is exercised.
+vi.mock('../../../../../packages/product-ext-proxy/ee/gateway/auth', async (importOriginal) => {
   const original = (await importOriginal()) as Record<string, unknown>;
   return {
     ...original,
@@ -240,7 +242,7 @@ describe('Extension Proxy Flow Integration', () => {
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromSessionAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
 
@@ -309,7 +311,7 @@ describe('Extension Proxy Flow Integration', () => {
       const { getRunnerBackend, RunnerRequestError } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromSessionAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
 
       // Setup Auth & Config Mocks
@@ -352,7 +354,7 @@ describe('Extension Proxy Flow Integration', () => {
       const { POST } = await import('../../../../../packages/product-ext-proxy/ee/handler');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromSessionAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
 
@@ -414,7 +416,7 @@ describe('Extension Proxy Flow Integration', () => {
 
     it('carries session user info to the runner on a session request with a matching tenant header', async () => {
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
-      const { getTenantFromSessionAuth, TenantAuthError } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth, TenantAuthError } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { getSession } = await import('@alga-psa/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
@@ -470,7 +472,7 @@ describe('Extension Proxy Flow Integration', () => {
 
     it('stops before install lookup and runner execution on a mismatched tenant header', async () => {
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
-      const { getTenantFromSessionAuth, TenantAuthError } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth, TenantAuthError } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { getSession } = await import('@alga-psa/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');

@@ -8,8 +8,9 @@ import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runne
 import {
   getTenantFromSessionAuth,
   TenantAuthError,
-} from 'server/src/lib/extensions/gateway/auth';
-import { getUserInfoFromAuth, assertAccess } from './gateway/auth';
+  getUserInfoFromAuth,
+  assertAccess,
+} from './gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 type ProxyMethod = Exclude<Method, 'OPTIONS'>;

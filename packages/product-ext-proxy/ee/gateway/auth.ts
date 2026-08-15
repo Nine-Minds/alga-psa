@@ -140,6 +140,79 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
   return userInfo;
 }
 
+export type TenantAuthErrorCode =
+  | 'unauthenticated'
+  | 'invalid_session'
+  | 'invalid_service_auth'
+  | 'missing_tenant'
+  | 'mixed_auth'
+  | 'tenant_mismatch';
+
+/**
+ * Typed tenant-resolution failure. Route boundaries map this to a generic 401
+ * (missing/invalid authentication) or 403 (conflicting tenant evidence). The
+ * internal `code` is stable and may be logged; request credentials (runner
+ * token, cookies, tenant header values) must never be included in logs.
+ *
+ * Mirrors server/src/lib/extensions/gateway/auth.ts. It is duplicated here so
+ * this package does not import the `server` app (which depends on this
+ * package), which would create a build/project-graph cycle.
+ */
+// LEVERAGE: friction ext-proxy-tenant-auth — session tenant resolver + error
+// type are duplicated between server/src/lib/extensions/gateway/auth.ts and
+// this package because the only shared home would be a `server` import that
+// cycles the project graph; a shared low-layer package would remove the copy.
+export class TenantAuthError extends Error {
+  readonly code: TenantAuthErrorCode;
+  readonly status: number;
+
+  constructor(code: TenantAuthErrorCode, message: string) {
+    super(message);
+    this.name = 'TenantAuthError';
+    this.code = code;
+    this.status = code === 'tenant_mismatch' ? 403 : 401;
+  }
+}
+
+/**
+ * Resolve the tenant for a browser/session flow.
+ *
+ * The session is the only tenant authority. `x-alga-tenant` and `x-tenant-id`
+ * are normalized and checked only for consistency during compatibility; they
+ * can never select a tenant, and a header that disagrees with the session
+ * fails closed with `tenant_mismatch`. A partial session (session object with
+ * a missing/blank tenant) throws `invalid_session` before any header is
+ * considered, and never falls through to service authentication.
+ */
+export async function getTenantFromSessionAuth(req: NextRequest): Promise<string> {
+  const session = await getSession();
+
+  if (!session) {
+    throw new TenantAuthError('unauthenticated', 'No authenticated session found');
+  }
+
+  const rawTenant = (session.user as { tenant?: unknown } | null | undefined)?.tenant;
+  if (typeof rawTenant !== 'string' || !rawTenant.trim()) {
+    throw new TenantAuthError('invalid_session', 'Session is missing a tenant');
+  }
+  const tenant = rawTenant.trim();
+
+  const canonical = toNonEmptyString(req.headers.get('x-alga-tenant'));
+  const legacy = toNonEmptyString(req.headers.get('x-tenant-id'));
+
+  if (canonical && canonical !== tenant) {
+    throw new TenantAuthError('tenant_mismatch', 'x-alga-tenant header does not match the session tenant');
+  }
+  if (legacy && legacy !== tenant) {
+    throw new TenantAuthError('tenant_mismatch', 'x-tenant-id header does not match the session tenant');
+  }
+  if (canonical && legacy && canonical !== legacy) {
+    throw new TenantAuthError('tenant_mismatch', 'Conflicting tenant headers supplied');
+  }
+
+  return tenant;
+}
+
 export async function assertAccess(_tenantId: string, _extensionId: string, _method: string, _path: string): Promise<void> {
   // TODO: implement RBAC and per-tenant endpoint checks
   return;
