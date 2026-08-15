@@ -31,6 +31,22 @@ async function getContractAuthoringError(
   return null;
 }
 
+/**
+ * custom_rate is an integer minor-unit amount in the contract currency;
+ * null clears the rate back to the contract default.
+ */
+function getCustomRateValidationError(customRate: number | null | undefined): string | null {
+  if (customRate === undefined || customRate === null) {
+    return null;
+  }
+
+  if (typeof customRate !== 'number' || !Number.isInteger(customRate) || customRate < 0) {
+    return 'Custom rate must be a non-negative integer amount in the currency\'s minor units';
+  }
+
+  return null;
+}
+
 
 /**
  * Get all pricing schedules for a contract
@@ -141,6 +157,11 @@ export const createPricingSchedule = withAuth(async (
   if (authoringError) {
     return actionError(authoringError);
   }
+
+  const customRateError = getCustomRateValidationError(scheduleData.custom_rate);
+  if (customRateError) {
+    return actionError(customRateError);
+  }
   const db = tenantDb(knex, tenant);
 
   // Calculate end_date from duration if provided
@@ -236,6 +257,11 @@ export const updatePricingSchedule = withAuth(async (
   const authoringError = await getContractAuthoringError(knex, tenant, existingSchedule.contract_id);
   if (authoringError) {
     return actionError(authoringError);
+  }
+
+  const customRateError = getCustomRateValidationError(scheduleData.custom_rate);
+  if (customRateError) {
+    return actionError(customRateError);
   }
 
   // Calculate end_date from duration if provided

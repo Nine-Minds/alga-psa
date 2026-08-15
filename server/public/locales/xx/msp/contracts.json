@@ -826,6 +826,7 @@
         "editPricingSchedule": "11111"
       },
       "validation": {
+        "currencySettingsLoading": "11111",
         "customRatePositive": "11111",
         "customRateRequired": "11111",
         "durationPositive": "11111",

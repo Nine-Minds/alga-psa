@@ -826,6 +826,7 @@
         "editPricingSchedule": "Edytuj harmonogram cenowy"
       },
       "validation": {
+        "currencySettingsLoading": "Ustawienia waluty wciąż się ładują; spróbuj ponownie za chwilę",
         "customRatePositive": "Stawka niestandardowa musi być liczbą dodatnią",
         "customRateRequired": "Stawka niestandardowa jest wymagana, gdy nie używana jest stawka domyślna",
         "durationPositive": "Czas trwania musi być liczbą dodatnią",

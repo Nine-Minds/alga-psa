@@ -826,6 +826,7 @@
         "editPricingSchedule": "Editar tabela de preços"
       },
       "validation": {
+        "currencySettingsLoading": "As configurações de moeda ainda estão a carregar; tente novamente num instante",
         "customRatePositive": "A taxa personalizada precisa ser um número positivo",
         "customRateRequired": "A taxa personalizada é obrigatória quando não se usa a taxa padrão",
         "durationPositive": "A duração precisa ser um número positivo",

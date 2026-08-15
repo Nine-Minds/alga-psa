@@ -826,6 +826,7 @@
         "editPricingSchedule": "Modifier le barème de prix"
       },
       "validation": {
+        "currencySettingsLoading": "Les paramètres de devise sont encore en cours de chargement ; réessayez dans un instant",
         "customRatePositive": "Le tarif personnalisé doit être un nombre positif",
         "customRateRequired": "Le tarif personnalisé est requis lorsque le tarif par défaut n'est pas utilisé",
         "durationPositive": "La durée doit être un nombre positif",
