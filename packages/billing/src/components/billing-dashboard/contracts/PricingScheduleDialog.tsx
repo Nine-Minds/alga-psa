@@ -144,8 +144,12 @@ export function PricingScheduleDialog({
       return;
     }
 
-    // Never convert with an unresolved flag: the minor-unit factor isn't known yet.
-    if (!useDefaultRate && flagLoading) {
+    // No submission may run while the flag is unresolved: the minor-unit
+    // factor isn't known yet, and even the default-rate null path must not
+    // clobber the stored rate before the currency interpretation is settled.
+    // The Save button is disabled for the same reason; this guard also covers
+    // Enter-key and programmatic form submission.
+    if (flagLoading) {
       setError(t('pricingSchedules.dialog.validation.currencySettingsLoading', {
         defaultValue: 'Currency settings are still loading; try again in a moment',
       }));
@@ -227,7 +231,12 @@ export function PricingScheduleDialog({
             id="save-pricing-schedule-btn"
             type="button"
             onClick={() => (document.getElementById('pricing-schedule-form') as HTMLFormElement | null)?.requestSubmit()}
-            disabled={isSaving}
+            disabled={isSaving || flagLoading}
+            title={flagLoading
+              ? t('pricingSchedules.dialog.validation.currencySettingsLoading', {
+                defaultValue: 'Currency settings are still loading; try again in a moment',
+              })
+              : undefined}
           >
             {isSaving
               ? t('pricingSchedules.dialog.actions.saving', { defaultValue: 'Saving...' })

@@ -363,4 +363,71 @@ describe('PricingScheduleDialog contract-currency custom rate (release-v1.5-feat
       expect.objectContaining({ custom_rate: 600 })
     );
   });
+
+  it('flag loading: blocks the default-rate reset so the stored custom rate is not clobbered', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+      currencyCode: 'JPY',
+    });
+
+    // Save is disabled while unresolved, with the loading reason surfaced.
+    const saveButton = screen.getByRole('button', { name: 'Update Schedule' });
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute(
+      'title',
+      'Currency settings are still loading; try again in a moment'
+    );
+
+    // Switching to the default rate (the custom_rate: null path) and
+    // submitting must be blocked in the handler too — the Enter-key path
+    // bypasses the disabled button.
+    fireEvent.click(screen.getByLabelText('Use default rate'));
+    submitForm();
+
+    expect(
+      await screen.findByText('Currency settings are still loading; try again in a moment')
+    ).toBeInTheDocument();
+    expect(updatePricingScheduleMock).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('flag loading: resolving to off lands in legacy two-decimal behavior with no stale gating', async () => {
+    featureFlagState.loading = true;
+    featureFlagState.enabled = false;
+    const { rerenderDialog, onSave } = renderDialog({
+      schedule: schedule({ custom_rate: 5000 }),
+      // Contract currency is supplied but must be ignored once the flag resolves off.
+      currencyCode: 'JPY',
+    });
+
+    // Unresolved: Save is disabled and no legacy units are exposed.
+    expect(screen.getByRole('button', { name: 'Update Schedule' })).toBeDisabled();
+    expect(rateInput().value).toBe('');
+
+    featureFlagState.loading = false;
+    featureFlagState.enabled = false;
+    rerenderDialog();
+
+    // Legacy ambient-currency semantics return end to end: /100 init,
+    // two-decimal step, ambient symbol, and no skeleton left behind.
+    const input = rateInput();
+    await waitFor(() => expect(input).toBeEnabled());
+    expect(input.value).toBe('50.00');
+    expect(input).toHaveAttribute('step', '0.01');
+    expect(screen.getByText('$')).toBeInTheDocument();
+    expect(screen.queryByTestId('rate-symbol-skeleton')).not.toBeInTheDocument();
+    // No stale loading gating survives the transition.
+    expect(screen.getByRole('button', { name: 'Update Schedule' })).toBeEnabled();
+
+    fireEvent.change(input, { target: { value: '51' } });
+    submitForm();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(updatePricingScheduleMock).toHaveBeenCalledWith(
+      'schedule-1',
+      expect.objectContaining({ custom_rate: 5100 })
+    );
+  });
 });
