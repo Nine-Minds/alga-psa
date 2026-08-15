@@ -182,7 +182,7 @@ describe('HuduClient — create/update/delete asset_password', () => {
 
     const error = (await client
       .createAssetPassword({ company_id: 101, name: 'No Dup 500' })
-      .catch((e: unknown) => e)) as HuduRequestError;
+      .catch((e: unknown) => e)) as { hudu: { kind: string }; message: string };
 
     expect(error).toBeInstanceOf(HuduRequestError);
     expect(error.hudu.kind).toBe('server_error');
@@ -204,7 +204,7 @@ describe('HuduClient — create/update/delete asset_password', () => {
 
     const error = (await client
       .createAssetPassword({ company_id: 101, name: 'No Dup Timeout' })
-      .catch((e: unknown) => e)) as HuduRequestError;
+      .catch((e: unknown) => e)) as { hudu: { kind: string }; message: string };
 
     expect(error).toBeInstanceOf(HuduRequestError);
     expect(error.hudu.kind).toBe('network_error');
