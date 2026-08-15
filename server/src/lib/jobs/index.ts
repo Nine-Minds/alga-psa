@@ -7,6 +7,11 @@ import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipH
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+  PrepaidBalanceAlertScanJobData,
+} from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
@@ -149,6 +154,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register expiring credits notification handler
     jobScheduler.registerJobHandler<ExpiringCreditsNotificationJobData>('expiring-credits-notification', async (job: Job<ExpiringCreditsNotificationJobData>) => {
       await expiringCreditsNotificationHandler(job.data);
+    });
+
+    // Register prepaid balance alert scan handler (daily 09:00 UTC)
+    jobScheduler.registerJobHandler<PrepaidBalanceAlertScanJobData>(PREPAID_BALANCE_ALERT_SCAN_JOB, async (job: Job<PrepaidBalanceAlertScanJobData>) => {
+      await prepaidBalanceAlertScanHandler(job.data);
     });
 
     // Register per-location low-stock alert handler (inventory F037/F038)
@@ -336,6 +346,7 @@ export type {
   GenerateInvoiceData,
   ExpiredCreditsJobData,
   ExpiringCreditsNotificationJobData,
+  PrepaidBalanceAlertScanJobData,
   ReconcileBucketUsageJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
@@ -475,6 +486,26 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, clientId }
+  );
+};
+
+/**
+ * Schedule the daily prepaid balance alert scan (09:00 UTC). CE registers one
+ * singleton per tenant; EE runs this through the global Temporal maintenance
+ * fanout schedule, so this returns null on enterprise-workflow editions.
+ */
+export const schedulePrepaidBalanceAlertScanJob = async (
+  tenantId: string,
+  cronExpression: string = '0 9 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<PrepaidBalanceAlertScanJobData>(
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
+    cronExpression,
+    { tenantId }
   );
 };
 

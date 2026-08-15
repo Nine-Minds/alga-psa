@@ -18,6 +18,11 @@ import {
   expiringCreditsNotificationHandler,
   ExpiringCreditsNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+  PrepaidBalanceAlertScanJobData,
+} from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
@@ -245,6 +250,19 @@ export async function registerAllJobHandlers(
       name: 'expiring-credits-notification',
       handler: async (_jobId, data) => {
         await expiringCreditsNotificationHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Prepaid balance alert scan handler (daily 09:00 UTC low-balance scan;
+  // server-free: publishes PREPAID_BALANCE_ALERT_SCAN_REQUESTED)
+  JobHandlerRegistry.register<PrepaidBalanceAlertScanJobData & BaseJobData>(
+    {
+      name: PREPAID_BALANCE_ALERT_SCAN_JOB,
+      handler: async (_jobId, data) => {
+        await prepaidBalanceAlertScanHandler(data);
       },
       retry: { maxAttempts: 3 },
     },
@@ -704,6 +722,7 @@ export function getAvailableJobHandlers(): string[] {
     // Credits
     'expired-credits',
     'expiring-credits-notification',
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',
