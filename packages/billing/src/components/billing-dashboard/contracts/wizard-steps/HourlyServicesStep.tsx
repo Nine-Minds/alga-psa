@@ -324,22 +324,24 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 ) : null}
               </div>
 
-              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                <SwitchWithLabel
-                  label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
-                  checked={Boolean(service.bucket_overlay)}
-                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                />
-                {service.bucket_overlay && (
-                  <BucketOverlayFields
-                    mode="hours"
-                    value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
-                    onChange={(next) => updateBucketOverlay(index, next)}
-                    automationId={`hourly-bucket-${index}`}
-                    billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
+              {!bucketPoolEditorEnabled && (
+                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                  <SwitchWithLabel
+                    label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                   />
-                )}
-              </div>
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="hours"
+                      value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
+                      onChange={(next) => updateBucketOverlay(index, next)}
+                      automationId={`hourly-bucket-${index}`}
+                      billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             <Button
@@ -449,7 +451,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   {formatBillingFrequency(data.hourly_billing_frequency)}
                 </p>
               )}
-              {data.hourly_services.some((service) => service.bucket_overlay) && (
+              {!bucketPoolEditorEnabled && data.hourly_services.some((service) => service.bucket_overlay) && (
                 <div className="pt-2">
                   <p className="font-semibold">
                     {t('wizardHourly.summary.labels.bucketsHeading', { defaultValue: 'Buckets:' })}

@@ -298,23 +298,25 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                 </div>
               </div>
 
-              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                <SwitchWithLabel
-                  label={t('wizardUsage.labels.setBucketAllocation', { defaultValue: 'Set bucket allocation' })}
-                  checked={Boolean(service.bucket_overlay)}
-                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                />
-                {service.bucket_overlay && (
-                  <BucketOverlayFields
-                    mode="usage"
-                    unitLabel={service.unit_of_measure}
-                    value={service.bucket_overlay ?? defaultOverlay(data.usage_billing_frequency ?? data.billing_frequency)}
-                    onChange={(next) => updateBucketOverlay(index, next)}
-                    automationId={`usage-bucket-${index}`}
-                    billingFrequency={data.usage_billing_frequency ?? data.billing_frequency}
+              {!bucketPoolEditorEnabled && (
+                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                  <SwitchWithLabel
+                    label={t('wizardUsage.labels.setBucketAllocation', { defaultValue: 'Set bucket allocation' })}
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                   />
-                )}
-              </div>
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="usage"
+                      unitLabel={service.unit_of_measure}
+                      value={service.bucket_overlay ?? defaultOverlay(data.usage_billing_frequency ?? data.billing_frequency)}
+                      onChange={(next) => updateBucketOverlay(index, next)}
+                      automationId={`usage-bucket-${index}`}
+                      billingFrequency={data.usage_billing_frequency ?? data.billing_frequency}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             <Button

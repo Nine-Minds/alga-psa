@@ -19,6 +19,7 @@ import type {
   ScenarioPricingSchedule,
   ScenarioBillingSchedule,
   ScenarioServiceConfig,
+  ScenarioPoolRef,
 } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
@@ -697,6 +698,11 @@ function buildTemplateScenarioLine(
         round_up_to_nearest:
           Number(hourly?.round_up_to_nearest ?? 0) || 0,
         user_type_rates: [],
+        ...(resolveScenarioPoolRef(
+          templatePoolRows,
+          poolMembersByBucket,
+          membership.service_id,
+        ) ?? {}),
       };
     } else if (configurationType === "Usage") {
       const usage = config ? usageByConfigId.get(config.config_id) : undefined;
@@ -708,6 +714,11 @@ function buildTemplateScenarioLine(
           usage?.minimum_usage != null ? Number(usage.minimum_usage) : null,
         base_rate: toCents(usage?.base_rate) ?? customRate,
         tiers: [],
+        ...(resolveScenarioPoolRef(
+          templatePoolRows,
+          poolMembersByBucket,
+          membership.service_id,
+        ) ?? {}),
       };
     } else if (configurationType === "Bucket") {
       const bucket = config ? bucketByConfigId.get(config.config_id) : undefined;
@@ -844,6 +855,14 @@ async function buildScenarioServiceConfig(
           user_type: rate.user_type,
           rate: Number(rate.rate),
         })),
+        // A real v1.5 Hourly line can carry line-owned pools: carry the pool
+        // this service draws from (membership, else line catch-all) so the
+        // snapshot → restore round-trip keeps scope/members/multipliers/schedule.
+        ...(resolveScenarioPoolRef(
+          poolContext.poolRowsByLine.get(poolContext.contractLineId) ?? [],
+          poolContext.poolMembersByBucket,
+          configDetails.serviceId,
+        ) ?? {}),
       };
     }
     case "Usage": {
@@ -866,6 +885,14 @@ async function buildScenarioServiceConfig(
             tier.max_quantity != null ? Number(tier.max_quantity) : null,
           rate: Number(tier.rate),
         })),
+        // Usage lines carry pools the same way Hourly lines do: preserve the
+        // pool reference so restore reproduces scope, members, multipliers,
+        // schedule, and after-hours settings.
+        ...(resolveScenarioPoolRef(
+          poolContext.poolRowsByLine.get(poolContext.contractLineId) ?? [],
+          poolContext.poolMembersByBucket,
+          configDetails.serviceId,
+        ) ?? {}),
       };
     }
     case "Bucket": {
@@ -884,35 +911,18 @@ async function buildScenarioServiceConfig(
       }
       // Preserve the weighted-burn pool configuration: the pool for this
       // (line, service) via the scope rule (membership, else line catch-all).
-      const linePools = poolContext.poolRowsByLine.get(poolContext.contractLineId) ?? [];
-      const memberPool =
-        linePools.find((pool) =>
-          poolMembersByBucketGet(poolContext.poolMembersByBucket, pool.bucket_id)
-            .some((member) => member.service_id === configDetails.serviceId),
-        ) ?? null;
-      const catchAllPool =
-        linePools.find((pool) => pool.covers_all_services) ?? null;
-      const pool = memberPool ?? catchAllPool ?? null;
-      const memberMultiplier = pool
-        ? poolMembersByBucketGet(poolContext.poolMembersByBucket, pool.bucket_id)
-            .find((member) => member.service_id === configDetails.serviceId)
-            ?.burn_multiplier ?? 1
-        : 1;
+      const poolRef = resolveScenarioPoolRef(
+        poolContext.poolRowsByLine.get(poolContext.contractLineId) ?? [],
+        poolContext.poolMembersByBucket,
+        configDetails.serviceId,
+      );
       return {
         configuration_type: "Bucket",
         total_minutes: Number(bucket.total_minutes ?? 0),
         billing_period: bucket.billing_period ?? "monthly",
         overage_rate: toCents(bucket.overage_rate ?? 0) ?? 0,
         allow_rollover: Boolean(bucket.allow_rollover),
-        pool_id: pool?.bucket_id ?? null,
-        pool_name: pool?.bucket_name ?? null,
-        covers_all_services: Boolean(pool?.covers_all_services),
-        after_hours_multiplier:
-          pool?.after_hours_multiplier != null
-            ? Number(pool.after_hours_multiplier)
-            : null,
-        business_hours_schedule_id: pool?.business_hours_schedule_id ?? null,
-        burn_multiplier: memberMultiplier,
+        ...(poolRef ?? {}),
       };
     }
     default:
@@ -928,6 +938,48 @@ function poolMembersByBucketGet(
   bucketId: string,
 ): Array<{ service_id: string; burn_multiplier: number }> {
   return map.get(bucketId) ?? [];
+}
+
+/**
+ * Resolve the weighted-burn pool a (line, service) draws from under the scope
+ * rule (explicit membership, else the line catch-all) and return the full pool
+ * reference the scenario snapshot must carry. `null` means the service draws
+ * from no pool — plain hourly/usage billing. Used identically for live
+ * contract lines and template lines so Hourly, Usage, and Bucket service
+ * configs all preserve scope, membership, multipliers, the schedule reference,
+ * and after-hours settings across a snapshot → restore round-trip.
+ */
+function resolveScenarioPoolRef(
+  linePools: PoolRow[],
+  poolMembersByBucket: Map<string, Array<{ service_id: string; burn_multiplier: number }>>,
+  serviceId: string,
+): ScenarioPoolRef | null {
+  const memberPool =
+    linePools.find((pool) =>
+      poolMembersByBucketGet(poolMembersByBucket, pool.bucket_id).some(
+        (member) => member.service_id === serviceId,
+      ),
+    ) ?? null;
+  const catchAllPool = linePools.find((pool) => pool.covers_all_services) ?? null;
+  const pool = memberPool ?? catchAllPool ?? null;
+  if (!pool) return null;
+
+  const memberMultiplier =
+    poolMembersByBucketGet(poolMembersByBucket, pool.bucket_id).find(
+      (member) => member.service_id === serviceId,
+    )?.burn_multiplier ?? 1;
+
+  return {
+    pool_id: pool.bucket_id,
+    pool_name: pool.bucket_name,
+    covers_all_services: Boolean(pool.covers_all_services),
+    after_hours_multiplier:
+      pool.after_hours_multiplier != null
+        ? Number(pool.after_hours_multiplier)
+        : null,
+    business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+    burn_multiplier: memberMultiplier,
+  };
 }
 
 async function loadPricingSchedules(

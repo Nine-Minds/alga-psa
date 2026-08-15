@@ -129,6 +129,9 @@ describe('ContractWizard pool configuration (flag states)', () => {
     renderStep(data, updateData);
 
     expect(await screen.findByText('Bucket pools for this line')).not.toBeNull();
+    // Flag ON selects exactly one bucket-authoring path: the legacy per-service
+    // bucket-of-hours input must not coexist with the pool editor.
+    expect(screen.queryByText('Set bucket of hours')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Add Pool' }));
 
     // Fill the create form: 20 hours, 150 $/hr overage, member service svc-1 at 2x.

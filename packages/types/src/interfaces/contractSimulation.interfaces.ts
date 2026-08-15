@@ -23,13 +23,32 @@ export interface ScenarioRateTier {
   rate: number;
 }
 
+/**
+ * Weighted-burn pool preservation, shared by every service config type. When
+ * the source (line, service) resolves to a pool (explicit membership, else the
+ * line catch-all), the snapshot carries the pool's own identity and full
+ * configuration so a snapshot → restore round-trip faithfully reproduces the
+ * line-owned shared pool — including on Hourly and Usage services, where the
+ * pool is a sibling row rather than the service's own Bucket config. All
+ * fields optional so draft-shaped scenarios (which only know per-service
+ * totals) still typecheck.
+ */
+export interface ScenarioPoolRef {
+  pool_id?: string | null;
+  pool_name?: string | null;
+  covers_all_services?: boolean;
+  burn_multiplier?: number;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+}
+
 export interface ScenarioFixedConfig {
   configuration_type: "Fixed";
   /** Cents. Null falls back to the service catalog default rate. */
   base_rate: number | null;
 }
 
-export interface ScenarioHourlyConfig {
+export interface ScenarioHourlyConfig extends ScenarioPoolRef {
   configuration_type: "Hourly";
   /** Cents per hour. */
   hourly_rate: number | null;
@@ -38,7 +57,7 @@ export interface ScenarioHourlyConfig {
   user_type_rates: Array<{ user_type: string; rate: number }>;
 }
 
-export interface ScenarioUsageConfig {
+export interface ScenarioUsageConfig extends ScenarioPoolRef {
   configuration_type: "Usage";
   unit_of_measure: string;
   enable_tiered_pricing: boolean;
@@ -48,26 +67,13 @@ export interface ScenarioUsageConfig {
   tiers: ScenarioRateTier[];
 }
 
-export interface ScenarioBucketConfig {
+export interface ScenarioBucketConfig extends ScenarioPoolRef {
   configuration_type: "Bucket";
   total_minutes: number;
   billing_period: string;
   /** Cents per hour of overage. */
   overage_rate: number;
   allow_rollover: boolean;
-  /**
-   * Weighted-burn pool preservation: when the source pool is known, the
-   * scenario carries the pool's own identity and full configuration so a
-   * snapshot faithfully represents the line-owned shared pool — never the
-   * bucket id masquerading as a service. All fields optional so draft-shaped
-   * scenarios (which only know per-service totals) still typecheck.
-   */
-  pool_id?: string | null;
-  pool_name?: string | null;
-  covers_all_services?: boolean;
-  burn_multiplier?: number;
-  after_hours_multiplier?: number | null;
-  business_hours_schedule_id?: string | null;
 }
 
 export type ScenarioServiceConfig =

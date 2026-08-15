@@ -216,6 +216,10 @@ describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws 
       serviceId: string;
       multiplier: number;
       afterHours?: { multiplier: number; scheduleId: string };
+      /** Pool size in minutes (default 6000, matching the fixed seed). */
+      totalMinutes?: number;
+      /** Whether unused minutes roll over into the next period (default false). */
+      allowRollover?: boolean;
     }>;
   }): Promise<ClientSeed> {
     const scopedDb = tenantDb(db, tenantId);
@@ -275,9 +279,9 @@ describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws 
         tenant: tenantId,
         bucket_id: bucketId,
         contract_line_id: contractLineId,
-        total_minutes: 6000,
+        total_minutes: poolDef.totalMinutes ?? 6000,
         overage_rate: 15000,
-        allow_rollover: false,
+        allow_rollover: poolDef.allowRollover ?? false,
         covers_all_services: false,
         after_hours_multiplier: poolDef.afterHours?.multiplier ?? null,
         business_hours_schedule_id: poolDef.afterHours?.scheduleId ?? null,
@@ -335,6 +339,16 @@ describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws 
       .where({ tenant: tenantId, client_id: clientId, bucket_id: bucketId })
       .first<{ minutes_used: number | string }>('minutes_used');
     return Number(row?.minutes_used ?? 0);
+  }
+
+  async function usageRecordForPeriod(
+    clientId: string,
+    bucketId: string,
+    periodStart: string,
+  ): Promise<{ minutes_used: number | string; rolled_over_minutes: number | string; period_start: string } | undefined> {
+    return tenantDb(db, tenantId).table('bucket_usage')
+      .where({ tenant: tenantId, client_id: clientId, bucket_id: bucketId, period_start: periodStart })
+      .first('minutes_used', 'rolled_over_minutes', 'period_start');
   }
 
   function entryPayload(params: {
@@ -467,5 +481,55 @@ describe.skipIf(!ENABLED)('time-entry edit/reassignment resolves weighted draws 
     }));
 
     expect(await usageMinutes(clientA.clientId, poolA1.bucketId)).toBe(90);
+  });
+
+  it('reverses the old draw BEFORE computing the new period rollover when an edit moves an entry across billing periods', async () => {
+    const clientA = await seedClient({
+      pools: [{ key: 'a1', serviceId: '', multiplier: 1, totalMinutes: 100, allowRollover: true }],
+    });
+    const poolA1 = clientA.pools.get('a1')!;
+    const serviceId = (poolA1 as any).serviceId;
+
+    // July entry: 60 weighted minutes drawn from a 100-minute rollover pool.
+    const created = await saveTimeEntry(entryPayload({
+      ticketId: clientA.ticketId,
+      serviceId,
+      contractLineId: poolA1.contractLineId,
+      startIso: '2026-07-10T10:00:00Z',
+      endIso: '2026-07-10T11:00:00Z',
+      billableDuration: 60,
+    }));
+    expect(created.entry_id).toBeTruthy();
+    const julyAfterCreate = await usageRecordForPeriod(clientA.clientId, poolA1.bucketId, '2026-07-01');
+    expect(julyAfterCreate).toBeDefined();
+    expect(Number(julyAfterCreate!.minutes_used)).toBe(60);
+
+    // Move the entry into August. The August record's rolled_over_minutes is
+    // computed from July's minutes_used at the moment the August record is
+    // created. Correct ordering (reverse old first) leaves July at 0 and
+    // carries the full 100 minutes over; the stale-ordering bug (apply new
+    // first) snapshots July's pre-reversal 60 and rolls only 40 over.
+    await saveTimeEntry(entryPayload({
+      entryId: created.entry_id,
+      ticketId: clientA.ticketId,
+      serviceId,
+      contractLineId: poolA1.contractLineId,
+      startIso: '2026-08-10T10:00:00Z',
+      endIso: '2026-08-10T11:00:00Z',
+      billableDuration: 60,
+    }));
+
+    // Old side fully reversed: July is back to zero (the 60 moved to August).
+    const julyAfterEdit = await usageRecordForPeriod(clientA.clientId, poolA1.bucketId, '2026-07-01');
+    expect(julyAfterEdit).toBeDefined();
+    expect(Number(julyAfterEdit!.minutes_used)).toBe(0);
+
+    // The August record's rollover must reflect POST-reversal July state: the
+    // whole 100 minutes carries over. (With apply-before-reverse ordering this
+    // is 40, so the test fails against the pre-fix path.)
+    const august = await usageRecordForPeriod(clientA.clientId, poolA1.bucketId, '2026-08-01');
+    expect(august).toBeDefined();
+    expect(Number(august!.minutes_used)).toBe(60);
+    expect(Number(august!.rolled_over_minutes)).toBe(100);
   });
 });

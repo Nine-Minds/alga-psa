@@ -675,45 +675,25 @@ export const saveTimeEntry = withAuth(async (
         }
       }
       // --- Bucket Usage Update Logic ---
-      // Two independent draws, each resolved from ITS OWN record side:
-      // reverse the OLD entry's burn under the OLD entry's own client (its own
-      // work item), span, service, and line; then apply the NEW entry's burn
-      // under the NEW entry's own client, span, service, and line. Never reuse
-      // the new context to reverse the old draw (or vice versa) — that would
-      // reverse against the wrong pool when an entry moves clients/lines.
-      let newClientId: string | null = null;
-      if (resultingEntry?.work_item_id && resultingEntry.work_item_type) {
-        newClientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
-      }
-      if (newClientId) {
-        // New side: apply the saved entry's burn when it resolves to a pool.
-        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-          try {
-            const appliedDelta = await adjustTimeSpanDraw(
-              trx,
-              tenant,
-              newClientId,
-              {
-                service_id: resultingEntry.service_id,
-                start_time: resultingEntry.start_time,
-                end_time: resultingEntry.end_time,
-                billable_duration: resultingEntry.billable_duration,
-                contract_line_id: resultingEntry.contract_line_id ?? null,
-              },
-              1,
-            );
-            if (appliedDelta !== 0) {
-              console.log(`Applied new bucket usage for entry ${resultingEntry.entry_id} (weighted ${appliedDelta})`);
-            }
-          } catch (bucketError) {
-            if (isBucketUsageError(bucketError)) throw bucketError;
-            throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
-        }
-      }
+      // Ordering matters: the OLD draw must be fully reversed BEFORE the NEW
+      // draw is applied. findOrCreateCurrentBucketUsageRecord computes rollover
+      // from the previous period's minutes_used, and updateBucketUsageMinutes
+      // derives overage from the running total — both snapshot whatever usage
+      // state exists at the moment they run. If the new draw ran first, a
+      // cross-period edit/reassignment would create (or update) the target
+      // period's record with rollover computed from usage that still includes
+      // the old, not-yet-reversed draw, leaving stale rollover behind. So:
+      // reverse the old side first (under the OLD entry's own client derived
+      // from its own work item, span, service, and line), then apply the new
+      // side (under the NEW entry's own client, span, service, and line).
+      // Rollover state is only ever computed from post-reversal data.
+      // Never reuse the new context to reverse the old draw (or vice versa) —
+      // that would reverse against the wrong pool when an entry moves
+      // clients/lines.
 
       // Old side (updates only): resolve the reversal under the OLD entry's own
-      // client (its own work item), span, service, and line.
+      // client (its own work item), span, service, and line — before any new
+      // draw runs.
       let oldClientId: string | null = null;
       if (entry_id && oldEntrySpan?.work_item_id && oldEntrySpan.work_item_type) {
         oldClientId = await getClientIdForWorkItem(trx, tenant, oldEntrySpan.work_item_id as string, oldEntrySpan.work_item_type as string);
@@ -739,6 +719,37 @@ export const saveTimeEntry = withAuth(async (
         } catch (bucketError) {
           if (isBucketUsageError(bucketError)) throw bucketError;
           throw new Error(`Bucket usage reversal failed for time entry ${resultingEntry?.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+        }
+      }
+
+      // New side: apply the saved entry's burn when it resolves to a pool.
+      let newClientId: string | null = null;
+      if (resultingEntry?.work_item_id && resultingEntry.work_item_type) {
+        newClientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+      }
+      if (newClientId) {
+        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+          try {
+            const appliedDelta = await adjustTimeSpanDraw(
+              trx,
+              tenant,
+              newClientId,
+              {
+                service_id: resultingEntry.service_id,
+                start_time: resultingEntry.start_time,
+                end_time: resultingEntry.end_time,
+                billable_duration: resultingEntry.billable_duration,
+                contract_line_id: resultingEntry.contract_line_id ?? null,
+              },
+              1,
+            );
+            if (appliedDelta !== 0) {
+              console.log(`Applied new bucket usage for entry ${resultingEntry.entry_id} (weighted ${appliedDelta})`);
+            }
+          } catch (bucketError) {
+            if (isBucketUsageError(bucketError)) throw bucketError;
+            throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+          }
         }
       }
       // --- End Bucket Usage Update Logic ---
