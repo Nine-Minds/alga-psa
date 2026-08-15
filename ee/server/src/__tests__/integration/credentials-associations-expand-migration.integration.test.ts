@@ -115,6 +115,11 @@ describe('credentials associations expand migration — down preflight-abort (is
     db = connectTo(dbName);
     db2 = connectTo(dbName);
     await db.raw('select 1');
+    // Pre-warm db2's connection: the race test's concurrent writer must
+    // dispatch its INSERT within the gate window, not pay pool-connect latency
+    // (a late dispatch would be rejected by the already-reverted schema and
+    // defeat the race).
+    await db2.raw('select 1');
 
     // Bootstrap the full CE migration chain so all prerequisite tables (tenants,
     // clients, users, assets, ...) and the credential tables exist in the
@@ -135,9 +140,17 @@ describe('credentials associations expand migration — down preflight-abort (is
    * A refused down leaves the schema fully migrated, so tests 1/2 never need a
    * reset. A successful down (test 3) reverts the schema; this repairs it by
    * re-running only the expand up (idempotent against the pre-expansion shape).
+   *
+   * The race test's fail-closed branch (b) — a concurrent ref write lands and a
+   * guard step refuses mid-DDL — can leave the two partial unique indexes
+   * dropped even though the credential_ref column survives, so the repair also
+   * re-runs up when the expanded-schema index surface is missing.
    */
   async function ensureMigrated(): Promise<void> {
-    if (!(await db.schema.hasColumn('credential_associations', 'credential_ref'))) {
+    if (
+      !(await db.schema.hasColumn('credential_associations', 'credential_ref')) ||
+      !(await indexExists('credential_associations_ref_entity_unique'))
+    ) {
       await expandMigration.up(db);
     }
   }
@@ -330,9 +343,9 @@ describe('credentials associations expand migration — down preflight-abort (is
 
     // Gate the table with a SHARE UPDATE EXCLUSIVE lock the test holds: SUE
     // conflicts with ACCESS EXCLUSIVE (the fixed down's explicit preflight lock
-    // AND every DDL lock) but is compatible with plain SELECT, so it does NOT
-    // block the pre-fix count — it only blocks the pre-fix down at its FIRST
-    // DDL, AFTER the count already ran.
+    // AND every DDL lock) and with the concurrent INSERT's ROW EXCLUSIVE, but
+    // is compatible with plain SELECT, so it does NOT block the pre-fix count —
+    // it only blocks the pre-fix down at its FIRST DDL, AFTER the count ran.
     let releaseGate!: () => void;
     const gate = new Promise<void>((resolve) => {
       releaseGate = resolve;
@@ -350,18 +363,22 @@ describe('credentials associations expand migration — down preflight-abort (is
     try {
       const downPromise = expandMigration.down(db);
 
-      // The fixed down blocks at its PREFLIGHT lock (its first statement),
-      // BEFORE the count runs. Pre-fix down never issues a LOCK TABLE, so this
-      // observation cannot match: the pre-fix down is gated only at its first
-      // DDL, after an unlocked count. The atomicity of the preflight is exactly
-      // what the fix adds.
-      const preflightLockObserved = await waitForDownPreflightLock();
+      // The down is now blocked acquiring ACCESS EXCLUSIVE on the table — the
+      // fixed down at its PREFLIGHT LOCK (before the count), the pre-fix down
+      // at its first DDL (after an unlocked count). Under the fixed code the
+      // count still has not run; under the pre-fix code it has.
+      const downBlocked = await waitForPendingLock('AccessExclusiveLock');
+      expect(downBlocked).toBe(true);
 
-      // Concurrent ref-only write on a SEPARATE connection. While down is
-      // gated at its preflight lock, Postgres's lock queue blocks this write
-      // until down finishes; it then lands on the narrowed schema and is
-      // rejected — it is never silently absorbed by DROP COLUMN. Start it as a
-      // promise (it stays queued) and await it AFTER down has completed.
+      // Concurrent ref-only write on a SEPARATE, PRE-WARMED connection. It is
+      // queued (pending ROW EXCLUSIVE) behind the down's ACCESS EXCLUSIVE while
+      // the gate is still held — that is the guarantee that it is in flight
+      // inside the vulnerable window and not dispatched late. Against the
+      // pre-fix down this write commits into the still-expanded schema and is
+      // then SILENTLY DROPPED by DROP COLUMN. Against the fixed down it is
+      // serialized by the preflight: it lands only after the preflight count
+      // certified a clean table, and the fail-closed DDL order then refuses
+      // (SET NOT NULL) rather than drop it.
       const insertOutcomeP = db2('credential_associations')
         .insert({
           tenant: tenantId,
@@ -371,22 +388,29 @@ describe('credentials associations expand migration — down preflight-abort (is
           entity_type: 'asset',
         })
         .then(() => 'committed' as const, () => 'rejected' as const);
+      const insertQueued = await waitForPendingLock('RowExclusiveLock');
+      expect(insertQueued).toBe(true);
 
       releaseGate();
       await holder;
       expect(gateError).toBeNull();
-      expect(preflightLockObserved).toBe(true);
 
-      // The race has exactly two FAIL-CLOSED outcomes, and which one occurs is
-      // a genuine scheduling matter (whether the concurrent INSERT's request
-      // reaches the server before or after down's guard DDL). Both must be
-      // accepted — the invariant under test is that a ref-only row is never
-      // SILENTLY dropped, never absorbed by the credential_ref DROP COLUMN:
+      // The race has exactly two FAIL-CLOSED outcomes for the FIXED down, and
+      // which one occurs is a genuine scheduling matter (whether the concurrent
+      // INSERT's request reaches the server before or after down's guard DDL).
+      // Both must be accepted — the invariant under test is that a ref-only row
+      // is never SILENTLY dropped, never absorbed by the credential_ref DROP
+      // COLUMN:
       //   (a) down succeeds   => guard 1 (SET NOT NULL) won the race, the
       //       concurrent insert is REJECTED against the narrowed schema, the
       //       column is gone, only the representable row remains; or
       //   (b) the insert lands => guard 1 fails, down is REFUSED, the ref-only
       //       row and the credential_ref column both survive untouched.
+      //
+      // The PRE-FIX down cannot satisfy either branch: its unlocked count saw a
+      // clean table, the insert then commits into the expanded schema and is
+      // dropped by DROP COLUMN, and the down "succeeds" — branch (b)'s
+      // `downRefused === true` fails.
       let downRefused = false;
       try {
         await downPromise;
@@ -416,20 +440,27 @@ describe('credentials associations expand migration — down preflight-abort (is
     }
   });
 
-  /** Poll pg_stat_activity until the down connection is waiting on the preflight LOCK TABLE. */
-  async function waitForDownPreflightLock(timeoutMs = 10_000): Promise<boolean> {
+  /**
+   * Poll pg_locks until a session other than this probe holds a PENDING
+   * (granted=false) `mode` lock request on credential_associations. Block
+   * detection is lock-table driven, never pg_stat_activity query text: a
+   * lock-blocked statement can be rendered 'idle in transaction' with a stale
+   * query, and the down's LOCK TABLE text is not the only 'active' statement.
+   */
+  async function waitForPendingLock(mode: 'AccessExclusiveLock' | 'RowExclusiveLock', timeoutMs = 10_000): Promise<boolean> {
     const deadline = Date.now() + timeoutMs;
     const probeSql = `
       SELECT count(*)::int AS c
-      FROM pg_stat_activity
-      WHERE datname = current_database()
-        AND pid <> pg_backend_pid()
-        AND state = 'active'
-        AND wait_event_type = 'Lock'
-        AND query ILIKE '%LOCK TABLE credential_associations IN ACCESS EXCLUSIVE MODE%';
+      FROM pg_locks l
+      JOIN pg_class c ON c.oid = l.relation
+      WHERE l.pid <> pg_backend_pid()
+        AND l.granted = false
+        AND l.locktype = 'relation'
+        AND l.mode = ?
+        AND c.relname = 'credential_associations';
     `;
     while (Date.now() < deadline) {
-      const result = await db.raw(probeSql);
+      const result = await db.raw(probeSql, [mode]);
       if (Number(result.rows?.[0]?.c ?? 0) > 0) return true;
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
