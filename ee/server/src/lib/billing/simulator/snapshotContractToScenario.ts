@@ -727,6 +727,11 @@ function buildTemplateScenarioLine(
       const pool =
         templatePoolRows.find((row) => row.bucket_id === config?.config_id) ??
         null;
+      const templateMember = pool
+        ? (poolMembersByBucket.get(pool.bucket_id)?.find(
+            (member) => member.service_id === membership.service_id,
+          ) ?? null)
+        : null;
       configuration = {
         configuration_type: "Bucket",
         total_minutes: Number(bucket?.total_minutes ?? pool?.total_minutes ?? 0),
@@ -736,17 +741,14 @@ function buildTemplateScenarioLine(
         pool_id: pool?.bucket_id ?? null,
         pool_name: pool?.bucket_name ?? null,
         covers_all_services: Boolean(pool?.covers_all_services),
+        is_pool_member: templateMember !== null,
         after_hours_multiplier:
           pool?.after_hours_multiplier != null
             ? Number(pool.after_hours_multiplier)
             : null,
         business_hours_schedule_id: pool?.business_hours_schedule_id ?? null,
-        burn_multiplier: pool
-          ? Number(
-              poolMembersByBucket.get(pool.bucket_id)?.find(
-                (member) => member.service_id === membership.service_id,
-              )?.burn_multiplier ?? 1,
-            )
+        burn_multiplier: templateMember
+          ? Number(templateMember.burn_multiplier)
           : 1,
       };
     } else {
@@ -948,6 +950,11 @@ function poolMembersByBucketGet(
  * contract lines and template lines so Hourly, Usage, and Bucket service
  * configs all preserve scope, membership, multipliers, the schedule reference,
  * and after-hours settings across a snapshot → restore round-trip.
+ *
+ * `is_pool_member` records whether the service matched via an explicit
+ * membership row (multiplier override) rather than catch-all non-member
+ * coverage, so restore never invents or drops membership rows — a 1x
+ * non-member and a 1x member are distinct states.
  */
 function resolveScenarioPoolRef(
   linePools: PoolRow[],
@@ -973,6 +980,11 @@ function resolveScenarioPoolRef(
     pool_id: pool.bucket_id,
     pool_name: pool.bucket_name,
     covers_all_services: Boolean(pool.covers_all_services),
+    // Discriminate explicit membership from catch-all non-member coverage:
+    // derived from which pool matched the scope rule (never from the
+    // multiplier, which defaults to 1 for a non-member and is therefore
+    // indistinguishable from a 1x membership row).
+    is_pool_member: memberPool !== null,
     after_hours_multiplier:
       pool.after_hours_multiplier != null
         ? Number(pool.after_hours_multiplier)

@@ -37,6 +37,12 @@ export interface ScenarioPoolRef {
   pool_id?: string | null;
   pool_name?: string | null;
   covers_all_services?: boolean;
+  /** True = the service has an explicit membership row in the pool (a
+   * multiplier override, even at 1x); false = the service draws from the pool
+   * only via the line catch-all as a non-member. Required so snapshot →
+   * restore does not confuse a 1x catch-all non-member with a 1x explicit
+   * member. */
+  is_pool_member?: boolean;
   burn_multiplier?: number;
   after_hours_multiplier?: number | null;
   business_hours_schedule_id?: string | null;

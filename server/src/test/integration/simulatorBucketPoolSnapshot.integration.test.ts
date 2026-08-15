@@ -186,6 +186,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
           pool_id: string | null;
           pool_name: string | null;
           covers_all_services: boolean;
+          is_pool_member: boolean;
           burn_multiplier: number;
           after_hours_multiplier: number | null;
           business_hours_schedule_id: string | null;
@@ -198,6 +199,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       expect(catchAll.pool_id).toBe(catchAllBucketId);
       expect(catchAll.pool_name).toBe('Sim catch-all');
       expect(catchAll.covers_all_services).toBe(true);
+      expect(catchAll.is_pool_member).toBe(true);
       expect(catchAll.burn_multiplier).toBe(2);
       expect(catchAll.after_hours_multiplier).toBe(1.5);
 
@@ -205,12 +207,14 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       const memberB = serviceConfig(serviceB);
       expect(memberB.pool_id).toBe(multiBucketId);
       expect(memberB.covers_all_services).toBe(false);
+      expect(memberB.is_pool_member).toBe(true);
       expect(memberB.burn_multiplier).toBe(1);
       expect(memberB.after_hours_multiplier).toBeNull();
 
       const memberC = serviceConfig(serviceC);
       expect(memberC.pool_id).toBe(multiBucketId);
       expect(memberC.covers_all_services).toBe(false);
+      expect(memberC.is_pool_member).toBe(true);
       expect(memberC.burn_multiplier).toBe(3);
 
       // Pool identity is never masqueraded as a service: every service_id on
@@ -470,6 +474,7 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       expect(h1.pool_id).toBe(hCatchAllId);
       expect(h1.pool_name).toBe('H catch-all');
       expect(h1.covers_all_services).toBe(true);
+      expect(h1.is_pool_member).toBe(true);
       expect(h1.burn_multiplier).toBe(2);
       expect(h1.after_hours_multiplier).toBe(1.5);
       expect(h1.business_hours_schedule_id).toBe(scheduleId);
@@ -478,18 +483,23 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       const h2 = configOf(hourlyLine!, hourlyServices.h2);
       expect(h2.pool_id).toBe(hMemberId);
       expect(h2.covers_all_services).toBe(false);
+      expect(h2.is_pool_member).toBe(true);
       expect(h2.burn_multiplier).toBe(1);
       expect(h2.after_hours_multiplier).toBeNull();
       expect(h2.business_hours_schedule_id).toBeNull();
 
       const h3 = configOf(hourlyLine!, hourlyServices.h3);
       expect(h3.pool_id).toBe(hMemberId);
+      expect(h3.is_pool_member).toBe(true);
       expect(h3.burn_multiplier).toBe(2.5);
 
-      // Hourly line — non-member draws from the catch-all at 1x with the rule.
+      // Hourly line — non-member draws from the catch-all at 1x with the rule:
+      // the 1x multiplier is the DEFAULT for a non-member, not a membership
+      // override, so the discriminator must read false.
       const h4 = configOf(hourlyLine!, hourlyServices.h4);
       expect(h4.pool_id).toBe(hCatchAllId);
       expect(h4.covers_all_services).toBe(true);
+      expect(h4.is_pool_member).toBe(false);
       expect(h4.burn_multiplier).toBe(1);
       expect(h4.after_hours_multiplier).toBe(1.5);
 
@@ -499,12 +509,14 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       expect(u1.unit_of_measure).toBe('GB');
       expect(u1.pool_id).toBe(uMemberId);
       expect(u1.covers_all_services).toBe(false);
+      expect(u1.is_pool_member).toBe(true);
       expect(u1.burn_multiplier).toBe(3);
       expect(u1.after_hours_multiplier).toBeNull();
 
       const u2 = configOf(usageLine!, usageServices.u2);
       expect(u2.pool_id).toBe(uCatchAllId);
       expect(u2.covers_all_services).toBe(true);
+      expect(u2.is_pool_member).toBe(true);
       expect(u2.burn_multiplier).toBe(1.5);
       expect(u2.after_hours_multiplier).toBe(2);
       expect(u2.business_hours_schedule_id).toBe(scheduleId);
@@ -512,12 +524,15 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
       const u3 = configOf(usageLine!, usageServices.u3);
       expect(u3.pool_id).toBe(uCatchAllId);
       expect(u3.covers_all_services).toBe(true);
+      expect(u3.is_pool_member).toBe(false);
       expect(u3.burn_multiplier).toBe(1);
       expect(u3.after_hours_multiplier).toBe(2);
 
       // Restore fidelity: reconstruct the line pools from the scenario configs
       // alone (group services by pool_id) and compare every listed field to the
-      // seeded rows — the proof that snapshot → restore is lossless.
+      // seeded rows — the proof that snapshot → restore is lossless. Membership
+      // rows come ONLY from configs whose is_pool_member discriminator is true;
+      // a catch-all non-member (1x, no override) must never mint a row.
       const reconstructPools = (line: { services: Array<{ service_id: string; configuration: unknown }> }) => {
         const pools = new Map<
           string,
@@ -539,10 +554,12 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
             business_hours_schedule_id: (config.business_hours_schedule_id as string | null) ?? null,
             members: [],
           };
-          entry.members.push({
-            service_id: service.service_id,
-            burn_multiplier: Number(config.burn_multiplier),
-          });
+          if (config.is_pool_member === true) {
+            entry.members.push({
+              service_id: service.service_id,
+              burn_multiplier: Number(config.burn_multiplier),
+            });
+          }
           pools.set(String(config.pool_id), entry);
         }
         return pools;
@@ -557,12 +574,10 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
         after_hours_multiplier: 1.5,
         business_hours_schedule_id: scheduleId,
       });
-      expect(hourlyPools.get(hCatchAllId)!.members).toEqual(
-        expect.arrayContaining([
-          { service_id: hourlyServices.h1, burn_multiplier: 2 },
-          { service_id: hourlyServices.h4, burn_multiplier: 1 },
-        ]),
-      );
+      // Only h1 is an explicit member; h4 (catch-all non-member at 1x) is NOT.
+      expect(hourlyPools.get(hCatchAllId)!.members).toEqual([
+        { service_id: hourlyServices.h1, burn_multiplier: 2 },
+      ]);
       expect(hourlyPools.get(hMemberId)).toMatchObject({
         pool_name: 'H member',
         covers_all_services: false,
@@ -591,12 +606,155 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
         after_hours_multiplier: 2,
         business_hours_schedule_id: scheduleId,
       });
-      expect(usagePools.get(uCatchAllId)!.members).toEqual(
-        expect.arrayContaining([
-          { service_id: usageServices.u2, burn_multiplier: 1.5 },
-          { service_id: usageServices.u3, burn_multiplier: 1 },
-        ]),
-      );
+      // Only u2 is an explicit member; u3 (catch-all non-member at 1x) is NOT.
+      expect(usagePools.get(uCatchAllId)!.members).toEqual([
+        { service_id: usageServices.u2, burn_multiplier: 1.5 },
+      ]);
     });
+  });
+
+  /**
+   * Adversarial fixture: one real Hourly line with a single catch-all pool.
+   * Service A is an EXPLICIT member at 1x (byte-identical multiplier to the
+   * catch-all non-member default), service B is a NON-member drawing from the
+   * catch-all at 1x, and service C is an explicit member at 2x. Without a
+   * membership discriminator, A and B's refs are indistinguishable — the
+   * claimed round-trip invents B's membership row or drops A's.
+   */
+  it('distinguishes 1x explicit catch-all members from 1x catch-all non-members', async () => {
+    const tenant: string = (await db('tenants').first('tenant')).tenant;
+
+    await db
+      .transaction(async (trx) => {
+        (trx as any).client.config.tenant = tenant;
+
+        const serviceTypeId = (await trx('service_types').where({ tenant }).first('id'))?.id
+          ?? (await trx('service_types').first('id'))?.id;
+
+        const contractId = randomUUID();
+        const contractLineId = randomUUID();
+        const catchAllBucketId = randomUUID();
+        const serviceA = randomUUID();
+        const serviceB = randomUUID();
+        const serviceC = randomUUID();
+
+        await trx('contracts').insert({
+          tenant, contract_id: contractId, contract_name: 'Simulator membership contract',
+          billing_frequency: 'monthly', currency_code: 'USD',
+          is_active: true, is_template: false,
+        });
+        await trx('contract_lines').insert({
+          tenant, contract_line_id: contractLineId, contract_id: contractId,
+          contract_line_name: 'Simulator membership line',
+          contract_line_type: 'Hourly', billing_frequency: 'monthly',
+          cadence_owner: 'client', is_template: false, is_active: true,
+        });
+
+        for (const serviceId of [serviceA, serviceB, serviceC]) {
+          await trx('service_catalog').insert({
+            tenant, service_id: serviceId,
+            service_name: `sim-mem-${serviceId.slice(0, 6)}`,
+            billing_method: 'hourly', custom_service_type_id: serviceTypeId,
+            default_rate: 12500, unit_of_measure: 'hour',
+          });
+          await trx('contract_line_services').insert({
+            tenant, contract_line_id: contractLineId, service_id: serviceId,
+          });
+          const configId = randomUUID();
+          await trx('contract_line_service_configuration').insert({
+            tenant, config_id: configId, contract_line_id: contractLineId,
+            service_id: serviceId, configuration_type: 'Hourly',
+            custom_rate: null, quantity: null,
+          });
+          await trx('contract_line_service_hourly_configs').insert({
+            config_id: configId, tenant,
+            hourly_rate: 12500, minimum_billable_time: 15, round_up_to_nearest: 15,
+            created_at: trx.fn.now(), updated_at: trx.fn.now(),
+          });
+        }
+
+        // Catch-all pool covering every service. A is an explicit 1x member
+        // (the adversarial case), C an explicit 2x member, B has NO row.
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: catchAllBucketId, contract_line_id: contractLineId,
+          bucket_name: 'Mem catch-all', total_minutes: 1200, overage_rate: 15000,
+          allow_rollover: true, covers_all_services: true,
+          after_hours_multiplier: null, business_hours_schedule_id: null,
+        });
+        await trx('contract_line_bucket_services').insert([
+          { tenant, bucket_id: catchAllBucketId, contract_line_id: contractLineId, service_id: serviceA, burn_multiplier: 1 },
+          { tenant, bucket_id: catchAllBucketId, contract_line_id: contractLineId, service_id: serviceC, burn_multiplier: 2 },
+        ]);
+
+        const scenario = await snapshotContractToScenario(
+          trx,
+          tenant,
+          { contractId, forceProfile: true },
+        );
+
+        const line = scenario.lines.find((l) => l.key === contractLineId);
+        expect(line).toBeDefined();
+        const hourlyServices = line!.services.filter(
+          (s) => s.configuration.configuration_type === 'Hourly',
+        );
+        expect(hourlyServices).toHaveLength(3);
+
+        const serviceConfig = (serviceId: string) => {
+          const service = hourlyServices.find((s) => s.service_id === serviceId);
+          expect(service).toBeDefined();
+          return service!.configuration as unknown as {
+            pool_id: string | null;
+            covers_all_services: boolean;
+            is_pool_member: boolean;
+            burn_multiplier: number;
+          };
+        };
+
+        // A: explicit member at 1x — indistinguishable from a non-member by
+        // multiplier alone; only the discriminator separates them.
+        const memberA = serviceConfig(serviceA);
+        expect(memberA.pool_id).toBe(catchAllBucketId);
+        expect(memberA.covers_all_services).toBe(true);
+        expect(memberA.is_pool_member).toBe(true);
+        expect(memberA.burn_multiplier).toBe(1);
+
+        // B: non-member covered by the catch-all at the default 1x.
+        const nonMemberB = serviceConfig(serviceB);
+        expect(nonMemberB.pool_id).toBe(catchAllBucketId);
+        expect(nonMemberB.covers_all_services).toBe(true);
+        expect(nonMemberB.is_pool_member).toBe(false);
+        expect(nonMemberB.burn_multiplier).toBe(1);
+
+        // C: explicit member at 2x.
+        const memberC = serviceConfig(serviceC);
+        expect(memberC.pool_id).toBe(catchAllBucketId);
+        expect(memberC.covers_all_services).toBe(true);
+        expect(memberC.is_pool_member).toBe(true);
+        expect(memberC.burn_multiplier).toBe(2);
+
+        // Round-trip: reconstruct membership from the refs alone. Exactly one
+        // row for A and one for C; ZERO for B — even though A and B share the
+        // same 1x multiplier.
+        const reconstructedMembers = hourlyServices
+          .filter(
+            (s) =>
+              (s.configuration as unknown as { is_pool_member?: boolean })
+                .is_pool_member === true,
+          )
+          .map((s) => ({
+            service_id: s.service_id,
+            burn_multiplier: (s.configuration as unknown as { burn_multiplier: number }).burn_multiplier,
+          }));
+        expect(reconstructedMembers).toEqual([
+          { service_id: serviceA, burn_multiplier: 1 },
+          { service_id: serviceC, burn_multiplier: 2 },
+        ]);
+
+        throw new Error('__rollback__');
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === '__rollback__') return;
+        throw error;
+      });
   });
 });
