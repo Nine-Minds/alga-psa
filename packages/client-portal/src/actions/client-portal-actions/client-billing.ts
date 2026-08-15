@@ -381,6 +381,7 @@ export const getClientCreditSummary = withAuth(async (user, { tenant }): Promise
           amount: Number(row.amount ?? 0),
           remaining_amount: Number(row.remaining_amount ?? 0),
           created_at: String(row.created_at),
+          // LEVERAGE: friction pg-date-stringify — same unsafe String(pg DATE) mapping as the hour-block surface (fixed on the branch); consolidate on toCalendarDateString.
           expiration_date: row.expiration_date ? String(row.expiration_date) : null,
           is_expired: Boolean(row.is_expired),
           currency_code: (row.currency_code as string) ?? null,
@@ -1372,10 +1373,14 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
         const remaining = Number(row.remaining_minutes ?? 0);
         const total = Number(row.total_minutes ?? 0);
         let expiringSoonDays: number | null = null;
+        // Normalize the pg DATE column to a plain YYYY-MM-DD string (node-postgres
+        // materializes DATE as a local-midnight Date, so String() would emit a
+        // locale/timezone-dependent blob). The same value also drives the badge.
+        let expirationDate: string | null = null;
         if (row.expiration_date) {
-          const rawExpiration = row.expiration_date as string | Date | null;
-          const expDate = toCalendarDateString(rawExpiration);
+          const expDate = toCalendarDateString(row.expiration_date as string | Date | null);
           if (expDate) {
+            expirationDate = expDate;
             const days = calendarDayDifference(today, expDate);
             if (days <= 7 && days >= 0) {
               expiringSoonDays = days;
@@ -1389,7 +1394,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           remaining_minutes: remaining,
           hours_remaining: Math.round((remaining / 60) * 10) / 10,
           hours_total: Math.round((total / 60) * 10) / 10,
-          expiration_date: row.expiration_date ? String(row.expiration_date) : null,
+          expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
           expiring_soon_days: expiringSoonDays,
@@ -1448,7 +1453,7 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
         allocation_id: String(row.allocation_id),
         minutes: Number(row.minutes ?? 0),
         hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
-        entry_date: row.work_date ? String(row.work_date) : null,
+        entry_date: toCalendarDateString(row.work_date as string | Date | null),
         work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
       }));
     });

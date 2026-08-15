@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
@@ -164,6 +164,9 @@ function assertTz(zone: string, expectedOffsetMinutes: number) {
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('allocates FIFO across blocks, respects scope, reverses, and reconciles idempotently', async () => {
     const db = connect();
     const tenant = uuidv4();
@@ -535,6 +538,72 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
       expiredDay: '2026-08-30',
       todayDay: '2026-08-31',
     });
+  });
+
+  // The exact Berlin availability boundary: an instant where the UTC calendar
+  // day and the Europe/Berlin calendar day disagree (2026-08-31T22:30Z = Berlin
+  // 2026-09-01 00:30). A block expiring 2026-08-31 is still "today" on the UTC
+  // calendar but already "yesterday" on the Berlin calendar, so availability
+  // must flip on the TENANT's configured timezone alone — the block, the frozen
+  // instant, and the worker host (UTC) are identical across both tenants. The
+  // comparison is inclusive: a block expiring the tenant's today stays available
+  // through the end of that local day (verified on the non-straddle side).
+  it('available-minutes flips at the UTC/Berlin calendar straddle on tenant timezone alone', async () => {
+    const originalTz = process.env.TZ;
+    assertTz('UTC', 0); // worker stays on UTC; only the tenant timezone differs
+    const db = connect();
+    const tenants: string[] = [];
+
+    try {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-08-31T22:30:00.000Z'));
+      expect(toCalendarDateStringInTimeZone(new Date(), 'Europe/Berlin'), 'Berlin must already be 2026-09-01').toBe('2026-09-01');
+      expect(new Date().toISOString().slice(0, 10), 'UTC worker must still read 2026-08-31').toBe('2026-08-31');
+
+      const berlinTenant = uuidv4();
+      tenants.push(berlinTenant);
+      const berlinClientId = uuidv4();
+      await db('tenants').insert({ tenant: berlinTenant, client_name: 'HB Straddle Berlin', email: 'hbstraddle-berlin@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant: berlinTenant, client_id: berlinClientId, client_name: 'HB Straddle Berlin Client' });
+      const { service_id: berlinSvc } = await insertService(db, berlinTenant, 'Straddle Svc', 1);
+      await db('tenant_settings').insert({ tenant: berlinTenant, settings: { timezone: 'Europe/Berlin' } });
+      await insertBlock(db, berlinTenant, berlinClientId, berlinSvc, uuidv4(), '2026-08-31');
+      expect(await getAvailableHourBlockMinutes(db, berlinTenant, berlinClientId), 'Berlin is already 09-01: the 08-31 block is expired').toBe(0);
+
+      const utcTenant = uuidv4();
+      tenants.push(utcTenant);
+      const utcClientId = uuidv4();
+      await db('tenants').insert({ tenant: utcTenant, client_name: 'HB Straddle UTC', email: 'hbstraddle-utc@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant: utcTenant, client_id: utcClientId, client_name: 'HB Straddle UTC Client' });
+      const { service_id: utcSvc } = await insertService(db, utcTenant, 'Straddle Svc UTC', 1);
+      await insertBlock(db, utcTenant, utcClientId, utcSvc, uuidv4(), '2026-08-31');
+      expect(await getAvailableHourBlockMinutes(db, utcTenant, utcClientId), 'UTC fallback still reads 08-31: the 08-31 block is available').toBe(600);
+
+      // Non-straddle side: one hour earlier Berlin is still 08-31 23:30, so the
+      // same block must still be available — expiration is inclusive through the
+      // end of the tenant-local day.
+      vi.setSystemTime(new Date('2026-08-31T21:30:00.000Z'));
+      expect(toCalendarDateStringInTimeZone(new Date(), 'Europe/Berlin'), 'Berlin must still read 2026-08-31').toBe('2026-08-31');
+      expect(await getAvailableHourBlockMinutes(db, berlinTenant, berlinClientId), 'Berlin is still 08-31: the 08-31 block is available through the local day').toBe(600);
+    } finally {
+      vi.useRealTimers();
+      process.env.TZ = originalTz;
+      for (const tenant of tenants) {
+        await db('hour_blocks').where({ tenant }).delete();
+        await db('hour_block_service_scopes').where({ tenant }).delete();
+        await db('hour_block_time_allocations').where({ tenant }).delete();
+        await db('hour_block_audit').where({ tenant }).delete();
+        await db('tenant_settings').where({ tenant }).delete();
+        await db('time_entries').where({ tenant }).delete();
+        await db('tickets').where({ tenant }).delete();
+        await db('service_catalog').where({ tenant }).delete();
+        await db('service_types').where({ tenant }).delete();
+        await db('users').where({ tenant }).delete();
+        await db('clients').where({ tenant }).delete();
+        await db('tenants').where({ tenant }).delete();
+      }
+      await db.destroy();
+    }
   });
 });
 

@@ -161,7 +161,7 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                           {(allocation.minutes / 60).toFixed(1)} hrs
                         </p>
                         <p className="truncate text-xs text-[rgb(var(--color-text-500))]">
-                          {allocation.user_name ?? ''}{allocation.entry_date ? ` · ${formatDateOnly(new Date(allocation.entry_date))}` : ''}
+                          {allocation.user_name ?? ''}{allocation.entry_date ? ` · ${formatCalendarDate(allocation.entry_date) ?? ''}` : ''}
                         </p>
                       </div>
                     </li>

@@ -667,7 +667,7 @@ export const getHourBlockDetail = withAuth(async (
           'hba.created_at',
           'te.work_item_id',
           'te.work_item_type',
-          'te.work_date',
+          { entry_date: 'te.work_date' },
           'te.start_time',
           'u.first_name as user_first_name',
           'u.last_name as user_last_name',
@@ -681,6 +681,9 @@ export const getHourBlockDetail = withAuth(async (
         const { user_first_name, user_last_name, user_username, ...rest } = a;
         return {
           ...rest,
+          // pg DATE (work_date) is a local-midnight Date; normalize to a plain
+          // YYYY-MM-DD so the drawer never reparses a date-only value.
+          entry_date: toCalendarDateString(rest.entry_date as string | Date | null | undefined),
           user_name: [user_first_name, user_last_name].filter(Boolean).join(' ').trim() || user_username || null,
         };
       });
