@@ -734,7 +734,9 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
 
         // Round-trip: reconstruct membership from the refs alone. Exactly one
         // row for A and one for C; ZERO for B — even though A and B share the
-        // same 1x multiplier.
+        // same 1x multiplier. The snapshot's service ordering is nondeterministic
+        // for this fixture (names derive from random uuids), so sort by the
+        // deterministic multiplier before comparing.
         const reconstructedMembers = hourlyServices
           .filter(
             (s) =>
@@ -744,7 +746,8 @@ describe.skipIf(!ENABLED)('simulator bucket pool snapshot (real DB)', () => {
           .map((s) => ({
             service_id: s.service_id,
             burn_multiplier: (s.configuration as unknown as { burn_multiplier: number }).burn_multiplier,
-          }));
+          }))
+          .sort((a, b) => a.burn_multiplier - b.burn_multiplier);
         expect(reconstructedMembers).toEqual([
           { service_id: serviceA, burn_multiplier: 1 },
           { service_id: serviceC, burn_multiplier: 2 },
