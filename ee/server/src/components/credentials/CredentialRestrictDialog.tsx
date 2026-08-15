@@ -41,6 +41,8 @@ export function CredentialRestrictDialog({
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [detailLoadFailed, setDetailLoadFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export function CredentialRestrictDialog({
     setIsRestricted(credential.isRestricted);
     setGrants([]);
     setError(null);
+    setDetailLoadFailed(false);
     getAllUsers(false)
       .then(setUsers)
       .catch(() => undefined);
@@ -58,16 +61,40 @@ export function CredentialRestrictDialog({
         }
       })
       .catch(() => undefined);
-    if (credential.source === 'alga') {
-      getCredential(credential.id)
-        .then((detail) => {
-          if (detail) {
-            setIsRestricted(detail.isRestricted);
-            setGrants(detail.grants);
-          }
-        })
-        .catch(() => undefined);
+    if (credential.source !== 'alga') {
+      // Hudu rows carry no per-item grants; there is nothing to load and Save
+      // is disabled for them anyway.
+      setIsLoadingDetail(false);
+      return;
     }
+    // Save must stay inert until the authoritative detail (real grant list)
+    // for THIS credential has loaded: clicking Save before it resolves would
+    // replace the stored grants with the seed's empty list. A failure to load
+    // is surfaced instead of silently proceeding, and Save stays blocked. The
+    // cancelled flag + id capture discard any in-flight response from a
+    // previously shown credential.
+    setIsLoadingDetail(true);
+    const credentialId = credential.id;
+    let cancelled = false;
+    getCredential(credentialId)
+      .then((detail) => {
+        if (cancelled) return;
+        if (detail) {
+          setIsRestricted(detail.isRestricted);
+          setGrants(detail.grants);
+        }
+        setIsLoadingDetail(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError(t('credentials.restrict.loadFailed'));
+        // Without the real grants a save would wipe them, so Save stays blocked.
+        setDetailLoadFailed(true);
+        setIsLoadingDetail(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [credential]);
 
   if (!credential) {
@@ -89,7 +116,7 @@ export function CredentialRestrictDialog({
   };
 
   const handleSave = async () => {
-    if (!credential) return;
+    if (!credential || isLoadingDetail || detailLoadFailed) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -129,9 +156,13 @@ export function CredentialRestrictDialog({
           <Button
             id="credential-restrict-save"
             onClick={handleSave}
-            disabled={isSaving || credential.source === 'hudu'}
+            disabled={isSaving || isLoadingDetail || detailLoadFailed || credential.source === 'hudu'}
           >
-            {isSaving ? t('credentials.restrict.saving') : t('credentials.restrict.save')}
+            {isSaving
+              ? t('credentials.restrict.saving')
+              : isLoadingDetail
+                ? t('credentials.restrict.loading')
+                : t('credentials.restrict.save')}
           </Button>
         </>
       }
