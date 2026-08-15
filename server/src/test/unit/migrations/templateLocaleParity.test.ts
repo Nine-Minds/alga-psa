@@ -192,9 +192,8 @@ function emailTemplateDefs() {
   // Modules not yet folded into the pt migration's getter list.
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/opportunities/opportunityWeeklyDigest.cjs')).getTemplate());
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/rmm/rmmAlertTriggered.cjs')).getTemplate());
-  const prepaidEmail = require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBalanceAlerts.cjs'));
-  defs.push(prepaidEmail.getCreditTemplate());
-  defs.push(prepaidEmail.getBucketTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidCreditLowBalance.cjs')).getTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBucketThresholdReached.cjs')).getTemplate());
   return defs;
 }
 

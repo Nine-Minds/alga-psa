@@ -16,7 +16,8 @@ import {
 const require = createRequire(import.meta.url);
 const migrationsDir = path.resolve(__dirname, '../../../migrations');
 const { SUPPORTED_LANGUAGES } = require(path.join(migrationsDir, 'utils/templates/_shared/constants.cjs'));
-const emailModule = require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBalanceAlerts.cjs'));
+const creditEmailModule = require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidCreditLowBalance.cjs'));
+const bucketEmailModule = require(path.join(migrationsDir, 'utils/templates/email/billing/prepaidBucketThresholdReached.cjs'));
 const internalModule = require(path.join(migrationsDir, 'utils/templates/internal/prepaidBalanceAlerts.cjs'));
 
 function placeholdersOf(text: string): string[] {
@@ -33,14 +34,14 @@ describe('prepaid balance alert notification definitions', () => {
   });
 
   it('ships every billing-email locale for both email templates', () => {
-    for (const template of emailModule.getTemplates()) {
+    for (const template of [creditEmailModule.getTemplate(), bucketEmailModule.getTemplate()]) {
       const locales = template.translations.map((t: { language: string }) => t.language).sort();
       expect([...locales].sort()).toEqual([...SUPPORTED_LANGUAGES].sort());
     }
   });
 
   it('renders the localized bucket usage-period values in every email variant', () => {
-    const template = emailModule.getBucketTemplate();
+    const template = bucketEmailModule.getTemplate();
     for (const translation of template.translations as Array<{ htmlContent: string; textContent: string }>) {
       expect(translation.htmlContent).toContain('{{alert.periodStart}}');
       expect(translation.htmlContent).toContain('{{alert.periodEnd}}');

@@ -24,7 +24,8 @@ const { upsertEmailCategoriesAndSubtypes } = require('./utils/templates/_shared/
 const { upsertEmailTemplates } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
 const { upsertCategoriesAndSubtypes } = require('./utils/templates/internal/categoriesAndSubtypes.cjs');
 const { upsertInternalTemplates } = require('./utils/templates/_shared/upsertInternalTemplates.cjs');
-const { getTemplates: getEmailTemplates } = require('./utils/templates/email/billing/prepaidBalanceAlerts.cjs');
+const { getTemplate: getCreditEmailTemplate } = require('./utils/templates/email/billing/prepaidCreditLowBalance.cjs');
+const { getTemplate: getBucketEmailTemplate } = require('./utils/templates/email/billing/prepaidBucketThresholdReached.cjs');
 const { TEMPLATES: INTERNAL_TEMPLATES } = require('./utils/templates/internal/prepaidBalanceAlerts.cjs');
 
 const HIGH_PRIORITY_INTERNAL_SUBTYPES = ['prepaid-credit-low-balance', 'prepaid-bucket-threshold-reached'];
@@ -220,7 +221,7 @@ exports.up = async function up(knex) {
   // ---------------------------------------------------------------------------
   await upsertEmailCategoriesAndSubtypes(knex);
   await upsertCategoriesAndSubtypes(knex);
-  await upsertEmailTemplates(knex, getEmailTemplates());
+  await upsertEmailTemplates(knex, [getCreditEmailTemplate(), getBucketEmailTemplate()]);
   await upsertInternalTemplates(knex, INTERNAL_TEMPLATES);
 
   // Internal alerts are high-priority warnings by default (29.8.46 priority
