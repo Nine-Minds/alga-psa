@@ -6,7 +6,7 @@ import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared
 import { getInstallConfig } from './install-config';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
 import { getTenantFromAuth, getUserInfoFromAuth, assertAccess, ExtensionGatewayAccessError } from './gateway/auth';
-import { startExtensionExecution, finishExtensionExecution } from 'server/src/lib/extensions/gateway/executionAudit';
+import { startExtensionExecution, finishExtensionExecution } from './gateway/executionAudit';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 type ProxyMethod = Exclude<Method, 'OPTIONS'>;

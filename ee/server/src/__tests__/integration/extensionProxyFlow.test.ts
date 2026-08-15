@@ -59,7 +59,7 @@ vi.mock('@ee/lib/extensions/installConfig', () => ({
   getInstallConfig: mocks.getInstallConfig,
 }));
 
-vi.mock('server/src/lib/extensions/gateway/executionAudit', () => ({
+vi.mock('../../../../../packages/product-ext-proxy/ee/gateway/executionAudit', () => ({
   startExtensionExecution: mocks.startExtensionExecution,
   finishExtensionExecution: mocks.finishExtensionExecution,
 }));

@@ -37,7 +37,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
 }));
 

@@ -6,13 +6,13 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 export {
   assertAccess,
   ExtensionGatewayAccessError,
-} from 'server/src/lib/extensions/gateway/access';
+} from './access';
 export type {
   AssertExtensionAccessInput,
   AuthorizedExtensionAccess,
   ExtensionGatewayAccessErrorCode,
   ExtensionGatewayPrincipal,
-} from 'server/src/lib/extensions/gateway/access';
+} from './access';
 
 export interface ExtProxyUserInfo {
   user_id: string;
