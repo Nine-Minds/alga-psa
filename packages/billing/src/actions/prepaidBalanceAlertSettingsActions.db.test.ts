@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   createTestDbConnection,
   wireLocalTestDbEnv,
-} from '../../../../server/test-utils/dbConfig';
+} from './_dbTestUtils';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
