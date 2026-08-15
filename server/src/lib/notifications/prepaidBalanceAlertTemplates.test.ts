@@ -68,7 +68,7 @@ describe('prepaid balance alert notification definitions', () => {
     });
     const bucketContext = buildInternalAlertContext('Acme', {
       percent: 80,
-      usedPercent: 92.5,
+      usedPercent: '92.5',
       capacity: '100 h',
       used: '92.5 h',
       link: 'https://app.example/msp/clients/c1?tab=billing',
@@ -100,12 +100,12 @@ describe('prepaid balance alert notification definitions', () => {
 
     const bucket = buildBucketAlertContext('Acme', {
       percent: 80,
-      usedPercent: 92.5,
+      usedPercent: '92.5',
       capacity: '100 h',
       used: '92.5 h',
       link: 'https://portal.example/client-portal/billing',
     }) as { client: { name: string }; alert: Record<string, unknown> };
     expect(bucket.client.name).toBe('Acme');
-    expect(bucket.alert).toMatchObject({ percent: 80, usedPercent: 92.5, capacity: '100 h', used: '92.5 h' });
+    expect(bucket.alert).toMatchObject({ percent: 80, usedPercent: '92.5', capacity: '100 h', used: '92.5 h' });
   });
 });

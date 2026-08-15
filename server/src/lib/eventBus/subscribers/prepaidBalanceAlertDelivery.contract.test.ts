@@ -13,11 +13,36 @@ describe('prepaid balance alert delivery wiring contract', () => {
     expect(claimBlock).toContain('.where({ tenant: tenantId, delivery_id: row.delivery_id })');
   });
 
+  it('excludes resolved alerts from the claim predicate inside the same transaction', () => {
+    const claimBlock = source.slice(source.indexOf('async function claimDeliveries'), source.indexOf('function rolesOf'));
+    expect(claimBlock).toContain(".whereNull('a.resolved_at')");
+  });
+
+  it('terminalizes pending/retrying sends of resolved alerts as superseded inside the claim transaction', () => {
+    const claimBlock = source.slice(source.indexOf('async function claimDeliveries'), source.indexOf('function rolesOf'));
+    expect(claimBlock).toContain('DELIVERY_STATUS_SUPERSEDED');
+    expect(claimBlock).toContain("whereIn('alert_id', db.table('prepaid_balance_alerts').whereNotNull('resolved_at').select('alert_id'))");
+    expect(claimBlock).toContain("status: DELIVERY_STATUS_SUPERSEDED");
+    expect(claimBlock).toContain('summary.superseded');
+    // The claim still runs in the same atomic transaction (no auto-commit split).
+    expect(claimBlock).toContain('.forUpdate()');
+    expect(claimBlock).toContain('.skipLocked()');
+  });
+
+  it('revalidates the parent and current recipient authorization before side effects', () => {
+    const processBlock = source.slice(source.indexOf('async function processDelivery'));
+    expect(processBlock).toContain('authorizedRolesForClaim');
+    expect(processBlock).toContain('claimedAlertIsOpen');
+    expect(processBlock).toContain('supersedeClaimedDelivery');
+    expect(processBlock).toContain('worker_id: delivery.worker_id');
+  });
+
   it('applies the tenant predicate to every delivery-status update, including the internal-channel transaction', () => {
     const internalBlock = source.slice(source.indexOf('if (delivery.channel === DELIVERY_CHANNEL_INTERNAL)'));
     expect(internalBlock).toContain('const db = tenantDb(trx, tenantId);');
     expect(internalBlock).toContain(".table('prepaid_balance_alert_deliveries')");
-    expect(internalBlock).toContain('.where({ tenant: tenantId, delivery_id: delivery.delivery_id })');
+    expect(internalBlock).toContain('tenant: tenantId,');
+    expect(internalBlock).toContain('delivery_id: delivery.delivery_id,');
     // No bare trx(...) updates that bypass the tenant-scoped facade.
     expect(internalBlock).not.toMatch(/trx\(['"]prepaid_balance_alert_deliveries['"]\)/);
   });

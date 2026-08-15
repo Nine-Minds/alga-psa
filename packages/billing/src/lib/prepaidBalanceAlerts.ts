@@ -99,13 +99,12 @@ export function creditDedupeKey(clientId: string, currencyCode: string, episode:
 }
 
 /**
- * Stable dedupe key for one bucket_usage period + configured percentage. The
- * episode is monotonically increasing per (usage_id, percent): re-opening the
- * same period/percentage after a resolution never collides with the resolved
- * row under the (tenant, dedupe_key) unique constraint.
+ * Stable identity for one bucket_usage period + configured percentage. Unlike
+ * credit, bucket alerts do not rearm within the same usage period: returning
+ * to a percentage that already alerted reuses the same logical alert row.
  */
-export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number, episode = 1): string {
-  return `bucket:${bucketUsageId}:${configuredPercent}pct:ep${episode}`;
+export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number): string {
+  return `bucket:${bucketUsageId}:${configuredPercent}pct`;
 }
 
 /** A threshold or currency change resolves the prior episode as policy_changed. */
@@ -140,6 +139,7 @@ export const DELIVERY_STATUS_SENT = 'sent';
 export const DELIVERY_STATUS_SKIPPED = 'skipped';
 export const DELIVERY_STATUS_FAILED = 'failed';
 export const DELIVERY_STATUS_EXHAUSTED = 'exhausted';
+export const DELIVERY_STATUS_SUPERSEDED = 'superseded';
 
 export const DELIVERY_CHANNEL_INTERNAL = 'internal';
 export const DELIVERY_CHANNEL_EMAIL = 'email';

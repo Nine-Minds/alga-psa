@@ -187,7 +187,7 @@ exports.up = async function up(knex) {
         .inTable('prepaid_balance_alerts');
       table.check("channel IN ('internal','email')", [], 'prepaid_balance_alert_deliveries_channel_check');
       table.check(
-        "status IN ('pending','processing','sent','skipped','failed','exhausted')",
+        "status IN ('pending','processing','sent','skipped','failed','exhausted','superseded')",
         [],
         'prepaid_balance_alert_deliveries_status_check'
       );
@@ -195,6 +195,24 @@ exports.up = async function up(knex) {
     });
 
     await ensureTenantDistribution(knex, 'prepaid_balance_alert_deliveries');
+  }
+
+  // Widen the status CHECK to accept the terminal 'superseded' state on
+  // databases migrated before that state existed (the CREATE TABLE guard above
+  // never runs for them). Idempotent: only replaced when the current definition
+  // still lacks 'superseded'.
+  const statusCheckName = 'prepaid_balance_alert_deliveries_status_check';
+  const statusCheck = await knex.raw(
+    'SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass',
+    [statusCheckName, 'prepaid_balance_alert_deliveries']
+  );
+  if (statusCheck.rows.length === 1 && !String(statusCheck.rows[0].def).includes('superseded')) {
+    await knex.raw('ALTER TABLE ?? DROP CONSTRAINT ??', ['prepaid_balance_alert_deliveries', statusCheckName]);
+    await knex.raw(
+      'ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' +
+        "status IN ('pending','processing','sent','skipped','failed','exhausted','superseded'))",
+      ['prepaid_balance_alert_deliveries', statusCheckName]
+    );
   }
 
   // ---------------------------------------------------------------------------

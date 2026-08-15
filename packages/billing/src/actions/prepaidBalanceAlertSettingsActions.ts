@@ -9,7 +9,6 @@ import {
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
   prepaidBalanceAlertSettingsInputSchema,
-  type PrepaidBalanceAlertSettings,
   type PrepaidBalanceAlertSettingsInput,
   type PrepaidBalanceAlertSettingsWithDefault,
 } from '@shared/billingClients/prepaidBalanceAlertSettings';
@@ -19,14 +18,6 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-
-export {
-  PREPAID_BALANCE_ALERT_FLAG,
-  prepaidBalanceAlertSettingsInputSchema,
-  type PrepaidBalanceAlertSettings,
-  type PrepaidBalanceAlertSettingsInput,
-  type PrepaidBalanceAlertSettingsWithDefault,
-} from '@shared/billingClients/prepaidBalanceAlertSettings';
 
 type ReadResult = PrepaidBalanceAlertSettingsWithDefault | ActionMessageError | ActionPermissionError;
 type UpdateResult = { success: true } | ActionMessageError | ActionPermissionError;

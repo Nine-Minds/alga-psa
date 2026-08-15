@@ -36,7 +36,7 @@ export interface CreditAlertTemplateValues {
 
 export interface BucketAlertTemplateValues {
   percent: number;
-  usedPercent: number;
+  usedPercent: string;
   capacity: string;
   used: string;
   link: string;

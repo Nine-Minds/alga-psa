@@ -169,6 +169,15 @@ describe('prepaid balance alerts migration (DB-backed)', () => {
     );
     expect(dupDelivery).toBe('rejected');
 
+    // Terminal 'superseded' status is accepted (resolved-alert delivery
+    // exclusion marks orphaned sends with it).
+    const superseded = await constraintProbe(
+      `UPDATE prepaid_balance_alert_deliveries
+       SET status = 'superseded', last_error = 'Superseded: alert resolved before delivery'
+       WHERE tenant = '${tenantId}'::uuid AND alert_id = '${alertId}'::uuid`
+    );
+    expect(superseded).toBe('accepted');
+
     // Cross-tenant delivery reference must fail.
     const crossDelivery = await constraintProbe(
       `INSERT INTO prepaid_balance_alert_deliveries (tenant, delivery_id, alert_id, channel, recipient_roles, recipient_key, status, attempt_count, created_at, updated_at)

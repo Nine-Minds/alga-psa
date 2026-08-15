@@ -66,6 +66,13 @@ export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Pr
 
       const { knex } = await createTenantKnex();
       const evaluation = await evaluatePrepaidBalanceAlertsForTenant(knex, tenantId, clientId);
+      // Delivery has its own fail-closed boundary. If the flag is disabled
+      // while a scan is evaluating, no recipient planning, claim, retry, or
+      // notification side effect proceeds from that point.
+      if (!(await featureEnabled(tenantId))) {
+        logger.info('[PrepaidBalanceAlertSubscriber] Feature flag disabled before delivery; skipping drain', { tenantId });
+        return;
+      }
       const delivery = await planAndDrainDeliveriesForTenant(knex, tenantId);
 
       logger.info('[PrepaidBalanceAlertSubscriber] Prepaid balance alert scan complete', {
@@ -86,6 +93,7 @@ export async function handlePrepaidBalanceAlertScanRequested(event: unknown): Pr
         skipped: delivery.skipped,
         retried: delivery.retried,
         exhausted: delivery.exhausted,
+        superseded: delivery.superseded,
         unroutable: delivery.unroutable,
       });
 

@@ -86,6 +86,26 @@ async function createManager(
   return userId;
 }
 
+async function createContact(
+  tenantId: string,
+  clientId: string,
+  overrides: Record<string, unknown> = {}
+): Promise<string> {
+  const contactId = randomUUID();
+  await db('contacts').insert({
+    tenant: tenantId,
+    contact_name_id: contactId,
+    client_id: clientId,
+    full_name: `Billing Contact ${contactId.slice(0, 8)}`,
+    email: 'billing-contact@example.com',
+    is_inactive: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+    ...overrides,
+  });
+  return contactId;
+}
+
 async function createBillingSettings(
   tenantId: string,
   clientId: string,
@@ -277,8 +297,10 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantDb(db, tenantId).table('contract_lines').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('client_contracts').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('contracts').where({ tenant: tenantId }).del();
-  await tenantDb(db, tenantId).table('users').where({ tenant: tenantId }).del();
+  await tenantDb(db, tenantId).table('user_preferences').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('internal_notifications').where({ tenant: tenantId }).del();
+  await tenantDb(db, tenantId).table('users').where({ tenant: tenantId }).del();
+  await tenantDb(db, tenantId).table('contacts').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('clients').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('tenants').where({ tenant: tenantId }).del();
 }
@@ -326,6 +348,31 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     expect(await deliveries(tenantId)).toHaveLength(0);
     const notifications = await tenantDb(db, tenantId).table('internal_notifications').where({ tenant: tenantId }).count('* as n').first();
     expect(Number(notifications?.n ?? 0)).toBe(0);
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed at the delivery boundary when the flag turns off during evaluation', async () => {
+    const tenantId = await createTenant('flag-off-before-delivery');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId);
+    await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    let checks = 0;
+    registerFeatureFlagChecker(async () => {
+      checks += 1;
+      return checks === 1;
+    });
+    try {
+      await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    } finally {
+      registerFeatureFlagChecker(async () => flagEnabled);
+    }
+
+    expect(await countAlerts(tenantId)).toBe(1);
+    expect(await deliveries(tenantId)).toHaveLength(0);
     expect(sendEmailMock).not.toHaveBeenCalled();
   });
 
@@ -419,6 +466,7 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       channel: 'email',
       recipient_roles: JSON.stringify(['account_manager']),
       recipient_key: 'manager@example.com',
+      recipient_user_id: managerId,
       recipient_email: 'manager@example.com',
       status: 'pending',
       attempt_count: 0,
@@ -543,11 +591,14 @@ describe('prepaid balance alert scan (DB-backed)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Regression: re-opening a resolved bucket episode uses a new dedupe key
-  // (no unique violation) and cannot roll back the client's credit evaluation.
+  // Regression: consumption oscillating around the bucket threshold WITHIN one
+  // period must NOT re-alert (one alert per (bucket_usage, period, percentage));
+  // policy changes resolve the prior open state while the durable identity
+  // remains exactly (bucket usage period, configured percentage) — and bucket
+  // transitions never roll back the client's committed credit evaluation.
   // -------------------------------------------------------------------------
-  it('re-opens a resolved bucket episode without colliding and without rolling back credit', async () => {
-    const tenantId = await createTenant('bucket-reopen');
+  it('suppresses bucket oscillation within one period and re-arms only on policy change', async () => {
+    const tenantId = await createTenant('bucket-oscillation');
     createdTenants.push(tenantId);
     const clientId = await createClient(tenantId);
     await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD', percent: 80 });
@@ -562,36 +613,72 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       periodEnd: end,
     });
 
+    // Fire: credit and bucket episodes both open.
     await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
-    const byType = new Map((await openAlerts(tenantId)).map((a) => [a.alert_type, a]));
+    let byType = new Map((await openAlerts(tenantId)).map((a) => [a.alert_type, a]));
     expect(byType.get('credit')).toBeDefined();
     expect(byType.get('bucket')).toBeDefined();
 
-    // Resolve the bucket episode (drop below the threshold).
+    // Suppress: repeated scans dedupe.
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(1);
+
+    // Oscillate BELOW the threshold: the episode must neither resolve nor re-open.
     await db('bucket_usage').where({ tenant: tenantId }).update({ minutes_used: 700 });
     await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
-    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(0);
+    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(1);
 
-    // Re-drop to the threshold: the re-open must use a fresh episode key.
+    // Oscillate BACK to the threshold: still the SAME episode, no re-alert.
     await db('bucket_usage').where({ tenant: tenantId }).update({ minutes_used: 800 });
     await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
-
-    const bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+    let bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
       .where({ tenant: tenantId, alert_type: 'bucket' })
       .orderBy('created_at', 'asc')
       .select('episode', 'resolved_at', 'dedupe_key');
-    expect(bucketRows).toHaveLength(2);
+    expect(bucketRows).toHaveLength(1);
     expect(Number(bucketRows[0].episode)).toBe(1);
-    expect(bucketRows[0].resolved_at).not.toBeNull();
-    expect(Number(bucketRows[1].episode)).toBe(2);
-    expect(bucketRows[1].resolved_at).toBeNull();
-    expect(bucketRows[1].dedupe_key).not.toBe(bucketRows[0].dedupe_key);
+    expect(bucketRows[0].resolved_at).toBeNull();
 
-    // The credit alert survived the bucket re-open (separate transactions).
-    const creditOpen = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
-      .where({ tenant: tenantId, alert_type: 'credit', resolved_at: null })
-      .count('* as n').first();
-    expect(Number(creditOpen?.n ?? 0)).toBe(1);
+    // Policy disabled mid-period: the sweep resolves the open episode as
+    // policy_changed so it can never strand.
+    await db('client_billing_settings').where({ client_id: clientId }).update({ bucket_usage_alert_percent: null });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(0);
+
+    // Re-enable the same percentage: reopen the SAME logical identity, without
+    // inserting another 80-percent row for this usage period.
+    await db('client_billing_settings').where({ client_id: clientId }).update({ bucket_usage_alert_percent: 80 });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'bucket' })
+      .orderBy('created_at', 'asc')
+      .select('episode', 'bucket_percent', 'resolved_at', 'dedupe_key');
+    expect(bucketRows).toHaveLength(1);
+    expect(Number(bucketRows[0].episode)).toBe(1);
+    expect(bucketRows[0].resolved_at).toBeNull();
+
+    // 80 -> 90 creates one distinct 90-percent identity; 90 -> 80 reuses the
+    // original 80-percent row. There are never two rows for the same pair.
+    await db('bucket_usage').where({ tenant: tenantId }).update({ minutes_used: 950 });
+    await db('client_billing_settings').where({ client_id: clientId }).update({ bucket_usage_alert_percent: 90 });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    await db('client_billing_settings').where({ client_id: clientId }).update({ bucket_usage_alert_percent: 80 });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'bucket' })
+      .orderBy('bucket_percent', 'asc')
+      .select('episode', 'bucket_percent', 'resolved_at', 'dedupe_key');
+    expect(bucketRows).toHaveLength(2);
+    expect(bucketRows.map((row) => Number(row.bucket_percent))).toEqual([80, 90]);
+    expect(bucketRows[0].resolved_at).toBeNull();
+    expect(bucketRows[1].resolved_at).not.toBeNull();
+    expect(bucketRows[0].dedupe_key).toContain(':80pct');
+    expect(bucketRows[1].dedupe_key).toContain(':90pct');
+
+    // The credit alert survived every bucket transition (separate transactions).
+    byType = new Map((await openAlerts(tenantId)).map((a) => [a.alert_type, a]));
+    expect(byType.get('credit')).toBeDefined();
   });
 
   // -------------------------------------------------------------------------
@@ -854,6 +941,72 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     expect(rows.filter((r) => r.channel === 'email')).toHaveLength(0);
   });
 
+  it('rejects non-internal managers and inactive or unrelated billing contacts', async () => {
+    const tenantId = await createTenant('recipient-authorization');
+    createdTenants.push(tenantId);
+    const managerId = await createManager(tenantId, { email: 'valid-manager@example.com' });
+
+    const unrelatedContactClientId = await createClient(tenantId);
+    const unrelatedContactId = await createContact(tenantId, unrelatedContactClientId, {
+      email: 'unrelated-contact@example.com',
+    });
+
+    const wrongContactClientId = await createClient(tenantId, {
+      account_manager_id: managerId,
+      billing_contact_id: unrelatedContactId,
+      billing_email: 'wrong-contact-fallback@example.com',
+    });
+    await createBillingSettings(tenantId, wrongContactClientId, {
+      threshold: 5000,
+      currency: 'USD',
+      notifyClient: true,
+    });
+    await createCredit(tenantId, wrongContactClientId, { amount: 100 });
+
+    const inactiveContactClientId = await createClient(tenantId, {
+      account_manager_id: managerId,
+      billing_email: 'inactive-contact-fallback@example.com',
+    });
+    const inactiveContactId = await createContact(tenantId, inactiveContactClientId, {
+      email: 'inactive-contact@example.com',
+      is_inactive: true,
+    });
+    await db('clients').where({ tenant: tenantId, client_id: inactiveContactClientId })
+      .update({ billing_contact_id: inactiveContactId });
+    await createBillingSettings(tenantId, inactiveContactClientId, {
+      threshold: 5000,
+      currency: 'USD',
+      notifyClient: true,
+    });
+    await createCredit(tenantId, inactiveContactClientId, { amount: 100 });
+
+    const invalidManagerClientId = await createClient(tenantId);
+    const clientUserId = await createManager(tenantId, {
+      email: 'client-user@example.com',
+      user_type: 'client',
+    });
+    await db('clients').where({ tenant: tenantId, client_id: invalidManagerClientId })
+      .update({ account_manager_id: clientUserId });
+    await createBillingSettings(tenantId, invalidManagerClientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, invalidManagerClientId, { amount: 100 });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const sentTo = sendEmailMock.mock.calls.map((call) => call[0].to);
+    expect(sentTo).toContain('wrong-contact-fallback@example.com');
+    expect(sentTo).toContain('inactive-contact-fallback@example.com');
+    expect(sentTo).not.toContain('unrelated-contact@example.com');
+    expect(sentTo).not.toContain('inactive-contact@example.com');
+    expect(sentTo).not.toContain('client-user@example.com');
+
+    const invalidManagerAlerts = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ client_id: invalidManagerClientId })
+      .select('alert_id');
+    const invalidManagerDeliveries = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries')
+      .whereIn('alert_id', invalidManagerAlerts.map((row) => row.alert_id));
+    expect(invalidManagerDeliveries).toHaveLength(0);
+  });
+
   // -------------------------------------------------------------------------
   // T022 + T024: leases, retries, exhaustion
   // -------------------------------------------------------------------------
@@ -897,6 +1050,7 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     // Force a stale processing lease on a new delivery row and reclaim it.
     const alert = (await openAlerts(tenantId))[0];
     const deliveryId = randomUUID();
+    await db('users').where({ tenant: tenantId, user_id: managerId }).update({ email: 'stale@example.com' });
     await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').insert({
       tenant: tenantId,
       delivery_id: deliveryId,
@@ -904,6 +1058,7 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       channel: 'email',
       recipient_roles: JSON.stringify(['account_manager']),
       recipient_key: 'stale@example.com',
+      recipient_user_id: managerId,
       recipient_email: 'stale@example.com',
       status: 'processing',
       attempt_count: 1,
@@ -1006,5 +1161,299 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     expect(alertsA).toHaveLength(1);
     expect(alertsA[0].client_id).toBe(clientA);
     expect(alertsB).toHaveLength(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // Disabled policies must not strand open episodes (draft-review defect #1):
+  // a policy turned off between scans — even a client that drops out of the
+  // configured set entirely — resolves its open episodes as policy_changed.
+  // -------------------------------------------------------------------------
+  it('resolves open episodes as policy_changed when a policy type is disabled', async () => {
+    const tenantId = await createTenant('disable-policy');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD', percent: 80 });
+    await createCredit(tenantId, clientId, { amount: 100 });
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+    await createBucketFixture(tenantId, clientId, {
+      totalMinutes: 1000,
+      minutesUsed: 900,
+      periodStart: start,
+      periodEnd: end,
+    });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect(await openAlerts(tenantId)).toHaveLength(2);
+
+    // Disable only the credit type (the client stays configured via its bucket
+    // policy): the open credit episode resolves as policy_changed while the
+    // bucket episode stays open.
+    await db('client_billing_settings').where({ client_id: clientId }).update({
+      prepaid_credit_alert_threshold: null,
+      prepaid_credit_alert_currency_code: null,
+    });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    let open = await openAlerts(tenantId);
+    expect(open).toHaveLength(1);
+    expect(open[0].alert_type).toBe('bucket');
+    const creditRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'credit' }).select('resolved_at', 'resolution_reason');
+    expect(creditRows).toHaveLength(1);
+    expect(creditRows[0].resolved_at).not.toBeNull();
+    expect(creditRows[0].resolution_reason).toBe('policy_changed');
+
+    // Disable the bucket type too: the client drops OUT of the configured set,
+    // and the tenant-wide sweep still resolves the open bucket episode.
+    await db('client_billing_settings').where({ client_id: clientId }).update({ bucket_usage_alert_percent: null });
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect(await openAlerts(tenantId)).toHaveLength(0);
+    const bucketRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+      .where({ tenant: tenantId, alert_type: 'bucket' }).select('resolved_at', 'resolution_reason');
+    expect(bucketRows).toHaveLength(1);
+    expect(bucketRows[0].resolved_at).not.toBeNull();
+    expect(bucketRows[0].resolution_reason).toBe('policy_changed');
+  });
+
+  // -------------------------------------------------------------------------
+  // Delivery must never send after an episode is resolved (draft-review
+  // defect #2). Each of the three resolution causes — recovery, period
+  // rollover, policy disabled — terminalizes an orphaned retrying send as
+  // `superseded` instead of claiming and resending it.
+  // -------------------------------------------------------------------------
+  it('supersedes a retrying send once recovery resolves the episode', async () => {
+    const tenantId = await createTenant('delivery-recovered');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    sendEmailMock.mockRejectedValueOnce(new Error('transient provider error'));
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const pendingDelivery = (await deliveries(tenantId)).find((row) => row.channel === 'email');
+    expect(pendingDelivery?.status).toBe('failed');
+
+    // Balance recovers to equality: the evaluator resolves the episode and the
+    // drain must terminalize the orphaned retrying send, not resend it.
+    await createCredit(tenantId, clientId, { amount: 5000 });
+    sendEmailMock.mockClear();
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const row = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').where({ delivery_id: pendingDelivery?.delivery_id }).first();
+    expect(row.status).toBe('superseded');
+    expect(await openAlerts(tenantId)).toHaveLength(0);
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('supersedes a retrying send once a period rollover resolves the episode', async () => {
+    const tenantId = await createTenant('delivery-rollover');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { percent: 80 });
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+    const { usageId } = await createBucketFixture(tenantId, clientId, {
+      totalMinutes: 1000,
+      minutesUsed: 900,
+      periodStart: start,
+      periodEnd: end,
+    });
+
+    sendEmailMock.mockRejectedValueOnce(new Error('transient provider error'));
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const pendingDelivery = (await deliveries(tenantId)).find((row) => row.channel === 'email');
+    expect(pendingDelivery?.status).toBe('failed');
+
+    // The period is no longer current: the old episode resolves as recovered
+    // and its undelivered send is superseded, never sent.
+    await db('bucket_usage').where({ tenant: tenantId, usage_id: usageId })
+      .update({ period_end: new Date(today.getTime() - 1 * 86400_000).toISOString().slice(0, 10) });
+    sendEmailMock.mockClear();
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const row = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').where({ delivery_id: pendingDelivery?.delivery_id }).first();
+    expect(row.status).toBe('superseded');
+    expect((await openAlerts(tenantId)).filter((a) => a.alert_type === 'bucket')).toHaveLength(0);
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('supersedes a retrying send once a disabled policy resolves the episode', async () => {
+    const tenantId = await createTenant('delivery-policy-off');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId);
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    sendEmailMock.mockRejectedValueOnce(new Error('transient provider error'));
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const pendingDelivery = (await deliveries(tenantId)).find((row) => row.channel === 'email');
+    expect(pendingDelivery?.status).toBe('failed');
+
+    // Disabling the credit policy resolves the episode as policy_changed; the
+    // retrying send is terminalized, never claimed again.
+    await db('client_billing_settings').where({ client_id: clientId }).update({
+      prepaid_credit_alert_threshold: null,
+      prepaid_credit_alert_currency_code: null,
+    });
+    sendEmailMock.mockClear();
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const row = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries').where({ delivery_id: pendingDelivery?.delivery_id }).first();
+    expect(row.status).toBe('superseded');
+    expect(await openAlerts(tenantId)).toHaveLength(0);
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Recipient authorization (draft-review defect #3): client billing-recipient
+  // email is strictly opt-in. Opted out ⇒ zero client-facing sends even though
+  // an episode fires; opted in ⇒ exactly the canonical recipient is emailed.
+  // -------------------------------------------------------------------------
+  it('emails zero client-facing recipients when the client opt-in is off, and the canonical recipient when enabled', async () => {
+    const tenantId = await createTenant('recipient-optin');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId, { billing_email: 'client-billing@example.com' });
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    // Opt-in defaults OFF: only the account manager is emailed.
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const toAddresses = sendEmailMock.mock.calls.map((c) => c[0].to);
+    expect(toAddresses).toEqual(['manager@example.com']);
+    expect(toAddresses).not.toContain('client-billing@example.com');
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+
+    // Opt-in ON: the canonical billing recipient is added exactly once; the
+    // already-successful manager email is never resent.
+    await db('client_billing_settings').where({ client_id: clientId }).update({ notify_client_on_prepaid_alert: true });
+    sendEmailMock.mockClear();
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    expect(sendEmailMock.mock.calls.map((c) => c[0].to)).toEqual(['client-billing@example.com']);
+    expect(sendEmailMock.mock.calls.some((c) => c[0].to === 'manager@example.com')).toBe(false);
+  });
+
+  it('does not retry a client delivery after the client opt-in is turned off', async () => {
+    const tenantId = await createTenant('recipient-optout-retry');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId, { billing_email: 'client-billing@example.com' });
+    await createBillingSettings(tenantId, clientId, {
+      threshold: 5000,
+      currency: 'USD',
+      notifyClient: true,
+    });
+    await createCredit(tenantId, clientId, { amount: 100 });
+
+    sendEmailMock.mockRejectedValueOnce(new Error('transient provider error'));
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+    const failed = (await deliveries(tenantId)).find((row) => row.channel === 'email');
+    expect(failed?.status).toBe('failed');
+
+    await db('client_billing_settings').where({ tenant: tenantId, client_id: clientId })
+      .update({ notify_client_on_prepaid_alert: false });
+    sendEmailMock.mockClear();
+    sendEmailMock.mockResolvedValue(undefined);
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    const afterOptOut = await tenantDb(db, tenantId).table('prepaid_balance_alert_deliveries')
+      .where({ delivery_id: failed?.delivery_id })
+      .first();
+    expect(afterOptOut.status).toBe('superseded');
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Localization (draft-review defect #3): client emails follow the client's
+  // locale; internal notifications (and manager emails) follow the recipient
+  // user's locale. EUR 50.00 formats as "50,00 €" (de) vs "€ 50,00" (nl).
+  // -------------------------------------------------------------------------
+  it('uses the client locale for client emails and the recipient user locale for internal notifications', async () => {
+    const tenantId = await createTenant('localization');
+    createdTenants.push(tenantId);
+    const clientId = await createClient(tenantId, { billing_email: 'client-billing@example.com' });
+    const managerId = await createManager(tenantId, { email: 'manager@example.com' });
+    await db('clients').where({ client_id: clientId }).update({
+      account_manager_id: managerId,
+      properties: JSON.stringify({ defaultLocale: 'de' }),
+    });
+    await db('user_preferences').insert({
+      tenant: tenantId,
+      user_id: managerId,
+      setting_name: 'locale',
+      setting_value: '"nl"',
+      updated_at: db.fn.now(),
+    });
+    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'EUR', notifyClient: true });
+    await createCredit(tenantId, clientId, { amount: 100, currency: 'EUR' });
+
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+
+    // Manager email formatted in the manager's nl locale: "€ 50,00" (nl uses a
+    // non-breaking space between the currency symbol and the amount).
+    const managerCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'manager@example.com');
+    expect(managerCall).toBeDefined();
+    expect(managerCall[0].locale).toBe('nl');
+    expect(managerCall[0].context.alert.threshold).toBe(`€\u00A050,00`);
+
+    // Client email formatted in the client's de locale: "50,00 €" (de also
+    // uses a non-breaking space before the currency symbol).
+    const clientCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'client-billing@example.com');
+    expect(clientCall).toBeDefined();
+    expect(clientCall[0].locale).toBe('de');
+    expect(clientCall[0].context.alert.threshold).toBe(`50,00\u00A0€`);
+
+    // Internal notification follows the recipient user's locale (nl), including
+    // the locale-formatted threshold in the rendered message.
+    const notification = await tenantDb(db, tenantId).table('internal_notifications')
+      .where({ tenant: tenantId, user_id: managerId })
+      .orderBy('created_at', 'desc')
+      .first();
+    expect(notification).toBeDefined();
+    expect(notification.language_code).toBe('nl');
+    expect(String(notification.message)).toContain(`€\u00A050,00`);
+  });
+
+  // -------------------------------------------------------------------------
+  // Tenant isolation end-to-end (draft-review defect #4): two tenants with
+  // identical clients/policies; scanning and delivering for tenant A never
+  // touches tenant B's alerts, deliveries, or recipients.
+  // -------------------------------------------------------------------------
+  it('keeps scan and delivery fully isolated between tenants with identical fixtures', async () => {
+    const tenantA = await createTenant('delivery-iso-a');
+    const tenantB = await createTenant('delivery-iso-b');
+    createdTenants.push(tenantA, tenantB);
+
+    for (const [tenantId, tag] of [[tenantA, 'a'], [tenantB, 'b']] as const) {
+      const clientId = await createClient(tenantId, { billing_email: `client-${tag}@example.com` });
+      const managerId = await createManager(tenantId, { email: `manager-${tag}@example.com` });
+      await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
+      await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+      await createCredit(tenantId, clientId, { amount: 100 });
+    }
+
+    sendEmailMock.mockClear();
+    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantA));
+
+    const alertsB = await tenantDb(db, tenantB).table('prepaid_balance_alerts').where({ tenant: tenantB }).select('client_id');
+    expect(alertsB).toHaveLength(0);
+
+    const deliveriesA = await tenantDb(db, tenantA).table('prepaid_balance_alert_deliveries').where({ tenant: tenantA }).select('*');
+    const deliveriesB = await tenantDb(db, tenantB).table('prepaid_balance_alert_deliveries').where({ tenant: tenantB }).select('*');
+    expect(deliveriesA.length).toBeGreaterThan(0);
+    expect(deliveriesB).toHaveLength(0);
+
+    const toAddresses = sendEmailMock.mock.calls.map((c) => c[0].to);
+    expect(toAddresses).toContain('manager-a@example.com');
+    expect(toAddresses).not.toContain('manager-b@example.com');
+    expect(toAddresses).not.toContain('client-b@example.com');
   });
 });

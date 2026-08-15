@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import type { Knex } from 'knex';
-import knexLib from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  createTestDbConnection,
+  wireLocalTestDbEnv,
+} from '../../../../server/test-utils/dbConfig';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -32,19 +35,8 @@ const otherTenantClientId = uuidv4();
 let db: Knex;
 
 beforeAll(async () => {
-  process.env.DB_PORT = process.env.DB_PORT || '5432';
-  
-  db = knexLib({
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME_SERVER || 'server',
-      user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || '',
-    },
-    pool: { min: 0, max: 5 },
-  });
+  wireLocalTestDbEnv();
+  db = await createTestDbConnection();
 
   await db('tenants').insert({
     tenant: tenantId,
@@ -88,7 +80,11 @@ afterAll(async () => {
   await db.destroy().catch(() => undefined);
 });
 
-describe('prepaid balance alert settings actions (DB-backed)', () => {
+// This suite shares module-level tenant/client fixtures and mutates one
+// client_billing_settings row across tests, so its cases are order-dependent.
+// The server vitest config runs with `sequence.shuffle: true`; pin declaration
+// order so a shuffled seed cannot turn a valid run red.
+describe.sequential('prepaid balance alert settings actions (DB-backed)', () => {
   it('read rejects when the feature flag is disabled or the checker is unavailable', async () => {
     (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(false);
     const result = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
