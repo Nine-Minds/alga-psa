@@ -433,11 +433,13 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="flex items-center gap-2 font-medium text-gray-900">
                         <span id={`credentials-row-name-${id}`}>{item.name}</span>
-                        <Badge variant="secondary" id={`credentials-row-source-${id}`}>
-                          {item.source === 'hudu'
-                            ? t('credentials.screen.sourceHudu')
-                            : t('credentials.screen.sourceAlga')}
-                        </Badge>
+                        {/* Badge the marked case only: native vault rows are
+                            the default and a label on every row marks nothing. */}
+                        {item.source === 'hudu' && (
+                          <Badge variant="secondary" id={`credentials-row-source-${id}`}>
+                            {t('credentials.screen.sourceHudu')}
+                          </Badge>
+                        )}
                         {item.isRestricted && (
                           <Badge variant="warning" id={`credentials-row-restricted-${id}`}>
                             <Lock className="mr-1 h-3 w-3" />
