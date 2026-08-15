@@ -65,11 +65,94 @@ describe.runIf(enabled)('getHourBlockDetail user-name composition', () => {
     await db('hour_blocks').where({ tenant }).delete();
     await db('time_entries').where({ tenant }).delete();
     await db('users').where({ tenant }).delete();
+    await db('invoice_charges').where({ tenant }).delete();
+    await db('invoices').where({ tenant }).delete();
     await db('service_catalog').where({ tenant }).delete();
     await db('service_types').where({ tenant }).delete();
     await db('clients').where({ tenant }).delete();
     await db('tenants').where({ tenant }).delete();
   }
+
+  async function seedProvenanceBlock(options: { sourceType: 'purchase' | 'grant'; withInvoice: boolean }) {
+    const clientId = uuidv4();
+    const blockId = uuidv4();
+    await db('tenants').insert({ tenant, client_name: 'HB Detail Tenant', email: 'hbdet@test.local', billing_source: 'test' });
+    await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Detail Client' });
+    const serviceTypeId = uuidv4();
+    const serviceId = uuidv4();
+    await db('service_types').insert({ id: serviceTypeId, tenant, name: 'HB Detail Type', is_active: true, order_number: 1 });
+    await db('service_catalog').insert({
+      service_id: serviceId, tenant, service_name: 'Detail Svc',
+      custom_service_type_id: serviceTypeId, billing_method: 'hourly', default_rate: 10000,
+      unit_of_measure: 'hour', category_id: null, tax_rate_id: null, item_kind: 'service', is_active: true, is_license: false,
+    });
+    const invoiceId = options.withInvoice ? uuidv4() : null;
+    if (invoiceId) {
+      await db('invoices').insert({
+        invoice_id: invoiceId, tenant, client_id: clientId, invoice_number: 'HB-DET-LIVE-1',
+        invoice_date: new Date().toISOString(), due_date: new Date().toISOString(),
+        total_amount: 100000, subtotal: 100000, tax: 0, status: 'active', is_manual: true, is_prepayment: false, credit_applied: 0,
+      });
+    }
+    await db('hour_blocks').insert({
+      block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
+      total_minutes: 600, remaining_minutes: 480, hourly_rate: 10000, purchase_amount: 100000,
+      currency_code: 'USD', status: 'active', purchased_at: new Date().toISOString(),
+      source_invoice_id: invoiceId, source_type: options.sourceType,
+    });
+    return { blockId, invoiceId };
+  }
+
+  it('surfaces a live source invoice number for a purchase-sourced block (drawer branch 1)', async () => {
+    const { blockId, invoiceId } = await seedProvenanceBlock({ sourceType: 'purchase', withInvoice: true });
+
+    try {
+      const { getHourBlockDetail } = await import('../src/actions/hourBlockActions');
+      const result = await getHourBlockDetail(blockId);
+
+      expect('block' in result).toBe(true);
+      const block = (result as { block: Record<string, any> }).block;
+      expect(block.source_invoice_id).toBe(invoiceId);
+      expect(block.source_type).toBe('purchase');
+      expect(block.invoice_number).toBe('HB-DET-LIVE-1');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('keeps purchase provenance but no invoice number when the source invoice is deleted (drawer branch 2)', async () => {
+    const { blockId } = await seedProvenanceBlock({ sourceType: 'purchase', withInvoice: false });
+
+    try {
+      const { getHourBlockDetail } = await import('../src/actions/hourBlockActions');
+      const result = await getHourBlockDetail(blockId);
+
+      expect('block' in result).toBe(true);
+      const block = (result as { block: Record<string, any> }).block;
+      expect(block.source_type).toBe('purchase');
+      expect(block.source_invoice_id).toBeNull();
+      expect(block.invoice_number).toBeNull();
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('carries no invoice fields for a direct grant (drawer branch 3)', async () => {
+    const { blockId } = await seedProvenanceBlock({ sourceType: 'grant', withInvoice: false });
+
+    try {
+      const { getHourBlockDetail } = await import('../src/actions/hourBlockActions');
+      const result = await getHourBlockDetail(blockId);
+
+      expect('block' in result).toBe(true);
+      const block = (result as { block: Record<string, any> }).block;
+      expect(block.source_type).toBe('grant');
+      expect(block.source_invoice_id).toBeNull();
+      expect(block.invoice_number).toBeNull();
+    } finally {
+      await cleanup();
+    }
+  });
 
   it('composes allocation user_name from first/last name with a username fallback and does not throw', async () => {
     const clientId = uuidv4();

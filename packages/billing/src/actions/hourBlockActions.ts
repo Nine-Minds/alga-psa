@@ -635,8 +635,16 @@ export const getHourBlockDetail = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const block = await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ block_id: blockId, tenant })
+      const scopedDb = tenantDb(trx, tenant);
+      const blockQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
+      scopedDb.tenantJoin(blockQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
+      const block = await blockQuery
+        .where({ 'hb.block_id': blockId })
+        .select(
+          'hb.*',
+          'inv.invoice_number as invoice_number',
+          'inv.status as invoice_status',
+        )
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
 
@@ -660,7 +668,6 @@ export const getHourBlockDetail = withAuth(async (
           'u.last_name as user_last_name',
           'u.username as user_username',
         );
-      const scopedDb = tenantDb(trx, tenant);
       scopedDb.tenantJoin(allocationsQuery, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
       scopedDb.tenantJoin(allocationsQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
       const allocations = await allocationsQuery;
