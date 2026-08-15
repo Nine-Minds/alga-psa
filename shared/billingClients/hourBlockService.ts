@@ -26,7 +26,7 @@
  */
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toCalendarDateString } from '@alga-psa/core';
 import type { IHourBlock } from '@alga-psa/types';
 
 /**
@@ -85,13 +85,25 @@ export function computeFifoAllocation(
   return allocations;
 }
 
-/** Normalizes a DATE/ISO value to YYYY-MM-DD for date comparisons. */
+/**
+ * Normalizes a DATE/ISO value to YYYY-MM-DD for date comparisons. Routes every
+ * value through {@link toCalendarDateString} so that pg DATE columns (which
+ * node-postgres materializes as local-midnight `Date` objects) and DatePicker
+ * values are read via their LOCAL calendar components — never through
+ * `toISOString()`, which shifted a local-midnight date backward a day in
+ * UTC+2 and broke expiration-boundary eligibility and FIFO ordering.
+ * `YYYY-MM-DD` strings pass through byte-for-byte after validation. Unparseable
+ * values resolve to `null` (the caller treats that as "no date") except a
+ * well-formed date-prefixed fallback, preserving the old naive-timestamp
+ * robustness without ever slicing garbage.
+ */
 function toDateOnly(value: string | Date | null | undefined): string | null {
   if (value == null) return null;
   try {
-    return toISODate(toPlainDate(value as string));
+    return toCalendarDateString(value);
   } catch {
-    return String(value).slice(0, 10);
+    const fallback = String(value).slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(fallback) ? fallback : null;
   }
 }
 
@@ -500,7 +512,13 @@ export async function getAvailableHourBlockMinutes(
   serviceId?: string,
 ): Promise<number> {
   const db = tenantDb(conn, tenant);
-  const today = toISODate(toPlainDate(new Date().toISOString()));
+  // "Today" for expiration eligibility must be the server's LOCAL calendar
+  // date: expiration dates are stored as user-local calendar dates, and a block
+  // expiring 2026-08-31 in Berlin is expired the moment Berlin enters
+  // 2026-09-01 — even while UTC still reads 2026-08-31. UTC-today (the old
+  // `toISODate(toPlainDate(new Date().toISOString()))`) counted such blocks as
+  // available for up to 24h, and drifted the other way east of UTC.
+  const today = toCalendarDateString(new Date());
 
   const query = db.table('hour_blocks as hb');
   if (serviceId) {

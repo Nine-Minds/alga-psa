@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
+import { toCalendarDateString } from '@alga-psa/core';
 import {
   allocateTimeEntry,
   reverseTimeEntryAllocations,
@@ -136,6 +137,30 @@ async function insertTimeEntry(
     work_date: workDate,
     start_time: start.toISOString(),
   };
+}
+
+async function insertBlock(
+  db: Knex,
+  tenant: string,
+  clientId: string,
+  serviceId: string,
+  blockId: string,
+  expirationDate: string | null,
+): Promise<void> {
+  await db('hour_blocks').insert({
+    tenant, block_id: blockId, client_id: clientId, service_id: serviceId,
+    total_minutes: 600, remaining_minutes: 600, hourly_rate: 13500,
+    purchase_amount: 135000, currency_code: 'USD', status: 'active',
+    purchased_at: new Date().toISOString(), expiration_date: expirationDate,
+  });
+}
+
+// The burn engine's date normalization is process-timezone-dependent, so the
+// timezone regression tests pin TZ explicitly and guard that Node honored it
+// before asserting on dates.
+function assertTz(zone: string, expectedOffsetMinutes: number) {
+  process.env.TZ = zone;
+  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {
@@ -324,6 +349,171 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
       expect(allocationsA).toHaveLength(1);
       expect(Number(allocationsA[0].minutes)).toBe(120);
     } finally {
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
+
+  // Regression: the burn engine reads work_date and expiration_date as pg DATE
+  // columns, which node-postgres materializes as local-midnight Date objects.
+  // Routing those through toISOString() shifted them backward a day in positive-
+  // offset zones, so a block that had already expired locally still matched an
+  // entry's work date and was wrongly burned. Each zone pins TZ and drives the
+  // REAL reconcile path (selectClientEligibleEntries → pg DATE read →
+  // toDateOnly → selectEligibleBlocks), the exact code path that regressed.
+  it('expiration-boundary burn uses local calendar dates on the pg DATE read path (Europe/Berlin UTC+2)', async () => {
+    const originalTz = process.env.TZ;
+    assertTz('Europe/Berlin', -120);
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB TZ Berlin', email: 'hbtz-berlin@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB TZ Berlin Client' });
+      const { service_id: svc } = await insertService(db, tenant, 'TZ Berlin Svc', 1);
+      const userId = await insertUser(db, tenant);
+      const ticket = await insertTicket(db, tenant, clientId, 'HB TZ Berlin Ticket');
+
+      const expiring = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, expiring, '2026-08-30');
+
+      await db.transaction(async (trx: Knex.Transaction) => {
+        // Sanity: pg materializes the 2026-08-31 DATE as a local-midnight Date
+        // whose UTC day is the PREVIOUS day in Berlin — the exact input that used
+        // to shift the work date backward and keep an expired block eligible.
+        const entry = await insertTimeEntry(db, tenant, userId, ticket, svc, 60, '2026-08-31');
+        const entryRow = await trx('time_entries').where({ tenant, entry_id: entry.entry_id }).first();
+        expect(entryRow.work_date).toBeInstanceOf(Date);
+        expect(entryRow.work_date.toISOString()).toBe('2026-08-30T22:00:00.000Z');
+
+        // Entry on 2026-08-31: the block expired on 2026-08-30, so nothing burns.
+        await reconcileClientAllocations(trx, tenant, clientId);
+        const block = await trx('hour_blocks').where({ tenant, block_id: expiring }).first();
+        expect(Number(block.remaining_minutes)).toBe(600);
+
+        // Positive control: an entry worked ON the block's expiration day must
+        // burn it — the fix must not over-exclude.
+        await insertTimeEntry(db, tenant, userId, ticket, svc, 60, '2026-08-30');
+        await reconcileClientAllocations(trx, tenant, clientId);
+        const block2 = await trx('hour_blocks').where({ tenant, block_id: expiring }).first();
+        expect(Number(block2.remaining_minutes)).toBe(540);
+      });
+    } finally {
+      process.env.TZ = originalTz;
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
+
+  it('expiration-boundary burn uses local calendar dates on the pg DATE read path (Pacific/Kiritimati UTC+14)', async () => {
+    const originalTz = process.env.TZ;
+    assertTz('Pacific/Kiritimati', -840);
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB TZ Kiritimati', email: 'hbtz-kiritimati@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB TZ Kiritimati Client' });
+      const { service_id: svc } = await insertService(db, tenant, 'TZ Kiritimati Svc', 1);
+      const userId = await insertUser(db, tenant);
+      const ticket = await insertTicket(db, tenant, clientId, 'HB TZ Kiritimati Ticket');
+
+      const expiring = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, expiring, '2026-08-30');
+
+      await db.transaction(async (trx: Knex.Transaction) => {
+        const entry = await insertTimeEntry(db, tenant, userId, ticket, svc, 60, '2026-08-31');
+        const entryRow = await trx('time_entries').where({ tenant, entry_id: entry.entry_id }).first();
+        expect(entryRow.work_date).toBeInstanceOf(Date);
+        expect(entryRow.work_date.toISOString()).toBe('2026-08-30T10:00:00.000Z');
+
+        const reconciled = await reconcileClientAllocations(trx, tenant, clientId);
+        void reconciled;
+        const block = await trx('hour_blocks').where({ tenant, block_id: expiring }).first();
+        expect(Number(block.remaining_minutes)).toBe(600);
+
+        await insertTimeEntry(db, tenant, userId, ticket, svc, 60, '2026-08-30');
+        await reconcileClientAllocations(trx, tenant, clientId);
+        const block2 = await trx('hour_blocks').where({ tenant, block_id: expiring }).first();
+        expect(Number(block2.remaining_minutes)).toBe(540);
+      });
+    } finally {
+      process.env.TZ = originalTz;
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
+
+  // "Today" for expiration eligibility must be the server's LOCAL calendar date,
+  // not UTC-today: expiration dates are stored as user-local calendar dates, so
+  // a block expiring 2026-08-30 is expired the moment local time enters 2026-08-31
+  // even while UTC still reads 2026-08-30. The old UTC-today counted such a block
+  // as available for up to 24h.
+  it('available-minutes "today" boundary uses the server-local calendar date (Europe/Berlin)', async () => {
+    const originalTz = process.env.TZ;
+    assertTz('Europe/Berlin', -120);
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB TZ Today', email: 'hbtz-today@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB TZ Today Client' });
+      const { service_id: svc } = await insertService(db, tenant, 'Today Svc', 1);
+
+      // Freeze "now" at 2026-08-30T23:00Z = 2026-08-31T01:00+02:00 Berlin: local
+      // today is 2026-08-31 while UTC today is still 2026-08-30.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-08-30T23:00:00.000Z'));
+      expect(toCalendarDateString(new Date())).toBe('2026-08-31');
+      expect(new Date().toISOString().slice(0, 10)).toBe('2026-08-30');
+
+      const blockUtcToday = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, blockUtcToday, '2026-08-30'); // expired locally, UTC-today
+      const blockLocalToday = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, blockLocalToday, '2026-08-31'); // local today
+      const blockNever = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, blockNever, null);
+
+      const available = await getAvailableHourBlockMinutes(db, tenant, clientId);
+      // The UTC-today-expiring block is already expired in Berlin and must be
+      // excluded; the local-today and never-expiring blocks count.
+      expect(available).toBe(1200);
+    } finally {
+      vi.useRealTimers();
+      process.env.TZ = originalTz;
       await db('hour_blocks').where({ tenant }).delete();
       await db('hour_block_service_scopes').where({ tenant }).delete();
       await db('hour_block_time_allocations').where({ tenant }).delete();
