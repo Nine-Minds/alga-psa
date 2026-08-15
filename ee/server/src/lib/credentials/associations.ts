@@ -273,6 +273,40 @@ export async function removeCredentialFromEntity(
   });
 }
 
+/**
+ * Filter association rows down to those whose credential the CALLER is
+ * authorized to see. Restricted native credentials (and out-of-scope Hudu
+ * refs) are hidden from the caller's list, so a replace-style write computed
+ * from that list must never detach them: the caller never formed intent about
+ * rows they cannot see, and removing one would both leak its existence and
+ * destroy it. Batched for native ids; per-ref for Hudu (bundle scope only,
+ * no live Hudu round-trip).
+ */
+async function filterRowsVisibleToCaller(
+  ctx: CredentialSourceContext,
+  rows: CredentialAssociationRow[]
+): Promise<CredentialAssociationRow[]> {
+  if (rows.length === 0) return rows;
+  const nativeIds = rows.flatMap((row) => (row.credential_id ? [row.credential_id] : []));
+  const refs = rows.flatMap((row) => (row.credential_ref ? [row.credential_ref] : []));
+  const visibleNativeIds = new Set(
+    (await nativeCredentialSource.listByIds(ctx, nativeIds)).map((summary) => summary.id)
+  );
+  const visibleRefs = new Set<string>();
+  for (const ref of refs) {
+    if (await huduCredentialSource.resolveOwnerClientId(ctx, ref)) {
+      visibleRefs.add(ref);
+    }
+  }
+  return rows.filter((row) =>
+    row.credential_id
+      ? visibleNativeIds.has(row.credential_id)
+      : row.credential_ref
+        ? visibleRefs.has(row.credential_ref)
+        : false
+  );
+}
+
 /** Replace the full credential set attached to an entity (link-existing save). */
 export async function setEntityCredentials(
   ctx: CredentialSourceContext,
@@ -301,19 +335,23 @@ export async function setEntityCredentials(
     );
     const desiredKeys = new Set(unique.map((id) => (isHuduCredentialId(id) ? `ref:${id}` : `id:${id}`)));
 
+    // Diff-based application: only rows the caller explicitly omitted AND is
+    // authorized to see are removed. Existing associations to credentials the
+    // caller cannot see (restricted rows hidden by the kernel, or out-of-scope
+    // Hudu refs) survive untouched — the caller never saw them, so detaching
+    // them would both leak their existence and destroy them.
     const toRemove = existing.filter((row) => {
       const key = row.credential_id ? `id:${row.credential_id}` : `ref:${row.credential_ref}`;
       return !desiredKeys.has(key);
     });
-    for (const row of toRemove) {
-      const key = row.credential_id ? `id:${row.credential_id}` : `ref:${row.credential_ref}`;
+    const removable = await filterRowsVisibleToCaller(ctx, toRemove);
+    for (const row of removable) {
       const db = tenantDb(trx, ctx.tenant).table('credential_associations');
       if (row.credential_id) {
         await db.where('credential_id', row.credential_id).where('entity_type', entityType).where('entity_id', entityId).del();
       } else {
         await db.where('credential_ref', row.credential_ref).where('entity_type', entityType).where('entity_id', entityId).del();
       }
-      void key;
     }
 
     const toAdd = unique.filter((id) => !existingKeys.has(isHuduCredentialId(id) ? `ref:${id}` : `id:${id}`));

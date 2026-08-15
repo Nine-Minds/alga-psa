@@ -1149,4 +1149,40 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
       await control.destroy();
     }
   });
+
+  it('setEntityCredentials preserves associations to restricted credentials the caller cannot see (no silent detach, no existence leak)', async () => {
+    const { addCredentialToEntity, setEntityCredentials, loadAssociationsForEntity } = await import(
+      '@ee/lib/credentials/associations'
+    );
+    const source = new NativeCredentialSource();
+    const ownerCtx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const strangerCtx = { tenant: assocTenant, userId: strangerId, user: userForId(strangerId) };
+
+    // A restricted credential hidden from everyone but the owner, and an open
+    // credential visible to everyone — both attached to the same ticket.
+    const hidden = await source.create(ownerCtx, { clientId: clientA, name: 'Hidden Restrict', password: 'x' });
+    await source.setRestriction(ownerCtx, hidden.id, { isRestricted: true, grants: [] });
+    const open = await source.create(ownerCtx, { clientId: clientA, name: 'Open Cred', password: 'x' });
+    const ticketForA = await seedEntity('ticket', clientA);
+    await addCredentialToEntity(ownerCtx, 'ticket', ticketForA, hidden.id);
+    await addCredentialToEntity(ownerCtx, 'ticket', ticketForA, open.id);
+
+    // The stranger sees only the open credential in the entity's list, so a
+    // link-manage save of an empty selection replaces the VISIBLE set only.
+    const strangerList = await source.listByIds(strangerCtx, [hidden.id, open.id]);
+    expect(strangerList.map((r) => r.id)).toEqual([open.id]);
+
+    await setEntityCredentials(strangerCtx, 'ticket', ticketForA, []);
+
+    // The hidden restricted association survives untouched; the visible open
+    // one was removed (the caller explicitly replaced with an empty set).
+    const rows = await loadAssociationsForEntity((await createTenantKnex(assocTenant)).knex, assocTenant, 'ticket', ticketForA);
+    expect(rows.map((r) => r.credential_id).sort()).toEqual([hidden.id]);
+
+    // The stranger's own read lens still hides the restricted credential (its
+    // existence was never confirmed by the replace — setEntityCredentials
+    // returns void, and the hidden row was neither removed nor reported).
+    const strangerEntityList = await source.listByIds(strangerCtx, [hidden.id, open.id]);
+    expect(strangerEntityList.map((r) => r.id)).toEqual([open.id]);
+  });
 });
