@@ -41,8 +41,8 @@ describe('TimePicker clock convention follows the locale', () => {
     for (const locale of ['fr', 'de', 'pt', 'nl', 'it', 'pl', 'es']) {
       mockLocale = locale;
       const { unmount } = render(<TimePicker value="19:05" onChange={() => {}} />);
-      expect(screen.getByText('19:05')).toBeTruthy();
-      expect(screen.queryByText(/PM/)).toBeNull();
+      expect(screen.getByDisplayValue('19:05')).toBeTruthy();
+      expect(screen.queryByDisplayValue(/PM/)).toBeNull();
       unmount();
     }
   });
@@ -50,18 +50,18 @@ describe('TimePicker clock convention follows the locale', () => {
   it('keeps 12-hour time with a meridiem for en', () => {
     mockLocale = 'en';
     render(<TimePicker value="19:05" onChange={() => {}} />);
-    expect(screen.getByText('7:05 PM')).toBeTruthy();
+    expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();
   });
 
   it('still honours an explicit timeFormat override', () => {
     mockLocale = 'fr';
     render(<TimePicker value="19:05" onChange={() => {}} timeFormat="12h" />);
-    expect(screen.getByText('7:05 PM')).toBeTruthy();
+    expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();
   });
 
   it('falls back to the default locale with no provider above it', () => {
     mockLocale = null;
     render(<TimePicker value="19:05" onChange={() => {}} />);
-    expect(screen.getByText('7:05 PM')).toBeTruthy();
+    expect(screen.getByDisplayValue('7:05 PM')).toBeTruthy();
   });
 });

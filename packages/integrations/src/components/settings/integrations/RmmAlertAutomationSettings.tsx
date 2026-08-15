@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { dateTimeFromString, dateTimeToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -1019,21 +1020,19 @@ function WindowEditorDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="win-start-time">Start time</Label>
-                <Input
+                <TimePicker
                   id="win-start-time"
-                  type="time"
                   value={f.startTime}
-                  onChange={(e) => setF((p) => ({ ...p, startTime: e.target.value }))}
+                  onChange={(startTime) => setF((p) => ({ ...p, startTime }))}
                   disabled={saving}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="win-end-time">End time</Label>
-                <Input
+                <TimePicker
                   id="win-end-time"
-                  type="time"
                   value={f.endTime}
-                  onChange={(e) => setF((p) => ({ ...p, endTime: e.target.value }))}
+                  onChange={(endTime) => setF((p) => ({ ...p, endTime }))}
                   disabled={saving}
                 />
               </div>

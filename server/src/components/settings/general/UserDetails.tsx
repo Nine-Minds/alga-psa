@@ -17,6 +17,7 @@ import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -518,20 +519,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                       onChange={(e) => update({ isWorking: e.target.checked })}
                       containerClassName="w-32"
                     />
-                    <Input
+                    <TimePicker
                       id={`user-work-schedule-start-${dayOfWeek}`}
-                      type="time"
                       value={day.startTime}
                       disabled={!day.isWorking}
-                      onChange={(e) => update({ startTime: e.target.value })}
+                      onChange={(startTime) => update({ startTime })}
                       className="w-32"
                     />
-                    <Input
+                    <TimePicker
                       id={`user-work-schedule-end-${dayOfWeek}`}
-                      type="time"
                       value={day.endTime}
                       disabled={!day.isWorking}
-                      onChange={(e) => update({ endTime: e.target.value })}
+                      onChange={(endTime) => update({ endTime })}
                       className="w-32"
                     />
                   </div>

@@ -5,7 +5,13 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { getInstallConfig } from './install-config';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, getUserInfoFromAuth, assertAccess, ExtensionGatewayAccessError } from './gateway/auth';
+import {
+  getTenantFromSessionAuth,
+  TenantAuthError,
+  getUserInfoFromAuth,
+  assertAccess,
+  ExtensionGatewayAccessError,
+} from './gateway/auth';
 import { startExtensionExecution, finishExtensionExecution } from './gateway/executionAudit';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
@@ -102,7 +108,7 @@ function corsPreflight(origin: string | null): NextResponse {
     headers.set('access-control-allow-credentials', 'true');
   }
   headers.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  headers.set('access-control-allow-headers', 'content-type,x-request-id,x-alga-tenant');
+  headers.set('access-control-allow-headers', 'content-type,x-request-id');
   headers.set('access-control-max-age', '120');
   headers.set('vary', 'Origin, Access-Control-Request-Headers');
   return new NextResponse(null, { status: 204, headers });
@@ -220,7 +226,7 @@ async function handle(
       methodOverrideSource,
     } = resolveMethodAndBody(rawMethod as ProxyMethod, url, initialBodyBuf);
 
-    tenantId = await getTenantFromAuth(req);
+    tenantId = await getTenantFromSessionAuth(req);
     logDebug('ext-proxy:start', {
       tenantId,
       extensionId,
@@ -431,8 +437,8 @@ async function handle(
       }
       return applyCorsHeaders(response, corsOrigin);
     }
-    if (error?.message === 'tenant_mismatch') {
-      return applyCorsHeaders(json(403, { error: 'tenant_mismatch' }), corsOrigin);
+    if (error instanceof TenantAuthError) {
+      return applyCorsHeaders(json(error.status, { error: error.code }), corsOrigin);
     }
     if (logId && tenantId) {
       const isTimeout = error?.name === 'AbortError';

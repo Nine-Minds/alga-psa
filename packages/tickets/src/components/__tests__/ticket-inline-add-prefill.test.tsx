@@ -508,14 +508,10 @@ vi.mock('../../actions/teamAssignmentActions', () => ({
   assignTeamToTicket: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: ({ value }: { value?: Date }) => (
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({
+  DateTimePicker: ({ value }: { value?: Date }) => (
     <input data-testid="due-date" value={value ? value.toISOString() : ''} readOnly />
   )
-}));
-
-vi.mock('@alga-psa/ui/components/TimePicker', () => ({
-  TimePicker: () => <input data-testid="due-time" />
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({

@@ -29,14 +29,6 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
         .string()
         .optional()
         .describe('Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.'),
-      'x-alga-tenant': zOpenApi
-        .string()
-        .optional()
-        .describe('Internal tenant header used for tenant resolution before session fallback.'),
-      'x-tenant-id': zOpenApi
-        .string()
-        .optional()
-        .describe('Legacy tenant header accepted for tenant resolution before session fallback.'),
     }),
   );
 
@@ -62,6 +54,7 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
       error: zOpenApi
         .enum([
           'unauthenticated',
+          'invalid_session',
           'tenant_mismatch',
           'extension_not_available',
           'endpoint_not_found',
@@ -94,12 +87,20 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
         description: 'Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path.',
         emptyBody: true,
       },
+      401: {
+        description: 'No authenticated session, or the session is missing a tenant.',
+        schema: ExtensionGatewayErrorResponse,
+      },
+      403: {
+        description: 'A tenant header conflicts with the authenticated session tenant.',
+        schema: ExtensionGatewayErrorResponse,
+      },
       404: {
-        description: 'Extension is not installed or not enabled for the resolved tenant.',
+        description: 'Extension is not installed or not enabled for the session tenant.',
         schema: ExtensionGatewayErrorResponse,
       },
       500: {
-        description: 'Tenant could not be resolved or another internal gateway error occurred.',
+        description: 'Another internal gateway error occurred.',
         schema: ExtensionGatewayErrorResponse,
       },
       502: {
@@ -158,30 +159,30 @@ export function registerExtensionGatewayRoutes(registry: ApiOpenApiRegistry) {
   registerGatewayMethod(
     'get',
     'Forward GET request to extension runner',
-    `Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute. ${extensionGatewayAccessPosture} GET requests do not read a body and do not generate an idempotency key.`,
+    `Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute and relays the runner response. ${extensionGatewayAccessPosture} Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. GET requests do not read a body and do not generate an idempotency key.`,
   );
 
   registerGatewayMethod(
     'post',
     'Forward POST request to extension runner',
-    `Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. ${extensionGatewayAccessPosture} For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.`,
+    `Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. ${extensionGatewayAccessPosture} Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.`,
   );
 
   registerGatewayMethod(
     'put',
     'Forward PUT request to extension runner',
-    `Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. ${extensionGatewayAccessPosture} For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.`,
+    `Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. ${extensionGatewayAccessPosture} Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.`,
   );
 
   registerGatewayMethod(
     'patch',
     'Forward PATCH request to extension runner',
-    `Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. ${extensionGatewayAccessPosture} For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.`,
+    `Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. ${extensionGatewayAccessPosture} Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.`,
   );
 
   registerGatewayMethod(
     'delete',
     'Forward DELETE request to extension runner',
-    `Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. ${extensionGatewayAccessPosture} For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.`,
+    `Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. ${extensionGatewayAccessPosture} Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.`,
   );
 }

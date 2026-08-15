@@ -1,5 +1,8 @@
 import type { AuthorizationKernel } from '@alga-psa/authorization/kernel';
-import { BuiltinAuthorizationKernelProvider } from '@alga-psa/authorization/kernel';
+import {
+  BuiltinAuthorizationKernelProvider,
+  resolveDefaultBuiltinRelationshipRules,
+} from '@alga-psa/authorization/kernel';
 import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import { loadEnterpriseAuthorizationKernelFactory } from './enterpriseEntry';
 
@@ -10,7 +13,12 @@ declare global {
 
 export function createBuiltinAuthorizationKernel(): AuthorizationKernel {
   return createAuthorizationKernelWithDefaultRbac({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    // Subject-aware same_client: client subjects are scoped to their own
+    // client; internal subjects keep the allow-all built-in baseline so RBAC
+    // and bundle narrowing behave exactly as before.
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      resolveRelationshipRules: resolveDefaultBuiltinRelationshipRules,
+    }),
   });
 }
 

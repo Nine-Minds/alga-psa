@@ -43,7 +43,11 @@ describe('quick add ticket i18n wiring contract', () => {
     expect(source).toContain("t('quickAdd.selectPriority', 'Select Priority *')");
     expect(source).toContain("t('quickAdd.dueDate', 'Due Date')");
     expect(source).toContain("t('quickAdd.selectDate', 'Select date')");
-    expect(source).toContain("t('quickAdd.timePlaceholder', 'Time')");
+    // The due date is one date+time field now, not a date picker beside a time
+    // picker. Its time half hints the locale's own clock format ("09:00",
+    // "9:00 AM") the way the date half hints "mm/dd/yyyy", so the dialog no
+    // longer supplies a word for it.
+    expect(source).not.toContain("t('quickAdd.timePlaceholder'");
   });
 
   it('T021: routes quick-add validation and required-fields messaging through translations', () => {

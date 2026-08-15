@@ -4,6 +4,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
@@ -42,7 +43,9 @@ export async function GET(
       }
 
       const apiUser = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-      if (!apiUser) {
+      try {
+        assertInternalApiUser(apiUser);
+      } catch {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 

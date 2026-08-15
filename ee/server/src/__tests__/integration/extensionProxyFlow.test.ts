@@ -26,6 +26,16 @@ const mocks = vi.hoisted(() => {
       this.retryAfterSeconds = retryAfterSeconds;
     }
   }
+  class TenantAuthError extends Error {
+    code: string;
+    status: number;
+    constructor(code: string, message: string) {
+      super(message);
+      this.name = 'TenantAuthError';
+      this.code = code;
+      this.status = code === 'tenant_mismatch' ? 403 : 401;
+    }
+  }
   class RunnerConfigError extends Error {}
   class RunnerRequestError extends Error {
     status?: number;
@@ -38,7 +48,7 @@ const mocks = vi.hoisted(() => {
     }
   }
   return {
-    getTenantFromAuth: vi.fn(),
+    getTenantFromSessionAuth: vi.fn(),
     getUserInfoFromAuth: vi.fn(),
     assertAccess: vi.fn(),
     getInstallConfig: vi.fn(),
@@ -46,16 +56,18 @@ const mocks = vi.hoisted(() => {
     finishExtensionExecution: vi.fn(),
     getRunnerBackend: vi.fn(),
     AccessError,
+    TenantAuthError,
     RunnerConfigError,
     RunnerRequestError,
   };
 });
 
 vi.mock('../../../../../packages/product-ext-proxy/ee/gateway/auth', () => ({
-  getTenantFromAuth: mocks.getTenantFromAuth,
+  getTenantFromSessionAuth: mocks.getTenantFromSessionAuth,
   getUserInfoFromAuth: mocks.getUserInfoFromAuth,
   assertAccess: mocks.assertAccess,
   ExtensionGatewayAccessError: mocks.AccessError,
+  TenantAuthError: mocks.TenantAuthError,
 }));
 
 vi.mock('@ee/lib/extensions/installConfig', () => ({
@@ -315,7 +327,7 @@ describe('Extension Proxy Flow Integration', () => {
 
   describe('Gateway Handler (Host -> Runner)', () => {
     beforeEach(() => {
-      mocks.getTenantFromAuth.mockResolvedValue('tenant-1');
+      mocks.getTenantFromSessionAuth.mockResolvedValue('tenant-1');
       mocks.assertAccess.mockResolvedValue(accessFixture());
       mocks.getUserInfoFromAuth.mockResolvedValue(userInfoFixture());
       mocks.getInstallConfig.mockResolvedValue(installConfigFixture());

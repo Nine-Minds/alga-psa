@@ -592,3 +592,267 @@ button[aria-selected="true"].rdp-day {
     flex: 1 1 auto;
   }
 }
+/* ── Date / time field family ──────────────────────────────────────────────
+   One field spec for date, time and date+time. The border lives on the
+   wrapper and the focus ring replaces it (as in Input.tsx) rather than
+   sitting outside it, so a focused picker shows one edge and not three. */
+
+.dtf-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.dtf-field {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.25rem;
+  padding: 0 0.25rem 0 0;
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 0.5rem;
+  background: rgb(var(--color-card));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dtf-fields > .dtf-field-date {
+  flex: 1.35 1 0;
+}
+
+.dtf-fields > .dtf-field-time {
+  flex: 1 1 0;
+}
+
+.dtf-field:hover:not(.dtf-field-disabled) {
+  border-color: rgb(var(--color-border-300));
+}
+
+.dtf-field:focus-within {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgb(var(--color-primary-500));
+}
+
+.dtf-field-error {
+  border-color: rgb(var(--color-destructive));
+  background: rgb(var(--color-destructive) / 0.06);
+}
+
+.dtf-field-error:focus-within {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgb(var(--color-destructive));
+}
+
+.dtf-field-disabled {
+  opacity: 0.5;
+  background: rgb(var(--color-border-50));
+}
+
+.dtf-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0.25rem 0 0.75rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: rgb(var(--color-text-900));
+}
+
+.dtf-input::placeholder {
+  color: rgb(var(--color-text-400));
+}
+
+.dtf-input:disabled {
+  cursor: not-allowed;
+}
+
+.dtf-field-clear,
+.dtf-field-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: rgb(var(--color-text-400));
+  cursor: pointer;
+}
+
+.dtf-field-clear:hover,
+.dtf-field-icon:hover:not(:disabled) {
+  background: rgb(var(--color-border-100));
+  color: rgb(var(--color-text-600));
+}
+
+.dtf-field-icon:disabled {
+  cursor: not-allowed;
+}
+
+.dtf-panel {
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgb(var(--color-card));
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 0.75rem;
+  box-shadow: 0 16px 36px -8px rgb(15 23 42 / 0.2);
+}
+
+.dtf-panel-body {
+  display: flex;
+  align-items: stretch;
+}
+
+.dtf-panel .calendar-container {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+}
+
+.dtf-rail {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  width: 9.375rem;
+  border-left: 1px solid rgb(var(--color-border-100));
+  background: rgb(var(--color-border-50));
+}
+
+/* With no calendar beside it the rail is the whole panel: the footer sets the
+   width, so let the rail take all of it instead of leaving a blank column. */
+.dtf-panel-rail-only .dtf-panel-body {
+  flex: 1 1 auto;
+}
+
+.dtf-panel-rail-only .dtf-rail {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 11rem;
+  border-left: none;
+  background: rgb(var(--color-card));
+}
+
+.dtf-rail-heading {
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--color-text-500));
+}
+
+.dtf-rail-scroll {
+  position: relative;
+  overflow-y: auto;
+  max-height: 17.5rem;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border-300)) transparent;
+}
+
+.dtf-rail-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dtf-rail-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--color-border-300));
+  border-radius: 3px;
+}
+
+.dtf-rail-option {
+  display: block;
+  width: 100%;
+  padding: 0.3125rem 0.75rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: rgb(var(--color-text-800));
+  cursor: pointer;
+}
+
+.dtf-rail-option:hover {
+  background: rgb(var(--color-border-100));
+}
+
+.dtf-rail-option.selected {
+  background: rgb(var(--color-primary-100));
+  color: rgb(var(--color-primary-700));
+  font-weight: 600;
+}
+
+/* A minute of the user's own, kept in sequence rather than rounded away. */
+.dtf-rail-option.exact {
+  box-shadow: inset 2px 0 0 0 rgb(var(--color-primary-500));
+}
+
+.dtf-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 0.625rem;
+  border-top: 1px solid rgb(var(--color-border-100));
+}
+
+.dtf-footer-text {
+  font-size: 0.71875rem;
+  line-height: 1.2;
+  color: rgb(var(--color-text-500));
+}
+
+.dtf-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.dtf-footer-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(var(--color-text-600));
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dtf-footer-button:hover {
+  background: rgb(var(--color-border-100));
+  color: rgb(var(--color-text-800));
+}
+
+@media (max-width: 640px) {
+  .dtf-panel-body {
+    flex-direction: column;
+  }
+
+  .dtf-rail {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgb(var(--color-border-100));
+  }
+}
+
+.dtf-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: rgb(var(--color-destructive));
+}

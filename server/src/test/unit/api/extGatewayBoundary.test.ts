@@ -19,9 +19,19 @@ const mocks = vi.hoisted(() => {
       this.retryAfterSeconds = retryAfterSeconds;
     }
   }
+  class TenantAuthError extends Error {
+    code: string;
+    status: number;
+    constructor(code: string, message: string) {
+      super(message);
+      this.name = 'TenantAuthError';
+      this.code = code;
+      this.status = code === 'tenant_mismatch' ? 403 : 401;
+    }
+  }
   return {
     assertSessionProductAccess: vi.fn(),
-    getTenantFromAuth: vi.fn(),
+    getTenantFromSessionAuth: vi.fn(),
     assertAccess: vi.fn(),
     startExtensionExecution: vi.fn(),
     finishExtensionExecution: vi.fn(),
@@ -32,6 +42,7 @@ const mocks = vi.hoisted(() => {
     tenantDb: vi.fn(),
     getInstallConfig: vi.fn(),
     AccessError,
+    TenantAuthError,
   };
 });
 
@@ -40,9 +51,10 @@ vi.mock('@/lib/api/standaloneProductGuards', () => ({
 }));
 
 vi.mock('server/src/lib/extensions/gateway/auth', () => ({
-  getTenantFromAuth: mocks.getTenantFromAuth,
+  getTenantFromSessionAuth: mocks.getTenantFromSessionAuth,
   assertAccess: mocks.assertAccess,
   ExtensionGatewayAccessError: mocks.AccessError,
+  TenantAuthError: mocks.TenantAuthError,
 }));
 
 vi.mock('server/src/lib/extensions/gateway/executionAudit', () => ({
@@ -126,7 +138,7 @@ describe('direct /api/ext gateway boundary', () => {
     process.env.RUNNER_BASE_URL = 'http://runner.test';
     vi.clearAllMocks();
     mocks.assertSessionProductAccess.mockResolvedValue(null);
-    mocks.getTenantFromAuth.mockResolvedValue('tenant-1');
+    mocks.getTenantFromSessionAuth.mockResolvedValue('tenant-1');
     mocks.assertAccess.mockResolvedValue(accessFixture());
     mocks.startExtensionExecution.mockResolvedValue('log-1');
     mocks.getCurrentUser.mockResolvedValue(userFixture() as any);

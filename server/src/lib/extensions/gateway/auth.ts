@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getSession } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { assertRunnerAuth, RunnerAuthError } from '../runnerAuth';
 
 export {
   assertAccess,
@@ -22,6 +23,32 @@ export interface ExtProxyUserInfo {
   client_name: string;
   /** For client portal users, the client_id they are associated with */
   client_id?: string;
+}
+
+export type TenantAuthErrorCode =
+  | 'unauthenticated'
+  | 'invalid_session'
+  | 'invalid_service_auth'
+  | 'missing_tenant'
+  | 'mixed_auth'
+  | 'tenant_mismatch';
+
+/**
+ * Typed tenant-resolution failure. Route boundaries map this to a generic 401
+ * (missing/invalid authentication) or 403 (conflicting tenant evidence). The
+ * internal `code` is stable and may be logged; request credentials (runner
+ * token, cookies, tenant header values) must never be included in logs.
+ */
+export class TenantAuthError extends Error {
+  readonly code: TenantAuthErrorCode;
+  readonly status: number;
+
+  constructor(code: TenantAuthErrorCode, message: string) {
+    super(message);
+    this.name = 'TenantAuthError';
+    this.code = code;
+    this.status = code === 'tenant_mismatch' ? 403 : 401;
+  }
 }
 
 /**
@@ -58,28 +85,18 @@ async function getUserClientId(userId: string, tenantId: string): Promise<string
   return result?.client_id || undefined;
 }
 
+function normalizeHeaderValue(value: string | null): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
 /**
  * Get full user info from session for passing to runner.
  * Returns null if no valid session exists.
  */
 export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUserInfo | null> {
-  // Check for internal header first (not typically used for user info)
-  const headerTenant = req.headers.get('x-alga-tenant');
-  if (headerTenant) {
-    // When using header-based auth, we don't have user info
-    console.log('[ext-proxy auth] Skipping user info - x-alga-tenant header present');
-    return null;
-  }
-
   const session = await getSession();
   const user = session?.user as any;
-
-  console.log('[ext-proxy auth] Session check', {
-    hasSession: !!session,
-    hasUser: !!user,
-    userId: user?.user_id || user?.id,
-    userEmail: user?.email,
-  });
 
   if (!user) {
     return null;
@@ -105,38 +122,85 @@ export async function getUserInfoFromAuth(req: NextRequest): Promise<ExtProxyUse
     client_id: clientId,
   };
 
-  console.log('[ext-proxy auth] Returning user info', {
-    userId: userInfo.user_id,
-    userEmail: userInfo.user_email,
-    userName: userInfo.user_name,
-    userType: userInfo.user_type,
-    clientId: userInfo.client_id,
-  });
-
   return userInfo;
 }
 
-export async function getTenantFromAuth(req: NextRequest): Promise<string> {
+/**
+ * Resolve the tenant for a browser/session flow.
+ *
+ * The session is the only tenant authority. `x-alga-tenant` and `x-tenant-id`
+ * are normalized and checked only for consistency during compatibility; they
+ * can never select a tenant, and a header that disagrees with the session
+ * fails closed with `tenant_mismatch`. A partial session (session object with
+ * a missing/blank tenant) throws `invalid_session` before any header is
+ * considered, and never falls through to service authentication.
+ */
+export async function getTenantFromSessionAuth(req: NextRequest): Promise<string> {
   const session = await getSession();
-  const sessionTenant = (session?.user as any)?.tenant;
-  const h = req.headers.get('x-alga-tenant')?.trim();
-  const legacy = req.headers.get('x-tenant-id')?.trim();
 
-  if (sessionTenant && String(sessionTenant).trim()) {
-    const tenant = String(sessionTenant).trim();
-    if ((h && h !== tenant) || (legacy && legacy !== tenant)) {
-      throw new Error('tenant_mismatch');
-    }
-    return tenant;
+  if (!session) {
+    throw new TenantAuthError('unauthenticated', 'No authenticated session found');
   }
 
-  // Header-based tenant selection is only allowed for non-browser/internal callers
-  // that do not already have a session tenant. A browser user must never be able
-  // to switch tenants by supplying x-alga-tenant/x-tenant-id.
-  if (h) return h;
-  if (legacy) return legacy;
+  const rawTenant = (session.user as { tenant?: unknown } | null | undefined)?.tenant;
+  if (typeof rawTenant !== 'string' || !rawTenant.trim()) {
+    throw new TenantAuthError('invalid_session', 'Session is missing a tenant');
+  }
+  const tenant = rawTenant.trim();
 
-  const dev = process.env.DEV_TENANT_ID;
-  if (dev && dev.trim()) return dev.trim();
-  throw new Error('unauthenticated');
+  const canonical = normalizeHeaderValue(req.headers.get('x-alga-tenant'));
+  const legacy = normalizeHeaderValue(req.headers.get('x-tenant-id'));
+
+  if (canonical && canonical !== tenant) {
+    throw new TenantAuthError('tenant_mismatch', 'x-alga-tenant header does not match the session tenant');
+  }
+  if (legacy && legacy !== tenant) {
+    throw new TenantAuthError('tenant_mismatch', 'x-tenant-id header does not match the session tenant');
+  }
+  if (canonical && legacy && canonical !== legacy) {
+    throw new TenantAuthError('tenant_mismatch', 'Conflicting tenant headers supplied');
+  }
+
+  return tenant;
+}
+
+/**
+ * Resolve the tenant for a service flow.
+ *
+ * A tenant header is honored only after an explicit service credential
+ * (`x-runner-auth` matching `RUNNER_SERVICE_TOKEN`) is verified with a
+ * constant-time comparison. `RUNNER_STORAGE_API_TOKEN` is deliberately not
+ * accepted here. Any session object — even a partial one — rejects with
+ * `mixed_auth` so partial sessions are never reinterpreted as service callers.
+ * `x-tenant-id` remains a documented legacy alias under service
+ * authentication; when both headers are supplied they must agree exactly.
+ */
+export async function getTenantFromServiceAuth(req: NextRequest): Promise<string> {
+  const session = await getSession();
+
+  if (session) {
+    throw new TenantAuthError('mixed_auth', 'Session must not be combined with service authentication');
+  }
+
+  try {
+    assertRunnerAuth(req.headers.get('x-runner-auth'), process.env.RUNNER_SERVICE_TOKEN);
+  } catch (error) {
+    if (error instanceof RunnerAuthError) {
+      throw new TenantAuthError('invalid_service_auth', 'Invalid or unconfigured service token');
+    }
+    throw error;
+  }
+
+  const canonical = normalizeHeaderValue(req.headers.get('x-alga-tenant'));
+  const legacy = normalizeHeaderValue(req.headers.get('x-tenant-id'));
+
+  const tenant = canonical || legacy;
+  if (!tenant) {
+    throw new TenantAuthError('missing_tenant', 'Service request is missing a tenant header');
+  }
+  if (canonical && legacy && canonical !== legacy) {
+    throw new TenantAuthError('tenant_mismatch', 'Conflicting tenant headers supplied');
+  }
+
+  return tenant;
 }

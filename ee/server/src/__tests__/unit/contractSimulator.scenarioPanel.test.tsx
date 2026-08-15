@@ -10,6 +10,7 @@ import type {
 import ScenarioPanel from "@ee/components/billing/simulator/ScenarioPanel";
 
 vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
+  useOptionalI18n: () => ({ locale: "en" }),
   useTranslation: () => ({
     t: (_key: string, options?: { defaultValue?: string }) =>
       options?.defaultValue ?? _key,

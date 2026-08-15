@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 
-import { getTenantFromAuth, assertAccess, ExtensionGatewayAccessError } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromSessionAuth, TenantAuthError, assertAccess, ExtensionGatewayAccessError } from 'server/src/lib/extensions/gateway/auth';
 import {
   startExtensionExecution,
   finishExtensionExecution,
@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const ALLOWED_METHODS = 'GET,POST,PUT,PATCH,DELETE,OPTIONS';
-const ALLOWED_HEADERS = 'content-type,x-request-id,x-idempotency-key,x-alga-tenant';
+const ALLOWED_HEADERS = 'content-type,x-request-id,x-idempotency-key';
 
 const isEnterpriseEdition =
   (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -228,7 +228,6 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
     headers: {
       origin: req.headers.get('origin'),
       host: req.headers.get('host'),
-      'x-alga-tenant': req.headers.get('x-alga-tenant'),
     },
   });
   const corsOrigin = pickCorsOrigin(req);
@@ -251,7 +250,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       return deniedResponse;
     }
 
-    const tenantId = await getTenantFromAuth(req);
+    const tenantId = await getTenantFromSessionAuth(req);
     console.log('[api/ext] tenant resolved', { tenantId, extensionId, method, elapsed: Date.now() - start });
 
     const access = await assertAccess({ tenantId, extensionId, method, path });
@@ -497,9 +496,9 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       }
       return applyCorsHeaders(response, corsOrigin);
     }
-    if (err instanceof Error && err.message === 'tenant_mismatch') {
+    if (err instanceof TenantAuthError) {
       return applyCorsHeaders(
-        NextResponse.json({ error: 'tenant_mismatch' }, { status: 403 }),
+        NextResponse.json({ error: err.code }, { status: err.status }),
         corsOrigin
       );
     }

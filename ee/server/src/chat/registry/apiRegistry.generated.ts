@@ -15884,7 +15884,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward GET request to extension runner",
     "summary": "Forward GET request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. GET requests do not read a body and do not generate an idempotency key.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. GET requests do not read a body and do not generate an idempotency key.",
     "tags": [
       "Extension Gateway"
     ],
@@ -15930,26 +15930,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -15965,7 +15945,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward POST request to extension runner",
     "summary": "Forward POST request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16011,26 +15991,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16051,7 +16011,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PUT request to extension runner",
     "summary": "Forward PUT request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16097,26 +16057,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16137,7 +16077,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward PATCH request to extension runner",
     "summary": "Forward PATCH request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16183,26 +16123,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],
@@ -16223,7 +16143,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/ext/{extensionId}/{path}",
     "displayName": "Forward DELETE request to extension runner",
     "summary": "Forward DELETE request to extension runner",
-    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development and forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.",
+    "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session, then forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway fails closed unless the caller has an authenticated session principal whose tenant matches the resolved tenant. It requires an active tenant-owned install (is_enabled true and status enabled), a declared endpoint on the installed version that matches the effective method and path, the extension:read permission for GET/HEAD requests or the extension:write permission for POST/PUT/PATCH/DELETE requests for MSP users, or an explicit client-portal opt-in with a resolvable client for client users, an available rate-limit budget for the tenant and extension, and a durable execution audit record. Header-only tenant resolution and DEV_TENANT_ID never authorize execution. Runner and install internals are never returned to callers. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64.",
     "tags": [
       "Extension Gateway"
     ],
@@ -16269,26 +16189,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-        }
-      },
-      {
-        "name": "x-alga-tenant",
-        "in": "header",
-        "required": false,
-        "description": "Internal tenant header used for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Internal tenant header used for tenant resolution before session fallback."
-        }
-      },
-      {
-        "name": "x-tenant-id",
-        "in": "header",
-        "required": false,
-        "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-        "schema": {
-          "type": "string",
-          "description": "Legacy tenant header accepted for tenant resolution before session fallback."
         }
       }
     ],

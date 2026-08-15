@@ -44,7 +44,7 @@ describe('tenant suspension surface gates', () => {
   it('T036: server API key validation variants gate on owner-inactive and tenant-suspended', () => {
     const source = read('server/src/lib/services/apiKeyServiceForApi.ts');
     expect(source.match(/getKeyGateReason\(/g)!.length).toBeGreaterThanOrEqual(3);
-    expect(source).toContain("'user_inactive' | 'tenant_suspended'");
+    expect(source).toContain("'user_inactive' | 'client_owner' | 'tenant_suspended'");
     expect(source).toContain('isTenantSuspended(knex, tenant)');
   });
 

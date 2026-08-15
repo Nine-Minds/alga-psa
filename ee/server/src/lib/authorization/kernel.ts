@@ -3,6 +3,7 @@ import {
   type AuthorizationKernel,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
+  resolveDefaultBuiltinRelationshipRules,
 } from '@alga-psa/authorization/kernel';
 import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
@@ -28,7 +29,12 @@ async function resolveBundleNarrowingRules(input: AuthorizationEvaluationInput) 
 
 export function createEnterpriseAuthorizationKernel(): AuthorizationKernel {
   return createAuthorizationKernelWithDefaultRbac({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    // Same subject-aware built-in invariant as CE: client subjects resolve to
+    // a same_client rule, internal subjects stay unchanged. Enterprise bundle
+    // narrowing intersects with the built-in result and can never widen it.
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      resolveRelationshipRules: resolveDefaultBuiltinRelationshipRules,
+    }),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: resolveBundleNarrowingRules,
     }),
