@@ -1043,4 +1043,110 @@ describe('credential associations — entity-wide (same-client + CRUD + migratio
     const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
     expect(row.client_id).toBe(clientB);
   });
+
+  it('reassign/attach race: the credential row lock serializes reassignment against association writes (same-client invariant)', async () => {
+    const { addCredentialToEntity } = await import('@ee/lib/credentials/associations');
+    const source = new NativeCredentialSource();
+    const ctx = { tenant: assocTenant, userId: ownerId, user: userForId(ownerId) };
+    const cred = await createCredentialFor(clientA, 'Race Credential');
+    const ticketForA = await seedEntity('ticket', clientA);
+
+    // Control connection gates the attach's association INSERT with a SHARE
+    // ROW EXCLUSIVE lock: it conflicts with the INSERT's ROW EXCLUSIVE (so the
+    // attach pauses AFTER its same-client check but BEFORE its insert lands)
+    // yet is compatible with every SELECT/UPDATE the reassignment path runs.
+    // This forces the exact race window: the attach has already certified
+    // owner A, and the reassignment is free to read the pre-attach state.
+    //
+    // NOTE: block detection is via pg_locks, NOT pg_stat_activity query text —
+    // through pgbouncer a lock-blocked statement is rendered 'idle in
+    // transaction' with a stale query. And the local role app_user_1 carries
+    // lock_timeout=8s, so the gate must be released well inside that budget.
+    const control = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || '127.0.0.1',
+        port: 5472,
+        user: process.env.DB_USER_ADMIN || 'postgres',
+        password: readPostgresPassword(),
+        database: process.env.DB_NAME_SERVER || 'server',
+      },
+      pool: { min: 1, max: 1 },
+    });
+    const waitForBlockedLock = async (relname: string, timeoutMs = 6000): Promise<boolean> => {
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        const res = await control.raw(
+          `SELECT count(*)::int AS c
+             FROM pg_locks l
+             LEFT JOIN pg_class c ON c.oid = l.relation
+            WHERE l.pid <> pg_backend_pid() AND l.granted = false AND c.relname = ?`,
+          [relname]
+        );
+        if (Number(res.rows?.[0]?.c ?? 0) > 0) return true;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      return false;
+    };
+
+    try {
+      await control.raw('BEGIN');
+      await control.raw('LOCK TABLE credential_associations IN SHARE ROW EXCLUSIVE MODE');
+
+      // Start the ATTACH first: with the fix it takes the credential row FOR
+      // UPDATE immediately, so it owns the lock for the whole mutation and is
+      // parked at its association INSERT by the SRE gate.
+      const attachPromise = addCredentialToEntity(ctx, 'ticket', ticketForA, cred).then(
+        () => 'attached' as const,
+        (error: unknown) =>
+          `attach-failed:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      expect(await waitForBlockedLock('credential_associations')).toBe(true);
+
+      // Start the reassignment. With the fix its first statement (FOR UPDATE on
+      // the credential row) blocks on the attach's held lock; WITHOUT the fix
+      // it is a plain read that does not block, and it commits client B while
+      // the attach still believes the owner is A.
+      const reassignPromise = source.update(ctx, cred, { clientId: clientB }).then(
+        () => 'reassigned' as const,
+        (error: unknown) => `reassign-rejected:${(error as { code?: string } | null)?.code ?? String(error)}`
+      );
+      // The fixed reassignment's FIRST statement is FOR UPDATE on the credential
+      // row the attach holds, so it stays pending until the gate releases.
+      // WITHOUT the fix it is a plain read that does not block: it completes
+      // immediately and commits client B while the attach still sees owner A.
+      const reassignStayedPending = await Promise.race([
+        reassignPromise.then(() => false, () => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 500)),
+      ]);
+
+      // Release the gate: the attach's insert lands, then the reassignment
+      // proceeds against committed state. Well inside the 8s lock_timeout.
+      await control.raw('COMMIT');
+
+      const attachOutcome = await attachPromise;
+      const reassignOutcome = await reassignPromise;
+
+      // The serialize point must have been exercised (this is what fails
+      // against the pre-fix code, whose reassignment never blocks).
+      expect(reassignStayedPending).toBe(true);
+
+      // Same-client invariant after the race: a credential owned by B must
+      // never be associated with the client-A ticket.
+      const row = await assocDb('credentials').where({ tenant: assocTenant, credential_id: cred }).first();
+      const associations = await assocDb('credential_associations').where({ tenant: assocTenant, credential_id: cred });
+      const crossClient =
+        row.client_id === clientB &&
+        associations.some((a) => a.entity_type === 'ticket' && a.entity_id === ticketForA);
+      expect(crossClient).toBe(false);
+
+      // Deterministic outcome in this orchestration: the attach committed first,
+      // so the reassignment is rejected against the now-visible association.
+      expect(attachOutcome).toBe('attached');
+      expect(reassignOutcome).toBe('reassign-rejected:CREDENTIAL_CLIENT_MISMATCH');
+    } finally {
+      await control.raw('ROLLBACK').catch(() => undefined);
+      await control.destroy();
+    }
+  });
 });

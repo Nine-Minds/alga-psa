@@ -47,6 +47,33 @@ export interface CredentialAssociationRow {
   entity_type: string;
 }
 
+/**
+ * Serialize association mutations against concurrent ownership reassignment on
+ * the SAME native credential. Takes FOR UPDATE row locks on every native
+ * credential the mutation touches (deterministic order — no deadlock) so the
+ * owner-client resolution and same-client checks below always observe the
+ * credential's committed, post-commit state. The reassignment path
+ * (nativeSource.update) takes the same row lock, so the two serialize: either
+ * the attach sees the post-reassign owner and rejects a mismatched entity, or
+ * the reassign sees the post-attach association list and rejects the move.
+ *
+ * Hudu refs have no native row to lock; their owning client derives from the
+ * company mapping, which the reassignment path never mutates.
+ */
+async function lockCredentialRowsForWrite(
+  trx: Knex.Transaction,
+  tenant: string,
+  credentialIds: string[]
+): Promise<void> {
+  const nativeIds = Array.from(new Set(credentialIds.filter((id) => !isHuduCredentialId(id)))).sort();
+  if (nativeIds.length === 0) return;
+  await tenantDb(trx, tenant)
+    .table('credentials')
+    .whereIn('credential_id', nativeIds)
+    .forUpdate()
+    .select('credential_id');
+}
+
 function notFound(): never {
   throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
 }
@@ -196,6 +223,9 @@ export async function addCredentialToEntity(
 ): Promise<void> {
   const { knex } = await createTenantKnex(ctx.tenant);
   await withTransaction(knex, async (trx) => {
+    // Hold the credential row lock for the whole mutation so a concurrent
+    // reassignment cannot commit between our owner-client read and the insert.
+    await lockCredentialRowsForWrite(trx, ctx.tenant, [credentialId]);
     // The credential's owning client (both sources), with the caller's
     // authorization baked in: absent or invisible => fail closed as not-found.
     const ownerClientId = await resolveCredentialOwnerClientId(ctx, credentialId);
@@ -221,6 +251,7 @@ export async function removeCredentialFromEntity(
 ): Promise<void> {
   const { knex } = await createTenantKnex(ctx.tenant);
   await withTransaction(knex, async (trx) => {
+    await lockCredentialRowsForWrite(trx, ctx.tenant, [credentialId]);
     const ownerClientId = await resolveCredentialOwnerClientId(ctx, credentialId);
     if (!ownerClientId) notFound();
 
@@ -252,6 +283,10 @@ export async function setEntityCredentials(
   const unique = Array.from(new Set(credentialIds));
   const { knex } = await createTenantKnex(ctx.tenant);
   await withTransaction(knex, async (trx) => {
+    // Lock EVERY native credential the set touches (deterministic order) up
+    // front, so a concurrent reassignment of any of them cannot commit between
+    // the same-client pre-check and the association diff below.
+    await lockCredentialRowsForWrite(trx, ctx.tenant, unique);
     // Resolve + same-client check EVERY credential BEFORE mutating anything so
     // a partial rejection never leaves a half-applied set.
     for (const credentialId of unique) {

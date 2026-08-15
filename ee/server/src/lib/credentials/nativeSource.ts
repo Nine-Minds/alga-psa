@@ -122,11 +122,17 @@ async function loadAssociations(
   return map;
 }
 
-async function fetchCredentialById(trx: Knex | Knex.Transaction, tenant: string, id: string): Promise<CredentialRowProjection | null> {
-  return tenantDb(trx, tenant)
+async function fetchCredentialById(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  id: string,
+  forUpdate = false
+): Promise<CredentialRowProjection | null> {
+  const query = tenantDb(trx, tenant)
     .table<CredentialRowProjection>('credentials')
-    .where('credential_id', id)
-    .first();
+    .where('credential_id', id);
+  if (forUpdate) query.forUpdate();
+  return query.first();
 }
 
 async function fetchGrantsForCredential(trx: Knex | Knex.Transaction, tenant: string, id: string): Promise<CredentialGrantRow[]> {
@@ -458,7 +464,11 @@ export class NativeCredentialSource implements CredentialSource {
   ): Promise<CredentialSummary> {
     const { knex } = await createTenantKnex(ctx.tenant);
     return withTransaction(knex, async (trx) => {
-      const existing = await fetchCredentialById(trx, ctx.tenant, id);
+      // FOR UPDATE from the first statement: the reassignment same-client
+      // check below must observe committed state and hold the row lock so a
+      // concurrent association write (associations.ts takes the same lock)
+      // cannot commit between the check and our own update.
+      const existing = await fetchCredentialById(trx, ctx.tenant, id, true);
       if (!existing) notFound();
       if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
 
