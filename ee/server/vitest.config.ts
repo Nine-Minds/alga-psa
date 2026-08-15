@@ -150,6 +150,7 @@ export default defineConfig({
       { find: '@main-server', replacement: path.resolve(__dirname, '../../server/src') },
       { find: '@main-test-utils', replacement: path.resolve(__dirname, '../../server/test-utils') },
       { find: 'server', replacement: path.resolve(__dirname, '../../server') },
+      { find: '@product/ext-proxy', replacement: path.resolve(__dirname, '../../packages/product-ext-proxy') },
 
       // Next.js server stubs for non-Next test runtime (required by next-auth env helpers).
       { find: 'fs', replacement: 'node:fs' },

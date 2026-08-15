@@ -4,6 +4,17 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { assertRunnerAuth, RunnerAuthError } from '../runnerAuth';
 
+export {
+  assertAccess,
+  ExtensionGatewayAccessError,
+} from './access';
+export type {
+  AssertExtensionAccessInput,
+  AuthorizedExtensionAccess,
+  ExtensionGatewayAccessErrorCode,
+  ExtensionGatewayPrincipal,
+} from './access';
+
 export interface ExtProxyUserInfo {
   user_id: string;
   user_email: string;
@@ -192,9 +203,4 @@ export async function getTenantFromServiceAuth(req: NextRequest): Promise<string
   }
 
   return tenant;
-}
-
-export async function assertAccess(_tenantId: string, _extensionId: string, _method: string, _path: string): Promise<void> {
-  // TODO: implement RBAC and per-tenant endpoint checks
-  return;
 }

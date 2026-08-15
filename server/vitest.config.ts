@@ -357,6 +357,7 @@ export default defineConfig({
       { find: '@tiptap/react/menus', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-react-menus.tsx') },
       { find: 'emoticon', replacement: path.resolve(__dirname, './src/test/stubs/emoticon.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
+      { find: '@product/ext-proxy', replacement: path.resolve(__dirname, '../packages/product-ext-proxy') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
