@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
 import {
   createDebugStreamClient,
   getDebugStreamPrefix,
@@ -39,7 +38,6 @@ class HttpResponseError extends Error {
 }
 
 async function assertAccess(
-  req: NextRequest,
   tenantIdFromQuery: string | null,
 ): Promise<{ tenantId: string | null }> {
   const currentUser = await getCurrentUser();
@@ -48,29 +46,14 @@ async function assertAccess(
     throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
   }
 
-  let tenantFromAuth: string | null = null;
-  try {
-    tenantFromAuth = await getTenantFromAuth(req);
-  } catch (err: unknown) {
-    // For end-user initiated requests we often won't have x-alga-tenant headers.
-    // Treat missing tenant header as null and fall back to the session tenant.
-    if (!(err instanceof Error && err.message === 'unauthenticated')) {
-      throw err;
-    }
-  }
-  const effectiveTenant =
-    tenantIdFromQuery || tenantFromAuth || currentUser.tenant || null;
+  // Tenant headers are not authority on this route. The explicit query
+  // parameter is the only selection mechanism, and it remains gated behind the
+  // current-user and RBAC checks below.
+  const effectiveTenant = tenantIdFromQuery?.trim() || currentUser.tenant || null;
 
   if (!effectiveTenant) {
     throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
   }
-
-  // Allow cross-tenant debugging if the user has permission.
-  // The strict check (currentUser.tenant !== effectiveTenant) prevented MSP admins
-  // from debugging customer tenants.
-  // if (currentUser.tenant && currentUser.tenant !== effectiveTenant) {
-  //   throw new HttpResponseError(json(401, { error: 'Unauthorized' }));
-  // }
 
   // Require extension read permission within tenant context
   const allowed = await hasPermission(currentUser, 'extension', 'read');
@@ -96,7 +79,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       return json(400, { error: 'extensionId is required' });
     }
 
-    const { tenantId } = await assertAccess(req, tenantIdParam);
+    const { tenantId } = await assertAccess(tenantIdParam);
     const normalizedInstall = installId?.trim().toLowerCase() || null;
     const normalizedRequest = requestId?.trim().toLowerCase() || null;
     const streamKeys = buildStreamKeys(extensionId, tenantId);
@@ -394,7 +377,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       return json(400, { error: 'extensionId is required' });
     }
 
-    const { tenantId } = await assertAccess(req, tenantIdParam);
+    const { tenantId } = await assertAccess(tenantIdParam);
     const normalizedInstall = installId?.trim().toLowerCase() || null;
     const normalizedRequest = requestId?.trim().toLowerCase() || null;
     const streamKeys = buildStreamKeys(extensionId, tenantId);

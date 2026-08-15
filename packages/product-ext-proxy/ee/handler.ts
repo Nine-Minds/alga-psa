@@ -5,7 +5,12 @@ import path from 'node:path';
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { loadInstallConfigCached } from './install-config-cache';
 import { getRunnerBackend, RunnerConfigError, RunnerRequestError } from './runner-backend';
-import { getTenantFromAuth, getUserInfoFromAuth, assertAccess } from './gateway/auth';
+import {
+  getTenantFromSessionAuth,
+  TenantAuthError,
+  getUserInfoFromAuth,
+  assertAccess,
+} from './gateway/auth';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
 type ProxyMethod = Exclude<Method, 'OPTIONS'>;
@@ -116,7 +121,7 @@ function corsPreflight(origin: string | null): NextResponse {
     headers.set('access-control-allow-credentials', 'true');
   }
   headers.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  headers.set('access-control-allow-headers', 'content-type,x-request-id,x-alga-tenant');
+  headers.set('access-control-allow-headers', 'content-type,x-request-id');
   headers.set('access-control-max-age', '120');
   headers.set('vary', 'Origin, Access-Control-Request-Headers');
   return new NextResponse(null, { status: 204, headers });
@@ -229,7 +234,7 @@ async function handle(
       methodOverrideSource,
     } = resolveMethodAndBody(rawMethod as ProxyMethod, url, initialBodyBuf);
 
-    const tenantId = await getTenantFromAuth(req);
+    const tenantId = await getTenantFromSessionAuth(req);
     const userInfo = await getUserInfoFromAuth(req);
     logDebug('ext-proxy:start', {
       tenantId,
@@ -356,8 +361,8 @@ async function handle(
     if (error instanceof AccessError) {
       return applyCorsHeaders(json(error.status, { error: error.message }), corsOrigin);
     }
-    if (error?.message === 'tenant_mismatch') {
-      return applyCorsHeaders(json(403, { error: 'tenant_mismatch' }), corsOrigin);
+    if (error instanceof TenantAuthError) {
+      return applyCorsHeaders(json(error.status, { error: error.code }), corsOrigin);
     }
     if (error instanceof RunnerConfigError) {
       console.error('[ext-proxy] Runner configuration error:', error.message);

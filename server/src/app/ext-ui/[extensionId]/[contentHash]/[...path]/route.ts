@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureUiCached } from 'server/src/lib/extensions/assets/cache';
 import { serveFrom } from 'server/src/lib/extensions/assets/serve';
-import { getTenantFromAuth } from 'server/src/lib/extensions/gateway/auth';
+import { getTenantFromSessionAuth } from 'server/src/lib/extensions/gateway/auth';
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 
 /**
@@ -83,7 +83,7 @@ export async function GET(
   // Legacy nextjs mode: retain existing validation and serving behavior
   // Validate that this contentHash matches the caller's active install for this extension.
   try {
-    const tenantId = await getTenantFromAuth(req);
+    const tenantId = await getTenantFromSessionAuth(req);
     const install = await getTenantInstall(tenantId, extensionId);
     if (!install) {
       console.warn(JSON.stringify({ ...logCtx, action: 'legacy_not_installed_404' }));

@@ -242,9 +242,6 @@
       "name": "extensions"
     },
     {
-      "name": "financial"
-    },
-    {
       "name": "import"
     },
     {
@@ -255,6 +252,12 @@
     },
     {
       "name": "internal"
+    },
+    {
+      "name": "inventory"
+    },
+    {
+      "name": "marketing"
     },
     {
       "name": "mcp"
@@ -279,6 +282,9 @@
     },
     {
       "name": "public"
+    },
+    {
+      "name": "scim"
     },
     {
       "name": "secrets"
@@ -10493,14 +10499,6 @@
           "x-idempotency-key": {
             "type": "string",
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner."
-          },
-          "x-alga-tenant": {
-            "type": "string",
-            "description": "Internal tenant header used for tenant resolution before session fallback."
-          },
-          "x-tenant-id": {
-            "type": "string",
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback."
           }
         }
       },
@@ -10520,6 +10518,9 @@
           "error": {
             "type": "string",
             "enum": [
+              "unauthenticated",
+              "invalid_session",
+              "tenant_mismatch",
               "not_installed",
               "payload_too_large",
               "install_context_missing",
@@ -22025,14 +22026,6 @@
               "null"
             ],
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "next_action": {
-            "type": "string",
-            "minLength": 1
-          },
-          "next_action_due": {
-            "type": "string",
-            "format": "date-time"
           },
           "generator_key": {
             "type": [
@@ -44617,7 +44610,7 @@
     "/api/email/oauth/initiate": {
       "post": {
         "summary": "Initiate email OAuth flow",
-        "description": "Starts the OAuth 2.0 authorization flow for a Google or Microsoft email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit.",
+        "description": "Starts the OAuth 2.0 authorization flow for a Google email provider. Requires a valid Auth.js session cookie. The handler builds secure OAuth state containing tenant, user, providerId, redirect URI, timestamp, and nonce, resolves the provider client ID from configured secrets, and returns the authorization URL for the browser to visit. Microsoft mailbox OAuth is not served by this unsigned route: it must be initiated from the mailbox form with an explicit application selection so the callback receives a signed state token.",
         "tags": [
           "Email"
         ],
@@ -45110,7 +45103,7 @@
     "/api/ext/{extensionId}/{path}": {
       "get": {
         "summary": "Forward GET request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "description": "Tenant-scoped extension gateway endpoint that forwards GET requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers and all query parameters to RUNNER_BASE_URL /v1/execute; and relays the runner response. GET requests do not read a body and do not generate an idempotency key. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
           "Extension Gateway"
         ],
@@ -45170,26 +45163,6 @@
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
             "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Internal tenant header used for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Internal tenant header used for tenant resolution before session fallback.",
-            "name": "x-alga-tenant",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-            "name": "x-tenant-id",
-            "in": "header"
           }
         ],
         "responses": {
@@ -45206,8 +45179,28 @@
           "204": {
             "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
           },
+          "401": {
+            "description": "No authenticated session, or the session is missing a tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A tenant header conflicts with the authenticated session tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "description": "Extension is not installed or not enabled for the session tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45217,7 +45210,7 @@
             }
           },
           "500": {
-            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "description": "Another internal gateway error occurred.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45240,7 +45233,7 @@
       },
       "post": {
         "summary": "Forward POST request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "description": "Tenant-scoped extension gateway endpoint that forwards POST requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For POST requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An x-idempotency-key header is forwarded when supplied, otherwise the generated x-request-id is used as the non-GET idempotency fallback. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
           "Extension Gateway"
         ],
@@ -45301,26 +45294,6 @@
             "required": false,
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Internal tenant header used for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Internal tenant header used for tenant resolution before session fallback.",
-            "name": "x-alga-tenant",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-            "name": "x-tenant-id",
             "in": "header"
           }
         ],
@@ -45350,8 +45323,28 @@
           "204": {
             "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
           },
+          "401": {
+            "description": "No authenticated session, or the session is missing a tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A tenant header conflicts with the authenticated session tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "description": "Extension is not installed or not enabled for the session tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45371,7 +45364,7 @@
             }
           },
           "500": {
-            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "description": "Another internal gateway error occurred.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45394,7 +45387,7 @@
       },
       "put": {
         "summary": "Forward PUT request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "description": "Tenant-scoped extension gateway endpoint that forwards PUT requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PUT requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
           "Extension Gateway"
         ],
@@ -45455,26 +45448,6 @@
             "required": false,
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Internal tenant header used for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Internal tenant header used for tenant resolution before session fallback.",
-            "name": "x-alga-tenant",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-            "name": "x-tenant-id",
             "in": "header"
           }
         ],
@@ -45504,8 +45477,28 @@
           "204": {
             "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
           },
+          "401": {
+            "description": "No authenticated session, or the session is missing a tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A tenant header conflicts with the authenticated session tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "description": "Extension is not installed or not enabled for the session tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45525,7 +45518,7 @@
             }
           },
           "500": {
-            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "description": "Another internal gateway error occurred.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45548,7 +45541,7 @@
       },
       "patch": {
         "summary": "Forward PATCH request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
+        "description": "Tenant-scoped extension gateway endpoint that forwards PATCH requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For PATCH requests the body is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Clients should provide x-idempotency-key for safe retries; otherwise the gateway falls back to a generated request ID. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway does not interpret PATCH semantics; partial-update behavior is extension-defined.",
         "tags": [
           "Extension Gateway"
         ],
@@ -45609,26 +45602,6 @@
             "required": false,
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Internal tenant header used for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Internal tenant header used for tenant resolution before session fallback.",
-            "name": "x-alga-tenant",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-            "name": "x-tenant-id",
             "in": "header"
           }
         ],
@@ -45658,8 +45631,28 @@
           "204": {
             "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
           },
+          "401": {
+            "description": "No authenticated session, or the session is missing a tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A tenant header conflicts with the authenticated session tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "description": "Extension is not installed or not enabled for the session tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45679,7 +45672,7 @@
             }
           },
           "500": {
-            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "description": "Another internal gateway error occurred.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45702,7 +45695,7 @@
       },
       "delete": {
         "summary": "Forward DELETE request to extension runner",
-        "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway resolves the tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in development; verifies the extension is installed and enabled for that tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
+        "description": "Tenant-scoped extension gateway endpoint that forwards DELETE requests to an installed extension runner. The gateway requires an authenticated session and derives the tenant from that session; verifies the extension is installed and enabled for the session tenant; forwards selected headers, query parameters, and an optional opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner response. For DELETE requests the body, if present, is limited to 10 MB, base64-encoded, and forwarded as http.body_b64. Tenant-selection headers are not accepted as authentication and a header that disagrees with the session tenant fails closed. The gateway currently has a placeholder access check and does not enforce per-extension RBAC beyond tenant install resolution.",
         "tags": [
           "Extension Gateway"
         ],
@@ -45764,26 +45757,6 @@
             "description": "Optional idempotency key for non-GET methods. The gateway falls back to x-request-id when absent and forwards the key to the runner.",
             "name": "x-idempotency-key",
             "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Internal tenant header used for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Internal tenant header used for tenant resolution before session fallback.",
-            "name": "x-alga-tenant",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Legacy tenant header accepted for tenant resolution before session fallback."
-            },
-            "required": false,
-            "description": "Legacy tenant header accepted for tenant resolution before session fallback.",
-            "name": "x-tenant-id",
-            "in": "header"
           }
         ],
         "requestBody": {
@@ -45812,8 +45785,28 @@
           "204": {
             "description": "Runner returned no content, or CORS preflight for OPTIONS requests on this gateway path."
           },
+          "401": {
+            "description": "No authenticated session, or the session is missing a tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A tenant header conflicts with the authenticated session tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionGatewayErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Extension is not installed or not enabled for the resolved tenant.",
+            "description": "Extension is not installed or not enabled for the session tenant.",
             "content": {
               "application/json": {
                 "schema": {
@@ -45833,7 +45826,7 @@
             }
           },
           "500": {
-            "description": "Tenant could not be resolved or another internal gateway error occurred.",
+            "description": "Another internal gateway error occurred.",
             "content": {
               "application/json": {
                 "schema": {
@@ -112252,6 +112245,126 @@
         }
       }
     },
+    "/api/auth/client-portal/sso/discover": {
+      "post": {
+        "summary": "POST auth",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "auth"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/client-portal/sso/resolve": {
+      "post": {
+        "summary": "POST auth",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "auth"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/e2e/google/authorize": {
       "get": {
         "summary": "GET auth",
@@ -117234,6 +117347,366 @@
         }
       }
     },
+    "/api/inventory/sales-orders/{id}/document": {
+      "get": {
+        "summary": "GET inventory",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "inventory"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/sales-orders/{id}/email-confirmation": {
+      "post": {
+        "summary": "POST inventory",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "inventory"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/marketing/capture/{tenant}/{slug}": {
+      "post": {
+        "summary": "POST marketing",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "marketing"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/marketing/track/click/{tenant}/{enrollmentId}/{stepId}": {
+      "get": {
+        "summary": "GET marketing",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "marketing"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/marketing/track/open/{tenant}/{enrollmentId}/{stepId}": {
+      "get": {
+        "summary": "GET marketing",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "marketing"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/marketing/unsubscribe/{tenant}/{enrollmentId}": {
+      "get": {
+        "summary": "GET marketing",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "marketing"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST marketing",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "marketing"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/mcp": {
       "get": {
         "summary": "GET mcp",
@@ -117784,6 +118257,308 @@
         "x-alga-products": [
           "psa"
         ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scim/v2/{connectionId}/{scimPath}": {
+      "delete": {
+        "summary": "DELETE scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "204": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "GET scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "OPTIONS scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "PATCH scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "PUT scim",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "scim"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Placeholder success response",
@@ -119558,72 +120333,12 @@
         }
       }
     },
-    "/api/v1/financial/reconciliation/run": {
+    "/api/v1/inventory/counts/{sessionId}/cancel": {
       "post": {
         "summary": "POST v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
         "tags": [
-          "financial"
-        ],
-        "extensions": {
-          "x-generated-from": "docs/openapi/route-inventory.json",
-          "x-placeholder": true
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "requestBody": {
-          "description": "Placeholder request body",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Placeholder success response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceholderObject"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/financial/reconciliation/{id}/resolve": {
-      "post": {
-        "summary": "POST v1",
-        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-        "tags": [
-          "financial"
+          "inventory"
         ],
         "extensions": {
           "x-generated-from": "docs/openapi/route-inventory.json",
@@ -124559,6 +125274,112 @@
         }
       }
     },
+    "/api/webhooks/ai-gateway": {
+      "options": {
+        "summary": "OPTIONS webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST webhooks",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "webhooks"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/webhooks/alternative-payments": {
       "get": {
         "summary": "GET webhooks",
@@ -125785,6 +126606,104 @@
         }
       }
     },
+    "/api/integrations/entra/mappings": {
+      "get": {
+        "summary": "GET integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/entra/mappings/groups": {
+      "get": {
+        "summary": "GET integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/integrations/entra/reconciliation-queue": {
       "get": {
         "summary": "GET integrations",
@@ -125802,6 +126721,67 @@
         ],
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/entra/reconciliation-queue/dismiss": {
+      "post": {
+        "summary": "POST integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
@@ -125896,6 +126876,175 @@
       }
     },
     "/api/integrations/entra/reconciliation-queue/resolve-new": {
+      "post": {
+        "summary": "POST integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/entra/schedule": {
+      "get": {
+        "summary": "GET integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "POST integrations",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "integrations"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true,
+          "x-edition": "EE"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/entra/sync/preflight": {
       "post": {
         "summary": "POST integrations",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",

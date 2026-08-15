@@ -13,8 +13,24 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(),
 }));
-vi.mock('server/src/lib/extensions/gateway/auth', () => ({
-  getTenantFromAuth: vi.fn(),
+// The handler imports the session resolver from the package's own gateway/auth
+// (importing `server` here would cycle the project graph). Keep the real
+// TenantAuthError and getUserInfoFromAuth so the handler's typed error handling
+// is exercised.
+vi.mock('../../../../../packages/product-ext-proxy/ee/gateway/auth', async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...original,
+    getTenantFromSessionAuth: vi.fn(),
+  };
+});
+vi.mock('@alga-psa/auth', () => ({
+  getSession: vi.fn(),
+}));
+vi.mock('@alga-psa/db/admin', () => ({
+  getAdminConnection: vi.fn(async () => {
+    throw new Error('no database in extension proxy unit tests');
+  }),
 }));
 vi.mock('../../../../../packages/product-ext-proxy/ee/install-config-cache', () => ({
   loadInstallConfigCached: vi.fn(),
@@ -226,14 +242,14 @@ describe('Extension Proxy Flow Integration', () => {
       const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
 
       // Setup mocks
       const tenantId = 'tenant-1';
       const installId = 'install-1';
-      vi.mocked(getTenantFromAuth).mockResolvedValue(tenantId);
+      vi.mocked(getTenantFromSessionAuth).mockResolvedValue(tenantId);
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 'user-1', tenant: tenantId } as any);
       vi.mocked(hasPermission).mockResolvedValue(true);
       vi.mocked(loadInstallConfigCached).mockResolvedValue({
@@ -251,7 +267,9 @@ describe('Extension Proxy Flow Integration', () => {
         body: mockBody,
       });
       vi.mocked(getRunnerBackend).mockReturnValue({
+        kind: 'docker',
         execute: mockExecute,
+        getPublicBase: () => null,
       } as any);
 
       // Construct Request
@@ -293,13 +311,13 @@ describe('Extension Proxy Flow Integration', () => {
       const { getRunnerBackend, RunnerRequestError } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
 
       // Setup Auth & Config Mocks
       const tenantId = 'tenant-1';
       const installId = 'install-1';
-      vi.mocked(getTenantFromAuth).mockResolvedValue(tenantId);
+      vi.mocked(getTenantFromSessionAuth).mockResolvedValue(tenantId);
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 'user-1', tenant: tenantId } as any);
       vi.mocked(hasPermission).mockResolvedValue(true);
       vi.mocked(loadInstallConfigCached).mockResolvedValue({
@@ -313,7 +331,9 @@ describe('Extension Proxy Flow Integration', () => {
       // Mock Runner error
       const mockExecute = vi.fn().mockRejectedValue(new RunnerRequestError('Runner failed', 'docker', 502));
       vi.mocked(getRunnerBackend).mockReturnValue({
+        kind: 'docker',
         execute: mockExecute,
+        getPublicBase: () => null,
       } as any);
 
       // Construct Request
@@ -334,13 +354,13 @@ describe('Extension Proxy Flow Integration', () => {
       const { POST } = await import('../../../../../packages/product-ext-proxy/ee/handler');
       const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
       const { hasPermission } = await import('server/src/lib/auth/rbac');
-      const { getTenantFromAuth } = await import('server/src/lib/extensions/gateway/auth');
+      const { getTenantFromSessionAuth } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
       const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
       const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
 
       const tenantId = 'tenant-1';
       const installId = 'install-1';
-      vi.mocked(getTenantFromAuth).mockResolvedValue(tenantId);
+      vi.mocked(getTenantFromSessionAuth).mockResolvedValue(tenantId);
       vi.mocked(getCurrentUser).mockResolvedValue({ id: 'user-1', tenant: tenantId } as any);
       vi.mocked(hasPermission).mockResolvedValue(true);
       vi.mocked(loadInstallConfigCached).mockResolvedValue({
@@ -357,7 +377,9 @@ describe('Extension Proxy Flow Integration', () => {
         body: Buffer.from('{}'),
       });
       vi.mocked(getRunnerBackend).mockReturnValue({
+        kind: 'docker',
         execute: mockExecute,
+        getPublicBase: () => null,
       } as any);
 
       const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets?__method=DELETE&limit=10`, {
@@ -390,6 +412,90 @@ describe('Extension Proxy Flow Integration', () => {
         : '';
       expect(forwardedBodyRaw).toContain('"reason":"cleanup"');
       expect(forwardedBodyRaw).not.toContain('__method');
+    });
+
+    it('carries session user info to the runner on a session request with a matching tenant header', async () => {
+      const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+      const { getTenantFromSessionAuth, TenantAuthError } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
+      const { getSession } = await import('@alga-psa/auth');
+      const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
+      const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
+
+      const tenantId = 'tenant-1';
+      vi.mocked(getTenantFromSessionAuth).mockResolvedValue(tenantId);
+      vi.mocked(getSession).mockResolvedValue({
+        user: {
+          tenant: tenantId,
+          user_id: 'user-1',
+          email: 'agent@example.com',
+          name: 'Agent One',
+          user_type: 'internal',
+        },
+      } as any);
+      vi.mocked(loadInstallConfigCached).mockResolvedValue({
+        installId: 'install-1',
+        versionId: 'v1',
+        contentHash: 'hash',
+        config: {},
+        providers: [],
+      });
+
+      const mockExecute = vi.fn().mockResolvedValue({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: Buffer.from('{}'),
+      });
+      vi.mocked(getRunnerBackend).mockReturnValue({ kind: 'docker', execute: mockExecute, getPublicBase: () => null } as any);
+
+      // Matching tenant header on a session request must not suppress user info.
+      const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets`, {
+        method: 'GET',
+        headers: { 'x-alga-tenant': tenantId, 'x-request-id': 'req-user' },
+      });
+      const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+      expect(response.status).toBe(200);
+      expect(mockExecute).toHaveBeenCalledTimes(1);
+      const executePayload = mockExecute.mock.calls[0]?.[0] as {
+        user?: { user_id: string; user_email: string; user_name: string };
+      };
+      expect(executePayload.user).toEqual(
+        expect.objectContaining({
+          user_id: 'user-1',
+          user_email: 'agent@example.com',
+          user_name: 'Agent One',
+          user_type: 'internal',
+        }),
+      );
+      expect(TenantAuthError).toBeDefined();
+    });
+
+    it('stops before install lookup and runner execution on a mismatched tenant header', async () => {
+      const { GET } = await import('../../../../../packages/product-ext-proxy/ee/handler');
+      const { getTenantFromSessionAuth, TenantAuthError } = await import('../../../../../packages/product-ext-proxy/ee/gateway/auth');
+      const { getSession } = await import('@alga-psa/auth');
+      const { loadInstallConfigCached } = await import('../../../../../packages/product-ext-proxy/ee/install-config-cache');
+      const { getRunnerBackend } = await import('../../../../../packages/product-ext-proxy/ee/runner-backend');
+
+      // The central resolver fails closed on a header/session mismatch.
+      vi.mocked(getTenantFromSessionAuth).mockRejectedValue(
+        new TenantAuthError('tenant_mismatch', 'x-alga-tenant header does not match the session tenant'),
+      );
+      vi.mocked(getSession).mockResolvedValue({ user: { tenant: 'tenant-1' } } as any);
+
+      const mockExecute = vi.fn();
+      vi.mocked(getRunnerBackend).mockReturnValue({ kind: 'docker', execute: mockExecute, getPublicBase: () => null } as any);
+
+      const req = new Request(`http://localhost:3000/api/ext-proxy/${extensionId}/tickets`, {
+        method: 'GET',
+        headers: { 'x-alga-tenant': 'tenant-evil', 'x-request-id': 'req-mismatch' },
+      });
+      const response = await GET(req as any, { params: Promise.resolve({ extensionId, path: ['tickets'] }) });
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual(expect.objectContaining({ error: 'tenant_mismatch' }));
+      expect(loadInstallConfigCached).not.toHaveBeenCalled();
+      expect(mockExecute).not.toHaveBeenCalled();
     });
   });
 });
