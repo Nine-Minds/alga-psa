@@ -470,6 +470,12 @@
       "createCustom": "11111",
       "expandLine": "11111"
     },
+    "billingProfile": {
+      "hint": "11111",
+      "label": "11111",
+      "none": "11111",
+      "updated": "11111"
+    },
     "bucket": {
       "billingPeriod": "11111 {{period}} 11111",
       "defaultUnit": "11111",

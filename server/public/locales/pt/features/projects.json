@@ -1798,6 +1798,12 @@
       "approved": "Aprovado: {{amount}}",
       "ready": "Pronto: {{amount}}",
       "total": "Total: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Perfil de faturação",
+      "none": "Usar o perfil predefinido do cliente",
+      "hint": "Os encargos de tempo e de calendário deste projeto são faturados neste perfil, salvo se um contrato os reclamar.",
+      "updated": "Perfil de faturação atualizado"
     }
   },
   "taskTypes": {

@@ -470,6 +470,12 @@
       "createCustom": "Aangepast aanmaken",
       "expandLine": "Contractregel uitvouwen"
     },
+    "billingProfile": {
+      "hint": "Kosten van deze regel worden aan dit profiel gefactureerd en overschrijven het contract.",
+      "label": "Facturatieprofiel",
+      "none": "Profiel van het contract gebruiken",
+      "updated": "Facturatieprofiel bijgewerkt"
+    },
     "bucket": {
       "billingPeriod": "Factureerperiode: {{period}}",
       "defaultUnit": "eenheid",

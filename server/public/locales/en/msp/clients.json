@@ -731,7 +731,10 @@
     "deactivateError": "Failed to deactivate contract",
     "updateError": "Failed to update contract",
     "createContract": "Create Contract",
-    "quickAdd": "Quick Add"
+    "quickAdd": "Quick Add",
+    "billingProfile": "Billing Profile",
+    "billingProfileUnassigned": "Not assigned",
+    "billingProfileUpdated": "Billing profile updated"
   },
   "clientContractDialog": {
     "assignTitle": "Assign Contract to Client",
@@ -1332,7 +1335,10 @@
         "stateProvince": "State/Province",
         "stateProvinceHelper": "State or province name",
         "taxRegion": "Tax Region",
-        "taxRegionHelper": "Select the applicable tax region"
+        "taxRegionHelper": "Select the applicable tax region",
+        "defaultBillingProfile": "Default billing profile",
+        "defaultBillingProfileNone": "None",
+        "defaultBillingProfileHelper": "New tickets at this location start with this billing profile. It can always be changed on the ticket."
       },
       "listTitle": "Locations",
       "loading": "Loading locations...",
@@ -1567,5 +1573,26 @@
       "notFound": "Contact not found.",
       "loadFailed": "Failed to load contact."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Billing profiles",
+    "description": "Bill separate sites, entities, or facilities within this client. Charges are attributed to a profile through the contract, contract line, or work item they come from; anything unassigned falls back to the default profile.",
+    "loading": "Loading billing profiles…",
+    "defaultBadge": "Default",
+    "rename": "Rename",
+    "makeDefault": "Make default",
+    "archive": "Archive",
+    "delete": "Delete",
+    "restore": "Restore",
+    "archivedHeading": "Archived",
+    "addLabel": "Add a billing profile",
+    "addPlaceholder": "e.g. North Plant",
+    "addButton": "Add profile",
+    "created": "Billing profile \"{{name}}\" created",
+    "renamed": "Billing profile renamed",
+    "madeDefault": "\"{{name}}\" is now the default billing profile",
+    "archived": "\"{{name}}\" archived",
+    "deleted": "\"{{name}}\" deleted",
+    "restored": "\"{{name}}\" restored"
   }
 }

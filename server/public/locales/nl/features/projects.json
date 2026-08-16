@@ -1798,6 +1798,12 @@
       "approved": "Goedgekeurd: {{amount}}",
       "ready": "Gereed: {{amount}}",
       "total": "Totaal: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Facturatieprofiel",
+      "none": "Standaardprofiel van de klant gebruiken",
+      "hint": "Tijd- en planningskosten van dit project worden aan dit profiel gefactureerd, tenzij een contract ze opeist.",
+      "updated": "Facturatieprofiel bijgewerkt"
     }
   },
   "taskTypes": {

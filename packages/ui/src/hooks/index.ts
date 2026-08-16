@@ -11,3 +11,4 @@ export * from './useTicketTimeTracking';
 export * from './useTruncationDetection';
 export * from './useAppTheme';
 export * from './useRangeSelection';
+export * from './useClientBillingProfiles';

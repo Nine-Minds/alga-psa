@@ -731,7 +731,10 @@
     "deactivateError": "11111",
     "updateError": "11111",
     "createContract": "11111",
-    "quickAdd": "11111"
+    "quickAdd": "11111",
+    "billingProfile": "11111",
+    "billingProfileUnassigned": "11111",
+    "billingProfileUpdated": "11111"
   },
   "clientContractDialog": {
     "assignTitle": "11111",
@@ -1332,7 +1335,10 @@
         "stateProvince": "11111",
         "stateProvinceHelper": "11111",
         "taxRegion": "11111",
-        "taxRegionHelper": "11111"
+        "taxRegionHelper": "11111",
+        "defaultBillingProfile": "11111",
+        "defaultBillingProfileNone": "11111",
+        "defaultBillingProfileHelper": "11111"
       },
       "listTitle": "11111",
       "loading": "11111",
@@ -1567,5 +1573,26 @@
       "notFound": "11111",
       "loadFailed": "11111"
     }
+  },
+  "clientBillingProfiles": {
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111",
+    "defaultBadge": "11111",
+    "rename": "11111",
+    "makeDefault": "11111",
+    "archive": "11111",
+    "delete": "11111",
+    "restore": "11111",
+    "archivedHeading": "11111",
+    "addLabel": "11111",
+    "addPlaceholder": "11111",
+    "addButton": "11111",
+    "created": "11111 {{name}} 11111",
+    "renamed": "11111",
+    "madeDefault": "11111 {{name}} 11111",
+    "archived": "11111 {{name}} 11111",
+    "deleted": "11111 {{name}} 11111",
+    "restored": "11111 {{name}} 11111"
   }
 }

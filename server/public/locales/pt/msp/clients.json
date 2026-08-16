@@ -731,7 +731,10 @@
     "deactivateError": "Falha ao desativar contrato",
     "updateError": "Falha ao atualizar o contrato",
     "createContract": "Criar contrato",
-    "quickAdd": "Adição rápida"
+    "quickAdd": "Adição rápida",
+    "billingProfile": "Perfil de faturação",
+    "billingProfileUnassigned": "Não atribuído",
+    "billingProfileUpdated": "Perfil de faturação atualizado"
   },
   "clientContractDialog": {
     "assignTitle": "Atribuir contrato ao cliente",
@@ -1332,7 +1335,10 @@
         "stateProvince": "Estado/Província",
         "stateProvinceHelper": "Nome do estado ou província",
         "taxRegion": "Região Fiscal",
-        "taxRegionHelper": "Selecione a região fiscal aplicável"
+        "taxRegionHelper": "Selecione a região fiscal aplicável",
+        "defaultBillingProfile": "Perfil de faturação predefinido",
+        "defaultBillingProfileNone": "Nenhum",
+        "defaultBillingProfileHelper": "Novos tickets nesta localização começam com este perfil de faturação. Pode sempre ser alterado no ticket."
       },
       "listTitle": "Locais",
       "loading": "Carregando locais...",
@@ -1567,5 +1573,26 @@
       "notFound": "Contato não encontrado.",
       "loadFailed": "Falha ao carregar o contato."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Perfis de faturação",
+    "description": "Fature separadamente instalações, entidades ou unidades dentro deste cliente. Os encargos são atribuídos a um perfil através do contrato, da linha de contrato ou do item de trabalho de onde provêm; o que não estiver atribuído recai no perfil predefinido.",
+    "loading": "A carregar perfis de faturação…",
+    "defaultBadge": "Predefinido",
+    "rename": "Mudar o nome",
+    "makeDefault": "Definir como predefinido",
+    "archive": "Arquivar",
+    "delete": "Eliminar",
+    "restore": "Restaurar",
+    "archivedHeading": "Arquivados",
+    "addLabel": "Adicionar um perfil de faturação",
+    "addPlaceholder": "ex.: Unidade Norte",
+    "addButton": "Adicionar perfil",
+    "created": "Perfil de faturação «{{name}}» criado",
+    "renamed": "Perfil de faturação renomeado",
+    "madeDefault": "«{{name}}» é agora o perfil de faturação predefinido",
+    "archived": "«{{name}}» arquivado",
+    "deleted": "«{{name}}» eliminado",
+    "restored": "«{{name}}» restaurado"
   }
 }

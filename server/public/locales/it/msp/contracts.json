@@ -470,6 +470,12 @@
       "createCustom": "Crea personalizzata",
       "expandLine": "Espandi linea contrattuale"
     },
+    "billingProfile": {
+      "hint": "Gli addebiti di questa riga vengono fatturati a questo profilo, prevalendo sul contratto.",
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo del contratto",
+      "updated": "Profilo di fatturazione aggiornato"
+    },
     "bucket": {
       "billingPeriod": "Periodo di fatturazione: {{period}}",
       "defaultUnit": "unità",

@@ -61,6 +61,7 @@ export const ticketSchema = z.object({
   board_id: z.string().uuid(),
   client_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
+  billing_profile_id: z.string().uuid().nullable().optional(),
   contact_name_id: z.string().uuid().nullable(),
   status_id: z.string().uuid(),
   category_id: z.string().uuid().nullable(),
@@ -120,6 +121,12 @@ export interface CreateTicketInput {
   client_id?: string;
   contact_id?: string; // Note: Maps to contact_name_id in database
   location_id?: string;
+  /**
+   * Billing profile the ticket's work is attributed to. A soft default, never
+   * required: a technician who ignores it still produces a correctly attributed
+   * charge in the common case (decision D3, F049/F050).
+   */
+  billing_profile_id?: string | null;
   status_id?: string;
   assigned_to?: string;
   assigned_team_id?: string;
@@ -620,6 +627,51 @@ export class TicketModel {
   /**
    * Create a new ticket with complete validation and business rule checking
    */
+  /**
+   * The soft default for a ticket's billing profile (F049, F051).
+   *
+   * Explicit choice → the location's default profile → unset. A profile that
+   * belongs to a different client is rejected outright rather than silently
+   * used: assignment decides which invoice a charge lands on, so a cross-client
+   * value is a billing error, not a harmless mismatch.
+   */
+  static async resolveTicketBillingProfileId(
+    input: Pick<CreateTicketInput, 'billing_profile_id' | 'client_id' | 'location_id'>,
+    tenant: string,
+    trx: Knex.Transaction,
+  ): Promise<string | null> {
+    if (!input.client_id) return null;
+    const db = tenantDb(trx, tenant);
+
+    if (input.billing_profile_id) {
+      const profile = await db
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: input.billing_profile_id })
+        .first('client_id', 'is_active');
+      if (!profile || profile.client_id !== input.client_id) {
+        throw new Error('Validation failed: billing profile does not belong to this client');
+      }
+      if (!profile.is_active) {
+        throw new Error('Validation failed: billing profile is archived');
+      }
+      return input.billing_profile_id;
+    }
+
+    if (input.location_id) {
+      const location = await db
+        .table('client_locations')
+        .where({ location_id: input.location_id })
+        .first('default_billing_profile_id');
+      if (location?.default_billing_profile_id) {
+        return location.default_billing_profile_id as string;
+      }
+    }
+
+    // Left unset deliberately: the resolution chain terminates at the client
+    // default, so an unassigned ticket is still correctly attributed.
+    return null;
+  }
+
   static async createTicket(
     input: CreateTicketInput,
     tenant: string,
@@ -681,6 +733,17 @@ export class TicketModel {
     const ticketId = uuidv4();
     const now = new Date();
 
+    // Soft-defaulted billing profile: an explicit choice wins, otherwise the
+    // ticket's location supplies one, otherwise it stays unset and charge
+    // attribution falls through to the client default. Ticket creation is never
+    // blocked by this (F049, F050) — a resolution failure leaves the field null
+    // rather than raising.
+    const resolvedBillingProfileId = await this.resolveTicketBillingProfileId(
+      cleanedInput,
+      tenant,
+      trx,
+    );
+
     // Prepare attributes object - description goes into attributes.description
     const attributes = { ...cleanedInput.attributes };
     if (cleanedInput.description) {
@@ -696,6 +759,7 @@ export class TicketModel {
       client_id: cleanedInput.client_id || null,
       contact_name_id: cleanedInput.contact_id || null, // Map contact_id to contact_name_id
       location_id: cleanedInput.location_id || null,
+      billing_profile_id: resolvedBillingProfileId,
       status_id: cleanedInput.status_id || null,
       assigned_to: cleanedInput.assigned_to || null,
       assigned_team_id: cleanedInput.assigned_team_id || null,

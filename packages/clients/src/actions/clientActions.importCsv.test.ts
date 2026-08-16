@@ -112,6 +112,12 @@ vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
   ensureDefaultContractForClientIfBillingConfigured: vi.fn(),
 }));
 
+// Every client-creation path provisions the default billing profile that charge
+// attribution terminates at; the fake DB here models only the client tables.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', () => ({
+  ensureClientDefaultBillingProfile: vi.fn(async () => 'billing-profile-1'),
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));

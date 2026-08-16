@@ -470,6 +470,12 @@
       "createCustom": "Crear personalizada",
       "expandLine": "Expandir línea de contrato"
     },
+    "billingProfile": {
+      "hint": "Los cargos de esta línea se facturan a este perfil, anulando el contrato.",
+      "label": "Perfil de facturación",
+      "none": "Usar el perfil del contrato",
+      "updated": "Perfil de facturación actualizado"
+    },
     "bucket": {
       "billingPeriod": "Período de facturación: {{period}}",
       "defaultUnit": "unidad",

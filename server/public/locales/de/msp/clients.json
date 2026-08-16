@@ -731,7 +731,10 @@
     "deactivateError": "Der Vertrag konnte nicht deaktiviert werden",
     "updateError": "Der Vertrag konnte nicht aktualisiert werden",
     "createContract": "Vertrag erstellen",
-    "quickAdd": "Schnell hinzufügen"
+    "quickAdd": "Schnell hinzufügen",
+    "billingProfile": "Abrechnungsprofil",
+    "billingProfileUnassigned": "Nicht zugeordnet",
+    "billingProfileUpdated": "Abrechnungsprofil aktualisiert"
   },
   "clientContractDialog": {
     "assignTitle": "Vertrag dem Kunden zuordnen",
@@ -1332,7 +1335,10 @@
         "stateProvince": "Bundesland/Provinz",
         "stateProvinceHelper": "Name des Bundesstaats oder der Provinz",
         "taxRegion": "Steuerregion",
-        "taxRegionHelper": "Wählen Sie die entsprechende Steuerregion aus"
+        "taxRegionHelper": "Wählen Sie die entsprechende Steuerregion aus",
+        "defaultBillingProfile": "Standard-Abrechnungsprofil",
+        "defaultBillingProfileNone": "Keines",
+        "defaultBillingProfileHelper": "Neue Tickets an diesem Standort starten mit diesem Abrechnungsprofil. Es kann im Ticket jederzeit geändert werden."
       },
       "listTitle": "Standorte",
       "loading": "Standorte werden geladen...",
@@ -1567,5 +1573,26 @@
       "notFound": "Kontakt nicht gefunden.",
       "loadFailed": "Kontakt konnte nicht geladen werden."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Abrechnungsprofile",
+    "description": "Rechnen Sie einzelne Standorte, Rechtsträger oder Betriebsstätten innerhalb dieses Kunden getrennt ab. Buchungen werden über den Vertrag, die Vertragsposition oder das Arbeitselement einem Profil zugeordnet; ohne Zuordnung gilt das Standardprofil.",
+    "loading": "Abrechnungsprofile werden geladen…",
+    "defaultBadge": "Standard",
+    "rename": "Umbenennen",
+    "makeDefault": "Als Standard festlegen",
+    "archive": "Archivieren",
+    "delete": "Löschen",
+    "restore": "Wiederherstellen",
+    "archivedHeading": "Archiviert",
+    "addLabel": "Abrechnungsprofil hinzufügen",
+    "addPlaceholder": "z. B. Werk Nord",
+    "addButton": "Profil hinzufügen",
+    "created": "Abrechnungsprofil „{{name}}“ erstellt",
+    "renamed": "Abrechnungsprofil umbenannt",
+    "madeDefault": "„{{name}}“ ist jetzt das Standard-Abrechnungsprofil",
+    "archived": "„{{name}}“ archiviert",
+    "deleted": "„{{name}}“ gelöscht",
+    "restored": "„{{name}}“ wiederhergestellt"
   }
 }

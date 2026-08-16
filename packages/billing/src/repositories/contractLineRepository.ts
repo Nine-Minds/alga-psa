@@ -162,6 +162,7 @@ export async function fetchDetailedContractLines(
       'cl.billing_timing',
       'cl.cadence_owner',
       'cl.location_id',
+      'cl.billing_profile_id',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',

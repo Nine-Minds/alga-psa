@@ -43,6 +43,12 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { toast } from 'react-hot-toast';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import {
+  assignContractLineBillingProfile,
+  getClientBillingProfilesForBilling,
+} from '@alga-psa/billing/actions/billingProfileActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -75,6 +81,8 @@ interface DetailedContractLineMapping {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   location_id?: string | null;
+  /** Step 2 of the charge-attribution chain; overrides the contract's profile. */
+  billing_profile_id?: string | null;
 }
 
 /**
@@ -129,8 +137,24 @@ interface PendingServiceAddition {
 
 const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
+
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
+
+  const handleAssignLineBillingProfile = async (
+    contractLineId: string,
+    billingProfileId: string | null,
+  ) => {
+    try {
+      await assignContractLineBillingProfile({ contractLineId, billingProfileId });
+      await fetchData();
+      toast.success(t('contractLines.billingProfile.updated', { defaultValue: 'Billing profile updated' }));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
@@ -1213,6 +1237,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                 </div>
                               </div>
                             )}
+
+                            {/* Billing profile (F045). Step 2 of the charge-attribution
+                                chain and the most specific contract-side step: a line
+                                assignment overrides its contract's. The picker renders
+                                nothing while the client holds a single profile. */}
+                            <BillingProfilePicker
+                              id={`billing-profile-${line.contract_line_id}`}
+                              clientId={clientId}
+                              loadProfiles={loadBillingProfiles}
+                              value={line.billing_profile_id ?? null}
+                              onChange={(billingProfileId) =>
+                                void handleAssignLineBillingProfile(line.contract_line_id, billingProfileId)
+                              }
+                              label={t('contractLines.billingProfile.label', { defaultValue: 'Billing profile' })}
+                              unassignedLabel={t('contractLines.billingProfile.none', {
+                                defaultValue: "Use the contract's profile",
+                              })}
+                              hint={t('contractLines.billingProfile.hint', {
+                                defaultValue:
+                                  'Charges from this line are billed to this profile, overriding the contract.',
+                              })}
+                              disabled={isReadOnly}
+                            />
 
                             {/* Billing timing and cadence owner - applies to all recurring line types */}
                             <div className="grid gap-4 md:grid-cols-2">

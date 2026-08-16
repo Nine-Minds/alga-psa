@@ -470,6 +470,12 @@
       "createCustom": "Utwórz niestandardowy",
       "expandLine": "Rozwiń linię kontraktową"
     },
+    "billingProfile": {
+      "hint": "Opłaty z tej pozycji są rozliczane na tym profilu, nadpisując umowę.",
+      "label": "Profil rozliczeniowy",
+      "none": "Użyj profilu umowy",
+      "updated": "Zaktualizowano profil rozliczeniowy"
+    },
     "bucket": {
       "billingPeriod": "Okres rozliczeniowy: {{period}}",
       "defaultUnit": "jednostka",

@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Impossibile aprire il pianificatore",
     "loadCommentsFailed": "Impossibile caricare i commenti",
     "updateTicketFailed": "Impossibile aggiornare il ticket",
-    "errorWithMessage": "Errore: {{message}}"
+    "errorWithMessage": "Errore: {{message}}",
+    "billingProfileUpdated": "Profilo di fatturazione aggiornato",
+    "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione"
   },
   "conversation": {
     "comments": "Commenti",
@@ -955,7 +957,10 @@
       "selective": "Seleziona i singoli membri da mantenere/rimuovere"
     },
     "noTeamMembersOnTicket": "Nessun membro del team trovato su questo ticket.",
-    "unnamedUser": "Utente senza nome"
+    "unnamedUser": "Utente senza nome",
+    "billingProfile": "Profilo di fatturazione",
+    "billingProfileUnassigned": "Usa il profilo predefinito",
+    "billingProfileHint": "Usato solo quando nessun contratto assegna questo lavoro a un profilo."
   },
   "settings": {
     "categories": {

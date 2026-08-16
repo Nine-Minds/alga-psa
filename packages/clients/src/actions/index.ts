@@ -13,6 +13,7 @@ export * from './clientLifecycleActions';
 export * from './clientLocationActions';
 export * from './clientLocaleActions';
 export * from './clientTaxRateActions';
+export * from './clientBillingProfileActions';
 export * from './clientContractLineActions';
 export * from './clientContractActions';
 export * from './clientNoteActions';

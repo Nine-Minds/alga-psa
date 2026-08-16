@@ -35,6 +35,8 @@ export { default as ContactPickerDialog } from './ContactPickerDialog';
 export { ContentCard, ContentCardVariantProvider, useContentCardVariant } from './ContentCard';
 export type { ContentCardVariant } from './ContentCard';
 export { default as ContentCardDefault } from './ContentCard';
+export * from './BillingProfilePicker';
+export { default as BillingProfilePicker } from './BillingProfilePicker';
 export * from './CountryPicker';
 export { default as CountryPicker } from './CountryPicker';
 export * from './CreditExpirationBadge';

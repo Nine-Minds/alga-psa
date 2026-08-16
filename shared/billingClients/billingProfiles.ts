@@ -21,6 +21,50 @@ import { tenantDb } from '@alga-psa/db';
 
 export const CLIENT_BILLING_PROFILES_TABLE = 'client_billing_profiles';
 
+export interface ClientBillingProfileRow {
+  billing_profile_id: string;
+  client_id: string;
+  name: string;
+  is_default: boolean;
+  is_active: boolean;
+  is_system_managed_default: boolean;
+}
+
+/**
+ * A client's billing profiles, default first.
+ *
+ * This is the single source of truth for the invisibility rule (decision D6):
+ * a client with exactly one profile is **not segmented**, and no profile
+ * picker, column, tab, or report is offered for it. Provisioning the default on
+ * read means the list is never empty for a client that exists, so callers can
+ * treat `length === 1` as "not segmented" without a separate empty case.
+ */
+export async function listClientBillingProfiles(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  options?: { includeInactive?: boolean },
+): Promise<ClientBillingProfileRow[]> {
+  await ensureClientDefaultBillingProfile(knex, tenant, clientId);
+  const query = tenantDb(knex, tenant)
+    .table(CLIENT_BILLING_PROFILES_TABLE)
+    .where({ client_id: clientId });
+  if (!options?.includeInactive) {
+    query.where({ is_active: true });
+  }
+  return (await query
+    .orderBy('is_default', 'desc')
+    .orderBy('name', 'asc')
+    .select(
+      'billing_profile_id',
+      'client_id',
+      'name',
+      'is_default',
+      'is_active',
+      'is_system_managed_default',
+    )) as ClientBillingProfileRow[];
+}
+
 async function readDefaultProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,

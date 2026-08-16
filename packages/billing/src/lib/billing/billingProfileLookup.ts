@@ -105,40 +105,10 @@ export async function resolveContractLineChargeProfile(
 }
 
 /**
- * The client's profiles, ordered default-first. The single source of truth for
- * the D6 invisibility rule on the server side: `profiles.length === 1` means
- * the client is not segmented and no profile UI or reporting is offered.
+ * The client's profiles, ordered default-first — re-exported from the shared
+ * model so the D6 invisibility rule has exactly one implementation.
  */
-export interface ClientBillingProfileRow {
-  billing_profile_id: string;
-  client_id: string;
-  name: string;
-  is_default: boolean;
-  is_active: boolean;
-  is_system_managed_default: boolean;
-}
-
-export async function listClientBillingProfiles(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string,
-  options?: { includeInactive?: boolean },
-): Promise<ClientBillingProfileRow[]> {
-  const query = tenantDb(knex, tenant)
-    .table("client_billing_profiles")
-    .where({ client_id: clientId });
-  if (!options?.includeInactive) {
-    query.where({ is_active: true });
-  }
-  return (await query
-    .orderBy("is_default", "desc")
-    .orderBy("name", "asc")
-    .select(
-      "billing_profile_id",
-      "client_id",
-      "name",
-      "is_default",
-      "is_active",
-      "is_system_managed_default",
-    )) as ClientBillingProfileRow[];
-}
+export {
+  listClientBillingProfiles,
+  type ClientBillingProfileRow,
+} from "@alga-psa/shared/billingClients/billingProfiles";

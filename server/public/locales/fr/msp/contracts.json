@@ -470,6 +470,12 @@
       "createCustom": "Créer personnalisé",
       "expandLine": "Déplier la ligne de contrat"
     },
+    "billingProfile": {
+      "hint": "Les charges de cette ligne sont facturées à ce profil, remplaçant le contrat.",
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil du contrat",
+      "updated": "Profil de facturation mis à jour"
+    },
     "bucket": {
       "billingPeriod": "Période de facturation : {{period}}",
       "defaultUnit": "unité",

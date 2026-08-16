@@ -2805,6 +2805,26 @@ const handleClose = () => {
         }
     };
 
+    const handleBillingProfileChange = async (newBillingProfileId: string | null) => {
+        try {
+            const result = await updateTicket(ticket.ticket_id!, {
+                billing_profile_id: newBillingProfileId
+            });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                billing_profile_id: newBillingProfileId
+            }));
+
+            toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBillingProfileFailed', 'Failed to update billing profile'));
+        }
+    };
+
     const handleDeleteRequest = (conversation: IComment) => {
         // Only allow users to delete their own comments
         if (userId === conversation.user_id) {
@@ -3928,6 +3948,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
+                                onChangeBillingProfile={handleBillingProfileChange}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
