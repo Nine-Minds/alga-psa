@@ -1532,7 +1532,12 @@ describeDb('Inbound email durable inbox (integration)', () => {
     microsoftFetchMock.mockRejectedValue(invalidClient);
 
     // Three distinct ingress rows, each failing its staged source fetch with
-    // a terminal credential error: the third trips the automatic pause.
+    // a terminal credential error: the third trips the automatic pause. The
+    // first two stay retryable ('retry'); the third fails while the provider
+    // is now paused, so it PARKS non-terminal with a voided attempt budget
+    // ('ack' + paused) instead of burning its retry budget against the dead
+    // credential — the message must survive until the pause is recovered.
+    const producedIds: string[] = [];
     for (let i = 0; i < 3; i += 1) {
       const produced = await persistIngressPointer({
         tenant: tenantId,
@@ -1540,6 +1545,7 @@ describeDb('Inbound email durable inbox (integration)', () => {
         providerType: 'microsoft',
         pointer: { providerType: 'microsoft', providerMessageId: `v2-pause-${i}-${randomUUID()}` },
       });
+      producedIds.push(produced.ingressId!);
       const job: any = {
         schemaVersion: 2,
         workType: 'stage_ingress',
@@ -1551,8 +1557,20 @@ describeDb('Inbound email durable inbox (integration)', () => {
         maxAttempts: 5,
       };
       const result = await processIngressStageJob(job, ctx);
-      expect(result.disposition).toBe('retry');
+      if (i < 2) {
+        expect(result.disposition).toBe('retry');
+      } else {
+        expect(result.disposition).toBe('ack');
+        expect(result.outcome).toBe('paused');
+      }
     }
+    // The pause-raced row is parked non-terminal (never dead-lettered), with
+    // its attempt budget voided for the post-recovery retry.
+    const parkedRow = await tenantTable('inbound_email_ingress')
+      .where({ ingress_id: producedIds[2] })
+      .first('status', 'attempt_count');
+    expect(parkedRow.status).toBe('retryable_failed');
+    expect(Number(parkedRow.attempt_count)).toBe(0);
 
     const row = await tenantTable('email_providers')
       .where({ id: providerId })
@@ -1561,6 +1579,342 @@ describeDb('Inbound email durable inbox (integration)', () => {
     expect(row.inbound_pause_reason).toBe('auth_failure');
     expect(Number(row.inbound_auth_failure_count)).toBe(3);
     expect(row.inbound_auth_failure_code).toBe('microsoft:invalid_client');
+  });
+
+  it('auth-paused provider ingress rows are gated pre-claim, survive the pause non-terminally, and are re-driven after resume', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'pause-survive@example.com', providerType: 'microsoft' });
+    const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+
+    const produced = await persistIngressPointer({
+      tenant: tenantId,
+      providerId,
+      providerType: 'microsoft',
+      pointer: {
+        providerType: 'microsoft',
+        providerMessageId: 'ms-pause-survive-1',
+        extra: {
+          resource: 'maintenance-reconcile',
+          reconcileReceivedAt: new Date(Date.now() - 30 * 60_000).toISOString(),
+        },
+      },
+    });
+    expect(produced.ingressId).toBeTruthy();
+    const job: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: produced.ingressId,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+
+    // Pause the provider (auth-failure shape, as the auto-pause would).
+    await tenantTable('email_providers').where({ id: providerId }).update({
+      inbound_paused_at: db.fn.now(),
+      inbound_pause_reason: 'auth_failure',
+    });
+
+    // Pre-claim gate: the wake-up acks without claiming (no attempt burned,
+    // no provider access) — pre-fix the claim+fetch ran and the pause gate
+    // inside fetchMicrosoftProviderConfig ('microsoft_provider_not_found')
+    // terminalized the row.
+    microsoftFetchMock.mockClear();
+    const gated = await processIngressStageJob(job, ctx);
+    expect(gated.disposition).toBe('ack');
+    expect(gated.outcome).toBe('paused');
+    expect(microsoftFetchMock).not.toHaveBeenCalled();
+    let row = await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId }).first();
+    expect(row.status).toBe('received');
+    expect(Number(row.attempt_count)).toBe(0);
+
+    // The sweep must not wake or dead-letter a paused provider's ingress row,
+    // even when it is due and over-cap (attempts accrued while the credential
+    // was dead must not terminalize a paused-interval message).
+    await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId })
+      .update({ status: 'retryable_failed', attempt_count: 9, next_attempt_at: db.raw("now() - interval '1 minute'") });
+    const { claimIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const claim = await claimIngress(db, { tenant: tenantId, ingress_id: produced.ingressId, owner: 'paused-claim', leaseTtlMs: 30_000, allowRetryable: true });
+    expect(claim.claimed).toBe(false);
+    expect(claim.reason).toBe('not_due');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    v2EnqueueMock.mockClear();
+    await sweepTenantDurableWork(tenantId, 10);
+    expect(v2EnqueueMock).not.toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', recordId: produced.ingressId }));
+    row = await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId }).first();
+    expect(row.status).toBe('retryable_failed');
+
+    // Resume: the very next sweep re-drives the parked row and it stages. The
+    // attempt budget is voided exactly as the park flow does (the 9 forced
+    // above existed only to prove the paused-state over-cap guard).
+    await tenantTable('email_providers').where({ id: providerId }).update({
+      inbound_paused_at: null,
+      inbound_pause_reason: null,
+    });
+    await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId })
+      .update({ attempt_count: 0 });
+    v2EnqueueMock.mockClear();
+    const sweep = await sweepTenantDurableWork(tenantId, 10);
+    expect(sweep.enqueued.ingress).toBeGreaterThanOrEqual(1);
+    expect(v2EnqueueMock).toHaveBeenCalledWith(expect.objectContaining({ workType: 'stage_ingress', tenantId, recordId: produced.ingressId }));
+    microsoftFetchMock.mockResolvedValueOnce({
+      id: 'ms-pause-survive-1',
+      rawMime: 'From: Sender <s@example.com>\r\nTo: Support <pause-survive@example.com>\r\nSubject: Survive\r\nMessage-ID: <ms-pause-survive-1@example.com>\r\n\r\nbody\r\n',
+    });
+    const staged = await processIngressStageJob(job, ctx);
+    expect(staged.disposition).toBe('ack');
+    row = await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId }).first();
+    expect(row.status).toBe('staged');
+  });
+
+  it('V2 staging resets the auth-failure counter immediately after a successful source fetch, even when staging then fails', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'v2-reset@example.com', providerType: 'microsoft' });
+    await tenantTable('email_providers').where({ id: providerId }).update({
+      inbound_auth_failure_count: 2,
+      inbound_auth_failure_last_at: new Date().toISOString(),
+      inbound_auth_failure_code: 'microsoft:invalid_grant',
+    });
+    const { persistIngressPointer } = await import('@alga-psa/shared/services/email/inboundEmailProducer');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+    const produced = await persistIngressPointer({
+      tenant: tenantId,
+      providerId,
+      providerType: 'microsoft',
+      pointer: { providerType: 'microsoft', providerMessageId: 'ms-reset-1' },
+    });
+    const job: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: produced.ingressId,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+
+    // The provider fetch SUCCEEDS (credentials are healthy), but the
+    // downstream object upload fails. The reset must already have fired at
+    // the fetch boundary — pre-fix it only ran after all staging work, so a
+    // healthy-credential provider kept a stale counter and a later blip plus
+    // one real auth error could mis-trip the pause.
+    microsoftFetchMock.mockResolvedValueOnce({
+      id: 'ms-reset-1',
+      rawMime: 'From: Sender <s@example.com>\r\nTo: Support <v2-reset@example.com>\r\nSubject: Reset\r\nMessage-ID: <ms-reset-1@example.com>\r\n\r\nbody\r\n',
+    });
+    storageProviderMock.upload.mockRejectedValueOnce(new Error('object store unavailable'));
+    const result = await processIngressStageJob(job, ctx);
+    expect(result.disposition).toBe('retry');
+
+    const providerRow = await tenantTable('email_providers').where({ id: providerId }).first('inbound_auth_failure_count', 'inbound_auth_failure_last_at');
+    expect(Number(providerRow.inbound_auth_failure_count)).toBe(0);
+    expect(providerRow.inbound_auth_failure_last_at).toBeNull();
+    const ingressRow = await tenantTable('inbound_email_ingress').where({ ingress_id: produced.ingressId }).first('status');
+    expect(ingressRow.status).toBe('retryable_failed');
+  });
+
+  it('V2 google staging resets the auth-failure counter at the first successful download, before staging work', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'v2-reset-g@example.com', providerType: 'google' });
+    await tenantTable('email_providers').where({ id: providerId }).update({
+      inbound_auth_failure_count: 2,
+      inbound_auth_failure_last_at: new Date().toISOString(),
+      inbound_auth_failure_code: 'google:invalid_grant',
+    });
+    const { upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+
+    // Pointer with explicitly discovered ids: no listing runs, so the first
+    // successful download is the source-access proof.
+    const ingress = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'history:90:auth-pause-reconcile:g-reset-1',
+      provider_pointer: { historyId: '90', discoveredMessageIds: ['g-reset-1'] },
+    });
+    const job: any = {
+      schemaVersion: 2,
+      workType: 'stage_ingress',
+      tenantId,
+      recordId: ingress.ingress_id,
+      jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    };
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+
+    gmailAdapterMock.downloadMessageSource.mockImplementationOnce(async () =>
+      buildMime({ from: 'a@b.c', to: 'v2-reset-g@example.com', subject: 'Reset', messageId: `g-reset-${randomUUID()}@example.com`, text: 'x' })
+    );
+    storageProviderMock.upload.mockRejectedValueOnce(new Error('object store unavailable'));
+    const result = await processIngressStageJob(job, ctx);
+    expect(result.disposition).toBe('retry');
+
+    const providerRow = await tenantTable('email_providers').where({ id: providerId }).first('inbound_auth_failure_count');
+    expect(Number(providerRow.inbound_auth_failure_count)).toBe(0);
+  });
+
+  it('google staging never regresses the history cursor below the current watch cursor', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'gmail-monotonic@example.com', providerType: 'google' });
+    const { upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+
+    // The staging worker's view of the current cursor is the fresh watch
+    // cursor (9999); the pointer carries an older stale cursor (1500) — the
+    // exact shape the pre-fix enforce-mode Google recovery produced. One mock
+    // per staging run so the override cannot leak into other tests.
+    googleProviderConfigMock.fetchGoogleProviderConfig
+      .mockResolvedValueOnce({
+        provider: { id: providerId, tenant: tenantId },
+        googleConfig: { history_id: '9999' },
+        config: {},
+      })
+      .mockResolvedValueOnce({
+        provider: { id: providerId, tenant: tenantId },
+        googleConfig: { history_id: '9999' },
+        config: {},
+      });
+    gmailAdapterMock.downloadMessageSource
+      .mockImplementationOnce(async () =>
+        buildMime({ from: 'a@b.c', to: 'gmail-monotonic@example.com', subject: 'Stale', messageId: `gm-stale-${randomUUID()}@example.com`, text: 'x' })
+      )
+      .mockImplementationOnce(async () =>
+        buildMime({ from: 'a@b.c', to: 'gmail-monotonic@example.com', subject: 'Fresh', messageId: `gm-fresh-${randomUUID()}@example.com`, text: 'x' })
+      );
+
+    const stale = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'history:1500:auth-pause-reconcile:g-stale-1',
+      provider_pointer: { historyId: '1500', discoveredMessageIds: ['g-stale-1'] },
+    });
+    const staleJob: any = {
+      schemaVersion: 2, workType: 'stage_ingress', tenantId,
+      recordId: stale.ingress_id, jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    };
+    const staleResult = await processIngressStageJob(staleJob, ctx);
+    expect(staleResult.disposition).toBe('ack');
+    let configRow = await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id');
+    // Pre-fix: pointer processing wrote the stale '1500' back. Post-fix: a
+    // stale cursor writes nothing (the seeded value stays).
+    expect(String(configRow.history_id)).toBe('1');
+
+    // A pointer newer than the current cursor still advances it.
+    const fresh = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'history:15000:auth-pause-reconcile:g-fresh-1',
+      provider_pointer: { historyId: '15000', discoveredMessageIds: ['g-fresh-1'] },
+    });
+    const freshJob: any = {
+      schemaVersion: 2, workType: 'stage_ingress', tenantId,
+      recordId: fresh.ingress_id, jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    };
+    const freshResult = await processIngressStageJob(freshJob, ctx);
+    expect(freshResult.disposition).toBe('ack');
+    configRow = await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id');
+    expect(String(configRow.history_id)).toBe('15000');
+  });
+
+  it('microsoft recovery reconcile: a terminally failed ingress is not covered — it is revived and re-handed-off between passes', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'ms-revive@example.com', providerType: 'microsoft' });
+    const { EmailWebhookMaintenanceService } = await import('@alga-psa/shared/services/email/EmailWebhookMaintenanceService');
+
+    const since = new Date(Date.now() - 3 * 60 * 60_000);
+    const T1 = new Date(Date.now() - 2 * 60 * 60_000).toISOString();
+    const T2 = new Date(Date.now() - 90 * 60_000).toISOString();
+    const T3 = new Date(Date.now() - 60 * 60_000).toISOString();
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockResolvedValue([
+      { id: 'ms-revive-1', receivedDateTime: T1 },
+      { id: 'ms-revive-2', receivedDateTime: T2 },
+    ]);
+
+    const service: any = new EmailWebhookMaintenanceService();
+    const config: any = {
+      id: providerId,
+      tenant: tenantId,
+      provider_type: 'microsoft',
+      mailbox: 'ms-revive@example.com',
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+      webhook_notification_url: 'https://example.com/api/email/webhooks/microsoft',
+      provider_config: { max_emails_per_sync: 50 },
+    };
+    const adapter = new (await import('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter')).MicrosoftGraphAdapter(config);
+
+    // Recovery pass 1 (explicit since boundary): both messages are handed off.
+    const pass1 = await service.reconcileMissedMessages(adapter, config, false, since, new Set<string>());
+    expect(pass1.queuedMessages).toBe(2);
+
+    // Deterministic interleave: between passes, a concurrent worker
+    // terminalizes the first message's ingress (the pause-window
+    // terminalization shape — e.g. attempts burned against the dead
+    // credential).
+    await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, ingress_key: 'message:ms-revive-1' })
+      .update({
+        status: 'terminal_failed',
+        completed_at: db.fn.now(),
+        lease_owner: null,
+        lease_token: null,
+        lease_expires_at: null,
+        next_attempt_at: null,
+      });
+
+    // Recovery pass 2 with the loop-seeded handedOffIds: a terminal row is NOT
+    // a durable hand-off. Pre-fix ("any ingress row counts as handed off")
+    // this pass reported queuedMessages 0 and the interval was declared
+    // exhausted with a message never durably handed off.
+    const pass2 = await service.reconcileMissedMessages(adapter, config, false, since, new Set(['ms-revive-1', 'ms-revive-2']));
+    expect(pass2.queuedMessages).toBe(1);
+    expect(pass2.moreRemaining).toBe(false);
+
+    const revived = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, ingress_key: 'message:ms-revive-1' })
+      .first('status', 'attempt_count', 'completed_at');
+    expect(revived.status).toBe('received');
+    expect(Number(revived.attempt_count)).toBe(0);
+    expect(revived.completed_at).toBeNull();
+
+    // The non-terminal row stays covered — no duplicate hand-off.
+    const untouched = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, provider_id: providerId, ingress_key: 'message:ms-revive-2' })
+      .first('status', 'attempt_count');
+    expect(untouched.status).toBe('received');
+    expect(Number(untouched.attempt_count)).toBe(0);
+
+    // A legacy audit row only counts as covered when SETTLED: a 'failed'
+    // legacy outcome never durably imported the message, so a recovery pass
+    // must hand it off again.
+    await tenantTable('email_processed_messages').insert({
+      message_id: 'ms-revive-3',
+      provider_id: providerId,
+      tenant: tenantId,
+      processed_at: db.fn.now(),
+      processing_status: 'failed',
+      error_message: 'legacy pipeline died',
+    });
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockResolvedValue([
+      { id: 'ms-revive-1', receivedDateTime: T1 },
+      { id: 'ms-revive-2', receivedDateTime: T2 },
+      { id: 'ms-revive-3', receivedDateTime: T3 },
+    ]);
+    const pass3 = await service.reconcileMissedMessages(adapter, config, false, since, new Set(['ms-revive-1', 'ms-revive-2']));
+    expect(pass3.queuedMessages).toBe(1);
+    const revived3 = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, ingress_key: 'message:ms-revive-3' })
+      .first('status');
+    expect(revived3.status).toBe('received');
   });
 
   it('core processing succeeds from the staged source when the provider message is gone', async () => {

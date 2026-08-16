@@ -592,7 +592,11 @@ export class EmailWebhookMaintenanceService {
    * whether Graph still holds unprocessed messages in the window so recovery
    * callers can loop until the paused interval is exhausted. `handedOffIds`
    * lets such callers treat previously handed-off messages as covered (the
-   * off/shadow modes have no ingress ledger to read that from).
+   * off/shadow modes have no ingress ledger to read that from). Recovery
+   * passes (explicit `since` and/or `handedOffIds`) only count monotonic
+   * coverage markers — this recovery's own hand-offs, non-terminal ingress
+   * rows, and settled legacy outcomes — so concurrent worker transitions
+   * between passes can never make an un-handed-off message look covered.
    */
   async reconcileProviderMessages(params: {
     providerId: string;
@@ -708,6 +712,23 @@ export class EmailWebhookMaintenanceService {
     let unprocessedMessages: Array<{ id: string; receivedDateTime?: string }> = [];
     const processedMessageIds = new Set<string>(handedOffIds || []);
     const checkedMessageIds = new Set<string>();
+    // An auth-pause recovery pass (explicit `since` boundary and/or
+    // caller-seeded handed-off ids) must decide "is this message covered?"
+    // from markers that cannot regress under concurrent workers:
+    //   - ids THIS recovery durably handed off (handedOffIds) — except where
+    //     the durable ledger refutes the hand-off (the ingress row later
+    //     transitioned to `terminal_failed`: the pipeline gave up, e.g.
+    //     attempts burned against the dead credential),
+    //   - ingress rows that are still owned by the durable pipeline
+    //     (received/staging/retryable_failed/staged — never deleted, and a
+    //     sweep will process them),
+    //   - SETTLED legacy audit outcomes (success/skipped).
+    // A `terminal_failed` ingress row is NOT a hand-off, and a legacy
+    // 'processing'/'failed' row is not an import. Counting either as covered
+    // could declare the interval exhausted (`moreRemaining: false`) while a
+    // message was never durably handed off. Renewal passes keep the
+    // historical any-row semantics.
+    const recoveryPass = Boolean(sinceOverride) || Boolean(handedOffIds);
 
     // A capped oldest-first query can initially contain only messages from the
     // safety-margin overlap. Expand the read until either maxCount unprocessed
@@ -720,24 +741,28 @@ export class EmailWebhookMaintenanceService {
         .filter((messageId) => !checkedMessageIds.has(messageId));
 
       if (uncheckedMessageIds.length > 0) {
-        const processedRows = await db.table('email_processed_messages')
+        const processedQuery = db.table('email_processed_messages')
           .where({ provider_id: config.id })
-          .whereIn('message_id', uncheckedMessageIds)
-          .select('message_id');
-        // Durable mode: a message with ANY ingress row has been handed to the
-        // durable pipeline (received/staging = claimed by a worker,
-        // retryable_failed = owned by its backoff + recovery sweep,
-        // staged/terminal = settled) and must not be re-enqueued by
-        // reconciliation. Previously only `staged` counted, which made
-        // consecutive recovery passes re-see freshly enqueued rows and
-        // prevented the paused interval from being paged through in enforce
-        // mode.
-        let handedOffRows: Array<{ ingress_key: string }> = [];
+          .whereIn('message_id', uncheckedMessageIds);
+        if (recoveryPass) {
+          processedQuery.andWhere('processing_status', 'in', ['success', 'skipped']);
+        }
+        const processedRows = await processedQuery.select('message_id');
+        // Durable mode: a message with a NON-TERMINAL ingress row has been
+        // handed to the durable pipeline (received/staging = claimed by a
+        // worker, retryable_failed = owned by its backoff + recovery sweep,
+        // staged = settled) and must not be re-enqueued by reconciliation.
+        // Recovery passes additionally treat a `terminal_failed` row as NOT
+        // handed off — including revoking a seeded handedOffIds entry — and
+        // revive it on re-hand-off so the explicit hand-off results in
+        // processing.
+        let handedOffRows: Array<{ ingress_key: string; status?: string }> = [];
+        const terminalIngressIds = new Set<string>();
         try {
           handedOffRows = await db.table('inbound_email_ingress')
             .where({ tenant: config.tenant, provider_id: config.id })
             .whereIn('ingress_key', uncheckedMessageIds.map((id) => `message:${id}`))
-            .select('ingress_key');
+            .select('ingress_key', 'status');
         } catch {
           // Ledger not available yet (pre-durable deploy): legacy dedupe only.
         }
@@ -745,8 +770,18 @@ export class EmailWebhookMaintenanceService {
         for (const row of processedRows) processedMessageIds.add(String(row.message_id));
         for (const row of handedOffRows) {
           const key = String(row.ingress_key);
-          if (key.startsWith('message:')) processedMessageIds.add(key.slice('message:'.length));
+          if (!key.startsWith('message:')) continue;
+          const messageId = key.slice('message:'.length);
+          if (recoveryPass && String(row.status) === 'terminal_failed') {
+            // The durable ledger refutes the hand-off: a terminal row will
+            // never be processed, so a seeded handedOffIds entry must not
+            // count as covered either.
+            terminalIngressIds.add(messageId);
+            continue;
+          }
+          processedMessageIds.add(messageId);
         }
+        for (const messageId of terminalIngressIds) processedMessageIds.delete(messageId);
       }
 
       unprocessedMessages = messages
@@ -806,10 +841,14 @@ export class EmailWebhookMaintenanceService {
       for (const message of unprocessedMessages) {
         // Durable path: persist the ingress pointer before the Redis handoff so
         // reconciliation never advances its cursor past an unstaged message.
+        // Recovery passes revive a terminally failed row: a terminal row is
+        // not a durable hand-off, and the explicit re-hand-off must result in
+        // processing (see the recoveryPass coverage rules above).
         const durable = await persistIngressPointer({
           tenant: config.tenant,
           providerId: config.id,
           providerType: 'microsoft',
+          reviveTerminal: recoveryPass,
           pointer: {
             providerType: 'microsoft',
             providerMessageId: message.id,

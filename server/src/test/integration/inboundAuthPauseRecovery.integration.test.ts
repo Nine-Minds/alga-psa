@@ -271,11 +271,12 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
   afterAll(async () => {
     if (testTenant) {
       await tenantTable('email_processed_messages').delete();
+      await tenantTable('inbound_email_ingress').delete();
       await tenantTable('microsoft_email_provider_config').delete();
       await tenantTable('google_email_provider_config').delete();
       await tenantTable('imap_email_provider_config').delete();
       await tenantTable('email_providers').delete();
-      await tenantFixtureTable().where('tenant', testTenant).delete();
+      await tenantFixtureTable().where({ tenant: testTenant }).delete();
     }
     await testDb?.destroy().catch(() => undefined);
   }, 30_000);
@@ -403,6 +404,51 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       const row = await getProviderRow(providerId);
       expect(row.inbound_paused_at).toBeNull();
       expect(Number(row.inbound_auth_failure_count)).toBe(0);
+    });
+
+    it('enforce mode: durable pointers carry the post-watch cursor, mailbox identity, and discovered ids (one ingress per message)', async () => {
+      const { providerId } = await seedPausedProvider('google');
+      const providerRow = await getProviderRow(providerId);
+
+      const prevMode = process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE;
+      process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = 'enforce';
+      try {
+        const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant);
+        expect(result.resumed).toBe(true);
+
+        // No legacy V1 handoff in enforce mode — the durable ingress rows are
+        // the hand-off.
+        expect(enqueueMock.enqueueUnifiedInboundEmailQueueJob).not.toHaveBeenCalled();
+
+        const rows = await tenantTable('inbound_email_ingress')
+          .where({ tenant: testTenant, provider_id: providerId });
+        // One ingress row per reconciled message id. Pre-fix every message
+        // shared the single deterministic key `history:<pre-watch-cursor>`,
+        // collapsing the whole interval into one row.
+        expect(rows.length).toBe(2);
+        expect(new Set(rows.map((row: any) => row.ingress_key)).size).toBe(2);
+
+        for (const row of rows) {
+          const pointer = row.provider_pointer;
+          // Post-watch cursor (9999), never the pre-watch one (1500): the
+          // staging worker persists pointer.historyId back to
+          // google_email_provider_config, and the pre-watch value would
+          // regress it below the fresh watch.
+          expect(String(pointer.historyId)).toBe('9999');
+          // Mailbox identity parity with the direct-enqueue branch.
+          expect(pointer.mailbox).toBe(providerRow.mailbox);
+          expect(pointer.emailAddress).toBe(providerRow.mailbox);
+          // The staging worker only downloads explicitly discovered ids;
+          // without them it re-lists from the post-watch cursor and finds
+          // nothing from the paused interval.
+          expect(Array.isArray(pointer.discoveredMessageIds)).toBe(true);
+          expect(pointer.discoveredMessageIds).toHaveLength(1);
+          expect(['g-1', 'g-2']).toContain(pointer.discoveredMessageIds[0]);
+        }
+      } finally {
+        process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = prevMode;
+        await tenantTable('inbound_email_ingress').where({ tenant: testTenant, provider_id: providerId }).delete();
+      }
     });
 
     it('falls back to a pause-bounded mailbox query when the saved cursor is rejected', async () => {

@@ -21,6 +21,8 @@ import {
   getDurableMaxAttempts,
   getInboundDurableMode,
   getIngress,
+  isInboundProviderPaused,
+  parkIngressWhilePaused,
   reclaimIngress,
   transitionIngress,
   upsertIngress,
@@ -45,6 +47,11 @@ function boundedBackoffMs(attemptCount: number): number {
   return Math.min(base + jitter, 5 * 60 * 1000);
 }
 
+/** Backoff for a parked-while-paused ingress row. Short on purpose: the pause
+ * gate (not the backoff) suppresses re-drives while paused, so after the pause
+ * clears the row becomes due quickly for the recovery sweep to re-enqueue. */
+const PAUSED_INGRESS_PARK_BACKOFF_MS = 30_000;
+
 export async function processIngressStageJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext
@@ -53,6 +60,23 @@ export async function processIngressStageJob(
   const owner = `ingress-stager-${job.jobId}`;
   const ttl = getDurableLeaseTtlMs();
   const maxAttempts = getDurableMaxAttempts();
+
+  // Pause gate BEFORE claiming: staging requires live provider credentials, so
+  // while the provider is ingestion-paused a wake-up must not claim the row
+  // (which would burn an attempt against the dead credential) and must not
+  // terminalize it. The row stays `received`/`retryable_failed` — non-terminal
+  // — and the recovery sweep re-drives it once the pause clears. Acking drops
+  // the wake-up; the durable row, not this job, is the unit of recovery.
+  const preClaim = await getIngress(db, job.tenantId, job.recordId);
+  if (preClaim && (await isInboundProviderPaused(db, job.tenantId, preClaim.provider_id))) {
+    console.info('[InboundIngressStagingWorker] ingress staging deferred: provider ingestion paused', {
+      event: 'inbound_email_ingress_paused_gate',
+      tenantId: job.tenantId,
+      providerId: preClaim.provider_id,
+      ingressId: preClaim.ingress_id,
+    });
+    return { disposition: 'ack', outcome: 'paused', reason: 'provider_ingestion_paused' };
+  }
 
   let claim = await claimIngress(db, {
     tenant: job.tenantId,
@@ -110,14 +134,27 @@ export async function processIngressStageJob(
   try {
     let stagedInboxes: string[];
     try {
-      stagedInboxes = await stageIngressSources(db, ingress);
+      stagedInboxes = await stageIngressSources(db, ingress, {
+        // Any successful provider source access — including an empty fetch —
+        // resets the consecutive auth-failure counter IMMEDIATELY, before the
+        // downstream staging work (object upload, inbox insert, cursor
+        // advance). A storage/inbox failure after a healthy fetch must not
+        // leave a stale counter armed: a later transient blip mixed with one
+        // real auth error could then mis-trip the automatic pause.
+        onSourceAccessSuccess: () =>
+          recordInboundSourceAccessSuccess({
+            tenant: ingress.tenant,
+            providerId: ingress.provider_id,
+            source: 'v2-ingress-staging',
+          }),
+      });
     } catch (error) {
       // Source-access auth accounting with the same semantics as the V1
       // processor boundary: only strictly classified terminal credential
       // failures count (the classifier never matches staging/storage errors),
       // a Google history notification with no messages is a successful empty
       // fetch, and the original error still propagates so the ingress
-      // retry/terminal policy above stays authoritative.
+      // retry/terminal policy below stays authoritative.
       if ((error as any)?.message === 'google_history_no_messages') {
         await recordInboundSourceAccessSuccess({
           tenant: ingress.tenant,
@@ -135,14 +172,6 @@ export async function processIngressStageJob(
       }
       throw error;
     }
-
-    // Any successful source access — including an empty fetch — resets the
-    // consecutive auth-failure counter before downstream inbox processing.
-    await recordInboundSourceAccessSuccess({
-      tenant: ingress.tenant,
-      providerId: ingress.provider_id,
-      source: 'v2-ingress-staging',
-    });
 
     const written = await transitionIngress(db, {
       tenant: ingress.tenant,
@@ -179,6 +208,26 @@ export async function processIngressStageJob(
     return { disposition: 'ack' };
   } catch (error: any) {
     const message = error?.message || String(error);
+    // Pause raced the claim (the pause tripped between the pre-claim gate and
+    // the fetch, e.g. a concurrent job crossed the threshold): the failure was
+    // measured against a dead credential, so park the row non-terminal with a
+    // voided attempt budget instead of terminalizing it. A paused-interval
+    // message must survive until the resume reconciliation hands it off.
+    if (await isInboundProviderPaused(db, ingress.tenant, ingress.provider_id)) {
+      const parked = await parkIngressWhilePaused(db, {
+        tenant: ingress.tenant,
+        ingress_id: ingress.ingress_id,
+        owner,
+        token,
+        version,
+        backoffMs: PAUSED_INGRESS_PARK_BACKOFF_MS,
+        error: message,
+      });
+      if (!parked) {
+        return { disposition: 'retry', error: 'ingress_fence_superseded' };
+      }
+      return { disposition: 'ack', outcome: 'paused', reason: `parked_while_paused:${message}` };
+    }
     const retryable = isRetryableStageError(message);
     // Terminal attempt cap: exhausted retries land in a queryable terminal
     // failure state instead of looping forever.
@@ -199,11 +248,25 @@ export async function processIngressStageJob(
   }
 }
 
-async function stageIngressSources(db: any, ingress: InboundIngressRecord): Promise<string[]> {  const providerType = ingress.provider_type;
+interface StageIngressSourcesContext {
+  /**
+   * Fired the moment provider source access is proven successful (fetch,
+   * listing, or download returned) — BEFORE any downstream staging work, so
+   * storage/insert failures cannot strand a stale auth-failure counter.
+   */
+  onSourceAccessSuccess: () => Promise<void>;
+}
+
+async function stageIngressSources(
+  db: any,
+  ingress: InboundIngressRecord,
+  ctx: StageIngressSourcesContext
+): Promise<string[]> {
+  const providerType = ingress.provider_type;
   const pointer = ingress.provider_pointer ?? {};
 
   if (providerType === 'google') {
-    return stageGoogleSources(db, ingress);
+    return stageGoogleSources(db, ingress, ctx);
   }
 
   const v1Job = buildV1JobFromIngress(ingress);
@@ -217,6 +280,9 @@ async function stageIngressSources(db: any, ingress: InboundIngressRecord): Prom
   } else {
     throw new Error(`unsupported_provider_type:${providerType}`);
   }
+  // Source fetch (download + parse) succeeded: reset the auth counter now —
+  // everything below is local staging work, not credential access.
+  await ctx.onSourceAccessSuccess();
 
   const rawMime = maybeExtractRawMimeFromEmailData(emailData);
   if (!rawMime) {
@@ -271,7 +337,7 @@ async function maybeAdvanceMicrosoftReconcileCursor(db: any, ingress: InboundIng
   }
 }
 
-async function stageGoogleSources(db: any, ingress: InboundIngressRecord): Promise<string[]> {
+async function stageGoogleSources(db: any, ingress: InboundIngressRecord, ctx: StageIngressSourcesContext): Promise<string[]> {
   const v1Job = buildV1JobFromIngress(ingress);
   const { fetchGoogleProviderConfig } = await import('./unifiedInboundEmailQueueJobProcessor');
   const { provider, googleConfig, config } = await fetchGoogleProviderConfig(v1Job);
@@ -286,13 +352,27 @@ async function stageGoogleSources(db: any, ingress: InboundIngressRecord): Promi
     googleConfig.history_id || Math.max((Number(ingress.provider_pointer?.historyId) || 1) - 1, 1)
   );
   const messageIds = explicitMessageIds.length > 0 ? explicitMessageIds : await adapter.listMessagesSince(startHistoryId);
+  if (explicitMessageIds.length === 0) {
+    // The history listing itself is the source access (an empty result is a
+    // successful empty fetch and throws below, handled by the caller's
+    // success-recording catch). Reset before any download/staging work.
+    await ctx.onSourceAccessSuccess();
+  }
   if (!messageIds.length) {
     throw new Error('google_history_no_messages');
   }
 
   const inboxIds: string[] = [];
+  let explicitSourceProven = explicitMessageIds.length === 0;
   for (const messageId of messageIds) {
     const rawMime = await adapter.downloadMessageSource(messageId);
+    if (!explicitSourceProven) {
+      // Pointer carried explicit discovered ids (no listing ran): the first
+      // successful download proves credential health. Reset immediately;
+      // remaining downloads + all staging work are downstream of the access.
+      explicitSourceProven = true;
+      await ctx.onSourceAccessSuccess();
+    }
     const emailData: any = {
       id: messageId,
       provider: 'google',
@@ -314,8 +394,18 @@ async function stageGoogleSources(db: any, ingress: InboundIngressRecord): Promi
   // durable: only after all inbox rows are inserted do we move the history
   // cursor to the notification's historyId. If any message failed to stage,
   // the caller marks the ingress retryable and this update is skipped.
+  // Monotonic (numeric GREATEST): a replayed/stale pointer must never regress
+  // the cursor below the persisted watch cursor — mirroring the Microsoft
+  // reconcile cursor's GREATEST advance.
   const cursorHistoryId = String(ingress.provider_pointer?.historyId ?? googleConfig.history_id ?? startHistoryId);
-  if (cursorHistoryId) {
+  const currentHistoryIdNum = Number(googleConfig.history_id);
+  const cursorHistoryIdNum = Number(cursorHistoryId);
+  const cursorAdvances =
+    !googleConfig.history_id ||
+    (Number.isFinite(cursorHistoryIdNum) &&
+      Number.isFinite(currentHistoryIdNum) &&
+      cursorHistoryIdNum > currentHistoryIdNum);
+  if (cursorHistoryId && cursorAdvances) {
     const { tenantDb } = await import('@alga-psa/db');
     await tenantDb(db, ingress.tenant).table('google_email_provider_config')
       .where({ email_provider_id: ingress.provider_id })

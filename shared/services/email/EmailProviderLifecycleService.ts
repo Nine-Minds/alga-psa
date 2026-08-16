@@ -843,11 +843,28 @@ export class EmailProviderLifecycleService {
         tenant: params.tenant,
         providerId: params.providerId,
         providerType: 'google',
+        // The enforce-mode pointer must carry exactly what the direct-enqueue
+        // branch carries: the POST-watch cursor (the staging worker persists
+        // pointer.historyId back to google_email_provider_config after
+        // staging, and the pre-watch cursor would regress it below the fresh
+        // watch), the mailbox identity, and the discovered message id (the
+        // staging worker only downloads ids it finds in the pointer — without
+        // them it re-lists from the post-watch cursor and finds nothing from
+        // the paused interval). pubsubMessageId keeps one ingress row per
+        // reconciled message (the deterministic key is
+        // `history:<historyId>:<pubsubMessageId>`), so re-reconciles are
+        // idempotent and a terminally failed row is revived, not skipped.
+        reviveTerminal: true,
         pointer: {
           providerType: 'google',
-          providerMessageId: messageId,
-          historyId: savedHistoryId,
-          extra: { resource: 'auth-pause-reconcile' },
+          historyId: currentHistoryId || savedHistoryId,
+          pubsubMessageId: `auth-pause-reconcile:${messageId}`,
+          mailbox: loaded.provider.mailbox,
+          extra: {
+            resource: 'auth-pause-reconcile',
+            emailAddress: loaded.provider.mailbox,
+            discoveredMessageIds: [messageId],
+          },
         },
       });
       if (!(durable.mode === 'enforce' && durable.ingressId)) {

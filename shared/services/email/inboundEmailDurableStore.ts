@@ -82,6 +82,22 @@ function isDue(nextAttemptAt: Date | string | null | undefined, now: Date): bool
 // Ingress
 // ---------------------------------------------------------------------------
 
+/**
+ * True when the provider's inbound ingestion is paused (any reason). Durable
+ * work that requires provider source access must wait out the pause instead of
+ * burning attempts against dead credentials: a message that arrived during an
+ * auth pause must survive, non-terminal, until the resume reconciliation and
+ * the recovery sweep hand it off. Ingestion gating here is the durable-mode
+ * equivalent of the `inbound_paused_at` filters in the queue/maintenance
+ * loaders.
+ */
+export async function isInboundProviderPaused(db: DurableDb, tenant: string, providerId: string): Promise<boolean> {
+  const row = await tenantDb(db, tenant).table('email_providers')
+    .where({ tenant, id: providerId })
+    .first('inbound_paused_at');
+  return Boolean(row?.inbound_paused_at);
+}
+
 export interface InboundIngressInsert {
   tenant: string;
   provider_id: string;
@@ -185,14 +201,84 @@ export async function claimIngress(db: DurableDb, params: {
   }
   if (current.status === 'retryable_failed') {
     // Over-cap due retryable rows are dead-lettered into a queryable terminal
-    // failure state rather than looping forever.
+    // failure state rather than looping forever — unless the provider is
+    // ingestion-paused: attempts that accrued while the credential was dead
+    // must not terminalize a paused-interval message. The row stays
+    // retryable and is re-driven after the pause clears.
     if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
+      if (await isInboundProviderPaused(db, params.tenant, current.provider_id)) {
+        return { claimed: false, reason: 'not_due' };
+      }
       await deadletterIngress(db, current);
       return { claimed: false, reason: 'terminal' };
     }
     return { claimed: false, reason: 'not_due' };
   }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/**
+ * Park a claimed ingress row whose provider is ingestion-paused: fenced
+ * transition to `retryable_failed` with the attempt budget VOIDED. The pause
+ * owns the delay — the row's attempts were burned against a dead credential,
+ * not an unhealthy message — so after the pause clears the row gets a full
+ * retry budget and the recovery sweep re-drives it. Never terminal.
+ */
+export async function parkIngressWhilePaused(db: DurableDb, params: {
+  tenant: string;
+  ingress_id: string;
+  owner: string;
+  token: string;
+  version: number;
+  backoffMs: number;
+  error?: string | null;
+}): Promise<boolean> {
+  const updated = await tenantDb(db, params.tenant).table('inbound_email_ingress')
+    .where({
+      tenant: params.tenant,
+      ingress_id: params.ingress_id,
+      status: 'staging',
+      lease_owner: params.owner,
+      lease_token: params.token,
+      lease_version: params.version,
+    })
+    .update({
+      status: 'retryable_failed',
+      attempt_count: 0,
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: db.raw("now() + (? || ' milliseconds')::interval", [params.backoffMs]),
+      ...(params.error !== undefined ? { last_error: params.error } : {}),
+      error_details: JSON.stringify({ phase: 'staging', parkedWhilePaused: true }),
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
+}
+
+/**
+ * Revive a `terminal_failed` ingress row back to `received` with a fresh
+ * attempt budget. Used by the auth-pause recovery reconciliation when it
+ * re-hands-off a paused-interval message whose prior ingress terminalized
+ * (e.g. attempts burned against the dead credential): a terminal row is NOT a
+ * durable hand-off, and an explicit new hand-off must result in processing.
+ * Conditional on the still-terminal status so concurrent revives are safe.
+ */
+export async function reviveTerminalIngress(db: DurableDb, tenant: string, ingressId: string): Promise<boolean> {
+  const updated = await tenantDb(db, tenant).table('inbound_email_ingress')
+    .where({ tenant, ingress_id: ingressId, status: 'terminal_failed' })
+    .update({
+      status: 'received',
+      attempt_count: 0,
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: null,
+      completed_at: null,
+      error_details: JSON.stringify({ revivedBy: 'auth-pause-reconcile' }),
+      updated_at: db.fn.now(),
+    });
+  return updated > 0;
 }
 
 /**

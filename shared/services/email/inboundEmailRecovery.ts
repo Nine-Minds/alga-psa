@@ -55,11 +55,29 @@ export interface RecoverySweepResult {
 
 export async function sweepTenantDurableWork(tenant: string, limit: number = 10): Promise<RecoverySweepResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
+  const { tenantDb } = await import('@alga-psa/db');
   const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0, deliveries: 0 } };
   const maxAttempts = getDurableMaxAttempts();
 
+  // Ingress staging requires live provider credentials. While a provider is
+  // ingestion-paused (auth_failure or manual), its ingress rows are left
+  // untouched: no wake-up (which would burn attempts against the dead
+  // credential) and no over-cap dead-letter (attempts accrued during the pause
+  // must not terminalize a paused-interval message). Once the pause clears,
+  // the next sweep re-drives every still-non-terminal row. Inbox/artifact/
+  // outbox rows process staged sources only — no credential access — and stay
+  // eligible during a pause.
+  const pausedProviderIds = new Set<string>(
+    ((await tenantDb(db, tenant).table('email_providers')
+      .whereNotNull('inbound_paused_at')
+      .select('id')) as Array<{ id: string }>).map((row) => row.id)
+  );
+
   const ingressRows = await findDueIngress(db, { tenant, limit });
   for (const row of ingressRows) {
+    if (pausedProviderIds.has(row.provider_id)) {
+      continue;
+    }
     // Exhausted retryable rows dead-letter into a queryable terminal state
     // instead of being re-woken forever.
     if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
