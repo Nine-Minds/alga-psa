@@ -178,7 +178,18 @@ export async function configureGmailProvider({
             hasRefreshToken: !!googleConfig.refresh_token
           });
           result.warnings.push('OAuth tokens missing - Gmail watch registration skipped');
-          result.success = result.pubsubConfigured; // Still considered success if pubsub was configured
+          // Without tokens the watch — and the auth-pause recovery behind
+          // it — cannot be re-established. For a provider auto-paused on
+          // auth failures this exit is a failed reconnect that must not
+          // masquerade as success over a still-paused mailbox; for everyone
+          // else it stays the historical warning-tolerant partial success.
+          if (pausedForAuthFailure) {
+            result.authFailureRecovery = 'failed';
+            result.success = false;
+            result.error = 'Gmail reconnection failed: OAuth authorization is required. Reconnect the mailbox and try again.';
+          } else {
+            result.success = result.pubsubConfigured; // Still considered success if pubsub was configured
+          }
           return;
         }
 
@@ -296,8 +307,19 @@ export async function configureGmailProvider({
         });
         // Record the error but don't throw - provider is saved, Pub/Sub may still work
         result.warnings.push('Gmail watch registration failed. Reconnect the mailbox or retry setup after verifying Google permissions.');
-        // If Pub/Sub was configured, we're partially successful
-        result.success = result.pubsubConfigured;
+        // For a provider auto-paused on auth failures this catch is the
+        // revoked/invalid-credential case: delivery was not re-established,
+        // recovery never ran, and the caller must not report success over a
+        // still-paused mailbox. Non-paused providers keep the historical
+        // warning-tolerant partial success.
+        if (pausedForAuthFailure) {
+          result.authFailureRecovery = 'failed';
+          result.success = false;
+          result.error = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+        } else {
+          // If Pub/Sub was configured, we're partially successful
+          result.success = result.pubsubConfigured;
+        }
       }
     });
   } catch (pubsubError) {

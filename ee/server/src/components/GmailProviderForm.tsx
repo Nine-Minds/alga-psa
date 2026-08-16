@@ -25,6 +25,10 @@ import { BasicConfigCard } from '@alga-psa/integrations/components/email/provide
 import { ProcessingSettingsCard } from '@alga-psa/integrations/components/email/providers/gmail/ProcessingSettingsCard';
 import { OAuthSection } from '@alga-psa/integrations/components/email/providers/gmail/OAuthSection';
 import { baseGmailProviderSchema } from '@alga-psa/integrations/components/email/providers/gmail/schemas';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type EEGmailProviderFormData = import('@alga-psa/integrations/components').BaseGmailProviderFormData;
 
@@ -158,16 +162,28 @@ export function GmailProviderForm({
         ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
         : await createEmailProvider(payload, false); // skipAutomation: false
 
-      // Check for setup errors or warnings
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
+      // A setup error (e.g. failed auth-pause recovery: the OAuth
+      // credentials were rejected or the Gmail watch could not be
+      // re-registered) means the reconnect did NOT succeed — the provider
+      // stays paused. Surface the error in the form and do not report
+      // success: closing the drawer would clear the paused-state banner
+      // while ingestion is still stopped.
       if (result.setupError) {
-        setError(t('gmailForm.warnings.setupIncomplete', { error: result.setupError }));
+        setError(t('forms.common.messages.setupIncomplete', {
+          defaultValue: 'Provider saved but setup incomplete: {{error}}',
+          error: result.setupError,
+        }));
+        return;
       }
       if (result.setupWarnings && result.setupWarnings.length > 0) {
         setSetupWarnings(result.setupWarnings);
       }
 
-      // Still call onSuccess so the provider appears in the list
-      // The user can see the error/warning state in the UI
       onSuccess(result.provider);
 
     } catch (err: any) {

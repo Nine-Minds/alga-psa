@@ -1108,6 +1108,7 @@ export const updateEmailProvider = withAuth(async (
     };
 
     let googleRecoveryAttempted = false;
+    let googleAutomationRan = false;
 
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
@@ -1116,6 +1117,7 @@ export const updateEmailProvider = withAuth(async (
         data.googleConfig?.project_id;
 
       if (effectiveProjectId) {
+        googleAutomationRan = true;
         const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
@@ -1156,6 +1158,45 @@ export const updateEmailProvider = withAuth(async (
 
     if (googleRecoveryAttempted) {
       await refreshProviderAfterRecovery();
+    }
+
+    if (data.providerType === 'google' && !googleAutomationRan) {
+      // A save of an auth_failure-paused Google provider that did not run
+      // the transport+recovery path above (skipAutomation=true, no Google
+      // config in the payload, or no resolvable project id) must never
+      // return success while the pause persists. Mirrors the IMAP and
+      // Microsoft branches: skipAutomation skips transport automation only
+      // and must not gate auth-pause recovery — recovery validates the
+      // credentials and re-establishes delivery itself.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            {}
+          );
+          if (!recovery.resumed) {
+            result.setupError = recovery.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+            provider.status = 'error';
+          }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
+        }
+      } catch (error) {
+        console.error('Google auth-failure recovery after credential update failed:', error);
+        result.setupError = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+        provider.status = 'error';
+      }
     }
 
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
