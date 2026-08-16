@@ -465,6 +465,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'client_portal_visibility_groups',
   'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
   'user_invitations', // no DB FK (role_id is unenforced, for CitusDB compatibility); order is advisory
+  // Billing profiles (billing-profiles S1). Referenced by client_contracts,
+  // contract_lines, client_locations, tickets, projects and invoice_charges
+  // (all deleted above), and references clients — so it must go after all of
+  // those and before clients.
+  'client_billing_profiles',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
