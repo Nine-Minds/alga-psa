@@ -873,9 +873,6 @@ export async function applyCreditToInvoiceInternal(
             requestedAmount = adjustedRequestedAmount;
         }
         
-        // Available credit in the invoice's currency, derived from tracking rows
-        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
-
         // A non-positive request is the only safe early exit. Even when the
         // invoice-currency balance is zero, inspect tracking rows below so a
         // client with credit in another currency gets the explicit mismatch
@@ -916,7 +913,9 @@ export async function applyCreditToInvoiceInternal(
         // and that write, or one decrement silently overwrites the other and
         // the same credit is spent twice. Lock order is deadlock-safe: every
         // application locks its invoice row first, then the client's credit
-        // rows in the same per-client ORDER BY.
+        // rows in the same per-client ORDER BY. The client-currency balance
+        // that feeds the transaction's `balance_after` is also read only
+        // after this lock is held (see below).
         const now = new Date().toISOString();
         let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
@@ -952,6 +951,19 @@ export async function applyCreditToInvoiceInternal(
             console.log(`No valid credit entries found for client ${clientId}`);
             return;
         }
+
+        // Available credit in the invoice's currency, derived from tracking
+        // rows. This read must come AFTER the credit_tracking FOR UPDATE
+        // above: the invoice row lock only serializes same-invoice callers, so
+        // a concurrent application for the same client against a *different*
+        // invoice can commit while this one is en route to the credit-row
+        // lock. A pre-lock read would then persist a stale `balance_after` on
+        // the credit_application transaction below. Under READ COMMITTED this
+        // statement takes a fresh snapshot once the lock wait ends, so it
+        // reflects every committed draw-down; it runs before this
+        // application's own decrements, so `availableCredit -
+        // totalAppliedAmount` is the true post-application balance.
+        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
 
         const invoiceProjectId = invoice.project_id ?? null;
         if (invoiceProjectId) {

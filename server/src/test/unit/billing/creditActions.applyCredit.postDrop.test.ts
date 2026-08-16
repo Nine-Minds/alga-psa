@@ -107,6 +107,7 @@ function createCreditApplicationTrx() {
       const builder: any = {
         where: vi.fn((_criteria: any) => builder),
         select: vi.fn((_columns: any) => builder),
+        forUpdate: vi.fn(() => builder),
         first: vi.fn(async () => state.invoice),
         update: vi.fn(async (payload: Row) => {
           // Source updates only credit_applied via trx.raw('COALESCE(credit_applied, 0) + ?')
@@ -161,6 +162,7 @@ function createCreditApplicationTrx() {
         andWhere: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         whereNot: vi.fn(() => builder),
         orderBy: vi.fn(() => builder),
+        forUpdate: vi.fn(() => builder),
         sum: vi.fn(() => { summing = true; return builder; }),
         first: vi.fn(async () =>
           summing

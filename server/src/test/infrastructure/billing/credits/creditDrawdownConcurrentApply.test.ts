@@ -280,4 +280,53 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
 
     expect(await creditsSpent(creditIds)).toBe(eligibleCap);
   }, 60000);
+
+  it('same-client applications to different invoices persist a consistent balance_after chain', async () => {
+    // The invoice row lock cannot serialize this pair — each application
+    // locks a different invoice — so they serialize only on the client's
+    // credit_tracking FOR UPDATE. The client-currency balance that feeds the
+    // credit_application transaction's balance_after must be read after that
+    // lock: read pre-lock, the loser persists a balance_after that ignores
+    // the winner's committed draw-down.
+    const clientId = await seedClient('Concurrent Cross Invoice Client');
+    const invoiceA = await seedInvoice(clientId, 3000, 10000);
+    const invoiceB = await seedInvoice(clientId, 4000, 10000);
+    const creditIds = [await seedCredit(clientId, 10000)];
+
+    const results = await Promise.all([
+      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceA, 3000),
+      applyCreditToInvoiceInternal(tenantId, userId, clientId, invoiceB, 4000),
+    ]);
+
+    // The shared credit covers both requests in full — the race under test is
+    // balance bookkeeping, not headroom clamping.
+    const appliedAmounts = results.map((result) => result.appliedAmount);
+    expect(appliedAmounts.sort((a, b) => a - b)).toEqual([3000, 4000]);
+
+    const stateA = await invoiceState(invoiceA);
+    const stateB = await invoiceState(invoiceB);
+    expect(stateA.creditApplied).toBe(3000);
+    expect(stateA.allocationTotal).toBe(3000);
+    expect(stateB.creditApplied).toBe(4000);
+    expect(stateB.allocationTotal).toBe(4000);
+    expect(await creditsSpent(creditIds)).toBe(7000);
+
+    const applications = await db('transactions')
+      .where({ client_id: clientId, tenant: tenantId, type: 'credit_application' })
+      .select('amount', 'balance_after');
+    expect(applications).toHaveLength(2);
+
+    // Whichever commit order won, the two transactions must form one coherent
+    // chain from the seeded 10000: the first-committed application's
+    // balance_after is 10000 minus its own draw-down, and the second's
+    // continues from there — matching the true final balance (3000). A stale
+    // pre-lock read instead leaves the loser at 10000 minus only its own
+    // amount (6000 or 7000).
+    const chain = applications
+      .map((tx) => ({ applied: -Number(tx.amount), after: Number(tx.balance_after) }))
+      .sort((a, b) => b.after - a.after);
+    expect(chain[0].after).toBe(10000 - chain[0].applied);
+    expect(chain[1].after).toBe(chain[0].after - chain[1].applied);
+    expect(chain[1].after).toBe(3000);
+  }, 60000);
 });
