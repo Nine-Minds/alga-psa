@@ -348,7 +348,7 @@ export function SpendByBillingProfileReport({ clientId }: SpendByBillingProfileR
           />
           <Button id="refresh-spend-by-profile" variant="outline" onClick={() => void load()}>
             <RefreshCw className="mr-1 h-4 w-4" />
-            {t('common.actions.refresh', { defaultValue: 'Refresh' })}
+            {t('common.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <Button
             id="export-spend-by-profile"
@@ -357,7 +357,7 @@ export function SpendByBillingProfileReport({ clientId }: SpendByBillingProfileR
             onClick={handleExport}
           >
             <Download className="mr-1 h-4 w-4" />
-            {t('common.actions.export', { defaultValue: 'Export' })}
+            {t('common.export', { defaultValue: 'Export' })}
           </Button>
         </div>
       </div>

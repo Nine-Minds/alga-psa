@@ -22,7 +22,8 @@
     "success": "Succes",
     "update": "Bijwerken",
     "yes": "Ja",
-    "no": "Nee"
+    "no": "Nee",
+    "export": "Exporteren"
   },
   "dashboard": {
     "title": "Facturering",

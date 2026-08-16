@@ -22,7 +22,8 @@
     "success": "Éxito",
     "update": "Actualizar",
     "yes": "Sí",
-    "no": "No"
+    "no": "No",
+    "export": "Exportar"
   },
   "dashboard": {
     "title": "Facturación",

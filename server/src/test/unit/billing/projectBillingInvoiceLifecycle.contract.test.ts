@@ -34,7 +34,9 @@ describe('project invoice lifecycle contracts', () => {
     expect(action).toContain('billingEngine.calculateProjectBilling(projectId, entryIds)');
     expect(action).toContain('{ projectId },');
     expect(invoiceCreate).toContain('...(options.projectId ? { project_id: options.projectId } : {})');
-    expect(invoiceCreate).toContain('const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);');
+    // The charge set is narrowed to the cycle's billing profile first, so the
+    // split reads from `scopedCharges` rather than the raw billing result.
+    expect(invoiceCreate).toContain('const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);');
     expect(invoiceCreate).toContain('await persistProjectScheduleCharges(');
     expect(invoiceCreate).toContain('trx,');
     expect(schedulePersistence).toContain("table('invoice_charges').insert");
@@ -72,7 +74,9 @@ describe('project invoice lifecycle contracts', () => {
     expect(issueCredit).toContain("tenantScopedTable(trx, tenant, 'credit_tracking').insert");
     expect(finalize).toContain('issueProjectDepositCreditsForInvoice(');
 
-    expect(creditActions).toContain(".select('credit_applied', 'currency_code', 'project_id')");
+    // The invoice's billing profile joins the same read: credit may only be
+    // applied to an invoice belonging to the profile that holds it.
+    expect(creditActions).toContain(".select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')");
     expect(creditActions).toContain("metadata.project_billing_credit_kind === 'project_deposit'");
     expect(creditActions).toContain('.filter(({ projectId }) => !projectId || projectId === invoiceProjectId)');
     expect(creditActions).toContain('left.projectId === invoiceProjectId ? 0 : 1');

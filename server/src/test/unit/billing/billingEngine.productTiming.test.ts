@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BillingEngine } from "@alga-psa/billing/services";
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 vi.mock("@alga-psa/billing/actions/billingAndTax", () => ({
   getNextBillingDate: vi.fn(
     async (_clientId: string, currentEndDate: string) => currentEndDate,
@@ -61,6 +71,9 @@ const installProductChargeMocks = (
     }),
     getLocationTaxRegionCode: () => null,
     getClientDefaultTaxRegionCode: () => "US-NY",
+    // Tax exemption is profile-scoped with a client fallback (D9); an
+    // unsegmented client has one profile and one answer.
+    isTaxExemptForProfile: () => false,
     calculateTax,
   });
 
@@ -226,6 +239,7 @@ describe("BillingEngine recurring product timing", () => {
       "US-NY",
       true,
       "USD",
+      "unit-test-default-billing-profile",
     );
     expect(charges).toEqual([
       expect.objectContaining({

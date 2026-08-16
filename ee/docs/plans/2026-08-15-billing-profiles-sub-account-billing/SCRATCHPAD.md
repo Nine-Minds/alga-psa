@@ -304,6 +304,44 @@ closing balance for a period, behind `getBillingProfileStatement`. A statement i
 a demand addressed to whoever pays it, so the profile is a required argument, not
 an optional filter.
 
+### Verification gap found late: `server/src/test/unit` was never run
+
+Slices S2–S11 were verified against `packages/*` unit tests, the billing
+integration suites, and the T013 gate. `server/src/test/unit` — 985 files —
+was not in that loop, and it turned out to hold 83 real regressions from S2/S7/S8
+that nothing else caught.
+
+Baseline established properly this time, by running the suite in a worktree at
+the pre-S1 commit `fcd7f8cfdf`: **9 files / 7 tests failing before any of this
+work**. Of those, the 6 in `docs/multiActiveContracts.docsAndGuards.test.ts` and
+`docs/servicePeriodFirstBillingPlan.contract.test.ts` still fail identically and
+are unrelated debt.
+
+The regressions fell into five kinds, none of which was a product defect:
+
+1. **Hand-rolled knex mocks that do not model the new tables.** Step 5 of the
+   attribution chain reads `client_billing_profiles`; a mock knex that throws on
+   unknown tables (or returns a builder with no `insert`) fails every charge
+   calculation. Stubbed through `server/test-utils/billingProfileUnitStub.ts`
+   rather than by teaching sixteen bespoke mocks a schema they exist to avoid.
+2. **`calculateTax` gained a 7th argument** (the resolved profile, S7).
+   Assertions updated; the region arguments they actually test are unchanged,
+   which is the point of D9.
+3. **`taxPorts` gained `isTaxExemptForProfile`** (S7). Stubs return `false`.
+4. **`getEligibleContractLineIdsForServiceAtDate` became
+   `getEligibleContractLinesForServiceAtDate`** and returns candidates carrying
+   profile assignments (S2/F135), so the shared disambiguation rule can narrow
+   them instead of the engine re-deriving it.
+5. **Source-text contract tests** asserting exact code strings that S2/S5/S8/S10
+   rewrote. Each assertion was re-pointed at the new expression, keeping the
+   property it was written to protect.
+
+One genuine product bug surfaced too: `SpendByBillingProfileReport` called
+`common.actions.refresh`/`common.actions.export` in the `msp/billing`
+namespace, where the keys are `common.refresh` and (newly added)
+`common.export`. Both buttons were rendering their inline English default in
+every locale.
+
 ### S11-D1 — a profile-level mapping needed no schema change
 
 `tenant_external_entity_mappings` is already keyed on `(alga_entity_type,

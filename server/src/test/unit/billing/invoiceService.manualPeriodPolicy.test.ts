@@ -5,6 +5,16 @@ import {
   validateClientBillingEmail,
 } from '../../../../../packages/billing/src/services/invoiceService';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 function normalizeColumnName(columnName: string) {
   const [, unqualifiedName] = columnName.match(/^(?:[^.]+)\.(.+)$/) ?? [];
   return unqualifiedName ?? columnName;

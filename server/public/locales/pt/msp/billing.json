@@ -22,7 +22,8 @@
     "success": "Sucesso",
     "update": "Atualizar",
     "yes": "Sim",
-    "no": "Não"
+    "no": "Não",
+    "export": "Exportar"
   },
   "dashboard": {
     "title": "Faturamento",

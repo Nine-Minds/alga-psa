@@ -22,7 +22,8 @@
     "success": "Success",
     "update": "Update",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "export": "Export"
   },
   "dashboard": {
     "title": "Billing",

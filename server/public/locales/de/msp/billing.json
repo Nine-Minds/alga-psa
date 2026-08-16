@@ -22,7 +22,8 @@
     "success": "Erfolg",
     "update": "Aktualisieren",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "export": "Exportieren"
   },
   "dashboard": {
     "title": "Abrechnung",

@@ -22,7 +22,8 @@
     "success": "Sukces",
     "update": "Aktualizuj",
     "yes": "Tak",
-    "no": "Nie"
+    "no": "Nie",
+    "export": "Eksportuj"
   },
   "dashboard": {
     "title": "Rozliczenia",
