@@ -749,6 +749,12 @@ export class EmailProviderLifecycleService {
    * the next pass so re-listed messages are recognized as covered in every
    * durable mode. Durable dedupe makes re-enqueueing safe.
    *
+   * A cursor-lock mismatch (another actor moved/held the Graph cursor during
+   * a pass) also reports `moreRemaining: true`: that pass handed off nothing,
+   * so it must never be treated as exhaustion. The loop simply re-drives the
+   * next pass from the saved boundary, and the pause is only cleared once a
+   * pass actually completes coverage.
+   *
    * If the sweep cannot exhaust the interval within the pass bound, this
    * throws so the caller fails the recovery and the provider stays paused —
    * never "resumed with a known gap".

@@ -924,7 +924,21 @@ export class EmailWebhookMaintenanceService {
         tenant: config.tenant,
         observedLastReconciliationAt: reconciliationState?.last_reconciliation_at || null,
       });
-      return { queuedMessages: 0, switchedToPolling: false, moreRemaining: false, enqueuedMessageIds: [] };
+      // A cursor-lock mismatch means another actor moved/held the Graph
+      // cursor during this pass: THIS pass handed off nothing and proves
+      // nothing about coverage of the window it read. A recovery pass must
+      // report remaining work so the multi-pass recovery caller keeps the
+      // pause (or re-drives) instead of declaring the paused interval
+      // exhausted over messages that were never handed off — the next pass
+      // re-reads the cursor and picks up from the saved boundary. Renewal
+      // passes keep the historical clean-skip semantics: their next
+      // scheduled run re-covers the window.
+      return {
+        queuedMessages: 0,
+        switchedToPolling: false,
+        moreRemaining: recoveryPass ? true : false,
+        enqueuedMessageIds: [],
+      };
     }
 
     const { queuedMessages, silenceEvidenceCount } = enqueueResult;

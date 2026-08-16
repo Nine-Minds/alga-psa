@@ -394,21 +394,24 @@ async function stageGoogleSources(db: any, ingress: InboundIngressRecord, ctx: S
   // durable: only after all inbox rows are inserted do we move the history
   // cursor to the notification's historyId. If any message failed to stage,
   // the caller marks the ingress retryable and this update is skipped.
-  // Monotonic (numeric GREATEST): a replayed/stale pointer must never regress
-  // the cursor below the persisted watch cursor — mirroring the Microsoft
-  // reconcile cursor's GREATEST advance.
+  // Monotonic AT THE DATABASE WRITE ITSELF: the conditional UPDATE compares
+  // against the CURRENT row, not the googleConfig snapshot read at the start
+  // of staging, so no application-level read-compare-write window exists —
+  // a slower concurrent worker holding an older historyId can never overwrite
+  // a newer cursor another worker already persisted. history_id is a varchar
+  // column holding Gmail's numeric historyId strings, so the comparison casts
+  // both sides to bigint; a NULL (never-set) baseline always accepts the
+  // write, and a non-numeric legacy value is left untouched (the candidate
+  // must itself be numeric for the write to run at all).
   const cursorHistoryId = String(ingress.provider_pointer?.historyId ?? googleConfig.history_id ?? startHistoryId);
-  const currentHistoryIdNum = Number(googleConfig.history_id);
-  const cursorHistoryIdNum = Number(cursorHistoryId);
-  const cursorAdvances =
-    !googleConfig.history_id ||
-    (Number.isFinite(cursorHistoryIdNum) &&
-      Number.isFinite(currentHistoryIdNum) &&
-      cursorHistoryIdNum > currentHistoryIdNum);
-  if (cursorHistoryId && cursorAdvances) {
+  if (cursorHistoryId && /^\d+$/.test(cursorHistoryId)) {
     const { tenantDb } = await import('@alga-psa/db');
     await tenantDb(db, ingress.tenant).table('google_email_provider_config')
       .where({ email_provider_id: ingress.provider_id })
+      .whereRaw(
+        '(history_id IS NULL OR (history_id ~ ? AND history_id::bigint < ?::bigint))',
+        ['^[0-9]+$', cursorHistoryId]
+      )
       .update({
         history_id: cursorHistoryId,
         updated_at: db.fn.now(),

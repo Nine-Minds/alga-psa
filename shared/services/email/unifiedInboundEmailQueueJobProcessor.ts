@@ -691,8 +691,19 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
   if (!historyId) return;
 
   const db = await getAdminConnection();
+  // Monotonic AT THE DATABASE WRITE ITSELF (compare-and-set): the predicate
+  // compares against the CURRENT row, so a slower job holding an older
+  // pointer historyId can never overwrite a newer cursor another worker
+  // already persisted — there is no application-level read-compare-write
+  // window. history_id is a varchar column of Gmail numeric historyId
+  // strings, so both sides cast to bigint; a NULL baseline always accepts,
+  // and a non-numeric legacy value is left untouched.
   await tenantDb(db, job.tenantId).table('google_email_provider_config')
     .where({ email_provider_id: job.providerId })
+    .whereRaw(
+      '(history_id IS NULL OR (history_id ~ ? AND history_id::bigint < ?::bigint))',
+      ['^[0-9]+$', historyId]
+    )
     .update({
       history_id: historyId,
       updated_at: db.fn.now(),

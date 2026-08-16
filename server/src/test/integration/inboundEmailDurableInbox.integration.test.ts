@@ -1765,10 +1765,15 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
     const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
 
-    // The staging worker's view of the current cursor is the fresh watch
-    // cursor (9999); the pointer carries an older stale cursor (1500) — the
-    // exact shape the pre-fix enforce-mode Google recovery produced. One mock
-    // per staging run so the override cannot leak into other tests.
+    // Persist the fresh watch cursor (9999) in the database first, exactly as
+    // a real registerWebhookSubscription persist would: the monotonic guard
+    // compares against the PERSISTED cursor at write time, not the worker's
+    // in-memory view. The pointer then carries an older stale cursor (1500) —
+    // the exact shape the pre-fix enforce-mode Google recovery produced. One
+    // mock per staging run so the override cannot leak into other tests.
+    await tenantTable('google_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .update({ history_id: '9999' });
     googleProviderConfigMock.fetchGoogleProviderConfig
       .mockResolvedValueOnce({
         provider: { id: providerId, tenant: tenantId },
@@ -1804,8 +1809,8 @@ describeDb('Inbound email durable inbox (integration)', () => {
     expect(staleResult.disposition).toBe('ack');
     let configRow = await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id');
     // Pre-fix: pointer processing wrote the stale '1500' back. Post-fix: a
-    // stale cursor writes nothing (the seeded value stays).
-    expect(String(configRow.history_id)).toBe('1');
+    // stale cursor writes nothing (the persisted watch cursor stays).
+    expect(String(configRow.history_id)).toBe('9999');
 
     // A pointer newer than the current cursor still advances it.
     const fresh = await upsertIngress(db, {
@@ -1915,6 +1920,314 @@ describeDb('Inbound email durable inbox (integration)', () => {
       .where({ tenant: tenantId, ingress_key: 'message:ms-revive-3' })
       .first('status');
     expect(revived3.status).toBe('received');
+  });
+
+  it('sweep starvation: a paused provider\'s due ingress rows never consume the capped scan window of an unpaused provider', async () => {
+    const paused = await setupProvider({ mailbox: 'starve-paused@example.com', providerType: 'google' });
+    const active = await setupProvider({ mailbox: 'starve-active@example.com', providerType: 'google' });
+    const { upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    // The paused provider holds the OLDEST due rows: a capped scan that
+    // includes them fills its window before ever reaching the active
+    // provider's work — the exact starvation shape the exclusion must
+    // prevent at the row-selection predicate, not after the cap.
+    const pausedIds: string[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const row = await upsertIngress(db, {
+        tenant: tenantId,
+        provider_id: paused.providerId,
+        provider_type: 'google',
+        ingress_key: `starve:paused:${i}`,
+        provider_pointer: { messageId: `starve-p-${i}` },
+      });
+      pausedIds.push(row.ingress_id);
+    }
+    const activeIds: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const row = await upsertIngress(db, {
+        tenant: tenantId,
+        provider_id: active.providerId,
+        provider_type: 'google',
+        ingress_key: `starve:active:${i}`,
+        provider_pointer: { messageId: `starve-a-${i}` },
+      });
+      activeIds.push(row.ingress_id);
+    }
+    for (const [index, id] of pausedIds.entries()) {
+      await tenantTable('inbound_email_ingress')
+        .where({ ingress_id: id })
+        .update({ received_at: db.raw(`now() - interval '${10 - index} minutes'`) });
+    }
+    await tenantTable('email_providers').where({ id: paused.providerId }).update({
+      inbound_paused_at: db.fn.now(),
+      inbound_pause_reason: 'auth_failure',
+    });
+
+    v2EnqueueMock.mockClear();
+    // limit=3: every cap slot must belong to the active provider's due work.
+    // Pre-fix, the paused provider's three oldest rows filled the window and
+    // the sweep enqueued zero ingress work.
+    const sweep = await sweepTenantDurableWork(tenantId, 3);
+    expect(sweep.enqueued.ingress).toBe(3);
+    const enqueuedIngressIds = v2EnqueueMock.mock.calls
+      .map((call: any) => call[0])
+      .filter((job: any) => job.workType === 'stage_ingress')
+      .map((job: any) => job.recordId)
+      .sort();
+    expect(enqueuedIngressIds).toEqual([...activeIds].sort());
+
+    // The paused provider's rows were not even selected: untouched, non-terminal.
+    for (const id of pausedIds) {
+      const row = await tenantTable('inbound_email_ingress').where({ ingress_id: id }).first('status', 'attempt_count');
+      expect(row.status).toBe('received');
+      expect(Number(row.attempt_count)).toBe(0);
+    }
+  });
+
+  it('sweep snapshot race: a provider pausing between the sweep snapshot and the over-cap dead-letter decision is parked, never terminalized', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'race-pause@example.com', providerType: 'google' });
+    const { upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { sweepTenantDurableWork } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+
+    const first = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'race:1',
+      provider_pointer: { messageId: 'race-1' },
+    });
+    const overCap = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'race:2',
+      provider_pointer: { messageId: 'race-2' },
+    });
+    // `first` sorts before `overCap` so the sweep reaches it first.
+    await tenantTable('inbound_email_ingress')
+      .where({ ingress_id: first.ingress_id })
+      .update({ received_at: db.raw("now() - interval '2 minutes'") });
+    // An over-cap due retryable row: the dead-letter candidate.
+    await tenantTable('inbound_email_ingress')
+      .where({ ingress_id: overCap.ingress_id })
+      .update({
+        status: 'retryable_failed',
+        attempt_count: 9,
+        next_attempt_at: db.raw("now() - interval '1 minute'"),
+        last_error: 'provider_unavailable_temporarily',
+      });
+
+    // Deterministic interleave: the sweep's snapshot of paused providers and
+    // its capped selection both happen BEFORE the enqueue of the first row;
+    // pausing the provider inside that enqueue lands strictly between the
+    // selection and the over-cap dead-letter decision for the second row.
+    v2EnqueueMock.mockImplementationOnce(async (input: any) => {
+      await tenantTable('email_providers').where({ id: providerId }).update({
+        inbound_paused_at: db.fn.now(),
+        inbound_pause_reason: 'auth_failure',
+      });
+      return {
+        job: { ...input, jobId: `v2-${randomUUID()}`, schemaVersion: 2, enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 },
+        queueDepth: 1,
+      };
+    });
+
+    await sweepTenantDurableWork(tenantId, 10);
+
+    // The pause raced the snapshot, so the row must be PARKED with the
+    // park-while-paused semantics — never terminalized.
+    const row = await tenantTable('inbound_email_ingress').where({ ingress_id: overCap.ingress_id }).first();
+    expect(row.status).toBe('retryable_failed');
+    expect(Number(row.attempt_count)).toBe(0);
+    expect(row.completed_at).toBeNull();
+    expect(row.next_attempt_at).not.toBeNull();
+    expect(new Date(row.next_attempt_at as string).getTime()).toBeGreaterThan(Date.now() - 1000);
+    expect((row.error_details as Record<string, unknown>)?.parkedWhilePaused).toBe(true);
+    expect(row.last_error).toBe('provider_unavailable_temporarily');
+  });
+
+  it('google history cursor advance is an atomic compare-and-set: a slower stale writer cannot overwrite a newer cursor', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'gmail-cas@example.com', providerType: 'google' });
+    const { upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const { processIngressStageJob } = await import('@alga-psa/shared/services/email/inboundEmailIngressStagingWorker');
+    const ctx = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: () => undefined };
+
+    const readCursor = async (): Promise<string> => {
+      const row = await tenantTable('google_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .first('history_id');
+      return String(row.history_id);
+    };
+
+    // The interleaving control: BOTH workers' config reads return the same
+    // pre-race snapshot ('1000') — one mock per staging run so nothing leaks.
+    // The fresh worker (pointer 9000) completes and persists first; the stale
+    // worker (pointer 1500, holding the pre-race read) completes AFTER it.
+    // This is the classic read-compare-write race the verifier found: the
+    // comparison must happen at the database write itself, not against the
+    // snapshot read at staging start.
+    googleProviderConfigMock.fetchGoogleProviderConfig
+      .mockResolvedValueOnce({
+        provider: { id: providerId, tenant: tenantId },
+        googleConfig: { history_id: '1000' },
+        config: {},
+      })
+      .mockResolvedValueOnce({
+        provider: { id: providerId, tenant: tenantId },
+        googleConfig: { history_id: '1000' },
+        config: {},
+      });
+    gmailAdapterMock.downloadMessageSource
+      .mockImplementationOnce(async () =>
+        buildMime({ from: 'a@b.c', to: 'gmail-cas@example.com', subject: 'Fresh', messageId: `cas-fresh-${randomUUID()}@example.com`, text: 'x' })
+      )
+      .mockImplementationOnce(async () =>
+        buildMime({ from: 'a@b.c', to: 'gmail-cas@example.com', subject: 'Stale', messageId: `cas-stale-${randomUUID()}@example.com`, text: 'x' })
+      );
+
+    const fresh = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'history:9000:cas:fresh-1',
+      provider_pointer: { historyId: '9000', discoveredMessageIds: ['cas-fresh-1'] },
+    });
+    const stale = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'google',
+      ingress_key: 'history:1500:cas:stale-1',
+      provider_pointer: { historyId: '1500', discoveredMessageIds: ['cas-stale-1'] },
+    });
+
+    // Newer-cursor writer completes first and advances 1000 -> 9000.
+    const freshJob: any = {
+      schemaVersion: 2, workType: 'stage_ingress', tenantId,
+      recordId: fresh.ingress_id, jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    };
+    const freshResult = await processIngressStageJob(freshJob, ctx);
+    expect(freshResult.disposition).toBe('ack');
+    expect(await readCursor()).toBe('9000');
+
+    // Older-cursor writer completes afterwards holding the stale pre-race
+    // read (1000): its comparison says "advance", but the write itself must
+    // lose to the newer persisted cursor. Pre-fix, the unconditional UPDATE
+    // regressed the cursor to '1500'.
+    const staleJob: any = {
+      schemaVersion: 2, workType: 'stage_ingress', tenantId,
+      recordId: stale.ingress_id, jobId: `stage-${randomUUID()}`,
+      enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+    };
+    const staleResult = await processIngressStageJob(staleJob, ctx);
+    expect(staleResult.disposition).toBe('ack');
+    expect(await readCursor()).toBe('9000');
+  });
+
+  it('microsoft recovery reconcile: a cursor-lock mismatch mid-pass reports remaining work and hands off nothing', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'ms-lock-race@example.com', providerType: 'microsoft' });
+    const { EmailWebhookMaintenanceService } = await import('@alga-psa/shared/services/email/EmailWebhookMaintenanceService');
+
+    const since = new Date(Date.now() - 3 * 60 * 60_000);
+    const T1 = new Date(Date.now() - 2 * 60 * 60_000).toISOString();
+
+    // Deterministic interleave: the concurrent actor moves the Graph
+    // reconciliation cursor WHILE this pass is listing (strictly between the
+    // pass's initial cursor read and its locked transactional decision), so
+    // the lock re-read observes a different cursor than the pass started
+    // with — the cursor-lock mismatch.
+    let listingCalls = 0;
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockImplementation(async () => {
+      listingCalls += 1;
+      if (listingCalls === 1) {
+        await tenantTable('microsoft_email_provider_config')
+          .where({ email_provider_id: providerId })
+          .update({ last_reconciliation_at: new Date(Date.now() - 90 * 60_000).toISOString() });
+      }
+      return [{ id: 'ms-lock-race-1', receivedDateTime: T1 }];
+    });
+
+    // Recovery pass (explicit since boundary): the mismatched pass handed
+    // off nothing and proved nothing about window coverage, so it must
+    // report remaining work instead of clean completion. Pre-fix this
+    // returned moreRemaining: false and the multi-pass recovery caller
+    // declared the paused interval exhausted.
+    const service = new EmailWebhookMaintenanceService();
+    const mismatchPass = await service.reconcileProviderMessages({
+      providerId,
+      tenant: tenantId,
+      since,
+      handedOffIds: new Set<string>(),
+    });
+    expect(mismatchPass.queuedMessages).toBe(0);
+    expect(mismatchPass.moreRemaining).toBe(true);
+    expect(mismatchPass.enqueuedMessageIds).toEqual([]);
+    const noHandoff = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, provider_id: providerId })
+      .first('ingress_id');
+    expect(noHandoff).toBeFalsy();
+
+    // The next pass re-reads the saved boundary and completes the hand-off.
+    const cleanPass = await service.reconcileProviderMessages({
+      providerId,
+      tenant: tenantId,
+      since,
+      handedOffIds: new Set<string>(),
+    });
+    expect(cleanPass.queuedMessages).toBe(1);
+    expect(cleanPass.moreRemaining).toBe(false);
+    expect(cleanPass.enqueuedMessageIds).toEqual(['ms-lock-race-1']);
+    const handedOff = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, ingress_key: 'message:ms-lock-race-1' })
+      .first('status');
+    expect(handedOff?.status).toBe('received');
+  });
+
+  it('auth-pause recovery survives a mid-recovery cursor-lock race: the pause clears only after a pass completes coverage', async () => {
+    const { providerId } = await setupProvider({ mailbox: 'ms-recover-race@example.com', providerType: 'microsoft' });
+    await tenantTable('email_providers').where({ id: providerId }).update({
+      inbound_paused_at: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+      inbound_pause_reason: 'auth_failure',
+      inbound_auth_failure_count: 3,
+    });
+
+    const T1 = new Date(Date.now() - 60 * 60_000).toISOString();
+    // First listing during recovery moves the cursor mid-pass (the lock
+    // race); the second listing is clean.
+    let listingCalls = 0;
+    microsoftGraphAdapterMock.listMessagesReceivedSince.mockImplementation(async () => {
+      listingCalls += 1;
+      if (listingCalls === 1) {
+        await tenantTable('microsoft_email_provider_config')
+          .where({ email_provider_id: providerId })
+          .update({ last_reconciliation_at: new Date(Date.now() - 30 * 60_000).toISOString() });
+      }
+      return [{ id: 'ms-recover-race-1', receivedDateTime: T1 }];
+    });
+
+    const { EmailProviderLifecycleService } = await import('@alga-psa/shared/services/email/EmailProviderLifecycleService');
+    const result = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, tenantId, {
+      credentialsValidated: true,
+      deliveryEstablished: true,
+    });
+
+    // The mismatched pass must NOT be treated as exhaustion: recovery loops
+    // to a second pass that completes the hand-off. Pre-fix, the mismatch
+    // pass reported clean completion, recovery "resumed" after ONE pass, the
+    // pause was cleared, and the paused-interval message was stranded.
+    expect(result.resumed).toBe(true);
+    expect(listingCalls).toBe(2);
+    expect(result.reconciliation).toEqual({ status: 'completed', queuedMessages: 1 });
+
+    const providerRow = await tenantTable('email_providers').where({ id: providerId }).first('inbound_paused_at');
+    expect(providerRow.inbound_paused_at).toBeNull();
+
+    // The pause cleared only once the message was durably handed off.
+    const handedOff = await tenantTable('inbound_email_ingress')
+      .where({ tenant: tenantId, ingress_key: 'message:ms-recover-race-1' })
+      .first('status');
+    expect(handedOff?.status).toBe('received');
   });
 
   it('core processing succeeds from the staged source when the provider message is gone', async () => {

@@ -546,6 +546,87 @@ describeDb('auth-failure recovery path (DB-backed)', () => {
       expect(row.inbound_pause_reason).toBe('auth_failure');
     });
 
+    it('V1 google cursor persist is monotonic at write: a stale pointer job cannot regress the post-watch cursor', async () => {
+      const { providerId } = await seedPausedProvider('google');
+
+      // Recovery re-registers the watch (the mocked adapter persists the
+      // fresh watch cursor 9999, faithful to the real adapter's authoritative
+      // baseline write) and clears the pause so V1 jobs process.
+      const recovered = await new EmailProviderLifecycleService().recoverAuthPausedProvider(providerId, testTenant);
+      expect(recovered.resumed).toBe(true);
+      const readCursor = async (): Promise<string> =>
+        String(
+          (await tenantTable('google_email_provider_config')
+            .where({ email_provider_id: providerId })
+            .first('history_id')).history_id
+        );
+      expect(await readCursor()).toBe('9999');
+
+      const { processUnifiedInboundEmailQueueJob } = await import(
+        '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor'
+      );
+      const processInboundEmailInAppModule = await vi.importActual<
+        typeof import('@alga-psa/shared/services/email/processInboundEmailInApp')
+      >('@alga-psa/shared/services/email/processInboundEmailInApp');
+      const spy = vi
+        .spyOn(processInboundEmailInAppModule, 'processInboundEmailInApp')
+        .mockResolvedValue({
+          outcome: 'created',
+          ticketId: '00000000-0000-4000-8000-0000000000cc',
+          diagnostics: {},
+        } as any);
+
+      try {
+        // A replayed/stale pointer job (historyId 1500, older than the fresh
+        // watch cursor 9999) completes AFTER the watch persist. Its cursor
+        // write must lose at the database predicate itself — pre-fix the
+        // unconditional UPDATE regressed the cursor to 1500 and the next sync
+        // re-scanned the whole interval.
+        gmailAdapterMock.getMessageDetails.mockResolvedValueOnce({
+          id: 'g-stale-cursor',
+          provider: 'google',
+          providerId,
+          tenant: testTenant,
+          receivedAt: new Date().toISOString(),
+          from: { email: 'sender@example.com' },
+          to: [{ email: 'support@example.com' }],
+          subject: 'Stale cursor',
+          body: { text: 'hello' },
+          attachments: [],
+        });
+        const staleJob = {
+          ...googleJob(providerId),
+          pointer: { historyId: '1500', emailAddress: 'recovery@example.com', discoveredMessageIds: ['g-stale-cursor'] },
+        };
+        const stale = await processUnifiedInboundEmailQueueJob(staleJob);
+        expect(stale.outcome).toBe('processed');
+        expect(await readCursor()).toBe('9999');
+
+        // A pointer newer than the current cursor still advances it.
+        gmailAdapterMock.getMessageDetails.mockResolvedValueOnce({
+          id: 'g-fresh-cursor',
+          provider: 'google',
+          providerId,
+          tenant: testTenant,
+          receivedAt: new Date().toISOString(),
+          from: { email: 'sender@example.com' },
+          to: [{ email: 'support@example.com' }],
+          subject: 'Fresh cursor',
+          body: { text: 'hello' },
+          attachments: [],
+        });
+        const freshJob = {
+          ...googleJob(providerId),
+          pointer: { historyId: '10500', emailAddress: 'recovery@example.com', discoveredMessageIds: ['g-fresh-cursor'] },
+        };
+        const fresh = await processUnifiedInboundEmailQueueJob(freshJob);
+        expect(fresh.outcome).toBe('processed');
+        expect(await readCursor()).toBe('10500');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it('reconciled messages are deduped on repeated processing', async () => {
       const { providerId } = await seedPausedProvider('google');
 

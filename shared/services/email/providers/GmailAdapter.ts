@@ -314,7 +314,19 @@ This indicates a problem with the OAuth token saving process.`;
       
       this.config.provider_config.watch_expiration = expirationISO || undefined;
 
-      // Save updated history_id and watch_expiration to database
+      // Save updated history_id and watch_expiration to database.
+      // INTENTIONALLY AUTHORITATIVE (not monotonic): a freshly registered
+      // watch's historyId is Gmail's own authoritative snapshot of the current
+      // mailbox state at watch creation — the baseline every subsequent
+      // notification advances from — so it must replace any prior cursor,
+      // including the older one a watch re-establishment after historyId
+      // invalidation (attemptWatchRecovery) is recovering from. Guarding this
+      // write with a monotonic predicate would strand that dead cursor
+      // forever. The only possible regression is against a NEWER
+      // notification-derived cursor persisted concurrently after the watch
+      // call; replaying from the watch baseline is the safe direction (the
+      // durable inbox dedupe re-covers already-staged messages, and the next
+      // notification re-advances the cursor).
       try {
         const knex = await getAdminConnection();
         await tenantDb(knex, this.config.tenant).table('google_email_provider_config')

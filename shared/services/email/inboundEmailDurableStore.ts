@@ -203,14 +203,23 @@ export async function claimIngress(db: DurableDb, params: {
     // Over-cap due retryable rows are dead-lettered into a queryable terminal
     // failure state rather than looping forever — unless the provider is
     // ingestion-paused: attempts that accrued while the credential was dead
-    // must not terminalize a paused-interval message. The row stays
-    // retryable and is re-driven after the pause clears.
+    // must not terminalize a paused-interval message. The early pause read
+    // leaves an already-paused provider's row untouched, and deadletterIngress
+    // re-checks the pause state atomically with the terminal write itself, so
+    // a pause landing between the two still cannot terminalize the row (it is
+    // parked there instead).
     if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
       if (await isInboundProviderPaused(db, params.tenant, current.provider_id)) {
         return { claimed: false, reason: 'not_due' };
       }
-      await deadletterIngress(db, current);
-      return { claimed: false, reason: 'terminal' };
+      const outcome = await deadletterIngress(db, current);
+      if (outcome === 'deadlettered') {
+        return { claimed: false, reason: 'terminal' };
+      }
+      // The pause raced this decision and the row was parked (or a
+      // concurrent transition won): not due now; the recovery sweep re-drives
+      // the row after the pause clears.
+      return { claimed: false, reason: 'not_due' };
     }
     return { claimed: false, reason: 'not_due' };
   }
@@ -316,10 +325,38 @@ export async function reclaimIngress(db: DurableDb, params: {
   return { claimed: false, reason: 'already_claimed' };
 }
 
-/** Dead-letter an over-cap due retryable ingress row into `terminal_failed`. */
-export async function deadletterIngress(db: DurableDb, row: InboundIngressRecord): Promise<boolean> {
+export type IngressDeadletterOutcome = 'deadlettered' | 'parked_while_paused' | 'noop';
+
+/** Backoff for a dead-letter attempt parked because the provider is paused.
+ * Short on purpose: the pause gate (not the backoff) suppresses re-drives
+ * while paused, matching parkIngressWhilePaused. */
+const PAUSED_DEADLETTER_PARK_BACKOFF_MS = 30_000;
+
+/**
+ * Dead-letter an over-cap due retryable ingress row into `terminal_failed`.
+ *
+ * The terminal transition is guarded at the WRITE ITSELF by the provider's
+ * live pause state (a NOT EXISTS subquery over the paused provider row in the
+ * same single UPDATE statement), so a provider that becomes paused between
+ * any earlier pause check/snapshot and this decision can never have an
+ * over-cap row terminalized: single-statement Postgres semantics make the
+ * guard and the write one atomic act. When the guard blocks the write because
+ * the provider is paused at decision time, the row is PARKED instead — the
+ * same non-terminal semantics as the staging-worker park (`retryable_failed`,
+ * attempt budget voided, short backoff) — so the recovery sweep re-drives it
+ * with a full retry budget once the pause clears.
+ */
+export async function deadletterIngress(
+  db: DurableDb,
+  row: InboundIngressRecord
+): Promise<IngressDeadletterOutcome> {
+  const notPausedWhileTerminal = db.raw(
+    'NOT EXISTS (SELECT 1 FROM email_providers ep WHERE ep.tenant = ? AND ep.id = ? AND ep.inbound_paused_at IS NOT NULL)',
+    [row.tenant, row.provider_id]
+  );
   const updated = await tenantDb(db, row.tenant).table('inbound_email_ingress')
     .where({ tenant: row.tenant, ingress_id: row.ingress_id, status: 'retryable_failed' })
+    .where(notPausedWhileTerminal)
     .update({
       status: 'terminal_failed',
       completed_at: db.fn.now(),
@@ -330,7 +367,27 @@ export async function deadletterIngress(db: DurableDb, row: InboundIngressRecord
       last_error: row.last_error ?? 'max_attempts_exhausted',
       updated_at: db.fn.now(),
     });
-  return updated > 0;
+  if (updated > 0) return 'deadlettered';
+
+  // Zero rows: either the row was transitioned concurrently (noop) or the
+  // pause guard blocked the terminal write. Park only when the provider is
+  // paused at this decision point — a fresh read, not a sweep-time snapshot.
+  if (!(await isInboundProviderPaused(db, row.tenant, row.provider_id))) {
+    return 'noop';
+  }
+  const parked = await tenantDb(db, row.tenant).table('inbound_email_ingress')
+    .where({ tenant: row.tenant, ingress_id: row.ingress_id, status: 'retryable_failed' })
+    .update({
+      attempt_count: 0,
+      lease_owner: null,
+      lease_token: null,
+      lease_expires_at: null,
+      next_attempt_at: db.raw("now() + (? || ' milliseconds')::interval", [PAUSED_DEADLETTER_PARK_BACKOFF_MS]),
+      last_error: row.last_error ?? 'max_attempts_exhausted',
+      error_details: JSON.stringify({ phase: 'deadletter', parkedWhilePaused: true }),
+      updated_at: db.fn.now(),
+    });
+  return parked > 0 ? 'parked_while_paused' : 'noop';
 }
 
 export async function getIngress(db: DurableDb, tenant: string, ingressId: string): Promise<InboundIngressRecord | null> {
@@ -1644,13 +1701,28 @@ export interface DueScanOptions {
   tenant: string;
   limit?: number;
   now?: Date;
+  /**
+   * Provider ids to exclude from the row-selection predicate ITSELF, before
+   * the cap is applied. Used by the recovery sweep for ingestion-paused
+   * providers' ingress rows: a paused provider's due rows must never occupy
+   * slots inside the cap window, or they would starve unpaused providers'
+   * due work. Only ingress staging requires live credentials, so only
+   * findDueIngress consumes this.
+   */
+  excludeProviderIds?: string[];
 }
 
 export async function findDueIngress(db: DurableDb, options: DueScanOptions): Promise<InboundIngressRecord[]> {
   const limit = Math.max(1, options.limit ?? 20);
   const now = options.now ?? new Date();
-  const rows = await tenantDb(db, options.tenant).table('inbound_email_ingress')
-    .where({ tenant: options.tenant })
+  const query = tenantDb(db, options.tenant).table('inbound_email_ingress')
+    .where({ tenant: options.tenant });
+  // The paused-provider filter is part of the selection predicate so the cap
+  // only ever applies to eligible (unpaused) work.
+  if (options.excludeProviderIds && options.excludeProviderIds.length > 0) {
+    query.whereNotIn('provider_id', options.excludeProviderIds);
+  }
+  const rows = await query
     .andWhere(function (this: any) {
       this.where({ status: 'received' })
         .orWhere((inner: any) => {
