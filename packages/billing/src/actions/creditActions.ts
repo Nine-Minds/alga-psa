@@ -804,13 +804,27 @@ export async function applyCreditToInvoiceInternal(
     }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Check if the invoice already has credit applied and get its currency
+        // Check if the invoice already has credit applied and get its currency.
+        //
+        // FOR UPDATE serializes concurrent applications to the same invoice:
+        // the remaining eligible headroom is derived from `credit_applied`
+        // read here, so this row lock must be taken BEFORE that read and held
+        // until every write this application performs (credit_tracking
+        // draw-down, transactions, credit_allocations, the credit_applied
+        // increment) commits with this transaction. An overlapping call blocks
+        // on this SELECT and, once the winner commits, re-reads the committed
+        // credit_applied — without the lock both callers observe the same
+        // headroom and can jointly exceed the eligible cap. Every entry path
+        // (finalize auto-apply, the manual applyCreditToInvoice action, and
+        // the REST services) funnels through this function, which always owns
+        // this transaction, so this is the single serialization point.
         const invoice = await tenantScopedTable(trx, tenant, 'invoices')
             .where({
                 invoice_id: invoiceId,
                 tenant
             })
             .select('credit_applied', 'currency_code', 'project_id')
+            .forUpdate()
             .first();
 
         if (!invoice) {
@@ -893,7 +907,16 @@ export async function applyCreditToInvoiceInternal(
                         { column: 'created_at', order: 'asc' },
                     ];
 
-        // Get all active credit tracking entries for this client in the same currency as the invoice
+        // Get all active credit tracking entries for this client in the same currency as the invoice.
+        //
+        // FOR UPDATE: `remaining_amount` is decremented below from the value
+        // read here, so concurrent applications for the same client (to a
+        // *different* invoice — same-invoice calls are already serialized by
+        // the invoice row lock above) must not interleave between this read
+        // and that write, or one decrement silently overwrites the other and
+        // the same credit is spent twice. Lock order is deadlock-safe: every
+        // application locks its invoice row first, then the client's credit
+        // rows in the same per-client ORDER BY.
         const now = new Date().toISOString();
         let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
@@ -907,7 +930,8 @@ export async function applyCreditToInvoiceInternal(
                     .orWhere('expiration_date', '>', now);
             })
             .where('remaining_amount', '>', 0)
-            .orderBy(creditOrderBy);
+            .orderBy(creditOrderBy)
+            .forUpdate();
 
         if (creditEntries.length === 0) {
             // Check if there are credits in other currencies
