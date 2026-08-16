@@ -295,16 +295,25 @@ GOLDEN_CAPTURE=1 env DB_HOST=127.0.0.1 DB_PORT=5472 ... \
   npx vitest run src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
 ```
 
-Re-capturing a baseline from the pre-S1 commit (how the committed baseline was made):
+Baseline provenance is recorded in
+`server/src/test/integration/billing/goldenOutput/baseline.provenance.json`
+(pre-S1 SHA `fcd7f8cfdf`, its tree hash, and the sha256 of the committed
+`baseline.json`) and is independently re-derivable:
 
 ```bash
-git worktree add /tmp/pres1 fcd7f8cfdf   # parent of the S1 commit
-cp server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts \
-   /tmp/pres1/server/src/test/integration/billing/goldenOutput/
-cd /tmp/pres1/server && GOLDEN_CAPTURE=1 npx vitest run \
-   src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
-# copy /tmp/pres1/server/.../baseline.json back into this branch
+# verify: rebuild a pre-S1 worktree (with @alga-psa/* resolving to the pre-S1
+# tree's own packages), re-run the capture, byte-diff vs the committed baseline
+server/src/test/integration/billing/goldenOutput/verify-baseline-provenance.sh
+
+# re-capture from the pre-S1 tree (ONLY for a recorded, justified projection change)
+server/src/test/integration/billing/goldenOutput/verify-baseline-provenance.sh --capture
 ```
+
+The projection covers invoice totals, charge lines, tax, credit application,
+the accounting-export preview incl. identity fields (invoice number, client
+id/name), and portal output (portal invoice list + rendering view model).
+The harness file is the only capture-branch input, so later slices must keep
+its imports restricted to modules that exist at the pre-S1 commit.
 
 The F002 guard is tested behaviorally by
 `server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`

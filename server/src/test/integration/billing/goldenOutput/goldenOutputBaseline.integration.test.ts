@@ -22,8 +22,12 @@ import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services';
 //
 // Captures a deterministic golden snapshot of the money-relevant output of the
 // existing billing integration scenario for a single-profile client — invoice
-// totals, per-line amounts, tax figures, credit application, and the accounting
-// export preview the existing suite produces — and diffs every later run
+// totals, per-line amounts, tax figures, credit application, the accounting
+// export preview (including the customer/invoice identity fields the export
+// maps: invoice number, client id, client name), and the portal-visible
+// output (the invoice list the client portal renders via
+// fetchInvoicesByClient, and the full rendering view model portal detail/PDF
+// views hydrate via getInvoiceForRendering) — and diffs every later run
 // against it byte-for-byte. A diff is a defect (T013), never a baseline to
 // refresh; see the README in this directory and SCRATCHPAD.
 //
@@ -58,6 +62,8 @@ let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration'
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let createPrepaymentInvoice: typeof import('@alga-psa/billing/actions/creditActions').createPrepaymentInvoice;
+let fetchInvoicesByClient: typeof import('@alga-psa/billing/actions/invoiceQueries').fetchInvoicesByClient;
+let getInvoiceForRendering: typeof import('@alga-psa/billing/actions/invoiceQueries').getInvoiceForRendering;
 
 function tenantTable<Row extends object = Record<string, unknown>>(
   connection: Knex,
@@ -211,6 +217,7 @@ describe('T013 gate — F128 golden-output baseline (single-profile client)', ()
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ createPrepaymentInvoice } = await import('@alga-psa/billing/actions/creditActions'));
+    ({ fetchInvoicesByClient, getInvoiceForRendering } = await import('@alga-psa/billing/actions/invoiceQueries'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -391,6 +398,12 @@ async function buildGoldenSnapshot(): Promise<Record<string, unknown>> {
   const previewLines = await selector.previewInvoiceLines({ invoiceIds: [invoiceId] });
   const normalizedPreview = sortBy(previewLines, (line) => `${line.amountCents}|${line.servicePeriodStart ?? ''}`).map(
     (line) => ({
+      // Identity fields the accounting export maps to the ledger customer —
+      // exactly what must stay a plain (non-sub-customer) identity for
+      // single-profile clients (plan exit criterion S11).
+      invoice_number: line.invoiceNumber,
+      client_id: line.clientId,
+      client_name: line.clientName,
       invoice_status: line.invoiceStatus,
       amount_cents: line.amountCents,
       currency_code: line.currencyCode,
@@ -404,11 +417,67 @@ async function buildGoldenSnapshot(): Promise<Record<string, unknown>> {
     })
   );
 
+  // Portal-visible output (plan exit criterion S12 / T013 "portal views"):
+  // the invoice list the client portal renders (getClientInvoices delegates to
+  // fetchInvoicesByClient and filters to finalized invoices) and the full
+  // rendering view model portal detail and PDF views hydrate through
+  // getInvoiceForRendering. Only deterministic fields are projected —
+  // generated ids and now()-derived dates (invoice_date, due_date,
+  // finalized_at) are excluded, not pinned.
+  const portalListRaw = await fetchInvoicesByClient(clientId);
+  if (!Array.isArray(portalListRaw)) {
+    throw new Error(`fetchInvoicesByClient returned a non-list: ${JSON.stringify(portalListRaw)}`);
+  }
+  const portalList = sortBy(
+    portalListRaw.filter((row) => row.finalized_at != null),
+    (row) => String(row.invoice_number)
+  ).map((row) => ({
+    invoice_number: String(row.invoice_number),
+    status: String(row.status),
+    invoice_type: row.invoice_type ?? null,
+    is_prepayment: Boolean(row.is_prepayment),
+    currency_code: String(row.currencyCode ?? (row as Record<string, unknown>).currency_code ?? ''),
+    subtotal: toMoney(row.subtotal),
+    tax: toMoney(row.tax),
+    total_amount: toMoney(row.total_amount),
+    credit_applied: toMoney(row.credit_applied),
+    service_period_start: toDateOnly(row.service_period_start),
+    service_period_end: toDateOnly(row.service_period_end),
+  }));
+
+  const rendered = await getInvoiceForRendering(invoiceId);
+  if (!rendered || typeof rendered !== 'object' || !('invoice_number' in rendered)) {
+    throw new Error(`getInvoiceForRendering returned no view model: ${JSON.stringify(rendered)}`);
+  }
+  const portalDetail = {
+    invoice_number: String(rendered.invoice_number),
+    status: String(rendered.status),
+    currency_code: String(rendered.currencyCode),
+    subtotal: toMoney(rendered.subtotal),
+    tax: toMoney(rendered.tax),
+    total: toMoney(rendered.total),
+    total_amount: toMoney(rendered.total_amount),
+    credit_applied: toMoney(rendered.credit_applied),
+    client: {
+      name: String(rendered.client?.name ?? ''),
+      address: String(rendered.client?.address ?? ''),
+    },
+    has_multiple_locations: Boolean(rendered.has_multiple_locations),
+    charges: sortBy(rendered.invoice_charges ?? [], (item) => String(item.description ?? '')).map((item) => ({
+      description: String(item.description ?? ''),
+      quantity: toMoney(item.quantity),
+      unit_price: toMoney(item.unit_price),
+      total_price: toMoney(item.total_price),
+      net_amount: toMoney(item.net_amount),
+      tax_amount: toMoney(item.tax_amount),
+    })),
+  };
+
   const totalAmount = toMoney(invoice.total_amount);
   const creditApplied = toMoney(invoice.credit_applied);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     scenario: 'single-profile-client',
     invoice: {
       status: String(invoice.status),
@@ -433,6 +502,10 @@ async function buildGoldenSnapshot(): Promise<Record<string, unknown>> {
     },
     export: {
       preview_lines: normalizedPreview,
+    },
+    portal: {
+      invoice_list: portalList,
+      invoice_detail: portalDetail,
     },
   };
 }

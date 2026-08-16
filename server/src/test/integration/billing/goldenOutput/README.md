@@ -5,8 +5,13 @@ golden-output baseline harness** and the **T013 backward-compatibility gate**
 (plan §4.1 step 0, §6.1). It runs a deterministic single-profile-client billing
 scenario through the real engine and serializes a snapshot of the
 money-relevant output — invoice totals, per-line amounts, tax figures, credit
-application, and the accounting-export preview — then diffs it byte-for-byte
-against the committed `baseline.json`.
+application, the accounting-export preview including the customer/invoice
+identity fields the export maps (invoice number, client id, client name — the
+identity that must stay a plain, non-sub-customer for single-profile clients),
+and the portal-visible output (the invoice list the client portal renders via
+`fetchInvoicesByClient` and the rendering view model portal detail/PDF views
+hydrate via `getInvoiceForRendering`) — then diffs it byte-for-byte against
+the committed `baseline.json`.
 
 **A diff is a defect, never a baseline to refresh.** If a slice genuinely must
 change single-profile output, that is a scope change requiring an explicit
@@ -29,19 +34,35 @@ GOLDEN_CAPTURE=1 env DB_HOST=... npx vitest run src/test/integration/billing/gol
 On a mismatch the harness writes `baseline.actual.json` next to the committed
 fixture for inspection.
 
-## Capturing the pre-S1 baseline
+## Provenance: the baseline comes from the pre-S1 tree, checkably
 
 The committed `baseline.json` was **not** captured from the post-S1 tree. S1
-(the schema + backfill) is already in this branch, so the honest baseline was
-captured by running this same harness against the parent of the S1 commit in a
-temporary worktree:
+(the schema + backfill) is already in this branch, so the honest baseline is
+captured from the parent of the S1 commit — and that claim is **independently
+re-derivable**, not self-attested:
+
+- `baseline.provenance.json` records the pre-S1 commit SHA, its git tree hash,
+  the SHA-256 of the committed `baseline.json`, and the capture command/env.
+- `verify-baseline-provenance.sh` re-derives the baseline from scratch: it
+  creates a temporary detached worktree at the recorded pre-S1 SHA, rebuilds
+  `node_modules` so `@alga-psa/*` workspace packages resolve to the **pre-S1
+  tree's own sources** (third-party deps shared from the main worktree),
+  copies in the harness (the only capture-branch input — it is additive),
+  runs the capture against the scratch test Postgres, and byte-diffs the
+  result against the committed `baseline.json`. It also checks the manifest's
+  hashes.
 
 ```bash
-git worktree add /tmp/pres1 <parent-of-S1>
-cd /tmp/pres1/server
-# (symlink node_modules/.env from the main worktree as needed)
-GOLDEN_CAPTURE=1 npx vitest run src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
+# Verify the committed baseline is exactly what the pre-S1 tree produces:
+server/src/test/integration/billing/goldenOutput/verify-baseline-provenance.sh
+
+# Re-capture (ONLY when the projection itself legitimately changes):
+server/src/test/integration/billing/goldenOutput/verify-baseline-provenance.sh --capture
 ```
+
+Because the harness file is the only capture-branch input, later slices must
+keep it runnable against the pre-S1 tree: its imports must be restricted to
+modules that exist at the recorded pre-S1 commit.
 
 The pre-S1 tree's migrations build a schema with no `client_billing_profiles`
 table, and the harness's fixture client therefore has no profile row — the

@@ -124,6 +124,76 @@ describe('F002 — zero-default is unreachable for any client with profiles (DB 
     await expect(defaultProfileIds(tenantId, clientId)).resolves.toEqual([defaultId]);
   }, HOOK_TIMEOUT);
 
+  it('rejects inserting a client’s first profile as non-default', async () => {
+    const tenantId = uuidv4();
+    tenantsToCleanup.add(tenantId);
+    const clientId = await seedTenantAndClient(tenantId, 'Guard Corp');
+
+    await expect(
+      table(tenantId, 'client_billing_profiles').insert({
+        tenant: tenantId,
+        billing_profile_id: uuidv4(),
+        client_id: clientId,
+        name: 'First But Not Default',
+        is_default: false,
+        is_system_managed_default: false,
+        is_active: true,
+      })
+    ).rejects.toThrow(/no default profile/);
+
+    // The rejected insert must not have taken effect.
+    await expect(
+      table(tenantId, 'client_billing_profiles').where({ client_id: clientId })
+    ).resolves.toHaveLength(0);
+  }, HOOK_TIMEOUT);
+
+  it('rejects a key-moving UPDATE that moves the default profile away from a client with siblings', async () => {
+    const tenantId = uuidv4();
+    tenantsToCleanup.add(tenantId);
+    const clientAId = await seedTenantAndClient(tenantId, 'Old Client');
+    const clientBId = await seedTenantAndClient(tenantId, 'New Client');
+    const [aDefaultId] = await seedProfiles(tenantId, clientAId, ['A Main', 'A Backup']);
+    const [bDefaultId] = await seedProfiles(tenantId, clientBId, ['B Main']);
+
+    // Move A's default to B as a non-default sibling. The NEW client (B) ends
+    // legal (its own default untouched); only the OLD client (A) is broken —
+    // siblings remain with no default. The guard must validate the OLD
+    // identity of the key-moving UPDATE and reject.
+    await expect(
+      table(tenantId, 'client_billing_profiles')
+        .where({ billing_profile_id: aDefaultId })
+        .update({ client_id: clientBId, is_default: false, is_system_managed_default: false })
+    ).rejects.toThrow(/no default profile/);
+
+    // The rejected move must not have taken effect on either client.
+    await expect(defaultProfileIds(tenantId, clientAId)).resolves.toEqual([aDefaultId]);
+    await expect(defaultProfileIds(tenantId, clientBId)).resolves.toEqual([bDefaultId]);
+  }, HOOK_TIMEOUT);
+
+  it('accepts moving a client’s sole profile to another client and preserves both invariants', async () => {
+    const tenantId = uuidv4();
+    tenantsToCleanup.add(tenantId);
+    const clientAId = await seedTenantAndClient(tenantId, 'Emptied Client');
+    const clientBId = await seedTenantAndClient(tenantId, 'Receiving Client');
+    const [soleId] = await seedProfiles(tenantId, clientAId, ['A Sole']);
+    const [bDefaultId] = await seedProfiles(tenantId, clientBId, ['B Main']);
+
+    // A is left with zero profiles (legal — the guard only constrains clients
+    // that HAVE profiles); B gains a non-default sibling and keeps exactly one
+    // default.
+    await table(tenantId, 'client_billing_profiles')
+      .where({ billing_profile_id: soleId })
+      .update({ client_id: clientBId, is_default: false, is_system_managed_default: false });
+
+    await expect(
+      table(tenantId, 'client_billing_profiles').where({ client_id: clientAId })
+    ).resolves.toHaveLength(0);
+    await expect(defaultProfileIds(tenantId, clientBId)).resolves.toEqual([bDefaultId]);
+    await expect(
+      table(tenantId, 'client_billing_profiles').where({ client_id: clientBId })
+    ).resolves.toHaveLength(2);
+  }, HOOK_TIMEOUT);
+
   it('accepts an atomic default switch from profile A to B and leaves exactly one default', async () => {
     const tenantId = uuidv4();
     tenantsToCleanup.add(tenantId);

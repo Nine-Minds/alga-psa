@@ -23,6 +23,11 @@
  *     is_default rows: unsetting the sole default, deleting the sole default
  *     while a sibling profile remains, or inserting a client's first profile
  *     as non-default.
+ *   - Key-moving UPDATEs are covered on BOTH sides: when an UPDATE changes the
+ *     row's client identity (OLD tenant/client_id <> NEW tenant/client_id),
+ *     the function validates the OLD client — which the move may have left
+ *     with profiles but no default — as well as the NEW client. A
+ *     non-key-moving UPDATE checks the single identity once.
  *   - The partial unique index still enforces at-most-one; together the two
  *     give exactly-one-default per client with profiles.
  *
@@ -42,7 +47,11 @@
  *   2. The guard is per-shard. It is sound because the table is distributed on
  *      `tenant` and every profile row of one client shares the client's tenant,
  *      hence lives on the same shard — the shard-local check sees the client's
- *      whole profile set.
+ *      whole profile set. This also covers key-moving UPDATEs: Citus rejects
+ *      UPDATEs of the distribution column (`tenant`) outright, so the only
+ *      expressible key move is a client_id change within one tenant, which
+ *      stays on the same shard where the trigger sees both the OLD and the
+ *      NEW client's profile sets.
  */
 
 const TABLE = 'client_billing_profiles';
@@ -72,16 +81,6 @@ async function triggerExistsOn(knex, tableExpr) {
   return Boolean(result.rows?.[0]?.present);
 }
 
-async function functionExists(knex) {
-  const result = await knex.raw(
-    `SELECT EXISTS (
-       SELECT 1 FROM pg_proc WHERE proname = ?
-     ) AS present`,
-    [FUNCTION_NAME]
-  );
-  return Boolean(result.rows?.[0]?.present);
-}
-
 // One function for every deployment shape. It reads the *current* trigger
 // table's name (the shard table on workers, the plain table on the
 // coordinator/CE), so a single definition serves both.
@@ -90,27 +89,48 @@ function functionSql() {
     CREATE OR REPLACE FUNCTION ${FUNCTION_NAME}() RETURNS trigger
     LANGUAGE plpgsql AS $fn$
     DECLARE
+      v_old_tenant uuid;
+      v_old_client uuid;
+      v_new_tenant uuid;
+      v_new_client uuid;
       v_tenant uuid;
       v_client uuid;
       v_total bigint;
       v_defaults bigint;
     BEGIN
-      IF TG_OP = 'DELETE' THEN
-        v_tenant := OLD.tenant;
-        v_client := OLD.client_id;
-      ELSE
-        v_tenant := NEW.tenant;
-        v_client := NEW.client_id;
+      -- OLD is unassigned on INSERT and NEW on DELETE; only touch the record
+      -- the operation actually provides.
+      IF TG_OP IN ('UPDATE', 'DELETE') THEN
+        v_old_tenant := OLD.tenant;
+        v_old_client := OLD.client_id;
+      END IF;
+      IF TG_OP IN ('INSERT', 'UPDATE') THEN
+        v_new_tenant := NEW.tenant;
+        v_new_client := NEW.client_id;
       END IF;
 
-      EXECUTE format(
-        'SELECT count(*), count(*) FILTER (WHERE is_default) FROM %I.%I WHERE tenant = $1 AND client_id = $2',
-        TG_TABLE_SCHEMA, TG_TABLE_NAME
-      ) INTO v_total, v_defaults USING v_tenant, v_client;
+      -- Validate every client identity this row version pair touches. For a
+      -- key-moving UPDATE (OLD tenant/client_id <> NEW tenant/client_id) that
+      -- is BOTH the old and the new client; DISTINCT collapses the common
+      -- non-key-moving case to a single check. tenant/client_id are NOT NULL
+      -- columns, so the NULL filter only drops the side the operation lacks.
+      FOR v_tenant, v_client IN
+        SELECT DISTINCT ident.t, ident.c
+        FROM (VALUES
+          (v_old_tenant, v_old_client),
+          (v_new_tenant, v_new_client)
+        ) AS ident(t, c)
+        WHERE ident.t IS NOT NULL AND ident.c IS NOT NULL
+      LOOP
+        EXECUTE format(
+          'SELECT count(*), count(*) FILTER (WHERE is_default) FROM %I.%I WHERE tenant = $1 AND client_id = $2',
+          TG_TABLE_SCHEMA, TG_TABLE_NAME
+        ) INTO v_total, v_defaults USING v_tenant, v_client;
 
-      IF v_total > 0 AND v_defaults = 0 THEN
-        RAISE EXCEPTION 'client % has % billing profile(s) but no default profile', v_client, v_total;
-      END IF;
+        IF v_total > 0 AND v_defaults = 0 THEN
+          RAISE EXCEPTION 'client % has % billing profile(s) but no default profile', v_client, v_total;
+        END IF;
+      END LOOP;
       RETURN NULL;
     END;
     $fn$;
@@ -129,10 +149,9 @@ function triggerSql(tableExpr) {
 
 exports.up = async function up(knex) {
   // Function first: plain Postgres creates it locally; Citus auto-propagates it
-  // to the workers where the shard triggers run.
-  if (!(await functionExists(knex))) {
-    await knex.raw(functionSql());
-  }
+  // to the workers where the shard triggers run. CREATE OR REPLACE is
+  // idempotent and also self-heals any database carrying a stale body.
+  await knex.raw(functionSql());
 
   const distributed = await isCitusDistributedTable(knex);
   if (distributed) {
