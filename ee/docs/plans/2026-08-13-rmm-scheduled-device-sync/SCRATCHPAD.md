@@ -294,3 +294,71 @@ FROM workstation_assets WHERE tenant='<uuid>';
   provider's delivery log, not as anything visible in our DB.
 - `packages/jobs` is the IJobRunner abstraction — never reach for pg-boss
   directly; EE refuses it.
+
+## Correction: TacticalRMM did have a bulk device sync (2026-08-14)
+
+The earlier entry claiming "TacticalRMM has no bulk device sync at all — only
+syncSingleAgent driven by webhooks" was **wrong**, and the conclusion drawn from
+it (that Tactical could never be scheduled) was wrong with it.
+
+`syncTacticalRmmDevices` has existed all along in
+`packages/integrations/src/actions/integrations/tacticalRmmActions.ts`: it walks
+`/beta/v1/site/`, then `/beta/v1/agent/?client_id=<org>` for every
+auto-sync-enabled organization mapping, and upserts each agent as an asset. What
+misled the earlier investigation was looking at `syncSingleAgent.ts` and the
+webhook path, and at production state — tenant `55f6a1b8` has 16 assets from one
+2026-06-17 burst, which is what a webhook trickle looks like, not evidence that
+no bulk path exists.
+
+Tactical was therefore in the same category as Tanium, not a category of its own:
+a working bulk sync that a job could not reach.
+
+### Why it could not simply be exported
+
+`tacticalRmmActions.ts` carries `'use server'`, and **every export from such a
+module becomes a callable RPC endpoint**. Exporting the sync so the job could
+import it would have published an unauthenticated device-sync endpoint. So the
+body moved to `lib/rmm/tacticalrmm/deviceSync.ts` (a plain module), together with
+the eight helpers it shares with the action — `tenantScopedTable`,
+`publishRmmSyncEvent`, `axiosErrorToMessage`, `buildConfiguredTacticalClient`,
+`inferAssetTypeFromTacticalAgent`, `extractOsFields`, `extractVitals`,
+`createTacticalAssetRecord` — and the tenant-secret name constants moved to
+`shared.ts`. The action is now a permission check plus a delegate call.
+
+No synthetic user was needed: `publishRmmSyncEvent` already computes
+`actorType: args.actorUserId ? 'USER' : 'SYSTEM'`, so a scheduled run passing no
+actor is attributed to SYSTEM, which is correct. A manual run still passes the
+operator's `user_id`.
+
+### Incremental semantics
+
+Same shape as Level.io: `/beta/v1/agent/` accepts only `client_id`, no time
+filter, so "incremental" is the same page walk filtered client-side on
+`last_seen` (`tacticalAgentChangedSince`). Inclusive at the boundary;
+missing/unparseable `last_seen` is always considered. Fewer ingest writes, same
+number of API reads — do not mistake it for a cheap call.
+
+This is only safe because the sync **never deletes** (`items_deleted` is
+hardcoded 0). A filtered listing plus orphan-removal would have deleted every
+device that had not been seen recently.
+
+### Notable difference from the other two providers
+
+Tactical's sync lives in `packages/integrations`, not under `ee/`, so its
+strategy is registered from `@alga-psa/integrations/...` rather than
+`@enterprise/...` — scheduled device sync for Tactical works in CE as well as EE.
+It is also the only provider with both capabilities, so its alert schedule and
+device schedule converge independently.
+
+The strategy wraps the engine in `runWithTenant`. The NinjaOne and Level.io
+strategies call `createTenantKnex()` without one; that currently works because
+all their table access passes an explicit tenant, but it relies on ambient
+context a job does not have. Worth aligning them.
+
+### Remaining exclusions
+
+- **huntress**: no agent listing at all (`getAgent(id)` only), `orgSync` sets
+  `auto_sync_assets: false`. Nothing to schedule.
+- **tanium**: working full sync behind `withAdvancedAssetsAccess`; needs exactly
+  the extraction Tactical just had. `user` appears on one line of its 178-line
+  body — the permission check.

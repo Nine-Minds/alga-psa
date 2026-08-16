@@ -245,7 +245,7 @@
   },
   {
     "id": "F031",
-    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence — DEFERRED: sync is only reachable through a user-gated server action; needs extracting into a callable engine first (see SCRATCHPAD F031)",
+    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence \u2014 DEFERRED: sync is only reachable through a user-gated server action; needs extracting into a callable engine first (see SCRATCHPAD F031)",
     "implemented": false,
     "prdRefs": [
       "Provider capability"
@@ -262,8 +262,8 @@
   },
   {
     "id": "F033",
-    "description": "TacticalRMM: implement or repair device sync so a manual sync succeeds before any schedule is enabled — DEFERRED: TacticalRMM has no bulk device sync to repair; building one is separate work (see SCRATCHPAD F032)",
-    "implemented": false,
+    "description": "TacticalRMM: extract the existing bulk device sync (syncTacticalRmmDevices) out of the 'use server' actions module into lib/rmm/tacticalrmm/deviceSync.ts so a job can call it without an acting user; the action keeps the permission check and delegates",
+    "implemented": true,
     "prdRefs": [
       "Provider capability",
       "Risks"
@@ -271,8 +271,8 @@
   },
   {
     "id": "F034",
-    "description": "TacticalRMM: implement syncDevicesIncremental once the base sync works — DEFERRED: TacticalRMM has no bulk device sync to repair; building one is separate work (see SCRATCHPAD F032)",
-    "implemented": false,
+    "description": "TacticalRMM: syncDevicesIncremental via tacticalRmmDeviceSyncStrategy \u2014 filters the agent listing on last_seen (no server-side delta available) and throws on reported failure so the job does not advance the cursor past an unread window",
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
@@ -297,7 +297,7 @@
   },
   {
     "id": "F037",
-    "description": "Add a Device sync enable/disable toggle to each connected integration's panel in Integrations → RMM",
+    "description": "Add a Device sync enable/disable toggle to each connected integration's panel in Integrations \u2192 RMM",
     "implemented": true,
     "prdRefs": [
       "UX notes"
@@ -378,7 +378,7 @@
   },
   {
     "id": "F047",
-    "description": "Level.io deviceMapper populates agent_version from the device payload — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
+    "description": "Level.io deviceMapper populates agent_version from the device payload \u2014 NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement",
@@ -387,7 +387,7 @@
   },
   {
     "id": "F048",
-    "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
+    "description": "Level.io deviceMapper populates wan_ip, replacing the hardcoded null \u2014 NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement",
@@ -404,7 +404,7 @@
   },
   {
     "id": "F050",
-    "description": "Level.io deviceMapper populates pending_software_patches — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
+    "description": "Level.io deviceMapper populates pending_software_patches \u2014 NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement"
@@ -412,7 +412,7 @@
   },
   {
     "id": "F051",
-    "description": "Level.io deviceMapper populates failed_patches — NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
+    "description": "Level.io deviceMapper populates failed_patches \u2014 NOT POSSIBLE: the Level.io API does not expose this (see SCRATCHPAD)",
     "implemented": false,
     "prdRefs": [
       "Problem statement"
