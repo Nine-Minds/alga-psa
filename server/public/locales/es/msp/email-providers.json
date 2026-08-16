@@ -167,6 +167,11 @@
       "pauseError": "No se pudo cambiar el estado de pausa del correo entrante."
     },
     "pausedHelp": "Los mensajes recibidos mientras esta bandeja está en pausa no se importan retroactivamente.",
+    "authFailure": {
+      "title": "Correo entrante en pausa — se requiere reconexión",
+      "description": "El correo entrante de {{mailbox}} está en pausa porque sus credenciales ya no funcionan. Los mensajes no se pierden: permanecen en el buzón de origen y se importarán después de que vuelva a conectar.",
+      "action": "Reconectar"
+    },
     "fields": {
       "status": "Estado",
       "lastSync": "Última sincronización",

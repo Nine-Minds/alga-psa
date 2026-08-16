@@ -167,6 +167,11 @@
       "pauseError": "Não foi possível alterar o estado de pausa dos e-mails recebidos."
     },
     "pausedHelp": "As mensagens recebidas enquanto esta caixa está pausada não são importadas retroativamente.",
+    "authFailure": {
+      "title": "E-mail de entrada pausado — reconexão necessária",
+      "description": "O e-mail de entrada de {{mailbox}} está pausado porque suas credenciais não funcionam mais. As mensagens não são perdidas — permanecem na caixa de correio de origem e serão importadas depois de você reconectar.",
+      "action": "Reconectar"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Última sincronização",

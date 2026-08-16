@@ -167,6 +167,11 @@
       "pauseError": "Impossibile modificare lo stato di pausa delle email in arrivo."
     },
     "pausedHelp": "I messaggi ricevuti mentre questa casella è in pausa non vengono importati retroattivamente.",
+    "authFailure": {
+      "title": "Email in entrata in pausa — riconnessione necessaria",
+      "description": "Le email in entrata per {{mailbox}} sono in pausa perché le credenziali non funzionano più. I messaggi non vanno persi: restano nella casella di origine e verranno importati dopo la riconnessione.",
+      "action": "Riconnetti"
+    },
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",

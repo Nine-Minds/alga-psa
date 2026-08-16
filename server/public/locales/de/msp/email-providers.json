@@ -167,6 +167,11 @@
       "pauseError": "Der Pausenstatus für eingehende E-Mails konnte nicht geändert werden."
     },
     "pausedHelp": "Nachrichten, die eingehen, während dieses Postfach pausiert ist, werden nicht nachträglich importiert.",
+    "authFailure": {
+      "title": "Eingehende E-Mails pausiert — erneute Verbindung erforderlich",
+      "description": "Eingehende E-Mails für {{mailbox}} sind pausiert, da die Anmeldedaten nicht mehr funktionieren. Nachrichten gehen nicht verloren — sie verbleiben im Quellpostfach und werden nach dem erneuten Verbinden importiert.",
+      "action": "Erneut verbinden"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Letzte Synchronisierung",

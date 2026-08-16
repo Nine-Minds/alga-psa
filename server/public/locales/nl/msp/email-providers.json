@@ -167,6 +167,11 @@
       "pauseError": "Kan de pauzestatus van inkomende e-mail niet wijzigen."
     },
     "pausedHelp": "Berichten die binnenkomen terwijl deze mailbox is gepauzeerd, worden niet met terugwerkende kracht geïmporteerd.",
+    "authFailure": {
+      "title": "Inkomende e-mail gepauzeerd — opnieuw verbinden vereist",
+      "description": "Inkomende e-mail voor {{mailbox}} is gepauzeerd omdat de inloggegevens niet meer werken. Berichten gaan niet verloren — ze blijven in de bronpostvak staan en worden geïmporteerd nadat u opnieuw verbinding hebt gemaakt.",
+      "action": "Opnieuw verbinden"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
