@@ -377,8 +377,15 @@ export const adjustHourBlockRemaining = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Row-lock (canonical order — see selectEligibleBlocks) so the remaining
+      // read that feeds BOTH the clamped write and the audit's
+      // previous_remaining_minutes serializes against a concurrent
+      // allocateTimeEntry decrement on the same block: an unlocked read plus
+      // an absolute-value write silently erased the burn (lost update,
+      // 29.8.18 mitigation round 3).
       const block = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
+        .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status === 'expired' || block.status === 'voided') {
@@ -425,8 +432,13 @@ export const updateHourBlockExpiration = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Row-lock (canonical order — see selectEligibleBlocks) so the voided
+      // check and the expiration write serialize against a concurrent
+      // burn/expire/void transition on the same block (same shape as
+      // manuallyExpireHourBlock / voidHourBlock).
       const block = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
+        .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status === 'voided') throw new Error('Cannot update expiration of a voided hour block');

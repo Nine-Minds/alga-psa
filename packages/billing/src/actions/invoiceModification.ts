@@ -73,26 +73,45 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
  * surviving line picked that way may belong to a different (re-added or
  * foreign) line, activating the block from data it cannot prove ownership of
  * (verified in review run b2b3038e). NULL or dangling linkage ⇒ void.
+ *
+ * The finalize flow passes its own transaction, which withTransaction joins
+ * (a passed trx is reused, not nested), so invoice finalization and block
+ * activation are one atomic unit — mirroring unfinalize/draft-delete, whose
+ * hour-block hooks also run inside the caller's trx. The pending-block
+ * selection itself runs INSIDE that transaction as SELECT ... FOR UPDATE in
+ * canonical block_id order, and every status write re-checks `pending`:
+ * a concurrent void/manual-expire/unfinalize that commits mid-flight
+ * serialized on the same row lock, so activation can never resurrect a block
+ * that left `pending` (29.8.18 mitigation round 3).
  */
 export async function activateHourBlocksForFinalizedInvoice(
   invoiceId: string,
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<void> {
-  const pendingBlocks = await tenantScopedTable(knex, tenant, 'hour_blocks')
-    .where({
-      tenant,
-      source_invoice_id: invoiceId,
-      status: 'pending',
-    })
-    .select('block_id', 'service_id', 'source_invoice_charge_id');
-
-  if (pendingBlocks.length === 0) {
-    return;
-  }
-
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Row-lock the pending blocks (canonical block_id order — the same order
+    // every other hour_blocks check-then-act site locks in; see
+    // selectEligibleBlocks in shared/billingClients/hourBlockService) inside
+    // the transaction that flips them. Pre-fix, this snapshot was an unlocked
+    // read outside the transaction and the activation UPDATE did not re-check
+    // status, so a void/expire committing in between resurrected the block to
+    // `active` on top of the void audit.
+    const pendingBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
+      .where({
+        tenant,
+        source_invoice_id: invoiceId,
+        status: 'pending',
+      })
+      .orderBy('block_id', 'asc')
+      .forUpdate()
+      .select('block_id', 'service_id', 'source_invoice_charge_id');
+
+    if (pendingBlocks.length === 0) {
+      return;
+    }
+
     const now = new Date().toISOString();
     for (const block of pendingBlocks) {
       const line = await resolvePurchaseLineForBlock(trx, tenant, invoiceId, block);
@@ -127,7 +146,10 @@ export async function activateHourBlocksForFinalizedInvoice(
       }
 
       await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ tenant, block_id: block.block_id })
+        // Belt-and-suspenders alongside the row lock: only a still-pending row
+        // may flip to active, so drift in the locked select can never
+        // resurrect a voided/expired block.
+        .where({ tenant, block_id: block.block_id, status: 'pending' })
         .update({
           status: 'active',
           purchased_at: now,
@@ -192,7 +214,9 @@ async function voidPendingBlockAtFinalization(
   metadata: Record<string, unknown>,
 ): Promise<void> {
   await tenantScopedTable(trx, tenant, 'hour_blocks')
-    .where({ tenant, block_id: blockId })
+    // Belt-and-suspenders alongside the row lock: only a still-pending row may
+    // be voided here, keeping the activation/void writes symmetric.
+    .where({ tenant, block_id: blockId, status: 'pending' })
     .update({
       status: 'voided',
       voided_at: now,
@@ -1068,6 +1092,16 @@ export async function finalizeInvoiceWithKnex(
       invoice = { ...invoice, ...identityUpdates };
     }
 
+    // Ad-hoc prepaid hour blocks linked to this invoice go active at finalize
+    // — inside the SAME transaction as the invoice's own finalization: the
+    // hook joins this trx (withTransaction reuses a passed trx), so a block
+    // activation failure rolls the finalization back with it, and the block
+    // row-locks serialize against concurrent void/expire on the same rows.
+    // Mirrors unfinalize/draft-delete, whose hour-block hooks also run inside
+    // the caller's trx (29.8.18 mitigation round 3: pre-fix this ran as a
+    // separate transaction after the invoice was already finalized).
+    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+
     // Record audit log
     // await auditLog(
     //   trx,
@@ -1281,8 +1315,8 @@ export async function finalizeInvoiceWithKnex(
     }
   }
 
-  // Ad-hoc prepaid hour blocks linked to this invoice go active at finalize.
-  await activateHourBlocksForFinalizedInvoice(invoiceId, knex, tenant, userId);
+  // (Ad-hoc prepaid hour blocks went active inside the finalization
+  // transaction above — see activateHourBlocksForFinalizedInvoice.)
 
   if (invoice) {
     projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(
