@@ -204,7 +204,7 @@
   {
     "id": "T021",
     "description": "Component: no billing profile control renders on client, contract, contract line, ticket, or project surfaces while the client has one profile, and all appear once a second is added.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F043",
@@ -482,7 +482,7 @@
   {
     "id": "T048",
     "description": "Integration: a multi-profile client holding parallel per-profile contracts that each carry the same service resolves time entries deterministically instead of falling through to unresolved, at both entry-create and generation-reconcile time.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133",
       "F134",
