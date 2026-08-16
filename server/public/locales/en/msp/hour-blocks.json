@@ -117,6 +117,7 @@
     "manuallyExpired": "Expired manually",
     "autoExpired": "Auto-expired",
     "voidedLabel": "Voided",
+    "purchaseReversed": "Purchase reversed (invoice unfinalized)",
     "unknownUser": "System"
   }
 }

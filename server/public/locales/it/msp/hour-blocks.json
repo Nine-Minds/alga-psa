@@ -117,6 +117,7 @@
     "manuallyExpired": "Scaduto manualmente",
     "autoExpired": "Scaduto automaticamente",
     "voidedLabel": "Annullato",
+    "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
     "unknownUser": "Sistema"
   }
 }

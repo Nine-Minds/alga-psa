@@ -32,6 +32,8 @@ function auditLabel(t: TranslateFn, entry: IHourBlockAuditEntry): string {
       return t('detail.autoExpired', { defaultValue: 'Auto-expired' });
     case 'void':
       return t('detail.voidedLabel', { defaultValue: 'Voided' });
+    case 'purchase_reversal':
+      return t('detail.purchaseReversed', { defaultValue: 'Purchase reversed (invoice unfinalized)' });
     default:
       return entry.type;
   }

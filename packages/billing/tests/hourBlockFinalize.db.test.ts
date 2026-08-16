@@ -41,6 +41,16 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice', () => {
         invoice_date: new Date().toISOString(), due_date: new Date().toISOString(),
         total_amount: 1000, subtotal: 1000, tax: 0, status: 'sent', is_manual: true, is_prepayment: false, credit_applied: 0,
       });
+      // The finalize hook syncs the block from the authoritative purchase line;
+      // an invoice with no line at all now counts as line-removed (block voided).
+      // This legacy-shaped block (no explicit charge linkage) resolves the sole
+      // service-matching charge.
+      const itemId = uuidv4();
+      await db('invoice_charges').insert({
+        tenant, item_id: itemId, invoice_id: invoiceId, service_id: serviceId,
+        description: 'Prepaid hour block — Finalize Svc', quantity: 10, unit_price: 10000,
+        total_price: 100000, tax_rate: 0, is_manual: true,
+      });
       await db('hour_blocks').insert({
         block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
         total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
@@ -60,6 +70,7 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice', () => {
 
       await db('hour_block_audit').where({ tenant }).delete();
       await db('hour_blocks').where({ tenant }).delete();
+      await db('invoice_charges').where({ tenant }).delete();
       await db('invoices').where({ tenant }).delete();
       await db('service_catalog').where({ tenant }).delete();
       await db('service_types').where({ tenant }).delete();

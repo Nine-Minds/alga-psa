@@ -117,6 +117,7 @@
     "manuallyExpired": "Expirado manualmente",
     "autoExpired": "Expirado automaticamente",
     "voidedLabel": "Anulado",
+    "purchaseReversed": "Compra revertida (fatura desfinalizada)",
     "unknownUser": "Sistema"
   }
 }

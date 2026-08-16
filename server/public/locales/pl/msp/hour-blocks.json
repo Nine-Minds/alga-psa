@@ -117,6 +117,7 @@
     "manuallyExpired": "Wygaszono ręcznie",
     "autoExpired": "Wygasł automatycznie",
     "voidedLabel": "Unieważniono",
+    "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
     "unknownUser": "System"
   }
 }

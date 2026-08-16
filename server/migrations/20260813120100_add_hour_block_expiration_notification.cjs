@@ -9,10 +9,50 @@
  * inventory length, and the hour-block template ships outside that v1 inventory
  * scope.
  *
+ * Down safety: `down` must never delete notification rows that pre-existed
+ * this migration (a name-based delete could remove rows created elsewhere, and
+ * an unguarded category delete could orphan unrelated subtypes). `up` therefore
+ * detects what already exists and records, in a migration-owned marker table,
+ * the exact ids of the category/subtype/template rows IT created. `down` deletes
+ * only those recorded ids and then drops the marker table. In an environment
+ * where the marker is absent (e.g. this migration ran before marker
+ * bookkeeping existed), `down` removes nothing — safety over cleanup.
+ *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+
+const MARKER_TABLE = 'migration_20260813120100_marker';
+
+async function readMarker(knex) {
+  const exists = await knex.schema.hasTable(MARKER_TABLE);
+  if (!exists) return {};
+  const rows = await knex(MARKER_TABLE).where({ marker_key: 'created_ids' });
+  if (rows.length === 0) return {};
+  const raw = rows[0].marker_value;
+  const value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return value && typeof value === 'object' ? value : {};
+}
+
+async function writeMarker(knex, marker) {
+  const exists = await knex.schema.hasTable(MARKER_TABLE);
+  if (!exists) {
+    await knex.schema.createTable(MARKER_TABLE, (table) => {
+      table.string('marker_key', 128).primary();
+      table.jsonb('marker_value').notNullable();
+    });
+  }
+  await knex(MARKER_TABLE)
+    .insert({ marker_key: 'created_ids', marker_value: JSON.stringify(marker) })
+    .onConflict('marker_key')
+    .merge();
+}
+
 exports.up = async function(knex) {
+  // Merge with any prior marker so a re-run after a partial state records only
+  // what is newly created instead of forgetting earlier creations.
+  const marker = await readMarker(knex);
+
   let invoicesCategory = await knex('notification_categories')
     .where({ name: 'Invoices' })
     .first();
@@ -26,6 +66,7 @@ exports.up = async function(knex) {
         is_default_enabled: true
       })
       .returning('*');
+    marker.created_category_id = invoicesCategory.id;
   }
 
   const existingSubtype = await knex('notification_subtypes')
@@ -45,6 +86,7 @@ exports.up = async function(knex) {
         is_default_enabled: true
       })
       .returning('*');
+    marker.created_subtype_id = subtype.id;
   }
 
   const existingTemplate = await knex('system_email_templates')
@@ -52,11 +94,12 @@ exports.up = async function(knex) {
     .first();
 
   if (!existingTemplate) {
-    await knex('system_email_templates').insert({
-      name: 'hour-block-expiring',
-      subject: 'Prepaid Hours Expiring Soon: {{company.name}}',
-      notification_subtype_id: subtype.id,
-      html_content: `
+    const [createdTemplate] = await knex('system_email_templates')
+      .insert({
+        name: 'hour-block-expiring',
+        subject: 'Prepaid Hours Expiring Soon: {{company.name}}',
+        notification_subtype_id: subtype.id,
+        html_content: `
         <h2>Prepaid Hours Expiring Soon</h2>
         <p>Prepaid hours for {{company.name}} will expire soon:</p>
         <div class="details">
@@ -86,7 +129,7 @@ exports.up = async function(knex) {
         <p style="margin-top: 20px;">Please use these prepaid hours before they expire.</p>
         <a href="{{hourBlocks.url}}" class="button">View Billing</a>
       `,
-      text_content: `
+        text_content: `
 Prepaid Hours Expiring Soon
 
 Prepaid hours for {{company.name}} will expire soon:
@@ -105,8 +148,12 @@ Please use these prepaid hours before they expire.
 
 View billing at: {{hourBlocks.url}}
       `
-    });
+      })
+      .returning('id');
+    marker.created_template_id = createdTemplate.id;
   }
+
+  await writeMarker(knex, marker);
 };
 
 /**
@@ -114,28 +161,38 @@ View billing at: {{hourBlocks.url}}
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-  await knex('system_email_templates')
-    .where({ name: 'hour-block-expiring' })
-    .del();
+  const marker = await readMarker(knex);
 
-  const deletedSubtype = await knex('notification_subtypes')
-    .where({ name: 'Hour Block Expiring' })
-    .del();
+  if (marker.created_template_id != null) {
+    await knex('system_email_templates')
+      .where({ id: marker.created_template_id })
+      .del();
+  }
 
-  const invoicesCategory = await knex('notification_categories')
-    .where({ name: 'Invoices' })
-    .first();
+  if (marker.created_subtype_id != null) {
+    await knex('notification_subtypes')
+      .where({ id: marker.created_subtype_id })
+      .del();
+  }
 
-  if (invoicesCategory && deletedSubtype > 0) {
-    const remainingSubtypes = await knex('notification_subtypes')
-      .where({ category_id: invoicesCategory.id })
+  if (marker.created_category_id != null) {
+    // Defensive: only drop the category this migration created when nothing
+    // else has attached itself to it since (the FK would cascade-delete
+    // those rows otherwise).
+    const remaining = await knex('notification_subtypes')
+      .where({ category_id: marker.created_category_id })
       .count('* as count')
       .first();
 
-    if (remainingSubtypes && remainingSubtypes.count === '0') {
+    if (!remaining || Number(remaining.count) === 0) {
       await knex('notification_categories')
-        .where({ id: invoicesCategory.id })
+        .where({ id: marker.created_category_id })
         .del();
     }
+  }
+
+  const markerExists = await knex.schema.hasTable(MARKER_TABLE);
+  if (markerExists) {
+    await knex.schema.dropTable(MARKER_TABLE);
   }
 };

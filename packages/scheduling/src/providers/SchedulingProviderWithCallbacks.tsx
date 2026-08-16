@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { SchedulingCallbackProvider } from '@alga-psa/ui/context';
 import type { SchedulingCallbacks } from '@alga-psa/ui/context';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import AgentScheduleView from '../components/schedule/AgentScheduleView';
 import { launchTimeEntryForWorkItem } from '../lib/timeEntryLauncher';
 import { launchScheduleEntryForWorkItem } from '../lib/scheduleEntryLauncher';
@@ -15,9 +16,13 @@ interface SchedulingProviderWithCallbacksProps {
 }
 
 export const SchedulingProviderWithCallbacks: React.FC<SchedulingProviderWithCallbacksProps> = ({ children }) => {
+  // The v1.5 flag is resolved here (the launcher is a plain async function, not
+  // a hook host) and threaded into every launch so flag-off callers keep the
+  // exact legacy toast behavior.
+  const { enabled: v15Enabled } = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
   const callbacks = useMemo<SchedulingCallbacks>(() => ({
     renderAgentSchedule: (agentId: string) => <AgentScheduleView agentId={agentId} />,
-    launchTimeEntry: (params) => launchTimeEntryForWorkItem(params),
+    launchTimeEntry: (params) => launchTimeEntryForWorkItem({ ...params, enhancedLaunchFeedback: v15Enabled }),
     launchScheduleEntry: (params) => launchScheduleEntryForWorkItem(params),
     fetchTimeEntriesForTicket: async (ticketId) => {
       const result = await fetchTimeEntriesForTicket(ticketId);
@@ -27,7 +32,7 @@ export const SchedulingProviderWithCallbacks: React.FC<SchedulingProviderWithCal
       return result;
     },
     deleteTimeEntry: (entryId) => deleteTimeEntry(entryId),
-  }), []);
+  }), [v15Enabled]);
 
   return (
     <SchedulingCallbackProvider value={callbacks}>

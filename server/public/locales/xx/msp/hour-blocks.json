@@ -117,6 +117,7 @@
     "manuallyExpired": "11111",
     "autoExpired": "11111",
     "voidedLabel": "11111",
+    "purchaseReversed": "11111",
     "unknownUser": "11111"
   }
 }

@@ -15,7 +15,8 @@ export type HourBlockAuditType =
   | 'expiration_date_change'
   | 'manual_expiration'
   | 'auto_expiration'
-  | 'void';
+  | 'void'
+  | 'purchase_reversal';
 
 export interface IHourBlock extends TenantEntity {
   block_id: string;
@@ -45,6 +46,13 @@ export interface IHourBlock extends TenantEntity {
   expiration_date?: string | null;
   /** Null ⇒ direct grant. */
   source_invoice_id?: string | null;
+  /**
+   * The invoice charge line this block was minted against. The authoritative
+   * link for finalization sync: the finalized line's quantity/rate/service
+   * overwrite the block's mint-time values when the invoice is finalized, and
+   * a missing line (removed from the draft) voids the pending block.
+   */
+  source_invoice_charge_id?: string | null;
   /**
    * Immutable origin of the block — 'purchase' (via an invoice) or 'grant'
    * (comped hours, no invoice). Set at mint time and never cleared: it keeps

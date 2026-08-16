@@ -117,6 +117,7 @@
     "manuallyExpired": "Manuell abgelaufen",
     "autoExpired": "Automatisch abgelaufen",
     "voidedLabel": "Storniert",
+    "purchaseReversed": "Kauf storniert (Rechnung entfinalisiert)",
     "unknownUser": "System"
   }
 }

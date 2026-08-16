@@ -250,6 +250,13 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
       await invoiceService.calculateAndDistributeTax(trx, invoiceId, client, taxService, tenant);
       await invoiceService.updateInvoiceTotalsAndRecordTransaction(trx, invoiceId, client, tenant, invoice.invoice_number);
 
+      // The block is minted against this exact line: finalization syncs the
+      // block from the line (qty/rate/service) via source_invoice_charge_id.
+      const purchaseLine = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, tenant, service_id: serviceId })
+        .first();
+      if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
+
       await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
         block_id: blockId,
         tenant,
@@ -264,6 +271,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         purchased_at: null,
         expiration_date: toCalendarDateString(expirationDate),
         source_invoice_id: invoiceId,
+        source_invoice_charge_id: purchaseLine.item_id,
         source_type: 'purchase',
         created_by: user.user_id,
         notes: notes?.trim() || null,

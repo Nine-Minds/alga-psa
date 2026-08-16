@@ -117,6 +117,7 @@
     "manuallyExpired": "Handmatig vervallen",
     "autoExpired": "Automatisch vervallen",
     "voidedLabel": "Ongeldig gemaakt",
+    "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
     "unknownUser": "Systeem"
   }
 }
