@@ -426,7 +426,8 @@
       "recentInvoicesTitle": "Faturas recentes",
       "billingHistoryTitle": "Histórico de cobrança",
       "labels": {
-        "defaultTag": "(Padrão)"
+        "defaultTag": "(Padrão)",
+        "paysFor": "Paga por {{profile}}"
       },
       "actions": {
         "setDefault": "Definir padrão",
@@ -440,7 +441,8 @@
         "expiryMonth": "Mês",
         "expiryYear": "Ano",
         "cvv": "CVV",
-        "setAsDefault": "Definir como forma de pagamento padrão"
+        "setAsDefault": "Definir como forma de pagamento padrão",
+        "billingProfile": "Paga por"
       },
       "history": {
         "period": "Período",

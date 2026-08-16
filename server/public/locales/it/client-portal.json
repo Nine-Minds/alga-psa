@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Fatture recenti",
       "billingHistoryTitle": "Storico fatturazione",
       "labels": {
-        "defaultTag": "(Predefinito)"
+        "defaultTag": "(Predefinito)",
+        "paysFor": "Paga per {{profile}}"
       },
       "actions": {
         "setDefault": "Imposta come predefinito",
@@ -391,7 +392,8 @@
         "expiryMonth": "Mese",
         "expiryYear": "Anno",
         "cvv": "CVV",
-        "setAsDefault": "Imposta come metodo di pagamento predefinito"
+        "setAsDefault": "Imposta come metodo di pagamento predefinito",
+        "billingProfile": "Paga per"
       },
       "history": {
         "period": "Periodo",

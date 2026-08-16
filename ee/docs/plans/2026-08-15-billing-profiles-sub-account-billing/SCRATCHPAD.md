@@ -255,6 +255,55 @@ The golden-output harness is the deliberate exception: it is copied verbatim int
 a **pre-S1 worktree** to re-derive the baseline, so it may not import anything
 that postdates S1. It inlines the profile behind a `hasColumn` probe instead.
 
+### S9-D1 — only `payment_methods` gets NOT NULL; the ledger stays nullable
+
+F102 asks for a non-null `billing_profile_id` on `payment_methods` and that is
+right: a stored card belongs to exactly one paying entity, and the F104
+uniqueness index is keyed on the profile, so a null would silently opt a card
+out of "one default per profile".
+
+F107/F108 ask only that `transactions` and `credit_tracking` *gain* the column,
+and they stay nullable deliberately. A transaction is a ledger entry whose
+profile is a property of the invoice or credit it references, not an independent
+fact about the money; NOT NULL would force ~20 unrelated ledger call sites to
+answer a question the ledger never asks, and any path that was missed would
+throw inside a payment rather than degrading. Every write path this feature
+touches populates it, and the migration backfills every existing row, so a null
+in practice means only "issued before profiles existed".
+
+### S10-D1 — a credit with no profile stays spendable anywhere in its client
+
+This is the one place strict scoping would have done harm. F111 constrains credit
+application to the issuing profile, and the T013 gate caught the consequence
+immediately: the golden client's prepayment credit stopped applying, and its
+invoice came out with `credit_applied: 0`.
+
+The rule that resolves it has two halves. Credit that *carries* a profile can
+only pay that profile's invoices — that is F111, and it is the AR defect decision
+D7 exists to prevent. Credit that carries **no** profile belongs to the client as
+a whole and remains spendable on any of its invoices; narrowing it would strand
+money a client already holds. The prepayment invoice now stamps its own profile
+(F096) so newly-issued credit is never in that state to begin with.
+
+For *reporting* the null bucket is kept separate — `getUnattributedCredit`
+alongside `getAvailableCreditByProfile` — and folded into the default profile's
+row. Counting it once per profile instead would make the breakdown exceed the
+client total, which is exactly the "rows disagree with the total" failure F115
+exists to rule out.
+
+### S10-D2 — aging and statements land on the surfaces that already exist
+
+F113 and F114 have no dedicated host: there is no AR aging report and no
+statement feature in the product. Aging *is* computed, in the client command
+centre's money pulse, so that is where the per-profile breakdown went — the
+bucketing moved to `shared/billingClients/billingProfileAr.ts` so the pure part
+is testable without a database, and the card shows the split only when
+`isSegmented` (D6). Statements got the primitive rather than a UI:
+`buildProfileStatement` produces one profile's opening balance, lines, and
+closing balance for a period, behind `getBillingProfileStatement`. A statement is
+a demand addressed to whoever pays it, so the profile is a required argument, not
+an optional filter.
+
 ### S8-D2 — the mixed-currency guard is per *invoice*, not per profile
 
 F098 says "per profile", but the guard's job is to stop one invoice carrying two

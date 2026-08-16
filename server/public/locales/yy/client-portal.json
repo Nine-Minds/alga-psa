@@ -426,7 +426,8 @@
       "recentInvoicesTitle": "55555",
       "billingHistoryTitle": "55555",
       "labels": {
-        "defaultTag": "55555"
+        "defaultTag": "55555",
+        "paysFor": "55555 {{profile}} 55555"
       },
       "actions": {
         "setDefault": "55555",
@@ -440,7 +441,8 @@
         "expiryMonth": "55555",
         "expiryYear": "55555",
         "cvv": "55555",
-        "setAsDefault": "55555"
+        "setAsDefault": "55555",
+        "billingProfile": "55555"
       },
       "history": {
         "period": "55555",

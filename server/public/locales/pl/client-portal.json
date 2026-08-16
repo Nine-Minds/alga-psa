@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Ostatnie faktury",
       "billingHistoryTitle": "Historia rozliczeń",
       "labels": {
-        "defaultTag": "(Domyślna)"
+        "defaultTag": "(Domyślna)",
+        "paysFor": "Płaci za {{profile}}"
       },
       "actions": {
         "setDefault": "Ustaw jako domyślną",
@@ -391,7 +392,8 @@
         "expiryMonth": "Miesiąc",
         "expiryYear": "Rok",
         "cvv": "CVV",
-        "setAsDefault": "Ustaw jako domyślną metodę płatności"
+        "setAsDefault": "Ustaw jako domyślną metodę płatności",
+        "billingProfile": "Płaci za"
       },
       "history": {
         "period": "Okres",

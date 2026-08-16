@@ -1,145 +1,1146 @@
 [
-  {"id":"F001","description":"client_billing_profiles table exists with PK (tenant, billing_profile_id), FK to clients, and name/is_default/is_active columns.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F002","description":"Exactly one default profile per client is enforced at the database layer: a partial unique index rejects a second default (at-most-one), and a deferred constraint trigger rejects any committed state where a client has profiles but no default (at-least-one).","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F003","description":"is_system_managed_default marks backfilled profiles, following the system-managed default contract precedent.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F004","description":"Backfill creates exactly one default profile for every existing client, named from the client.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F005","description":"Backfill is idempotent and safe to re-run without creating duplicate profiles.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F006","description":"client_contracts gains a nullable billing_profile_id column.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F007","description":"contract_lines gains a nullable billing_profile_id column.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F008","description":"client_locations gains a nullable default_billing_profile_id column.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F009","description":"tickets gains a nullable billing_profile_id column.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F010","description":"projects gains a nullable billing_profile_id column.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F011","description":"invoice_charges gains billing_profile_id and billing_profile_source columns.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F012","description":"time_entries gains a contract_line_source column.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F013","description":"client_billing_profiles is registered in tenant table metadata so Citus distributes it correctly.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F014","description":"client_billing_profiles is included in the tenant deletion activity so tenant teardown removes it.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F015","description":"All phase-1 migrations have working down migrations that restore the prior schema.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F016","description":"A pure resolveChargeProfile function implements the five-step resolution chain.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F017","description":"The resolver returns a source value identifying which chain step produced the profile.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F018","description":"The resolver always terminates at the client default profile and never returns null.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F019","description":"A contract-line profile assignment takes precedence over a work-item profile assignment.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F020","description":"A contract profile assignment takes precedence over a work-item profile assignment.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F021","description":"An explicit profile on the source record takes precedence over every other step.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F022","description":"The time-entry billing query selects the ticket billing profile from the existing tickets join.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F023","description":"The time-entry billing query selects the project billing profile via the existing project joins.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F024","description":"Time-based charge computation stamps the resolved billing profile and source on each charge.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F025","description":"Usage-based charge computation stamps the resolved billing profile and source on each charge.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F026","description":"Fixed charge computation stamps the resolved billing profile and source at all of its stamp sites.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F027","description":"Bucket charge computation stamps the resolved billing profile and source on each charge.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F028","description":"Recurring-quantity charge computation stamps the resolved billing profile and source on each charge.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F029","description":"Invoice charge persistence writes billing_profile_id and billing_profile_source to invoice_charges.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F030","description":"Project schedule charge persistence stamps a billing profile, closing a path that currently stamps no segment at all.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F031","description":"Manual and ad-hoc invoice items accept and persist an explicit billing profile.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F032","description":"The sales-order invoicing path stamps a billing profile on generated charges.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F033","description":"The invoice modification path stamps a billing profile on generated charges.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F034","description":"Invoice totals and tax figures are unchanged for clients with a single billing profile.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F035","description":"A billing profiles section on the client detail page lists the client's profiles.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F036","description":"A user can create a billing profile under a client.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F037","description":"A user can rename a billing profile.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F038","description":"A user can archive a billing profile, removing it from pickers without deleting history.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F039","description":"A user can change which profile is the client's default.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F040","description":"Archiving the client's default profile is rejected with a clear message.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F041","description":"Deleting a profile that has charges is rejected and archiving is offered instead.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F042","description":"A useClientBillingProfiles hook returns the client's profiles and an isSegmented flag.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F043","description":"All billing profile UI is hidden on every surface while a client has exactly one profile.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F044","description":"A billing profile picker is available on a contract.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F045","description":"A billing profile picker is available on a contract line.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F046","description":"A location can be given a default billing profile.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F047","description":"A billing profile picker is available on a ticket.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F048","description":"A billing profile picker is available on a project.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F049","description":"A ticket's billing profile soft-defaults at creation from the location default, then the client default.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F050","description":"Ticket creation is never blocked by a missing or ambiguous billing profile.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F051","description":"A billing profile assigned to a ticket is validated to belong to the ticket's client.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F052","description":"Profile assignment changes are recorded with actor and timestamp on the affected record.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F053","description":"A spend-by-profile report shows total spend per profile over a selected period.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F054","description":"A user can drill from a profile total into the individual charges behind it.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F055","description":"The report supports comparing two periods.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F056","description":"The report can be exported.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F057","description":"The report reads from invoice_charges directly with no separate rollup table.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F058","description":"The spend-by-profile report is not offered for single-profile clients.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F059","description":"Charges that resolved via the client-default fallback are distinguishable in the report.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F060","description":"Access to the spend-by-profile report is governed by an RBAC permission.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F061","description":"billing_profile_source records which chain step won, across explicit, contract line, contract, work item, and client default.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F062","description":"contract_line_source records how a time entry's contract line was chosen, including the unresolved case.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F063","description":"contract_line_source is set when a time entry is created or updated.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F064","description":"contract_line_source is set when the generation-time reconcile path assigns a contract line.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F065","description":"An attribution inspector on an invoice line explains why the charge was attributed to its profile.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F066","description":"An attribution inspector on a time entry explains how its contract line was chosen.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F067","description":"Each source value renders a plain-language explanation sentence rather than a raw enum.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F068","description":"A queue lists time entries whose contract line could not be resolved because a service matched more than one line.","implemented":true,"prdRefs":["Problem"]},
-  {"id":"F069","description":"A user can resolve a queued entry by assigning a contract line to it.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F070","description":"The inspector states the contract-line granularity limitation for usage, bucket, fixed, and project-schedule charges.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F071","description":"The client portal shows organization-wide spend across all of a client's profiles.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F072","description":"A segment selector appears in the portal when the client has more than one profile.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F073","description":"A portal user can drill into spend for a single profile.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F074","description":"A portal user can view invoices filtered to a single profile.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F075","description":"A portal user can view tickets filtered to a single profile.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F076","description":"A portal user can view services and contracts filtered to a single profile.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F077","description":"The portal is visually and functionally identical to today for single-profile clients.","implemented":true,"prdRefs":["UX / UI Notes"]},
-  {"id":"F078","description":"Portal segment views respect existing client portal RBAC and tenant scoping.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F079","description":"client_billing_profiles gains a bills_separately flag defaulting to false.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F080","description":"A profile can carry its own bill-to name.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F081","description":"A profile can carry its own bill-to location reference.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F082","description":"A profile can carry its own billing contact and invoice recipient.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F083","description":"A billing profile can carry its own tax exemption status and exemption certificate, falling back to the client when unset.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F084","description":"A profile can carry its own PO number and PO-required setting.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F085","description":"A profile can carry its own invoice delivery preferences.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F086","description":"A profile can carry its own billing cycle frequency overriding the client's.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F087","description":"Every profile-level billing field falls back to the client value when unset.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F088","description":"A UI lets a user edit a profile's bill-to identity, tax, PO, and delivery settings.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F089","description":"The tax region resolution chain is unchanged - service region, then contract-line location region, then client default - and a billing profile does not participate in it.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F090","description":"client_billing_cycles gains a non-null billing_profile_id column.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F091","description":"Existing billing cycle rows are backfilled to their client's default profile.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F092","description":"A unique constraint covers tenant, client, billing profile, and period start.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F093","description":"Billing cycle creation generates one cycle per separately-billing profile per period.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F094","description":"Invoice generation scopes charges to the profile of the cycle being generated.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F095","description":"A generated invoice reads bill-to details from its profile, falling back to the client.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F096","description":"invoices gains a billing_profile_id column identifying the profile it bills.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F097","description":"A profile's own billing cycle frequency is honored when generating its cycles.","implemented":true,"prdRefs":["Goals"]},
-  {"id":"F098","description":"The mixed-currency guard operates per profile rather than per client.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F099","description":"All non-test consumers of client_billing_cycles are updated for the new profile dimension.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F100","description":"A shared test fixture helper supplies a default billing profile so existing billing tests need only mechanical changes.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F101","description":"Per-profile cycle generation is gated behind a per-tenant feature flag.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F102","description":"payment_methods gains a non-null billing_profile_id column.","implemented":false,"prdRefs":["Goals"]},
-  {"id":"F103","description":"Existing payment methods are backfilled to their client's default profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F104","description":"Default payment method uniqueness is scoped to tenant, client, and profile.","implemented":false,"prdRefs":["Goals"]},
-  {"id":"F105","description":"Payment method management UI is scoped to a billing profile.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F106","description":"Payment collection for an invoice uses the payment method of that invoice's profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F107","description":"transactions gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F108","description":"credit_tracking gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F109","description":"credit_allocations gains a billing_profile_id column.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F110","description":"Existing AR rows are backfilled to their client's default profile.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F111","description":"Credit application is constrained to invoices belonging to the issuing profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F112","description":"The derived credit balance query is profile-aware rather than client-aware.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F113","description":"Aging is computed and displayed per billing profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F114","description":"Statements are produced per billing profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F115","description":"Client-level AR views sum balances, aging, and credits across the client's profiles.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F116","description":"External entity mappings can address a billing profile as the Alga-side entity.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F117","description":"A client maps to a QuickBooks parent customer.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F118","description":"A separately-billing profile maps to a QuickBooks sub-customer referencing the client's parent customer.","implemented":false,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F119","description":"A single-profile client continues to map to a plain QuickBooks customer with no sub-customer.","implemented":false,"prdRefs":["Risks, Rollout, and Migration"]},
-  {"id":"F120","description":"Customer sync creates and updates sub-customers for separately-billing profiles.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F121","description":"Invoice export targets the sub-customer corresponding to the invoice's profile.","implemented":false,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F122","description":"The customer mapping UI displays and allows editing profile-level mappings.","implemented":false,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F123","description":"A portal user's permitted billing profiles can be stored and defaults to all profiles.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F124","description":"A restricted portal user sees only their permitted segments in every portal view.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F125","description":"A restricted portal user's organization-wide totals reflect only their permitted segments.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F126","description":"An admin UI sets which profiles a portal user may see.","implemented":true,"prdRefs":["Users and Primary Flows"]},
-  {"id":"F127","description":"Profile restriction is enforced server-side on portal data queries, not only in the UI.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
-  {"id":"F128","description":"A golden-output baseline harness captures invoice totals, line amounts, tax figures, credit application, portal-visible output (portal invoice list and rendering view model), and accounting-export output including the customer/invoice identity fields the export maps (invoice number, client id, client name), and can diff a later run against it byte-for-byte. Baseline captured from the pre-S1 commit (parent of the S1 commit); provenance is independently re-derivable via baseline.provenance.json (pre-S1 SHA, tree hash, baseline sha256) plus verify-baseline-provenance.sh, which rebuilds a pre-S1 worktree, re-runs the capture, and byte-diffs against the committed baseline (T013).","implemented":true,"prdRefs":["Backward-compatibility gate (T013) \u2014 runs after every slice"]},
-  {"id":"F129","description":"A billing profile can carry its own tax ID number, falling back to the client when unset.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F130","description":"client_tax_settings is re-keyed to (tenant, client_id, billing_profile_id) so reverse-charge applicability is per profile, with existing rows backfilled to the client's default profile.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F131","description":"Charge tax context is built per resolved billing profile rather than per client, so a single invoice can carry both exempt and non-exempt lines.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F132","description":"Default tax settings provisioning creates a row for the resolved billing profile rather than only for the client.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F133","description":"Contract-line disambiguation accepts the resolved billing profile and, when more than one line is eligible, prefers the line whose contract belongs to that profile.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F134","description":"Profile-aware contract-line narrowing is applied when a time entry is created or updated.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F135","description":"Profile-aware contract-line narrowing is applied on the generation-time reconcile path.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F136","description":"Profile-aware narrowing that still leaves more than one candidate reports ambiguity rather than picking arbitrarily.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F137","description":"The existing unresolved rows in the billing dashboard show why an item is unresolved, distinguishing ambiguous from no-contract-covers-this-service, a distinction the engine computes today but only writes to logs.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F138","description":"An unresolved row offers inline remediation - assign a contract line - after which the item bills at contract pricing rather than catalog pricing.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F139","description":"An ambiguous item is never silently billed at service catalog default rate; falling back to catalog pricing becomes an explicit per-item choice by the biller.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F140","description":"An item with no eligible contract line continues to bill at service catalog default rate and is labelled as not covered by any contract.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F141","description":"Unresolved usage records receive the same reason surfacing, remediation, and explicit-fallback treatment as time entries.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F142","description":"The unresolved-item UI states that catalog pricing ignores contract rate, rounding, minimums, overtime, and pricing schedules.","implemented":true,"prdRefs":["Unresolved charge handling (settled)"]},
-  {"id":"F143","description":"Every client created after the S1 backfill also gets exactly one system-managed default billing profile: provisioned eagerly at each client-creation path and lazily by the resolution chain's terminal step, so no creation path can leave a client unattributable.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]}
+  {
+    "id": "F001",
+    "description": "client_billing_profiles table exists with PK (tenant, billing_profile_id), FK to clients, and name/is_default/is_active columns.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Exactly one default profile per client is enforced at the database layer: a partial unique index rejects a second default (at-most-one), and a deferred constraint trigger rejects any committed state where a client has profiles but no default (at-least-one).",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "is_system_managed_default marks backfilled profiles, following the system-managed default contract precedent.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Backfill creates exactly one default profile for every existing client, named from the client.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Backfill is idempotent and safe to re-run without creating duplicate profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "client_contracts gains a nullable billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "contract_lines gains a nullable billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "client_locations gains a nullable default_billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "tickets gains a nullable billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "projects gains a nullable billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "invoice_charges gains billing_profile_id and billing_profile_source columns.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "time_entries gains a contract_line_source column.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "client_billing_profiles is registered in tenant table metadata so Citus distributes it correctly.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "client_billing_profiles is included in the tenant deletion activity so tenant teardown removes it.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "All phase-1 migrations have working down migrations that restore the prior schema.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "A pure resolveChargeProfile function implements the five-step resolution chain.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "The resolver returns a source value identifying which chain step produced the profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "The resolver always terminates at the client default profile and never returns null.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "A contract-line profile assignment takes precedence over a work-item profile assignment.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "A contract profile assignment takes precedence over a work-item profile assignment.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "An explicit profile on the source record takes precedence over every other step.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "The time-entry billing query selects the ticket billing profile from the existing tickets join.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The time-entry billing query selects the project billing profile via the existing project joins.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Time-based charge computation stamps the resolved billing profile and source on each charge.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Usage-based charge computation stamps the resolved billing profile and source on each charge.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Fixed charge computation stamps the resolved billing profile and source at all of its stamp sites.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Bucket charge computation stamps the resolved billing profile and source on each charge.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Recurring-quantity charge computation stamps the resolved billing profile and source on each charge.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Invoice charge persistence writes billing_profile_id and billing_profile_source to invoice_charges.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Project schedule charge persistence stamps a billing profile, closing a path that currently stamps no segment at all.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Manual and ad-hoc invoice items accept and persist an explicit billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "The sales-order invoicing path stamps a billing profile on generated charges.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "The invoice modification path stamps a billing profile on generated charges.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Invoice totals and tax figures are unchanged for clients with a single billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "A billing profiles section on the client detail page lists the client's profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "A user can create a billing profile under a client.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "A user can rename a billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "A user can archive a billing profile, removing it from pickers without deleting history.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "A user can change which profile is the client's default.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Archiving the client's default profile is rejected with a clear message.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Deleting a profile that has charges is rejected and archiving is offered instead.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "A useClientBillingProfiles hook returns the client's profiles and an isSegmented flag.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "All billing profile UI is hidden on every surface while a client has exactly one profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "A billing profile picker is available on a contract.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "A billing profile picker is available on a contract line.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "A location can be given a default billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "A billing profile picker is available on a ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "A billing profile picker is available on a project.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "A ticket's billing profile soft-defaults at creation from the location default, then the client default.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Ticket creation is never blocked by a missing or ambiguous billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "A billing profile assigned to a ticket is validated to belong to the ticket's client.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Profile assignment changes are recorded with actor and timestamp on the affected record.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "A spend-by-profile report shows total spend per profile over a selected period.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "A user can drill from a profile total into the individual charges behind it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "The report supports comparing two periods.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "The report can be exported.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "The report reads from invoice_charges directly with no separate rollup table.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "The spend-by-profile report is not offered for single-profile clients.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Charges that resolved via the client-default fallback are distinguishable in the report.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Access to the spend-by-profile report is governed by an RBAC permission.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "billing_profile_source records which chain step won, across explicit, contract line, contract, work item, and client default.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "contract_line_source records how a time entry's contract line was chosen, including the unresolved case.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "contract_line_source is set when a time entry is created or updated.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "contract_line_source is set when the generation-time reconcile path assigns a contract line.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "An attribution inspector on an invoice line explains why the charge was attributed to its profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "An attribution inspector on a time entry explains how its contract line was chosen.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Each source value renders a plain-language explanation sentence rather than a raw enum.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "A queue lists time entries whose contract line could not be resolved because a service matched more than one line.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "A user can resolve a queued entry by assigning a contract line to it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "The inspector states the contract-line granularity limitation for usage, bucket, fixed, and project-schedule charges.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "The client portal shows organization-wide spend across all of a client's profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "A segment selector appears in the portal when the client has more than one profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "A portal user can drill into spend for a single profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "A portal user can view invoices filtered to a single profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "A portal user can view tickets filtered to a single profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "A portal user can view services and contracts filtered to a single profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "The portal is visually and functionally identical to today for single-profile clients.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Portal segment views respect existing client portal RBAC and tenant scoping.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "client_billing_profiles gains a bills_separately flag defaulting to false.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "A profile can carry its own bill-to name.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "A profile can carry its own bill-to location reference.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "A profile can carry its own billing contact and invoice recipient.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "A billing profile can carry its own tax exemption status and exemption certificate, falling back to the client when unset.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "A profile can carry its own PO number and PO-required setting.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "A profile can carry its own invoice delivery preferences.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "A profile can carry its own billing cycle frequency overriding the client's.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Every profile-level billing field falls back to the client value when unset.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "A UI lets a user edit a profile's bill-to identity, tax, PO, and delivery settings.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "The tax region resolution chain is unchanged - service region, then contract-line location region, then client default - and a billing profile does not participate in it.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "client_billing_cycles gains a non-null billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Existing billing cycle rows are backfilled to their client's default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "A unique constraint covers tenant, client, billing profile, and period start.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Billing cycle creation generates one cycle per separately-billing profile per period.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Invoice generation scopes charges to the profile of the cycle being generated.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "A generated invoice reads bill-to details from its profile, falling back to the client.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "invoices gains a billing_profile_id column identifying the profile it bills.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "A profile's own billing cycle frequency is honored when generating its cycles.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "The mixed-currency guard operates per profile rather than per client.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "All non-test consumers of client_billing_cycles are updated for the new profile dimension.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "A shared test fixture helper supplies a default billing profile so existing billing tests need only mechanical changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Per-profile cycle generation is gated behind a per-tenant feature flag.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "payment_methods gains a non-null billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Existing payment methods are backfilled to their client's default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Default payment method uniqueness is scoped to tenant, client, and profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Payment method management UI is scoped to a billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Payment collection for an invoice uses the payment method of that invoice's profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "transactions gains a billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "credit_tracking gains a billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "credit_allocations gains a billing_profile_id column.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Existing AR rows are backfilled to their client's default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Credit application is constrained to invoices belonging to the issuing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "The derived credit balance query is profile-aware rather than client-aware.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Aging is computed and displayed per billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Statements are produced per billing profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Client-level AR views sum balances, aging, and credits across the client's profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "External entity mappings can address a billing profile as the Alga-side entity.",
+    "implemented": false,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "A client maps to a QuickBooks parent customer.",
+    "implemented": false,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "A separately-billing profile maps to a QuickBooks sub-customer referencing the client's parent customer.",
+    "implemented": false,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "A single-profile client continues to map to a plain QuickBooks customer with no sub-customer.",
+    "implemented": false,
+    "prdRefs": [
+      "Risks, Rollout, and Migration"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Customer sync creates and updates sub-customers for separately-billing profiles.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Invoice export targets the sub-customer corresponding to the invoice's profile.",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "The customer mapping UI displays and allows editing profile-level mappings.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "A portal user's permitted billing profiles can be stored and defaults to all profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "A restricted portal user sees only their permitted segments in every portal view.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "A restricted portal user's organization-wide totals reflect only their permitted segments.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "An admin UI sets which profiles a portal user may see.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Profile restriction is enforced server-side on portal data queries, not only in the UI.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "A golden-output baseline harness captures invoice totals, line amounts, tax figures, credit application, portal-visible output (portal invoice list and rendering view model), and accounting-export output including the customer/invoice identity fields the export maps (invoice number, client id, client name), and can diff a later run against it byte-for-byte. Baseline captured from the pre-S1 commit (parent of the S1 commit); provenance is independently re-derivable via baseline.provenance.json (pre-S1 SHA, tree hash, baseline sha256) plus verify-baseline-provenance.sh, which rebuilds a pre-S1 worktree, re-runs the capture, and byte-diffs against the committed baseline (T013).",
+    "implemented": true,
+    "prdRefs": [
+      "Backward-compatibility gate (T013) — runs after every slice"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "A billing profile can carry its own tax ID number, falling back to the client when unset.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "client_tax_settings is re-keyed to (tenant, client_id, billing_profile_id) so reverse-charge applicability is per profile, with existing rows backfilled to the client's default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Charge tax context is built per resolved billing profile rather than per client, so a single invoice can carry both exempt and non-exempt lines.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Default tax settings provisioning creates a row for the resolved billing profile rather than only for the client.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Contract-line disambiguation accepts the resolved billing profile and, when more than one line is eligible, prefers the line whose contract belongs to that profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Profile-aware contract-line narrowing is applied when a time entry is created or updated.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Profile-aware contract-line narrowing is applied on the generation-time reconcile path.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Profile-aware narrowing that still leaves more than one candidate reports ambiguity rather than picking arbitrarily.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / Integration Notes"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "The existing unresolved rows in the billing dashboard show why an item is unresolved, distinguishing ambiguous from no-contract-covers-this-service, a distinction the engine computes today but only writes to logs.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "An unresolved row offers inline remediation - assign a contract line - after which the item bills at contract pricing rather than catalog pricing.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "An ambiguous item is never silently billed at service catalog default rate; falling back to catalog pricing becomes an explicit per-item choice by the biller.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "An item with no eligible contract line continues to bill at service catalog default rate and is labelled as not covered by any contract.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Unresolved usage records receive the same reason surfacing, remediation, and explicit-fallback treatment as time entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "The unresolved-item UI states that catalog pricing ignores contract rate, rounding, minimums, overtime, and pricing schedules.",
+    "implemented": true,
+    "prdRefs": [
+      "Unresolved charge handling (settled)"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Every client created after the S1 backfill also gets exactly one system-managed default billing profile: provisioned eagerly at each client-creation path and lazily by the resolution chain's terminal step, so no creation path can leave a client unattributable.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria / Definition of Done"
+    ]
+  }
 ]

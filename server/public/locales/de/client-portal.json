@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Aktuelle Rechnungen",
       "billingHistoryTitle": "Abrechnungshistorie",
       "labels": {
-        "defaultTag": "(Standard)"
+        "defaultTag": "(Standard)",
+        "paysFor": "Zahlt für {{profile}}"
       },
       "actions": {
         "setDefault": "Als Standard festlegen",
@@ -391,7 +392,8 @@
         "expiryMonth": "Monat",
         "expiryYear": "Jahr",
         "cvv": "CVV",
-        "setAsDefault": "Als Standard-Zahlungsmethode festlegen"
+        "setAsDefault": "Als Standard-Zahlungsmethode festlegen",
+        "billingProfile": "Zahlt für"
       },
       "history": {
         "period": "Zeitraum",
