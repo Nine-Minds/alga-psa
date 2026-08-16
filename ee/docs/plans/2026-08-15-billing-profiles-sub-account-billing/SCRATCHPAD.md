@@ -304,6 +304,39 @@ closing balance for a period, behind `getBillingProfileStatement`. A statement i
 a demand addressed to whoever pays it, so the profile is a required argument, not
 an optional filter.
 
+### Worktrees sharing one test database made two baselines worthless
+
+Two attempts at an infrastructure-suite baseline had to be thrown away before
+the third was trustworthy. Both failures are worth recording, because both look
+like product defects and neither is.
+
+**Attempt 1 — a worktree with symlinked `node_modules`.** Checking out the
+pre-S1 commit into a scratch worktree and symlinking this one's `node_modules`
+seemed cheap. It is not sound: Vite resolves realpaths and shares its transform
+cache through that directory, so the "baseline" run executed *this* branch's
+`TestContext` — the one that provisions billing profiles — against a schema with
+no `client_billing_profiles` table. Fourteen tests were skipped rather than run,
+and the diff duly reported them as new failures.
+
+**Attempt 2 — the shared `test_database`.** Every `TestContext` suite drops,
+recreates and re-migrates that database on startup, and a sibling worktree
+(`feature-credit-drawdown-policy-controls`) was doing the same thing at the same
+time. Seven suites died with `Connection terminated unexpectedly` before running
+a single test. `TEST_DB_NAME` now overrides the database name per checkout,
+which makes the collision impossible; the default is unchanged.
+
+**Attempt 3, the one that counts.** Same worktree, same `node_modules`, same
+isolated database, `git checkout` between the pre-S1 commit and the branch tip,
+with the one-line `TEST_DB_NAME` change applied by hand on the pre-S1 side so
+both runs get their own database. Result: **75 failures before, the same 75
+after, byte-identical test lists** — no regressions, and every one of those 75 is
+pre-existing debt (fabricated `usageId: uuidv4()` values with no `usage_tracking`
+row, a `clients.credit_balance` column dropped long ago, an rbac mock pointed at
+a module path the action no longer imports).
+
+The general lesson: a baseline is only worth what its isolation is worth. Two
+cheap shortcuts produced confident, wrong answers.
+
 ### The lazy provisioning net deadlocks inside a long-lived transaction
 
 `src/test/infrastructure/billing` turned up a failure mode the other suites
