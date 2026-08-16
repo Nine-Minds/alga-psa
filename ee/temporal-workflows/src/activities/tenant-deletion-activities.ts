@@ -468,7 +468,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing profiles (billing-profiles S1). Referenced by client_contracts,
   // contract_lines, client_locations, tickets, projects and invoice_charges
   // (all deleted above), and references clients — so it must go after all of
-  // those and before clients.
+  // those and before clients. The portal access grants reference profiles, so
+  // they go first (S12).
+  'client_portal_user_billing_profiles',
   'client_billing_profiles',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)

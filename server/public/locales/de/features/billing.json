@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "Übersicht",
     "invoices": "Rechnungen",
-    "quotes": "Angebote"
+    "quotes": "Angebote",
+    "segments": "Nach Segment"
   },
   "currentContractLine": "Aktueller Tarif",
   "nextInvoice": "Nächste Rechnung",

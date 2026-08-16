@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "11111",
     "invoices": "11111",
-    "quotes": "11111"
+    "quotes": "11111",
+    "segments": "11111"
   },
   "currentContractLine": "11111",
   "nextInvoice": "11111",

@@ -1644,5 +1644,13 @@
     "archived": "Zarchiwizowano „{{name}}”",
     "deleted": "Usunięto „{{name}}”",
     "restored": "Przywrócono „{{name}}”"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmenty rozliczeniowe",
+    "restrictedHint": "Ten użytkownik widzi tylko segmenty wybrane poniżej.",
+    "allHint": "Ten użytkownik widzi wszystkie segmenty rozliczeniowe, także dodane później.",
+    "save": "Zapisz dostęp do segmentów",
+    "saved": "Zaktualizowano dostęp do segmentów portalu",
+    "emptyWarning": "Wybierz co najmniej jeden segment albo wyłącz ograniczenie, aby pokazać wszystkie."
   }
 }

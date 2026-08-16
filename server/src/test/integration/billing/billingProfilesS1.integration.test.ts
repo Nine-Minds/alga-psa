@@ -18,6 +18,13 @@ const createMigration = require(
 const assignmentMigration = require(
   path.join(MIGRATION_DIR, '20260816010000_add_billing_profile_assignment_columns.cjs')
 );
+// Later slices add tables that reference client_billing_profiles. A real
+// rollback runs migrations down in reverse order, so this test has to as well
+// — otherwise it would be asserting that S1 can be dropped out from under its
+// own dependants, which no rollback ever does.
+const dependentMigrationsNewestFirst = [
+  '20260821000000_create_portal_user_billing_profile_access.cjs',
+].map((file) => require(path.join(MIGRATION_DIR, file)));
 
 // Column matrix for F006–F012 (the assignment columns S1 adds).
 const ASSIGNMENT_COLUMNS: Array<[string, string]> = [
@@ -195,6 +202,9 @@ describe('billing profiles S1 — schema + default-profile backfill (T006–T009
     }
     await expect(db.schema.hasTable('client_billing_profiles')).resolves.toBe(true);
 
+    for (const migration of dependentMigrationsNewestFirst) {
+      await migration.down(db);
+    }
     await assignmentMigration.down(db);
     await createMigration.down(db);
 
@@ -215,6 +225,9 @@ describe('billing profiles S1 — schema + default-profile backfill (T006–T009
     // Restore for the rest of the suite (and for T008's own re-apply invariant).
     await createMigration.up(db);
     await assignmentMigration.up(db);
+    for (const migration of [...dependentMigrationsNewestFirst].reverse()) {
+      await migration.up(db);
+    }
     await expect(db.schema.hasTable('client_billing_profiles')).resolves.toBe(true);
     for (const [tbl, col] of ASSIGNMENT_COLUMNS) {
       await expect(db.schema.hasColumn(tbl, col)).resolves.toBe(true);

@@ -895,6 +895,15 @@
         "backToBilling": "Wróć do rozliczeń",
         "viewInvoice": "Wyświetl fakturę"
       }
+    },
+    "segments": {
+      "allSegments": "Cała organizacja",
+      "organizationTotalLabel": "Suma dla Twojej organizacji",
+      "periodLabel": "{{start}} – {{end}}",
+      "selectorLabel": "Pokaż",
+      "empty": "Brak rozliczonych opłat w tym okresie.",
+      "chargesTitle": "Opłaty w tym segmencie",
+      "noCharges": "Brak opłat w tym okresie."
     }
   },
   "assets": {

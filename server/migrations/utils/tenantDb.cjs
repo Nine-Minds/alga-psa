@@ -59,6 +59,7 @@ const TENANT_TABLE_METADATA = {
   client_billing_cycles: { scope: 'tenant' },
   client_billing_plans: { scope: 'tenant' },
   client_billing_profiles: { scope: 'tenant' },
+  client_portal_user_billing_profiles: { scope: 'tenant' },
   client_billing_settings: { scope: 'tenant' },
   client_contracts: { scope: 'tenant' },
   client_contract_lines: { scope: 'tenant' },

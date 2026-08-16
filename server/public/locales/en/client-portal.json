@@ -893,6 +893,15 @@
         "backToBilling": "Back to Billing",
         "viewInvoice": "View Invoice"
       }
+    },
+    "segments": {
+      "allSegments": "Whole organisation",
+      "organizationTotalLabel": "Total across your organisation",
+      "periodLabel": "{{start}} to {{end}}",
+      "selectorLabel": "Show",
+      "empty": "No billed charges in this period.",
+      "chargesTitle": "Charges in this segment",
+      "noCharges": "No charges in this period."
     }
   },
   "assets": {

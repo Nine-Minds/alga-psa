@@ -893,6 +893,15 @@
         "backToBilling": "Terug naar facturatie",
         "viewInvoice": "Factuur bekijken"
       }
+    },
+    "segments": {
+      "allSegments": "Hele organisatie",
+      "organizationTotalLabel": "Totaal van uw organisatie",
+      "periodLabel": "{{start}} tot {{end}}",
+      "selectorLabel": "Tonen",
+      "empty": "Geen gefactureerde kosten in deze periode.",
+      "chargesTitle": "Kosten in dit segment",
+      "noCharges": "Geen kosten in deze periode."
     }
   },
   "assets": {

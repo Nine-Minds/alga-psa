@@ -49,6 +49,8 @@ const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
 
 // Always load the overview tab eagerly as it's the default tab
 import BillingOverviewTab from './BillingOverviewTab';
+import { getPortalBillingProfiles } from '../../actions/client-portal-actions/client-billing-segments';
+import BillingSegmentsTab from './BillingSegmentsTab';
 
 // Lazy load other tabs
 const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
@@ -153,6 +155,9 @@ export default function BillingOverview() {
   const [isUsageMetricsLoading, setIsUsageMetricsLoading] = useState(false);
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
+  // Segment count drives the D6 invisibility rule on the portal (F072/F077): a
+  // client with one billing profile sees exactly the portal it saw before.
+  const [segmentCount, setSegmentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -250,6 +255,18 @@ export default function BillingOverview() {
           if (!isMounted) return;
           console.error('User does not have access to invoices:', error);
           setHasInvoiceAccess(false);
+        }
+
+        // How many billing profiles this viewer may see. Zero or one means the
+        // client is not segmented (or this user is restricted to one segment),
+        // and no segment UI is offered at all.
+        try {
+          const segments = await getPortalBillingProfiles();
+          if (isMounted) {
+            setSegmentCount(Array.isArray(segments) ? segments.length : 0);
+          }
+        } catch {
+          if (isMounted) setSegmentCount(0);
         }
         
         // Load enhanced bucket usage data
@@ -497,6 +514,21 @@ export default function BillingOverview() {
       });
     }
 
+    // Segments tab — only once the client actually has more than one billing
+    // profile. One profile means one segment, and a breakdown of one row is
+    // not information (F077).
+    if (hasInvoiceAccess && segmentCount > 1) {
+      tabsArray.push({
+        id: 'segments',
+        label: t('tabs.segments', { defaultValue: 'By segment' }),
+        content: (
+          <div id="segments-tab">
+            <BillingSegmentsTab formatCurrency={formatCurrency} formatDate={formatDate} />
+          </div>
+        ),
+      });
+    }
+
     if (SHOW_USAGE_FEATURES) {
       // Add Hours by Service tab
       tabsArray.push({
@@ -543,6 +575,7 @@ export default function BillingOverview() {
     isBucketHistoryLoading,
     isLoading,
     hasInvoiceAccess,
+    segmentCount,
     currentPage,
     hoursByService,
     isHoursLoading,

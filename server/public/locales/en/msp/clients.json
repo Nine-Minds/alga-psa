@@ -1594,5 +1594,13 @@
     "archived": "\"{{name}}\" archived",
     "deleted": "\"{{name}}\" deleted",
     "restored": "\"{{name}}\" restored"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Billing segments",
+    "restrictedHint": "This user sees only the segments selected below.",
+    "allHint": "This user sees every billing segment, including ones added later.",
+    "save": "Save segment access",
+    "saved": "Portal segment access updated",
+    "emptyWarning": "Select at least one segment, or turn the restriction off to show all of them."
   }
 }

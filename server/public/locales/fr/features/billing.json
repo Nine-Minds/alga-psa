@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "Aperçu",
     "invoices": "Factures",
-    "quotes": "Devis"
+    "quotes": "Devis",
+    "segments": "Par segment"
   },
   "currentContractLine": "Forfait actuel",
   "nextInvoice": "Prochaine facture",

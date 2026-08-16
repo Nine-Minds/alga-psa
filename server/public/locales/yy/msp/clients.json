@@ -1594,5 +1594,13 @@
     "archived": "55555 {{name}} 55555",
     "deleted": "55555 {{name}} 55555",
     "restored": "55555 {{name}} 55555"
+  },
+  "portalBillingProfileAccess": {
+    "label": "55555",
+    "restrictedHint": "55555",
+    "allHint": "55555",
+    "save": "55555",
+    "saved": "55555",
+    "emptyWarning": "55555"
   }
 }

@@ -1594,5 +1594,13 @@
     "archived": "„{{name}}“ archiviert",
     "deleted": "„{{name}}“ gelöscht",
     "restored": "„{{name}}“ wiederhergestellt"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Abrechnungssegmente",
+    "restrictedHint": "Diese Person sieht nur die unten ausgewählten Segmente.",
+    "allHint": "Diese Person sieht alle Abrechnungssegmente, auch später hinzugefügte.",
+    "save": "Segmentzugriff speichern",
+    "saved": "Portal-Segmentzugriff aktualisiert",
+    "emptyWarning": "Wählen Sie mindestens ein Segment aus oder deaktivieren Sie die Einschränkung, um alle anzuzeigen."
   }
 }

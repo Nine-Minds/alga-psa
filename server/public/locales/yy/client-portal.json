@@ -893,6 +893,15 @@
         "backToBilling": "55555",
         "viewInvoice": "55555"
       }
+    },
+    "segments": {
+      "allSegments": "55555",
+      "organizationTotalLabel": "55555",
+      "periodLabel": "55555 {{start}} 55555 {{end}} 55555",
+      "selectorLabel": "55555",
+      "empty": "55555",
+      "chargesTitle": "55555",
+      "noCharges": "55555"
     }
   },
   "assets": {

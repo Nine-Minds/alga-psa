@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "Panoramica",
     "invoices": "Fatture",
-    "quotes": "Preventivi"
+    "quotes": "Preventivi",
+    "segments": "Per segmento"
   },
   "currentContractLine": "Linea di contratto attuale",
   "nextInvoice": "Prossima fattura",

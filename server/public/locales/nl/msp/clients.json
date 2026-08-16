@@ -1594,5 +1594,13 @@
     "archived": "“{{name}}” gearchiveerd",
     "deleted": "“{{name}}” verwijderd",
     "restored": "“{{name}}” hersteld"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Facturatiesegmenten",
+    "restrictedHint": "Deze gebruiker ziet alleen de hieronder geselecteerde segmenten.",
+    "allHint": "Deze gebruiker ziet alle facturatiesegmenten, ook later toegevoegde.",
+    "save": "Segmenttoegang opslaan",
+    "saved": "Portaalsegmenttoegang bijgewerkt",
+    "emptyWarning": "Selecteer minstens één segment, of zet de beperking uit om ze allemaal te tonen."
   }
 }

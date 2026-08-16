@@ -1594,5 +1594,13 @@
     "archived": "« {{name}} » archivé",
     "deleted": "« {{name}} » supprimé",
     "restored": "« {{name}} » restauré"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segments de facturation",
+    "restrictedHint": "Cet utilisateur ne voit que les segments sélectionnés ci-dessous.",
+    "allHint": "Cet utilisateur voit tous les segments de facturation, y compris ceux ajoutés plus tard.",
+    "save": "Enregistrer l’accès aux segments",
+    "saved": "Accès aux segments du portail mis à jour",
+    "emptyWarning": "Sélectionnez au moins un segment, ou désactivez la restriction pour tous les afficher."
   }
 }

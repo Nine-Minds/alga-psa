@@ -893,6 +893,15 @@
         "backToBilling": "Torna alla fatturazione",
         "viewInvoice": "Visualizza fattura"
       }
+    },
+    "segments": {
+      "allSegments": "Intera organizzazione",
+      "organizationTotalLabel": "Totale della tua organizzazione",
+      "periodLabel": "dal {{start}} al {{end}}",
+      "selectorLabel": "Mostra",
+      "empty": "Nessun addebito fatturato in questo periodo.",
+      "chargesTitle": "Addebiti di questo segmento",
+      "noCharges": "Nessun addebito in questo periodo."
     }
   },
   "assets": {

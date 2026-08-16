@@ -893,6 +893,15 @@
         "backToBilling": "Zurück zur Abrechnung",
         "viewInvoice": "Rechnung anzeigen"
       }
+    },
+    "segments": {
+      "allSegments": "Gesamte Organisation",
+      "organizationTotalLabel": "Gesamtsumme Ihrer Organisation",
+      "periodLabel": "{{start}} bis {{end}}",
+      "selectorLabel": "Anzeigen",
+      "empty": "Keine abgerechneten Buchungen in diesem Zeitraum.",
+      "chargesTitle": "Buchungen in diesem Segment",
+      "noCharges": "Keine Buchungen in diesem Zeitraum."
     }
   },
   "assets": {

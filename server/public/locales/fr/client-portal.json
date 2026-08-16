@@ -893,6 +893,15 @@
         "backToBilling": "Retour à la facturation",
         "viewInvoice": "Voir la facture"
       }
+    },
+    "segments": {
+      "allSegments": "Toute l’organisation",
+      "organizationTotalLabel": "Total de votre organisation",
+      "periodLabel": "du {{start}} au {{end}}",
+      "selectorLabel": "Afficher",
+      "empty": "Aucune charge facturée sur cette période.",
+      "chargesTitle": "Charges de ce segment",
+      "noCharges": "Aucune charge sur cette période."
     }
   },
   "assets": {

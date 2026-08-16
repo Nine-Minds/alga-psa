@@ -1594,5 +1594,13 @@
     "archived": "11111 {{name}} 11111",
     "deleted": "11111 {{name}} 11111",
     "restored": "11111 {{name}} 11111"
+  },
+  "portalBillingProfileAccess": {
+    "label": "11111",
+    "restrictedHint": "11111",
+    "allHint": "11111",
+    "save": "11111",
+    "saved": "11111",
+    "emptyWarning": "11111"
   }
 }

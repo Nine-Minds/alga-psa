@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "Overview",
     "invoices": "Invoices",
-    "quotes": "Quotes"
+    "quotes": "Quotes",
+    "segments": "By segment"
   },
   "currentContractLine": "Current Contract Line",
   "nextInvoice": "Next Invoice",

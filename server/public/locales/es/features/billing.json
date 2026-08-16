@@ -4,7 +4,8 @@
   "tabs": {
     "overview": "Resumen",
     "invoices": "Facturas",
-    "quotes": "Cotizaciones"
+    "quotes": "Cotizaciones",
+    "segments": "Por segmento"
   },
   "currentContractLine": "Línea de contrato actual",
   "nextInvoice": "Próxima factura",
