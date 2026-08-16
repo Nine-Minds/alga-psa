@@ -245,6 +245,26 @@ const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
  * catalog pricing (F139). Carries the offending records so the caller can turn
  * it into an actionable message rather than a generic failure.
  */
+/**
+ * Whether a contract-line selection may be written back at generation time.
+ *
+ * Reconcile has always accepted exactly one thing: a single eligible line.
+ * Profile narrowing joins it (F135), because parallel per-profile contracts
+ * carrying the same service are the multi-candidate case this feature creates
+ * and the work item's profile genuinely answers it.
+ *
+ * The bucket-overlay tie-break does **not** join it. That rule belongs to
+ * time-entry *creation*, where a person is choosing a line and an overlay is a
+ * reasonable default. Applying it here would silently attach a contract line to
+ * records the engine has always left unresolved — and those records then get
+ * billed twice, once by the contract-line path and once by the usage path.
+ */
+function isReconcilableSelection(selection: {
+  decision: string;
+}): boolean {
+  return selection.decision === "explicit" || selection.decision === "billing_profile";
+}
+
 export class UnresolvedCatalogPricingError extends Error {
   readonly items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>;
 
@@ -2419,7 +2439,7 @@ export class BillingEngine {
           eligibleLines,
           { billingProfileId: entry.work_item_billing_profile_id ?? null },
         );
-        if (selection.selectedContractLineId) {
+        if (selection.selectedContractLineId && isReconcilableSelection(selection)) {
           const updatedCount = await db
             .table("time_entries")
             .where({
@@ -2638,7 +2658,7 @@ export class BillingEngine {
       // symmetrically to usage (F141).
       const usageSelection =
         resolveDeterministicContractLineSelection(eligibleLines);
-      if (usageSelection.selectedContractLineId) {
+      if (usageSelection.selectedContractLineId && isReconcilableSelection(usageSelection)) {
         const updatedCount = await db
           .table("usage_tracking")
           .where({

@@ -332,6 +332,13 @@ export class TestContext {
       throw new Error('Failed to ensure client record');
     }
 
+    // Every client has exactly one default billing profile (F002/F143), and
+    // production provisions it eagerly at client creation. Do the same for the
+    // fixture client so the lazy net in the attribution chain never fires
+    // mid-test — it would run on the pooled connection while this transaction
+    // holds the rows it needs, and the test would hang rather than fail.
+    await this.ensureDefaultBillingProfileId(this.clientId);
+
     this.client = clientRecord as IClient;
 
     let userRecord = this.userId
@@ -420,6 +427,16 @@ export class TestContext {
     }
 
     await tenantDb(this.db, this.tenantId).table(table).insert(entityData);
+
+    // Every client has exactly one default billing profile (F002/F143), and
+    // production provisions it eagerly at client creation. Fixtures insert
+    // clients directly, so do the same here: the lazy net in the attribution
+    // chain would otherwise fire mid-test, from inside the fixture's own
+    // transaction, on rows it is concurrently holding.
+    if (table === 'clients') {
+      await this.ensureDefaultBillingProfileId(entityData[idField] as string);
+    }
+
     return entityData[idField] as string;
   }
 

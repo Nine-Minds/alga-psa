@@ -304,6 +304,33 @@ closing balance for a period, behind `getBillingProfileStatement`. A statement i
 a demand addressed to whoever pays it, so the profile is a required argument, not
 an optional filter.
 
+### The lazy provisioning net deadlocks inside a long-lived transaction
+
+`src/test/infrastructure/billing` turned up a failure mode the other suites
+could not: tests *hanging* to a 20-second timeout rather than failing. The
+database showed one connection `idle in transaction`, parked immediately after
+
+    select billing_profile_id from client_billing_profiles
+    where tenant = $1 and client_id = $2 and is_default = $3
+
+with no second connection anywhere. Node was not blocked on a lock — it was
+blocked acquiring a connection. `TestContext` holds one long-lived transaction
+for the whole test, the action under test calls `createTenantKnex()` and gets a
+separate pooled instance, and the lazy provision inside
+`ensureClientDefaultBillingProfile` needs a connection the transaction is
+holding. Deadlock by pool exhaustion, which looks exactly like a slow test.
+
+Fixed by removing the trigger rather than the net: `TestContext` now provisions
+the fixture client's default profile eagerly, at `ensureBaseEntities` and at
+`createEntity('clients')`, mirroring what production does at all six
+client-creation paths. The lazy net stays for the paths nothing else covers.
+
+Worth remembering as a *shape*, not just a fixture bug: a read-path safety net
+that writes will find any caller that reads inside one transaction and writes
+through another. Production is not exposed today — client creation commits
+before billing ever runs — but a future caller that provisions mid-transaction
+would hang, not error.
+
 ### Verification gap found late: `server/src/test/unit` was never run
 
 Slices S2–S11 were verified against `packages/*` unit tests, the billing
