@@ -1111,9 +1111,15 @@ export const unfinalizeInvoice = withAuth(async (
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Check if invoice exists and is finalized
+      // Check if invoice exists and is finalized. FOR UPDATE: this
+      // transaction later deletes credit_tracking rows (project-deposit
+      // rollback) and then writes the invoice row — locking the invoice row
+      // first matches applyCreditToInvoiceInternal's invoice-then-credit
+      // lock order, so a concurrent credit application queues here instead
+      // of deadlocking against the rollback's credit-row locks.
       const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
+      .forUpdate()
       .first();
 
     if (!invoice) {
@@ -1664,12 +1670,16 @@ export const hardDeleteInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
-    // 1. Get invoice details
+    // 1. Get invoice details. FOR UPDATE: deletion rolls back project-deposit
+    // credit_tracking rows before deleting the invoice row — taking the
+    // invoice row lock first preserves the invoice-then-credit lock order
+    // applyCreditToInvoiceInternal relies on (deadlock avoidance).
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {

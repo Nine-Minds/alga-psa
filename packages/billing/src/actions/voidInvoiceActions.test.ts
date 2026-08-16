@@ -44,6 +44,7 @@ function makeQueryBuilder(returnValue: any = null) {
   builder.select = vi.fn(() => builder);
   builder.increment = vi.fn(() => builder);
   builder.decrement = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
   builder.update = vi.fn(async () => 1);
   builder.insert = vi.fn(async () => [{}]);
   builder.sum = vi.fn(() => builder);
@@ -269,6 +270,7 @@ function makeVoidHarness(options: VoidHarnessOptions = {}) {
       return builder;
     });
     builder.increment = vi.fn(() => builder);
+    builder.forUpdate = vi.fn(() => builder);
     return builder;
   });
   knex.raw = vi.fn((sql: string) => sql);

@@ -91,9 +91,17 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true)),
 }));
 
+// voidInvoice checks permissions via the '@alga-psa/auth/rbac' subpath — a
+// distinct module id from '@alga-psa/auth', so it needs its own mock.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+}));
+
 import { createTestDbConnection } from '../../../../../test-utils/dbConfig';
 import { createClient } from '../../../../../test-utils/testDataFactory';
+import { currentUserRef } from '../../../../../test-utils/authModuleMock';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
 
 let db: Knex;
 
@@ -209,6 +217,69 @@ async function creditsSpent(creditIds: string[]): Promise<number> {
   );
 }
 
+/**
+ * Standard finalized invoice that already has `applied` of credit drawn from a
+ * single seeded credit — the state voidInvoice's standard branch reverses:
+ * credit_applied set, a credit_application transaction carrying the
+ * applied_credits metadata the reversal walks, and the credit_tracking row
+ * drawn down by the same amount.
+ */
+async function seedAppliedCreditInvoice(clientId: string, creditAmount: number, applied: number) {
+  const invoiceId = await seedInvoice(clientId, applied, applied);
+  const creditId = await seedCredit(clientId, creditAmount);
+  const now = new Date().toISOString();
+  await db('invoices')
+    .where({ invoice_id: invoiceId, tenant: tenantId })
+    .update({ finalized_at: now, credit_applied: applied });
+  await db('credit_tracking')
+    .where({ credit_id: creditId, tenant: tenantId })
+    .update({ remaining_amount: creditAmount - applied, updated_at: now });
+  await db('transactions').insert({
+    transaction_id: uuidv4(),
+    tenant: tenantId,
+    client_id: clientId,
+    invoice_id: invoiceId,
+    amount: -applied,
+    type: 'credit_application',
+    status: 'completed',
+    description: 'Concurrency test credit application',
+    created_at: now,
+    balance_after: creditAmount - applied,
+    currency_code: 'USD',
+    metadata: { applied_credits: [{ creditId, amount: applied }] },
+  });
+  return { invoiceId, creditId };
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Wait until at least `count` backends sit in a row-lock wait — i.e. the
+ * concurrently launched voidInvoice call(s) have run into the held invoice
+ * row lock. No query-text filter: WHERE the void blocks is version-dependent
+ * (post-fix it is the first-statement invoice FOR UPDATE; pre-fix it was the
+ * reversal's transactions INSERT, whose invoice FK check needs KEY SHARE on
+ * the FOR UPDATE-locked invoice row). The NOWAIT probe in the test, not this
+ * helper, discriminates the two worlds. The suite is the database's only
+ * client while this file runs, so any lock waiter is ours.
+ */
+async function waitForLockWaiters(count: number, timeoutMs = 20000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const result = await db.raw(
+      `SELECT count(*)::int AS waiting
+         FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'`
+    );
+    if (Number(result.rows?.[0]?.waiting ?? 0) >= count) return;
+    if (Date.now() > deadline) {
+      throw new Error(`Timed out waiting for ${count} lock waiter(s)`);
+    }
+    await sleep(100);
+  }
+}
+
 describe('applyCreditToInvoiceInternal under concurrent applications', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -218,6 +289,9 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
       throw new Error('Seeded test database has no tenant');
     }
     tenantId = tenantRow.tenant as string;
+    // The withAuth mock injects currentUserRef.user as the acting user;
+    // voidInvoice scopes every query to that user's tenant.
+    currentUserRef.user = { ...currentUserRef.user, tenant: tenantId };
   }, 240000);
 
   afterAll(async () => {
@@ -328,5 +402,116 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
     expect(chain[0].after).toBe(10000 - chain[0].applied);
     expect(chain[1].after).toBe(chain[0].after - chain[1].applied);
     expect(chain[1].after).toBe(3000);
+  }, 60000);
+
+  /**
+   * Lock-order regression: applyCreditToInvoiceInternal locks the invoice row
+   * first, then credit_tracking rows. Pre-fix, voidInvoice's transaction did
+   * the opposite — it restored credit_tracking rows first and updated the
+   * invoice row last — so a concurrent apply + void could each hold one lock
+   * while waiting on the other: a PostgreSQL deadlock (40P01). The fix makes
+   * the void transaction's first statement a FOR UPDATE on the invoice row.
+   *
+   * Deterministic proof, no deadlock roulette: hold the invoice row lock from
+   * a bare transaction (standing in for apply's first lock), start a void, and
+   * wait until its backend is provably lock-waiting. Post-fix the void has
+   * touched nothing yet, so the client's credit_tracking rows are lockable
+   * with FOR UPDATE NOWAIT. Pre-fix the void already holds row locks on
+   * credit_tracking while it waits — the NOWAIT probe fails with 55P03,
+   * exhibiting exactly the inverted hold-and-wait the deadlock needs.
+   */
+  it('void waits on the invoice row before touching credit_tracking', async () => {
+    const clientId = await seedClient('Void Lock Order Client');
+    const { invoiceId, creditId } = await seedAppliedCreditInvoice(clientId, 10000, 4000);
+
+    const invoiceHolder = await db.transaction();
+    try {
+      await invoiceHolder('invoices')
+        .where({ invoice_id: invoiceId, tenant: tenantId })
+        .forUpdate()
+        .first();
+
+      const voidPromise = voidInvoice(invoiceId, 'lock-order regression');
+      await waitForLockWaiters(1);
+
+      // The void backend is blocked on the invoice row. It must not yet hold
+      // any credit_tracking row lock — NOWAIT throws 55P03 if it does.
+      const probe = await db.transaction();
+      try {
+        await expect(
+          probe('credit_tracking')
+            .where({ tenant: tenantId, client_id: clientId })
+            .forUpdate()
+            .noWait()
+            .select('credit_id')
+        ).resolves.toBeTruthy();
+      } finally {
+        await probe.rollback();
+      }
+
+      await invoiceHolder.rollback();
+
+      const result = await voidPromise;
+      expect(result).toEqual({ success: true });
+    } catch (error) {
+      if (!invoiceHolder.isCompleted()) await invoiceHolder.rollback();
+      throw error;
+    }
+
+    // Released, the void completes with a full, single reversal.
+    const invoice = await db('invoices')
+      .where({ invoice_id: invoiceId, tenant: tenantId })
+      .first();
+    expect(invoice?.status).toBe('cancelled');
+    expect(Number(invoice?.credit_applied)).toBe(0);
+
+    const credit = await db('credit_tracking')
+      .where({ credit_id: creditId, tenant: tenantId })
+      .first();
+    expect(Number(credit?.remaining_amount)).toBe(10000);
+  }, 60000);
+
+  it('concurrent double-void reverses the applied credit exactly once', async () => {
+    // Both voids pass the cheap pre-transaction guards, then queue on the
+    // invoice row lock. The loser must re-read status under the lock and see
+    // 'cancelled' — pre-fix both proceeded from the stale snapshot and each
+    // restored the credit, minting money.
+    const clientId = await seedClient('Concurrent Double Void Client');
+    const { invoiceId, creditId } = await seedAppliedCreditInvoice(clientId, 10000, 4000);
+
+    const invoiceHolder = await db.transaction();
+    let results: Array<{ success: boolean; error?: string }>;
+    try {
+      await invoiceHolder('invoices')
+        .where({ invoice_id: invoiceId, tenant: tenantId })
+        .forUpdate()
+        .first();
+
+      const voids = [
+        voidInvoice(invoiceId, 'double-void race A'),
+        voidInvoice(invoiceId, 'double-void race B'),
+      ];
+      await waitForLockWaiters(2);
+      await invoiceHolder.rollback();
+      results = await Promise.all(voids);
+    } catch (error) {
+      if (!invoiceHolder.isCompleted()) await invoiceHolder.rollback();
+      throw error;
+    }
+
+    const successes = results.filter((r) => r.success);
+    expect(successes).toHaveLength(1);
+    expect(results.find((r) => !r.success)?.error).toBe('Invoice is already voided.');
+
+    const credit = await db('credit_tracking')
+      .where({ credit_id: creditId, tenant: tenantId })
+      .first();
+    // Restored once: back to the full 10000, not 14000.
+    expect(Number(credit?.remaining_amount)).toBe(10000);
+
+    const reversals = await db('transactions')
+      .where({ invoice_id: invoiceId, tenant: tenantId, type: 'credit_adjustment' })
+      .select('transaction_id');
+    expect(reversals).toHaveLength(1);
   }, 60000);
 });

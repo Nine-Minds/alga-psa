@@ -161,7 +161,33 @@ export const voidInvoice = withAuth(async (
     }
   }
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const outcome = await withTransaction(knex, async (trx: Knex.Transaction): Promise<VoidInvoiceResult> => {
+    // Lock-order contract with applyCreditToInvoiceInternal (creditActions.ts):
+    // invoice row FIRST, credit_tracking rows only after. Credit application
+    // locks the invoice row FOR UPDATE and then the client's credit_tracking
+    // rows; before this lock the void path wrote credit_tracking first and the
+    // invoice row last, so a concurrent apply + void could each hold one lock
+    // while waiting on the other — a PostgreSQL deadlock (40P01). Taking the
+    // same invoice row lock as this transaction's first statement makes void
+    // queue behind (or ahead of) apply instead of interleaving with it.
+    //
+    // The re-read under the lock also supersedes the pre-transaction snapshot
+    // for every in-transaction decision: `status` (a concurrent void may have
+    // cancelled the invoice between the guard read and here — without this
+    // re-check both voids would restore the applied credits twice) and
+    // `credit_applied` (a concurrent application may have changed it).
+    const lockedInvoice = await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .forUpdate()
+      .first('status', 'credit_applied');
+
+    if (!lockedInvoice) {
+      return { success: false, error: 'Invoice not found.' };
+    }
+    if (lockedInvoice.status === 'cancelled') {
+      return { success: false, error: 'Invoice is already voided.' };
+    }
+
     if (isCreditNote) {
       // Claw back the issued pool credit: voiding the source document must
       // remove the credit it put into the pool, or the customer keeps
@@ -207,8 +233,11 @@ export const voidInvoice = withAuth(async (
         }
       }
     } else {
-      // Standard invoice: reverse any credit applications
-      if (Number(invoice.credit_applied ?? 0) > 0) {
+      // Standard invoice: reverse any credit applications. Decided from the
+      // locked row, not the pre-transaction snapshot — a concurrent
+      // application committing between the two reads is invisible to the
+      // snapshot but must still be reversed.
+      if (Number(lockedInvoice.credit_applied ?? 0) > 0) {
         await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id);
       }
     }
@@ -235,7 +264,13 @@ export const voidInvoice = withAuth(async (
         voided_by: user.user_id
       }
     });
+
+    return { success: true };
   });
+
+  if (!outcome.success) {
+    return outcome;
+  }
 
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
   const { knex: syncKnex } = await createTenantKnex();
