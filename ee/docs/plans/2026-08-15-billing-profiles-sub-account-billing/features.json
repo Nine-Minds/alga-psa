@@ -1,6 +1,6 @@
 [
   {"id":"F001","description":"client_billing_profiles table exists with PK (tenant, billing_profile_id), FK to clients, and name/is_default/is_active columns.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
-  {"id":"F002","description":"A partial unique index enforces exactly one is_default profile per client.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
+  {"id":"F002","description":"Exactly one default profile per client is enforced at the database layer: a partial unique index rejects a second default (at-most-one), and a deferred constraint trigger rejects any committed state where a client has profiles but no default (at-least-one).","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F003","description":"is_system_managed_default marks backfilled profiles, following the system-managed default contract precedent.","implemented":true,"prdRefs":["Data Model / Integration Notes"]},
   {"id":"F004","description":"Backfill creates exactly one default profile for every existing client, named from the client.","implemented":true,"prdRefs":["Acceptance Criteria / Definition of Done"]},
   {"id":"F005","description":"Backfill is idempotent and safe to re-run without creating duplicate profiles.","implemented":true,"prdRefs":["Risks, Rollout, and Migration"]},

@@ -87,7 +87,9 @@ created_by / updated_by   uuid
 
 PK (tenant, billing_profile_id)
 FK (tenant, client_id) -> clients
-UNIQUE (tenant, client_id) WHERE is_default    -- exactly one default per client
+UNIQUE (tenant, client_id) WHERE is_default    -- at most one default per client
+-- + deferred constraint trigger (20260817000000) making zero-default unreachable
+--   for any client that has profiles: exactly one default per client with profiles
 INDEX (tenant, client_id, is_active)
 ```
 
