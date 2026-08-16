@@ -5,7 +5,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientContractLineSettingsAsync,
@@ -95,7 +95,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
       const result = await updateClientContractLineSettingsAsync(clientId, {
         creditAutoApplyEnabled: checked,
       });
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings((prev) => ({ ...prev, creditAutoApplyEnabled: checked }));
         setUseDefault(false);
         toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
@@ -113,7 +115,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
       const result = await updateClientContractLineSettingsAsync(clientId, {
         creditApplicationOrder: order,
       });
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings((prev) => ({ ...prev, creditApplicationOrder: order }));
         setUseDefault(false);
         toast.success(t('clientCreditDrawdownSettings.updatedSuccess', { defaultValue: 'Credit draw-down settings have been updated.' }));
@@ -130,7 +134,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         const result = await updateClientContractLineSettingsAsync(clientId, {
           creditServiceTypeRestrictionMode: null,
         });
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings((prev) => ({
             ...prev,
             creditServiceTypeRestrictionMode: null,
@@ -143,7 +149,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         const result = await updateClientContractLineSettingsAsync(clientId, {
           creditServiceTypeRestrictionMode: 'all',
         });
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings((prev) => ({
             ...prev,
             creditServiceTypeRestrictionMode: 'all',
@@ -175,7 +183,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         const result = await updateClientContractLineSettingsAsync(clientId, {
           creditServiceTypeRestrictionMode: null,
         });
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings((prev) => ({
             ...prev,
             creditServiceTypeRestrictionMode: null,
@@ -189,7 +199,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         creditServiceTypeRestrictionMode: 'restricted',
         creditEligibleServiceTypeIds: next,
       });
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings((prev) => ({
           ...prev,
           creditServiceTypeRestrictionMode: 'restricted',
@@ -214,7 +226,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
           creditApplicationOrder: null,
           creditServiceTypeRestrictionMode: null,
         });
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(null);
           setUseDefault(true);
           // The resolved policy now follows the tenant defaults; refresh it so
@@ -244,7 +258,9 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
           creditEligibleServiceTypeIds: seed.eligibleServiceTypeIds,
         };
         const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(newSettings);
           setUseDefault(false);
           toast.success(t('clientCreditDrawdownSettings.clientSpecificEnabled', { defaultValue: 'Client-specific credit draw-down settings enabled.' }));

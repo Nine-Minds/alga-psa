@@ -5,7 +5,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getClientContractLineSettingsAsync,
@@ -59,7 +59,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         enableCreditExpiration: checked,
       };
       const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
         toast.success(t('clientCreditExpirationSettings.updatedSuccess', { defaultValue: 'Credit expiration settings have been updated.' }));
@@ -94,7 +96,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         creditExpirationDays: settings.creditExpirationDays
       };
       const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
         toast.success(t('clientCreditExpirationSettings.periodUpdatedSuccess', { defaultValue: 'Credit expiration period has been updated.' }));
@@ -121,7 +125,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
       };
 
       const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-      if (result.success) {
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+      } else if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
         toast.success(t('clientCreditExpirationSettings.notificationsUpdatedSuccess', { defaultValue: 'Notification days have been updated.' }));
@@ -136,7 +142,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
       if (checked) {
         // Remove client override
         const result = await updateClientContractLineSettingsAsync(clientId, null);
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(null);
           setUseDefault(true);
           toast.success(t('clientCreditExpirationSettings.useDefaultSuccess', { defaultValue: 'Client will now use default credit expiration settings.' }));
@@ -152,7 +160,9 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
           creditExpirationNotificationDays: defaultSettings?.creditExpirationNotificationDays ?? [30, 7, 1],
         };
         const result = await updateClientContractLineSettingsAsync(clientId, newSettings);
-        if (result.success) {
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+        } else if (result.success) {
           setSettings(newSettings);
           setNotificationDays(newSettings.creditExpirationNotificationDays?.join(', ') || '');
           setUseDefault(false);

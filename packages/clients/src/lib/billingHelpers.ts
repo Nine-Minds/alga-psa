@@ -127,11 +127,17 @@ export const getClientContractLineSettingsAsync = withAuth(async (
 });
 
 export const updateClientContractLineSettingsAsync = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   settings: ClientBillingSettings | null
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | ActionPermissionError> => {
+  // Client billing settings are billing configuration: mirror the tenant-level
+  // gate in billingSettingsActions so authentication alone cannot mutate them.
+  if (!await hasPermission(user, 'billing_settings', 'update')) {
+    return permissionError('Permission denied: Cannot update billing settings');
+  }
+
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
