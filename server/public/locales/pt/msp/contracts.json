@@ -472,9 +472,9 @@
     },
     "billingProfile": {
       "hint": "Os encargos desta linha são faturados neste perfil, substituindo o contrato.",
-      "label": "Perfil de faturação",
+      "label": "Perfil de faturamento",
       "none": "Usar o perfil do contrato",
-      "updated": "Perfil de faturação atualizado"
+      "updated": "Perfil de faturamento atualizado"
     },
     "bucket": {
       "billingPeriod": "Período de cobrança: {{period}}",

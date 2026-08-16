@@ -499,5 +499,53 @@
     "unknownValue": "Unknown value",
     "noDataForList": "No data for list: {{name}}",
     "uncategorized": "Uncategorized"
+  },
+  "spendByProfile": {
+    "title": "Spend by billing profile",
+    "description": "What each site or entity within this client cost over the period. Open a row to see the charges behind the number.",
+    "from": "From",
+    "to": "To",
+    "comparePrevious": "Compare to previous period",
+    "defaultBadge": "Default",
+    "empty": "No finalized charges for this client in the selected period.",
+    "drillDownTitle": "Charges behind this number",
+    "drillDownEmpty": "No charges found.",
+    "priorPeriod": "was {{amount}}",
+    "unattributedHint": "No contract, contract line, or work item claimed these charges, so they landed on the default profile.",
+    "columns": {
+      "profile": "Billing profile",
+      "charges": "Charges",
+      "net": "Net",
+      "tax": "Tax",
+      "total": "Total",
+      "unattributed": "Fell back to default",
+      "priorTotal": "Prior period total",
+      "change": "Change"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Billed to {{profile}} because it was chosen for this charge directly.",
+      "contractLine": "Billed to {{profile}} because the contract line is assigned to it.",
+      "contractLineNamed": "Billed to {{profile}} because the contract line \"{{line}}\" is assigned to it.",
+      "contract": "Billed to {{profile}} because the contract is assigned to it.",
+      "contractNamed": "Billed to {{profile}} because the contract \"{{contract}}\" is assigned to it.",
+      "workItem": "Billed to {{profile}} because the ticket or project is assigned to it; no contract assignment applies.",
+      "workItemNamed": "Billed to {{profile}} because \"{{workItem}}\" is assigned to it; no contract assignment applies.",
+      "clientDefault": "Billed to {{profile}} because nothing else claimed this charge — it fell back to the client's default profile.",
+      "unknown": "This charge has no recorded attribution."
+    },
+    "line": {
+      "explicit": "Someone chose {{line}} for this entry.",
+      "autoUniqueService": "{{line}} was the only contract line covering this service.",
+      "autoBucketOverlay": "Several contract lines covered this service; {{line}} was the only one with a bucket.",
+      "autoBillingProfile": "Several contract lines covered this service; {{line}} was picked because it belongs to the work item's billing profile.",
+      "reconciled": "{{line}} was matched to this entry when the invoice was generated.",
+      "unresolved": "No contract line could be chosen for this entry.",
+      "unknown": "How this contract line was chosen was not recorded."
+    },
+    "limitation": {
+      "contractGranular": "This charge type has no per-item record behind it, so it can only be attributed as far as the contract — not to the specific site or work it came from."
+    }
   }
 }

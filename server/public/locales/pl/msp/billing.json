@@ -499,5 +499,53 @@
     "unknownValue": "Nieznana wartość",
     "noDataForList": "Brak danych dla listy: {{name}}",
     "uncategorized": "Bez kategorii"
+  },
+  "spendByProfile": {
+    "title": "Wydatki wg profilu rozliczeniowego",
+    "description": "Ile kosztowała każda lokalizacja lub jednostka tego klienta w danym okresie. Otwórz wiersz, aby zobaczyć opłaty stojące za liczbą.",
+    "from": "Od",
+    "to": "Do",
+    "comparePrevious": "Porównaj z poprzednim okresem",
+    "defaultBadge": "Domyślny",
+    "empty": "Brak zatwierdzonych opłat dla tego klienta w wybranym okresie.",
+    "drillDownTitle": "Opłaty stojące za tą liczbą",
+    "drillDownEmpty": "Nie znaleziono opłat.",
+    "priorPeriod": "było {{amount}}",
+    "unattributedHint": "Żadna umowa, pozycja umowy ani element pracy nie przejęły tych opłat, więc trafiły do profilu domyślnego.",
+    "columns": {
+      "profile": "Profil rozliczeniowy",
+      "charges": "Opłaty",
+      "net": "Netto",
+      "tax": "Podatek",
+      "total": "Razem",
+      "unattributed": "Trafiło do domyślnego",
+      "priorTotal": "Razem w poprzednim okresie",
+      "change": "Zmiana"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Rozliczono na {{profile}}, ponieważ profil wybrano bezpośrednio dla tej opłaty.",
+      "contractLine": "Rozliczono na {{profile}}, ponieważ pozycja umowy jest do niego przypisana.",
+      "contractLineNamed": "Rozliczono na {{profile}}, ponieważ pozycja umowy „{{line}}” jest do niego przypisana.",
+      "contract": "Rozliczono na {{profile}}, ponieważ umowa jest do niego przypisana.",
+      "contractNamed": "Rozliczono na {{profile}}, ponieważ umowa „{{contract}}” jest do niego przypisana.",
+      "workItem": "Rozliczono na {{profile}}, ponieważ zgłoszenie lub projekt jest do niego przypisany; żadne przypisanie umowy nie obowiązuje.",
+      "workItemNamed": "Rozliczono na {{profile}}, ponieważ „{{workItem}}” jest do niego przypisany; żadne przypisanie umowy nie obowiązuje.",
+      "clientDefault": "Rozliczono na {{profile}}, ponieważ nic innego nie przejęło tej opłaty — trafiła do domyślnego profilu klienta.",
+      "unknown": "Dla tej opłaty nie zapisano przypisania."
+    },
+    "line": {
+      "explicit": "Ktoś wybrał {{line}} dla tego wpisu.",
+      "autoUniqueService": "{{line}} była jedyną pozycją umowy obejmującą tę usługę.",
+      "autoBucketOverlay": "Kilka pozycji umowy obejmowało tę usługę; tylko {{line}} miała pakiet.",
+      "autoBillingProfile": "Kilka pozycji umowy obejmowało tę usługę; wybrano {{line}}, ponieważ należy do profilu rozliczeniowego elementu pracy.",
+      "reconciled": "{{line}} dopasowano do tego wpisu podczas generowania faktury.",
+      "unresolved": "Nie udało się wybrać pozycji umowy dla tego wpisu.",
+      "unknown": "Nie zapisano, jak wybrano tę pozycję umowy."
+    },
+    "limitation": {
+      "contractGranular": "Ten typ opłaty nie ma za sobą zapisu pojedynczych pozycji, więc można go przypisać najwyżej do umowy — nie do konkretnej lokalizacji ani pracy, z której pochodzi."
+    }
   }
 }

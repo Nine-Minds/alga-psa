@@ -15,6 +15,7 @@ export * from './billingClientLocationActions';
 export * from './billingCurrencyActions';
 export * from './billingCycleActions';
 export * from './billingProfileActions';
+export * from './billingProfileReportActions';
 export * from './billingCycleAnchorActions';
 export * from './billingScheduleActions';
 export * from './billingSettingsActions';

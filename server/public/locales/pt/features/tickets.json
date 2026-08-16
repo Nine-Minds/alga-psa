@@ -301,8 +301,8 @@
     "loadCommentsFailed": "Falha ao carregar os comentários",
     "updateTicketFailed": "Falha ao atualizar o ticket",
     "errorWithMessage": "Erro: {{message}}",
-    "billingProfileUpdated": "Perfil de faturação atualizado",
-    "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturação"
+    "billingProfileUpdated": "Perfil de faturamento atualizado",
+    "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento"
   },
   "conversation": {
     "comments": "Comentários",
@@ -958,8 +958,8 @@
     },
     "noTeamMembersOnTicket": "Nenhum membro da equipe encontrado neste ticket.",
     "unnamedUser": "Usuário Sem Nome",
-    "billingProfile": "Perfil de faturação",
-    "billingProfileUnassigned": "Usar o perfil predefinido",
+    "billingProfile": "Perfil de faturamento",
+    "billingProfileUnassigned": "Usar o perfil padrão",
     "billingProfileHint": "Só é usado quando nenhum contrato atribui este trabalho a um perfil."
   },
   "settings": {

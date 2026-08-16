@@ -499,5 +499,53 @@
     "unknownValue": "Valor desconhecido",
     "noDataForList": "Sem dados para lista: {{name}}",
     "uncategorized": "Sem categoria"
+  },
+  "spendByProfile": {
+    "title": "Despesa por perfil de faturamento",
+    "description": "Quanto custou cada instalação ou entidade deste cliente no período. Abra uma linha para ver os encargos por trás do número.",
+    "from": "De",
+    "to": "Até",
+    "comparePrevious": "Comparar com o período anterior",
+    "defaultBadge": "Predefinido",
+    "empty": "Sem encargos finalizados para este cliente no período selecionado.",
+    "drillDownTitle": "Encargos por trás deste número",
+    "drillDownEmpty": "Nenhum encargo encontrado.",
+    "priorPeriod": "era {{amount}}",
+    "unattributedHint": "Nenhum contrato, linha de contrato ou item de trabalho reclamou estes encargos, pelo que recaíram no perfil padrão.",
+    "columns": {
+      "profile": "Perfil de faturamento",
+      "charges": "Encargos",
+      "net": "Líquido",
+      "tax": "Imposto",
+      "total": "Total",
+      "unattributed": "Recaiu no padrão",
+      "priorTotal": "Total do período anterior",
+      "change": "Variação"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Faturado a {{profile}} porque foi escolhido diretamente para este encargo.",
+      "contractLine": "Faturado a {{profile}} porque a linha de contrato lhe está atribuída.",
+      "contractLineNamed": "Faturado a {{profile}} porque a linha de contrato «{{line}}» lhe está atribuída.",
+      "contract": "Faturado a {{profile}} porque o contrato lhe está atribuído.",
+      "contractNamed": "Faturado a {{profile}} porque o contrato «{{contract}}» lhe está atribuído.",
+      "workItem": "Faturado a {{profile}} porque o ticket ou projeto lhe está atribuído; não se aplica qualquer atribuição de contrato.",
+      "workItemNamed": "Faturado a {{profile}} porque «{{workItem}}» lhe está atribuído; não se aplica qualquer atribuição de contrato.",
+      "clientDefault": "Faturado a {{profile}} porque mais nada reclamou este encargo — recaiu no perfil padrão do cliente.",
+      "unknown": "Este encargo não tem atribuição registada."
+    },
+    "line": {
+      "explicit": "Alguém escolheu {{line}} para este registro.",
+      "autoUniqueService": "{{line}} era a única linha de contrato que cobria este serviço.",
+      "autoBucketOverlay": "Várias linhas de contrato cobriam este serviço; só {{line}} tinha um pacote.",
+      "autoBillingProfile": "Várias linhas de contrato cobriam este serviço; {{line}} foi escolhida por pertencer ao perfil de faturamento do item de trabalho.",
+      "reconciled": "{{line}} foi associada a este registro quando a fatura foi gerada.",
+      "unresolved": "Não foi possível escolher qualquer linha de contrato para este registro.",
+      "unknown": "Não foi registado como esta linha de contrato foi escolhida."
+    },
+    "limitation": {
+      "contractGranular": "Este tipo de encargo não tem um registro por item por trás, pelo que só pode ser atribuído até ao contrato — não à instalação ou ao trabalho concretos de que provém."
+    }
   }
 }

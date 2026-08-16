@@ -499,5 +499,53 @@
     "unknownValue": "Valor desconocido",
     "noDataForList": "No hay datos para la lista: {{name}}",
     "uncategorized": "Sin categoría"
+  },
+  "spendByProfile": {
+    "title": "Gasto por perfil de facturación",
+    "description": "Lo que costó cada sede o entidad de este cliente durante el período. Abra una fila para ver los cargos detrás de la cifra.",
+    "from": "Desde",
+    "to": "Hasta",
+    "comparePrevious": "Comparar con el período anterior",
+    "defaultBadge": "Predeterminado",
+    "empty": "No hay cargos finalizados para este cliente en el período seleccionado.",
+    "drillDownTitle": "Cargos detrás de esta cifra",
+    "drillDownEmpty": "No se encontraron cargos.",
+    "priorPeriod": "era {{amount}}",
+    "unattributedHint": "Ningún contrato, línea de contrato ni elemento de trabajo reclamó estos cargos, por lo que recayeron en el perfil predeterminado.",
+    "columns": {
+      "profile": "Perfil de facturación",
+      "charges": "Cargos",
+      "net": "Neto",
+      "tax": "Impuesto",
+      "total": "Total",
+      "unattributed": "Recayó en el predeterminado",
+      "priorTotal": "Total del período anterior",
+      "change": "Variación"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Facturado a {{profile}} porque se eligió directamente para este cargo.",
+      "contractLine": "Facturado a {{profile}} porque la línea de contrato está asignada a él.",
+      "contractLineNamed": "Facturado a {{profile}} porque la línea de contrato «{{line}}» está asignada a él.",
+      "contract": "Facturado a {{profile}} porque el contrato está asignado a él.",
+      "contractNamed": "Facturado a {{profile}} porque el contrato «{{contract}}» está asignado a él.",
+      "workItem": "Facturado a {{profile}} porque el ticket o proyecto está asignado a él; no se aplica ninguna asignación de contrato.",
+      "workItemNamed": "Facturado a {{profile}} porque «{{workItem}}» está asignado a él; no se aplica ninguna asignación de contrato.",
+      "clientDefault": "Facturado a {{profile}} porque nada más reclamó este cargo: recayó en el perfil predeterminado del cliente.",
+      "unknown": "Este cargo no tiene atribución registrada."
+    },
+    "line": {
+      "explicit": "Alguien eligió {{line}} para esta entrada.",
+      "autoUniqueService": "{{line}} era la única línea de contrato que cubría este servicio.",
+      "autoBucketOverlay": "Varias líneas de contrato cubrían este servicio; {{line}} era la única con bolsa.",
+      "autoBillingProfile": "Varias líneas de contrato cubrían este servicio; se eligió {{line}} porque pertenece al perfil de facturación del elemento de trabajo.",
+      "reconciled": "{{line}} se emparejó con esta entrada al generar la factura.",
+      "unresolved": "No se pudo elegir ninguna línea de contrato para esta entrada.",
+      "unknown": "No se registró cómo se eligió esta línea de contrato."
+    },
+    "limitation": {
+      "contractGranular": "Este tipo de cargo no tiene un registro por elemento detrás, así que solo puede atribuirse hasta el contrato, no a la sede o el trabajo concretos de los que proviene."
+    }
   }
 }

@@ -1800,10 +1800,10 @@
       "total": "Total: {{amount}}"
     },
     "billingProfile": {
-      "label": "Perfil de faturação",
-      "none": "Usar o perfil predefinido do cliente",
+      "label": "Perfil de faturamento",
+      "none": "Usar o perfil padrão do cliente",
       "hint": "Os encargos de tempo e de calendário deste projeto são faturados neste perfil, salvo se um contrato os reclamar.",
-      "updated": "Perfil de faturação atualizado"
+      "updated": "Perfil de faturamento atualizado"
     }
   },
   "taskTypes": {

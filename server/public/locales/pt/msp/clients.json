@@ -732,9 +732,9 @@
     "updateError": "Falha ao atualizar o contrato",
     "createContract": "Criar contrato",
     "quickAdd": "Adição rápida",
-    "billingProfile": "Perfil de faturação",
+    "billingProfile": "Perfil de faturamento",
     "billingProfileUnassigned": "Não atribuído",
-    "billingProfileUpdated": "Perfil de faturação atualizado"
+    "billingProfileUpdated": "Perfil de faturamento atualizado"
   },
   "clientContractDialog": {
     "assignTitle": "Atribuir contrato ao cliente",
@@ -1336,9 +1336,9 @@
         "stateProvinceHelper": "Nome do estado ou província",
         "taxRegion": "Região Fiscal",
         "taxRegionHelper": "Selecione a região fiscal aplicável",
-        "defaultBillingProfile": "Perfil de faturação predefinido",
+        "defaultBillingProfile": "Perfil de faturamento padrão",
         "defaultBillingProfileNone": "Nenhum",
-        "defaultBillingProfileHelper": "Novos tickets nesta localização começam com este perfil de faturação. Pode sempre ser alterado no ticket."
+        "defaultBillingProfileHelper": "Novos tickets nesta localização começam com este perfil de faturamento. Pode sempre ser alterado no ticket."
       },
       "listTitle": "Locais",
       "loading": "Carregando locais...",
@@ -1575,22 +1575,22 @@
     }
   },
   "clientBillingProfiles": {
-    "title": "Perfis de faturação",
-    "description": "Fature separadamente instalações, entidades ou unidades dentro deste cliente. Os encargos são atribuídos a um perfil através do contrato, da linha de contrato ou do item de trabalho de onde provêm; o que não estiver atribuído recai no perfil predefinido.",
-    "loading": "A carregar perfis de faturação…",
+    "title": "Perfis de faturamento",
+    "description": "Fature separadamente instalações, entidades ou unidades dentro deste cliente. Os encargos são atribuídos a um perfil através do contrato, da linha de contrato ou do item de trabalho de onde provêm; o que não estiver atribuído recai no perfil padrão.",
+    "loading": "A carregar perfis de faturamento…",
     "defaultBadge": "Predefinido",
     "rename": "Mudar o nome",
-    "makeDefault": "Definir como predefinido",
+    "makeDefault": "Definir como padrão",
     "archive": "Arquivar",
     "delete": "Eliminar",
     "restore": "Restaurar",
     "archivedHeading": "Arquivados",
-    "addLabel": "Adicionar um perfil de faturação",
+    "addLabel": "Adicionar um perfil de faturamento",
     "addPlaceholder": "ex.: Unidade Norte",
     "addButton": "Adicionar perfil",
-    "created": "Perfil de faturação «{{name}}» criado",
-    "renamed": "Perfil de faturação renomeado",
-    "madeDefault": "«{{name}}» é agora o perfil de faturação predefinido",
+    "created": "Perfil de faturamento «{{name}}» criado",
+    "renamed": "Perfil de faturamento renomeado",
+    "madeDefault": "«{{name}}» é agora o perfil de faturamento padrão",
     "archived": "«{{name}}» arquivado",
     "deleted": "«{{name}}» eliminado",
     "restored": "«{{name}}» restaurado"

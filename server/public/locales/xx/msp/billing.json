@@ -499,5 +499,53 @@
     "unknownValue": "11111",
     "noDataForList": "11111 {{name}} 11111",
     "uncategorized": "11111"
+  },
+  "spendByProfile": {
+    "title": "11111",
+    "description": "11111",
+    "from": "11111",
+    "to": "11111",
+    "comparePrevious": "11111",
+    "defaultBadge": "11111",
+    "empty": "11111",
+    "drillDownTitle": "11111",
+    "drillDownEmpty": "11111",
+    "priorPeriod": "11111 {{amount}} 11111",
+    "unattributedHint": "11111",
+    "columns": {
+      "profile": "11111",
+      "charges": "11111",
+      "net": "11111",
+      "tax": "11111",
+      "total": "11111",
+      "unattributed": "11111",
+      "priorTotal": "11111",
+      "change": "11111"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "11111 {{profile}} 11111",
+      "contractLine": "11111 {{profile}} 11111",
+      "contractLineNamed": "11111 {{profile}} 11111 {{line}} 11111",
+      "contract": "11111 {{profile}} 11111",
+      "contractNamed": "11111 {{profile}} 11111 {{contract}} 11111",
+      "workItem": "11111 {{profile}} 11111",
+      "workItemNamed": "11111 {{profile}} 11111 {{workItem}} 11111",
+      "clientDefault": "11111 {{profile}} 11111",
+      "unknown": "11111"
+    },
+    "line": {
+      "explicit": "11111 {{line}} 11111",
+      "autoUniqueService": "11111 {{line}} 11111",
+      "autoBucketOverlay": "11111 {{line}} 11111",
+      "autoBillingProfile": "11111 {{line}} 11111",
+      "reconciled": "11111 {{line}} 11111",
+      "unresolved": "11111",
+      "unknown": "11111"
+    },
+    "limitation": {
+      "contractGranular": "11111"
+    }
   }
 }

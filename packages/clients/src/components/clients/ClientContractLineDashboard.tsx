@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Text } from '@radix-ui/themes';
 import { SectionLoadError } from './SectionLoadError';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTable
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
@@ -87,6 +88,7 @@ const CustomBucketTooltip = ({ active, payload, label }: CustomBucketTooltipProp
 
 
 const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = ({ clientId }) => {
+  const { renderClientBillingProfileSpend } = useClientCrossFeature();
  const { money } = useCurrencyFormat();
  const { t } = useTranslation('msp/clients');
  const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
@@ -350,6 +352,10 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
 
   return (
     <div className="space-y-4">
+      {/* Spend by billing profile (F053). Renders nothing for a single-profile
+          client, which is every client until someone adds a second profile. */}
+      {renderClientBillingProfileSpend?.({ clientId })}
+
       <Card>
         <CardHeader>
           <CardTitle>{t('clientContractLineDashboard.recentInvoices', { defaultValue: 'Recent invoices' })}</CardTitle>
