@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { getBusinessHoursSchedules } from '@alga-psa/sla/actions';
+import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 
 interface HourlyServicesStepProps {
@@ -39,7 +39,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     let isActive = true;
     void (async () => {
       try {
-        const schedules = await getBusinessHoursSchedules();
+        const schedules = await listBucketBusinessHoursSchedules();
         if (isActive && Array.isArray(schedules)) {
           setBucketSchedules(schedules.map((schedule) => ({
             schedule_id: schedule.schedule_id,

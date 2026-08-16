@@ -37,7 +37,7 @@ import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { getBusinessHoursSchedules } from '@alga-psa/sla/actions';
+import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
   type ContractLineServiceSelection,
@@ -205,7 +205,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     let isActive = true;
     void (async () => {
       try {
-        const schedules = await getBusinessHoursSchedules();
+        const schedules = await listBucketBusinessHoursSchedules();
         if (isActive && Array.isArray(schedules)) {
           setBucketSchedules(schedules.map((schedule) => ({
             schedule_id: schedule.schedule_id,

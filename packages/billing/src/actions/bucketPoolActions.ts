@@ -49,6 +49,12 @@ export type BucketPoolMemberInput = {
 
 export type BucketPoolActionError = ActionMessageError | ActionPermissionError;
 
+export type BucketBusinessHoursScheduleSummary = {
+  schedule_id: string;
+  schedule_name: string;
+  is_default: boolean;
+};
+
 export type BucketPoolSnapshot = {
   bucket_id: string;
   contract_line_id: string;
@@ -163,6 +169,35 @@ export const listBucketPoolsForLine = withAuth(async (
       }
       return loadPoolSnapshot(trx, tenant, contractLineId);
     });
+  });
+});
+
+/**
+ * List the schedule choices used by the billing-owned bucket editors.
+ *
+ * This query intentionally lives in billing instead of importing the SLA
+ * feature package into billing UI code. The schedule table is shared tenant
+ * data; the bucket editor only needs this small read-only projection.
+ */
+export const listBucketBusinessHoursSchedules = withAuth(async (
+  user,
+  { tenant },
+): Promise<BucketBusinessHoursScheduleSummary[]> => {
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      throw new Error('Permission denied: Cannot read bucket pool schedules');
+    }
+
+    const schedules = await tenantDb(trx, tenant).table('business_hours_schedules')
+      .select('schedule_id', 'schedule_name', 'is_default')
+      .orderBy('schedule_name', 'asc');
+
+    return schedules.map((schedule) => ({
+      schedule_id: schedule.schedule_id,
+      schedule_name: schedule.schedule_name,
+      is_default: Boolean(schedule.is_default),
+    }));
   });
 });
 

@@ -319,12 +319,12 @@ exports.up = async function up(knex) {
       AND psc.service_id = bu.service_catalog_id
     JOIN contract_line_service_bucket_config psbc
       ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+    JOIN contract_lines cl
+      ON cl.tenant = psc.tenant
+      AND cl.contract_line_id = psc.contract_line_id
     JOIN client_contracts cc
       ON cc.tenant = psc.tenant
-      AND cc.contract_id = (
-        SELECT cl.contract_id FROM contract_lines cl
-        WHERE cl.tenant = psc.tenant AND cl.contract_line_id = psc.contract_line_id
-      )
+      AND cc.contract_id = cl.contract_id
     WHERE psc.configuration_type = 'Bucket'
       AND bu.bucket_id IS NULL
       AND bu.client_id = cc.client_id
@@ -347,12 +347,12 @@ exports.up = async function up(knex) {
     FROM contract_line_service_configuration psc
     JOIN contract_line_service_bucket_config psbc
       ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+    JOIN contract_lines cl
+      ON cl.tenant = psc.tenant
+      AND cl.contract_line_id = psc.contract_line_id
     JOIN client_contracts cc
       ON cc.tenant = psc.tenant
-      AND cc.contract_id = (
-        SELECT cl.contract_id FROM contract_lines cl
-        WHERE cl.tenant = psc.tenant AND cl.contract_line_id = psc.contract_line_id
-      )
+      AND cc.contract_id = cl.contract_id
     WHERE psc.configuration_type = 'Bucket'
       AND bu.tenant = psc.tenant
       AND bu.client_id = cc.client_id
