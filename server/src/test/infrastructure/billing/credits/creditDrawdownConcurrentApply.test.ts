@@ -251,6 +251,62 @@ async function seedAppliedCreditInvoice(clientId: string, creditAmount: number, 
   return { invoiceId, creditId };
 }
 
+/**
+ * Finalized credit note: the negative source invoice, its credit-issuance
+ * transaction, and the (so far unconsumed) credit_tracking row it minted —
+ * the state voidInvoice's credit-note branch claws back.
+ */
+async function seedCreditNote(clientId: string, creditAmount: number) {
+  const invoiceId = uuidv4();
+  const now = new Date().toISOString();
+  await db('invoices').insert({
+    tenant: tenantId,
+    invoice_id: invoiceId,
+    client_id: clientId,
+    invoice_number: `CN-${invoiceId.slice(0, 8)}`,
+    invoice_date: now,
+    due_date: now,
+    subtotal: -creditAmount,
+    tax: 0,
+    total_amount: -creditAmount,
+    status: 'sent',
+    credit_applied: 0,
+    currency_code: 'USD',
+    is_manual: false,
+    is_prepayment: false,
+    invoice_type: 'credit_note',
+    finalized_at: now,
+  });
+  const transactionId = uuidv4();
+  await db('transactions').insert({
+    transaction_id: transactionId,
+    tenant: tenantId,
+    client_id: clientId,
+    invoice_id: invoiceId,
+    amount: creditAmount,
+    type: 'credit_issuance_from_negative_invoice',
+    status: 'completed',
+    description: 'Concurrency test credit note issuance',
+    created_at: now,
+    balance_after: creditAmount,
+    currency_code: 'USD',
+  });
+  const creditId = uuidv4();
+  await db('credit_tracking').insert({
+    credit_id: creditId,
+    tenant: tenantId,
+    client_id: clientId,
+    transaction_id: transactionId,
+    amount: creditAmount,
+    remaining_amount: creditAmount,
+    created_at: now,
+    updated_at: now,
+    is_expired: false,
+    currency_code: 'USD',
+  });
+  return { invoiceId, creditId };
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -469,6 +525,77 @@ describe('applyCreditToInvoiceInternal under concurrent applications', () => {
       .where({ credit_id: creditId, tenant: tenantId })
       .first();
     expect(Number(credit?.remaining_amount)).toBe(10000);
+  }, 60000);
+
+  /**
+   * Consumed-credit-note TOCTOU: voidInvoice's "has this note's credit been
+   * spent?" guard runs before the transaction, on an unlocked snapshot. The
+   * invoice row lock cannot close the race — an application spending this
+   * note's credit locks the TARGET invoice's row, not the note's — so the fix
+   * re-checks consumption inside the transaction with FOR UPDATE on the
+   * note's credit_tracking rows, queueing behind any in-flight application.
+   *
+   * Deterministic proof: a bare transaction stands in for an in-flight
+   * applyCreditToInvoiceInternal — it holds the credit row FOR UPDATE with
+   * its draw-down written but uncommitted, so the void's pre-transaction
+   * guard reads committed (unconsumed) state and passes. Post-fix the void
+   * blocks at the in-transaction FOR UPDATE re-check, and on commit sees the
+   * consumption and refuses. Pre-fix it has already decided to claw back from
+   * a stale unlocked read, blocks at the claw-back UPDATE instead, and on
+   * commit voids the note — zeroing out credit the application just spent.
+   */
+  it('void refuses a credit note consumed by a concurrent application', async () => {
+    const clientId = await seedClient('Consumed Credit Note Void Client');
+    const { invoiceId, creditId } = await seedCreditNote(clientId, 10000);
+
+    const applyHolder = await db.transaction();
+    let result: { success: boolean; error?: string };
+    try {
+      await applyHolder('credit_tracking')
+        .where({ credit_id: creditId, tenant: tenantId })
+        .forUpdate()
+        .first();
+      // The in-flight application's draw-down: 4000 of the note's 10000 spent.
+      await applyHolder('credit_tracking')
+        .where({ credit_id: creditId, tenant: tenantId })
+        .update({ remaining_amount: 6000, updated_at: new Date().toISOString() });
+
+      const voidPromise = voidInvoice(invoiceId, 'consumed credit note race');
+      // Any-Lock-waiter poll (no query-text filter): pre- and post-fix block
+      // at different statements on the same credit row, but both are Lock
+      // waits — the two worlds are discriminated by the outcome below.
+      await waitForLockWaiters(1);
+
+      await applyHolder.commit();
+      result = await voidPromise;
+    } catch (error) {
+      if (!applyHolder.isCompleted()) await applyHolder.rollback();
+      throw error;
+    }
+
+    expect(result).toEqual({
+      success: false,
+      error: 'This credit note has applied credit. Unapply the credit before voiding.',
+    });
+
+    // The note survives untouched: still finalized-and-sent, the credit at
+    // exactly the application's committed remainder, and neither a claw-back
+    // adjustment nor a cancellation transaction written.
+    const invoice = await db('invoices')
+      .where({ invoice_id: invoiceId, tenant: tenantId })
+      .first();
+    expect(invoice?.status).toBe('sent');
+
+    const credit = await db('credit_tracking')
+      .where({ credit_id: creditId, tenant: tenantId })
+      .first();
+    expect(Number(credit?.remaining_amount)).toBe(6000);
+
+    const writtenTxns = await db('transactions')
+      .where({ invoice_id: invoiceId, tenant: tenantId })
+      .whereIn('type', ['credit_adjustment', 'invoice_cancelled'])
+      .select('transaction_id');
+    expect(writtenTxns).toHaveLength(0);
   }, 60000);
 
   it('concurrent double-void reverses the applied credit exactly once', async () => {

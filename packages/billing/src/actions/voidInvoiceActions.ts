@@ -133,7 +133,9 @@ export const voidInvoice = withAuth(async (
 
   // Guard: consumed credit notes (for credit note invoices)
   // A credit note has consumed credit when credit_tracking rows linked to it
-  // have remaining_amount < amount (i.e. some credit was used)
+  // have remaining_amount < amount (i.e. some credit was used).
+  // This read is an unlocked fast-fail only — the authoritative re-check runs
+  // inside the transaction below, after the row locks (TOCTOU).
   const isCreditNote =
     invoice.invoice_type === 'credit_note' ||
     (Number(invoice.total_amount ?? 0) < 0 && !invoice.is_prepayment);
@@ -197,6 +199,32 @@ export const voidInvoice = withAuth(async (
         .where({ invoice_id: invoiceId })
         .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
         .select('transaction_id', 'client_id', 'amount');
+
+      // Re-check the consumed guard UNDER LOCK. The pre-transaction guard is
+      // only a fast-fail on a snapshot: a concurrent
+      // applyCreditToInvoiceInternal can consume this note's credit between
+      // that read and this transaction. The invoice row lock above does not
+      // serialize against it — the application locks the TARGET invoice's
+      // row, not this credit note's — so contention lands on the
+      // credit_tracking rows, which the apply path holds FOR UPDATE until it
+      // commits. Taking FOR UPDATE here queues behind any in-flight
+      // application (lock order invoice-row-then-credit-rows, matching
+      // applyCreditToInvoiceInternal), making this re-read authoritative:
+      // without it, the claw-back below zeroes out credit the concurrent
+      // application just spent, voiding a consumed credit note.
+      if (creditIssuanceTxns.length > 0) {
+        const lockedCreditRows = await tenantDb(trx, tenant).table('credit_tracking')
+          .whereIn('transaction_id', creditIssuanceTxns.map((t: any) => t.transaction_id))
+          .forUpdate()
+          .select('amount', 'remaining_amount');
+
+        const consumedUnderLock = lockedCreditRows.some(
+          (row: any) => Number(row.remaining_amount) < Number(row.amount)
+        );
+        if (consumedUnderLock) {
+          return { success: false, error: 'This credit note has applied credit. Unapply the credit before voiding.' };
+        }
+      }
 
       for (const txn of creditIssuanceTxns) {
         const creditRow = await tenantDb(trx, tenant).table('credit_tracking')

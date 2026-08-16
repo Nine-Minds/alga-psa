@@ -60,15 +60,26 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   const [resolvedPolicy, setResolvedPolicy] = useState<ResolvedDrawdownPolicy | null>(null);
   const [useDefault, setUseDefault] = useState(true);
   const [serviceTypes, setServiceTypes] = useState<Array<{ id: string; name: string; is_standard: boolean }>>([]);
+  // No control may be interactive before the async loads settle: the pre-load
+  // render would otherwise show "Use Default" checked with fallback values for
+  // EVERY client, and a click in that window writes those fallbacks over the
+  // client's persisted policy. Controls render only in 'ready'.
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
+    let cancelled = false;
     const loadSettings = async () => {
+      setLoadState('loading');
+      setSettings(null);
+      setResolvedPolicy(null);
+      setUseDefault(true);
       try {
         const [clientSettings, serviceTypeResult, resolved] = await Promise.all([
           getClientContractLineSettingsAsync(clientId),
           getServiceTypesForSelectionAsync(),
           getResolvedCreditDrawdownPolicyAsync(clientId),
         ]);
+        if (cancelled) return;
         if (clientSettings) {
           setSettings(clientSettings);
           setUseDefault(!hasDrawdownOverrides(clientSettings));
@@ -80,15 +91,24 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         if (Array.isArray(serviceTypeResult)) {
           setServiceTypes(serviceTypeResult);
         }
+        setLoadState('ready');
       } catch (error) {
+        if (cancelled) return;
+        setLoadState('error');
         handleError(error, t('clientCreditDrawdownSettings.loadError', { defaultValue: 'Failed to load settings' }));
       }
     };
 
     loadSettings();
+    return () => {
+      cancelled = true;
+    };
   }, [clientId, t]);
 
   const handleAutoApplyChange = async (checked: boolean) => {
+    // Belt-and-suspenders with the render gate: never write from a state that
+    // was not seeded from this client's loaded settings.
+    if (loadState !== 'ready') return;
     try {
       // Send only the field being changed; the shared update path leaves every
       // unrelated override untouched.
@@ -108,6 +128,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   };
 
   const handleOrderChange = async (value: string) => {
+    if (loadState !== 'ready') return;
     try {
       const order = value as 'expiration_first' | 'oldest_first' | 'newest_first';
       // Send only the field being changed; the shared update path leaves every
@@ -128,6 +149,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   };
 
   const handleServiceTypeModeChange = async (value: string) => {
+    if (loadState !== 'ready') return;
     try {
       if (value === 'inherit') {
         // Revert only this field to the tenant default.
@@ -173,6 +195,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   };
 
   const handleServiceTypeToggle = async (serviceTypeId: string, checked: boolean) => {
+    if (loadState !== 'ready') return;
     try {
       const current = settings?.creditEligibleServiceTypeIds ?? [];
       const next = checked
@@ -216,6 +239,7 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
   };
 
   const handleUseDefaultChange = async (checked: boolean) => {
+    if (loadState !== 'ready') return;
     try {
       if (checked) {
         // Revert only the three draw-down fields to inherit; the shared update
@@ -245,12 +269,11 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
         // Enable client-specific draw-down seeded from the *resolved* policy,
         // so flipping to custom is a no-op on the effective policy until the
         // user actually edits a field. Never touch unrelated overrides.
-        const seed = resolvedPolicy ?? {
-          autoApplyEnabled: true,
-          applicationOrder: 'expiration_first',
-          eligibleServiceTypeIds: null,
-          serviceTypeRestrictionMode: 'all',
-        };
+        // The seed comes ONLY from the loaded resolved policy — a hardcoded
+        // fallback here is exactly the write that clobbered persisted custom
+        // policies when clicked before (or after a failed) load.
+        if (!resolvedPolicy) return;
+        const seed = resolvedPolicy;
         const newSettings: BillingSettings = {
           creditAutoApplyEnabled: seed.autoApplyEnabled,
           creditApplicationOrder: seed.applicationOrder,
@@ -279,13 +302,15 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
 
   // When "Use Default Settings" is active, the disabled controls show the
   // resolved tenant policy (not hardcoded placeholders); when custom, they show
-  // the client's own overrides.
+  // the client's own overrides, falling back per-field to the resolved policy
+  // for fields the client has not overridden. The controls only render once
+  // loading settles, so these never display pre-load fallback values.
   const effectiveAutoApply = useDefault
     ? (resolvedPolicy?.autoApplyEnabled ?? true)
-    : (settings?.creditAutoApplyEnabled ?? true);
+    : (settings?.creditAutoApplyEnabled ?? resolvedPolicy?.autoApplyEnabled ?? true);
   const effectiveOrder = useDefault
     ? (resolvedPolicy?.applicationOrder ?? 'expiration_first')
-    : (settings?.creditApplicationOrder ?? 'expiration_first');
+    : (settings?.creditApplicationOrder ?? resolvedPolicy?.applicationOrder ?? 'expiration_first');
 
   // The service-type restriction is an explicit three-way choice. When the
   // master "Use Default Settings" is active the control is disabled and shows
@@ -307,6 +332,26 @@ const ClientCreditDrawdownSettings: React.FC<ClientCreditDrawdownSettingsProps> 
     { value: 'all', label: t('clientCreditDrawdownSettings.serviceTypes.mode.all', { defaultValue: 'All service types' }) },
     { value: 'restricted', label: t('clientCreditDrawdownSettings.serviceTypes.mode.restricted', { defaultValue: 'Only selected types' }) },
   ];
+
+  // Nothing interactive renders before the load settles: a pre-load render
+  // cannot know whether this client inherits or carries a custom policy, and
+  // any click against guessed state writes the guess over the persisted row.
+  // On load failure the panel stays inert — writing from unknown state is the
+  // same clobber with an error toast in front of it.
+  if (loadState !== 'ready' || !resolvedPolicy) {
+    return (
+      <div className="mt-6">
+        <Text as="div" size="3" mb="4" weight="medium" className="text-gray-900">
+          {t('clientCreditDrawdownSettings.title', { defaultValue: 'Credit Draw-Down Settings' })}
+        </Text>
+        <p className="text-sm text-muted-foreground">
+          {loadState === 'error' || (loadState === 'ready' && !resolvedPolicy)
+            ? t('clientCreditDrawdownSettings.loadError', { defaultValue: 'Failed to load settings' })
+            : t('common.states.loading', { defaultValue: 'Loading...' })}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6">
