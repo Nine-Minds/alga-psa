@@ -137,35 +137,41 @@ describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', ()
     expect(credit.compareDocumentPosition(prepaid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('saves both alert types and the client opt-in without any immediate send', async () => {
-    render(<BillingConfiguration client={client as never} onSave={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText('Prepaid Balance Alerts')).toBeDefined());
+  it(
+    'saves both alert types and the client opt-in without any immediate send',
+    async () => {
+      render(<BillingConfiguration client={client as never} onSave={vi.fn()} />);
+      // Wait for the interactive card, not just the title: the title renders in
+      // both the loading and loaded states, and a click before the settings load
+      // settles races under slow CI runners.
+      await screen.findByRole('switch', { name: /prepaid credit alerts/i });
+      await userEvent.click(screen.getByRole('switch', { name: /prepaid credit alerts/i }));
+      // Query the numeric inputs by placeholder rather than label: the server
+      // unit suite globally mocks useAutomationIdAndRegister to return empty
+      // automation props, which strips the `id` off @alga-psa/ui Input, so the
+      // Label htmlFor association that getByLabelText relies on is absent there.
+      await userEvent.type(screen.getByPlaceholderText('e.g. 500.00'), '250');
+      await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
+      await userEvent.type(screen.getByPlaceholderText('e.g. 80'), '85');
+      await userEvent.click(screen.getByRole('switch', { name: /client billing recipient/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
 
-    await userEvent.click(screen.getByRole('switch', { name: /prepaid credit alerts/i }));
-    // Query the numeric inputs by placeholder rather than label: the server
-    // unit suite globally mocks useAutomationIdAndRegister to return empty
-    // automation props, which strips the `id` off @alga-psa/ui Input, so the
-    // Label htmlFor association that getByLabelText relies on is absent there.
-    await userEvent.type(screen.getByPlaceholderText('e.g. 500.00'), '250');
-    await userEvent.click(screen.getByRole('switch', { name: /bucket usage alerts/i }));
-    await userEvent.type(screen.getByPlaceholderText('e.g. 80'), '85');
-    await userEvent.click(screen.getByRole('switch', { name: /client billing recipient/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
-
-    await waitFor(() =>
-      expect(updatePrepaidSettingsMock).toHaveBeenCalledWith({
-        clientId: 'client-e2e',
-        prepaidCreditAlertThreshold: 25000,
-        prepaidCreditAlertCurrencyCode: 'USD',
-        bucketUsageAlertPercent: 85,
-        notifyClientOnPrepaidAlert: true,
-      })
-    );
-    // No immediate send: the update action is the only side effect.
-    expect(getContractLineSettingsMock).toHaveBeenCalled();
-    expect(updateContractLineSettingsMock).not.toHaveBeenCalled();
-    expect(getPrepaidSettingsMock).toHaveBeenCalledTimes(1);
-  });
+      await waitFor(() =>
+        expect(updatePrepaidSettingsMock).toHaveBeenCalledWith({
+          clientId: 'client-e2e',
+          prepaidCreditAlertThreshold: 25000,
+          prepaidCreditAlertCurrencyCode: 'USD',
+          bucketUsageAlertPercent: 85,
+          notifyClientOnPrepaidAlert: true,
+        })
+      );
+      // No immediate send: the update action is the only side effect.
+      expect(getContractLineSettingsMock).toHaveBeenCalled();
+      expect(updateContractLineSettingsMock).not.toHaveBeenCalled();
+      expect(getPrepaidSettingsMock).toHaveBeenCalledTimes(1);
+    },
+    15_000
+  );
 
   it('is structurally absent while the feature flag is off', async () => {
     flagEnabled = false;
