@@ -46,11 +46,11 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
 /**
  * Which providers get a recurring device sync. Deliberately NOT the alert
  * polling list: the two capabilities do not coincide. Level.io syncs devices
- * but polls no alerts; Huntress polls incidents but has no proven device sync
- * path. A provider only belongs here once a manual sync is known to work for
+ * but polls no alerts; Huntress polls incidents but has no device listing at
+ * all. A provider only belongs here once a manual sync is known to work for
  * it — scheduling a broken path just manufactures recurring failures.
  */
-const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio'];
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm'];
 
 /** Device syncs are far heavier than alert polls, so the floor is higher. */
 const DEVICE_SYNC_MIN_MINUTES = 15;
@@ -236,6 +236,16 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
     }
   } catch {
     // CE build without the alias target — Level.io device sync unavailable.
+  }
+  try {
+    // Not behind @enterprise: Tactical's sync ships in packages/integrations,
+    // so scheduled device sync works in CE as well as EE.
+    const mod = await import('@alga-psa/integrations/lib/rmm/tacticalrmm/deviceSyncStrategy');
+    if (mod.tacticalRmmDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('tacticalrmm', mod.tacticalRmmDeviceSyncStrategy);
+    }
+  } catch {
+    // Subpath unavailable in this build — Tactical device sync unavailable.
   }
   deviceSyncStrategiesEnsured = true;
 }

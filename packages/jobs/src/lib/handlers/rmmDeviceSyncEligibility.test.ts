@@ -17,7 +17,7 @@ import { parseRmmDeviceSyncState } from './rmmAlertPollingHandlers';
  * provider that prompted this work — never reached its device sync at all.
  */
 
-const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio'];
+const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm'];
 const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
 
 function deviceSyncEligible(row: {
@@ -49,10 +49,15 @@ describe('device sync eligibility', () => {
   });
 
   it('is not eligible for a provider outside the device sync list', () => {
-    // tacticalrmm polls alerts but has never completed a device sync in
-    // production; scheduling it would manufacture recurring failures.
-    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'tacticalrmm' })).toBe(false);
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'huntress' })).toBe(false);
+    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'tanium' })).toBe(false);
+  });
+
+  it('is eligible for Tactical RMM, which polls alerts as well', () => {
+    // The one provider with both capabilities — each still converges on its own
+    // schedule, so enabling device sync must not depend on the alert poll.
+    expect(ALERT_POLLING_PROVIDERS).toContain('tacticalrmm');
+    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'tacticalrmm' })).toBe(true);
   });
 
   it('is not eligible when the integration is inactive', () => {
@@ -86,21 +91,24 @@ describe('device sync eligibility', () => {
 });
 
 /**
- * Why the other three providers are absent, recorded so nobody "fixes" the list
- * by adding them:
+ * Why the remaining two providers are absent, recorded so nobody "fixes" the
+ * list by adding them:
  *
- * - tacticalrmm: has no bulk device sync at all. Its only sync is
- *   syncSingleAgent, driven by webhook deliveries, and it writes sync state on
- *   the entity mapping rather than on rmm_integrations. There is nothing to
- *   schedule until a device-list sync is built.
  * - huntress: exposes getAgent(id) but no agent listing, and orgSync sets
  *   auto_sync_assets: false — it is an incident source, not an inventory one.
+ *   Nothing to schedule until a device-list endpoint exists.
  * - tanium: has a working full sync, but only behind a server action wrapped in
  *   withAuth + a per-user permission check. A scheduled run has no acting user,
- *   so it needs extracting into a callable engine first.
+ *   so it needs the same extraction Tactical just had: move the body into a
+ *   plain lib module, leave the permission check on the action.
+ *
+ * Tactical RMM was in this list until its bulk sync was extracted. It always
+ * had one — syncTacticalRmmDevices, walking /beta/v1/agent/ per mapped org —
+ * it was simply unreachable from a job because every export of a 'use server'
+ * module is an RPC endpoint, so the sync could not be exported unguarded.
  */
 describe('providers deliberately excluded from device sync', () => {
   it('lists only the providers with a job-callable device sync', () => {
-    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone']);
+    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm']);
   });
 });
