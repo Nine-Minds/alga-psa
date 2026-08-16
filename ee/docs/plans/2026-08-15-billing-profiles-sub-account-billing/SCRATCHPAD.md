@@ -181,6 +181,69 @@ diff stays mechanical rather than 59 hand edits.
 
 ---
 
+## Decisions taken during implementation
+
+### S2-D1 — every client needs a default profile, not just the backfilled ones
+
+**Found by a failing test, not by review.** The S1 backfill gives a default
+profile to every client that existed *at migration time*. Nothing gave one to
+clients created afterwards, so the first integration run against a
+fixture-created client failed with "no default billing profile" — and that
+would have been every newly created client in production.
+
+Nothing in F001–F015 covers this; it is now **F143**, with **T054** as its test.
+Two mechanisms, deliberately both:
+
+- **Eager**, at each client-creation path (`clientActions` ×2, `inboundActions`,
+  `xeroCsvClientSyncService`, `ClientService`, `shared/models/clientModel`), so
+  the profile carries the client's name from the start. These are exactly the
+  six sites that already call `ensureDefaultContractForClientIfBillingConfigured`.
+- **Lazy**, in the chain's terminal step (`getClientDefaultBillingProfileId` →
+  `ensureClientDefaultBillingProfile`), following the `createDefaultTaxSettings`
+  precedent already in the engine. Client rows arrive from paths nobody
+  enumerates — CSV import, onboarding, seeds, test fixtures, direct SQL — and an
+  invariant that holds only when every one of them cooperates is not an
+  invariant.
+
+The lazy net is also what keeps the ~59 existing billing test files working
+unchanged, which is the outcome F100 was written to buy.
+
+Not done as a DB trigger despite the F002 precedent: a trigger on `clients`
+would have to insert into the *colocated* `client_billing_profiles` shard, and
+resolving that shard name from inside a worker-side trigger is fragile. The
+app-level pair behaves identically on Citus and plain Postgres.
+
+### S2-D2 — project-schedule charges resolve at the work-item step, not the contract step
+
+The design source's charge-type table lists project schedule as having no
+segment-bearing source record. That was true before F010 added
+`projects.billing_profile_id`: a project billing schedule entry hangs off a
+*project*, and a project now carries a profile. Attributing milestones and
+deposits to the client default while F048 offers a profile picker on the project
+would be an obvious defect — the user sets a profile and the invoice line
+ignores it.
+
+So project-schedule charges resolve `work item → client default` (they have no
+contract line at all, so steps 2 and 3 are structurally absent). **T005's wording
+was corrected** to match: usage, bucket, fixed, and recurring-quantity stop at
+the contract step; project-schedule reaches the work item. F070's documented
+limitation still applies to the four that genuinely cannot carry a segment.
+
+### S2-D3 — the unresolved *reason* gets its own column, not a source value
+
+`contract_line_source` records **how the line was chosen**;
+`contract_line_unresolved_reason` records **why no line was**. They answer
+different questions and a row can only carry one source, so folding
+`ambiguous`/`no_match` into the source enum would have destroyed the very
+distinction the unresolved-item fix is built on. Migration
+`20260818000000_add_contract_line_attribution_reasons.cjs` adds the reason
+column to `time_entries` and `usage_tracking`, plus `auto_billing_profile` to
+the source value set (profile-aware narrowing is a genuinely new way to reach an
+answer, and collapsing it into `auto_unique_service` would make the attribution
+inspector lie).
+
+---
+
 ## Gotchas
 
 - **Do not model profile as a location property.** It is the one modelling mistake that
@@ -226,6 +289,16 @@ diff stays mechanical rather than 59 hand edits.
   while still making zero-default unreachable. Behavioral tests:
   `server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`
   (T053).
+- **Integration runs collide on the shared `test_database`.** Sibling worktrees
+  run their own suites against the same `127.0.0.1:5472` and recreate that
+  database mid-run, which shows up as `terminating connection due to
+  administrator command` or a half-applied migration rather than as a real
+  failure. The S2 attribution suite passes an explicit
+  `databaseName: 'test_db_billing_profiles'` for this reason. `wireLocalTestDbEnv`
+  hardcodes port 5472, so overriding `DB_PORT` alone does not isolate a run.
+- **The January cycle bills the December service period.** Contracts in these
+  fixtures start `2024-12-01` and bill in arrears, so billable work has to be
+  dated in December or the charge simply does not appear — with no error.
 - **Citus cannot create triggers on distributed tables.** The F002 trigger is applied
   per-shard via the documented `run_command_on_shards` workaround (function is a
   single coordinator-side `CREATE OR REPLACE FUNCTION` — Citus auto-propagates

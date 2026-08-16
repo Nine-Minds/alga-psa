@@ -7,6 +7,74 @@ export interface IBillingPeriod extends TenantEntity {
   endDate: ISO8601String;
 }
 
+/**
+ * Which step of the billing-profile resolution chain produced a charge's
+ * profile. Ordered most- to least-specific; the chain always terminates at
+ * `client_default`. Mirrors the CHECK constraint on
+ * `invoice_charges.billing_profile_source`.
+ */
+export type BillingProfileSource =
+  | 'explicit'
+  | 'contract_line'
+  | 'contract'
+  | 'work_item'
+  | 'client_default';
+
+export const BILLING_PROFILE_SOURCES: readonly BillingProfileSource[] = [
+  'explicit',
+  'contract_line',
+  'contract',
+  'work_item',
+  'client_default',
+] as const;
+
+/**
+ * How a time entry's contract line was chosen. Mirrors the CHECK constraint on
+ * `time_entries.contract_line_source`.
+ */
+export type ContractLineSource =
+  | 'explicit'
+  | 'auto_unique_service'
+  | 'auto_bucket_overlay'
+  | 'auto_billing_profile'
+  | 'unresolved'
+  | 'reconciled_at_generation';
+
+export const CONTRACT_LINE_SOURCES: readonly ContractLineSource[] = [
+  'explicit',
+  'auto_unique_service',
+  'auto_bucket_overlay',
+  'auto_billing_profile',
+  'unresolved',
+  'reconciled_at_generation',
+] as const;
+
+/**
+ * Why the contract-line resolver reached its answer. Distinct from
+ * `ContractLineSource`, which records the answer's provenance on the entry:
+ * several reasons collapse to `unresolved`, and the reason is what tells a
+ * biller whether catalog pricing is honest (`no_match`) or wrong (`ambiguous`).
+ */
+export type ContractLineSelectionReason =
+  | 'single_candidate'
+  | 'bucket_overlay'
+  | 'billing_profile'
+  | 'ambiguous'
+  | 'no_match'
+  | 'error';
+
+export const CONTRACT_LINE_SOURCE_BY_SELECTION_REASON: Record<
+  ContractLineSelectionReason,
+  ContractLineSource
+> = {
+  single_candidate: 'auto_unique_service',
+  bucket_overlay: 'auto_bucket_overlay',
+  billing_profile: 'auto_billing_profile',
+  ambiguous: 'unresolved',
+  no_match: 'unresolved',
+  error: 'unresolved',
+};
+
 export interface IUserCostRate extends TenantEntity {
   rate_id: string;
   user_id: string | null;
@@ -83,6 +151,20 @@ export interface IBillingCharge extends TenantEntity {
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   location_id?: string | null;
+  /**
+   * Billing profile this charge is attributed to, resolved through the
+   * five-step chain. Null only in contexts that never persist charges (the
+   * contract simulator); production generation always resolves one.
+   */
+  billing_profile_id?: string | null;
+  billing_profile_source?: BillingProfileSource | null;
+  /**
+   * Set only on charges the engine could not attach to a contract line.
+   * `no_match` means no contract covers the service, so catalog pricing is
+   * honest; anything else means one does and the line could not be picked, so
+   * catalog pricing is wrong and needs an explicit decision.
+   */
+  unresolved_reason?: ContractLineSelectionReason | null;
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
   servicePeriodRecordId?: string | null;
@@ -142,6 +224,10 @@ export interface IClientContractLine extends TenantEntity {
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
   location_id?: string | null;
   is_system_managed_default?: boolean;
+  /** contract_lines.billing_profile_id — step 2 of the resolution chain. */
+  billing_profile_id?: string | null;
+  /** client_contracts.billing_profile_id — step 3 of the resolution chain. */
+  contract_billing_profile_id?: string | null;
 }
 
 export interface IClientContractLineCycle extends TenantEntity {

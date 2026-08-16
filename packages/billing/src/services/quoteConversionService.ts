@@ -12,6 +12,7 @@ import type {
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -874,6 +875,13 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
+  // A quote-converted charge has no contract line and no work item, so the
+  // chain terminates immediately at the client default (F032).
+  const quoteBillingProfileId = await getClientDefaultBillingProfileId(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+  );
   const invoiceChargeRows = oneTimeItems.map((item) => {
     const itemId = uuidv4();
     invoiceItemIdsByQuoteItemId.set(item.quote_item_id, itemId);
@@ -907,6 +915,8 @@ export async function convertQuoteToDraftInvoice(
       applies_to_item_id: item.applies_to_item_id ?? null,
       applies_to_service_id: item.applies_to_service_id ?? null,
       location_id: item.location_id ?? null,
+      billing_profile_id: quoteBillingProfileId,
+      billing_profile_source: 'client_default',
       created_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       updated_by: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? null,
       created_at: nowIso,

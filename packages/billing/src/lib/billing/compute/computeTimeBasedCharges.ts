@@ -8,7 +8,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * Time-entry charge math extracted from BillingEngine.calculateTimeBasedCharges.
@@ -35,6 +37,12 @@ export interface TimeEntryComputeRow {
   billable_duration: number;
   project_phase_id?: string | null;
   project_id?: string | null;
+  /**
+   * Work-item billing profile — step 4 of the resolution chain. Selected from
+   * the ticket / project joins the time-entry loader already performs, which is
+   * why time is one of only two charge types that can reach step 4.
+   */
+  work_item_billing_profile_id?: string | null;
 }
 
 export interface HourlyServiceConfigEntry {
@@ -77,6 +85,8 @@ export interface TimeBasedChargeComputeInputs {
   serviceConfigMap: Map<string, HourlyServiceConfigEntry>;
   timeEntries: TimeEntryComputeRow[];
   contractCurrency: string;
+  /** Contract-line/contract/client-default profile assignments (F016–F024). */
+  billingProfile?: ChargeProfileAssignments | null;
   /** Project-billing hooks; production wires these to ProjectBillingContext, the simulator passes null. */
   resolvePhaseRateOverride?:
     | ((
@@ -118,6 +128,7 @@ export function computeTimeBasedCharges(
     serviceConfigMap,
     timeEntries,
     contractCurrency,
+    billingProfile,
     resolvePhaseRateOverride,
     getProjectChargeConfig,
   } = inputs;
@@ -246,6 +257,13 @@ export function computeTimeBasedCharges(
       ? getProjectChargeConfig?.(entry.project_id)
       : undefined;
 
+    // Time is one of only two charge types whose source record can carry a
+    // segment, so this is the one place the work-item step of the chain is
+    // reachable from recurring generation.
+    const resolvedProfile = resolveChargeProfileFor(billingProfile, {
+      workItemBillingProfileId: entry.work_item_billing_profile_id,
+    });
+
     const explanationInputs = [
       {
         label: "Rate",
@@ -304,6 +322,8 @@ export function computeTimeBasedCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
       ...(projectConfig?.billing_model === "time_and_materials"
         ? {
             project_id: projectConfig.project_id,

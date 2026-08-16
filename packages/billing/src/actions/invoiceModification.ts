@@ -1448,6 +1448,9 @@ async function updateManualInvoiceItemsInternal(
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
+          // Step 1 of the resolution chain; persistManualInvoiceCharges falls
+          // through to the client default when unset (F033).
+          billing_profile_id: item.billing_profile_id ?? null,
         })),
         client,
         session,

@@ -17,6 +17,7 @@ import { unparseCSV, parseCSV } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
 const ADAPTER_TYPE = 'xero_csv';
 
@@ -725,6 +726,8 @@ export class XeroCsvClientSyncService {
       created_at: now,
       updated_at: now
     });
+
+    await ensureClientDefaultBillingProfile(trx, tenant, clientId);
 
     await ensureDefaultContractForClientIfBillingConfigured(trx, {
       tenant,

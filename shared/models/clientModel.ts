@@ -16,6 +16,13 @@ import {
 } from '../interfaces/client.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
+// LEVERAGE: pattern client-creation-prerequisites — six client-creation sites each
+// have to remember the same list of post-insert ensure-* calls (default contract,
+// default billing profile, default tax settings). A single
+// `ensureClientPrerequisites(trx, tenant, client)` seam below these callers would
+// make forgetting one impossible; today a missed call silently breaks billing for
+// clients created through that path.
+import { ensureClientDefaultBillingProfile } from '../billingClients/billingProfiles';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -289,6 +296,10 @@ export class ClientModel {
     const [client] = await tenantDb(trx, tenant).table('clients')
       .insert(insertData)
       .returning('*');
+
+    await ensureClientDefaultBillingProfile(trx, tenant, client.client_id, {
+      clientName: client.client_name,
+    });
 
     await ensureDefaultContractForClientIfBillingConfigured(trx, {
       tenant,

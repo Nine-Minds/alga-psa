@@ -95,6 +95,15 @@ import {
   type LoadedChargeTaxRate,
   type UsageServiceConfigEntry,
 } from "./compute";
+import {
+  resolveChargeProfile,
+  type ChargeProfileAssignments,
+} from "./billingProfileResolution";
+import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
+import {
+  resolveDeterministicContractLineSelection,
+  type ContractLineSelectionReason,
+} from "../contractLineDisambiguation.shared";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 import {
   computeCapWriteDown,
@@ -238,6 +247,14 @@ export class BillingEngine {
   private readonly locationTaxRegionCodeCache = new Map<
     string,
     string | null
+  >();
+  private readonly clientDefaultBillingProfileIdCache = new Map<
+    string,
+    string
+  >();
+  private readonly contractProfileAssignmentCache = new Map<
+    string,
+    { contractLineBillingProfileId: string | null; contractBillingProfileId: string | null }
   >();
 
   constructor() {
@@ -541,6 +558,109 @@ export class BillingEngine {
     );
     this.clientDefaultTaxRegionCodeCache.set(cacheKey, taxRegionCode);
     return taxRegionCode;
+  }
+
+  /**
+   * The client's default billing profile — step 5 of the resolution chain, and
+   * the reason the chain always terminates. F002 guarantees exactly one exists
+   * per client at the database layer, so a miss here is a broken invariant, not
+   * a case to fall back from.
+   */
+  private async getClientDefaultBillingProfileId(
+    clientId: string,
+  ): Promise<string> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const cacheKey = `${this.tenant}:${clientId}`;
+    const cached = this.clientDefaultBillingProfileIdCache.get(cacheKey);
+    if (cached) return cached;
+
+    const billingProfileId = await getClientDefaultBillingProfileId(
+      this.knex,
+      this.tenant,
+      clientId,
+    );
+    this.clientDefaultBillingProfileIdCache.set(cacheKey, billingProfileId);
+    return billingProfileId;
+  }
+
+  /**
+   * Steps 2, 3, and 5 of the resolution chain for one contract line — the part
+   * that is constant across every charge the line produces. Compute modules
+   * combine this with any per-charge work-item assignment.
+   *
+   * Prefers values already selected onto the contract line and only queries for
+   * lines loaded by paths that do not select them.
+   */
+  private async loadChargeProfileAssignments(
+    clientId: string,
+    clientContractLine: IClientContractLine,
+  ): Promise<ChargeProfileAssignments> {
+    const clientDefaultBillingProfileId =
+      await this.getClientDefaultBillingProfileId(clientId);
+
+    if ("billing_profile_id" in clientContractLine) {
+      return {
+        contractLineBillingProfileId:
+          clientContractLine.billing_profile_id ?? null,
+        contractBillingProfileId:
+          clientContractLine.contract_billing_profile_id ?? null,
+        clientDefaultBillingProfileId,
+      };
+    }
+
+    const db = tenantDb(this.knex, this.tenant as string);
+    const cacheKey = `${this.tenant}:${clientContractLine.client_contract_line_id}:${clientContractLine.client_contract_id ?? ""}`;
+    let assignments = this.contractProfileAssignmentCache.get(cacheKey);
+    if (!assignments) {
+      const [lineRow, contractRow] = await Promise.all([
+        db
+          .table("contract_lines")
+          .where({ contract_line_id: clientContractLine.contract_line_id })
+          .select("billing_profile_id")
+          .first(),
+        clientContractLine.client_contract_id
+          ? db
+              .table("client_contracts")
+              .where({
+                client_contract_id: clientContractLine.client_contract_id,
+              })
+              .select("billing_profile_id")
+              .first()
+          : Promise.resolve(undefined),
+      ]);
+      assignments = {
+        contractLineBillingProfileId:
+          (lineRow?.billing_profile_id as string | null) ?? null,
+        contractBillingProfileId:
+          (contractRow?.billing_profile_id as string | null) ?? null,
+      };
+      this.contractProfileAssignmentCache.set(cacheKey, assignments);
+    }
+
+    return { ...assignments, clientDefaultBillingProfileId };
+  }
+
+  /** Work-item profiles for a set of projects, for charge types whose only
+   * segment-bearing record is the project itself. */
+  private async loadProjectBillingProfileIds(
+    projectIds: string[],
+  ): Promise<Map<string, string | null>> {
+    const distinctIds = [...new Set(projectIds.filter(Boolean))];
+    if (distinctIds.length === 0) return new Map();
+    await this.initKnex();
+    const rows = await tenantDb(this.knex, this.tenant as string)
+      .table("projects")
+      .whereIn("project_id", distinctIds)
+      .select("project_id", "billing_profile_id");
+    return new Map(
+      rows.map((row: { project_id: string; billing_profile_id: string | null }) => [
+        row.project_id,
+        row.billing_profile_id ?? null,
+      ]),
+    );
   }
 
   private async getLocationTaxRegionCode(
@@ -1687,6 +1807,16 @@ export class BillingEngine {
     const selectedEntryIds = target?.entryIds ? new Set(target.entryIds) : null;
     const charges: ProjectScheduleCharge[] = [];
 
+    // Project schedule charges have no contract line behind them at all — the
+    // schedule entry hangs off the project. The project is therefore the only
+    // segment-bearing record in the chain, so these charges resolve at the
+    // work-item step or fall through to the client default (F030).
+    const clientDefaultBillingProfileId =
+      await this.getClientDefaultBillingProfileId(client.client_id);
+    const projectProfileIds = await this.loadProjectBillingProfileIds(
+      context.configs.map((config) => config.project_id),
+    );
+
     for (const config of context.configs) {
       if (target) {
         if (config.project_id !== target.projectId) {
@@ -1760,6 +1890,12 @@ export class BillingEngine {
           taxRate = taxResult.taxRate;
         }
 
+        const scheduleChargeProfile = resolveChargeProfile({
+          workItemBillingProfileId:
+            projectProfileIds.get(config.project_id) ?? null,
+          clientDefaultBillingProfileId,
+        });
+
         charges.push({
           type:
             entryType === "milestone" ? "project_milestone" : "project_deposit",
@@ -1779,6 +1915,8 @@ export class BillingEngine {
           tax_rate: taxRate,
           tax_region: effectiveTaxRegion,
           is_taxable: config.is_taxable,
+          billing_profile_id: scheduleChargeProfile.billingProfileId,
+          billing_profile_source: scheduleChargeProfile.source,
         } as ProjectScheduleCharge);
       }
     }
@@ -1898,11 +2036,23 @@ export class BillingEngine {
     });
   }
 
-  private async getEligibleContractLineIdsForServiceAtDate(input: {
+  /**
+   * Eligible contract lines for a service on a date, carrying the profile
+   * assignments the reconcile path needs to narrow a multi-candidate field
+   * (F135). Returns candidates, not ids, so the shared disambiguation rule can
+   * be applied instead of re-deriving it here.
+   */
+  private async getEligibleContractLinesForServiceAtDate(input: {
     clientId: string;
     serviceId: string;
     workDate: ISO8601String;
-  }): Promise<string[]> {
+  }): Promise<
+    Array<{
+      client_contract_line_id: string;
+      billing_profile_id: string | null;
+      contract_billing_profile_id: string | null;
+    }>
+  > {
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
@@ -1943,14 +2093,24 @@ export class BillingEngine {
         );
       })
       .distinct("cl.contract_line_id")
-      .select("cl.contract_line_id");
+      .select(
+        "cl.contract_line_id",
+        "cl.billing_profile_id",
+        "cc.billing_profile_id as contract_billing_profile_id",
+      );
 
     return rows
-      .map((row: any) => row.contract_line_id)
       .filter(
-        (lineId: unknown): lineId is string =>
-          typeof lineId === "string" && lineId.length > 0,
-      );
+        (row: any) =>
+          typeof row.contract_line_id === "string" &&
+          row.contract_line_id.length > 0,
+      )
+      .map((row: any) => ({
+        client_contract_line_id: row.contract_line_id as string,
+        billing_profile_id: (row.billing_profile_id as string | null) ?? null,
+        contract_billing_profile_id:
+          (row.contract_billing_profile_id as string | null) ?? null,
+      }));
   }
 
   private async calculateUnresolvedNonContractCharges(
@@ -1993,6 +2153,12 @@ export class BillingEngine {
 
     const unresolvedCharges: Array<ITimeBasedCharge | IUsageBasedCharge> = [];
     const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
+    // Why each record stayed unresolved, keyed by entry/usage id. The engine
+    // has always computed this and written it only to logs; carrying it onto
+    // the charge is what lets the biller see whether catalog pricing is honest.
+    const unresolvedReasonByRecordId = new Map<string, ContractLineSelectionReason>();
+    const clientDefaultBillingProfileId =
+      await this.getClientDefaultBillingProfileId(clientId);
 
     const timeEntriesQuery = db.table<any>("time_entries");
     db.tenantJoin(
@@ -2088,6 +2254,9 @@ export class BillingEngine {
       "service_catalog.tax_rate_id",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
+      this.knex.raw(
+        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
+      ),
     );
 
     for (const entry of timeEntries) {
@@ -2102,13 +2271,20 @@ export class BillingEngine {
       }
       if (!projectTarget) {
         const workDate = toISODate(toPlainDate(entry.start_time));
-        const eligibleLineIds =
-          await this.getEligibleContractLineIdsForServiceAtDate({
+        const eligibleLines =
+          await this.getEligibleContractLinesForServiceAtDate({
             clientId,
             serviceId: entry.service_id,
             workDate,
           });
-        if (eligibleLineIds.length === 1) {
+        // Profile-aware narrowing at generation time (F135): parallel
+        // per-profile contracts carrying the same service are exactly the
+        // multi-candidate case, and the work item's profile answers it.
+        const selection = resolveDeterministicContractLineSelection(
+          eligibleLines,
+          { billingProfileId: entry.work_item_billing_profile_id ?? null },
+        );
+        if (selection.selectedContractLineId) {
           const updatedCount = await db
             .table("time_entries")
             .where({
@@ -2117,7 +2293,9 @@ export class BillingEngine {
             })
             .whereNull("contract_line_id")
             .update({
-              contract_line_id: eligibleLineIds[0],
+              contract_line_id: selection.selectedContractLineId,
+              contract_line_source: "reconciled_at_generation",
+              contract_line_unresolved_reason: null,
               updated_at: this.knex.fn.now(),
             });
           console.info("[billing_engine.reconcile.unresolved]", {
@@ -2127,25 +2305,41 @@ export class BillingEngine {
             clientId,
             recordId: entry.entry_id,
             decision: "deterministic_single_match",
-            selectedContractLineId: eligibleLineIds[0],
-            eligibleLineCount: eligibleLineIds.length,
+            reason: selection.reason,
+            selectedContractLineId: selection.selectedContractLineId,
+            eligibleLineCount: eligibleLines.length,
             persisted: updatedCount > 0,
             metric: { name: "unmatched_resolved_deterministically", value: 1 },
           });
           continue;
         }
+        // The reason is what distinguishes "no contract covers this service"
+        // (catalog rate is honest) from "a contract does, and we could not tell
+        // which line" (catalog rate is wrong). Persisted rather than only
+        // logged, so the dashboard can say which it is (F137).
+        unresolvedReasonByRecordId.set(entry.entry_id, selection.reason);
+        await db
+          .table("time_entries")
+          .where({ tenant: this.tenant, entry_id: entry.entry_id })
+          .whereNull("contract_line_id")
+          .update({
+            contract_line_source: "unresolved",
+            contract_line_unresolved_reason: selection.reason,
+            updated_at: this.knex.fn.now(),
+          });
         console.info("[billing_engine.reconcile.unresolved]", {
           event: "billing_engine.reconcile.unresolved",
           recordType: "time_entry",
           tenant: this.tenant,
           clientId,
           recordId: entry.entry_id,
-          decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
+          decision: selection.reason === "no_match" ? "no_match" : "ambiguous",
+          reason: selection.reason,
           selectedContractLineId: null,
-          eligibleLineCount: eligibleLineIds.length,
+          eligibleLineCount: eligibleLines.length,
           persisted: false,
           metric:
-            eligibleLineIds.length > 1
+            selection.reason !== "no_match"
               ? { name: "unresolved_ambiguous_count", value: 1 }
               : undefined,
         });
@@ -2210,6 +2404,10 @@ export class BillingEngine {
       const projectConfig = entry.project_id
         ? projectBillingContext?.configsByProjectId.get(entry.project_id)
         : undefined;
+      const unresolvedTimeProfile = resolveChargeProfile({
+        workItemBillingProfileId: entry.work_item_billing_profile_id ?? null,
+        clientDefaultBillingProfileId,
+      });
       unresolvedCharges.push({
         type: "time",
         serviceId: effectiveServiceId,
@@ -2227,6 +2425,10 @@ export class BillingEngine {
         servicePeriodStart: billingPeriod.startDate,
         servicePeriodEnd: billingPeriod.endDate,
         billingTiming: "arrears",
+        billing_profile_id: unresolvedTimeProfile.billingProfileId,
+        billing_profile_source: unresolvedTimeProfile.source,
+        unresolved_reason:
+          unresolvedReasonByRecordId.get(entry.entry_id) ?? null,
         ...(projectConfig?.billing_model === "time_and_materials"
           ? {
               project_id: projectConfig.project_id,
@@ -2279,13 +2481,18 @@ export class BillingEngine {
         continue;
       }
       const workDate = toISODate(toPlainDate(record.usage_date));
-      const eligibleLineIds =
-        await this.getEligibleContractLineIdsForServiceAtDate({
+      const eligibleLines =
+        await this.getEligibleContractLinesForServiceAtDate({
           clientId,
           serviceId: record.service_id,
           workDate,
         });
-      if (eligibleLineIds.length === 1) {
+      // usage_tracking carries no work item, so there is no profile to narrow
+      // with here — the reason surfacing below is the part that applies
+      // symmetrically to usage (F141).
+      const usageSelection =
+        resolveDeterministicContractLineSelection(eligibleLines);
+      if (usageSelection.selectedContractLineId) {
         const updatedCount = await db
           .table("usage_tracking")
           .where({
@@ -2294,7 +2501,9 @@ export class BillingEngine {
           })
           .whereNull("contract_line_id")
           .update({
-            contract_line_id: eligibleLineIds[0],
+            contract_line_id: usageSelection.selectedContractLineId,
+            contract_line_source: "reconciled_at_generation",
+            contract_line_unresolved_reason: null,
             updated_at: this.knex.fn.now(),
           });
         console.info("[billing_engine.reconcile.unresolved]", {
@@ -2304,25 +2513,38 @@ export class BillingEngine {
           clientId,
           recordId: record.usage_id,
           decision: "deterministic_single_match",
-          selectedContractLineId: eligibleLineIds[0],
-          eligibleLineCount: eligibleLineIds.length,
+          reason: usageSelection.reason,
+          selectedContractLineId: usageSelection.selectedContractLineId,
+          eligibleLineCount: eligibleLines.length,
           persisted: updatedCount > 0,
           metric: { name: "unmatched_resolved_deterministically", value: 1 },
         });
         continue;
       }
+      unresolvedReasonByRecordId.set(record.usage_id, usageSelection.reason);
+      await db
+        .table("usage_tracking")
+        .where({ tenant: this.tenant, usage_id: record.usage_id })
+        .whereNull("contract_line_id")
+        .update({
+          contract_line_source: "unresolved",
+          contract_line_unresolved_reason: usageSelection.reason,
+          updated_at: this.knex.fn.now(),
+        });
       console.info("[billing_engine.reconcile.unresolved]", {
         event: "billing_engine.reconcile.unresolved",
         recordType: "usage_record",
         tenant: this.tenant,
         clientId,
         recordId: record.usage_id,
-        decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
+        decision:
+          usageSelection.reason === "no_match" ? "no_match" : "ambiguous",
+        reason: usageSelection.reason,
         selectedContractLineId: null,
-        eligibleLineCount: eligibleLineIds.length,
+        eligibleLineCount: eligibleLines.length,
         persisted: false,
         metric:
-          eligibleLineIds.length > 1
+          usageSelection.reason !== "no_match"
             ? { name: "unresolved_ambiguous_count", value: 1 }
             : undefined,
       });
@@ -2376,6 +2598,10 @@ export class BillingEngine {
         servicePeriodStart: billingPeriod.startDate,
         servicePeriodEnd: billingPeriod.endDate,
         billingTiming: "arrears",
+        billing_profile_id: clientDefaultBillingProfileId,
+        billing_profile_source: "client_default",
+        unresolved_reason:
+          unresolvedReasonByRecordId.get(record.usage_id) ?? null,
       } satisfies IUsageBasedCharge);
     }
 
@@ -2464,6 +2690,10 @@ export class BillingEngine {
         "cl.custom_rate",
         "cl.enable_proration",
         "cl.location_id",
+        // Steps 2 and 3 of the billing-profile resolution chain, loaded with
+        // the line so charge attribution needs no extra round trip.
+        "cl.billing_profile_id",
+        "cc.billing_profile_id as contract_billing_profile_id",
         knex.raw("cc.tenant as tenant"),
       );
 
@@ -3001,6 +3231,10 @@ export class BillingEngine {
         customRateSource,
         planServices,
         fallbackService,
+        billingProfile: await this.loadChargeProfileAssignments(
+          clientId,
+          clientContractLine,
+        ),
       },
       await this.loadChargeComputeTaxContext({
         client,
@@ -3820,6 +4054,12 @@ export class BillingEngine {
       ),
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
+      // Step 4 of the billing-profile resolution chain. The ticket and project
+      // joins already exist for work-item naming; this is the whole cost of
+      // making the work-item step reachable for time charges.
+      this.knex.raw(
+        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
+      ),
     );
 
     const timeEntries = await query;
@@ -3838,6 +4078,10 @@ export class BillingEngine {
         serviceConfigMap,
         timeEntries,
         contractCurrency,
+        billingProfile: await this.loadChargeProfileAssignments(
+          clientId,
+          clientContractLine,
+        ),
         resolvePhaseRateOverride: (phaseId, serviceId) =>
           this.resolveProjectPhaseRateOverride(
             projectBillingContext ?? null,
@@ -4056,6 +4300,10 @@ export class BillingEngine {
         >,
         usageRecords,
         contractCurrency,
+        billingProfile: await this.loadChargeProfileAssignments(
+          clientId,
+          clientContractLine,
+        ),
       },
       await this.loadChargeComputeTaxContext({
         client,
@@ -4276,6 +4524,10 @@ export class BillingEngine {
         chargeType,
         services: planServices,
         contractCurrency: clientContractLine.currency_code || "USD",
+        billingProfile: await this.loadChargeProfileAssignments(
+          clientId,
+          clientContractLine,
+        ),
       },
       await this.loadChargeComputeTaxContext({
         client,
@@ -4632,6 +4884,10 @@ export class BillingEngine {
             },
             usageRecords,
             contractCurrency: contractLine.currency_code || "USD",
+            billingProfile: await this.loadChargeProfileAssignments(
+              clientId,
+              contractLine,
+            ),
           },
           await this.loadChargeComputeTaxContext({
             client,

@@ -5,7 +5,12 @@ import type {
   IClientContractLine,
   ISO8601String,
 } from "@alga-psa/types";
-import type { ChargeComputeClient, ChargeComputeTaxPorts } from "./types";
+import type {
+  ChargeComputeClient,
+  ChargeComputeTaxPorts,
+  ChargeProfileAssignments,
+} from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -97,6 +102,11 @@ export interface BucketChargeComputeInputs {
   config: BucketServiceComputeConfig;
   usageRecords: BucketUsageComputeRow[];
   contractCurrency: string;
+  /**
+   * bucket_usage carries no segment-bearing field, so bucket charges stop at
+   * the contract step of the resolution chain (F027, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface BucketChargeComputeResult {
@@ -184,7 +194,9 @@ export function computeBucketCharges(
     config,
     usageRecords,
     contractCurrency,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
   const isUsageBucket =
     clientContractLine.contract_line_type === "Usage" ||
     config.billing_method === "usage";
@@ -275,6 +287,8 @@ export function computeBucketCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
     });
 
     const displayDivisor = isUsageBucket ? 1 : 60;

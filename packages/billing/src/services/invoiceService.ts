@@ -11,6 +11,8 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -281,6 +283,13 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   applies_to_service_id?: string;
   discount_percentage?: number;
   location_id?: string | null;
+  /**
+   * Explicit billing profile for this manual item — step 1 of the resolution
+   * chain, and the only step a manual item can use, since it has no contract
+   * line or work item behind it. Callers that omit it fall through to the
+   * client default.
+   */
+  billing_profile_id?: string | null;
   /** Sales-order line this charge bills (reconciliation backlink — F047). */
   so_line_id?: string | null;
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
@@ -396,6 +405,20 @@ export async function persistManualInvoiceCharges(
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
 
+  // A manual item has no contract line and no work item behind it, so the
+  // resolution chain collapses to "explicit assignment, else client default"
+  // (F031). Resolved once — the client default is the same for every item.
+  const clientDefaultBillingProfileId = await getClientDefaultBillingProfileId(
+    tx,
+    tenant,
+    client.client_id
+  );
+  const resolveItemProfile = (requestItem: ManualInvoiceItemInput) =>
+    resolveChargeProfile({
+      explicitBillingProfileId: requestItem.billing_profile_id ?? null,
+      clientDefaultBillingProfileId
+    });
+
   // --- First Pass: Process non-discount manual items ---
   const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
@@ -459,6 +482,7 @@ export async function persistManualInvoiceCharges(
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
     const isCredit = !requestItem.is_discount && requestItem.rate < 0;
+    const itemProfile = resolveItemProfile(requestItem);
 
     const invoiceItem = {
       item_id: uuidv4(),
@@ -479,6 +503,8 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
+      billing_profile_id: itemProfile.billingProfileId,
+      billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,
       created_by: session.user.id,
       created_at: now,
@@ -551,6 +577,7 @@ export async function persistManualInvoiceCharges(
     }
     // --- End Determine Tax Region ---
 
+    const discountProfile = resolveItemProfile(requestItem);
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -572,6 +599,8 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: applicableItemId,
       applies_to_service_id: requestItem.applies_to_service_id, // Store original reference
       location_id: requestItem.location_id ?? null,
+      billing_profile_id: discountProfile.billingProfileId,
+      billing_profile_source: discountProfile.source,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -727,6 +756,8 @@ async function persistFixedInvoiceCharges(
         applies_to_service_id: null,
         client_contract_id: charge.client_contract_id ?? null,
         location_id: charge.location_id ?? null,
+        billing_profile_id: charge.billing_profile_id ?? null,
+        billing_profile_source: charge.billing_profile_source ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -814,6 +845,10 @@ async function persistFixedInvoiceCharges(
     let planTaxRegion: string | null = null;
     let planIsTaxable = false;
     let planLocationId: string | null = null;
+    // Every detail in a plan group comes from one contract line, so they share
+    // a resolved profile; the first non-null is the group's profile.
+    let planBillingProfileId: string | null = null;
+    let planBillingProfileSource: IBillingCharge['billing_profile_source'] = null;
 
     for (const detail of planEntry.details) {
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
@@ -829,6 +864,10 @@ async function persistFixedInvoiceCharges(
       }
       if (!planLocationId && detail.location_id) {
         planLocationId = detail.location_id;
+      }
+      if (!planBillingProfileId && detail.billing_profile_id) {
+        planBillingProfileId = detail.billing_profile_id;
+        planBillingProfileSource = detail.billing_profile_source ?? null;
       }
     }
 
@@ -853,6 +892,8 @@ async function persistFixedInvoiceCharges(
       is_taxable: planIsTaxable,
       client_contract_id: planEntry.consolidatedItem.client_contract_id ?? null,
       location_id: planLocationId,
+      billing_profile_id: planBillingProfileId,
+      billing_profile_source: planBillingProfileSource,
       created_by: session.user.id,
       created_at: now,
       updated_at: now,
@@ -1037,6 +1078,8 @@ export async function persistInvoiceCharges(
       applies_to_service_id: null,
       client_contract_id: charge.client_contract_id ?? null,
       location_id: charge.location_id ?? null,
+      billing_profile_id: charge.billing_profile_id ?? null,
+      billing_profile_source: charge.billing_profile_source ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant

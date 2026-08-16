@@ -70,3 +70,15 @@ export interface ChargeComputeClient {
   client_id: string;
   is_tax_exempt?: boolean | null;
 }
+
+/**
+ * Billing-profile assignments constant across every charge a contract line
+ * produces. Resolved once during the caller's load phase; the compute modules
+ * combine them with any per-charge work-item assignment through
+ * `resolveChargeProfile`.
+ *
+ * Optional throughout the compute layer: the contract simulator produces
+ * charges that are never persisted and supplies none. Production generation
+ * always supplies one, which is what makes every persisted charge attributed.
+ */
+export type { ChargeProfileAssignments } from "../billingProfileResolution";

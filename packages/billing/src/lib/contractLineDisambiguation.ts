@@ -4,10 +4,18 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
-import { resolveDeterministicContractLineSelection } from './contractLineDisambiguation.shared';
+import {
+  resolveDeterministicContractLineSelection,
+  type ContractLineSelectionOptions,
+  type ContractLineSelectionResult,
+} from './contractLineDisambiguation.shared';
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
+  /** contract_lines.billing_profile_id — step 2 of the resolution chain. */
+  billing_profile_id?: string | null;
+  /** client_contracts.billing_profile_id — step 3 of the resolution chain. */
+  contract_billing_profile_id?: string | null;
   bucket_overlay?: {
     config_id: string;
     total_minutes?: number | null;
@@ -39,7 +47,8 @@ const logResolverDecision = (payload: {
   effectiveDate?: string | Date;
   eligibleCount: number;
   overlayCount: number;
-  decision: 'explicit' | 'default' | 'ambiguous_or_unresolved';
+  decision: ContractLineSelectionResult['decision'];
+  reason: ContractLineSelectionResult['reason'];
   selectedContractLineId: string | null;
 }): void => {
   console.info('[contract_line_resolver.routing]', {
@@ -53,16 +62,16 @@ const logResolverDecision = (payload: {
 };
 
 /**
- * Determines the default contract line for a time entry or usage record
- * @param clientId The client ID
- * @param serviceId The service ID
- * @returns The recommended contract line ID or null if explicit selection is required
+ * Selects the contract line for a time entry or usage record, and reports why.
+ * `options.billingProfileId` narrows a multi-candidate field to the line whose
+ * contract belongs to the work item's billing profile (F133).
  */
-export async function determineDefaultContractLine(
+export async function resolveContractLineSelection(
   clientId: string,
   serviceId: string,
-  effectiveDate?: string | Date
-): Promise<string | null> {
+  effectiveDate?: string | Date,
+  options?: ContractLineSelectionOptions
+): Promise<ContractLineSelectionResult> {
   const { knex, tenant } = await createTenantKnex();
   
   if (!tenant) {
@@ -71,7 +80,7 @@ export async function determineDefaultContractLine(
 
   try {
     const eligibleContractLines = await getEligibleContractLines(knex, tenant, clientId, serviceId, effectiveDate);
-    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines);
+    const resolution = resolveDeterministicContractLineSelection(eligibleContractLines, options);
 
     logResolverDecision({
       tenant,
@@ -81,13 +90,36 @@ export async function determineDefaultContractLine(
       eligibleCount: eligibleContractLines.length,
       overlayCount: resolution.overlayCount,
       decision: resolution.decision,
+      reason: resolution.reason,
       selectedContractLineId: resolution.selectedContractLineId,
     });
-    return resolution.selectedContractLineId;
+    return resolution;
   } catch (error) {
     console.error('Error determining default contract line:', error);
-    return null;
+    return {
+      selectedContractLineId: null,
+      decision: 'ambiguous_or_unresolved',
+      reason: 'error',
+      overlayCount: 0,
+      candidateCount: 0,
+    };
   }
+}
+
+/**
+ * The contract line alone, for callers that do not record provenance.
+ * Prefer `resolveContractLineSelection` when the reason matters — an entry that
+ * ends up unresolved needs to say whether nothing covered the service or too
+ * many lines did.
+ */
+export async function determineDefaultContractLine(
+  clientId: string,
+  serviceId: string,
+  effectiveDate?: string | Date,
+  options?: ContractLineSelectionOptions
+): Promise<string | null> {
+  const resolution = await resolveContractLineSelection(clientId, serviceId, effectiveDate, options);
+  return resolution.selectedContractLineId;
 }
 
 /**
@@ -180,6 +212,10 @@ export async function getEligibleContractLines(
     'contract_lines.contract_line_type',
     'contract_lines.contract_line_name',
     'contracts.contract_name',
+    // Steps 2 and 3 of the billing-profile chain, so profile-aware narrowing
+    // can prefer the line whose contract belongs to the work item's profile.
+    'contract_lines.billing_profile_id',
+    'client_contracts.billing_profile_id as contract_billing_profile_id',
     'bucket_config.config_id as bucket_config_id',
     'bucket_details.total_minutes as bucket_total_minutes',
     'bucket_details.overage_rate as bucket_overage_rate',

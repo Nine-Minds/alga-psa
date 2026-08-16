@@ -8,7 +8,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 export interface UsageRecordComputeRow {
   usage_id: string;
@@ -43,6 +45,11 @@ export interface UsageBasedChargeComputeInputs {
   serviceConfigMap: Map<string, UsageServiceConfigEntry>;
   usageRecords: UsageRecordComputeRow[];
   contractCurrency: string;
+  /**
+   * usage_tracking carries no segment-bearing field, so usage charges stop at
+   * the contract step of the resolution chain (F025, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface UsageBasedChargeComputeResult {
@@ -73,7 +80,9 @@ export function computeUsageBasedCharges(
     serviceConfigMap,
     usageRecords,
     contractCurrency,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
   const explanations: ChargeExplanation[] = [];
   const isSystemManagedDefault =
     clientContractLine.is_system_managed_default === true;
@@ -227,6 +236,8 @@ export function computeUsageBasedCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
     };
   });
 

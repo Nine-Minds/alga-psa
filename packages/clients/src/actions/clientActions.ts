@@ -31,6 +31,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   actionError,
   permissionError,
@@ -520,6 +521,13 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
           updated_at: new Date().toISOString()
         })
         .returning('*');
+
+      // Every client must have exactly one default billing profile — it is the
+      // terminal step of charge attribution. Provisioned here so it carries the
+      // client's name from the start.
+      await ensureClientDefaultBillingProfile(trx, tenant, created.client_id, {
+        clientName: created.client_name,
+      });
 
       await ensureDefaultContractForClientIfBillingConfigured(trx, {
         tenant,
@@ -1714,6 +1722,10 @@ export const importClientsFromCSV = withAuth(async (
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .insert(clientToCreate)
             .returning('*');
+
+          await ensureClientDefaultBillingProfile(trx, tenant, savedClient!.client_id, {
+            clientName: savedClient!.client_name,
+          });
 
           if (hasLocationData(clientData)) {
             await tenantScopedTable(trx, 'client_locations', tenant).insert({
