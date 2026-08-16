@@ -7,68 +7,9 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
-
-// Exported for testing
-export async function reverseCreditApplicationsForInvoice(
-  trx: Knex.Transaction,
-  tenant: string,
-  invoiceId: string,
-  userId: string
-): Promise<void> {
-  // Find all credit_application transactions for this invoice
-  const creditAppTxns = await tenantDb(trx, tenant).table('transactions')
-    .where({ invoice_id: invoiceId, type: 'credit_application' })
-    .select('*');
-
-  for (const txn of creditAppTxns) {
-    const appliedCredits: Array<{ creditId: string; amount: number }> =
-      (txn.metadata as any)?.applied_credits ?? [];
-
-    let totalRestored = 0;
-
-    for (const applied of appliedCredits) {
-      // Restore the credit tracking pool
-      await tenantDb(trx, tenant).table('credit_tracking')
-        .where({ credit_id: applied.creditId })
-        .increment('remaining_amount', applied.amount)
-        .update({ updated_at: new Date().toISOString() });
-
-      totalRestored += applied.amount;
-    }
-
-    if (totalRestored > 0) {
-      // The restored remaining_amounts above put the credit back in the
-      // derived balance; only the reversing transaction is left to write.
-
-      // Write reversing transaction
-      await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: txn.client_id,
-        invoice_id: invoiceId,
-        amount: totalRestored,
-        type: 'credit_adjustment',
-        status: 'completed',
-        description: `Credit reversal due to invoice void`,
-        created_at: new Date().toISOString(),
-        balance_after: null,
-        tenant,
-        metadata: {
-          reversal_of: txn.transaction_id,
-          reason: 'invoice_voided'
-        }
-      });
-    }
-  }
-
-  // Zero out credit_applied on the invoice
-  if (creditAppTxns.length > 0) {
-    await tenantDb(trx, tenant).table('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({ credit_applied: 0, updated_at: new Date().toISOString() });
-  }
-}
 
 export type VoidInvoiceResult =
   | { success: true }
@@ -264,9 +205,11 @@ export const voidInvoice = withAuth(async (
       // Standard invoice: reverse any credit applications. Decided from the
       // locked row, not the pre-transaction snapshot — a concurrent
       // application committing between the two reads is invisible to the
-      // snapshot but must still be reversed.
+      // snapshot but must still be reversed. The canonical primitive
+      // (packages/billing/src/lib/creditReversal.ts) is repeat-safe and
+      // restores every application.
       if (Number(lockedInvoice.credit_applied ?? 0) > 0) {
-        await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id);
+        await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_voided');
       }
     }
 
