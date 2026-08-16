@@ -50,11 +50,21 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
 
         const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
 
+        // Lock the candidates (canonical block_id order — the same order
+        // allocateTimeEntry/unfinalize lock hour_blocks in) so the eligibility
+        // check and the expired transition are one serialized step: a
+        // concurrent allocation either already holds/queued on these locks
+        // (this query waits, then re-evaluates the committed row) or runs
+        // after this transaction commits and no longer sees the block as
+        // active. Pre-fix, an allocation could commit against a block between
+        // this check and the update below (review run b2b3038e).
         let query = (tenantScopedTable(trx, 'hour_blocks', tenantId) as Knex.QueryBuilder<IHourBlock, IHourBlock[]>)
           .where('status', 'active')
           .whereNotNull('expiration_date')
           .where('expiration_date', '<', today)
-          .where('remaining_minutes', '>', 0);
+          .where('remaining_minutes', '>', 0)
+          .orderBy('block_id', 'asc')
+          .forUpdate();
 
         if (clientId) {
           query = query.where('client_id', clientId);

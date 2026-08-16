@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
 
@@ -365,6 +366,89 @@ describe.runIf(enabled)('20260813120100 hour block notification migration rollba
       }
       await restoreSubtree(snap);
       await dropMarkerTableIfExists();
+    }
+  });
+
+  // The b2b3038e rollback probe (regression): after `up`, a FOREIGN row (here:
+  // a system_email_template the migration never created, plus a tenant's
+  // subtype settings) attaches itself to the migration-created subtype. The
+  // old `down` deleted the subtype unconditionally and the ON DELETE CASCADE
+  // destroyed the foreign rows. The fixed `down` keeps the subtype (safety
+  // over cleanup), removes exactly its own template, and a re-`up` re-applies
+  // idempotently against the surviving subtype.
+  it('case (b) guard: down keeps a migration-created subtype that a foreign template/settings attached itself to, and re-up is idempotent', async () => {
+    const snap = await snapshotSubtree();
+    const foreignTemplateName = `hb-migration-foreign-template-${Date.now()}`;
+    const foreignTenant = uuidv4();
+    try {
+      // Start from a clean slate so the migration creates the subtype itself.
+      if (snap.subtype) {
+        await db('notification_subtypes').where({ id: snap.subtype.id }).del();
+      }
+      await dropMarkerTableIfExists();
+
+      await migration.up(db);
+
+      const createdSubtype = await db('notification_subtypes').where({ name: 'Hour Block Expiring' }).first();
+      expect(createdSubtype).toBeTruthy();
+      const markerAfterUp = await readMarker();
+      expect(markerAfterUp.created_subtype_id).toBe(createdSubtype.id);
+
+      // Foreign, non-migration rows appear under the migration-created subtype.
+      // The tenant settings row needs a real tenants row (FK).
+      const [foreignTemplate] = await db('system_email_templates').insert({
+        name: foreignTemplateName,
+        subject: 'Foreign template that must survive migration down',
+        notification_subtype_id: createdSubtype.id,
+        html_content: '<p>foreign</p>',
+        text_content: 'foreign',
+      }).returning('*');
+      await db('tenants').insert({
+        tenant: foreignTenant,
+        client_name: 'HB Migration Foreign Tenant',
+        email: 'hb-migration-foreign@test.local',
+        billing_source: 'test',
+      });
+      await db('tenant_notification_subtype_settings').insert({
+        tenant: foreignTenant,
+        subtype_id: createdSubtype.id,
+      });
+
+      await migration.down(db);
+
+      // The foreign rows SURVIVE (the b2 regression: they were cascade-deleted).
+      expect(await db('system_email_templates').where({ id: foreignTemplate.id }).first()).toBeTruthy();
+      expect(await db('tenant_notification_subtype_settings').where({ tenant: foreignTenant, subtype_id: createdSubtype.id }).first()).toBeTruthy();
+      // The migration's own template is gone, the subtype is kept (childless
+      // delete refused), and the marker bookkeeping is cleaned up.
+      expect(await db('system_email_templates').where({ name: 'hour-block-expiring' }).first()).toBeFalsy();
+      const keptSubtype = await db('notification_subtypes').where({ id: createdSubtype.id }).first();
+      expect(keptSubtype).toBeTruthy();
+      expect(await db.schema.hasTable(MARKER_TABLE)).toBe(false);
+
+      // Idempotent re-application: up reuses the surviving subtype, recreates
+      // its own template, and the marker only claims the newly created rows.
+      await migration.up(db);
+      const reupSubtype = await db('notification_subtypes').where({ name: 'Hour Block Expiring' }).first();
+      expect(reupSubtype.id).toBe(createdSubtype.id);
+      const reupTemplate = await db('system_email_templates').where({ name: 'hour-block-expiring' }).first();
+      expect(reupTemplate).toBeTruthy();
+      const markerAfterReup = await readMarker();
+      expect(markerAfterReup.created_subtype_id).toBeUndefined();
+      expect(markerAfterReup.created_template_id).toBe(reupTemplate.id);
+      expect(await db('system_email_templates').where({ id: foreignTemplate.id }).first()).toBeTruthy();
+
+      // And down again removes only the re-created template.
+      await migration.down(db);
+      expect(await db('system_email_templates').where({ name: 'hour-block-expiring' }).first()).toBeFalsy();
+      expect(await db('notification_subtypes').where({ id: createdSubtype.id }).first()).toBeTruthy();
+      expect(await db('system_email_templates').where({ id: foreignTemplate.id }).first()).toBeTruthy();
+      expect(await db.schema.hasTable(MARKER_TABLE)).toBe(false);
+    } finally {
+      await db('tenant_notification_subtype_settings').where({ tenant: foreignTenant }).del();
+      await db('tenants').where({ tenant: foreignTenant }).del();
+      await db('system_email_templates').where({ name: foreignTemplateName }).del();
+      await cleanupToSnapshot(snap);
     }
   });
 });

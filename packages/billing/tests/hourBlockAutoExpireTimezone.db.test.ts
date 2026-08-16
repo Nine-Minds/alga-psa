@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import knexLib from 'knex';
 import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { expiredHourBlocksHandler } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import { allocateTimeEntry } from '@alga-psa/shared/billingClients/hourBlockService';
 
 // DB-backed regression test for the auto-expiration handler's "today" boundary
 // (29.8.18 mitigation). The invariant: "today" is the calendar date in the
@@ -107,6 +108,9 @@ async function cleanup() {
   await db('hour_block_service_scopes').where({ tenant }).delete();
   await db('hour_block_audit').where({ tenant }).delete();
   await db('hour_blocks').where({ tenant }).delete();
+  await db('time_entries').where({ tenant }).delete();
+  await db('tickets').where({ tenant }).delete();
+  await db('users').where({ tenant }).delete();
   await db('invoices').where({ tenant }).delete();
   await db('invoice_charges').where({ tenant }).delete();
   await db('tenant_settings').where({ tenant }).delete();
@@ -267,6 +271,153 @@ describe.runIf(enabled)('hour-block auto-expiration "today" is the tenant calend
 
       await assertBoundary(blockExpired, blockStillActive, '2026-08-30');
     } finally {
+      await cleanup();
+    }
+  });
+
+  // Genuinely-concurrent expiration coverage (29.8.18 Blocker 2): the nightly
+  // expiration pass and a back-dated burn race on the same block — the block's
+  // expiration day has passed on the tenant calendar (the job wants to expire
+  // it) while an entry WORKED on that day is still eligible to burn it. Both
+  // sides now row-lock the hour_blocks row (canonical order), so the
+  // interleaving serializes: the burn commits while the block is active and
+  // the job then expires the post-burn state — the job never re-reads a
+  // stale pre-burn row, and the burn never lands on an already-expired block.
+  it('race: a back-dated burn committing mid-expiration serializes — the job parks at the row lock and expires the post-burn state', async () => {
+    const originalTzState = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const { clientId, serviceId } = await seedBase(null); // UTC fallback: deterministic "today"
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const blockId = uuidv4();
+      await insertBlock(blockId, clientId, serviceId, yesterday);
+
+      // Ticket + user + back-dated entry (worked ON the expiration day, so the
+      // burn engine still considers the block eligible for it).
+      const ticketId = uuidv4();
+      await db('tickets').insert({ tenant, ticket_id: ticketId, client_id: clientId, title: 'HB Expire Race Ticket', ticket_number: `HB-EXPR-${ticketId.slice(0, 8)}` });
+      const entryUserId = uuidv4();
+      await db('users').insert({
+        tenant, user_id: entryUserId, username: `hbexpr_${entryUserId.slice(0, 8)}`,
+        hashed_password: 'x', email: `hbexpr_${entryUserId.slice(0, 8)}@test.local`,
+      });
+      const entryId = uuidv4();
+      const start = new Date(`${yesterday}T09:00:00.000Z`);
+      const entry = {
+        entry_id: entryId, service_id: serviceId, billable_duration: 120, contract_line_id: null,
+        work_item_id: ticketId, work_item_type: 'ticket', work_date: yesterday, start_time: start.toISOString(),
+      };
+      await db('time_entries').insert({
+        tenant, entry_id: entryId, user_id: entryUserId, service_id: serviceId,
+        work_item_id: ticketId, work_item_type: 'ticket',
+        start_time: start.toISOString(), end_time: new Date(start.getTime() + 120 * 60000).toISOString(),
+        work_date: yesterday, work_timezone: 'UTC',
+        billable_duration: 120, approval_status: 'APPROVED', invoiced: false, contract_line_id: null,
+      });
+
+      // Transaction A (the burn side): lock the block — where a mid-flight
+      // allocateTimeEntry sits after its eligible-block select.
+      const holderDb = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 1 } });
+      try {
+        const holderTrx = await holderDb.transaction();
+        await holderTrx('hour_blocks').where({ tenant, block_id: blockId }).select('block_id').forUpdate();
+
+        // Transaction B: the nightly job starts and must PARK at its own
+        // SELECT ... FOR UPDATE on the candidate rows.
+        let handlerSettled = false;
+        const handlerPromise = (async () => {
+          await expiredHourBlocksHandler({ tenantId: tenant });
+          handlerSettled = true;
+        })();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        expect(handlerSettled, 'the expiration pass must block on the hour_blocks row lock while the burn holds it').toBe(false);
+
+        // The burn commits (real burn engine, same locking discipline) while
+        // the block is still active.
+        const allocations = await allocateTimeEntry(holderTrx as unknown as Knex.Transaction, tenant, clientId, entry);
+        expect(allocations).toEqual([{ block_id: blockId, minutes: 120 }]);
+        await holderTrx.commit();
+
+        // B unparks on the committed state: the block expires now, with the
+        // burn already recorded — the audit proves the job read the post-burn
+        // remaining balance, not a stale pre-burn row.
+        await handlerPromise;
+        const block = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+        expect(block.status).toBe('expired');
+        expect(block.first_allocated_at).toBeTruthy();
+        expect(Number(block.remaining_minutes)).toBe(480);
+        const audit = await auditRows(blockId);
+        expect(audit).toHaveLength(1);
+        expect(audit[0].type).toBe('auto_expiration');
+        expect(audit[0].metadata?.remaining_minutes_at_expiration).toBe(480);
+        const liveRows = await db('hour_block_time_allocations').where({ tenant, block_id: blockId });
+        expect(liveRows).toHaveLength(1);
+        expect(Number(liveRows[0].minutes)).toBe(120);
+      } finally {
+        await holderDb.destroy();
+      }
+    } finally {
+      if (originalTzState) {
+        process.env.TZ = originalTzState;
+      } else {
+        delete process.env.TZ;
+      }
+      await cleanup();
+    }
+  });
+
+  // The mirrored serialization order: the expiration pass commits first, and
+  // an allocation started after it (real burn engine) refuses the expired
+  // block — no allocation row is ever written against an expired block.
+  it('race (mirror): after the expiration pass commits, a burn started against the committed state writes nothing', async () => {
+    const originalTzState = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const { clientId, serviceId } = await seedBase(null);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const blockId = uuidv4();
+      await insertBlock(blockId, clientId, serviceId, yesterday);
+
+      const ticketId = uuidv4();
+      await db('tickets').insert({ tenant, ticket_id: ticketId, client_id: clientId, title: 'HB Expire Mirror Ticket', ticket_number: `HB-EXPM-${ticketId.slice(0, 8)}` });
+      const entryUserId = uuidv4();
+      await db('users').insert({
+        tenant, user_id: entryUserId, username: `hbexpm_${entryUserId.slice(0, 8)}`,
+        hashed_password: 'x', email: `hbexpm_${entryUserId.slice(0, 8)}@test.local`,
+      });
+      const entryId = uuidv4();
+      const start = new Date(`${yesterday}T09:00:00.000Z`);
+      const entry = {
+        entry_id: entryId, service_id: serviceId, billable_duration: 120, contract_line_id: null,
+        work_item_id: ticketId, work_item_type: 'ticket', work_date: yesterday, start_time: start.toISOString(),
+      };
+      await db('time_entries').insert({
+        tenant, entry_id: entryId, user_id: entryUserId, service_id: serviceId,
+        work_item_id: ticketId, work_item_type: 'ticket',
+        start_time: start.toISOString(), end_time: new Date(start.getTime() + 120 * 60000).toISOString(),
+        work_date: yesterday, work_timezone: 'UTC',
+        billable_duration: 120, approval_status: 'APPROVED', invoiced: false, contract_line_id: null,
+      });
+
+      // The expiration pass commits first.
+      await expiredHourBlocksHandler({ tenantId: tenant });
+      expect(await blockStatus(blockId)).toBe('expired');
+
+      // A burn started now (back-dated entry, real burn engine): the locked
+      // re-read sees the committed expired status and refuses the block.
+      const allocations = await db.transaction(async (trx: Knex.Transaction) => allocateTimeEntry(trx, tenant, clientId, entry));
+      expect(allocations).toEqual([]);
+      expect(await db('hour_block_time_allocations').where({ tenant, block_id: blockId })).toHaveLength(0);
+      const block = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+      expect(block.status).toBe('expired');
+      expect(block.first_allocated_at).toBeNull();
+      expect(Number(block.remaining_minutes)).toBe(600);
+    } finally {
+      if (originalTzState) {
+        process.env.TZ = originalTzState;
+      } else {
+        delete process.env.TZ;
+      }
       await cleanup();
     }
   });

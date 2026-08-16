@@ -42,9 +42,9 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice', () => {
         total_amount: 1000, subtotal: 1000, tax: 0, status: 'sent', is_manual: true, is_prepayment: false, credit_applied: 0,
       });
       // The finalize hook syncs the block from the authoritative purchase line;
-      // an invoice with no line at all now counts as line-removed (block voided).
-      // This legacy-shaped block (no explicit charge linkage) resolves the sole
-      // service-matching charge.
+      // an invoice with no line at all counts as line-removed (block voided).
+      // Resolution is linkage-based (the mint path always records
+      // source_invoice_charge_id), so the seed carries the linkage too.
       const itemId = uuidv4();
       await db('invoice_charges').insert({
         tenant, item_id: itemId, invoice_id: invoiceId, service_id: serviceId,
@@ -55,6 +55,7 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice', () => {
         block_id: blockId, tenant, client_id: clientId, service_id: serviceId,
         total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
         currency_code: 'USD', status: 'pending', purchased_at: null, source_invoice_id: invoiceId,
+        source_invoice_charge_id: itemId,
       });
 
       const userId = uuidv4();

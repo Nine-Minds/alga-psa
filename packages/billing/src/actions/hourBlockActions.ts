@@ -474,8 +474,12 @@ export const manuallyExpireHourBlock = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Row-lock (canonical order — see selectEligibleBlocks) so the
+      // status check and the expired transition serialize against a
+      // concurrent allocateTimeEntry on the same block.
       const block = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
+        .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status === 'voided') throw new Error('Cannot expire a voided hour block');
@@ -525,8 +529,13 @@ export const voidHourBlock = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Row-lock (canonical order — see selectEligibleBlocks) so the void
+      // guard's used-check serializes against a concurrent allocateTimeEntry:
+      // the marker and allocation rows the guard reads are necessarily
+      // committed state, not an in-flight burn.
       const block = await tenantScopedTable(trx, tenant, 'hour_blocks')
         .where({ block_id: blockId, tenant })
+        .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
       if (block.status !== 'pending' && block.status !== 'active') {

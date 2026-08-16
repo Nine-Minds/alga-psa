@@ -52,6 +52,7 @@ interface EligibleBlock {
   remaining_minutes: number;
   expiration_date: string | null;
   purchased_at: string | null;
+  created_at?: string | null;
 }
 
 interface FifoAllocation {
@@ -212,6 +213,17 @@ export async function isEntryEligibleForBlockBurn(
  * with NOT EXISTS/EXISTS so a block scoped to [A,B] is NOT eligible for an
  * entry on service C (a naive LEFT JOIN ON scopes.service_id = C would have
  * treated the no-match row as "unscoped").
+ *
+ * Locking discipline (29.8.18 Blocker 2): the rows are locked with
+ * SELECT ... FOR UPDATE in canonical block_id order — the same order every
+ * other hour_blocks check-then-act site (expire handlers, unfinalize, void)
+ * locks in — so concurrent mutators of a block's burn-state serialize instead
+ * of racing. A block can no longer be expired/unfinalized between this read
+ * and the allocation writes, because those writers wait on this lock, and this
+ * query re-evaluates the row's committed state when the wait ends. FIFO order
+ * (expiration, purchase, creation) is applied AFTER locking, in JS, so the
+ * math still sees the burn order while the locks stay canonically ordered
+ * (deadlock-free against the other lock sites).
  */
 async function selectEligibleBlocks(
   trx: Knex.Transaction,
@@ -223,7 +235,7 @@ async function selectEligibleBlocks(
   const workDate = toDateOnly(entry.work_date) ?? toDateOnly(entry.start_time);
   if (!workDate) return [];
 
-  return await db.table('hour_blocks as hb')
+  const rows: any[] = await db.table('hour_blocks as hb')
     .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
     .where('hb.remaining_minutes', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
@@ -244,18 +256,36 @@ async function selectEligibleBlocks(
           .where('s2.service_id', entry.service_id ?? '');
       });
     })
-    .select('hb.block_id', 'hb.remaining_minutes', 'hb.expiration_date', 'hb.purchased_at')
-    .orderByRaw('hb.expiration_date ASC NULLS LAST')
-    .orderBy('hb.purchased_at', 'asc')
-    .orderBy('hb.created_at', 'asc')
-    .then((rows: any[]) =>
-      rows.map((row) => ({
-        block_id: row.block_id,
-        remaining_minutes: Number(row.remaining_minutes),
-        expiration_date: row.expiration_date ? toDateOnly(row.expiration_date) : null,
-        purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString() : null,
-      })),
-    );
+    .select('hb.block_id', 'hb.remaining_minutes', 'hb.expiration_date', 'hb.purchased_at', 'hb.created_at')
+    .orderBy('hb.block_id', 'asc')
+    .forUpdate();
+
+  const locked = rows.map((row) => ({
+    block_id: row.block_id,
+    remaining_minutes: Number(row.remaining_minutes),
+    expiration_date: row.expiration_date ? toDateOnly(row.expiration_date) : null,
+    purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString() : null,
+    created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
+  }));
+
+  // FIFO burn order on the already-locked rows: expiration first (soonest
+  // first, never-expiring last), then purchase, then creation.
+  locked.sort((a, b) => {
+    if (a.expiration_date === null && b.expiration_date !== null) return 1;
+    if (a.expiration_date !== null && b.expiration_date === null) return -1;
+    if (a.expiration_date !== null && b.expiration_date !== null && a.expiration_date !== b.expiration_date) {
+      return a.expiration_date < b.expiration_date ? -1 : 1;
+    }
+    const aPurchased = a.purchased_at ?? '';
+    const bPurchased = b.purchased_at ?? '';
+    if (aPurchased !== bPurchased) return aPurchased < bPurchased ? -1 : 1;
+    const aCreated = a.created_at ?? '';
+    const bCreated = b.created_at ?? '';
+    if (aCreated !== bCreated) return aCreated < bCreated ? -1 : 1;
+    return a.block_id < b.block_id ? -1 : 1;
+  });
+
+  return locked;
 }
 
 /**
@@ -263,6 +293,12 @@ async function selectEligibleBlocks(
  * hour_block_time_allocations rows and decrements remaining_minutes in the
  * same transaction. The uncovered remainder is left unallocated (normal
  * billable time). Returns the allocation rows written.
+ *
+ * Participates in the hour_blocks row-lock discipline: the eligible-block
+ * select takes FOR UPDATE (canonical block_id order) before any write, so a
+ * concurrent expiration/unfinalization/void either waits (and this burn
+ * lands first, while the block is still active) or has already committed
+ * (and the locked re-read excludes the block). See selectEligibleBlocks.
  */
 export async function allocateTimeEntry(
   trx: Knex.Transaction,

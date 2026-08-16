@@ -595,6 +595,82 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
     });
   });
 
+  // 29.8.18 Blocker 2: two genuinely concurrent allocations of the same
+  // block must serialize on the hour_blocks row lock the eligible-block select
+  // takes. Pre-fix, both transactions read remaining_minutes = 600 before
+  // either committed, each allocated the full 600, and the block went to
+  // -600 (oversold). Post-fix the second transaction parks at SELECT ... FOR
+  // UPDATE, re-evaluates the committed row (remaining 0, predicate fails),
+  // and allocates nothing.
+  it('serializes two concurrent full-block allocations: no oversell, second allocation sees committed exhaustion', async () => {
+    const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+    const workDate = '2026-08-10';
+
+    try {
+      await db('tenants').insert({ tenant, client_name: 'HB Oversell Tenant', email: 'hboversell@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Oversell Client' });
+      const { service_id: svc } = await insertService(db, tenant, 'Oversell Svc', 1);
+      const userId = await insertUser(db, tenant);
+      const ticketId = await insertTicket(db, tenant, clientId, 'HB Oversell Ticket');
+      const blockId = uuidv4();
+      await insertBlock(db, tenant, clientId, svc, blockId, null);
+
+      // Two entries, each needing the block's full 600 minutes.
+      const entry1 = await insertTimeEntry(db, tenant, userId, ticketId, svc, 600, workDate);
+      const entry2 = await insertTimeEntry(db, tenant, userId, ticketId, svc, 600, workDate);
+
+      // Transaction A: real burn engine; after allocating it HOLDS its locks
+      // briefly so transaction B genuinely interleaves mid-flight.
+      const allocation1 = db.transaction(async (trx: Knex.Transaction) => {
+        const result = await allocateTimeEntry(trx, tenant, clientId, entry1);
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return result;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Transaction B: starts while A is mid-flight and must PARK at the
+      // hour_blocks row lock A holds.
+      let allocation2Settled = false;
+      const allocation2 = (async () => {
+        const result = await db.transaction(async (trx: Knex.Transaction) => allocateTimeEntry(trx, tenant, clientId, entry2));
+        allocation2Settled = true;
+        return result;
+      })();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(allocation2Settled, 'the second allocation must block on the hour_blocks row lock the first holds').toBe(false);
+
+      const [first, second] = await Promise.all([allocation1, allocation2]);
+
+      // Exactly one burn of the full block; the loser saw committed
+      // exhaustion and wrote nothing — never a negative balance.
+      expect(first).toEqual([{ block_id: blockId, minutes: 600 }]);
+      expect(second).toEqual([]);
+
+      const block = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+      expect(Number(block.remaining_minutes)).toBe(0);
+      expect(block.first_allocated_at).toBeTruthy();
+      const rows = await db('hour_block_time_allocations').where({ tenant, block_id: blockId });
+      expect(rows).toHaveLength(1);
+      expect(Number(rows[0].minutes)).toBe(600);
+    } finally {
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_block_time_allocations').where({ tenant }).delete();
+      await db('hour_block_audit').where({ tenant }).delete();
+      await db('time_entries').where({ tenant }).delete();
+      await db('tickets').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('users').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
+      await db.destroy();
+    }
+  });
+
   // The exact Berlin availability boundary: an instant where the UTC calendar
   // day and the Europe/Berlin calendar day disagree (2026-08-31T22:30Z = Berlin
   // 2026-09-01 00:30). A block expiring 2026-08-31 is still "today" on the UTC

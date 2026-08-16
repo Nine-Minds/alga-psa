@@ -6,10 +6,14 @@ import { activateHourBlocksForFinalizedInvoice } from '../src/actions/invoiceMod
 import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
 
 // Guarded DB test for the finalize-time sync between a draft hour-block
-// purchase invoice and its pending block (29.8.18 Blocker 2). The invoice is
-// editable before finalization, so the FINAL line is the authority: activation
-// must sync the block to the edited line (qty/rate/service), and a removed line
-// must void the block instead of activating stale hours.
+// purchase invoice and its pending block (29.8.18 Blocker 1, mitigation round
+// 2). The invoice is editable before finalization, so the FINAL line is the
+// authority: activation must sync the block to the edited line
+// (qty/rate/service) via its explicit source_invoice_charge_id linkage, and a
+// block whose linked line no longer survives as a positive charge on the
+// finalized invoice must be VOIDED — never activated from a surviving line it
+// cannot prove ownership of (removed line + foreign survivor, removed +
+// re-added line, unresolvable linkage).
 
 const enabled = process.env.HOUR_BLOCK_DB_TESTS === '1';
 
@@ -171,9 +175,88 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice draft-edit sync (
     }
   });
 
-  it('legacy blocks without charge linkage sync from the invoice sole service charge', async () => {
+  it('removed line with a surviving foreign line: the block is voided, never bound to the surviving line (b2b3038e)', async () => {
     const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
     const tenant = uuidv4();
+    const s = await seed(db, tenant);
+    try {
+      // The b2 reproduction shape: the block's purchase line (service A) is
+      // removed from the draft — the FK's ON DELETE SET NULL erases the block's
+      // linkage — while a DIFFERENT line (service B) survives. The deleted line
+      // is indistinguishable from an unlinked legacy block, so any
+      // surviving-line fallback would activate the block against a line it was
+      // never minted against.
+      await db('invoice_charges').where({ tenant, item_id: s.itemId }).delete();
+      await db('invoice_charges').insert({
+        tenant, item_id: uuidv4(), invoice_id: s.invoiceId, service_id: s.serviceB,
+        description: 'Unrelated surviving line', quantity: 7, unit_price: 9000,
+        total_price: 63000, tax_rate: 0, is_manual: true,
+      });
+
+      await activateHourBlocksForFinalizedInvoice(s.invoiceId, db, tenant, uuidv4());
+
+      const block = await db('hour_blocks').where({ tenant, block_id: s.blockId }).first();
+      expect(block.status).toBe('voided');
+      expect(block.voided_at).toBeTruthy();
+      // Never activated from the surviving foreign line: mint-time values kept.
+      expect(block.total_minutes).toBe(600);
+      expect(block.hourly_rate).toBe(10000);
+      expect(block.service_id).toBe(s.serviceA);
+      expect(block.source_invoice_charge_id).toBeNull();
+
+      const voidAudit = await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'void' }).first();
+      expect(voidAudit).toBeTruthy();
+      expect(voidAudit.reason).toBe('Purchase line removed from the invoice before finalization');
+      expect(voidAudit.metadata.source_invoice_charge_id).toBeNull();
+      expect(await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'purchase' }).first()).toBeFalsy();
+
+      expect(await getAvailableHourBlockMinutes(db, tenant, s.clientId)).toBe(0);
+    } finally {
+      await cleanup(db, tenant);
+      await db.destroy();
+    }
+  });
+
+  it('line removed and re-added with a new id: the block is voided, never bound to the re-added line', async () => {
+    const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
+    const tenant = uuidv4();
+    const s = await seed(db, tenant);
+    try {
+      // Remove-then-re-add of the "same" purchase: the replacement line carries
+      // a fresh item_id, so the block's linkage points at a dead row (nulled by
+      // the FK) and cannot prove ownership of the new line.
+      await db('invoice_charges').where({ tenant, item_id: s.itemId }).delete();
+      const replacementId = uuidv4();
+      await db('invoice_charges').insert({
+        tenant, item_id: replacementId, invoice_id: s.invoiceId, service_id: s.serviceA,
+        description: 'Prepaid hour block — Sync Svc A (re-added)', quantity: 5, unit_price: 12000,
+        total_price: 60000, tax_rate: 0, is_manual: true,
+      });
+
+      await activateHourBlocksForFinalizedInvoice(s.invoiceId, db, tenant, uuidv4());
+
+      const block = await db('hour_blocks').where({ tenant, block_id: s.blockId }).first();
+      expect(block.status).toBe('voided');
+      expect(block.source_invoice_charge_id).toBeNull();
+      expect(block.total_minutes).toBe(600);
+      expect(await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'purchase' }).first()).toBeFalsy();
+      expect(await getAvailableHourBlockMinutes(db, tenant, s.clientId)).toBe(0);
+
+      // No pending block lingers for the invoice either.
+      const pending = await db('hour_blocks').where({ tenant, source_invoice_id: s.invoiceId, status: 'pending' }).count({ count: '*' }).first();
+      expect(Number(pending?.count ?? 0)).toBe(0);
+    } finally {
+      await cleanup(db, tenant);
+      await db.destroy();
+    }
+  });
+
+  it('a pending block without resolvable linkage at finalize is voided, never activated from unproven line data', async () => {
+    const db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
+    const tenant = uuidv4();
+    // linkCharge: false leaves source_invoice_charge_id NULL — post-backfill
+    // that is exactly the "lineage cannot be proven" shape (the FK nulls the
+    // column on line deletion). Activation must not guess a line for it.
     const s = await seed(db, tenant, { linkCharge: false });
     try {
       await db('invoice_charges').where({ tenant, item_id: s.itemId }).update({ quantity: 2, unit_price: 5000, total_price: 10000 });
@@ -181,10 +264,11 @@ describe.runIf(enabled)('activateHourBlocksForFinalizedInvoice draft-edit sync (
       await activateHourBlocksForFinalizedInvoice(s.invoiceId, db, tenant, uuidv4());
 
       const block = await db('hour_blocks').where({ tenant, block_id: s.blockId }).first();
-      expect(block.status).toBe('active');
-      expect(block.total_minutes).toBe(120);
-      expect(block.hourly_rate).toBe(5000);
-      expect(block.source_invoice_charge_id).toBe(s.itemId);
+      expect(block.status).toBe('voided');
+      expect(block.total_minutes).toBe(600);
+      expect(block.hourly_rate).toBe(10000);
+      expect(await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'purchase' }).first()).toBeFalsy();
+      expect(await getAvailableHourBlockMinutes(db, tenant, s.clientId)).toBe(0);
     } finally {
       await cleanup(db, tenant);
       await db.destroy();

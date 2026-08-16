@@ -62,11 +62,17 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
  * is the authority: inside one transaction each pending block is synchronized
  * to its source line (total/remaining minutes from quantity, hourly_rate from
  * unit_price, purchase_amount, service) and flipped to `active` with a
- * `purchase` audit row. A block whose line no longer exists (or no longer has
- * a positive quantity/service) is voided instead — never activated with values
- * that drift from the invoice. Blocks created before the explicit
- * source_invoice_charge_id linkage fall back to matching the invoice's single
- * charge for the block's service (the original 1:1 shape).
+ * `purchase` audit row. A block whose line no longer survives as a positive
+ * charge on the finalized invoice is voided instead — never activated with
+ * values that drift from the invoice.
+ *
+ * Resolution is strictly linkage-based (source_invoice_charge_id). Removing a
+ * draft line fires the FK's ON DELETE SET NULL, which erases the linkage —
+ * indistinguishable from a block that never had one — so a NULL linkage at
+ * finalization CANNOT be resolved by service/sole-charge matching: any
+ * surviving line picked that way may belong to a different (re-added or
+ * foreign) line, activating the block from data it cannot prove ownership of
+ * (verified in review run b2b3038e). NULL or dangling linkage ⇒ void.
  */
 export async function activateHourBlocksForFinalizedInvoice(
   invoiceId: string,
@@ -99,7 +105,7 @@ export async function activateHourBlocksForFinalizedInvoice(
           userId,
           now,
           'Purchase line removed from the invoice before finalization',
-          { source_invoice_id: invoiceId },
+          { source_invoice_id: invoiceId, source_invoice_charge_id: block.source_invoice_charge_id ?? null },
         );
         continue;
       }
@@ -154,10 +160,12 @@ export async function activateHourBlocksForFinalizedInvoice(
 }
 
 /**
- * Resolves the authoritative invoice charge for a pending block: the recorded
- * source line when present; for pre-linkage blocks, the single charge on the
- * invoice matching the block's service, else the invoice's sole charge.
- * Returns null when no line can be proven to belong to the block.
+ * Resolves the authoritative invoice charge for a pending block: exactly the
+ * recorded source line, still present on the invoice being finalized. There is
+ * deliberately NO fallback: line deletion nulls the linkage (FK ON DELETE SET
+ * NULL), so a pending block without a resolvable linkage at finalization is a
+ * block whose line was removed (or whose lineage cannot be proven), and any
+ * surviving-line match could bind it to a line it was never minted against.
  */
 async function resolvePurchaseLineForBlock(
   trx: Knex.Transaction,
@@ -165,21 +173,13 @@ async function resolvePurchaseLineForBlock(
   invoiceId: string,
   block: { service_id: string; source_invoice_charge_id: string | null },
 ): Promise<Record<string, unknown> | null> {
-  if (block.source_invoice_charge_id) {
-    return await tenantScopedTable(trx, tenant, 'invoice_charges')
-      .where({ tenant, item_id: block.source_invoice_charge_id, invoice_id: invoiceId })
-      .first();
+  if (!block.source_invoice_charge_id) {
+    return null;
   }
 
-  const serviceMatch = await tenantScopedTable(trx, tenant, 'invoice_charges')
-    .where({ tenant, invoice_id: invoiceId, service_id: block.service_id });
-  if (serviceMatch.length === 1) {
-    return serviceMatch[0];
-  }
-
-  const allCharges = await tenantScopedTable(trx, tenant, 'invoice_charges')
-    .where({ tenant, invoice_id: invoiceId });
-  return allCharges.length === 1 ? allCharges[0] : null;
+  return await tenantScopedTable(trx, tenant, 'invoice_charges')
+    .where({ tenant, item_id: block.source_invoice_charge_id, invoice_id: invoiceId })
+    .first() ?? null;
 }
 
 async function voidPendingBlockAtFinalization(
@@ -228,8 +228,18 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
   invoiceId: string,
   userId: string,
 ): Promise<void> {
+  // Row-lock the affected blocks (canonical block_id order) so the used-check
+  // and the pending transition serialize against allocateTimeEntry, which
+  // locks the same rows before writing allocations/first_allocated_at. Without
+  // the lock, a concurrent allocation committing between the check and the
+  // update left a `pending` (unburnable) block with live allocations against
+  // it (review run b2b3038e). Holding the lock means an in-flight allocation
+  // has necessarily committed (marker visible, allocation rows countable) or
+  // rolled back before the check runs.
   const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
     .where({ tenant, source_invoice_id: invoiceId })
+    .orderBy('block_id', 'asc')
+    .forUpdate()
     .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at');
 
   for (const block of linkedBlocks) {
