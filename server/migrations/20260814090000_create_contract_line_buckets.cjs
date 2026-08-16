@@ -341,10 +341,16 @@ exports.up = async function up(knex) {
     );
   }
 
-  await knex.raw(`
-    UPDATE bucket_usage bu
-    SET bucket_id = psc.config_id
-    FROM contract_line_service_configuration psc
+  // Citus rejects the equivalent UPDATE ... FROM multi-table join even when
+  // every join includes the tenant distribution key. Materialize the mapping
+  // with the supported SELECT above, then issue distribution-key-qualified
+  // point updates against bucket_usage.
+  const mappedUsageRows = await knex.raw(`
+    SELECT DISTINCT bu.tenant, bu.usage_id, psc.config_id AS bucket_id
+    FROM bucket_usage bu
+    JOIN contract_line_service_configuration psc
+      ON psc.tenant = bu.tenant
+      AND psc.service_id = bu.service_catalog_id
     JOIN contract_line_service_bucket_config psbc
       ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
     JOIN contract_lines cl
@@ -354,11 +360,16 @@ exports.up = async function up(knex) {
       ON cc.tenant = psc.tenant
       AND cc.contract_id = cl.contract_id
     WHERE psc.configuration_type = 'Bucket'
-      AND bu.tenant = psc.tenant
-      AND bu.client_id = cc.client_id
-      AND bu.service_catalog_id = psc.service_id
       AND bu.bucket_id IS NULL
+      AND bu.client_id = cc.client_id
   `);
+
+  for (const row of mappedUsageRows.rows) {
+    await knex('bucket_usage')
+      .where({ tenant: row.tenant, usage_id: row.usage_id })
+      .whereNull('bucket_id')
+      .update({ bucket_id: row.bucket_id });
+  }
 
   // 3d. Guard: any usage row left unmapped means data the new keying cannot
   //     serve. Fail the migration loudly rather than ship an orphan (a row
