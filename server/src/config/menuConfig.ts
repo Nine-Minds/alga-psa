@@ -175,6 +175,14 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/assets'
       },
       {
+        name: 'Passwords',
+        translationKey: 'nav.passwords',
+        icon: KeyRound,
+        href: '/msp/credentials',
+        requiredFeature: TIER_FEATURES.CREDENTIALS,
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
+      },
+      {
         name: 'Inventory',
         translationKey: 'nav.inventory.label',
         icon: Package,

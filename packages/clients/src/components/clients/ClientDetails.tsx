@@ -97,6 +97,8 @@ import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
 import { useHuduClientTab } from './useHuduClientTab';
+import { useCredentialsVaultTab } from './useCredentialsVaultTab';
+import { ClientCredentialsTab } from './ClientCredentialsTab';
 import { useClientEquipmentTab } from './useClientEquipmentTab';
 import { ClientEquipmentTab } from './ClientEquipmentTab';
 
@@ -303,6 +305,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
+  // Credentials vault: EE + release-v1.5-feature + tier. When visible the
+  // unified Passwords tab replaces the Hudu-only one; when off, the legacy tab
+  // registration above is preserved exactly.
+  const credentialsVaultTab = useCredentialsVaultTab();
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();
 
@@ -1642,7 +1648,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
-    // EE-only Hudu tabs: registered only when EE + flag + connected + mapped (F070/F080).
+    // Hudu tab (F070): the general Hudu client tab (articles/assets mapping)
+    // is ALWAYS registered when EE + Hudu connected + this client mapped — it
+    // is independent of the credentials-vault flag. The release flag only
+    // swaps the password surface: the unified vault tab replaces the legacy
+    // Hudu-only Passwords tab, nothing else. Flag off ⇒ legacy pair as before.
     ...(huduClientTab.visible ? [{
       id: 'hudu',
       label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
@@ -1651,7 +1661,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <HuduClientTab clientId={client.client_id} />
         </div>
       )
-    }, {
+    }] : []),
+    ...(credentialsVaultTab.visible ? [{
+      id: 'credentials',
+      label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <ClientCredentialsTab clientId={client.client_id} />
+        </div>
+      )
+    }] : huduClientTab.visible ? [{
       id: 'hudu-passwords',
       label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
       content: (
@@ -1708,6 +1727,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter,
     interactions,
     huduClientTab.visible,
+    credentialsVaultTab.visible,
     clientEquipmentTab.visible
   ]);
 

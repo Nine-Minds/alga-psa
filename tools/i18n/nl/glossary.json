@@ -924,7 +924,8 @@
       "• Database",
       "• Printer",
       "• Server",
-      "• VPN"
+      "• VPN",
+      "{{count}} asset"
     ],
     "caseInsensitive": [
       "account",

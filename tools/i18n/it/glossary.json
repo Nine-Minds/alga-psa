@@ -733,7 +733,9 @@
       "workflow.event",
       "{{rate}} per {{unit}}",
       "| null",
-      "—"
+      "—",
+      "{{count}} asset",
+      "{{count}} assets"
     ],
     "caseInsensitive": [
       "account",
