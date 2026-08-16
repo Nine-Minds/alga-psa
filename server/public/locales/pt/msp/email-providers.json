@@ -242,6 +242,9 @@
         "authorizing": "Autorizando...",
         "authorized": "Autorizado",
         "authorizeAccess": "Autorizar acesso"
+      },
+      "messages": {
+        "setupIncomplete": "Provedor salvo, mas configuração incompleta: {{error}}"
       }
     },
     "microsoft": {

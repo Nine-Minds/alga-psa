@@ -250,6 +250,19 @@ describeDb('auth-pause reconnect save path (updateEmailProvider, DB-backed)', ()
     expect(row.status).toBe('connected');
     expect(row.error_message).toBeNull();
 
+    // The RETURNED provider must mirror that post-recovery row, not the
+    // pre-recovery snapshot assembled before recovery ran: the settings
+    // banner renders from this object, so a stale pause/status here keeps
+    // the "reconnect required" banner on screen after a successful
+    // reconnect until a manual refresh.
+    expect(result.provider.inboundPausedAt).toBeNull();
+    expect(result.provider.inboundPauseReason).toBeNull();
+    expect(Number(result.provider.inboundAuthFailureCount)).toBe(0);
+    expect(result.provider.inboundAuthFailureLastAt).toBeNull();
+    expect(result.provider.inboundAuthFailureCode).toBeNull();
+    expect(result.provider.status).toBe('connected');
+    expect(result.provider.errorMessage).toBeNull();
+
     // Pause-window backfill armed: UID/folder cursors reset so the poller
     // rescans the paused interval (last_uid '0' = scan from UID 1).
     const config = await getImapConfigRow(providerId);
@@ -271,6 +284,11 @@ describeDb('auth-pause reconnect save path (updateEmailProvider, DB-backed)', ()
     expect((result as any).actionError).toBeUndefined();
     expect((result as any).setupError).toBeTruthy();
     expect((result as any).provider.status).toBe('error');
+
+    // The returned provider must show the still-paused state (post-recovery
+    // re-read), so the settings banner persists alongside the form error.
+    expect(result.provider.inboundPausedAt).not.toBeNull();
+    expect(result.provider.inboundPauseReason).toBe('auth_failure');
 
     expect(imapFlowMock.instances).toHaveLength(1);
 

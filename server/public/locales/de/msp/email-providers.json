@@ -242,6 +242,9 @@
         "authorizing": "Wird autorisiert...",
         "authorized": "Autorisiert",
         "authorizeAccess": "Zugriff autorisieren"
+      },
+      "messages": {
+        "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}"
       }
     },
     "microsoft": {

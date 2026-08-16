@@ -242,6 +242,9 @@
         "authorizing": "11111",
         "authorized": "11111",
         "authorizeAccess": "11111"
+      },
+      "messages": {
+        "setupIncomplete": "11111 {{error}} 11111"
       }
     },
     "microsoft": {

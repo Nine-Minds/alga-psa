@@ -242,6 +242,9 @@
         "authorizing": "Autoriseren...",
         "authorized": "Geautoriseerd",
         "authorizeAccess": "Toegang autoriseren"
+      },
+      "messages": {
+        "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}"
       }
     },
     "microsoft": {

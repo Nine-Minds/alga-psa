@@ -1070,6 +1070,45 @@ export const updateEmailProvider = withAuth(async (
 
     result.provider = provider;
 
+    // Auth-pause recovery below mutates the provider row after `provider`
+    // above was assembled (pause cleared + counters reset, or status flipped
+    // to error with the pause left intact). The returned provider must
+    // reflect that persisted post-recovery state — returning the stale
+    // snapshot keeps the settings banner paused after a successful
+    // reconnect.
+    const refreshProviderAfterRecovery = async (): Promise<void> => {
+      try {
+        const { knex: refreshKnex } = await createTenantKnex(tenant);
+        const [freshRow] = await tenantDb(refreshKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .select([
+            ...PROVIDER_COLUMNS,
+            'inbound_auth_failure_count as inboundAuthFailureCount',
+            'inbound_auth_failure_last_at as inboundAuthFailureLastAt',
+            'inbound_auth_failure_code as inboundAuthFailureCode',
+          ]) as unknown as ProviderRow[];
+        if (freshRow) {
+          // Transport setup above may stamp lastSyncAt in memory without
+          // persisting it (initializeProviderWebhook does not write
+          // last_sync_at); keep whichever timestamp is fresher.
+          if (
+            provider.lastSyncAt &&
+            (!freshRow.lastSyncAt || new Date(provider.lastSyncAt) > new Date(freshRow.lastSyncAt))
+          ) {
+            freshRow.lastSyncAt = provider.lastSyncAt;
+          }
+          result.provider = { ...provider, ...freshRow };
+        }
+      } catch (error) {
+        // The save/recovery outcome stands; the caller just gets the
+        // pre-re-read snapshot, as before this refresh existed.
+        console.error('Failed to re-read provider after auth-failure recovery:', error);
+      }
+    };
+
+    let googleRecoveryAttempted = false;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
       const effectiveProjectId =
@@ -1102,11 +1141,21 @@ export const updateEmailProvider = withAuth(async (
           }
         }
 
+        // The recovery (resumed or failed) rewrote the provider row; the
+        // returned provider must not carry the pre-recovery pause state.
+        if (gmailResult.authFailureRecovery !== undefined) {
+          googleRecoveryAttempted = true;
+        }
+
         // Add any warnings
         if (gmailResult.warnings && gmailResult.warnings.length > 0) {
           result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
         }
       }
+    }
+
+    if (googleRecoveryAttempted) {
+      await refreshProviderAfterRecovery();
     }
 
     if (!skipAutomation && data.providerType === 'microsoft' && provider.microsoftConfig) {
@@ -1166,6 +1215,10 @@ export const updateEmailProvider = withAuth(async (
             );
             provider.status = 'error';
           }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
         }
       } catch (error) {
         console.error('Microsoft auth-failure recovery after credential update failed:', error);
@@ -1207,6 +1260,10 @@ export const updateEmailProvider = withAuth(async (
             result.setupError = recovery.error || 'IMAP reconnection failed. Check the credentials and try again.';
             provider.status = 'error';
           }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
         }
       } catch (error) {
         console.error('IMAP auth-failure recovery after credential update failed:', error);

@@ -242,6 +242,9 @@
         "authorizing": "Autoryzuję...",
         "authorized": "Upoważniony",
         "authorizeAccess": "Autoryzuj dostęp"
+      },
+      "messages": {
+        "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}"
       }
     },
     "microsoft": {

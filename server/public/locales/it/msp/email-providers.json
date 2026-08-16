@@ -242,6 +242,9 @@
         "authorizing": "Autorizzazione in corso...",
         "authorized": "Autorizzato",
         "authorizeAccess": "Autorizza l'accesso"
+      },
+      "messages": {
+        "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}"
       }
     },
     "microsoft": {

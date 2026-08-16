@@ -242,6 +242,9 @@
         "authorizing": "55555",
         "authorized": "55555",
         "authorizeAccess": "55555"
+      },
+      "messages": {
+        "setupIncomplete": "55555 {{error}} 55555"
       }
     },
     "microsoft": {

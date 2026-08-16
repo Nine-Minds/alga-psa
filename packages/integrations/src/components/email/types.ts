@@ -13,6 +13,9 @@ export interface EmailProvider {
   isActive: boolean;
   inboundPausedAt?: string | null;
   inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
+  inboundAuthFailureCount?: number;
+  inboundAuthFailureLastAt?: string | null;
+  inboundAuthFailureCode?: string | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
