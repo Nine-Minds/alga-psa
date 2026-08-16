@@ -16,6 +16,12 @@ import { allocateTimeEntry } from '@alga-psa/shared/billingClients/hourBlockServ
 //   2. Manual adjust used to read the block unlocked, compute the absolute
 //      new remaining in JS, and write it — a classic lost update that
 //      silently erased a concurrent burn's decrement.
+// Round 4 pins the remaining gap, the draft-deletion hook:
+//   3. voidPendingHourBlocksForDeletedInvoice used to read the linked blocks
+//      from an unlocked snapshot and void/detach with status-blind UPDATEs,
+//      so a finalization committing in between was stomped: the just-active
+//      block was re-voided, the finalized invoice deleted, and a bogus void
+//      audit written on top of the purchase audit.
 // The race tests hold a REAL pg transaction mid-flight on a second connection
 // and assert the action parks at the row lock and then behaves on the
 // committed state. No sleep-and-hope: the row lock serializes the outcome;
@@ -332,6 +338,67 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
       const burnRows = await db('hour_block_time_allocations').where({ tenant, block_id: s.blockId });
       expect(burnRows).toHaveLength(1);
       expect(Number(burnRows[0].minutes)).toBe(120);
+    } finally {
+      await holderDb.destroy();
+      await cleanup();
+    }
+  });
+
+  // Draft-deletion vs finalization race, genuinely concurrent (29.8.18
+  // mitigation round 4): transaction A is the REAL finalize-activation code
+  // joined onto a held-open holder trx (withTransaction reuses a passed trx),
+  // sitting exactly where a finalize transaction sits after activation,
+  // before commit — the hour_blocks row lock is held with the pending→active
+  // flip written but uncommitted. Transaction B is hardDeleteInvoice: its
+  // first touch of the block must be a SELECT ... FOR UPDATE that PARKS. When
+  // the finalization commits, B's locked select re-evaluates committed state,
+  // sees `active`, and refuses the deletion — the whole deletion transaction
+  // rolls back, invoice included. Pre-fix, B's snapshot was an unlocked read
+  // that saw `pending`, and its status-blind void UPDATE parked on the lock
+  // and then stomped the just-activated block back to `voided`, deleted the
+  // invoice, and wrote a bogus void audit on top of the purchase audit.
+  it('race: a finalization committing while draft deletion is in flight parks deletion at the row lock; the block stays active and the invoice survives', async () => {
+    const s = await seedPendingPurchase();
+    const holderDb = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 1 } });
+    try {
+      // Transaction A (the finalization side): real activation code on a
+      // trx held open mid-flight — row locked, pending → active flip
+      // uncommitted.
+      const holderTrx = await holderDb.transaction();
+      await activateHourBlocksForFinalizedInvoice(s.invoiceId, holderTrx as unknown as Knex.Transaction, tenant, userId);
+
+      // Transaction B: the draft deletion starts and must PARK at its own
+      // SELECT ... FOR UPDATE on the block row.
+      let deleteSettled = false;
+      const deletePromise = (async () => {
+        const { hardDeleteInvoice } = await import('../src/actions/invoiceModification');
+        const result = await hardDeleteInvoice(s.invoiceId);
+        deleteSettled = true;
+        return result;
+      })();
+      await sleep(300);
+      expect(deleteSettled, 'hardDeleteInvoice must block on the hour_blocks row lock while finalization holds it').toBe(false);
+
+      // The finalization wins the race and commits.
+      await holderTrx.commit();
+
+      // B unparks on the committed state: the block is active, so the
+      // deletion is refused wholesale — no clobbered status, no orphaned
+      // pending block, no void audit for a block this path did not void.
+      const result = await deletePromise;
+      expect(isActionError(result)).toBe(true);
+
+      const block = await db('hour_blocks').where({ tenant, block_id: s.blockId }).first();
+      expect(block.status).toBe('active');
+      expect(block.voided_at).toBeNull();
+      expect(block.source_invoice_id).toBe(s.invoiceId);
+
+      const invoice = await db('invoices').where({ tenant, invoice_id: s.invoiceId }).first();
+      expect(invoice).toBeTruthy();
+
+      expect(await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'void' }).first()).toBeFalsy();
+      const purchaseAudit = await db('hour_block_audit').where({ tenant, block_id: s.blockId, type: 'purchase' }).first();
+      expect(purchaseAudit).toBeTruthy();
     } finally {
       await holderDb.destroy();
       await cleanup();

@@ -485,6 +485,16 @@ async function releaseMaterialsForDeletedInvoice(
  * null the NOT NULL tenant column) and left `pending` forever. Mirrors the
  * manual `voidHourBlock` shape (status/voided_at/voided_by/void_reason +
  * audit); the audit metadata retains the deleted invoice's id as provenance.
+ *
+ * Lock discipline (29.8.18 mitigation round 4): runs inside the
+ * hardDeleteInvoice transaction (deletion + void stay atomic) and takes the
+ * linked rows SELECT ... FOR UPDATE in canonical block_id order — the same
+ * order every other hour_blocks check-then-act site locks in — so a
+ * concurrent finalize-activation holding the row lock parks this read until
+ * it commits, and the read then re-evaluates the block's committed state.
+ * Every status write below additionally re-checks the expected status in its
+ * WHERE clause; a block that left `pending` under the deletion is skipped,
+ * never overwritten from the locked snapshot.
  */
 async function voidPendingHourBlocksForDeletedInvoice(
   trx: Knex.Transaction,
@@ -495,11 +505,18 @@ async function voidPendingHourBlocksForDeletedInvoice(
 ): Promise<void> {
   const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
     .where({ tenant, source_invoice_id: invoiceId })
+    .orderBy('block_id', 'asc')
+    .forUpdate()
     .select('block_id', 'status');
 
   // Non-pending, non-voided linked blocks are an impossible state for a draft
   // invoice deletion — refuse rather than silently voiding an active/expired
-  // block. Already-voided blocks are left alone.
+  // block. Already-voided blocks are left alone. Under the lock this check is
+  // also the deletion-vs-finalization race outcome: if a concurrent
+  // finalization won the row lock and activated the block, the whole deletion
+  // transaction rolls back (invoice included) — the finalized invoice, not
+  // the deletion, owns the block now, so it must not be voided, re-voided,
+  // or detached from stale snapshot state.
   for (const block of linkedBlocks) {
     if (block.status !== 'pending' && block.status !== 'voided') {
       throw expectedInvoiceActionError(
@@ -510,8 +527,12 @@ async function voidPendingHourBlocksForDeletedInvoice(
 
   for (const block of linkedBlocks) {
     if (block.status === 'pending') {
-      await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ tenant, block_id: block.block_id })
+      const voidedCount = await tenantScopedTable(trx, tenant, 'hour_blocks')
+        // Belt-and-suspenders alongside the row lock: only a still-pending row
+        // may be voided here. If a concurrent transition somehow beat the
+        // lock (0 affected rows), the block is skipped — never overwritten —
+        // and no void audit row is fabricated for a void that did not happen.
+        .where({ tenant, block_id: block.block_id, status: 'pending' })
         .update({
           status: 'voided',
           voided_at: now,
@@ -520,6 +541,9 @@ async function voidPendingHourBlocksForDeletedInvoice(
           updated_at: now,
           source_invoice_id: null,
         });
+      if (voidedCount === 0) {
+        continue;
+      }
       await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
         tenant,
         block_id: block.block_id,
@@ -531,7 +555,10 @@ async function voidPendingHourBlocksForDeletedInvoice(
       });
     } else {
       await tenantScopedTable(trx, tenant, 'hour_blocks')
-        .where({ tenant, block_id: block.block_id })
+        // Same guard for the detach of an already-voided block: a row that
+        // left `voided` under the deletion keeps its current linkage — the
+        // deletion no longer owns it.
+        .where({ tenant, block_id: block.block_id, status: 'voided' })
         .update({ source_invoice_id: null, updated_at: now });
     }
   }

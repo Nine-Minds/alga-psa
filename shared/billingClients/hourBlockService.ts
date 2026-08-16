@@ -217,8 +217,9 @@ export async function isEntryEligibleForBlockBurn(
  * Locking discipline (29.8.18 Blocker 2): the rows are locked with
  * SELECT ... FOR UPDATE in canonical block_id order — the same order every
  * other hour_blocks check-then-act site (expire handlers, finalize
- * activation, unfinalize, adjust, expiration-edit, void; 29.8.18 mitigation
- * round 3 closed the activation/adjust/expiration-edit gaps) locks in — so
+ * activation, unfinalize, adjust, expiration-edit, void, draft-deletion
+ * void; 29.8.18 mitigation round 3 closed the activation/adjust/
+ * expiration-edit gaps, round 4 the draft-deletion one) locks in — so
  * concurrent mutators of a block's burn-state serialize instead
  * of racing. A block can no longer be expired/unfinalized between this read
  * and the allocation writes, because those writers wait on this lock, and this
