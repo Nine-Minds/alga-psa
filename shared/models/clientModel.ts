@@ -230,9 +230,13 @@ export class ClientModel {
       });
     }
 
-    // Create default client tax settings
+    // Create default client tax settings. Keyed per billing profile since S7:
+    // reverse-charge applicability is per legal entity, and the client's
+    // default profile is the entity a freshly created client bills as.
+    const defaultBillingProfileId = await ensureClientDefaultBillingProfile(trx, tenant, clientId);
     await db.table('client_tax_settings').insert({
       client_id: clientId,
+      billing_profile_id: defaultBillingProfileId,
       tenant,
       is_reverse_charge_applicable: false,
       created_at: new Date().toISOString(),

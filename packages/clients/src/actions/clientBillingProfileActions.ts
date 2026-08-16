@@ -8,6 +8,10 @@ import {
   listClientBillingProfiles,
 } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
+  resolveEffectiveBillingIdentity,
+  type EffectiveBillingIdentity,
+} from '@alga-psa/shared/billingClients/billingProfileSettings';
+import {
   actionError,
   permissionError,
   type ActionMessageError,
@@ -492,6 +496,146 @@ export const assignBillingProfile = withAuth(async (
           ...(spec.tracksActor ? { updated_by: user.user_id } : {}),
           updated_at: knex.fn.now(),
         });
+      return { success: true as const };
+    });
+  } catch (error) {
+    const expected = billingProfileActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
+ * The phase-2 bill-to, tax, PO, and delivery settings a profile may carry
+ * (F080–F088, F129).
+ *
+ * Every field is nullable and NULL means "inherit from the client" (F087) — so
+ * clearing a field is a real operation, not a no-op, and the editor sends
+ * explicit nulls.
+ *
+ * `billing_profile_id` is **not** part of the tax *region* chain and never
+ * becomes one (F089, decision D9): region follows delivery, and a profile's
+ * bill-to jurisdiction is not where the work happened.
+ */
+export interface ClientBillingProfileSettingsInput {
+  bills_separately?: boolean;
+  bill_to_name?: string | null;
+  bill_to_location_id?: string | null;
+  billing_contact_id?: string | null;
+  billing_email?: string | null;
+  is_tax_exempt?: boolean | null;
+  tax_exemption_certificate?: string | null;
+  tax_id_number?: string | null;
+  po_number?: string | null;
+  po_required?: boolean | null;
+  invoice_delivery_method?: string | null;
+  invoice_template_id?: string | null;
+  billing_cycle?: string | null;
+  payment_terms?: string | null;
+}
+
+const SETTINGS_FIELDS: Array<keyof ClientBillingProfileSettingsInput> = [
+  'bills_separately',
+  'bill_to_name',
+  'bill_to_location_id',
+  'billing_contact_id',
+  'billing_email',
+  'is_tax_exempt',
+  'tax_exemption_certificate',
+  'tax_id_number',
+  'po_number',
+  'po_required',
+  'invoice_delivery_method',
+  'invoice_template_id',
+  'billing_cycle',
+  'payment_terms',
+];
+
+/** The profile's stored settings alongside the values actually in force. */
+export const getClientBillingProfileSettings = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string; billingProfileId: string },
+): Promise<
+  | { stored: ClientBillingProfileSettingsInput; effective: EffectiveBillingIdentity }
+  | ClientBillingProfileActionError
+> => {
+  try {
+    await assertCanRead(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const row = await tenantDb(trx, tenant)
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
+        .first(...SETTINGS_FIELDS);
+      if (!row) {
+        return actionError('That billing profile does not belong to this client.');
+      }
+      return {
+        stored: row as ClientBillingProfileSettingsInput,
+        // Showing both is the point: an admin needs to see what this profile
+        // will actually bill as, not only which boxes they filled in.
+        effective: await resolveEffectiveBillingIdentity(
+          trx,
+          tenant,
+          input.clientId,
+          input.billingProfileId,
+        ),
+      };
+    });
+  } catch (error) {
+    const expected = billingProfileActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const updateClientBillingProfileSettings = withAuth(async (
+  user,
+  { tenant },
+  input: {
+    clientId: string;
+    billingProfileId: string;
+    settings: ClientBillingProfileSettingsInput;
+  },
+): Promise<{ success: true } | ClientBillingProfileActionError> => {
+  try {
+    await assertCanUpdate(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const profile = await db
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: input.billingProfileId, client_id: input.clientId })
+        .first('billing_profile_id');
+      if (!profile) {
+        return actionError('That billing profile does not belong to this client.');
+      }
+
+      // Only fields the caller actually sent are written; an omitted field is
+      // left alone, while an explicit null clears it back to inheriting.
+      const update: Record<string, unknown> = {};
+      for (const field of SETTINGS_FIELDS) {
+        if (field in input.settings) {
+          update[field] = input.settings[field] ?? null;
+        }
+      }
+      if (Object.keys(update).length === 0) {
+        return { success: true as const };
+      }
+
+      // bills_separately is the phase-2 gate and is never nullable.
+      if ('bills_separately' in update) {
+        update.bills_separately = Boolean(update.bills_separately);
+      }
+
+      update.updated_by = user.user_id;
+      update.updated_at = knex.fn.now();
+
+      await db
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: input.billingProfileId })
+        .update(update);
       return { success: true as const };
     });
   } catch (error) {

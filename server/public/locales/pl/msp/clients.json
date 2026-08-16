@@ -1643,7 +1643,8 @@
     "madeDefault": "„{{name}}” jest teraz domyślnym profilem rozliczeniowym",
     "archived": "Zarchiwizowano „{{name}}”",
     "deleted": "Usunięto „{{name}}”",
-    "restored": "Przywrócono „{{name}}”"
+    "restored": "Przywrócono „{{name}}”",
+    "settings": "Ustawienia rozliczeń"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenty rozliczeniowe",
@@ -1652,5 +1653,23 @@
     "save": "Zapisz dostęp do segmentów",
     "saved": "Zaktualizowano dostęp do segmentów portalu",
     "emptyWarning": "Wybierz co najmniej jeden segment albo wyłącz ograniczenie, aby pokazać wszystkie."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Zapisano ustawienia profilu rozliczeniowego",
+    "inherited": "Dziedziczone: {{value}}",
+    "notSet": "Nie ustawiono",
+    "billsSeparately": "Rozliczaj osobno",
+    "billsSeparatelyHint": "Wystawiaj osobną fakturę dla tego profilu, z własnym odbiorcą, metodą płatności i saldem.",
+    "billToName": "Nazwa na fakturze",
+    "billingEmail": "E-mail do faktur",
+    "poNumber": "Numer zamówienia",
+    "taxIdNumber": "NIP",
+    "taxExemptionCertificate": "Certyfikat zwolnienia podatkowego",
+    "invoiceDeliveryMethod": "Sposób dostarczania faktur",
+    "billingCycle": "Cykl rozliczeniowy",
+    "paymentTerms": "Warunki płatności",
+    "taxExempt": "Zwolniony z podatku",
+    "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
+    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
   }
 }

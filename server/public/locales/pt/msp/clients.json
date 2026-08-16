@@ -1593,7 +1593,8 @@
     "madeDefault": "«{{name}}» é agora o perfil de faturamento padrão",
     "archived": "«{{name}}» arquivado",
     "deleted": "«{{name}}» eliminado",
-    "restored": "«{{name}}» restaurado"
+    "restored": "«{{name}}» restaurado",
+    "settings": "Configurações de faturamento"
   },
   "portalBillingProfileAccess": {
     "label": "Segmentos de faturamento",
@@ -1602,5 +1603,23 @@
     "save": "Salvar acesso aos segmentos",
     "saved": "Acesso aos segmentos do portal atualizado",
     "emptyWarning": "Selecione ao menos um segmento, ou desative a restrição para mostrar todos."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Configurações do perfil de faturamento salvas",
+    "inherited": "Herdado: {{value}}",
+    "notSet": "Não definido",
+    "billsSeparately": "Faturar separadamente",
+    "billsSeparatelyHint": "Gerar uma fatura separada para este perfil, com seu próprio destinatário, forma de pagamento e saldo.",
+    "billToName": "Nome de faturamento",
+    "billingEmail": "E-mail de faturamento",
+    "poNumber": "Número da ordem de compra",
+    "taxIdNumber": "Número fiscal",
+    "taxExemptionCertificate": "Certificado de isenção fiscal",
+    "invoiceDeliveryMethod": "Forma de envio das faturas",
+    "billingCycle": "Ciclo de faturamento",
+    "paymentTerms": "Condições de pagamento",
+    "taxExempt": "Isento de imposto",
+    "taxExemptInherited": "Herdado do cliente ({{value}})",
+    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente."
   }
 }

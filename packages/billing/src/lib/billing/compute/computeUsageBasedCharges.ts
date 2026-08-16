@@ -162,7 +162,13 @@ export function computeUsageBasedCharges(
 
     let taxAmount = 0;
     let taxRate = 0;
-    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+    // Exemption is per billing profile (F131): one invoice can carry both
+    // exempt and non-exempt lines when a client holds several legal entities.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      isTaxable &&
+      effectiveTaxRegion
+    ) {
       try {
         const taxResult = taxPorts.calculateTax(
           client.client_id,
@@ -171,6 +177,7 @@ export function computeUsageBasedCharges(
           effectiveTaxRegion,
           true,
           clientContractLine.currency_code || "USD",
+          resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
         taxAmount = taxResult.taxAmount;

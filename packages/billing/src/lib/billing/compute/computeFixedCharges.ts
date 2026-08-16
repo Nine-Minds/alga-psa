@@ -386,7 +386,13 @@ export function computeFixedCharges(
       taxPorts.getClientDefaultTaxRegionCode(client.client_id);
     let fallbackTaxAmount = 0;
     let fallbackTaxRate = 0;
-    if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
+    // Exemption is per billing profile (F131), not per client — one invoice
+    // can carry both exempt and non-exempt lines.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      fallbackIsTaxable &&
+      fallbackTaxRegion
+    ) {
       const taxResult = taxPorts.calculateTax(
         client.client_id,
         baseRateInCents,
@@ -394,6 +400,7 @@ export function computeFixedCharges(
         fallbackTaxRegion,
         true,
         currencyCode,
+        resolvedProfile?.billingProfileId ?? null,
       );
       fallbackTaxRate = taxResult.taxRate;
       fallbackTaxAmount = taxResult.taxAmount;
@@ -492,7 +499,7 @@ export function computeFixedCharges(
 
       let taxAmount = 0;
       let taxRate = 0;
-      if (!client.is_tax_exempt && isTaxable) {
+      if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && isTaxable) {
         const effectiveTaxRegion =
           serviceTaxRegion ??
           taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
@@ -506,6 +513,7 @@ export function computeFixedCharges(
             effectiveTaxRegion,
             true,
             currencyCode,
+            resolvedProfile?.billingProfileId ?? null,
           );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
@@ -682,7 +690,7 @@ export function computeFixedCharges(
           config_id: service.config_id,
           base_rate: baseRateInCents,
         };
-        if (!client.is_tax_exempt && charge.is_taxable) {
+        if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && charge.is_taxable) {
           const effectiveTaxRegion = charge.tax_region ?? "";
           if (effectiveTaxRegion) {
             const taxResult = taxPorts.calculateTax(
@@ -692,6 +700,7 @@ export function computeFixedCharges(
               effectiveTaxRegion,
               true,
               currencyCode,
+              resolvedProfile?.billingProfileId ?? null,
             );
             charge.tax_rate = taxResult.taxRate;
             charge.tax_amount = taxResult.taxAmount;

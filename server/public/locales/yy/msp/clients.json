@@ -1593,7 +1593,8 @@
     "madeDefault": "55555 {{name}} 55555",
     "archived": "55555 {{name}} 55555",
     "deleted": "55555 {{name}} 55555",
-    "restored": "55555 {{name}} 55555"
+    "restored": "55555 {{name}} 55555",
+    "settings": "55555"
   },
   "portalBillingProfileAccess": {
     "label": "55555",
@@ -1602,5 +1603,23 @@
     "save": "55555",
     "saved": "55555",
     "emptyWarning": "55555"
+  },
+  "clientBillingProfileSettings": {
+    "saved": "55555",
+    "inherited": "55555 {{value}} 55555",
+    "notSet": "55555",
+    "billsSeparately": "55555",
+    "billsSeparatelyHint": "55555",
+    "billToName": "55555",
+    "billingEmail": "55555",
+    "poNumber": "55555",
+    "taxIdNumber": "55555",
+    "taxExemptionCertificate": "55555",
+    "invoiceDeliveryMethod": "55555",
+    "billingCycle": "55555",
+    "paymentTerms": "55555",
+    "taxExempt": "55555",
+    "taxExemptInherited": "55555 {{value}} 55555",
+    "regionNote": "55555"
   }
 }

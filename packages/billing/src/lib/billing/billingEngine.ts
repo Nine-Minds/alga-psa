@@ -93,6 +93,7 @@ import {
   type ChargeComputeClient,
   type ChargeComputeTaxContext,
   type LoadedChargeTaxRate,
+  type LoadedProfileTaxIdentity,
   type UsageServiceConfigEntry,
 } from "./compute";
 import {
@@ -764,10 +765,26 @@ export class BillingEngine {
   }
 
   /** Load every tax row needed by deterministic charge arithmetic. */
+  /**
+   * Load every tax row deterministic charge arithmetic consumes.
+   *
+   * Since S7 this builds tax identity **per billing profile**, not once per
+   * client (F131). Exemption, reverse charge, and tax ID are per legal entity,
+   * and one client can hold several — so a single invoice can legitimately
+   * carry both exempt and non-exempt lines. A NULL on the profile means
+   * "inherit from the client", which is what keeps a single-profile client's
+   * output identical.
+   *
+   * The **region chain is untouched** (F089, decision D9): service region →
+   * contract-line location region → client default region. A profile does not
+   * participate in it.
+   */
   private async loadChargeComputeTaxContext(input: {
     client: ChargeComputeClient;
     locationId: string | null | undefined;
     services: Array<{ tax_rate_id?: string | null }>;
+    /** Profiles whose charges this context will price; defaults to all of the client's. */
+    billingProfileIds?: Array<string | null | undefined>;
   }): Promise<ChargeComputeTaxContext> {
     await this.initKnex();
     if (!this.tenant) throw new Error("tenant context not found");
@@ -800,21 +817,68 @@ export class BillingEngine {
       return Boolean(rate?.regionCode);
     });
 
-    let settings = await db
+    // The client's default profile carries the client-level answer: since S7
+    // the settings table is keyed per profile, and the default profile's row is
+    // the one the pre-S7 schema held.
+    const defaultProfileId = await this.getClientDefaultBillingProfileId(
+      input.client.client_id,
+    );
+    const profileIds = new Set<string>([defaultProfileId]);
+    for (const id of input.billingProfileIds ?? []) {
+      if (id) profileIds.add(id);
+    }
+
+    const profileRows = await db
+      .table("client_billing_profiles")
+      .whereIn("billing_profile_id", [...profileIds])
+      .select("billing_profile_id", "is_tax_exempt");
+
+    let settingsRows = await db
       .table("client_tax_settings")
       .where({ client_id: input.client.client_id })
-      .select("is_reverse_charge_applicable")
-      .first();
+      .whereIn("billing_profile_id", [...profileIds])
+      .select("billing_profile_id", "is_reverse_charge_applicable");
+
     // Preserve TaxService.calculateTax's production-only provisioning side
     // effect, but keep it in this load phase and only when tax would be read.
-    if (!settings && !input.client.is_tax_exempt && hasTaxableService) {
-      await new TaxService().createDefaultTaxSettings(input.client.client_id);
-      settings = await db
+    // Provisioning is per profile now (F132): a row for the client alone would
+    // leave the resolved profile without one, and the next read would provision
+    // it again.
+    const missingProfileIds = [...profileIds].filter(
+      (id) => !settingsRows.some((row: any) => row.billing_profile_id === id),
+    );
+    if (missingProfileIds.length > 0 && !input.client.is_tax_exempt && hasTaxableService) {
+      const taxService = new TaxService();
+      for (const billingProfileId of missingProfileIds) {
+        await taxService.createDefaultTaxSettings(
+          input.client.client_id,
+          billingProfileId,
+        );
+      }
+      settingsRows = await db
         .table("client_tax_settings")
         .where({ client_id: input.client.client_id })
-        .select("is_reverse_charge_applicable")
-        .first();
+        .whereIn("billing_profile_id", [...profileIds])
+        .select("billing_profile_id", "is_reverse_charge_applicable");
     }
+
+    const reverseChargeByProfile = new Map<string, boolean>(
+      settingsRows.map((row: any) => [
+        row.billing_profile_id as string,
+        Boolean(row.is_reverse_charge_applicable),
+      ]),
+    );
+    const profileTax = new Map<string, LoadedProfileTaxIdentity>(
+      profileRows.map((row: any) => [
+        row.billing_profile_id as string,
+        {
+          // NULL means inherit from the client; only an explicit false/true on
+          // the profile overrides it.
+          isTaxExempt: row.is_tax_exempt ?? null,
+          reverseCharge: reverseChargeByProfile.get(row.billing_profile_id) ?? null,
+        },
+      ]),
+    );
 
     const [locationRegion, clientDefaultRegion] = await Promise.all([
       this.getLocationTaxRegionCode(input.locationId),
@@ -826,9 +890,10 @@ export class BillingEngine {
     return buildChargeComputeTaxContext({
       clientId: input.client.client_id,
       clientIsTaxExempt: Boolean(input.client.is_tax_exempt),
-      reverseCharge: Boolean(settings?.is_reverse_charge_applicable),
+      reverseCharge: Boolean(reverseChargeByProfile.get(defaultProfileId)),
       clientDefaultRegion,
       locationRegions,
+      profileTax,
       rates,
     });
   }
@@ -3318,6 +3383,10 @@ export class BillingEngine {
         services: fallbackService
           ? [...planServices, fallbackService]
           : planServices,
+        billingProfileIds: [
+          clientContractLine.billing_profile_id,
+          clientContractLine.contract_billing_profile_id,
+        ],
       }),
     );
 
@@ -4173,6 +4242,17 @@ export class BillingEngine {
         services: timeEntries.map(
           (entry: { tax_rate_id?: string | null }) => entry,
         ),
+        // Time is the one recurring path where charges on one contract line can
+        // land on different profiles, so every entry's work-item profile has to
+        // be in the context.
+        billingProfileIds: [
+          clientContractLine.billing_profile_id,
+          clientContractLine.contract_billing_profile_id,
+          ...timeEntries.map(
+            (entry: { work_item_billing_profile_id?: string | null }) =>
+              entry.work_item_billing_profile_id,
+          ),
+        ],
       }),
     );
 
@@ -4385,6 +4465,10 @@ export class BillingEngine {
         client,
         locationId: clientContractLine.location_id,
         services: usageRecords,
+        billingProfileIds: [
+          clientContractLine.billing_profile_id,
+          clientContractLine.contract_billing_profile_id,
+        ],
       }),
     );
 
@@ -4609,6 +4693,10 @@ export class BillingEngine {
         client,
         locationId: clientContractLine.location_id,
         services: planServices,
+        billingProfileIds: [
+          clientContractLine.billing_profile_id,
+          clientContractLine.contract_billing_profile_id,
+        ],
       }),
     );
 
@@ -4969,6 +5057,10 @@ export class BillingEngine {
             client,
             locationId: contractLine.location_id,
             services: [bucketConfig],
+            billingProfileIds: [
+              contractLine.billing_profile_id,
+              contractLine.contract_billing_profile_id,
+            ],
           }),
         );
         return result.charges;

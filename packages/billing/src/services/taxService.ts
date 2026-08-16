@@ -9,6 +9,7 @@ import type {
 } from '@alga-psa/types';
 import ClientTaxSettings from '../models/clientTaxSettings';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import { v4 as uuid4 } from 'uuid';
 import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 
@@ -345,11 +346,26 @@ export class TaxService {
     return taxSettings;
   }
 
-  async createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
+  /**
+   * Provision the default tax settings row for a client's billing profile
+   * (F132).
+   *
+   * `client_tax_settings` is keyed per profile since S7, so provisioning for
+   * the client alone would leave the resolved profile without a row and the
+   * next read would provision it again. When no profile is given, the client's
+   * default profile is used — which is exactly the pre-S7 behaviour for a
+   * single-profile client.
+   */
+  async createDefaultTaxSettings(
+    clientId: string,
+    billingProfileId?: string,
+  ): Promise<IClientTaxSettings> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for creating default tax settings');
     }
+    const resolvedProfileId = billingProfileId
+      ?? await ensureClientDefaultBillingProfile(knex, tenant, clientId);
     const trx = await knex.transaction();
 
     try {
@@ -369,36 +385,48 @@ export class TaxService {
       const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
         .insert({
           client_id: clientId,
+          billing_profile_id: resolvedProfileId,
           // tax_rate_id: defaultTaxRate.tax_rate_id, // Removed
           is_reverse_charge_applicable: false,
           tenant
         })
+        .onConflict(['tenant', 'client_id', 'billing_profile_id'])
+        .merge({ is_reverse_charge_applicable: false })
         .returning('*');
 
-      // Create the default association in client_tax_rates
-      await db.table('client_tax_rates')
-        .insert({
-          // client_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
-          client_id: clientId,
-          tax_rate_id: defaultTaxRate.tax_rate_id,
-          is_default: true,
-          location_id: null,
-          tenant
-        });
+      // The default tax-rate association and its component are per *client*,
+      // not per profile — the region chain is unchanged by billing profiles
+      // (F089). Provisioning for a second profile must not create a second
+      // default rate for the same client.
+      const existingDefaultRate = await db.table('client_tax_rates')
+        .where({ client_id: clientId, is_default: true })
+        .first();
 
-      // Create a default tax component (linked to the tax_rate, not settings)
-      // This part remains largely the same, assuming components are tied to rates
-      const tax_component_id = uuid4();
-      await db.table<ITaxComponent>('tax_components')
-        .insert({
-          tax_component_id,
-          tax_rate_id: defaultTaxRate.tax_rate_id, // Link component to the chosen default rate
-          name: 'Default Tax',
-          rate: Math.ceil(defaultTaxRate.tax_percentage),
-          sequence: 1,
-          is_compound: false,
-          tenant
-        });
+      if (!existingDefaultRate) {
+        await db.table('client_tax_rates')
+          .insert({
+            // client_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
+            client_id: clientId,
+            tax_rate_id: defaultTaxRate.tax_rate_id,
+            is_default: true,
+            location_id: null,
+            tenant
+          });
+
+        // Create a default tax component (linked to the tax_rate, not settings)
+        // This part remains largely the same, assuming components are tied to rates
+        const tax_component_id = uuid4();
+        await db.table<ITaxComponent>('tax_components')
+          .insert({
+            tax_component_id,
+            tax_rate_id: defaultTaxRate.tax_rate_id, // Link component to the chosen default rate
+            name: 'Default Tax',
+            rate: Math.ceil(defaultTaxRate.tax_percentage),
+            sequence: 1,
+            is_compound: false,
+            tenant
+          });
+      }
         // Removed .returning('*') as it wasn't used
 
       await trx.commit();

@@ -1593,7 +1593,8 @@
     "madeDefault": "11111 {{name}} 11111",
     "archived": "11111 {{name}} 11111",
     "deleted": "11111 {{name}} 11111",
-    "restored": "11111 {{name}} 11111"
+    "restored": "11111 {{name}} 11111",
+    "settings": "11111"
   },
   "portalBillingProfileAccess": {
     "label": "11111",
@@ -1602,5 +1603,23 @@
     "save": "11111",
     "saved": "11111",
     "emptyWarning": "11111"
+  },
+  "clientBillingProfileSettings": {
+    "saved": "11111",
+    "inherited": "11111 {{value}} 11111",
+    "notSet": "11111",
+    "billsSeparately": "11111",
+    "billsSeparatelyHint": "11111",
+    "billToName": "11111",
+    "billingEmail": "11111",
+    "poNumber": "11111",
+    "taxIdNumber": "11111",
+    "taxExemptionCertificate": "11111",
+    "invoiceDeliveryMethod": "11111",
+    "billingCycle": "11111",
+    "paymentTerms": "11111",
+    "taxExempt": "11111",
+    "taxExemptInherited": "11111 {{value}} 11111",
+    "regionNote": "11111"
   }
 }

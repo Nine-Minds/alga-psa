@@ -1593,7 +1593,8 @@
     "madeDefault": "\"{{name}}\" is now the default billing profile",
     "archived": "\"{{name}}\" archived",
     "deleted": "\"{{name}}\" deleted",
-    "restored": "\"{{name}}\" restored"
+    "restored": "\"{{name}}\" restored",
+    "settings": "Billing settings"
   },
   "portalBillingProfileAccess": {
     "label": "Billing segments",
@@ -1602,5 +1603,23 @@
     "save": "Save segment access",
     "saved": "Portal segment access updated",
     "emptyWarning": "Select at least one segment, or turn the restriction off to show all of them."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Billing profile settings saved",
+    "inherited": "Inherited: {{value}}",
+    "notSet": "Not set",
+    "billsSeparately": "Bills separately",
+    "billsSeparatelyHint": "Produce a separate invoice for this profile, with its own bill-to, payment method, and balance.",
+    "billToName": "Bill-to name",
+    "billingEmail": "Billing email",
+    "poNumber": "PO number",
+    "taxIdNumber": "Tax ID",
+    "taxExemptionCertificate": "Tax exemption certificate",
+    "invoiceDeliveryMethod": "Invoice delivery method",
+    "billingCycle": "Billing cycle",
+    "paymentTerms": "Payment terms",
+    "taxExempt": "Tax exempt",
+    "taxExemptInherited": "Inheriting from the client ({{value}})",
+    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default."
   }
 }

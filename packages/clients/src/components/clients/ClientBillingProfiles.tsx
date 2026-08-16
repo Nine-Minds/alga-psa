@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Star, Archive, Trash2, RotateCcw } from 'lucide-react';
+import { Pencil, Plus, Star, Archive, Trash2, RotateCcw, Settings2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -22,6 +22,7 @@ import {
   unarchiveClientBillingProfile,
   type ClientBillingProfile,
 } from '../../actions/clientBillingProfileActions';
+import { ClientBillingProfileSettings } from './ClientBillingProfileSettings';
 
 /**
  * Billing profiles on the client detail page (F035–F041).
@@ -50,6 +51,7 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
   const [isCreating, setIsCreating] = useState(false);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [settingsProfileId, setSettingsProfileId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setIsLoading(true);
@@ -145,10 +147,8 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
               const isBusy = busyProfileId === profile.billing_profile_id;
               const isEditing = editingProfileId === profile.billing_profile_id;
               return (
-                <li
-                  key={profile.billing_profile_id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
+                <li key={profile.billing_profile_id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     {isEditing ? (
                       <Input
@@ -195,6 +195,22 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
                       </>
                     ) : (
                       <>
+                        <Button
+                          id={`settings-billing-profile-${profile.billing_profile_id}`}
+                          size="sm"
+                          variant="ghost"
+                          title={t('clientBillingProfiles.settings', { defaultValue: 'Billing settings' })}
+                          disabled={isBusy}
+                          onClick={() =>
+                            setSettingsProfileId((current) =>
+                              current === profile.billing_profile_id
+                                ? null
+                                : profile.billing_profile_id,
+                            )
+                          }
+                        >
+                          <Settings2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           id={`rename-billing-profile-${profile.billing_profile_id}`}
                           size="sm"
@@ -275,6 +291,15 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
                       </>
                     )}
                   </div>
+                  </div>
+                  {settingsProfileId === profile.billing_profile_id && (
+                    <div className="mt-3">
+                      <ClientBillingProfileSettings
+                        clientId={clientId}
+                        billingProfileId={profile.billing_profile_id}
+                      />
+                    </div>
+                  )}
                 </li>
               );
             })}

@@ -1593,7 +1593,8 @@
     "madeDefault": "„{{name}}“ ist jetzt das Standard-Abrechnungsprofil",
     "archived": "„{{name}}“ archiviert",
     "deleted": "„{{name}}“ gelöscht",
-    "restored": "„{{name}}“ wiederhergestellt"
+    "restored": "„{{name}}“ wiederhergestellt",
+    "settings": "Abrechnungseinstellungen"
   },
   "portalBillingProfileAccess": {
     "label": "Abrechnungssegmente",
@@ -1602,5 +1603,23 @@
     "save": "Segmentzugriff speichern",
     "saved": "Portal-Segmentzugriff aktualisiert",
     "emptyWarning": "Wählen Sie mindestens ein Segment aus oder deaktivieren Sie die Einschränkung, um alle anzuzeigen."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Einstellungen des Abrechnungsprofils gespeichert",
+    "inherited": "Geerbt: {{value}}",
+    "notSet": "Nicht gesetzt",
+    "billsSeparately": "Separat abrechnen",
+    "billsSeparatelyHint": "Für dieses Profil eine eigene Rechnung erstellen – mit eigener Rechnungsadresse, Zahlungsart und Saldo.",
+    "billToName": "Rechnungsempfänger",
+    "billingEmail": "Rechnungs-E-Mail",
+    "poNumber": "Bestellnummer",
+    "taxIdNumber": "Steuernummer",
+    "taxExemptionCertificate": "Steuerbefreiungsbescheinigung",
+    "invoiceDeliveryMethod": "Rechnungsversand",
+    "billingCycle": "Abrechnungszyklus",
+    "paymentTerms": "Zahlungsbedingungen",
+    "taxExempt": "Steuerbefreit",
+    "taxExemptInherited": "Wird vom Kunden geerbt ({{value}})",
+    "regionNote": "Die Steuerregion wird hier nicht gesetzt. Sie richtet sich nach dem Leistungsort – Leistung, dann Standort der Vertragsposition, dann Kundenstandard."
   }
 }

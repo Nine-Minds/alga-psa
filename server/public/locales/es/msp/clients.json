@@ -1593,7 +1593,8 @@
     "madeDefault": "«{{name}}» es ahora el perfil de facturación predeterminado",
     "archived": "«{{name}}» archivado",
     "deleted": "«{{name}}» eliminado",
-    "restored": "«{{name}}» restaurado"
+    "restored": "«{{name}}» restaurado",
+    "settings": "Configuración de facturación"
   },
   "portalBillingProfileAccess": {
     "label": "Segmentos de facturación",
@@ -1602,5 +1603,23 @@
     "save": "Guardar acceso a segmentos",
     "saved": "Acceso a segmentos del portal actualizado",
     "emptyWarning": "Seleccione al menos un segmento, o desactive la restricción para mostrarlos todos."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Configuración del perfil de facturación guardada",
+    "inherited": "Heredado: {{value}}",
+    "notSet": "Sin definir",
+    "billsSeparately": "Factura por separado",
+    "billsSeparatelyHint": "Generar una factura aparte para este perfil, con su propio destinatario, método de pago y saldo.",
+    "billToName": "Nombre de facturación",
+    "billingEmail": "Correo de facturación",
+    "poNumber": "Número de OC",
+    "taxIdNumber": "NIF/CIF",
+    "taxExemptionCertificate": "Certificado de exención fiscal",
+    "invoiceDeliveryMethod": "Método de envío de facturas",
+    "billingCycle": "Ciclo de facturación",
+    "paymentTerms": "Condiciones de pago",
+    "taxExempt": "Exento de impuestos",
+    "taxExemptInherited": "Heredado del cliente ({{value}})",
+    "regionNote": "La región fiscal no se define aquí. Sigue el lugar de entrega: el servicio, luego la ubicación de la línea de contrato y luego el valor por defecto del cliente."
   }
 }

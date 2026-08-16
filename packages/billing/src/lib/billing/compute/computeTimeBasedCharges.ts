@@ -225,6 +225,14 @@ export function computeTimeBasedCharges(
         tax_rate_id: effectiveTaxRateId,
       });
 
+    // Time is one of only two charge types whose source record can carry a
+    // segment, so this is the one place the work-item step of the chain is
+    // reachable from recurring generation. Resolved before tax because
+    // exemption is per profile (F131), not per client.
+    const resolvedProfile = resolveChargeProfileFor(billingProfile, {
+      workItemBillingProfileId: entry.work_item_billing_profile_id,
+    });
+
     let taxAmount = 0;
     let taxRate = 0;
     const effectiveTaxRegion =
@@ -233,7 +241,11 @@ export function computeTimeBasedCharges(
       taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
       undefined;
 
-    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      isTaxable &&
+      effectiveTaxRegion
+    ) {
       try {
         const taxResult = taxPorts.calculateTax(
           client.client_id,
@@ -242,6 +254,7 @@ export function computeTimeBasedCharges(
           effectiveTaxRegion,
           true,
           clientContractLine.currency_code || "USD",
+          resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
         taxAmount = taxResult.taxAmount;
@@ -256,13 +269,6 @@ export function computeTimeBasedCharges(
     const projectConfig = entry.project_id
       ? getProjectChargeConfig?.(entry.project_id)
       : undefined;
-
-    // Time is one of only two charge types whose source record can carry a
-    // segment, so this is the one place the work-item step of the chain is
-    // reachable from recurring generation.
-    const resolvedProfile = resolveChargeProfileFor(billingProfile, {
-      workItemBillingProfileId: entry.work_item_billing_profile_id,
-    });
 
     const explanationInputs = [
       {

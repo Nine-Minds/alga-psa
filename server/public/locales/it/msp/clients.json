@@ -1593,7 +1593,8 @@
     "madeDefault": "«{{name}}» è ora il profilo di fatturazione predefinito",
     "archived": "«{{name}}» archiviato",
     "deleted": "«{{name}}» eliminato",
-    "restored": "«{{name}}» ripristinato"
+    "restored": "«{{name}}» ripristinato",
+    "settings": "Impostazioni di fatturazione"
   },
   "portalBillingProfileAccess": {
     "label": "Segmenti di fatturazione",
@@ -1602,5 +1603,23 @@
     "save": "Salva accesso ai segmenti",
     "saved": "Accesso ai segmenti del portale aggiornato",
     "emptyWarning": "Seleziona almeno un segmento oppure disattiva la restrizione per mostrarli tutti."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Impostazioni del profilo di fatturazione salvate",
+    "inherited": "Ereditato: {{value}}",
+    "notSet": "Non impostato",
+    "billsSeparately": "Fattura separatamente",
+    "billsSeparatelyHint": "Genera una fattura separata per questo profilo, con proprio intestatario, metodo di pagamento e saldo.",
+    "billToName": "Intestatario fattura",
+    "billingEmail": "Email di fatturazione",
+    "poNumber": "Numero ordine",
+    "taxIdNumber": "Partita IVA",
+    "taxExemptionCertificate": "Certificato di esenzione",
+    "invoiceDeliveryMethod": "Modalità di invio fatture",
+    "billingCycle": "Ciclo di fatturazione",
+    "paymentTerms": "Termini di pagamento",
+    "taxExempt": "Esente da imposta",
+    "taxExemptInherited": "Ereditato dal cliente ({{value}})",
+    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente."
   }
 }

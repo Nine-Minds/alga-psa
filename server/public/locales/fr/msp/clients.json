@@ -1593,7 +1593,8 @@
     "madeDefault": "« {{name}} » est désormais le profil de facturation par défaut",
     "archived": "« {{name}} » archivé",
     "deleted": "« {{name}} » supprimé",
-    "restored": "« {{name}} » restauré"
+    "restored": "« {{name}} » restauré",
+    "settings": "Paramètres de facturation"
   },
   "portalBillingProfileAccess": {
     "label": "Segments de facturation",
@@ -1602,5 +1603,23 @@
     "save": "Enregistrer l’accès aux segments",
     "saved": "Accès aux segments du portail mis à jour",
     "emptyWarning": "Sélectionnez au moins un segment, ou désactivez la restriction pour tous les afficher."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Paramètres du profil de facturation enregistrés",
+    "inherited": "Hérité : {{value}}",
+    "notSet": "Non défini",
+    "billsSeparately": "Facturé séparément",
+    "billsSeparatelyHint": "Générer une facture distincte pour ce profil, avec son propre destinataire, moyen de paiement et solde.",
+    "billToName": "Nom de facturation",
+    "billingEmail": "E-mail de facturation",
+    "poNumber": "Numéro de commande",
+    "taxIdNumber": "Numéro fiscal",
+    "taxExemptionCertificate": "Certificat d’exonération",
+    "invoiceDeliveryMethod": "Mode d’envoi des factures",
+    "billingCycle": "Cycle de facturation",
+    "paymentTerms": "Conditions de paiement",
+    "taxExempt": "Exonéré de taxe",
+    "taxExemptInherited": "Hérité du client ({{value}})",
+    "regionNote": "La région fiscale ne se définit pas ici. Elle suit le lieu de livraison : le service, puis le site de la ligne de contrat, puis la valeur par défaut du client."
   }
 }

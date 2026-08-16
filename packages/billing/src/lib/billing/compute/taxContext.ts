@@ -11,12 +11,31 @@ export interface LoadedChargeTaxRate {
   currencyCode: string | null;
 }
 
+/**
+ * Tax identity for one billing profile. Every field is nullable and NULL means
+ * "inherit from the client" — the same rule as the columns themselves, which is
+ * what makes a profile with nothing filled in behave exactly like the client
+ * does today.
+ */
+export interface LoadedProfileTaxIdentity {
+  isTaxExempt: boolean | null;
+  reverseCharge: boolean | null;
+}
+
 export interface LoadedChargeTaxContext {
   clientId: string;
   clientIsTaxExempt: boolean;
   reverseCharge: boolean;
   clientDefaultRegion: string | null;
   locationRegions: ReadonlyMap<string, string | null>;
+  /**
+   * Per-profile tax identity (F131). One invoice can legitimately carry both
+   * exempt and non-exempt lines — the one-site-many-legal-entities shape is
+   * exactly a mix — so exemption is resolved per charge, not once per client.
+   * Absent for callers with no profile dimension (the contract simulator),
+   * which then get the client-level values, i.e. today's behaviour.
+   */
+  profileTax?: ReadonlyMap<string, LoadedProfileTaxIdentity>;
   rates: readonly LoadedChargeTaxRate[];
   onMissingRate?: (input: {
     regionCode: string;
@@ -32,6 +51,16 @@ export function buildChargeComputeTaxContext(
   loaded: LoadedChargeTaxContext,
 ): ChargeComputeTaxContext {
   const rateById = new Map(loaded.rates.map((rate) => [rate.taxRateId, rate]));
+
+  const identityFor = (billingProfileId: string | null | undefined) => {
+    const profile = billingProfileId
+      ? loaded.profileTax?.get(billingProfileId)
+      : undefined;
+    return {
+      isTaxExempt: profile?.isTaxExempt ?? loaded.clientIsTaxExempt,
+      reverseCharge: profile?.reverseCharge ?? loaded.reverseCharge,
+    };
+  };
 
   return {
     getTaxInfoFromService(service): ChargeComputeTaxInfo {
@@ -49,6 +78,9 @@ export function buildChargeComputeTaxContext(
     getClientDefaultTaxRegionCode(clientId) {
       return clientId === loaded.clientId ? loaded.clientDefaultRegion : null;
     },
+    isTaxExemptForProfile(billingProfileId) {
+      return identityFor(billingProfileId).isTaxExempt;
+    },
     calculateTax(
       clientId,
       netAmountInCents,
@@ -56,11 +88,13 @@ export function buildChargeComputeTaxContext(
       regionCode,
       isTaxable,
       currencyCode,
+      billingProfileId,
     ) {
+      const identity = identityFor(billingProfileId);
       if (
         clientId !== loaded.clientId ||
-        loaded.clientIsTaxExempt ||
-        loaded.reverseCharge ||
+        identity.isTaxExempt ||
+        identity.reverseCharge ||
         !isTaxable ||
         netAmountInCents <= 0
       ) {

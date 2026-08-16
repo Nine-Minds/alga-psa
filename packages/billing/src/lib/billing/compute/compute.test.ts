@@ -21,6 +21,9 @@ const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
   }),
   getLocationTaxRegionCode: () => null,
   getClientDefaultTaxRegionCode: () => "US-TEST",
+  // No profile dimension in these fixtures: the client-level answer applies,
+  // which is exactly what a single-profile client gets in production.
+  isTaxExemptForProfile: () => false,
   calculateTax: (_clientId, netAmountInCents) => ({
     taxRate: 10,
     taxAmount: Math.round(netAmountInCents * 0.1),

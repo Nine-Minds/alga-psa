@@ -1593,7 +1593,8 @@
     "madeDefault": "“{{name}}” is nu het standaard facturatieprofiel",
     "archived": "“{{name}}” gearchiveerd",
     "deleted": "“{{name}}” verwijderd",
-    "restored": "“{{name}}” hersteld"
+    "restored": "“{{name}}” hersteld",
+    "settings": "Facturatie-instellingen"
   },
   "portalBillingProfileAccess": {
     "label": "Facturatiesegmenten",
@@ -1602,5 +1603,23 @@
     "save": "Segmenttoegang opslaan",
     "saved": "Portaalsegmenttoegang bijgewerkt",
     "emptyWarning": "Selecteer minstens één segment, of zet de beperking uit om ze allemaal te tonen."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Instellingen facturatieprofiel opgeslagen",
+    "inherited": "Geërfd: {{value}}",
+    "notSet": "Niet ingesteld",
+    "billsSeparately": "Apart factureren",
+    "billsSeparatelyHint": "Maak een aparte factuur voor dit profiel, met een eigen factuuradres, betaalmethode en saldo.",
+    "billToName": "Factuurnaam",
+    "billingEmail": "Factuur-e-mail",
+    "poNumber": "Inkoopordernummer",
+    "taxIdNumber": "Btw-nummer",
+    "taxExemptionCertificate": "Vrijstellingsverklaring",
+    "invoiceDeliveryMethod": "Factuurverzending",
+    "billingCycle": "Facturatiecyclus",
+    "paymentTerms": "Betalingsvoorwaarden",
+    "taxExempt": "Btw-vrijgesteld",
+    "taxExemptInherited": "Geërfd van de klant ({{value}})",
+    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant."
   }
 }
