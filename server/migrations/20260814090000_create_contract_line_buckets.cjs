@@ -307,10 +307,29 @@ exports.up = async function up(knex) {
   //     which the old write path was known to populate unreliably (the
   //     write-under-one-line/read-under-another mismatch the rekey kills).
   //
+  //     Effective window: a usage row must only match the assignment that was
+  //     in force for the row's period, mirroring the runtime resolution in
+  //     shared/billingClients/bucketUsageService.ts resolveBucketDraw():
+  //       cc.start_date <= target AND (cc.end_date IS NULL OR cc.end_date >= target)
+  //     (end_date inclusive, plain-date comparison). Anchor: the usage row's
+  //     period_start, taken as a UTC calendar date — bucket_usage periods are
+  //     written as UTC midnights derived from the same plain date the runtime
+  //     resolved the assignment with, and the explicit AT TIME ZONE 'UTC' keeps
+  //     the date extraction independent of the server TimeZone setting.
+  //     Deliberately NOT filtering cc.is_active: the runtime uses is_active to
+  //     gate *current* draws, but historical usage legitimately belongs to
+  //     assignments that have since been deactivated — filtering them would
+  //     push valid rows into the 3d unmapped hard failure. If two assignment
+  //     windows genuinely overlap on the anchor date (e.g. A.end_date equals
+  //     B.start_date under the inclusive bound), the row matches both and the
+  //     ambiguity guard below fails loudly rather than silently picking one.
+  //
   //     Ambiguity guard: client_contracts is many-to-many (a client may hold
   //     several overlapping assignments on the same line), so a usage row can
   //     match several pools. That would silently pick an arbitrary bucket —
-  //     fail loudly instead.
+  //     fail loudly instead. Without the effective-window predicate this guard
+  //     also fired falsely on *sequential, non-overlapping* assignments (an
+  //     ended contract followed by its replacement), which is healthy data.
   const ambiguousMatches = await knex.raw(`
     SELECT bu.usage_id, COUNT(DISTINCT psc.config_id) AS pool_count
     FROM bucket_usage bu
@@ -328,6 +347,8 @@ exports.up = async function up(knex) {
     WHERE psc.configuration_type = 'Bucket'
       AND bu.bucket_id IS NULL
       AND bu.client_id = cc.client_id
+      AND cc.start_date <= (bu.period_start AT TIME ZONE 'UTC')::date
+      AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
     GROUP BY bu.usage_id
     HAVING COUNT(DISTINCT psc.config_id) > 1
     LIMIT 5
@@ -344,7 +365,9 @@ exports.up = async function up(knex) {
   // Citus rejects the equivalent UPDATE ... FROM multi-table join even when
   // every join includes the tenant distribution key. Materialize the mapping
   // with the supported SELECT above, then issue distribution-key-qualified
-  // point updates against bucket_usage.
+  // point updates against bucket_usage. The effective-window predicate is
+  // byte-identical to the ambiguity guard's — the guard proves at most one
+  // match per row only under the exact match set this query maps with.
   const mappedUsageRows = await knex.raw(`
     SELECT DISTINCT bu.tenant, bu.usage_id, psc.config_id AS bucket_id
     FROM bucket_usage bu
@@ -362,6 +385,8 @@ exports.up = async function up(knex) {
     WHERE psc.configuration_type = 'Bucket'
       AND bu.bucket_id IS NULL
       AND bu.client_id = cc.client_id
+      AND cc.start_date <= (bu.period_start AT TIME ZONE 'UTC')::date
+      AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
   `);
 
   for (const row of mappedUsageRows.rows) {

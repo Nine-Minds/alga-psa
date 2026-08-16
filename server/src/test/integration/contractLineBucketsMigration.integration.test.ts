@@ -12,6 +12,9 @@
  *  5. down() restores the legacy world (new tables dropped, bucket_id column
  *     gone, minutes back to bigint) so the frozen legacy tables still describe
  *     the old world.
+ *  6. Sequential non-overlapping client-contract assignments neither trip the
+ *     ambiguity guard nor map usage to the wrong pool: both backfill queries
+ *     scope matches to the assignment effective for each row's period (T004).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import path from 'node:path';
@@ -291,5 +294,154 @@ describe('contract_line_buckets migration (real DB)', () => {
       expect(catalog.atttypmod).toBe(expectedAtttypmod);
       expect(catalog.atttypid).toBe(numericTypeOid);
     }
+  });
+
+  it('T004: up() maps each usage row to the assignment active for its period when a client holds sequential non-overlapping contracts', async () => {
+    // Sequential history: contract A (Jan–Jun 2026, since deactivated) was
+    // replaced by contract B (Jul 2026–open). Both carry a Bucket config for
+    // the SAME service, so without the effective-window predicate every usage
+    // row for that (client, service) joins both configs: the ambiguity guard
+    // fires on healthy data (both backfill queries share the predicate, so a
+    // wrong window would surface either as that false abort or as a row mapped
+    // to the pool of a contract not in force for its period).
+    await migration.down(knex);
+
+    const tenant = randomUUID();
+    const clientId = randomUUID();
+    const serviceId = randomUUID();
+    const serviceTypeId = randomUUID();
+    const contractIdA = randomUUID();
+    const contractIdB = randomUUID();
+    const lineIdA = randomUUID();
+    const lineIdB = randomUUID();
+    const configIdA = randomUUID();
+    const configIdB = randomUUID();
+    const usageIdMarch = randomUUID();
+    const usageIdAugust = randomUUID();
+
+    await knex('tenants').insert({ tenant, client_name: 'Sequential Assignments Tenant', email: `seq-${tenant}@example.com` });
+    await knex('clients').insert({ tenant, client_id: clientId, client_name: 'Sequential Assignments Client', client_type: 'company', is_tax_exempt: false });
+    await knex('service_types').insert({ id: serviceTypeId, tenant, name: `Sequential Type ${tenant.slice(0, 6)}`, is_active: true });
+    await knex('service_catalog').insert({
+      tenant,
+      service_id: serviceId,
+      service_name: 'Sequential Assignments Service',
+      billing_method: 'hourly',
+      custom_service_type_id: serviceTypeId,
+      default_rate: 10000,
+      unit_of_measure: 'hour',
+    });
+
+    const contracts = [
+      { contractId: contractIdA, lineId: lineIdA, configId: configIdA, name: 'A' },
+      { contractId: contractIdB, lineId: lineIdB, configId: configIdB, name: 'B' },
+    ];
+    for (const c of contracts) {
+      await knex('contracts').insert({ tenant, contract_id: c.contractId, contract_name: `Sequential Contract ${c.name}`, billing_frequency: 'monthly', is_active: true, status: 'active', is_template: false, currency_code: 'USD', is_system_managed_default: false, owner_client_id: clientId });
+      await knex('contract_lines').insert({
+        tenant,
+        contract_line_id: c.lineId,
+        contract_id: c.contractId,
+        contract_line_name: `Sequential Line ${c.name}`,
+        billing_frequency: 'monthly',
+        contract_line_type: 'Bucket',
+        is_active: true,
+        is_template: false,
+        billing_timing: 'arrears',
+        cadence_owner: 'client',
+        billing_cycle_alignment: 'start',
+        minimum_billable_time: 0,
+        round_up_to_nearest: 0,
+      });
+      await knex('contract_line_service_configuration').insert({
+        tenant,
+        config_id: c.configId,
+        contract_line_id: c.lineId,
+        service_id: serviceId,
+        configuration_type: 'Bucket',
+        custom_rate: null,
+        quantity: null,
+      });
+      await knex('contract_line_service_bucket_config').insert({
+        tenant,
+        config_id: c.configId,
+        total_minutes: 1200,
+        overage_rate: 12000,
+        allow_rollover: false,
+        billing_period: 'monthly',
+      });
+    }
+
+    // Assignment A ended 2026-06-30 and was deactivated — historical rows in
+    // its window must still map to it (the backfill intentionally does not
+    // filter is_active). Assignment B started 2026-07-01, open-ended.
+    await knex('client_contracts').insert({
+      tenant,
+      client_contract_id: randomUUID(),
+      client_id: clientId,
+      contract_id: contractIdA,
+      start_date: '2026-01-01',
+      end_date: '2026-06-30',
+      is_active: false,
+      status: 'completed',
+      renewal_mode: 'none',
+      notice_period_days: 0,
+      renewal_due_date_action_policy: 'queue_only',
+    });
+    await knex('client_contracts').insert({
+      tenant,
+      client_contract_id: randomUUID(),
+      client_id: clientId,
+      contract_id: contractIdB,
+      start_date: '2026-07-01',
+      end_date: null,
+      is_active: true,
+      status: 'pending',
+      renewal_mode: 'none',
+      notice_period_days: 0,
+      renewal_due_date_action_policy: 'queue_only',
+    });
+
+    // One usage row inside each assignment's window.
+    await knex('bucket_usage').insert({
+      tenant,
+      usage_id: usageIdMarch,
+      client_id: clientId,
+      contract_line_id: lineIdA,
+      service_catalog_id: serviceId,
+      period_start: '2026-03-01 00:00:00+00',
+      period_end: '2026-04-01 00:00:00+00',
+      minutes_used: 300,
+      overage_minutes: 0,
+      rolled_over_minutes: 0,
+    });
+    await knex('bucket_usage').insert({
+      tenant,
+      usage_id: usageIdAugust,
+      client_id: clientId,
+      contract_line_id: lineIdB,
+      service_catalog_id: serviceId,
+      period_start: '2026-08-01 00:00:00+00',
+      period_end: '2026-09-01 00:00:00+00',
+      minutes_used: 450,
+      overage_minutes: 0,
+      rolled_over_minutes: 0,
+    });
+
+    // Query path 1 (ambiguity guard): with the effective-window predicate the
+    // sequential assignments are NOT ambiguous — up() must complete instead of
+    // throwing the "maps to multiple legacy Bucket configs" abort.
+    await migration.up(knex);
+
+    // Query path 2 (mapping): each row selected only the assignment active
+    // for its period — row-by-row, not by count.
+    const marchRow = await knex('bucket_usage').where({ tenant, usage_id: usageIdMarch }).first();
+    const augustRow = await knex('bucket_usage').where({ tenant, usage_id: usageIdAugust }).first();
+    expect(marchRow.bucket_id).toBe(configIdA);
+    expect(augustRow.bucket_id).toBe(configIdB);
+
+    // Both legacy configs became their own single-member pools.
+    const pools = await knex('contract_line_buckets').where({ tenant }).orderBy('contract_line_id');
+    expect(pools.map((p) => p.bucket_id).sort()).toEqual([configIdA, configIdB].sort());
   });
 });
