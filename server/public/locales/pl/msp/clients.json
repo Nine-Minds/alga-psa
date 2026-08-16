@@ -975,12 +975,12 @@
     "noServiceTypes": "Nie skonfigurowano typów usług.",
     "serviceTypes": {
       "mode": {
-        "inherit": "Użyj wartości domyślnej dzierżawcy",
+        "inherit": "Użyj wartości domyślnej organizacji",
         "all": "Wszystkie typy usług",
         "restricted": "Tylko wybrane typy",
         "placeholder": "Wybierz ograniczenie typu usługi"
       },
-      "inheritedRestricted": "Wartość domyślna dzierżawcy: tylko wybrane typy ({{types}}).",
+      "inheritedRestricted": "Wartość domyślna organizacji: tylko wybrane typy ({{types}}).",
       "restricted": "Kredyt jest ograniczony do wybranych typów usług. Wybierz co najmniej jeden, aby zapisać."
     },
     "order": {
