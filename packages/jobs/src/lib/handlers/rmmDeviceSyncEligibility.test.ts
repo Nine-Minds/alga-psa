@@ -17,7 +17,7 @@ import { parseRmmDeviceSyncState } from './rmmAlertPollingHandlers';
  * provider that prompted this work — never reached its device sync at all.
  */
 
-const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm'];
+const DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
 const ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
 
 function deviceSyncEligible(row: {
@@ -50,7 +50,7 @@ describe('device sync eligibility', () => {
 
   it('is not eligible for a provider outside the device sync list', () => {
     expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'huntress' })).toBe(false);
-    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'tanium' })).toBe(false);
+    expect(deviceSyncEligible({ is_active: true, settings: enabled, provider: 'unknown-provider' })).toBe(false);
   });
 
   it('is eligible for Tactical RMM, which polls alerts as well', () => {
@@ -109,6 +109,6 @@ describe('device sync eligibility', () => {
  */
 describe('providers deliberately excluded from device sync', () => {
   it('lists only the providers with a job-callable device sync', () => {
-    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm']);
+    expect([...DEVICE_SYNC_PROVIDERS].sort()).toEqual(['levelio', 'ninjaone', 'tacticalrmm', 'tanium']);
   });
 });

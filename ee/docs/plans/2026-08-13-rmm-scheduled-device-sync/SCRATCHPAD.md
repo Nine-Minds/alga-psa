@@ -362,3 +362,52 @@ context a job does not have. Worth aligning them.
 - **tanium**: working full sync behind `withAdvancedAssetsAccess`; needs exactly
   the extraction Tactical just had. `user` appears on one line of its 178-line
   body — the permission check.
+
+## Tanium brought to parity (2026-08-16)
+
+Same extraction as Tactical, with one extra obligation.
+
+`triggerTaniumFullSync` was wrapped in `withAdvancedAssetsAccess`, which is
+`withAuth` **plus** `assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS)`. The
+permission check is about the acting user and belongs on the action; the tier
+check is about the *tenant's* entitlement and had to travel with the work —
+otherwise scheduling a sync would be a way around a paid feature.
+`assertTenantTierAccess(tenantId, feature)` already existed as the session-free
+form of the same check, so the engine calls that. A source-level contract test
+pins it, including that the session-based `assertTierAccess` is *not* used
+(it reads `getSession()`, which a job does not have).
+
+**API shape is unchanged.** `triggerTaniumFullSync` keeps its name, its no-arg
+call from `TaniumIntegrationSettings.tsx:190`, and its result fields. The
+existing unit tests call the inner function as
+`(triggerTaniumFullSync as any)({}, { tenant })`, which still works.
+
+### Two corrections made while extracting
+
+- The old body stamped `last_full_sync_at` on every run. An incremental run must
+  not: `resolveDeviceSyncCursor` falls back to `last_full_sync_at`, so an
+  incremental would have stood in for a full sweep it never performed. Now
+  conditional on `syncType === 'full'`.
+- `items_deleted` can only ever be 0 from this path. `markMappedAssetDeleted`
+  fires on `snapshot.lifecycleState === 'deleted' | 'tombstoned'`, and Tanium's
+  mapper emits only `'offline'` or `'active'`. Worth knowing: it means deletion
+  is snapshot-driven rather than set-difference, which is what makes the
+  incremental filter safe — an endpoint outside the window is simply not
+  visited, and nothing infers its absence.
+
+### Deliberate difference from Tactical's strategy
+
+Tanium sets `success = errors.length === 0`, so a single failing endpoint fails
+the run and the strategy throws, holding the cursor. That means a permanently
+broken endpoint re-reads the same window every interval instead of advancing.
+Taken knowingly: a stalled cursor is loud (`sync_status 'error'`, the failure in
+`sync_error`, the schedule visibly retrying) where skipped devices are silent.
+Tactical's engine reports `success: true` with per-agent errors, so it advances.
+
+### Test reach
+
+The Tactical tests live in `packages/`, which CI runs. These Tanium ones live in
+`ee/server/src/__tests__/`, and `sebastian-ee` is excluded from both nx test runs
+in the unit workflow — so they pass locally but **do not gate anything in CI**.
+Unchanged by this work, but it is the reason `taniumActions.test.ts` already had
+8 failures before any of it: nothing had been running them.

@@ -49,8 +49,12 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
  * but polls no alerts; Huntress polls incidents but has no device listing at
  * all. A provider only belongs here once a manual sync is known to work for
  * it — scheduling a broken path just manufactures recurring failures.
+ *
+ * Tanium's entry carries one extra obligation: ADVANCED_ASSETS is a tenant
+ * entitlement, so its engine asserts the tier itself rather than relying on the
+ * action wrapper a scheduled run never passes through.
  */
-const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm'];
+const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
 
 /** Device syncs are far heavier than alert polls, so the floor is higher. */
 const DEVICE_SYNC_MIN_MINUTES = 15;
@@ -246,6 +250,14 @@ async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
     }
   } catch {
     // Subpath unavailable in this build — Tactical device sync unavailable.
+  }
+  try {
+    const mod = await import('@enterprise/lib/integrations/tanium/sync/deviceSyncStrategy');
+    if (mod.taniumDeviceSyncStrategy) {
+      registerRmmDeviceSyncStrategy('tanium', mod.taniumDeviceSyncStrategy);
+    }
+  } catch {
+    // CE build without the alias target — Tanium device sync unavailable.
   }
   deviceSyncStrategiesEnsured = true;
 }

@@ -245,8 +245,8 @@
   },
   {
     "id": "F031",
-    "description": "Tanium: implement syncDevicesIncremental, or document that only a full sync is possible and schedule it at a low cadence \u2014 DEFERRED: sync is only reachable through a user-gated server action; needs extracting into a callable engine first (see SCRATCHPAD F031)",
-    "implemented": false,
+    "description": "Tanium: extract triggerTaniumFullSync's body into lib/integrations/tanium/sync/deviceSyncEngine.ts and assert the ADVANCED_ASSETS tier with assertTenantTierAccess so the tenant entitlement survives a session-free run",
+    "implemented": true,
     "prdRefs": [
       "Provider capability"
     ]
