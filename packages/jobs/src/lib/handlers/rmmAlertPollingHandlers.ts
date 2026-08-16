@@ -223,6 +223,15 @@ let deviceSyncStrategiesEnsured = false;
  * dynamic @enterprise imports that resolve to CE stubs exporting undefined, so a
  * community build simply has no strategy for that provider and the job no-ops.
  */
+/**
+ * Exported so an on-demand trigger (the v1 API) resolves strategies through the
+ * same registry the job does, rather than reaching for each provider's manual
+ * sync and letting the two paths drift.
+ */
+export async function ensureRmmDeviceSyncStrategies(): Promise<void> {
+  return ensureDeviceSyncStrategiesRegistered();
+}
+
 async function ensureDeviceSyncStrategiesRegistered(): Promise<void> {
   if (deviceSyncStrategiesEnsured) return;
   try {
