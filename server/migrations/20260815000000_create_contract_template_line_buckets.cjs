@@ -25,39 +25,6 @@
 
 exports.config = { transaction: false };
 
-// Distribute a tenant-scoped table on Citus, colocated with `contract_lines`.
-// No-op on plain Postgres and on already-distributed tables.
-async function distributeColocatedWithContractLines(knex, tableName) {
-  let citusAvailable = false;
-  try {
-    const citusFn = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table'
-      ) AS exists;
-    `);
-    citusAvailable = Boolean(citusFn.rows?.[0]?.exists);
-  } catch {
-    citusAvailable = false;
-  }
-  if (!citusAvailable) return;
-
-  try {
-    const alreadyDistributed = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition
-        WHERE logicalrelid = '${tableName}'::regclass
-      ) AS is_distributed;
-    `);
-    if (alreadyDistributed.rows?.[0]?.is_distributed) return;
-  } catch {
-    return; // pg_dist_partition unavailable on plain Postgres
-  }
-
-  await knex.raw(
-    `SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'contract_lines')`
-  );
-}
-
 exports.up = async function up(knex) {
   // -------------------------------------------------------------------------
   // 1. contract_template_line_buckets — the pool snapshot
@@ -143,9 +110,10 @@ exports.up = async function up(knex) {
     `);
   }
 
-  // Distribute after creation (Citus FK requires distributed parents first).
-  await distributeColocatedWithContractLines(knex, 'contract_template_line_buckets');
-  await distributeColocatedWithContractLines(knex, 'contract_template_line_bucket_services');
+  // Keep these tables local on Citus, matching their contract-template
+  // parents. `contract_templates` deliberately has a single-column unique key
+  // that prevents it (and therefore `contract_template_lines`) from being
+  // distributed; distributing either child would make its parent FK invalid.
 };
 
 exports.down = async function down(knex) {
