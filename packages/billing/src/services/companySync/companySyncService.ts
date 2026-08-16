@@ -33,7 +33,8 @@ export class CompanyAccountingSyncService {
       tenantId: params.tenantId,
       adapterType: params.adapterType,
       companyId: params.companyId,
-      targetRealm: params.targetRealm ?? null
+      targetRealm: params.targetRealm ?? null,
+      algaEntityType: params.algaEntityType
     });
     if (existing) {
       this.mappingCache.set(cacheKey, existing);
@@ -56,6 +57,7 @@ export class CompanyAccountingSyncService {
       await this.deps.mappingRepository.upsertCompanyMapping({
         tenantId: params.tenantId,
         adapterType: params.adapterType,
+        algaEntityType: params.algaEntityType,
         algaCompanyId: params.companyId,
         externalCompanyId: resolved.externalId,
         targetRealm: params.targetRealm ?? null,
@@ -72,7 +74,8 @@ export class CompanyAccountingSyncService {
         tenantId: params.tenantId,
         adapterType: params.adapterType,
         companyId: params.companyId,
-        targetRealm: params.targetRealm ?? null
+        targetRealm: params.targetRealm ?? null,
+        algaEntityType: params.algaEntityType
       })) ??
       {
         externalCompanyId: resolved.externalId,
@@ -88,6 +91,7 @@ export class CompanyAccountingSyncService {
       params.tenantId,
       params.adapterType,
       params.targetRealm ?? 'default',
+      params.algaEntityType ?? 'client',
       params.companyId
     ].join(':');
   }

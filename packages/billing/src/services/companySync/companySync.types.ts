@@ -24,6 +24,13 @@ export interface NormalizedCompanyContact {
 export interface NormalizedCompanyPayload {
   companyId: string;
   name: string;
+  /**
+   * Set when this record is a separately-billing profile rather than the client
+   * itself (F118). The external system creates it *under* the parent customer,
+   * so a franchise site's invoices and balance stay on its own ledger while
+   * still rolling up to the client.
+   */
+  parentExternalId?: string | null;
   primaryEmail?: string | null;
   primaryPhone?: string | null;
   billingAddress?: NormalizedCompanyAddress | null;
@@ -44,6 +51,13 @@ export interface ExternalCompanyRecord {
 export interface CompanyMappingRecord {
   tenantId: string;
   adapterType: AccountingAdapterType;
+  /**
+   * Which kind of Alga entity the mapping addresses (F116). Defaults to
+   * `client`; `billing_profile` is what makes a sub-customer addressable
+   * without a schema change, since the table is already keyed on
+   * (alga_entity_type, alga_entity_id).
+   */
+  algaEntityType?: string;
   algaCompanyId: string;
   externalCompanyId: string;
   targetRealm?: string | null;
@@ -66,6 +80,8 @@ export interface EnsureCompanyMappingParams {
   adapterType: AccountingAdapterType;
   tenantId: string;
   targetRealm?: string | null;
+  /** See `CompanyMappingRecord.algaEntityType`. Defaults to `client`. */
+  algaEntityType?: string;
 }
 
 export interface AccountingCompanyAdapter {
@@ -86,6 +102,7 @@ export interface CompanyMappingRepository {
     adapterType: AccountingAdapterType;
     companyId: string;
     targetRealm?: string | null;
+    algaEntityType?: string;
   }): Promise<CompanyMappingLookupResult | null>;
   upsertCompanyMapping(record: CompanyMappingRecord): Promise<void>;
 }

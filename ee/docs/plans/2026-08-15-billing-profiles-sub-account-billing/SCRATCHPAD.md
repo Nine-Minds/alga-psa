@@ -304,6 +304,26 @@ closing balance for a period, behind `getBillingProfileStatement`. A statement i
 a demand addressed to whoever pays it, so the profile is a required argument, not
 an optional filter.
 
+### S11-D1 — a profile-level mapping needed no schema change
+
+`tenant_external_entity_mappings` is already keyed on `(alga_entity_type,
+alga_entity_id)` with `alga_entity_type` a free-form `varchar(50)` and no check
+constraint. F116 therefore cost nothing: `billing_profile` sits alongside
+`client` in the same table, and one client can have a parent-customer mapping
+and several sub-customer mappings that cannot collide.
+
+The narrow part is *which* profiles get one. Only a profile that bills
+separately, is not the client's default, and belongs to a client with more than
+one profile. The default profile **is** the client in accounting terms and bills
+on the parent customer; giving it a sub-customer too would split one entity
+across two QuickBooks records. A reporting-only segment issues no invoice at
+all, so its sub-customer would be an empty record someone has to reconcile
+against nothing. Both exclusions are asserted in T042.
+
+Sub-customer display names are qualified as `Client:Segment`, because
+QuickBooks requires `DisplayName` to be unique across the whole file — a bare
+"Site B" collides the moment a second client has one.
+
 ### S8-D2 — the mixed-currency guard is per *invoice*, not per profile
 
 F098 says "per profile", but the guard's job is to stop one invoice carrying two

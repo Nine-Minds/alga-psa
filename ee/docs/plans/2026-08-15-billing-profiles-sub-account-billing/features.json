@@ -922,7 +922,7 @@
   {
     "id": "F116",
     "description": "External entity mappings can address a billing profile as the Alga-side entity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model / Integration Notes"
     ]
@@ -930,7 +930,7 @@
   {
     "id": "F117",
     "description": "A client maps to a QuickBooks parent customer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model / Integration Notes"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "F118",
     "description": "A separately-billing profile maps to a QuickBooks sub-customer referencing the client's parent customer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model / Integration Notes"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "F119",
     "description": "A single-profile client continues to map to a plain QuickBooks customer with no sub-customer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks, Rollout, and Migration"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "F120",
     "description": "Customer sync creates and updates sub-customers for separately-billing profiles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria / Definition of Done"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "F121",
     "description": "Invoice export targets the sub-customer corresponding to the invoice's profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria / Definition of Done"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "F122",
     "description": "The customer mapping UI displays and allows editing profile-level mappings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
