@@ -208,6 +208,31 @@ diff stays mechanical rather than 59 hand edits.
   possible cause of a diff. S8 is the highest-risk gate. **A diff is a defect, never a
   baseline to refresh** — if single-profile output genuinely must change, that is a
   scope change and gets recorded here with rationale before the baseline moves.
+- **F128 baseline was captured post-hoc from the pre-S1 commit** (see below) — S1 had
+  already landed when the harness was implemented, so the "before S1" baseline could
+  not be captured from this branch. Method: `git worktree add <tmp> <parent-of-S1>`,
+  copy the harness into the worktree, run `GOLDEN_CAPTURE=1` there against the scratch
+  test DB (pre-S1 migrations → no `client_billing_profiles` table), copy the generated
+  `baseline.json` back, commit it. Then run the harness on the S1 branch in diff mode:
+  byte-identical. The fixture client represents "single-profile" differently per tree —
+  pre-S1 has no table at all; on S1 the harness inserts the one system-managed default
+  profile for the fixture client (mirroring the backfill) but serializes no profile
+  data, so both runs must match. That identity is the T013 proof for S1.
+- **F002 zero-default guard is a constraint trigger, not the index alone.** The S1
+  partial unique index gives at-most-one; `20260817000000` adds a `DEFERRABLE
+  INITIALLY DEFERRED` AFTER INSERT/UPDATE/DELETE trigger that rejects any committed
+  state where a client has profiles but no `is_default` row. Deferred-to-commit is what
+  lets an atomic default switch (unset A + set B in one statement/transaction) pass
+  while still making zero-default unreachable. Behavioral tests:
+  `server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`
+  (T053).
+- **Citus cannot create triggers on distributed tables.** The F002 trigger is applied
+  per-shard via the documented `run_command_on_shards` workaround (function is a
+  single coordinator-side `CREATE OR REPLACE FUNCTION` — Citus auto-propagates
+  functions to workers — resolving the shard table from `TG_TABLE_SCHEMA/TG_TABLE_NAME`).
+  Disclosed limitation, extends the S1 note: triggers applied via `run_command_on_shards`
+  must be re-applied after shard rebalancing; the guard is per-shard and sound because
+  the table is distributed on `tenant` so one client's profiles all live on one shard.
 
 ---
 
@@ -252,3 +277,35 @@ grep -rln "client_billing_cycles" --include=*.ts --include=*.tsx server/src pack
 python3 ~/.claude/skills/alga-plan/scripts/validate_plan.py \
   ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing
 ```
+
+### T013 gate / F128 harness runbook
+
+The gate is `server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts`.
+Run in **diff mode** (the gate) or **capture mode** (`GOLDEN_CAPTURE=1`) from `server/`:
+
+```bash
+# gate (default): runs the single-profile scenario, diffs byte-for-byte against
+# the committed baseline.json
+env DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=... \
+  DB_USER_SERVER=app_user DB_PASSWORD_SERVER=... \
+  npx vitest run src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
+
+# capture: regenerate baseline.json (only for a recorded, justified scope change)
+GOLDEN_CAPTURE=1 env DB_HOST=127.0.0.1 DB_PORT=5472 ... \
+  npx vitest run src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
+```
+
+Re-capturing a baseline from the pre-S1 commit (how the committed baseline was made):
+
+```bash
+git worktree add /tmp/pres1 fcd7f8cfdf   # parent of the S1 commit
+cp server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts \
+   /tmp/pres1/server/src/test/integration/billing/goldenOutput/
+cd /tmp/pres1/server && GOLDEN_CAPTURE=1 npx vitest run \
+   src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts
+# copy /tmp/pres1/server/.../baseline.json back into this branch
+```
+
+The F002 guard is tested behaviorally by
+`server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`
+(T053); the migration is `server/migrations/20260817000000_enforce_client_billing_profile_default_guard.cjs`.

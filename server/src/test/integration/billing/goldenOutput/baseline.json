@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "scenario": "single-profile-client",
+  "invoice": {
+    "status": "sent",
+    "invoice_type": "standard",
+    "currency_code": "USD",
+    "subtotal": 25000,
+    "tax": 2219,
+    "total_amount": 27219,
+    "credit_applied": 5000,
+    "balance_due": 22219
+  },
+  "charges": [
+    {
+      "description": "Golden Support Plan",
+      "quantity": "1.00",
+      "unit_price": 25000,
+      "total_price": 27219,
+      "net_amount": 25000,
+      "tax_amount": 2219,
+      "tax_rate": "8.88",
+      "tax_region": "US-NY",
+      "service_period_start": "2024-12-01",
+      "service_period_end": "2024-12-31"
+    }
+  ],
+  "credit": {
+    "tracking": [
+      {
+        "amount": 5000,
+        "remaining_amount": 0,
+        "currency_code": "USD"
+      }
+    ],
+    "allocations": [
+      {
+        "amount": 5000
+      }
+    ]
+  },
+  "export": {
+    "preview_lines": [
+      {
+        "invoice_status": "sent",
+        "amount_cents": 27219,
+        "currency_code": "USD",
+        "service_period_start": "2024-12-01T00:00:00.000Z",
+        "service_period_end": "2024-12-31T00:00:00.000Z",
+        "service_period_source": "canonical_detail_periods",
+        "is_manual_invoice": false,
+        "is_manual_charge": false,
+        "is_credit": false,
+        "is_zero_amount": false
+      }
+    ]
+  }
+}
