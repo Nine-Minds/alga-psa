@@ -22,6 +22,7 @@ import {
   createTicket,
   ensureDefaultBillingProfile,
   ensureUsdServicePrice,
+  seedBillingCycle,
 } from '../../../../test-utils/billingProfileTestHelpers';
 
 /**
@@ -149,7 +150,7 @@ async function seedClient(name: string): Promise<{ clientId: string; cycleId: st
   });
 
   const cycleId = uuidv4();
-  await table('client_billing_cycles').insert({
+  await seedBillingCycle(db, tenantId, {
     billing_cycle_id: cycleId,
     tenant: tenantId,
     client_id: clientId,

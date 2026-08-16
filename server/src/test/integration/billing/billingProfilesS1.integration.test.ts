@@ -23,6 +23,7 @@ const assignmentMigration = require(
 // — otherwise it would be asserting that S1 can be dropped out from under its
 // own dependants, which no rollback ever does.
 const dependentMigrationsNewestFirst = [
+  '20260823000000_add_billing_profile_to_cycles_and_invoices.cjs',
   '20260822000000_add_billing_profile_bill_to_and_tax.cjs',
   '20260821000000_create_portal_user_billing_profile_access.cjs',
 ].map((file) => require(path.join(MIGRATION_DIR, file)));
@@ -73,9 +74,12 @@ async function seedTenantAndClients(tenantId: string, clientNames: string[]): Pr
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await table(tenantId, 'client_billing_profiles').del();
+  // Order matters: profiles are referenced by charges, invoices, and cycles
+  // (S8), so they go after everything that points at them and before clients.
   await table(tenantId, 'invoice_charges').del();
   await table(tenantId, 'invoices').del();
+  await table(tenantId, 'client_billing_cycles').del();
+  await table(tenantId, 'client_billing_profiles').del();
   await table(tenantId, 'clients').del();
   await tenantsUnscoped().where({ tenant: tenantId }).del();
 }

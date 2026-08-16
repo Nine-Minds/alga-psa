@@ -1199,6 +1199,18 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
       }
 
+      // Billing profiles go after everything that references them — tax
+      // settings, cycles, contracts, locations — and before the client itself.
+      // A restrict-mode FK means a missed reference surfaces here rather than
+      // leaving an orphan.
+      const deletedBillingProfiles = await tenantScopedTable(trx, 'client_billing_profiles', tenantId)
+        .where({ client_id: clientId })
+        .delete();
+
+      if (deletedBillingProfiles > 0) {
+        console.log(`Deleted ${deletedBillingProfiles} client billing profile records`);
+      }
+
       if (isEnterprise) {
         const deletedPaymentCustomers = await tenantScopedTable(trx, 'client_payment_customers', tenantId)
           .where({ client_id: clientId })

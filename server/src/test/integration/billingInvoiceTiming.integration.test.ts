@@ -35,6 +35,7 @@ import {
   buildRecurringServicePeriodDueSelectionQuery,
   selectDueRecurringServicePeriodRecords,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodDueSelection';
+import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers';
 
 let db: Knex;
 let tenantId: string;
@@ -5042,7 +5043,7 @@ async function createClientWithRecurringCycles(
   const previousPeriodEnd = Temporal.PlainDate.from(currentPeriodStart).subtract({ days: 1 }).toString();
   const currentPeriodEnd = Temporal.PlainDate.from(nextPeriodStart).subtract({ days: 1 }).toString();
 
-  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+  await seedBillingCycle(db, tenantId, {
     billing_cycle_id: uuidv4(),
     tenant: tenantId,
     client_id: clientId,
@@ -5055,7 +5056,7 @@ async function createClientWithRecurringCycles(
   });
 
   const cycleId = uuidv4();
-  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+  await seedBillingCycle(db, tenantId, {
     billing_cycle_id: cycleId,
     tenant: tenantId,
     client_id: clientId,

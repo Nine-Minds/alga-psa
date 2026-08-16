@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createClientContractLineCycles } from '../../../../../../packages/billing/src/lib/billing/createBillingCycles';
 import { TestContext } from 'server/test-utils/testContext';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
 const {
   beforeAll: setupContext,
@@ -46,7 +47,7 @@ describe('Client billing-cycle recurring service-period replenishment', () => {
 
   async function seedCycle(start: string, end: string) {
     const billingCycleId = uuidv4();
-    await context.db('client_billing_cycles').insert({
+    await seedBillingCycle(context.db, context.tenantId, {
       billing_cycle_id: billingCycleId,
       tenant: context.tenantId,
       client_id: context.clientId,

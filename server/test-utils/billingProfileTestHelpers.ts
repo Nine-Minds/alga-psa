@@ -211,3 +211,35 @@ export async function createApprovedTimeEntry(
   });
   return entryId;
 }
+
+/**
+ * Insert a billing cycle, supplying the client's default billing profile.
+ *
+ * `client_billing_cycles.billing_profile_id` became NOT NULL in S8 — a cycle
+ * has to say whose invoice it produces. Existing fixtures do not know about
+ * profiles, so this helper resolves (and if necessary provisions) the client's
+ * default one and fills it in, which is what a single-profile client's cycle
+ * has always meant.
+ *
+ * Accepts the same row shape the fixtures already build, so adopting it is a
+ * one-line change per call site rather than a rewrite (F100).
+ */
+export async function seedBillingCycle(
+  knex: Knex,
+  tenantId: string,
+  row: Record<string, unknown> | Array<Record<string, unknown>>,
+): Promise<void> {
+  const rows = Array.isArray(row) ? row : [row];
+  const withProfiles = [];
+  for (const cycle of rows) {
+    const clientId = (cycle.client_id ?? cycle.clientId) as string;
+    withProfiles.push({
+      ...cycle,
+      tenant: cycle.tenant ?? tenantId,
+      billing_profile_id:
+        cycle.billing_profile_id
+        ?? (await ensureDefaultBillingProfile({ db: knex, tenantId }, clientId)),
+    });
+  }
+  await tenantDb(knex, tenantId).table('client_billing_cycles').insert(withProfiles);
+}

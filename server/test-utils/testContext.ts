@@ -408,8 +408,49 @@ export class TestContext {
       entityData[idField] = uuidv4();
     }
 
+    // Billing cycles carry the profile they bill (S8, NOT NULL). Fixtures
+    // predate profiles, so supply the client's default one — which is what a
+    // single-profile client's cycle has always meant. Doing it here rather than
+    // at every call site is what keeps the existing billing suites unchanged
+    // (F100).
+    if (table === 'client_billing_cycles' && !entityData.billing_profile_id) {
+      entityData.billing_profile_id = await this.ensureDefaultBillingProfileId(
+        entityData.client_id as string,
+      );
+    }
+
     await tenantDb(this.db, this.tenantId).table(table).insert(entityData);
     return entityData[idField] as string;
+  }
+
+  /**
+   * The client's default billing profile, provisioning one if the fixture
+   * created the client by direct insert (which most do).
+   */
+  async ensureDefaultBillingProfileId(clientId: string): Promise<string> {
+    const existing = await tenantDb(this.db, this.tenantId)
+      .table('client_billing_profiles')
+      .where({ client_id: clientId, is_default: true })
+      .first('billing_profile_id');
+    if (existing?.billing_profile_id) {
+      return existing.billing_profile_id as string;
+    }
+
+    const client = await tenantDb(this.db, this.tenantId)
+      .table('clients')
+      .where({ client_id: clientId })
+      .first('client_name');
+    const billingProfileId = uuidv4();
+    await tenantDb(this.db, this.tenantId).table('client_billing_profiles').insert({
+      tenant: this.tenantId,
+      billing_profile_id: billingProfileId,
+      client_id: clientId,
+      name: client?.client_name ?? 'Default',
+      is_default: true,
+      is_system_managed_default: true,
+      is_active: true,
+    });
+    return billingProfileId;
   }
 
   /**

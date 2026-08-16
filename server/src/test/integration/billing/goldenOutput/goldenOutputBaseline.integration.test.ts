@@ -93,6 +93,14 @@ async function createFixedTenant(connection: Knex, fixedTenant: string): Promise
 // When the S1 `client_billing_profiles` table exists, give the fixture client
 // exactly one system-managed default profile (the state the S1 backfill leaves
 // every client in). No-op on the pre-S1 schema where the table is absent.
+async function hasBillingProfileColumn(connection: Knex, table: string): Promise<boolean> {
+  try {
+    return await connection.schema.hasColumn(table, 'billing_profile_id');
+  } catch {
+    return false;
+  }
+}
+
 async function ensureSingleDefaultProfile(connection: Knex, tenant: string, client: string): Promise<void> {
   const hasTable = await connection.schema.hasTable('client_billing_profiles');
   if (!hasTable) return;
@@ -105,7 +113,7 @@ async function ensureSingleDefaultProfile(connection: Knex, tenant: string, clie
 
   await tenantDb(connection, tenant).table('client_billing_profiles').insert({
     tenant,
-    billing_profile_id: 'aaaaaaa0-0000-4000-8000-00000000000b',
+    billing_profile_id: FIXED_BILLING_PROFILE,
     client_id: client,
     name: 'Golden Single-Profile Client',
     is_default: true,
@@ -185,6 +193,7 @@ const FIXED_CONTRACT = 'aaaaaaa0-0000-4000-8000-000000000007';
 const FIXED_CONTRACT_LINE = 'aaaaaaa0-0000-4000-8000-000000000008';
 const FIXED_CLIENT_CONTRACT = 'aaaaaaa0-0000-4000-8000-000000000009';
 const FIXED_CLIENT_LINE = 'aaaaaaa0-0000-4000-8000-00000000000a';
+const FIXED_BILLING_PROFILE = 'aaaaaaa0-0000-4000-8000-00000000000b';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = path.join(__dirname, 'baseline.json');
@@ -307,6 +316,12 @@ async function seedScenario(): Promise<string> {
     period_end_date: `${FEBRUARY_START}T00:00:00Z`,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
+    // Present only from S8 on. This harness is copied verbatim into a pre-S1
+    // worktree to re-derive the baseline, so it must not import anything that
+    // postdates S1 and must tolerate the column being absent.
+    ...(await hasBillingProfileColumn(db, 'client_billing_cycles')
+      ? { billing_profile_id: FIXED_BILLING_PROFILE }
+      : {}),
   });
 
   const line = await createFixedPlanAssignment(contextLike as any, monitoringServiceId, {

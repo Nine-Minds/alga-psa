@@ -10,6 +10,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import {
+  getCycleBillingProfileId,
+  resolveInvoiceProfileScope,
+  scopeChargesToProfile,
+} from '../lib/billing/billingProfileInvoiceScope';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -2886,15 +2892,42 @@ export const createInvoiceFromBillingResult = withAuth(async (
   const useTaxDelegation = await shouldUseTaxDelegation(clientId);
 
   const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
-  const invoicePoNumber = clientContractId
+
+  // Which profile this invoice bills (F094–F096). For a cycle created before
+  // S8, or a client nobody has segmented, this is the client's default profile
+  // and nothing downstream changes.
+  const cycleBillingProfileId = billing_cycle_id
+    ? await getCycleBillingProfileId(knex, tenant, billing_cycle_id)
+    : null;
+  const profileScope = await resolveInvoiceProfileScope(
+    knex,
+    tenant,
+    clientId,
+    cycleBillingProfileId,
+    { userId },
+  );
+  // F095 — bill-to, PO, delivery, and tax identity come from the profile,
+  // falling back to the client field by field.
+  const billingIdentity = await resolveEffectiveBillingIdentity(
+    knex,
+    tenant,
+    clientId,
+    profileScope.billingProfileId,
+  );
+
+  const contractPoNumber = clientContractId
     ? (await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId })).po_number
     : null;
+  // A PO on the contract is specific to that agreement and outranks the
+  // profile's standing PO number.
+  const invoicePoNumber = contractPoNumber ?? billingIdentity.poNumber ?? null;
 
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
     ...(options.projectId ? { project_id: options.projectId } : {}),
     client_contract_id: clientContractId,
+    billing_profile_id: profileScope.billingProfileId,
     po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
     due_date,
@@ -2976,13 +3009,17 @@ export const createInvoiceFromBillingResult = withAuth(async (
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
+    // F094 — the charges this cycle's profile is responsible for. Returns the
+    // full set unchanged unless some profile of this client bills separately,
+    // so an unsegmented client's invoice is untouched.
+    const scopedCharges = scopeChargesToProfile(billingResult.charges, profileScope);
     const capDeltas = await prepareProjectCapChargesForPersistence(
       trx,
-      billingResult.charges,
+      scopedCharges,
     );
     persistedCapDeltas = capDeltas;
-    const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);
-    const standardCharges = billingResult.charges.filter((charge) => !isProjectScheduleCharge(charge));
+    const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
+    const standardCharges = scopedCharges.filter((charge) => !isProjectScheduleCharge(charge));
     const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,

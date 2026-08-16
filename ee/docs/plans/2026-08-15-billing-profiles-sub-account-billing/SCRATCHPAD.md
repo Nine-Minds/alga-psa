@@ -242,6 +242,28 @@ the source value set (profile-aware narrowing is a genuinely new way to reach an
 answer, and collapsing it into `auto_unique_service` would make the attribution
 inspector lie).
 
+### S8-D1 — the fixture seam is `TestContext.createEntity`, not 20 call sites
+
+F100 asked for "a shared test fixture helper so existing billing tests need only
+mechanical changes". The mechanical change turned out to be **zero** for most of
+them: `client_billing_cycles` inserts funnel through `TestContext.createEntity`,
+so filling `billing_profile_id` there covers every infrastructure suite at once.
+The ~14 files that insert cycles directly use `seedBillingCycle` from
+`server/test-utils/billingProfileTestHelpers.ts`.
+
+The golden-output harness is the deliberate exception: it is copied verbatim into
+a **pre-S1 worktree** to re-derive the baseline, so it may not import anything
+that postdates S1. It inlines the profile behind a `hasColumn` probe instead.
+
+### S8-D2 — the mixed-currency guard is per *invoice*, not per profile
+
+F098 says "per profile", but the guard's job is to stop one invoice carrying two
+currencies. Profiles that do **not** bill separately share the client's invoice,
+so grouping strictly by profile would let a genuinely mixed-currency invoice
+through. The buckets are therefore: one per separately-billing profile, plus one
+shared bucket for everything else. With nothing marked separately-billing that
+collapses to a single bucket — today's behaviour exactly.
+
 ---
 
 ## Gotchas
@@ -289,6 +311,13 @@ inspector lie).
   while still making zero-default unreachable. Behavioral tests:
   `server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`
   (T053).
+- **`clientBillingCycleAnchors.test.ts` has 4 pre-existing failures**
+  (`createNextBillingCycle` returns `permissionError: billing create required`;
+  the file mocks `server/src/lib/auth/rbac` while the action imports
+  `hasPermission` from `@alga-psa/auth`). Verified against a clean stash before
+  S8 — unrelated to this effort. `src/test/infrastructure/billing/invoices/`
+  likewise carries ~70 pre-existing failures; compare against a stashed baseline
+  rather than reading the absolute count.
 - **Integration runs collide on the shared `test_database`.** Sibling worktrees
   run their own suites against the same `127.0.0.1:5472` and recreate that
   database mid-run, which shows up as `terminating connection due to

@@ -101,6 +101,7 @@ import {
   type ChargeProfileAssignments,
 } from "./billingProfileResolution";
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
+import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionReason,
@@ -1450,15 +1451,38 @@ export class BillingEngine {
       cycle = billingCycle;
     }
 
-    const uniqueCurrencies = Array.from(
-      new Set(
-        clientContractLines
-          .map((line) => line.currency_code)
-          .filter((code): code is string => !!code),
-      ),
+    // The mixed-currency guard applies **per invoice**, and once profiles bill
+    // separately one client produces more than one (F098). Two separately
+    // billed entities under one client can legitimately be in different
+    // currencies — that is the point of billing them separately — so each gets
+    // its own bucket. Everything else, including every line on a profile that
+    // does *not* bill separately, shares the client's invoice and therefore
+    // shares one bucket: relaxing the guard for them would let a genuinely
+    // mixed-currency invoice through.
+    const separatelyBillingIds = new Set(
+      (
+        await listSeparatelyBillingProfiles(this.knex, this.tenant as string, clientId)
+      ).map((profile) => profile.billing_profile_id),
     );
+    const SHARED_INVOICE_BUCKET = "__shared_invoice__";
+    const currenciesByInvoice = new Map<string, Set<string>>();
+    for (const line of clientContractLines) {
+      if (!line.currency_code) continue;
+      const profileId =
+        line.billing_profile_id ?? line.contract_billing_profile_id ?? null;
+      const bucket =
+        profileId && separatelyBillingIds.has(profileId)
+          ? profileId
+          : SHARED_INVOICE_BUCKET;
+      const currencies = currenciesByInvoice.get(bucket) ?? new Set<string>();
+      currencies.add(line.currency_code);
+      currenciesByInvoice.set(bucket, currencies);
+    }
 
-    if (uniqueCurrencies.length > 1) {
+    const conflicting = [...currenciesByInvoice.values()].find(
+      (currencies) => currencies.size > 1,
+    );
+    if (conflicting) {
       return {
         charges: [],
         totalAmount: 0,
@@ -1466,9 +1490,17 @@ export class BillingEngine {
         adjustments: [],
         finalAmount: 0,
         currency_code: client?.default_currency_code || "USD",
-        error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${uniqueCurrencies.join(", ")}). Mixed currency billing is not supported.`,
+        error: `Billing Error: Client ${clientId} has active contracts in multiple currencies (${[...conflicting].join(", ")}). Mixed currency billing is not supported.`,
       };
     }
+
+    const uniqueCurrencies = Array.from(
+      new Set(
+        clientContractLines
+          .map((line) => line.currency_code)
+          .filter((code): code is string => !!code),
+      ),
+    );
 
     const billingCurrency =
       uniqueCurrencies.length === 1
