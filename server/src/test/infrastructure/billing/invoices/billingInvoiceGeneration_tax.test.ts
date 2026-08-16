@@ -228,10 +228,15 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -342,10 +347,15 @@ describe('Billing Invoice Tax Calculations', () => {
         is_active: true
       }, 'tax_rate_id');
 
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: clientId,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(clientId),
       });
 
       await tenantTable(context, 'client_tax_rates').insert({
@@ -516,10 +526,15 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'tax_rate_id');
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -652,10 +667,15 @@ describe('Billing Invoice Tax Calculations', () => {
       const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
       // Set up client tax settings
+      // Tax settings are keyed per billing profile since S7 — reverse-charge
+      // applicability is a property of the entity being billed (D9). The
+      // fixture seeds the client's default profile's row, which is what the
+      // pre-S7 schema held.
       await tenantTable(context, 'client_tax_settings').insert({
         client_id: client_id,
         tenant: context.tenantId,
-        is_reverse_charge_applicable: false
+        is_reverse_charge_applicable: false,
+        billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
       });
 
       // Set up client tax rate relationship
@@ -768,10 +788,15 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -899,10 +924,15 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -1005,10 +1035,15 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'tax_rate_id');
 
     // Set up client tax settings
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: client_id,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: false
+      is_reverse_charge_applicable: false,
+      billing_profile_id: await context.ensureDefaultBillingProfileId(client_id),
     });
 
     // Set up client tax rate relationship
@@ -1303,10 +1338,15 @@ describe('Billing Invoice Tax Calculations', () => {
     const nyTaxRateId = nyTaxRate.tax_rate_id as string;
 
     // Set up client tax settings WITH REVERSE CHARGE ENABLED
+    // Tax settings are keyed per billing profile since S7 — reverse-charge
+    // applicability is a property of the entity being billed (D9). The
+    // fixture seeds the client's default profile's row, which is what the
+    // pre-S7 schema held.
     await tenantTable(context, 'client_tax_settings').insert({
       client_id: clientId,
       tenant: context.tenantId,
-      is_reverse_charge_applicable: true // This is the key setting
+      is_reverse_charge_applicable: true, // This is the key setting
+      billing_profile_id: await context.ensureDefaultBillingProfileId(clientId),
     });
 
     // Set up client tax rate relationship (would normally cause tax to be applied)
