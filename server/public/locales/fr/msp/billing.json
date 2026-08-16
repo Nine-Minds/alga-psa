@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Ce type de charge n'a pas d'enregistrement unitaire derrière lui : il ne peut être attribué qu'au niveau du contrat, pas au site ou au travail précis dont il provient."
     }
+  },
+  "unresolvedReview": {
+    "title": "Éléments sans ligne de contrat",
+    "description": "Ces éléments ne sont pas encore rattachés à une ligne de contrat ; ils seraient donc facturés au tarif du catalogue de services.",
+    "catalogPricingCaveat": "Le tarif catalogue ignore le tarif du contrat, l'arrondi, le temps minimum facturable, les heures supplémentaires et toute grille tarifaire.",
+    "ambiguousBlocked": "{{count}} élément(s) sont couverts par un contrat mais correspondaient à plusieurs lignes de contrat. Ils ne seront pas facturés tant que vous n'aurez pas attribué une ligne ou choisi le tarif catalogue pour eux.",
+    "unknownService": "Service inconnu",
+    "timeEntry": "Saisie de temps · {{minutes}} min",
+    "usageRecord": "Relevé d'usage · {{quantity}}",
+    "assignLine": "Attribuer une ligne de contrat",
+    "assigned": "Attribué — cet élément sera facturé au tarif du contrat.",
+    "useCatalogPricing": "Utiliser le tarif catalogue",
+    "undoCatalogPricing": "Annuler",
+    "catalogPricingChosen": "Tarif catalogue choisi",
+    "catalogPricingAccepted": "Tarif catalogue choisi pour cet élément.",
+    "catalogPricingRevoked": "Tarif catalogue retiré.",
+    "uncoveredExplanation": "Aucun contrat ne couvre ce service : le tarif catalogue est le seul disponible. Il sera facturé tel quel.",
+    "ambiguousExplanation": "Un contrat couvre ce service, il existe donc un tarif négocié. Choisissez la ligne de contrat à laquelle il appartient.",
+    "reason": {
+      "uncovered": "Couvert par aucun contrat",
+      "ambiguous": "Plusieurs lignes de contrat correspondent"
+    }
   }
 }

@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Achter dit kostentype zit geen registratie per item, dus het kan alleen tot aan het contract worden toegewezen — niet tot de specifieke locatie of het werk waar het vandaan komt."
     }
+  },
+  "unresolvedReview": {
+    "title": "Items zonder contractregel",
+    "description": "Deze items zijn nog niet aan een contractregel gekoppeld en zouden dus tegen het tarief uit de servicecatalogus worden gefactureerd.",
+    "catalogPricingCaveat": "Catalogusprijzen negeren het contracttarief, afronding, minimale factureerbare tijd, overwerk en elk prijsschema.",
+    "ambiguousBlocked": "{{count}} item(s) worden door een contract gedekt maar kwamen overeen met meer dan één contractregel. Ze worden pas gefactureerd nadat u een regel toewijst of catalogusprijzen kiest.",
+    "unknownService": "Onbekende dienst",
+    "timeEntry": "Tijdregel · {{minutes}} min",
+    "usageRecord": "Verbruiksregel · {{quantity}}",
+    "assignLine": "Contractregel toewijzen",
+    "assigned": "Toegewezen — dit item wordt tegen contracttarief gefactureerd.",
+    "useCatalogPricing": "Catalogusprijs gebruiken",
+    "undoCatalogPricing": "Ongedaan maken",
+    "catalogPricingChosen": "Catalogusprijs gekozen",
+    "catalogPricingAccepted": "Catalogusprijs gekozen voor dit item.",
+    "catalogPricingRevoked": "Catalogusprijs ingetrokken.",
+    "uncoveredExplanation": "Geen enkel contract dekt deze dienst, dus het catalogustarief is het enige beschikbare tarief. Het wordt ongewijzigd gefactureerd.",
+    "ambiguousExplanation": "Een contract dekt deze dienst, dus er bestaat een onderhandeld tarief. Kies de contractregel waar het bij hoort.",
+    "reason": {
+      "uncovered": "Niet gedekt door een contract",
+      "ambiguous": "Meer dan één contractregel komt overeen"
+    }
   }
 }

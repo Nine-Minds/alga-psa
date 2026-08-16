@@ -28,7 +28,7 @@ import {
   type SpendByProfileRow,
 } from '@alga-psa/billing/actions/billingProfileReportActions';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
-import { billingProfileSourceSentence } from './billingProfileAttributionCopy';
+import { billingProfileSourceSentence } from '@alga-psa/ui/lib/billingProfileAttributionCopy';
 
 /**
  * Spend by billing profile (F053–F060).

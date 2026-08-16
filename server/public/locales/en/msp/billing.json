@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "This charge type has no per-item record behind it, so it can only be attributed as far as the contract — not to the specific site or work it came from."
     }
+  },
+  "unresolvedReview": {
+    "title": "Items without a contract line",
+    "description": "These items are not attached to a contract line yet, so they would be billed at the service catalog rate.",
+    "catalogPricingCaveat": "Catalog pricing ignores the contract rate, rounding, minimum billable time, overtime, and any pricing schedule.",
+    "ambiguousBlocked": "{{count}} item(s) are covered by a contract but matched more than one contract line. They will not be invoiced until you assign a line or choose catalog pricing for them.",
+    "unknownService": "Unknown service",
+    "timeEntry": "Time entry · {{minutes}} min",
+    "usageRecord": "Usage record · {{quantity}}",
+    "assignLine": "Assign a contract line",
+    "assigned": "Assigned — this item will bill at contract pricing.",
+    "useCatalogPricing": "Use catalog pricing",
+    "undoCatalogPricing": "Undo",
+    "catalogPricingChosen": "Catalog pricing chosen",
+    "catalogPricingAccepted": "Catalog pricing chosen for this item.",
+    "catalogPricingRevoked": "Catalog pricing withdrawn.",
+    "uncoveredExplanation": "No contract covers this service, so the catalog rate is the only rate available. It will be billed as-is.",
+    "ambiguousExplanation": "A contract covers this service, so a negotiated rate exists. Pick the contract line it belongs to.",
+    "reason": {
+      "uncovered": "Not covered by any contract",
+      "ambiguous": "More than one contract line matches"
+    }
   }
 }

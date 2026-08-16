@@ -237,6 +237,25 @@ type ContractCadenceGenerator =
 const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
   "Recurring timing rollout guard blocked mixed legacy/canonical timing state";
 
+/**
+ * Raised when generation is asked to bill items that a contract covers but
+ * whose contract line could not be chosen, and for which nobody has accepted
+ * catalog pricing (F139). Carries the offending records so the caller can turn
+ * it into an actionable message rather than a generic failure.
+ */
+export class UnresolvedCatalogPricingError extends Error {
+  readonly items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>;
+
+  constructor(
+    message: string,
+    items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>,
+  ) {
+    super(message);
+    this.name = "UnresolvedCatalogPricingError";
+    this.items = items;
+  }
+}
+
 export class BillingEngine {
   private knex: Knex;
   private tenant: string | null;
@@ -1670,10 +1689,14 @@ export class BillingEngine {
                 (charge): charge is ITimeBasedCharge => charge.type === "time",
               )
               .map((charge) => charge.entryId),
+            // This is the billing path, not the listing path: an ambiguous item
+            // must not be billed at catalog rate without an explicit decision.
+            requireCatalogPricingDecision: true,
           }
         : {
             timeEntryIds: nonContractSelection?.timeEntryIds,
             usageRecordIds: nonContractSelection?.usageRecordIds,
+            requireCatalogPricingDecision: true,
           };
       const nonContractCharges =
         projectBillingContext || options.projectTarget
@@ -2120,6 +2143,14 @@ export class BillingEngine {
       timeEntryIds?: string[];
       usageRecordIds?: string[];
       excludeTimeEntryIds?: string[];
+      /**
+       * Set by invoice generation (not by the listing). When true, an item that
+       * is unresolved *because more than one contract line covers its service*
+       * may not be billed at catalog rate unless the biller has explicitly
+       * chosen catalog pricing for it. See F139 and the migration
+       * 20260820000000 for why the two unresolved reasons diverge here.
+       */
+      requireCatalogPricingDecision?: boolean;
     },
     projectBillingContext?: ProjectBillingContext | null,
     projectTarget?: CalculateBillingOptions["projectTarget"],
@@ -2138,6 +2169,9 @@ export class BillingEngine {
         ? new Set(selection.usageRecordIds)
         : null;
     const excludedTimeEntryIds = new Set(selection?.excludeTimeEntryIds ?? []);
+    const requireCatalogPricingDecision = Boolean(
+      selection?.requireCatalogPricingDecision,
+    );
 
     const db = tenantDb(this.knex, this.tenant);
     const client = await db
@@ -2157,6 +2191,10 @@ export class BillingEngine {
     // has always computed this and written it only to logs; carrying it onto
     // the charge is what lets the biller see whether catalog pricing is honest.
     const unresolvedReasonByRecordId = new Map<string, ContractLineSelectionReason>();
+    // Items a contract *does* cover but whose line could not be chosen, and for
+    // which no one has accepted catalog pricing. Collected rather than thrown
+    // on first sight so the biller gets the whole list at once (F139).
+    const blockedFromCatalogPricing: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }> = [];
     const clientDefaultBillingProfileId =
       await this.getClientDefaultBillingProfileId(clientId);
 
@@ -2318,6 +2356,17 @@ export class BillingEngine {
         // which line" (catalog rate is wrong). Persisted rather than only
         // logged, so the dashboard can say which it is (F137).
         unresolvedReasonByRecordId.set(entry.entry_id, selection.reason);
+        if (
+          requireCatalogPricingDecision &&
+          selection.reason !== "no_match" &&
+          !entry.catalog_pricing_acknowledged_at
+        ) {
+          blockedFromCatalogPricing.push({
+            kind: "time_entry",
+            id: entry.entry_id,
+            label: entry.service_name ?? entry.entry_id,
+          });
+        }
         await db
           .table("time_entries")
           .where({ tenant: this.tenant, entry_id: entry.entry_id })
@@ -2522,6 +2571,17 @@ export class BillingEngine {
         continue;
       }
       unresolvedReasonByRecordId.set(record.usage_id, usageSelection.reason);
+      if (
+        requireCatalogPricingDecision &&
+        usageSelection.reason !== "no_match" &&
+        !record.catalog_pricing_acknowledged_at
+      ) {
+        blockedFromCatalogPricing.push({
+          kind: "usage_record",
+          id: record.usage_id,
+          label: record.service_name ?? record.usage_id,
+        });
+      }
       await db
         .table("usage_tracking")
         .where({ tenant: this.tenant, usage_id: record.usage_id })
@@ -2603,6 +2663,22 @@ export class BillingEngine {
         unresolved_reason:
           unresolvedReasonByRecordId.get(record.usage_id) ?? null,
       } satisfies IUsageBasedCharge);
+    }
+
+    if (blockedFromCatalogPricing.length > 0) {
+      // Refusing is the point: silently dropping these would replace one silent
+      // default with another, and billing them at catalog rate is what this
+      // guard exists to prevent. Naming them tells the biller exactly what to
+      // act on.
+      const names = blockedFromCatalogPricing
+        .map((item) => item.label)
+        .filter((label, index, all) => all.indexOf(label) === index)
+        .join(', ');
+      throw new UnresolvedCatalogPricingError(
+        `A contract covers ${blockedFromCatalogPricing.length === 1 ? 'this item' : 'these items'} (${names}) but more than one contract line matched, ` +
+          'so they cannot be billed at catalog rate. Assign a contract line to each, or explicitly choose catalog pricing for it.',
+        blockedFromCatalogPricing,
+      );
     }
 
     return unresolvedCharges;

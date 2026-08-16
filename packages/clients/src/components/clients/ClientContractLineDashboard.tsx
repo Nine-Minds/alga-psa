@@ -88,7 +88,7 @@ const CustomBucketTooltip = ({ active, payload, label }: CustomBucketTooltipProp
 
 
 const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = ({ clientId }) => {
-  const { renderClientBillingProfileSpend } = useClientCrossFeature();
+  const { renderClientBillingProfileSpend, renderClientUnresolvedChargeReview } = useClientCrossFeature();
  const { money } = useCurrencyFormat();
  const { t } = useTranslation('msp/clients');
  const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
@@ -352,6 +352,14 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
 
   return (
     <div className="space-y-4">
+      {/* Items with no contract line, and the two ways out of that (F068).
+          Renders nothing when there are none. */}
+      {renderClientUnresolvedChargeReview?.({
+        clientId,
+        windowStart: dateRange.startDate,
+        windowEnd: dateRange.endDate,
+      })}
+
       {/* Spend by billing profile (F053). Renders nothing for a single-profile
           client, which is every client until someone adds a second profile. */}
       {renderClientBillingProfileSpend?.({ clientId })}

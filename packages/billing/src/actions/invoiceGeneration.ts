@@ -8,7 +8,7 @@ import { SharedNumberingService } from '@alga-psa/shared/services/numberingServi
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
-import { BillingEngine } from '../lib/billing/billingEngine';
+import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -623,6 +623,13 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
+    }
+
+    // An expected, actionable refusal, not a failure: a contract covers these
+    // items but more than one line matched, so they may not be billed at
+    // catalog rate until someone decides (F139). The message names them.
+    if (error instanceof UnresolvedCatalogPricingError) {
+      return actionError(error.message);
     }
 
     if (error.message === 'Billing cycle not found') {

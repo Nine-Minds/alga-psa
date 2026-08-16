@@ -41,6 +41,12 @@ export interface ClientBillingProfileSpendRenderProps {
   clientId: string;
 }
 
+export interface ClientUnresolvedChargeReviewRenderProps {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
+}
+
 export interface ClientTicketsRenderProps {
   clientId: string;
   clientName?: string;
@@ -119,6 +125,11 @@ export interface ClientCrossFeatureCallbacks {
    * through this seam. Renders nothing for a single-profile client.
    */
   renderClientBillingProfileSpend?: (props: ClientBillingProfileSpendRenderProps) => ReactNode;
+  /**
+   * Optional: the queue of time entries and usage records with no contract
+   * line, and the two remedies for them. Also lives in the billing package.
+   */
+  renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;

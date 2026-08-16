@@ -9,7 +9,7 @@ import {
   billingProfileSourceSentence,
   chargeGranularityLimitation,
   contractLineSourceSentence,
-} from '../src/components/billing-dashboard/reports/billingProfileAttributionCopy';
+} from './billingProfileAttributionCopy';
 
 /**
  * T028 — the attribution inspector renders a distinct plain-language sentence

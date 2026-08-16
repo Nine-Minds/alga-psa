@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Este tipo de encargo não tem um registro por item por trás, pelo que só pode ser atribuído até ao contrato — não à instalação ou ao trabalho concretos de que provém."
     }
+  },
+  "unresolvedReview": {
+    "title": "Itens sem linha de contrato",
+    "description": "Estes itens ainda não estão ligados a uma linha de contrato, pelo que seriam faturados pela tarifa do catálogo de serviços.",
+    "catalogPricingCaveat": "A tarifa de catálogo ignora a tarifa do contrato, o arredondamento, o tempo mínimo faturável, as horas extra e qualquer tabela de preços.",
+    "ambiguousBlocked": "{{count}} item(ns) estão cobertos por um contrato mas corresponderam a mais de uma linha de contrato. Não serão faturados enquanto não atribuir uma linha ou escolher a tarifa de catálogo para eles.",
+    "unknownService": "Serviço desconhecido",
+    "timeEntry": "Registro de tempo · {{minutes}} min",
+    "usageRecord": "Registro de uso · {{quantity}}",
+    "assignLine": "Atribuir uma linha de contrato",
+    "assigned": "Atribuído — este item será faturado pela tarifa do contrato.",
+    "useCatalogPricing": "Usar tarifa de catálogo",
+    "undoCatalogPricing": "Anular",
+    "catalogPricingChosen": "Tarifa de catálogo escolhida",
+    "catalogPricingAccepted": "Tarifa de catálogo escolhida para este item.",
+    "catalogPricingRevoked": "Tarifa de catálogo retirada.",
+    "uncoveredExplanation": "Nenhum contrato cobre este serviço, pelo que a tarifa de catálogo é a única disponível. Será faturado tal como está.",
+    "ambiguousExplanation": "Um contrato cobre este serviço, pelo que existe uma tarifa negociada. Escolha a linha de contrato a que pertence.",
+    "reason": {
+      "uncovered": "Não coberto por qualquer contrato",
+      "ambiguous": "Corresponde a mais de uma linha de contrato"
+    }
   }
 }

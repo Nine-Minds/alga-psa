@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Ten typ opłaty nie ma za sobą zapisu pojedynczych pozycji, więc można go przypisać najwyżej do umowy — nie do konkretnej lokalizacji ani pracy, z której pochodzi."
     }
+  },
+  "unresolvedReview": {
+    "title": "Pozycje bez pozycji umowy",
+    "description": "Te pozycje nie są jeszcze powiązane z pozycją umowy, więc zostałyby rozliczone według stawki z katalogu usług.",
+    "catalogPricingCaveat": "Stawka katalogowa pomija stawkę umowną, zaokrąglanie, minimalny czas rozliczeniowy, nadgodziny i wszelkie harmonogramy cen.",
+    "ambiguousBlocked": "{{count}} pozycji jest objętych umową, ale pasowały do więcej niż jednej pozycji umowy. Nie zostaną zafakturowane, dopóki nie przypiszesz pozycji lub nie wybierzesz dla nich stawki katalogowej.",
+    "unknownService": "Nieznana usługa",
+    "timeEntry": "Wpis czasu · {{minutes}} min",
+    "usageRecord": "Wpis zużycia · {{quantity}}",
+    "assignLine": "Przypisz pozycję umowy",
+    "assigned": "Przypisano — ta pozycja zostanie rozliczona według stawki umownej.",
+    "useCatalogPricing": "Użyj stawki katalogowej",
+    "undoCatalogPricing": "Cofnij",
+    "catalogPricingChosen": "Wybrano stawkę katalogową",
+    "catalogPricingAccepted": "Wybrano stawkę katalogową dla tej pozycji.",
+    "catalogPricingRevoked": "Wycofano stawkę katalogową.",
+    "uncoveredExplanation": "Żadna umowa nie obejmuje tej usługi, więc stawka katalogowa jest jedyną dostępną. Zostanie rozliczona bez zmian.",
+    "ambiguousExplanation": "Umowa obejmuje tę usługę, więc istnieje stawka wynegocjowana. Wybierz pozycję umowy, do której należy.",
+    "reason": {
+      "uncovered": "Nieobjęte żadną umową",
+      "ambiguous": "Pasuje więcej niż jedna pozycja umowy"
+    }
   }
 }

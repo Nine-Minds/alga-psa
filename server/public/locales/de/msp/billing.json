@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Für diese Buchungsart gibt es keinen Einzelnachweis, daher lässt sie sich nur bis zum Vertrag zuordnen – nicht zum konkreten Standort oder zur konkreten Arbeit."
     }
+  },
+  "unresolvedReview": {
+    "title": "Positionen ohne Vertragsposition",
+    "description": "Diese Positionen sind noch keiner Vertragsposition zugeordnet und würden daher zum Katalogpreis abgerechnet.",
+    "catalogPricingCaveat": "Katalogpreise ignorieren den Vertragspreis, Rundung, Mindestabrechnungszeit, Überstunden und jede Preisstaffel.",
+    "ambiguousBlocked": "{{count}} Position(en) sind durch einen Vertrag abgedeckt, passten aber zu mehr als einer Vertragsposition. Sie werden erst abgerechnet, wenn Sie eine Position zuweisen oder Katalogpreise dafür wählen.",
+    "unknownService": "Unbekannte Leistung",
+    "timeEntry": "Zeiteintrag · {{minutes}} Min.",
+    "usageRecord": "Verbrauchseintrag · {{quantity}}",
+    "assignLine": "Vertragsposition zuweisen",
+    "assigned": "Zugewiesen – diese Position wird zu Vertragspreisen abgerechnet.",
+    "useCatalogPricing": "Katalogpreis verwenden",
+    "undoCatalogPricing": "Rückgängig",
+    "catalogPricingChosen": "Katalogpreis gewählt",
+    "catalogPricingAccepted": "Katalogpreis für diese Position gewählt.",
+    "catalogPricingRevoked": "Katalogpreis zurückgenommen.",
+    "uncoveredExplanation": "Kein Vertrag deckt diese Leistung ab, daher ist der Katalogpreis der einzige verfügbare Preis. Sie wird unverändert abgerechnet.",
+    "ambiguousExplanation": "Ein Vertrag deckt diese Leistung ab, es gibt also einen ausgehandelten Preis. Wählen Sie die zugehörige Vertragsposition.",
+    "reason": {
+      "uncovered": "Durch keinen Vertrag abgedeckt",
+      "ambiguous": "Mehr als eine Vertragsposition passt"
+    }
   }
 }

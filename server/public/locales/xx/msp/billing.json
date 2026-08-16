@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "11111"
     }
+  },
+  "unresolvedReview": {
+    "title": "11111",
+    "description": "11111",
+    "catalogPricingCaveat": "11111",
+    "ambiguousBlocked": "11111 {{count}} 11111",
+    "unknownService": "11111",
+    "timeEntry": "11111 {{minutes}} 11111",
+    "usageRecord": "11111 {{quantity}} 11111",
+    "assignLine": "11111",
+    "assigned": "11111",
+    "useCatalogPricing": "11111",
+    "undoCatalogPricing": "11111",
+    "catalogPricingChosen": "11111",
+    "catalogPricingAccepted": "11111",
+    "catalogPricingRevoked": "11111",
+    "uncoveredExplanation": "11111",
+    "ambiguousExplanation": "11111",
+    "reason": {
+      "uncovered": "11111",
+      "ambiguous": "11111"
+    }
   }
 }

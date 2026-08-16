@@ -547,5 +547,27 @@
     "limitation": {
       "contractGranular": "Questo tipo di addebito non ha un record per singolo elemento alle spalle, quindi può essere attribuito solo fino al contratto, non alla sede o al lavoro specifici da cui proviene."
     }
+  },
+  "unresolvedReview": {
+    "title": "Voci senza riga di contratto",
+    "description": "Queste voci non sono ancora collegate a una riga di contratto, quindi verrebbero fatturate alla tariffa del catalogo servizi.",
+    "catalogPricingCaveat": "La tariffa di catalogo ignora la tariffa contrattuale, lʼarrotondamento, il tempo minimo fatturabile, gli straordinari e qualsiasi listino.",
+    "ambiguousBlocked": "{{count}} voce/i sono coperte da un contratto ma corrispondevano a più di una riga di contratto. Non verranno fatturate finché non assegni una riga o scegli la tariffa di catalogo.",
+    "unknownService": "Servizio sconosciuto",
+    "timeEntry": "Inserimento ore · {{minutes}} min",
+    "usageRecord": "Voce di consumo · {{quantity}}",
+    "assignLine": "Assegna una riga di contratto",
+    "assigned": "Assegnata — questa voce sarà fatturata a tariffa contrattuale.",
+    "useCatalogPricing": "Usa la tariffa di catalogo",
+    "undoCatalogPricing": "Annulla",
+    "catalogPricingChosen": "Tariffa di catalogo scelta",
+    "catalogPricingAccepted": "Tariffa di catalogo scelta per questa voce.",
+    "catalogPricingRevoked": "Tariffa di catalogo revocata.",
+    "uncoveredExplanation": "Nessun contratto copre questo servizio, quindi la tariffa di catalogo è lʼunica disponibile. Verrà fatturata così comʼè.",
+    "ambiguousExplanation": "Un contratto copre questo servizio, quindi esiste una tariffa negoziata. Scegli la riga di contratto a cui appartiene.",
+    "reason": {
+      "uncovered": "Non coperto da alcun contratto",
+      "ambiguous": "Corrisponde a più di una riga di contratto"
+    }
   }
 }
