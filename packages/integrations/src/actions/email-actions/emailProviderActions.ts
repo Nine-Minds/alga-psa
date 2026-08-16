@@ -1127,13 +1127,18 @@ export const updateEmailProvider = withAuth(async (
       }
     }
 
-    if (!skipAutomation && data.providerType === 'microsoft') {
+    if (data.providerType === 'microsoft') {
       // An edited Microsoft configuration (e.g. a renewed client secret — the
       // EQUIT scenario) is a reconnect path for a provider auto-paused on
       // repeated auth failures. When the webhook initialization above ran, it
       // already re-established delivery; recovery then reconciles the paused
       // interval and only then clears the pause. Without this, the provider
       // stays paused while its freshly registered webhook feeds gated jobs.
+      // This runs even when skipAutomation skipped the webhook setup above:
+      // skipping transport automation must not skip lifecycle recovery, but
+      // the credentialsValidated/deliveryEstablished hints may only be
+      // claimed when that setup actually ran — otherwise recovery validates
+      // the credentials itself.
       try {
         const { knex: pausedKnex } = await createTenantKnex(tenant);
         const pausedProvider = await tenantDb(pausedKnex, tenant)
@@ -1144,7 +1149,7 @@ export const updateEmailProvider = withAuth(async (
           const { EmailProviderLifecycleService } = await import(
             '@alga-psa/shared/services/email/EmailProviderLifecycleService'
           );
-          const webhookInitSucceeded = !result.setupError;
+          const webhookInitSucceeded = !skipAutomation && !result.setupError;
           const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
             provider.id,
             tenant,
@@ -1172,11 +1177,17 @@ export const updateEmailProvider = withAuth(async (
       }
     }
 
-    if (!skipAutomation && data.providerType === 'imap') {
+    if (data.providerType === 'imap') {
       // Edited IMAP credentials are the reconnect path for a provider
       // auto-paused on repeated auth failures. Recovery validates the new
       // credentials while still paused, clears UID/folder cursors so the
       // poller rescans the paused interval, and only then clears the pause.
+      // This deliberately runs regardless of skipAutomation: that flag means
+      // "don't touch transport automation (Pub/Sub/webhooks)" — IMAP has none
+      // in this action, and credential saves are the only reconnect surface an
+      // auth-paused IMAP provider has. Gating recovery on the flag left the
+      // Reconnect drawer's save (which passes skipAutomation=true) silently
+      // keeping the provider paused after a successful credential save.
       try {
         const { knex: pausedKnex } = await createTenantKnex(tenant);
         const pausedProvider = await tenantDb(pausedKnex, tenant)
