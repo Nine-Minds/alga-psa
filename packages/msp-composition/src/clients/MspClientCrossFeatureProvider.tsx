@@ -11,7 +11,7 @@ import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
-import { HourBlocksSection } from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
+import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
