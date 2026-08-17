@@ -1339,8 +1339,9 @@
       "lightMode": "Variante clara",
       "darkMode": "Variante oscura",
       "previewAlt": "Vista previa del tema personalizado",
-      "contrastTitle": "Estos pares de colores están por debajo del mínimo WCAG AA:",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (se necesita {{required}}:1)",
+      "seededFrom": "Estos colores parten del tema {{pair}}: cambie solo los que le interesen y las escalas completas se ajustan solas.",
+      "contrastTitle": "Estos colores están demasiado juntos para leerse. Corríjalos antes de guardar:",
+      "contrastIssue": "{{foreground}} sobre {{background}} solo alcanza {{ratio}}:1 y el mínimo es {{required}}:1. {{hint}}",
       "tokens": {
         "background": "Fondo de página",
         "card": "Superficie de tarjeta",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "Fondo del panel lateral",
         "sidebarText": "Texto del panel lateral",
         "sidebarHover": "Panel lateral al pasar el cursor",
-        "headerBg": "Fondo del encabezado"
+        "headerBg": "Fondo del encabezado",
+        "buttonLabel": "Etiquetas de botón en blanco"
       },
       "actions": {
         "save": "Guardar y usar el tema personalizado",
-        "reset": "Restablecer colores",
-        "resetDone": "Colores personalizados restablecidos: guarde para aplicarlos"
+        "reset": "Restablecer a los colores de {{pair}}",
+        "resetDone": "Colores restablecidos al tema {{pair}}: guarde para aplicarlos"
+      },
+      "contrastHints": {
+        "lighten": "Elija un {{foreground}} más claro o un {{background}} más oscuro.",
+        "darken": "Elija un {{foreground}} más oscuro o un {{background}} más claro."
       }
     },
     "whiteLabel": {

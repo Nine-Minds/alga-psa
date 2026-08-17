@@ -1339,8 +1339,9 @@
       "lightMode": "Helle Variante",
       "darkMode": "Dunkle Variante",
       "previewAlt": "Vorschau des eigenen Designs",
-      "contrastTitle": "Diese Farbpaare liegen unter dem WCAG-AA-Mindestwert:",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (erforderlich {{required}}:1)",
+      "seededFrom": "Diese Farben starten beim Design {{pair}} – ändern Sie nur die wenigen, die Sie brauchen, die vollen Farbskalen folgen automatisch.",
+      "contrastTitle": "Diese Farben liegen zu nah beieinander und sind schlecht lesbar. Bitte vor dem Speichern korrigieren:",
+      "contrastIssue": "{{foreground}} auf {{background}} erreicht nur {{ratio}}:1, mindestens nötig sind {{required}}:1. {{hint}}",
       "tokens": {
         "background": "Seitenhintergrund",
         "card": "Kartenfläche",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "Hintergrund der Seitenleiste",
         "sidebarText": "Text der Seitenleiste",
         "sidebarHover": "Seitenleiste beim Überfahren",
-        "headerBg": "Kopfzeilenhintergrund"
+        "headerBg": "Kopfzeilenhintergrund",
+        "buttonLabel": "Weiße Schaltflächenbeschriftungen"
       },
       "actions": {
         "save": "Eigenes Design speichern und verwenden",
-        "reset": "Farben zurücksetzen",
-        "resetDone": "Eigene Farben zurückgesetzt – zum Übernehmen speichern"
+        "reset": "Auf Farben von {{pair}} zurücksetzen",
+        "resetDone": "Farben auf das Design {{pair}} zurückgesetzt – zum Anwenden speichern"
+      },
+      "contrastHints": {
+        "lighten": "Wählen Sie ein helleres {{foreground}} oder ein dunkleres {{background}}.",
+        "darken": "Wählen Sie ein dunkleres {{foreground}} oder ein helleres {{background}}."
       }
     },
     "whiteLabel": {

@@ -1339,8 +1339,9 @@
       "lightMode": "11111",
       "darkMode": "11111",
       "previewAlt": "11111",
+      "seededFrom": "11111",
       "contrastTitle": "11111",
-      "contrastIssue": "11111 {{pair}} 11111 {{ratio}} 11111 {{required}} 11111",
+      "contrastIssue": "11111",
       "tokens": {
         "background": "11111",
         "card": "11111",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "11111",
         "sidebarText": "11111",
         "sidebarHover": "11111",
-        "headerBg": "11111"
+        "headerBg": "11111",
+        "buttonLabel": "11111"
       },
       "actions": {
         "save": "11111",
         "reset": "11111",
         "resetDone": "11111"
+      },
+      "contrastHints": {
+        "lighten": "11111",
+        "darken": "11111"
       }
     },
     "whiteLabel": {

@@ -1339,8 +1339,9 @@
       "lightMode": "Light variant",
       "darkMode": "Dark variant",
       "previewAlt": "Custom theme preview",
-      "contrastTitle": "These color pairs are below the WCAG AA minimum:",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (needs {{required}}:1)",
+      "seededFrom": "These colors start from the {{pair}} theme — change the few you care about and the full scales follow.",
+      "contrastTitle": "These colors are too close together to read. Fix them before saving:",
+      "contrastIssue": "{{foreground}} on {{background}} is only {{ratio}}:1, and {{required}}:1 is the minimum. {{hint}}",
       "tokens": {
         "background": "Page background",
         "card": "Card surface",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "Side panel background",
         "sidebarText": "Side panel text",
         "sidebarHover": "Side panel hover",
-        "headerBg": "Header background"
+        "headerBg": "Header background",
+        "buttonLabel": "White button labels"
       },
       "actions": {
         "save": "Save and use custom theme",
-        "reset": "Reset colors",
-        "resetDone": "Custom colors reset — save to apply"
+        "reset": "Reset to {{pair}} colors",
+        "resetDone": "Colors reset to the {{pair}} theme — save to apply"
+      },
+      "contrastHints": {
+        "lighten": "Pick a lighter {{foreground}} or a darker {{background}}.",
+        "darken": "Pick a darker {{foreground}} or a lighter {{background}}."
       }
     },
     "whiteLabel": {

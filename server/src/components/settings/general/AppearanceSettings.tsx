@@ -22,21 +22,17 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActi
 import {
   DEFAULT_THEME_PAIR_ID,
   THEME_PAIRS,
+  getThemePairMeta,
   type ThemePairId,
 } from '@alga-psa/tenancy/lib/themePairs';
 import {
-  DEFAULT_CUSTOM_THEME,
+  customThemePresetFor,
   type CustomThemeMode,
   type CustomThemeTokenKey,
   type CustomThemeTokens,
 } from '@alga-psa/tenancy/lib/customTheme';
 import ThemePairPreview from './ThemePairPreview';
 import CustomThemeEditor from './CustomThemeEditor';
-
-const cloneDefaultCustomTheme = (): { light: CustomThemeTokens; dark: CustomThemeTokens } => ({
-  light: { ...DEFAULT_CUSTOM_THEME.light },
-  dark: { ...DEFAULT_CUSTOM_THEME.dark },
-});
 
 const AppearanceSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -46,7 +42,12 @@ const AppearanceSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pairId, setPairId] = useState<ThemePairId>(DEFAULT_THEME_PAIR_ID);
-  const [customTheme, setCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens } | null>(null);
+  const [customTheme, setCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens }>(
+    () => customThemePresetFor(DEFAULT_THEME_PAIR_ID),
+  );
+  // Which predefined pair the editor colors were seeded from, or null once the
+  // tenant has saved a palette of their own.
+  const [customSeedPairId, setCustomSeedPairId] = useState<ThemePairId | null>(DEFAULT_THEME_PAIR_ID);
   const [customMode, setCustomMode] = useState<CustomThemeMode>('light');
   const [mspWhiteLabel, setMspWhiteLabel] = useState(false);
   const [tenantId, setTenantId] = useState('');
@@ -63,7 +64,16 @@ const AppearanceSettings = () => {
           getCurrentUser(),
         ]);
         setPairId(theme.pairId);
-        setCustomTheme(theme.customTheme ? { light: theme.customTheme.light, dark: theme.customTheme.dark } : null);
+        if (theme.customTheme) {
+          setCustomTheme({ light: theme.customTheme.light, dark: theme.customTheme.dark });
+          setCustomSeedPairId(null);
+        } else {
+          // No palette of their own yet: start the editor from the pair they run,
+          // so tweaking a couple of colors still yields a coherent theme.
+          const seed = theme.pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : theme.pairId;
+          setCustomTheme(customThemePresetFor(seed));
+          setCustomSeedPairId(seed);
+        }
         setMspWhiteLabel(!!theme.mspWhiteLabel);
         setLogoUrl(branding?.logoUrl || '');
         setLogoDarkUrl(branding?.logoDarkUrl || '');
@@ -79,11 +89,13 @@ const AppearanceSettings = () => {
   }, []);
 
   const handleTokenChange = useCallback((mode: CustomThemeMode, key: CustomThemeTokenKey, value: string) => {
-    setCustomTheme((current) => {
-      const base = current ?? cloneDefaultCustomTheme();
-      return { ...base, [mode]: { ...base[mode], [key]: value } };
-    });
+    setCustomTheme((current) => ({ ...current, [mode]: { ...current[mode], [key]: value } }));
   }, []);
+
+  const pairLabel = (id: ThemePairId) => {
+    const meta = getThemePairMeta(id);
+    return meta ? t(meta.labelKey, { defaultValue: meta.label }) : id;
+  };
 
   const applyPairAttribute = (nextPairId: ThemePairId) => {
     // The attribute is server-rendered; keep the open tab in sync so the admin
@@ -101,10 +113,17 @@ const AppearanceSettings = () => {
         // leaves the saved palette to the action's carry-forward, so an
         // unsaved, contrast-failing edit can never block a pair change.
         pairId: nextPairId,
-        ...(nextPairId === 'custom' ? { customTheme: customTheme ?? cloneDefaultCustomTheme() } : {}),
+        ...(nextPairId === 'custom' ? { customTheme } : {}),
         mspWhiteLabel: nextWhiteLabel,
       });
       setPairId(nextPairId);
+      if (nextPairId === 'custom') {
+        setCustomSeedPairId(null);
+      } else if (customSeedPairId) {
+        // Still on seeded colors, so follow the pair they just chose.
+        setCustomTheme(customThemePresetFor(nextPairId));
+        setCustomSeedPairId(nextPairId);
+      }
       setMspWhiteLabel(nextWhiteLabel);
       applyPairAttribute(nextPairId);
       // The shell reads branding on the server, so refresh it instead of making
@@ -206,10 +225,11 @@ const AppearanceSettings = () => {
           </CardHeader>
           <CardContent>
             <CustomThemeEditor
-              theme={customTheme ?? cloneDefaultCustomTheme()}
+              theme={customTheme}
               mode={customMode}
               onModeChange={setCustomMode}
               onTokenChange={handleTokenChange}
+              seededFrom={customSeedPairId ? pairLabel(customSeedPairId) : undefined}
               disabled={loading || saving}
             />
             <div className="mt-4 flex flex-wrap gap-2">
@@ -227,13 +247,21 @@ const AppearanceSettings = () => {
                 variant="outline"
                 disabled={loading || saving}
                 onClick={() => {
-                  setCustomTheme(cloneDefaultCustomTheme());
+                  const seed = pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : pairId;
+                  setCustomTheme(customThemePresetFor(seed));
+                  setCustomSeedPairId(seed);
                   toast.success(
-                    t('appearance.custom.actions.resetDone', { defaultValue: 'Custom colors reset — save to apply' }),
+                    t('appearance.custom.actions.resetDone', {
+                      defaultValue: 'Colors reset to the {{pair}} theme — save to apply',
+                      pair: pairLabel(seed),
+                    }),
                   );
                 }}
               >
-                {t('appearance.custom.actions.reset', { defaultValue: 'Reset colors' })}
+                {t('appearance.custom.actions.reset', {
+                  defaultValue: 'Reset to {{pair}} colors',
+                  pair: pairLabel(pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : pairId),
+                })}
               </Button>
             </div>
           </CardContent>

@@ -1339,8 +1339,9 @@
       "lightMode": "Variante claire",
       "darkMode": "Variante sombre",
       "previewAlt": "Aperçu du thème personnalisé",
-      "contrastTitle": "Ces paires de couleurs sont en dessous du minimum WCAG AA :",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (minimum {{required}}:1)",
+      "seededFrom": "Ces couleurs partent du thème {{pair}} : modifiez seulement celles qui vous importent, les gammes complètes suivent.",
+      "contrastTitle": "Ces couleurs sont trop proches pour être lisibles. Corrigez-les avant d’enregistrer :",
+      "contrastIssue": "{{foreground}} sur {{background}} n’atteint que {{ratio}}:1 alors que {{required}}:1 est le minimum. {{hint}}",
       "tokens": {
         "background": "Arrière-plan de la page",
         "card": "Surface de carte",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "Arrière-plan du panneau latéral",
         "sidebarText": "Texte du panneau latéral",
         "sidebarHover": "Panneau latéral au survol",
-        "headerBg": "Arrière-plan de l’en-tête"
+        "headerBg": "Arrière-plan de l’en-tête",
+        "buttonLabel": "Libellés de bouton blancs"
       },
       "actions": {
         "save": "Enregistrer et utiliser le thème personnalisé",
-        "reset": "Réinitialiser les couleurs",
-        "resetDone": "Couleurs personnalisées réinitialisées — enregistrez pour appliquer"
+        "reset": "Rétablir les couleurs de {{pair}}",
+        "resetDone": "Couleurs rétablies sur le thème {{pair}} — enregistrez pour appliquer"
+      },
+      "contrastHints": {
+        "lighten": "Choisissez un {{foreground}} plus clair ou un {{background}} plus sombre.",
+        "darken": "Choisissez un {{foreground}} plus sombre ou un {{background}} plus clair."
       }
     },
     "whiteLabel": {

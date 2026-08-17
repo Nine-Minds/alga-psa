@@ -1339,8 +1339,9 @@
       "lightMode": "Variante chiara",
       "darkMode": "Variante scura",
       "previewAlt": "Anteprima del tema personalizzato",
-      "contrastTitle": "Queste coppie di colori sono sotto il minimo WCAG AA:",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (richiesto {{required}}:1)",
+      "seededFrom": "Questi colori partono dal tema {{pair}}: modifica solo quelli che ti interessano e le scale complete si adeguano.",
+      "contrastTitle": "Questi colori sono troppo vicini per essere leggibili. Correggili prima di salvare:",
+      "contrastIssue": "{{foreground}} su {{background}} raggiunge solo {{ratio}}:1, mentre il minimo è {{required}}:1. {{hint}}",
       "tokens": {
         "background": "Sfondo della pagina",
         "card": "Superficie della scheda",
@@ -1356,12 +1357,17 @@
         "sidebarBg": "Sfondo del pannello laterale",
         "sidebarText": "Testo del pannello laterale",
         "sidebarHover": "Pannello laterale al passaggio del mouse",
-        "headerBg": "Sfondo dell’intestazione"
+        "headerBg": "Sfondo dell’intestazione",
+        "buttonLabel": "Etichette dei pulsanti in bianco"
       },
       "actions": {
         "save": "Salva e usa il tema personalizzato",
-        "reset": "Reimposta i colori",
-        "resetDone": "Colori personalizzati reimpostati: salva per applicare"
+        "reset": "Ripristina i colori di {{pair}}",
+        "resetDone": "Colori ripristinati al tema {{pair}}: salva per applicarli"
+      },
+      "contrastHints": {
+        "lighten": "Scegli un {{foreground}} più chiaro o un {{background}} più scuro.",
+        "darken": "Scegli un {{foreground}} più scuro o un {{background}} più chiaro."
       }
     },
     "whiteLabel": {

@@ -1345,8 +1345,9 @@
       "lightMode": "Wariant jasny",
       "darkMode": "Wariant ciemny",
       "previewAlt": "Podgląd motywu własnego",
-      "contrastTitle": "Te pary kolorów są poniżej minimum WCAG AA:",
-      "contrastIssue": "{{pair}} — {{ratio}}:1 (wymagane {{required}}:1)",
+      "seededFrom": "Te kolory wychodzą z motywu {{pair}} — zmień tylko te, na których Ci zależy, a pełne skale dostosują się same.",
+      "contrastTitle": "Te kolory są zbyt podobne, aby dało się je odczytać. Popraw je przed zapisaniem:",
+      "contrastIssue": "{{foreground}} na {{background}} osiąga tylko {{ratio}}:1, a minimum to {{required}}:1. {{hint}}",
       "tokens": {
         "background": "Tło strony",
         "card": "Powierzchnia karty",
@@ -1362,12 +1363,17 @@
         "sidebarBg": "Tło panelu bocznego",
         "sidebarText": "Tekst panelu bocznego",
         "sidebarHover": "Panel boczny po najechaniu",
-        "headerBg": "Tło nagłówka"
+        "headerBg": "Tło nagłówka",
+        "buttonLabel": "Białe etykiety przycisków"
       },
       "actions": {
         "save": "Zapisz i użyj motywu własnego",
-        "reset": "Przywróć kolory",
-        "resetDone": "Kolory własne przywrócone — zapisz, aby zastosować"
+        "reset": "Przywróć kolory motywu {{pair}}",
+        "resetDone": "Kolory przywrócone do motywu {{pair}} — zapisz, aby zastosować"
+      },
+      "contrastHints": {
+        "lighten": "Wybierz jaśniejszy {{foreground}} lub ciemniejszy {{background}}.",
+        "darken": "Wybierz ciemniejszy {{foreground}} lub jaśniejszy {{background}}."
       }
     },
     "whiteLabel": {

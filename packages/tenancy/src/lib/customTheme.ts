@@ -8,6 +8,10 @@
  * agree about what "primary-700" means.
  */
 
+import { DEFAULT_THEME_PAIR_ID, type ThemePairId } from './themePairs';
+
+type PredefinedThemePairId = Exclude<ThemePairId, 'custom'>;
+
 export const CUSTOM_THEME_TOKEN_KEYS = [
   'background',
   'card',
@@ -38,43 +42,314 @@ export interface CustomTheme {
   computedStyles?: string;
 }
 
-/** Starting point for a tenant opening the editor: today's Alga pair. */
-export const DEFAULT_CUSTOM_THEME: { light: CustomThemeTokens; dark: CustomThemeTokens } = {
-  light: {
-    background: '#ffffff',
-    card: '#ffffff',
-    surface: '#f8fafc',
-    textPrimary: '#0f172a',
-    textSecondary: '#475569',
-    textMuted: '#64748b',
-    border: '#e2e8f0',
-    borderStrong: '#cbd5e1',
-    primary: '#8a4dea',
-    secondary: '#40cff9',
-    accent: '#ff9c30',
-    sidebarBg: '#0c111d',
-    sidebarText: '#f5f5f5',
-    sidebarHover: '#808080',
-    headerBg: '#ffffff',
+/**
+ * Core tokens of every predefined pair, so opening the editor starts from the
+ * palette the tenant already picked instead of a blank purple slate: choose
+ * Forest, tweak two greens, keep a balanced ramp. Values mirror the pair blocks
+ * in server/src/app/globals.css (a unit test pins them together).
+ */
+export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: CustomThemeTokens; dark: CustomThemeTokens }> = {
+  alga: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#f8fafc',
+      textPrimary: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      borderStrong: '#94a3b8',
+      primary: '#8a4dea',
+      secondary: '#40cff9',
+      accent: '#ff9c30',
+      sidebarBg: '#0c111d',
+      sidebarText: '#f5f5f5',
+      sidebarHover: '#808080',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#0c0a18',
+      card: '#1e1836',
+      surface: '#130d24',
+      textPrimary: '#e8e4f6',
+      textSecondary: '#c9c3e0',
+      textMuted: '#9a92b8',
+      border: '#272041',
+      borderStrong: '#3a2f59',
+      primary: '#8a4dea',
+      secondary: '#53d7fa',
+      accent: '#ffa645',
+      sidebarBg: '#151024',
+      sidebarText: '#e8e4f6',
+      sidebarHover: '#221743',
+      headerBg: '#151024',
+    },
   },
-  dark: {
-    background: '#0c0a18',
-    card: '#1e1836',
-    surface: '#1b1530',
-    textPrimary: '#e8e4f6',
-    textSecondary: '#c9c3e0',
-    textMuted: '#9a92b8',
-    border: '#272041',
-    borderStrong: '#3a2f59',
-    primary: '#8a4dea',
-    secondary: '#40cff9',
-    accent: '#ff9c30',
-    sidebarBg: '#151024',
-    sidebarText: '#e8e4f6',
-    sidebarHover: '#221743',
-    headerBg: '#151024',
+  slate: {
+    light: {
+      background: '#f2f3f5',
+      card: '#ffffff',
+      surface: '#f7f8f9',
+      textPrimary: '#111827',
+      textSecondary: '#4b5563',
+      textMuted: '#6b7280',
+      border: '#e2e4e8',
+      borderStrong: '#b9bec7',
+      primary: '#8a4dea',
+      secondary: '#40cff9',
+      accent: '#ff9c30',
+      sidebarBg: '#0c111d',
+      sidebarText: '#f5f5f5',
+      sidebarHover: '#808080',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#000000',
+      card: '#161c30',
+      surface: '#0f172a',
+      textPrimary: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      borderStrong: '#64748b',
+      primary: '#9855ee',
+      secondary: '#53d7fa',
+      accent: '#ffa645',
+      sidebarBg: '#0f172a',
+      sidebarText: '#f5f5f5',
+      sidebarHover: '#1e293b',
+      headerBg: '#161c30',
+    },
+  },
+  ocean: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#f4f8fb',
+      textPrimary: '#0f1e29',
+      textSecondary: '#455a6b',
+      textMuted: '#5c7285',
+      border: '#d9e2ec',
+      borderStrong: '#93a7ba',
+      primary: '#0284c7',
+      secondary: '#14b8a6',
+      accent: '#f59e0b',
+      sidebarBg: '#0b1620',
+      sidebarText: '#e2ecf6',
+      sidebarHover: '#16283a',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#05080f',
+      card: '#0d1726',
+      surface: '#070d16',
+      textPrimary: '#e2ecf6',
+      textSecondary: '#8aa4bb',
+      textMuted: '#5f7c96',
+      border: '#1c2b3d',
+      borderStrong: '#2a3c52',
+      primary: '#0284c7',
+      secondary: '#14b8a6',
+      accent: '#f59e0b',
+      sidebarBg: '#0d1726',
+      sidebarText: '#e2ecf6',
+      sidebarHover: '#17293d',
+      headerBg: '#0d1726',
+    },
+  },
+  forest: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#f2f7f3',
+      textPrimary: '#131c16',
+      textSecondary: '#4d6152',
+      textMuted: '#6b7f70',
+      border: '#d5e2d8',
+      borderStrong: '#b7cbbc',
+      primary: '#16a34a',
+      secondary: '#0d9488',
+      accent: '#f59e0b',
+      sidebarBg: '#0c1510',
+      sidebarText: '#e4f2e8',
+      sidebarHover: '#17251b',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#0a120d',
+      card: '#121f17',
+      surface: '#0c150f',
+      textPrimary: '#e4f2e8',
+      textSecondary: '#93ab9b',
+      textMuted: '#6b8272',
+      border: '#1e3226',
+      borderStrong: '#33513c',
+      primary: '#16a34a',
+      secondary: '#0d9488',
+      accent: '#f59e0b',
+      sidebarBg: '#121f17',
+      sidebarText: '#e4f2e8',
+      sidebarHover: '#1d3325',
+      headerBg: '#121f17',
+    },
+  },
+  sunset: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#fbf6ef',
+      textPrimary: '#1c1917',
+      textSecondary: '#78716c',
+      textMuted: '#8b7d6d',
+      border: '#e8dcc8',
+      borderStrong: '#cdbb9c',
+      primary: '#c2410c',
+      secondary: '#0d9488',
+      accent: '#eab308',
+      sidebarBg: '#1a1008',
+      sidebarText: '#f6ede4',
+      sidebarHover: '#2c1c0d',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#140b05',
+      card: '#211408',
+      surface: '#180e06',
+      textPrimary: '#f6ede4',
+      textSecondary: '#a89383',
+      textMuted: '#7d6a5c',
+      border: '#4a2f17',
+      borderStrong: '#6e4826',
+      primary: '#ea580c',
+      secondary: '#0d9488',
+      accent: '#eab308',
+      sidebarBg: '#211408',
+      sidebarText: '#f6ede4',
+      sidebarHover: '#3a2412',
+      headerBg: '#211408',
+    },
+  },
+  cappuccino: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#faf6f1',
+      textPrimary: '#211a14',
+      textSecondary: '#5e4f43',
+      textMuted: '#7d6a5b',
+      border: '#e7d9c9',
+      borderStrong: '#c3a988',
+      primary: '#8b5e3c',
+      secondary: '#47786f',
+      accent: '#d9944a',
+      sidebarBg: '#241a12',
+      sidebarText: '#f5ece2',
+      sidebarHover: '#3a2a1d',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#140e09',
+      card: '#2a1d13',
+      surface: '#1a120c',
+      textPrimary: '#f5ece2',
+      textSecondary: '#c8b6a4',
+      textMuted: '#a3907e',
+      border: '#3a2a1d',
+      borderStrong: '#5d452f',
+      primary: '#a9713f',
+      secondary: '#4f8b80',
+      accent: '#d9944a',
+      sidebarBg: '#1a120c',
+      sidebarText: '#f5ece2',
+      sidebarHover: '#33241a',
+      headerBg: '#2a1d13',
+    },
+  },
+  vice: {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#fdf5fa',
+      textPrimary: '#211722',
+      textSecondary: '#5b3f5a',
+      textMuted: '#7c5c78',
+      border: '#f2d5e8',
+      borderStrong: '#d194bf',
+      primary: '#c4187f',
+      secondary: '#0891b2',
+      accent: '#ea580c',
+      sidebarBg: '#190431',
+      sidebarText: '#fbe9f5',
+      sidebarHover: '#2d0a52',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#0d0221',
+      card: '#241050',
+      surface: '#140430',
+      textPrimary: '#fdeff9',
+      textSecondary: '#dcbce6',
+      textMuted: '#b48ccb',
+      border: '#34176b',
+      borderStrong: '#5b2ba8',
+      primary: '#e01f8b',
+      secondary: '#22d3ee',
+      accent: '#ffc857',
+      sidebarBg: '#170538',
+      sidebarText: '#fdeff9',
+      sidebarHover: '#2a0d55',
+      headerBg: '#241050',
+    },
+  },
+  'high-contrast': {
+    light: {
+      background: '#ffffff',
+      card: '#ffffff',
+      surface: '#ffffff',
+      textPrimary: '#000000',
+      textSecondary: '#1f2937',
+      textMuted: '#374151',
+      border: '#111111',
+      borderStrong: '#1f2937',
+      primary: '#5b21b6',
+      secondary: '#1d4ed8',
+      accent: '#b45309',
+      sidebarBg: '#000000',
+      sidebarText: '#ffffff',
+      sidebarHover: '#333333',
+      headerBg: '#ffffff',
+    },
+    dark: {
+      background: '#000000',
+      card: '#000000',
+      surface: '#000000',
+      textPrimary: '#ffffff',
+      textSecondary: '#e5e7eb',
+      textMuted: '#d1d5db',
+      border: '#f5f5f5',
+      borderStrong: '#9ca3af',
+      primary: '#7c3aed',
+      secondary: '#3b82f6',
+      accent: '#f59e0b',
+      sidebarBg: '#000000',
+      sidebarText: '#ffffff',
+      sidebarHover: '#333333',
+      headerBg: '#000000',
+    },
   },
 };
+
+/** Starting point for a tenant opening the editor without a pair in hand. */
+export const DEFAULT_CUSTOM_THEME: { light: CustomThemeTokens; dark: CustomThemeTokens } =
+  CUSTOM_THEME_PRESETS[DEFAULT_THEME_PAIR_ID as PredefinedThemePairId];
+
+/** Fresh copy of a pair's core tokens, safe for the editor to mutate. */
+export function customThemePresetFor(
+  pairId: string | undefined,
+): { light: CustomThemeTokens; dark: CustomThemeTokens } {
+  const preset = CUSTOM_THEME_PRESETS[pairId as PredefinedThemePairId] ?? DEFAULT_CUSTOM_THEME;
+  return { light: { ...preset.light }, dark: { ...preset.dark } };
+}
 
 type Rgb = [number, number, number];
 
@@ -155,23 +430,60 @@ export const contrastRatio = (a: string, b: string): number => {
   return (light + 0.05) / (dark + 0.05);
 };
 
+/** The white button label is checked against the primary fill, not a token. */
+export type CustomThemeContrastForeground = CustomThemeTokenKey | 'buttonLabel';
+
 export interface CustomThemeContrastIssue {
   mode: CustomThemeMode;
   /** Token pair that failed, e.g. 'textPrimary/background'. */
   pair: string;
+  /** Which colors clashed, so callers can name them in the reader's language. */
+  foreground: CustomThemeContrastForeground;
+  background: CustomThemeTokenKey;
+  /** 'lighten' when the fix is a lighter foreground (dark ground), else 'darken'. */
+  fix: 'lighten' | 'darken';
   ratio: number;
   required: number;
 }
 
-const CONTRAST_CHECKS: Array<{ pair: string; fg: CustomThemeTokenKey | '#ffffff'; bg: CustomThemeTokenKey; required: number }> = [
-  { pair: 'textPrimary/background', fg: 'textPrimary', bg: 'background', required: 4.5 },
-  { pair: 'textPrimary/card', fg: 'textPrimary', bg: 'card', required: 4.5 },
-  { pair: 'textSecondary/background', fg: 'textSecondary', bg: 'background', required: 4.5 },
-  { pair: 'textMuted/background', fg: 'textMuted', bg: 'background', required: 3 },
-  { pair: 'sidebarText/sidebarBg', fg: 'sidebarText', bg: 'sidebarBg', required: 4.5 },
-  { pair: 'primary/background', fg: 'primary', bg: 'background', required: 3 },
-  { pair: 'buttonLabel/primary', fg: '#ffffff', bg: 'primary', required: 3 },
+const CONTRAST_CHECKS: Array<{ fg: CustomThemeContrastForeground; bg: CustomThemeTokenKey; required: number }> = [
+  { fg: 'textPrimary', bg: 'background', required: 4.5 },
+  { fg: 'textPrimary', bg: 'card', required: 4.5 },
+  { fg: 'textSecondary', bg: 'background', required: 4.5 },
+  { fg: 'textMuted', bg: 'background', required: 3 },
+  { fg: 'sidebarText', bg: 'sidebarBg', required: 4.5 },
+  { fg: 'primary', bg: 'background', required: 3 },
+  { fg: 'buttonLabel', bg: 'primary', required: 3 },
 ];
+
+/** English names for the failing colors — the settings UI localizes its own. */
+const CONTRAST_LABELS: Record<CustomThemeContrastForeground | CustomThemeTokenKey, string> = {
+  background: 'the page background',
+  card: 'the card surface',
+  surface: 'the raised surface',
+  textPrimary: 'primary text',
+  textSecondary: 'secondary text',
+  textMuted: 'muted text',
+  border: 'the border color',
+  borderStrong: 'the strong border color',
+  primary: 'the primary color',
+  secondary: 'the secondary color',
+  accent: 'the accent color',
+  sidebarBg: 'the side panel background',
+  sidebarText: 'the side panel text',
+  sidebarHover: 'the side panel hover',
+  headerBg: 'the header background',
+  buttonLabel: 'white button labels',
+};
+
+/** Plain-English sentence for one failure, used in thrown save errors. */
+export function describeContrastIssue(issue: CustomThemeContrastIssue): string {
+  const fix = issue.fix === 'lighten'
+    ? `pick a lighter ${CONTRAST_LABELS[issue.foreground]} or a darker ${CONTRAST_LABELS[issue.background]}`
+    : `pick a darker ${CONTRAST_LABELS[issue.foreground]} or a lighter ${CONTRAST_LABELS[issue.background]}`;
+  return `in the ${issue.mode} variant, ${CONTRAST_LABELS[issue.foreground]} on ${CONTRAST_LABELS[issue.background]}`
+    + ` is only ${issue.ratio}:1 where ${issue.required}:1 is needed — ${fix}`;
+}
 
 /** Every token must be a 6-digit hex; missing/short values are rejected up front. */
 export function findInvalidCustomThemeTokens(tokens: Partial<CustomThemeTokens>): CustomThemeTokenKey[] {
@@ -184,11 +496,22 @@ export function validateCustomThemeContrast(
   const issues: CustomThemeContrastIssue[] = [];
   (['light', 'dark'] as const).forEach((mode) => {
     const tokens = theme[mode];
-    CONTRAST_CHECKS.forEach(({ pair, fg, bg, required }) => {
-      const foreground = fg === '#ffffff' ? '#ffffff' : tokens[fg];
-      const ratio = contrastRatio(foreground, tokens[bg]);
+    CONTRAST_CHECKS.forEach(({ fg, bg, required }) => {
+      const foreground = fg === 'buttonLabel' ? '#ffffff' : tokens[fg];
+      const backgroundHex = tokens[bg];
+      const ratio = contrastRatio(foreground, backgroundHex);
       if (ratio < required) {
-        issues.push({ mode, pair, ratio: Math.round(ratio * 100) / 100, required });
+        const backgroundRgb = hexToRgbTuple(backgroundHex);
+        issues.push({
+          mode,
+          pair: `${fg}/${bg}`,
+          foreground: fg,
+          background: bg,
+          // A dark ground can only be fixed by lifting the foreground.
+          fix: backgroundRgb && relativeLuminance(backgroundRgb) < 0.2 ? 'lighten' : 'darken',
+          ratio: Math.round(ratio * 100) / 100,
+          required,
+        });
       }
     });
   });

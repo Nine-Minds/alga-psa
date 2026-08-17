@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CUSTOM_THEME_PRESETS,
   DEFAULT_CUSTOM_THEME,
   contrastRatio,
+  customThemePresetFor,
+  describeContrastIssue,
   findInvalidCustomThemeTokens,
   generateCustomThemeStyles,
   validateCustomThemeContrast,
 } from './customTheme';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme } from './tenantTheme';
-import { THEME_PAIRS, isThemePairId } from './themePairs';
+import { DEFAULT_THEME_PAIR_ID, THEME_PAIRS, isThemePairId } from './themePairs';
 
 const clone = () => ({
   light: { ...DEFAULT_CUSTOM_THEME.light },
@@ -82,6 +85,63 @@ describe('custom theme validation', () => {
     const issues = validateCustomThemeContrast(theme);
     expect(issues.some((issue) => issue.mode === 'light' && issue.pair === 'textPrimary/background')).toBe(true);
     expect(issues.every((issue) => issue.ratio < issue.required)).toBe(true);
+  });
+
+  // The operator's report: "needs to be 3 to 1" told an admin nothing about
+  // which two colors clashed or which way to move them.
+  it('says which colors clashed and which way to move them', () => {
+    const theme = clone();
+    theme.light.textPrimary = '#eeeeee';
+    theme.dark.textPrimary = '#12101c';
+    const issues = validateCustomThemeContrast(theme);
+
+    const light = issues.find((issue) => issue.mode === 'light' && issue.pair === 'textPrimary/background')!;
+    expect(light.foreground).toBe('textPrimary');
+    expect(light.background).toBe('background');
+    expect(light.fix).toBe('darken');
+    expect(describeContrastIssue(light)).toContain('primary text on the page background');
+    expect(describeContrastIssue(light)).toContain('pick a darker primary text');
+
+    const dark = issues.find((issue) => issue.mode === 'dark' && issue.pair === 'textPrimary/background')!;
+    expect(dark.fix).toBe('lighten');
+    expect(describeContrastIssue(dark)).toContain('in the dark variant');
+  });
+
+  it('names the white button label rather than a token that does not exist', () => {
+    const theme = clone();
+    theme.light.primary = '#fdf5c9';
+    const issue = validateCustomThemeContrast(theme)
+      .find((candidate) => candidate.pair === 'buttonLabel/primary')!;
+
+    expect(issue.foreground).toBe('buttonLabel');
+    expect(describeContrastIssue(issue)).toContain('white button labels');
+  });
+});
+
+describe('custom theme presets', () => {
+  it('seeds every predefined pair, including the new ones', () => {
+    expect(Object.keys(CUSTOM_THEME_PRESETS)).toEqual([
+      'alga', 'slate', 'ocean', 'forest', 'sunset', 'cappuccino', 'vice', 'high-contrast',
+    ]);
+  });
+
+  // A prefilled palette that opens with contrast errors would be worse than no
+  // prefill at all.
+  it('ships every preset already passing the checks that gate a save', () => {
+    Object.entries(CUSTOM_THEME_PRESETS).forEach(([pairId, preset]) => {
+      expect(findInvalidCustomThemeTokens(preset.light), pairId).toEqual([]);
+      expect(findInvalidCustomThemeTokens(preset.dark), pairId).toEqual([]);
+      expect(validateCustomThemeContrast(preset), pairId).toEqual([]);
+    });
+  });
+
+  it('hands back a mutable copy and falls back to the default pair', () => {
+    const forest = customThemePresetFor('forest');
+    forest.light.primary = '#000000';
+    expect(CUSTOM_THEME_PRESETS.forest.light.primary).not.toBe('#000000');
+
+    expect(customThemePresetFor('custom')).toEqual(customThemePresetFor(DEFAULT_THEME_PAIR_ID));
+    expect(customThemePresetFor(undefined)).toEqual(customThemePresetFor(DEFAULT_THEME_PAIR_ID));
   });
 
   it('computes WCAG ratios symmetrically', () => {

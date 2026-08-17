@@ -6,6 +6,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   CUSTOM_THEME_TOKEN_KEYS,
   validateCustomThemeContrast,
+  type CustomThemeContrastForeground,
   type CustomThemeMode,
   type CustomThemeTokenKey,
   type CustomThemeTokens,
@@ -35,6 +36,8 @@ interface CustomThemeEditorProps {
   mode: CustomThemeMode;
   onModeChange: (mode: CustomThemeMode) => void;
   onTokenChange: (mode: CustomThemeMode, key: CustomThemeTokenKey, value: string) => void;
+  /** Pair the colors were seeded from, named in the "starting point" note. */
+  seededFrom?: string;
   disabled?: boolean;
 }
 
@@ -43,10 +46,16 @@ export function CustomThemeEditor({
   mode,
   onModeChange,
   onTokenChange,
+  seededFrom,
   disabled = false,
 }: CustomThemeEditorProps) {
   const { t } = useTranslation('msp/settings');
   const tokens = theme[mode];
+
+  const colorName = (key: CustomThemeContrastForeground) =>
+    key === 'buttonLabel'
+      ? t('appearance.custom.tokens.buttonLabel', { defaultValue: 'White button labels' })
+      : t(`appearance.custom.tokens.${key}`, { defaultValue: TOKEN_FALLBACK_LABELS[key] });
 
   // Same checks the server re-runs on save, so a failing palette is visible
   // before the admin hits the button.
@@ -55,6 +64,16 @@ export function CustomThemeEditor({
 
   return (
     <div className="space-y-4">
+      {seededFrom && (
+        <p className="text-sm text-[rgb(var(--color-text-500))]" data-automation-id="custom-theme-seeded-from">
+          {t('appearance.custom.seededFrom', {
+            defaultValue:
+              'These colors start from the {{pair}} theme — change the few you care about and the full scales follow.',
+            pair: seededFrom,
+          })}
+        </p>
+      )}
+
       <div className="flex gap-2">
         {(['light', 'dark'] as const).map((candidate) => (
           <button
@@ -129,17 +148,30 @@ export function CustomThemeEditor({
         >
           <p className="font-medium">
             {t('appearance.custom.contrastTitle', {
-              defaultValue: 'These color pairs are below the WCAG AA minimum:',
+              defaultValue: 'These colors are too close together to read. Fix them before saving:',
             })}
           </p>
           <ul className="mt-1 list-inside list-disc">
             {modeIssues.map((issue) => (
               <li key={`${issue.mode}-${issue.pair}`}>
                 {t('appearance.custom.contrastIssue', {
-                  defaultValue: '{{pair}} — {{ratio}}:1 (needs {{required}}:1)',
-                  pair: issue.pair,
+                  defaultValue:
+                    '{{foreground}} on {{background}} is only {{ratio}}:1, and {{required}}:1 is the minimum. {{hint}}',
+                  foreground: colorName(issue.foreground),
+                  background: colorName(issue.background),
                   ratio: issue.ratio,
                   required: issue.required,
+                  hint: issue.fix === 'lighten'
+                    ? t('appearance.custom.contrastHints.lighten', {
+                        defaultValue: 'Pick a lighter {{foreground}} or a darker {{background}}.',
+                        foreground: colorName(issue.foreground),
+                        background: colorName(issue.background),
+                      })
+                    : t('appearance.custom.contrastHints.darken', {
+                        defaultValue: 'Pick a darker {{foreground}} or a lighter {{background}}.',
+                        foreground: colorName(issue.foreground),
+                        background: colorName(issue.background),
+                      }),
                 })}
               </li>
             ))}

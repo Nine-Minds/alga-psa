@@ -9,6 +9,7 @@ import type { Knex } from 'knex';
 import { isThemePairId } from '../../lib/themePairs';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme, type TenantTheme } from '../../lib/tenantTheme';
 import {
+  describeContrastIssue,
   findInvalidCustomThemeTokens,
   generateCustomThemeStyles,
   validateCustomThemeContrast,
@@ -73,10 +74,8 @@ export const updateTenantThemeAction = withAuth(
 
       const issues = validateCustomThemeContrast(rawCustom);
       if (issues.length) {
-        const detail = issues
-          .map((issue) => `${issue.mode} ${issue.pair} ${issue.ratio}:1 (needs ${issue.required}:1)`)
-          .join('; ');
-        throw new Error(`Custom theme fails contrast checks: ${detail}`);
+        const detail = issues.map(describeContrastIssue).join('; ');
+        throw new Error(`These colors are too close together to read: ${detail}`);
       }
 
       customTheme = {
