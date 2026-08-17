@@ -221,6 +221,7 @@ const servicePeriodPostInventoryRefs = new Set([
   // service-period columns in its fixtures.
   'server/src/test/infrastructure/billing/credits/creditDrawdownPolicy.test.ts',
   'server/src/test/infrastructure/billing/credits/creditServiceTypeRestrictionMode.test.ts',
+  'server/src/test/infrastructure/billing/credits/invoiceCreditReversalLifecycle.test.ts',
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
   // Batched fixed-charge preview loader suite seeds persisted service-period
   // rows in its fixtures; it landed after the pass-0 snapshot.
