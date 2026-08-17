@@ -1117,7 +1117,8 @@
         "supportEmail": "Support-E-Mail",
         "supportPhone": "Support-Telefon",
         "heroGradient": "Dashboard-Hintergrundverlauf",
-        "sidebarStyle": "Farbe der Seitenleiste"
+        "sidebarStyle": "Farbe der Seitenleiste",
+        "sidebarColor": "Farbe der Seitenleiste"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
@@ -1128,7 +1129,8 @@
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
         "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
         "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard.",
-        "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe."
+        "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe.",
+        "sidebarColor": "Eine beliebige Farbe. Das Panel verwendet einen abgedunkelten Farbton davon, damit der helle Text der Seitenleiste lesbar bleibt."
       },
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "Standard (dunkles Schiefergrau)",
         "primary": "Primärfarbe",
-        "secondary": "Sekundärfarbe"
+        "secondary": "Sekundärfarbe",
+        "custom": "Eigene Farbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",

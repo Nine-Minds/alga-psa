@@ -1117,7 +1117,8 @@
         "supportEmail": "55555",
         "supportPhone": "55555",
         "heroGradient": "55555",
-        "sidebarStyle": "55555"
+        "sidebarStyle": "55555",
+        "sidebarColor": "55555"
       },
       "help": {
         "companyName": "55555",
@@ -1128,7 +1129,8 @@
         "supportEmail": "55555",
         "supportPhone": "55555",
         "heroGradient": "55555",
-        "sidebarStyle": "55555"
+        "sidebarStyle": "55555",
+        "sidebarColor": "55555"
       },
       "heroGradient": {
         "primaryShades": "55555",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "55555",
         "primary": "55555",
-        "secondary": "55555"
+        "secondary": "55555",
+        "custom": "55555"
       },
       "preview": "55555",
       "previewDarkMode": "55555",

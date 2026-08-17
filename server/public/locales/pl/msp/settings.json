@@ -1123,7 +1123,8 @@
         "supportEmail": "E-mail wsparcia",
         "supportPhone": "Telefon wsparcia",
         "heroGradient": "Gradient nagłówka pulpitu",
-        "sidebarStyle": "Kolor panelu bocznego"
+        "sidebarStyle": "Kolor panelu bocznego",
+        "sidebarColor": "Kolor panelu bocznego"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
@@ -1134,7 +1135,8 @@
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
         "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów.",
         "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta.",
-        "sidebarStyle": "Nadaje panelowi bocznemu portalu klienta kolor główny lub dodatkowy."
+        "sidebarStyle": "Nadaje panelowi bocznemu portalu klienta kolor główny lub dodatkowy.",
+        "sidebarColor": "Dowolny kolor. Panel używa jego przyciemnionego odcienia, aby jasny tekst panelu bocznego pozostał czytelny."
       },
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
@@ -1143,7 +1145,8 @@
       "sidebarStyle": {
         "default": "Domyślny (ciemny grafit)",
         "primary": "Kolor główny",
-        "secondary": "Kolor dodatkowy"
+        "secondary": "Kolor dodatkowy",
+        "custom": "Kolor własny"
       },
       "preview": "Podgląd",
       "previewDarkMode": "Podgląd trybu ciemnego",

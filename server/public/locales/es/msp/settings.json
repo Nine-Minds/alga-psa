@@ -1117,7 +1117,8 @@
         "supportEmail": "Correo de soporte",
         "supportPhone": "Teléfono de soporte",
         "heroGradient": "Degradado del encabezado del panel",
-        "sidebarStyle": "Color del panel lateral"
+        "sidebarStyle": "Color del panel lateral",
+        "sidebarColor": "Color del panel lateral"
       },
       "help": {
         "companyName": "Esto se mostrará en el encabezado del portal del cliente",
@@ -1128,7 +1129,8 @@
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
         "supportPhone": "Opcional. Se muestra junto al correo de soporte en los correos enviados a los clientes.",
         "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente.",
-        "sidebarStyle": "Aplica su color primario o secundario al panel lateral del portal del cliente."
+        "sidebarStyle": "Aplica su color primario o secundario al panel lateral del portal del cliente.",
+        "sidebarColor": "Cualquier color que desee. El panel usa un tono oscurecido para que el texto claro del panel lateral siga siendo legible."
       },
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "Predeterminado (pizarra oscura)",
         "primary": "Color primario",
-        "secondary": "Color secundario"
+        "secondary": "Color secundario",
+        "custom": "Color personalizado"
       },
       "preview": "Vista previa",
       "previewDarkMode": "Vista previa en modo oscuro",

@@ -8,7 +8,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
-export type PortalSidebarStyle = 'default' | 'primary' | 'secondary';
+export type PortalSidebarStyle = 'default' | 'primary' | 'secondary' | 'custom';
 
 export interface TenantBranding {
   logoUrl: string;
@@ -26,10 +26,13 @@ export interface TenantBranding {
    */
   portalHeroGradient?: PortalHeroGradient;
   /**
-   * Tints the client portal side panel with the primary/secondary palette.
-   * Missing or 'default' keeps the stock slate side panel.
+   * Tints the client portal side panel with the primary/secondary palette, or
+   * with `portalSidebarColor` when set to 'custom'. Missing or 'default' keeps
+   * the stock slate side panel.
    */
   portalSidebarStyle?: PortalSidebarStyle;
+  /** Arbitrary side panel tint, used only when portalSidebarStyle is 'custom'. */
+  portalSidebarColor?: string;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
@@ -59,6 +62,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   // another settings tab can never wipe them.
   const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
+  const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
 
   // Precompute CSS styles for performance
   const computedStyles = generateBrandingStyles({
@@ -67,6 +71,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     secondaryColor: branding.secondaryColor,
     clientName: branding.clientName,
     portalSidebarStyle,
+    portalSidebarColor,
   });
 
   // Build updated settings with branding and computed styles.
@@ -84,6 +89,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
       clientName: branding.clientName,
       portalHeroGradient: branding.portalHeroGradient,
       portalSidebarStyle,
+      portalSidebarColor,
       computedStyles, // Store precomputed CSS
     }
   };

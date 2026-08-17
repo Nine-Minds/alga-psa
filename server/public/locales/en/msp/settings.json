@@ -1117,7 +1117,8 @@
         "supportEmail": "Support Email",
         "supportPhone": "Support Phone",
         "heroGradient": "Dashboard hero gradient",
-        "sidebarStyle": "Side panel color"
+        "sidebarStyle": "Side panel color",
+        "sidebarColor": "Side panel color"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
@@ -1128,7 +1129,8 @@
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
         "supportPhone": "Optional. Shown alongside the support email in client-facing emails.",
         "heroGradient": "Controls the welcome banner gradient on the client dashboard.",
-        "sidebarStyle": "Tints the client portal side panel with your primary or secondary color."
+        "sidebarStyle": "Tints the client portal side panel with your primary or secondary color.",
+        "sidebarColor": "Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable."
       },
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "Default (dark slate)",
         "primary": "Primary color",
-        "secondary": "Secondary color"
+        "secondary": "Secondary color",
+        "custom": "Custom color"
       },
       "preview": "Preview",
       "previewDarkMode": "Preview dark mode",

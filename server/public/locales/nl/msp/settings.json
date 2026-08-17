@@ -1117,7 +1117,8 @@
         "supportEmail": "Support-e-mail",
         "supportPhone": "Support-telefoonnummer",
         "heroGradient": "Verloop van dashboardkop",
-        "sidebarStyle": "Kleur van zijpaneel"
+        "sidebarStyle": "Kleur van zijpaneel",
+        "sidebarColor": "Kleur zijpaneel"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
@@ -1128,7 +1129,8 @@
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
         "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten.",
         "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard.",
-        "sidebarStyle": "Geeft het zijpaneel van het klantenportaal uw primaire of secundaire kleur."
+        "sidebarStyle": "Geeft het zijpaneel van het klantenportaal uw primaire of secundaire kleur.",
+        "sidebarColor": "Elke kleur die u wilt. Het paneel gebruikt een donkerdere tint zodat de lichte tekst in het zijpaneel leesbaar blijft."
       },
       "heroGradient": {
         "primaryShades": "Primaire kleur naar primaire tint",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "Standaard (donker leigrijs)",
         "primary": "Primaire kleur",
-        "secondary": "Secundaire kleur"
+        "secondary": "Secundaire kleur",
+        "custom": "Eigen kleur"
       },
       "preview": "Voorbeeld",
       "previewDarkMode": "Voorbeeld donkere modus",

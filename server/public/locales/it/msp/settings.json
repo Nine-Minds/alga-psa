@@ -1117,7 +1117,8 @@
         "supportEmail": "E-mail di supporto",
         "supportPhone": "Telefono di supporto",
         "heroGradient": "Gradiente dell’intestazione della dashboard",
-        "sidebarStyle": "Colore del pannello laterale"
+        "sidebarStyle": "Colore del pannello laterale",
+        "sidebarColor": "Colore del pannello laterale"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
@@ -1128,7 +1129,8 @@
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
         "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti.",
         "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente.",
-        "sidebarStyle": "Applica il colore primario o secondario al pannello laterale del portale clienti."
+        "sidebarStyle": "Applica il colore primario o secondario al pannello laterale del portale clienti.",
+        "sidebarColor": "Qualsiasi colore preferisci. Il pannello usa una tonalità più scura, così il testo chiaro del pannello laterale resta leggibile."
       },
       "heroGradient": {
         "primaryShades": "Dal colore primario a una tonalità primaria",
@@ -1137,7 +1139,8 @@
       "sidebarStyle": {
         "default": "Predefinito (ardesia scura)",
         "primary": "Colore primario",
-        "secondary": "Colore secondario"
+        "secondary": "Colore secondario",
+        "custom": "Colore personalizzato"
       },
       "preview": "Anteprima",
       "previewDarkMode": "Anteprima modalita scura",

@@ -232,7 +232,9 @@ export function generateBrandingStyles(branding: TenantBranding | null): string 
     ? primaryShades
     : branding?.portalSidebarStyle === 'secondary'
       ? secondaryShades
-      : null;
+      : branding?.portalSidebarStyle === 'custom' && branding?.portalSidebarColor
+        ? generateColorShades(branding.portalSidebarColor)
+        : null;
   const sidebarBody = sidebarShades ? sidebarOverrides(sidebarShades) : '';
 
   return `

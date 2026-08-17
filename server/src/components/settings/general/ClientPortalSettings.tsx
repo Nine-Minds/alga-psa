@@ -89,6 +89,7 @@ const ClientPortalSettings = () => {
   const [portalSidebarStyle, setPortalSidebarStyle] = useState<PortalSidebarStyle>(
     DEFAULT_PORTAL_SIDEBAR_STYLE,
   );
+  const [portalSidebarColor, setPortalSidebarColor] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [supportPhone, setSupportPhone] = useState<string>('');
@@ -162,6 +163,7 @@ const ClientPortalSettings = () => {
           setSecondaryColor(brandingSettings.secondaryColor || '');
           setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
           setPortalSidebarStyle(brandingSettings.portalSidebarStyle ?? DEFAULT_PORTAL_SIDEBAR_STYLE);
+          setPortalSidebarColor(brandingSettings.portalSidebarColor ?? '');
           setClientName(brandingSettings.clientName || '');
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
@@ -260,6 +262,7 @@ const ClientPortalSettings = () => {
     secondaryColor: string;
     portalHeroGradient: PortalHeroGradient;
     portalSidebarStyle: PortalSidebarStyle;
+    portalSidebarColor: string;
     clientName: string;
     supportEmail: string;
     supportPhone: string;
@@ -271,6 +274,7 @@ const ClientPortalSettings = () => {
       secondaryColor: updates.secondaryColor || secondaryColor,
       portalHeroGradient: updates.portalHeroGradient ?? portalHeroGradient,
       portalSidebarStyle: updates.portalSidebarStyle ?? portalSidebarStyle,
+      portalSidebarColor: updates.portalSidebarColor ?? portalSidebarColor,
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
       supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
       supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
@@ -288,6 +292,7 @@ const ClientPortalSettings = () => {
         secondaryColor,
         portalHeroGradient,
         portalSidebarStyle,
+        portalSidebarColor,
         clientName,
         supportEmail,
         supportPhone,
@@ -680,6 +685,12 @@ const ClientPortalSettings = () => {
                         defaultValue: 'Secondary color',
                       }),
                     },
+                    {
+                      value: 'custom',
+                      label: t('clientPortal.branding.sidebarStyle.custom', {
+                        defaultValue: 'Custom color',
+                      }),
+                    },
                   ]}
                   value={portalSidebarStyle}
                   onValueChange={(value) => setPortalSidebarStyle(value as PortalSidebarStyle)}
@@ -693,6 +704,42 @@ const ClientPortalSettings = () => {
                   })}
                 </p>
               </div>
+
+              {portalSidebarStyle === 'custom' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    {t('clientPortal.branding.fields.sidebarColor', {
+                      defaultValue: 'Side panel color',
+                    })}
+                  </label>
+                  <ColorPicker
+                    currentBackgroundColor={portalSidebarColor || '#0C111D'}
+                    onSave={(color) => setPortalSidebarColor(color || '')}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md transition-colors w-fit"
+                        disabled={brandingLoading || brandingSaving}
+                        data-automation-id="client-portal-sidebar-color-picker"
+                      >
+                        <div
+                          className="w-8 h-8 rounded border border-gray-300"
+                          style={{ backgroundColor: portalSidebarColor || '#0C111D' }}
+                        />
+                        <span className="text-sm">{portalSidebarColor || '#0C111D'}</span>
+                      </button>
+                    }
+                    showTextColor={false}
+                    previewType="circle"
+                    colorMode="tag"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('clientPortal.branding.help.sidebarColor', {
+                      defaultValue: 'Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable.',
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Preview Selection Buttons */}
@@ -774,7 +821,9 @@ const ClientPortalSettings = () => {
                   ? getSidebarShade(previewPrimary, isDark)
                   : portalSidebarStyle === 'secondary'
                     ? getSidebarShade(previewSecondary, isDark)
-                    : null;
+                    : portalSidebarStyle === 'custom' && portalSidebarColor
+                      ? getSidebarShade(portalSidebarColor, isDark)
+                      : null;
                 const previewSidebarLogo = logoDarkUrl || logoUrl;
                 const heroGradientEnd = portalHeroGradient === 'primary-secondary'
                   ? previewSecondary
