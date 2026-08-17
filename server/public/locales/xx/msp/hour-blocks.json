@@ -54,7 +54,11 @@
     "totalLabel": "11111",
     "submit": "11111",
     "submitted": "11111 {{invoiceNumber}} 11111",
-    "invoiceError": "11111"
+    "invoiceError": "11111",
+    "serviceRequired": "11111",
+    "hoursRequired": "11111",
+    "rateRequired": "11111",
+    "noServices": "11111"
   },
   "grant": {
     "title": "11111",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "11111",
     "submit": "11111",
     "granted": "11111",
-    "error": "11111"
+    "error": "11111",
+    "reasonRequired": "11111"
   },
   "adjust": {
     "title": "11111",
@@ -73,7 +78,9 @@
     "reasonPlaceholder": "11111",
     "submit": "11111",
     "adjusted": "11111",
-    "error": "11111"
+    "error": "11111",
+    "deltaRequired": "11111",
+    "reasonRequired": "11111"
   },
   "expiration": {
     "title": "11111",
@@ -83,6 +90,16 @@
     "saved": "11111",
     "error": "11111"
   },
+  "expire": {
+    "title": "11111",
+    "remaining": "11111 {{hours}} 11111",
+    "reasonLabel": "11111",
+    "reasonPlaceholder": "11111",
+    "reasonRequired": "11111",
+    "submit": "11111",
+    "expired": "11111",
+    "error": "11111"
+  },
   "void": {
     "title": "11111",
     "confirm": "11111",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "11111",
     "submit": "11111",
     "voided": "11111",
-    "error": "11111"
+    "error": "11111",
+    "reasonRequired": "11111"
   },
   "detail": {
     "title": "11111",

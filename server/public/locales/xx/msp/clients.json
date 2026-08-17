@@ -930,7 +930,7 @@
         "restricted": "11111",
         "placeholder": "11111"
       },
-      "inheritedRestricted": "11111",
+      "inheritedRestricted": "11111 {{types}} 11111",
       "restricted": "11111"
     },
     "order": {
