@@ -1369,7 +1369,9 @@
       "actions": {
         "save": "Zapisz i użyj motywu własnego",
         "reset": "Przywróć kolory motywu {{pair}}",
-        "resetDone": "Kolory przywrócone do motywu {{pair}} — zapisz, aby zastosować"
+        "resetDone": "Kolory przywrócone do motywu {{pair}} — zapisz, aby zastosować",
+        "useSaved": "Użyj moich zapisanych kolorów",
+        "useSavedDone": "Zapisane kolory wróciły — zapisz, aby zastosować"
       },
       "contrastHints": {
         "lighten": "Wybierz jaśniejszy {{foreground}} lub ciemniejszy {{background}}.",

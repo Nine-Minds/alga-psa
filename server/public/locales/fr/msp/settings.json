@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Enregistrer et utiliser le thème personnalisé",
         "reset": "Rétablir les couleurs de {{pair}}",
-        "resetDone": "Couleurs rétablies sur le thème {{pair}} — enregistrez pour appliquer"
+        "resetDone": "Couleurs rétablies sur le thème {{pair}} — enregistrez pour appliquer",
+        "useSaved": "Utiliser mes couleurs enregistrées",
+        "useSavedDone": "Vos couleurs enregistrées sont de retour — enregistrez pour appliquer"
       },
       "contrastHints": {
         "lighten": "Choisissez un {{foreground}} plus clair ou un {{background}} plus sombre.",

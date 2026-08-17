@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Salvar e usar o tema personalizado",
         "reset": "Redefinir para as cores de {{pair}}",
-        "resetDone": "Cores redefinidas para o tema {{pair}} — salve para aplicar"
+        "resetDone": "Cores redefinidas para o tema {{pair}} — salve para aplicar",
+        "useSaved": "Usar minhas cores salvas",
+        "useSavedDone": "Suas cores salvas voltaram — salve para aplicar"
       },
       "contrastHints": {
         "lighten": "Escolha um {{foreground}} mais claro ou um {{background}} mais escuro.",

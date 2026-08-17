@@ -45,9 +45,12 @@ const AppearanceSettings = () => {
   const [customTheme, setCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens }>(
     () => customThemePresetFor(DEFAULT_THEME_PAIR_ID),
   );
-  // Which predefined pair the editor colors were seeded from, or null once the
-  // tenant has saved a palette of their own.
+  // Which predefined pair the editor colors were seeded from, or null while the
+  // tenant's own saved palette is on screen.
   const [customSeedPairId, setCustomSeedPairId] = useState<ThemePairId | null>(DEFAULT_THEME_PAIR_ID);
+  const [savedCustomTheme, setSavedCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens } | null>(
+    null,
+  );
   const [customMode, setCustomMode] = useState<CustomThemeMode>('light');
   const [mspWhiteLabel, setMspWhiteLabel] = useState(false);
   const [tenantId, setTenantId] = useState('');
@@ -64,12 +67,19 @@ const AppearanceSettings = () => {
           getCurrentUser(),
         ]);
         setPairId(theme.pairId);
-        if (theme.customTheme) {
-          setCustomTheme({ light: theme.customTheme.light, dark: theme.customTheme.dark });
+        const saved = theme.customTheme
+          ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
+          : null;
+        setSavedCustomTheme(saved);
+        if (theme.pairId === 'custom' && saved) {
+          // The custom palette is what the tenant is running, so edit that.
+          setCustomTheme(saved);
           setCustomSeedPairId(null);
         } else {
-          // No palette of their own yet: start the editor from the pair they run,
-          // so tweaking a couple of colors still yields a coherent theme.
+          // Running a predefined pair: open on that pair's colors, so tweaking a
+          // couple of them still yields a coherent theme. A palette saved during
+          // an earlier visit must not shadow the pair on screen — it stays one
+          // button away instead.
           const seed = theme.pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : theme.pairId;
           setCustomTheme(customThemePresetFor(seed));
           setCustomSeedPairId(seed);
@@ -118,6 +128,7 @@ const AppearanceSettings = () => {
       });
       setPairId(nextPairId);
       if (nextPairId === 'custom') {
+        setSavedCustomTheme(customTheme);
         setCustomSeedPairId(null);
       } else if (customSeedPairId) {
         // Still on seeded colors, so follow the pair they just chose.
@@ -263,6 +274,25 @@ const AppearanceSettings = () => {
                   pair: pairLabel(pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : pairId),
                 })}
               </Button>
+              {savedCustomTheme && customSeedPairId && (
+                <Button
+                  id="use-saved-custom-theme"
+                  type="button"
+                  variant="outline"
+                  disabled={loading || saving}
+                  onClick={() => {
+                    setCustomTheme(savedCustomTheme);
+                    setCustomSeedPairId(null);
+                    toast.success(
+                      t('appearance.custom.actions.useSavedDone', {
+                        defaultValue: 'Your saved colors are back — save to apply',
+                      }),
+                    );
+                  }}
+                >
+                  {t('appearance.custom.actions.useSaved', { defaultValue: 'Use my saved colors' })}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

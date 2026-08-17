@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "11111",
         "reset": "11111 {{pair}} 11111",
-        "resetDone": "11111 {{pair}} 11111"
+        "resetDone": "11111 {{pair}} 11111",
+        "useSaved": "11111",
+        "useSavedDone": "11111"
       },
       "contrastHints": {
         "lighten": "11111 {{foreground}} 11111 {{background}} 11111",

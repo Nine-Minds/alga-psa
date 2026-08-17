@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Salva e usa il tema personalizzato",
         "reset": "Ripristina i colori di {{pair}}",
-        "resetDone": "Colori ripristinati al tema {{pair}}: salva per applicarli"
+        "resetDone": "Colori ripristinati al tema {{pair}}: salva per applicarli",
+        "useSaved": "Usa i miei colori salvati",
+        "useSavedDone": "I tuoi colori salvati sono tornati: salva per applicarli"
       },
       "contrastHints": {
         "lighten": "Scegli un {{foreground}} più chiaro o un {{background}} più scuro.",

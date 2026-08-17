@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Eigenes Design speichern und verwenden",
         "reset": "Auf Farben von {{pair}} zurücksetzen",
-        "resetDone": "Farben auf das Design {{pair}} zurückgesetzt – zum Anwenden speichern"
+        "resetDone": "Farben auf das Design {{pair}} zurückgesetzt – zum Anwenden speichern",
+        "useSaved": "Meine gespeicherten Farben verwenden",
+        "useSavedDone": "Ihre gespeicherten Farben sind wieder da – zum Anwenden speichern"
       },
       "contrastHints": {
         "lighten": "Wählen Sie ein helleres {{foreground}} oder ein dunkleres {{background}}.",

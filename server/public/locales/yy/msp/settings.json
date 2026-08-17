@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "55555",
         "reset": "55555 {{pair}} 55555",
-        "resetDone": "55555 {{pair}} 55555"
+        "resetDone": "55555 {{pair}} 55555",
+        "useSaved": "55555",
+        "useSavedDone": "55555"
       },
       "contrastHints": {
         "lighten": "55555 {{foreground}} 55555 {{background}} 55555",

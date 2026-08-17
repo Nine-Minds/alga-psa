@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Save and use custom theme",
         "reset": "Reset to {{pair}} colors",
-        "resetDone": "Colors reset to the {{pair}} theme — save to apply"
+        "resetDone": "Colors reset to the {{pair}} theme — save to apply",
+        "useSaved": "Use my saved colors",
+        "useSavedDone": "Your saved colors are back — save to apply"
       },
       "contrastHints": {
         "lighten": "Pick a lighter {{foreground}} or a darker {{background}}.",

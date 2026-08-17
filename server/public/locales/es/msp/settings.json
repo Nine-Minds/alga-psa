@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Guardar y usar el tema personalizado",
         "reset": "Restablecer a los colores de {{pair}}",
-        "resetDone": "Colores restablecidos al tema {{pair}}: guarde para aplicarlos"
+        "resetDone": "Colores restablecidos al tema {{pair}}: guarde para aplicarlos",
+        "useSaved": "Usar mis colores guardados",
+        "useSavedDone": "Sus colores guardados han vuelto: guarde para aplicarlos"
       },
       "contrastHints": {
         "lighten": "Elija un {{foreground}} más claro o un {{background}} más oscuro.",

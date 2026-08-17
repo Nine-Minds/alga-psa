@@ -1363,7 +1363,9 @@
       "actions": {
         "save": "Eigen thema opslaan en gebruiken",
         "reset": "Terug naar de kleuren van {{pair}}",
-        "resetDone": "Kleuren terug naar het thema {{pair}} — opslaan om toe te passen"
+        "resetDone": "Kleuren terug naar het thema {{pair}} — opslaan om toe te passen",
+        "useSaved": "Mijn opgeslagen kleuren gebruiken",
+        "useSavedDone": "Uw opgeslagen kleuren zijn terug — opslaan om toe te passen"
       },
       "contrastHints": {
         "lighten": "Kies een lichtere {{foreground}} of een donkerdere {{background}}.",
