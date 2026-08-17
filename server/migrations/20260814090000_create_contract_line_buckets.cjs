@@ -429,6 +429,18 @@ exports.up = async function up(knex) {
   }
 
   // 3b. One pool per canonical legacy config (member-scoped, no after-hours rule).
+  //     The terms are MERGED, not ignored, on conflict. A pool keyed on a legacy
+  //     config_id can already exist from an earlier failed run of this migration,
+  //     carrying whatever the config held at that moment; DO NOTHING would keep
+  //     those stale values forever while the migration reported success. The
+  //     legacy config is the source of truth until this migration completes — no
+  //     one edits pools before the new model is live — so re-reading it on every
+  //     run is what makes the step converge.
+  //
+  //     Only the four term columns are merged. contract_line_id is pool identity,
+  //     and covers_all_services / after_hours_multiplier /
+  //     business_hours_schedule_id belong to the new model, so an existing pool
+  //     keeps whatever it holds for those rather than being reset to the seed.
   for (const config of canonicalConfigs) {
     await knex('contract_line_buckets')
       .insert({
@@ -440,9 +452,10 @@ exports.up = async function up(knex) {
         allow_rollover: config.allow_rollover,
         billing_period: config.billing_period,
         covers_all_services: false,
+        updated_at: knex.fn.now(),
       })
       .onConflict(['tenant', 'bucket_id'])
-      .ignore();
+      .merge(['total_minutes', 'overage_rate', 'allow_rollover', 'billing_period', 'updated_at']);
   }
 
   // 3c. One member row per canonical legacy config at multiplier 1.0. The
