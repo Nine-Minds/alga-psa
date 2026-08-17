@@ -7,7 +7,9 @@ import type {
   QuickAddTicketRenderProps,
   ClientTicketsRenderProps,
   ContactTicketsRenderProps,
+  HourBlocksRenderProps,
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import { HourBlocksSection } from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import MspClientTickets from './MspClientTickets';
@@ -69,6 +71,13 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
     []
   );
 
+  const renderHourBlocks = useCallback(
+    (props: HourBlocksRenderProps) => (
+      <HourBlocksSection clientId={props.clientId} currencyCode={props.currencyCode} />
+    ),
+    []
+  );
+
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
       renderQuickAddTicket,
@@ -79,10 +88,11 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
       renderContactTickets,
       renderContractWizard: () => renderNothing(),
       renderContractQuickAdd: () => renderNothing(),
+      renderHourBlocks,
       openTicketDetails,
       getSlaPolicies: async () => [],
     }),
-    [renderQuickAddTicket, renderClientTickets, renderContactTickets, openTicketDetails]
+    [renderQuickAddTicket, renderClientTickets, renderContactTickets, renderHourBlocks, openTicketDetails]
   );
 
   return (

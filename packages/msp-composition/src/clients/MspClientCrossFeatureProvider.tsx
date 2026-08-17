@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, HourBlocksRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -13,6 +13,7 @@ import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySu
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
+import { HourBlocksSection } from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
 import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
 import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';
@@ -123,6 +124,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
     []
   );
 
+  const renderHourBlocks = useCallback(
+    (props: HourBlocksRenderProps) => (
+      <HourBlocksSection clientId={props.clientId} currencyCode={props.currencyCode} />
+    ),
+    []
+  );
+
   const scheduleTeamsMeeting = useCallback(
     (input: ScheduleTeamsMeetingFromClientInput) => scheduleTeamsMeetingAction({
       ...input,
@@ -148,6 +156,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
+      renderHourBlocks,
       openTicketDetails,
       getTeamsMeetingCapability,
       scheduleTeamsMeeting,
@@ -164,6 +173,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
+      renderHourBlocks,
       openTicketDetails,
       getTeamsMeetingCapability,
       scheduleTeamsMeeting,
