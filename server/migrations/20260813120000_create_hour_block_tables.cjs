@@ -29,7 +29,11 @@
  * the composite tenant PKs and the tenantDb query layer instead.
  */
 
-// Helper: distribute a table by tenant if Citus is available
+// Helper: distribute a table by tenant if Citus is available.
+// Colocation with invoices is required so the composite FKs to invoices /
+// clients / service_catalog / time_entries / each other are valid on Citus
+// (FKs between distributed tables demand the same colocation group; see
+// 20260722120000_create_invoice_payments_table.cjs).
 async function distributeIfCitus(knex, tableName) {
   const citusFn = await knex.raw(`
     SELECT EXISTS (
@@ -44,7 +48,10 @@ async function distributeIfCitus(knex, tableName) {
       ) AS is_distributed;
     `);
     if (!alreadyDistributed.rows?.[0]?.is_distributed) {
-      await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant')`);
+      await knex.raw(
+        `SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'invoices')`,
+        [tableName],
+      );
     }
   }
 }
@@ -175,6 +182,21 @@ exports.up = async function (knex) {
   await distributeIfCitus(knex, 'hour_block_time_allocations');
   await distributeIfCitus(knex, 'hour_block_audit');
 
+  // hour_blocks -> invoices: a bare composite ON DELETE SET NULL would null
+  // BOTH columns — including NOT NULL tenant — and Citus refuses SET NULL
+  // outright when the distribution key is part of the FK. Same recipe as
+  // 20260719120000_fix_suppression_contact_fk_set_null.cjs:
+  // - PG 15+ on plain Postgres: column-targeted SET NULL (source_invoice_id)
+  // - Citus (or PG < 15): plain NO ACTION. Safe because draft-invoice
+  //   deletion detaches source_invoice_id in the app first
+  //   (voidPendingHourBlocksForDeletedInvoice) and tenant deletion removes
+  //   hour_blocks before invoices.
+  const citusRow = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1",
+  );
+  const versionRow = await knex.raw("SELECT current_setting('server_version_num')::int AS v");
+  const columnTargeted = versionRow.rows[0].v >= 150000 && citusRow.rows.length === 0;
+
   await addForeignKeyIfMissing(knex, 'hour_blocks_client_fkey', `
     ALTER TABLE hour_blocks
       ADD CONSTRAINT hour_blocks_client_fkey
@@ -192,8 +214,7 @@ exports.up = async function (knex) {
     ALTER TABLE hour_blocks
       ADD CONSTRAINT hour_blocks_invoice_fkey
       FOREIGN KEY (tenant, source_invoice_id)
-      REFERENCES invoices(tenant, invoice_id)
-      ON DELETE SET NULL
+      REFERENCES invoices(tenant, invoice_id)${columnTargeted ? ' ON DELETE SET NULL (source_invoice_id)' : ''}
   `);
 
   await addForeignKeyIfMissing(knex, 'hour_block_scopes_block_fkey', `
@@ -217,13 +238,28 @@ exports.up = async function (knex) {
       REFERENCES hour_blocks(tenant, block_id)
       ON DELETE CASCADE
   `);
-  await addForeignKeyIfMissing(knex, 'hour_block_allocations_entry_fkey', `
-    ALTER TABLE hour_block_time_allocations
-      ADD CONSTRAINT hour_block_allocations_entry_fkey
-      FOREIGN KEY (tenant, time_entry_id)
-      REFERENCES time_entries(tenant, entry_id)
-      ON DELETE CASCADE
-  `);
+  // hour_block_time_allocations -> time_entries: time_entries is a local
+  // (non-distributed) table on Citus, and Citus cannot enforce an FK from a
+  // distributed table to a local one ("referenced table must be a distributed
+  // table or a reference table"). Add the FK only where it is enforceable —
+  // plain Postgres, or a Citus cluster that has distributed time_entries. On
+  // Citus without it, integrity is covered by the app-level allocation
+  // cleanup and the tenant deletion order (allocations before time_entries).
+  const timeEntriesDistributed = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition
+      WHERE logicalrelid = 'time_entries'::regclass
+    ) AS is_distributed;
+  `).then((r) => Boolean(r.rows?.[0]?.is_distributed)).catch(() => false);
+  if (citusRow.rows.length === 0 || timeEntriesDistributed) {
+    await addForeignKeyIfMissing(knex, 'hour_block_allocations_entry_fkey', `
+      ALTER TABLE hour_block_time_allocations
+        ADD CONSTRAINT hour_block_allocations_entry_fkey
+        FOREIGN KEY (tenant, time_entry_id)
+        REFERENCES time_entries(tenant, entry_id)
+        ON DELETE CASCADE
+    `);
+  }
 
   await addForeignKeyIfMissing(knex, 'hour_block_audit_block_fkey', `
     ALTER TABLE hour_block_audit
