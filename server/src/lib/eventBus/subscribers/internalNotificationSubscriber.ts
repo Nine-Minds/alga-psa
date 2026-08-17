@@ -756,7 +756,13 @@ async function handleProjectTaskAdditionalAgentAssigned(
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, changes } = payload;
+  const { tenantId, ticketId, changes } = payload;
+  // TICKET_UPDATED accepts two payload shapes (TicketUpdatedPayloadSchema is a
+  // union): the legacy shape names the actor `userId`, the canonical domain shape
+  // names it `updatedByUserId`. Server-action publishers emit both, but the REST
+  // API emits only `updatedByUserId` — and Zod strips the unmatched field — so
+  // reading `userId` alone leaves the actor undefined for every API-driven update.
+  const performedByUserId: string | undefined = payload.updatedByUserId ?? payload.userId;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
@@ -772,11 +778,14 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change
-    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
-      .select('user_id', 'first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
+    // Get user who made the change. Skip the lookup when the actor is unknown —
+    // binding an undefined `user_id` makes Knex throw before the fallback below.
+    const performedByUser = performedByUserId
+      ? await tenantScopedTable(db, 'users', tenantId)
+          .select('user_id', 'first_name', 'last_name')
+          .where('user_id', performedByUserId)
+          .first()
+      : undefined;
 
     const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
 
@@ -785,7 +794,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      performedById: userId
+      performedById: performedByUserId
     };
 
     // Process changes to get human-readable names
@@ -885,7 +894,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
     } else {
       // Notify all assigned agents
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
-      const notifiedUserIds = new Set<string>([userId]); // Don't notify the person who made the change
+      // Don't notify the person who made the change (when we know who that is)
+      const notifiedUserIds = new Set<string>(performedByUserId ? [performedByUserId] : []);
 
       for (const assigneeId of allAssignees) {
         if (!notifiedUserIds.has(assigneeId)) {
