@@ -13,7 +13,7 @@ import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySu
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
-import { HourBlocksSection } from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
+import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
 import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
 import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';

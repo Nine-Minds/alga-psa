@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const hourBlocksProps: Array<Record<string, unknown>> = [];
 
 vi.mock('@alga-psa/billing/components/hour-blocks/HourBlocksSection', () => ({
-  HourBlocksSection: (props: Record<string, unknown>) => {
+  default: (props: Record<string, unknown>) => {
     hourBlocksProps.push(props);
     return <div data-testid="hour-blocks-stub">hour blocks</div>;
   },
