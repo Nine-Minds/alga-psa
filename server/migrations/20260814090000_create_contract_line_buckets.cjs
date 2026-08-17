@@ -16,6 +16,11 @@
  * The new pool's `bucket_id` is seeded from the legacy config's `config_id` so
  * the member backfill and the usage remap are deterministic joins, not scans.
  *
+ * One wrinkle: legacy configs are not actually unique per (line, service) —
+ * see CANONICAL_BUCKET_CONFIGS. Duplicate groups collapse to their earliest
+ * config, and only while every config in the group grants the same
+ * entitlement; a group that disagrees hard-fails instead.
+ *
  * Down-migration drops the new tables and the `bucket_usage.bucket_id` column
  * and reverts the numeric types; the frozen legacy tables still describe the
  * old world.
@@ -91,6 +96,117 @@ async function indexExists(knex, tableName, indexName) {
     WHERE tablename = '${tableName}' AND indexname = '${indexName}'
   `);
   return rows.rows.length > 0;
+}
+
+/**
+ * The canonical legacy Bucket config per (tenant, contract_line_id, service_id).
+ *
+ * Legacy configs are NOT unique per (line, service), contrary to what the old
+ * `plan_service_configuration` table guaranteed: `20250318200000` declared
+ * `UNIQUE (plan_id, service_id, tenant)`, but `20251008000001` recreated the
+ * table as `contract_line_service_configuration` with only
+ * `PRIMARY KEY (tenant, config_id)` and backfilled it with a bare
+ * `ON CONFLICT DO NOTHING`. Since then the contract-line editor has been able
+ * to write a second config for the same service milliseconds after the first —
+ * same bucket terms, `custom_rate`/`quantity` left NULL.
+ *
+ * The weighted-burn model puts a service in at most one pool per line
+ * (`UNIQUE (tenant, contract_line_id, service_id)` below, mirroring the
+ * cardinality documented in shared/billingClients/bucketUsageService.ts), so
+ * each duplicate group collapses to its earliest config. Collapsing is only
+ * lossless while the group agrees on the bucket terms; a group that disagrees
+ * is a real entitlement ambiguity and hard-fails in
+ * assertDuplicateBucketConfigsAreEquivalent() rather than silently discarding
+ * one side's minutes.
+ */
+const CANONICAL_BUCKET_CONFIGS = `
+  SELECT DISTINCT ON (psc.tenant, psc.contract_line_id, psc.service_id)
+    psc.tenant,
+    psc.config_id,
+    psc.contract_line_id,
+    psc.service_id,
+    psbc.total_minutes,
+    psbc.overage_rate,
+    psbc.allow_rollover,
+    psbc.billing_period
+  FROM contract_line_service_configuration psc
+  JOIN contract_line_service_bucket_config psbc
+    ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+  WHERE psc.configuration_type = 'Bucket'
+  ORDER BY psc.tenant, psc.contract_line_id, psc.service_id, psc.created_at, psc.config_id
+`;
+
+/**
+ * A usage row covers a period, not an instant, so it belongs to the assignment
+ * that was in force during that period — an interval overlap against
+ * [period_start, period_end], not a point test on period_start. The point test
+ * stranded rows whose period opened a few days before the assignment's
+ * start_date (a mid-period contract start), which then died on the 3f orphan
+ * guard. Bounds stay inclusive on both sides, matching resolveBucketDraw();
+ * the explicit AT TIME ZONE 'UTC' keeps date extraction independent of the
+ * server TimeZone setting.
+ */
+const ASSIGNMENT_COVERS_USAGE_PERIOD = `
+  cc.start_date <= (bu.period_end AT TIME ZONE 'UTC')::date
+  AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
+`;
+
+/**
+ * Hard-fail when duplicate legacy Bucket configs disagree on the terms that
+ * become the pool, since collapsing them would silently pick one side's
+ * minutes.
+ *
+ * Two Citus shapes to avoid here, both found the hard way against the hosted
+ * cluster. The terms are compared as a concatenated text key rather than a
+ * ROW(), because row comparison under COUNT(DISTINCT ...) does not survive the
+ * aggregate push-down. And COUNT(DISTINCT ...) is projected in a grouped CTE
+ * and filtered in an outer WHERE rather than tested in HAVING: in HAVING it
+ * either mistypes the push-down (`COALESCE types numeric and character varying
+ * cannot be matched`) or silently returns groups that do not satisfy the
+ * predicate.
+ */
+async function assertDuplicateBucketConfigsAreEquivalent(knex) {
+  const divergent = await knex.raw(`
+    WITH terms AS (
+      SELECT
+        psc.tenant,
+        psc.contract_line_id,
+        psc.service_id,
+        psbc.total_minutes::text || '|' ||
+        psbc.overage_rate::text || '|' ||
+        psbc.allow_rollover::text || '|' ||
+        COALESCE(psbc.billing_period, '') AS term_key
+      FROM contract_line_service_configuration psc
+      JOIN contract_line_service_bucket_config psbc
+        ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+      WHERE psc.configuration_type = 'Bucket'
+    ),
+    grouped AS (
+      SELECT
+        tenant,
+        contract_line_id,
+        service_id,
+        COUNT(*) AS config_count,
+        COUNT(DISTINCT term_key) AS distinct_terms
+      FROM terms
+      GROUP BY tenant, contract_line_id, service_id
+    )
+    SELECT tenant, contract_line_id, service_id, config_count
+    FROM grouped
+    WHERE config_count > 1 AND distinct_terms > 1
+    LIMIT 5
+  `);
+
+  if (divergent.rows.length > 0) {
+    const sample = divergent.rows
+      .map((row) => `${row.tenant}/${row.contract_line_id}/${row.service_id} (${row.config_count} configs)`)
+      .join(', ');
+    throw new Error(
+      `[create_contract_line_buckets] duplicate legacy Bucket configs disagree on total_minutes/overage_rate/` +
+      `allow_rollover/billing_period (sample: ${sample}). A service belongs to at most one pool per line, and ` +
+      'collapsing configs that grant different entitlements would discard minutes. Reconcile these configs before re-running.'
+    );
+  }
 }
 
 const NUMERIC_TYPE_OID = 1700; // pg_type.oid for 'numeric'
@@ -260,47 +376,94 @@ exports.up = async function up(knex) {
   const bucketUsageRowsBefore = await knex('bucket_usage').count('* as count');
   console.log(`[create_contract_line_buckets] bucket_usage rows before backfill: ${bucketUsageRowsBefore[0].count}`);
 
-  // 3a. One pool per legacy config (member-scoped, no after-hours rule).
-  await knex.raw(`
-    INSERT INTO contract_line_buckets (
-      tenant, bucket_id, contract_line_id, total_minutes, overage_rate,
-      allow_rollover, billing_period, covers_all_services
-    )
-    SELECT
-      psc.tenant,
-      psc.config_id,
-      psc.contract_line_id,
-      psbc.total_minutes,
-      psbc.overage_rate,
-      psbc.allow_rollover,
-      psbc.billing_period,
-      false
-    FROM contract_line_service_configuration psc
-    JOIN contract_line_service_bucket_config psbc
-      ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
-    WHERE psc.configuration_type = 'Bucket'
-    ON CONFLICT (tenant, bucket_id) DO NOTHING
-  `);
+  // 3a. Refuse to collapse duplicate configs that grant different entitlements,
+  //     then sweep pools left behind by an earlier run of THIS migration that
+  //     seeded a pool per legacy config before the duplicates were understood.
+  //     Both tables are created here, so a pool keyed on a now-non-canonical
+  //     config_id can only be debris from such a run — and the members/usage
+  //     checks keep the delete from touching anything that is referenced.
+  await assertDuplicateBucketConfigsAreEquivalent(knex);
 
-  // 3b. One member row per legacy config at multiplier 1.0.
-  await knex.raw(`
-    INSERT INTO contract_line_bucket_services (
-      tenant, bucket_id, service_id, contract_line_id, burn_multiplier
-    )
-    SELECT
-      psc.tenant,
-      psc.config_id,
-      psc.service_id,
-      psc.contract_line_id,
-      1
-    FROM contract_line_service_configuration psc
-    JOIN contract_line_service_bucket_config psbc
-      ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
-    WHERE psc.configuration_type = 'Bucket'
-    ON CONFLICT (tenant, bucket_id, service_id) DO NOTHING
-  `);
+  // Materialize the canonical set once. Citus will not accept a correlated
+  // subquery whose FROM clause holds a subquery or CTE ("correlated subqueries
+  // are not supported when the FROM clause contains a CTE or subquery"), which
+  // rules out driving the writes below from an inline `(${CANONICAL_BUCKET_CONFIGS})`
+  // via EXISTS / INSERT ... SELECT. Same resolution the usage remap already
+  // takes: read the mapping with a supported SELECT, then issue
+  // distribution-key-qualified point writes. The set is small — one row per
+  // (line, service) carrying a bucket, tens of rows per tenant.
+  const canonicalConfigs = (await knex.raw(CANONICAL_BUCKET_CONFIGS)).rows;
+  console.log(`[create_contract_line_buckets] ${canonicalConfigs.length} canonical legacy Bucket configs`);
 
-  // 3c. Remap existing usage rows to the new pool. The legacy config is unique
+  // Sweep pools left behind by an earlier run of THIS migration, which seeded a
+  // pool per legacy config before the duplicates were understood. Both tables
+  // are created here, so a pool keyed on a now-non-canonical config_id can only
+  // be debris from such a run; the members/usage anti-joins keep the delete off
+  // anything referenced.
+  const stalePools = await knex.raw(`
+    WITH canon AS (${CANONICAL_BUCKET_CONFIGS}),
+    legacy AS (
+      SELECT psc.tenant, psc.config_id
+      FROM contract_line_service_configuration psc
+      JOIN contract_line_service_bucket_config psbc
+        ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+      WHERE psc.configuration_type = 'Bucket'
+    )
+    SELECT b.tenant, b.bucket_id
+    FROM contract_line_buckets b
+    JOIN legacy a ON a.tenant = b.tenant AND a.config_id = b.bucket_id
+    LEFT JOIN canon c ON c.tenant = b.tenant AND c.config_id = b.bucket_id
+    LEFT JOIN contract_line_bucket_services m ON m.tenant = b.tenant AND m.bucket_id = b.bucket_id
+    LEFT JOIN bucket_usage bu ON bu.tenant = b.tenant AND bu.bucket_id = b.bucket_id
+    WHERE c.config_id IS NULL
+      AND m.bucket_id IS NULL
+      AND bu.usage_id IS NULL
+  `);
+  for (const row of stalePools.rows) {
+    await knex('contract_line_buckets')
+      .where({ tenant: row.tenant, bucket_id: row.bucket_id })
+      .del();
+  }
+  if (stalePools.rows.length > 0) {
+    console.log(`[create_contract_line_buckets] swept ${stalePools.rows.length} non-canonical pools from a prior run`);
+  }
+
+  // 3b. One pool per canonical legacy config (member-scoped, no after-hours rule).
+  for (const config of canonicalConfigs) {
+    await knex('contract_line_buckets')
+      .insert({
+        tenant: config.tenant,
+        bucket_id: config.config_id,
+        contract_line_id: config.contract_line_id,
+        total_minutes: config.total_minutes,
+        overage_rate: config.overage_rate,
+        allow_rollover: config.allow_rollover,
+        billing_period: config.billing_period,
+        covers_all_services: false,
+      })
+      .onConflict(['tenant', 'bucket_id'])
+      .ignore();
+  }
+
+  // 3c. One member row per canonical legacy config at multiplier 1.0. The
+  //     conflict target names the primary key, but the table also carries
+  //     UNIQUE (tenant, contract_line_id, service_id) — an uncollapsed
+  //     duplicate group violates that one instead, which no arbiter here can
+  //     absorb. Feeding the canonical set is what keeps both keys satisfied.
+  for (const config of canonicalConfigs) {
+    await knex('contract_line_bucket_services')
+      .insert({
+        tenant: config.tenant,
+        bucket_id: config.config_id,
+        service_id: config.service_id,
+        contract_line_id: config.contract_line_id,
+        burn_multiplier: 1,
+      })
+      .onConflict(['tenant', 'bucket_id', 'service_id'])
+      .ignore();
+  }
+
+  // 3d. Remap existing usage rows to the new pool. A canonical config is unique
   //     per (line, service), and its line's contract identifies the client the
   //     pool serves — match on client via the line's contract + service. This
   //     deliberately keys on client rather than bucket_usage.contract_line_id,
@@ -309,20 +472,15 @@ exports.up = async function up(knex) {
   //
   //     Effective window: a usage row must only match the assignment that was
   //     in force for the row's period, mirroring the runtime resolution in
-  //     shared/billingClients/bucketUsageService.ts resolveBucketDraw():
-  //       cc.start_date <= target AND (cc.end_date IS NULL OR cc.end_date >= target)
-  //     (end_date inclusive, plain-date comparison). Anchor: the usage row's
-  //     period_start, taken as a UTC calendar date — bucket_usage periods are
-  //     written as UTC midnights derived from the same plain date the runtime
-  //     resolved the assignment with, and the explicit AT TIME ZONE 'UTC' keeps
-  //     the date extraction independent of the server TimeZone setting.
+  //     shared/billingClients/bucketUsageService.ts resolveBucketDraw() —
+  //     see ASSIGNMENT_COVERS_USAGE_PERIOD for the bounds and why the test is
+  //     an interval overlap rather than a point test on period_start.
   //     Deliberately NOT filtering cc.is_active: the runtime uses is_active to
   //     gate *current* draws, but historical usage legitimately belongs to
   //     assignments that have since been deactivated — filtering them would
-  //     push valid rows into the 3d unmapped hard failure. If two assignment
-  //     windows genuinely overlap on the anchor date (e.g. A.end_date equals
-  //     B.start_date under the inclusive bound), the row matches both and the
-  //     ambiguity guard below fails loudly rather than silently picking one.
+  //     push valid rows into the 3e unmapped hard failure. If two assignment
+  //     windows genuinely overlap the usage period, the row matches both and
+  //     the ambiguity guard below fails loudly rather than silently picking one.
   //
   //     Ambiguity guard: client_contracts is many-to-many (a client may hold
   //     several overlapping assignments on the same line), so a usage row can
@@ -330,28 +488,30 @@ exports.up = async function up(knex) {
   //     fail loudly instead. Without the effective-window predicate this guard
   //     also fired falsely on *sequential, non-overlapping* assignments (an
   //     ended contract followed by its replacement), which is healthy data.
+  //
+  //     The COUNT(DISTINCT ...) is projected and filtered in an outer WHERE for
+  //     the Citus reason spelled out on assertDuplicateBucketConfigsAreEquivalent():
+  //     the same count tested in HAVING does not survive push-down reliably.
   const ambiguousMatches = await knex.raw(`
-    SELECT bu.usage_id, COUNT(DISTINCT psc.config_id) AS pool_count
-    FROM bucket_usage bu
-    JOIN contract_line_service_configuration psc
-      ON psc.tenant = bu.tenant
-      AND psc.service_id = bu.service_catalog_id
-    JOIN contract_line_service_bucket_config psbc
-      ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
-    JOIN contract_lines cl
-      ON cl.tenant = psc.tenant
-      AND cl.contract_line_id = psc.contract_line_id
-    JOIN client_contracts cc
-      ON cc.tenant = psc.tenant
-      AND cc.contract_id = cl.contract_id
-    WHERE psc.configuration_type = 'Bucket'
-      AND bu.bucket_id IS NULL
-      AND bu.client_id = cc.client_id
-      AND cc.start_date <= (bu.period_start AT TIME ZONE 'UTC')::date
-      AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
-    GROUP BY bu.usage_id
-    HAVING COUNT(DISTINCT psc.config_id) > 1
-    LIMIT 5
+    WITH canon AS (${CANONICAL_BUCKET_CONFIGS}),
+    matches AS (
+      SELECT bu.usage_id, COUNT(DISTINCT c.config_id) AS pool_count
+      FROM bucket_usage bu
+      JOIN canon c
+        ON c.tenant = bu.tenant
+        AND c.service_id = bu.service_catalog_id
+      JOIN contract_lines cl
+        ON cl.tenant = c.tenant
+        AND cl.contract_line_id = c.contract_line_id
+      JOIN client_contracts cc
+        ON cc.tenant = c.tenant
+        AND cc.contract_id = cl.contract_id
+      WHERE bu.bucket_id IS NULL
+        AND bu.client_id = cc.client_id
+        AND ${ASSIGNMENT_COVERS_USAGE_PERIOD}
+      GROUP BY bu.usage_id
+    )
+    SELECT usage_id, pool_count FROM matches WHERE pool_count > 1 LIMIT 5
   `);
   if (ambiguousMatches.rows.length > 0) {
     const sample = ambiguousMatches.rows.map((row) => row.usage_id).join(', ');
@@ -369,24 +529,20 @@ exports.up = async function up(knex) {
   // byte-identical to the ambiguity guard's — the guard proves at most one
   // match per row only under the exact match set this query maps with.
   const mappedUsageRows = await knex.raw(`
-    SELECT DISTINCT bu.tenant, bu.usage_id, psc.config_id AS bucket_id
+    SELECT DISTINCT bu.tenant, bu.usage_id, c.config_id AS bucket_id
     FROM bucket_usage bu
-    JOIN contract_line_service_configuration psc
-      ON psc.tenant = bu.tenant
-      AND psc.service_id = bu.service_catalog_id
-    JOIN contract_line_service_bucket_config psbc
-      ON psbc.tenant = psc.tenant AND psbc.config_id = psc.config_id
+    JOIN (${CANONICAL_BUCKET_CONFIGS}) c
+      ON c.tenant = bu.tenant
+      AND c.service_id = bu.service_catalog_id
     JOIN contract_lines cl
-      ON cl.tenant = psc.tenant
-      AND cl.contract_line_id = psc.contract_line_id
+      ON cl.tenant = c.tenant
+      AND cl.contract_line_id = c.contract_line_id
     JOIN client_contracts cc
-      ON cc.tenant = psc.tenant
+      ON cc.tenant = c.tenant
       AND cc.contract_id = cl.contract_id
-    WHERE psc.configuration_type = 'Bucket'
-      AND bu.bucket_id IS NULL
+    WHERE bu.bucket_id IS NULL
       AND bu.client_id = cc.client_id
-      AND cc.start_date <= (bu.period_start AT TIME ZONE 'UTC')::date
-      AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
+      AND ${ASSIGNMENT_COVERS_USAGE_PERIOD}
   `);
 
   for (const row of mappedUsageRows.rows) {
@@ -396,21 +552,65 @@ exports.up = async function up(knex) {
       .update({ bucket_id: row.bucket_id });
   }
 
-  // 3d. Guard: any usage row left unmapped means data the new keying cannot
-  //     serve. Fail the migration loudly rather than ship an orphan (a row
-  //     whose (line, service) has no legacy Bucket config was never billable
-  //     under the old schema either — the invoice read filtered on the
-  //     config — so this surfaces real corruption for a human decision).
+  // 3e. Drop usage rows that no pool can ever hold. A row whose service has no
+  //     Bucket config anywhere in the tenant — and whose own line has none
+  //     either — was never billable under the old schema (the invoice read
+  //     filtered on the config), and bucket_id goes NOT NULL below, so there is
+  //     no shape in the new model for it to keep. Nothing references
+  //     bucket_usage (no inbound foreign keys; invoice charges land in
+  //     invoice_items / invoice_item_details), so the delete is self-contained.
+  //
+  //     Scoped deliberately narrow: a row that HAS a candidate config but fails
+  //     the client/window join is a mapping problem, not debris, and still hits
+  //     the hard-fail guard below. Every removed row is logged with its minutes
+  //     so the loss is on the record rather than inferred from a count.
+  //
+  //     Written as top-level anti-joins rather than NOT EXISTS for the Citus
+  //     reason noted at 3a: a correlated subquery cannot read from a CTE. The
+  //     LEFT JOINs may fan out on the matching side, but only non-matching rows
+  //     survive the IS NULL filter, so no row is reported twice.
+  const unmappableUsage = await knex.raw(`
+    WITH canon AS (${CANONICAL_BUCKET_CONFIGS})
+    SELECT DISTINCT bu.tenant, bu.usage_id, bu.client_id, bu.contract_line_id,
+           bu.service_catalog_id, bu.period_start, bu.minutes_used, bu.overage_minutes
+    FROM bucket_usage bu
+    LEFT JOIN canon by_service
+      ON by_service.tenant = bu.tenant AND by_service.service_id = bu.service_catalog_id
+    LEFT JOIN canon by_line
+      ON by_line.tenant = bu.tenant AND by_line.contract_line_id = bu.contract_line_id
+    WHERE bu.bucket_id IS NULL
+      AND by_service.config_id IS NULL
+      AND by_line.config_id IS NULL
+  `);
+
+  for (const row of unmappableUsage.rows) {
+    console.log(
+      `[create_contract_line_buckets] deleting unmappable bucket_usage ${row.usage_id} ` +
+      `(tenant ${row.tenant}, client ${row.client_id}, line ${row.contract_line_id}, ` +
+      `service ${row.service_catalog_id}, period ${row.period_start}, ` +
+      `minutes_used ${row.minutes_used}, overage ${row.overage_minutes}): ` +
+      'no Bucket config exists for its service or its line'
+    );
+    await knex('bucket_usage')
+      .where({ tenant: row.tenant, usage_id: row.usage_id })
+      .whereNull('bucket_id')
+      .del();
+  }
+
+  // 3f. Guard: any usage row still unmapped had a pool to reach and did not
+  //     reach it — a keying problem the migration must not paper over. Fail
+  //     loudly rather than ship an orphan.
   const unmapped = await knex('bucket_usage').whereNull('bucket_id').count('* as count');
   if (Number(unmapped[0].count) > 0) {
     throw new Error(
-      `[create_contract_line_buckets] ${unmapped[0].count} bucket_usage rows have no legacy ` +
-      'Bucket config to remap to (client via the line\'s contract + service_catalog_id). ' +
-      'Refusing to continue with orphaned usage rows.'
+      `[create_contract_line_buckets] ${unmapped[0].count} bucket_usage rows could not be remapped ` +
+      '(client via the line\'s contract + service_catalog_id, over the assignment window). ' +
+      'A Bucket config exists for their service or line, so this is a keying problem rather than ' +
+      'pre-schema debris. Refusing to continue with orphaned usage rows.'
     );
   }
 
-  // 3e. Pre-check the new unique key against duplicate (bucket_id, period_start)
+  // 3g. Pre-check the new unique key against duplicate (bucket_id, period_start)
   //     rows. client_contracts is many-to-many; two usage rows for the same pool
   //     and period would make the unique index creation fail late with a cryptic
   //     error. Fail early with a descriptive one instead.
@@ -432,7 +632,7 @@ exports.up = async function up(knex) {
     );
   }
 
-  // 3f. FK + NOT NULL on bucket_id. Citus distributed tables need the
+  // 3h. FK + NOT NULL on bucket_id. Citus distributed tables need the
   //     run_command_on_shards form for the NOT NULL ALTER.
   if (!(await constraintExists(knex, 'bucket_usage', 'bucket_usage_bucket_id_fk'))) {
     await knex.raw(`
@@ -463,7 +663,7 @@ exports.up = async function up(knex) {
     await knex.raw(`ALTER TABLE bucket_usage ALTER COLUMN bucket_id SET NOT NULL`);
   }
 
-  // 3g. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
+  // 3i. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
   // minutes are fractional). Distributed tables need the shard-aware form.
   if (usageCitusDistributed) {
     await knex.raw(`
@@ -488,7 +688,7 @@ exports.up = async function up(knex) {
   await ensureCoordinatorNumericAtttypmod(knex, 'bucket_usage', 'minutes_used', 12, 2);
   await ensureCoordinatorNumericAtttypmod(knex, 'bucket_usage', 'overage_minutes', 12, 2);
 
-  // 3h. New unique key — kills the duplicate-period hazard and the
+  // 3j. New unique key — kills the duplicate-period hazard and the
   //     write-under-one-line/read-under-another mismatch.
   if (!(await indexExists(knex, 'bucket_usage', 'bucket_usage_tenant_bucket_period_uidx'))) {
     await knex.raw(`
