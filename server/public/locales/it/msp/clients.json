@@ -909,6 +909,40 @@
     "updateError": "Impossibile aggiornare le impostazioni",
     "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di scadenza del credito."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Impostazioni di utilizzo del credito",
+    "useDefault": "Utilizza le impostazioni predefinite",
+    "useDefaultHelp": "Utilizza le impostazioni predefinite a livello di sistema per l'utilizzo del credito",
+    "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di utilizzo del credito.",
+    "clientSpecificEnabled": "Impostazioni di utilizzo del credito specifiche del cliente abilitate.",
+    "autoApply": "Applica automaticamente il credito alla finalizzazione",
+    "autoApplyHelp": "Se abilitato, il credito disponibile viene applicato automaticamente quando una fattura viene finalizzata",
+    "orderLabel": "Ordine di applicazione del credito",
+    "selectOrder": "Seleziona l'ordine del credito",
+    "orderHelp": "Scegli l'ordine in cui i crediti vengono consumati",
+    "serviceTypesLabel": "Tipi di servizio idonei",
+    "serviceTypesHelp": "Scegli se il credito può essere applicato a tutti gli addebiti o solo agli addebiti dei tipi di servizio selezionati.",
+    "noServiceTypes": "Nessun tipo di servizio configurato.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usa il valore predefinito del tenant",
+        "all": "Tutti i tipi di servizio",
+        "restricted": "Solo i tipi selezionati",
+        "placeholder": "Seleziona la restrizione del tipo di servizio"
+      },
+      "inheritedRestricted": "Predefinito del tenant: solo i tipi selezionati ({{types}}).",
+      "restricted": "Il credito è limitato ai tipi di servizio selezionati. Selezionane almeno uno per salvare."
+    },
+    "order": {
+      "expirationFirst": "Prima quelli in scadenza",
+      "oldestFirst": "Prima il credito più vecchio",
+      "newestFirst": "Prima il credito più recente"
+    },
+    "updatedSuccess": "Le impostazioni di utilizzo del credito sono state aggiornate.",
+    "loadError": "Impossibile caricare le impostazioni",
+    "saveError": "Impossibile salvare le impostazioni",
+    "updateError": "Impossibile aggiornare le impostazioni"
+  },
   "clientExternalCreditSettings": {
     "title": "Credito esterno registrato",
     "enable": "Il cliente ha un credito nel sistema contabile",

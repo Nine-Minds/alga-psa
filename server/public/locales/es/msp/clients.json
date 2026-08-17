@@ -909,6 +909,40 @@
     "updateError": "No se pudo actualizar la configuración",
     "useDefaultSuccess": "El cliente ahora utilizará la configuración predeterminada de vencimiento de crédito."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Configuración de consumo de crédito",
+    "useDefault": "Usar la configuración predeterminada",
+    "useDefaultHelp": "Usar la configuración predeterminada de todo el sistema para el consumo de crédito",
+    "useDefaultSuccess": "El cliente ahora usará la configuración predeterminada de consumo de crédito.",
+    "clientSpecificEnabled": "Se habilitó la configuración de consumo de crédito específica del cliente.",
+    "autoApply": "Aplicar crédito automáticamente al finalizar",
+    "autoApplyHelp": "Cuando está habilitado, el crédito disponible se aplica automáticamente al finalizar una factura",
+    "orderLabel": "Orden de aplicación del crédito",
+    "selectOrder": "Seleccione el orden del crédito",
+    "orderHelp": "Elija el orden en que se consumen los créditos",
+    "serviceTypesLabel": "Tipos de servicio elegibles",
+    "serviceTypesHelp": "Elija si el crédito se puede aplicar a todos los cargos o solo a los cargos de los tipos de servicio seleccionados.",
+    "noServiceTypes": "No hay tipos de servicio configurados.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usar el valor predeterminado del inquilino",
+        "all": "Todos los tipos de servicio",
+        "restricted": "Solo los tipos seleccionados",
+        "placeholder": "Seleccionar la restricción de tipo de servicio"
+      },
+      "inheritedRestricted": "Predeterminado del inquilino: solo los tipos seleccionados ({{types}}).",
+      "restricted": "El crédito está restringido a los tipos de servicio seleccionados. Seleccione al menos uno para guardar."
+    },
+    "order": {
+      "expirationFirst": "Primero los que vencen antes",
+      "oldestFirst": "Primero el crédito más antiguo",
+      "newestFirst": "Primero el crédito más reciente"
+    },
+    "updatedSuccess": "Se actualizó la configuración de consumo de crédito.",
+    "loadError": "No se pudo cargar la configuración",
+    "saveError": "No se pudo guardar la configuración",
+    "updateError": "No se pudo actualizar la configuración"
+  },
   "clientExternalCreditSettings": {
     "title": "Crédito externo registrado",
     "enable": "El cliente tiene crédito en el sistema contable",

@@ -88,6 +88,43 @@
         "save": "Kan instellingen niet opslaan"
       }
     },
+    "creditDrawdown": {
+      "title": "Kredietopname",
+      "description": "Bepaal wanneer klantkrediet op facturen wordt toegepast en hoe het wordt verbruikt.",
+      "fields": {
+        "autoApply": {
+          "label": "Krediet automatisch toepassen bij finalisatie",
+          "help": "Indien ingeschakeld, wordt beschikbaar krediet automatisch toegepast wanneer een factuur wordt gefinaliseerd"
+        },
+        "order": {
+          "label": "Volgorde van krediettoepassing",
+          "placeholder": "Selecteer kredietvolgorde",
+          "help": "Kies de volgorde waarin kredieten worden verbruikt"
+        },
+        "serviceTypes": {
+          "label": "In aanmerking komende servicetypen",
+          "help": "Kies of krediet kan worden toegepast op alle kosten of alleen op kosten voor de geselecteerde servicetypen.",
+          "empty": "Geen servicetypen geconfigureerd.",
+          "restricted": "Krediet is beperkt tot de geselecteerde servicetypen.",
+          "mode": {
+            "all": "Alle servicetypen",
+            "restricted": "Alleen geselecteerde typen"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Eerst het snelst vervallende",
+        "oldestFirst": "Oudste krediet eerst",
+        "newestFirst": "Nieuwste krediet eerst"
+      },
+      "toast": {
+        "updated": "De instellingen voor kredietopname zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Kan instellingen niet laden",
+        "save": "Kan instellingen niet opslaan"
+      }
+    },
     "renewal": {
       "title": "Automatisering van vernieuwing",
       "description": "Configureer het standaardgedrag wanneer contracten hun verlengingsdatum bereiken.",

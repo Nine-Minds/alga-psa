@@ -88,6 +88,43 @@
         "save": "Impossibile salvare le impostazioni"
       }
     },
+    "creditDrawdown": {
+      "title": "Utilizzo del credito",
+      "description": "Controlla quando i crediti dei clienti vengono applicati alle fatture e come vengono consumati.",
+      "fields": {
+        "autoApply": {
+          "label": "Applica automaticamente il credito alla finalizzazione",
+          "help": "Se abilitato, il credito disponibile viene applicato automaticamente quando una fattura viene finalizzata"
+        },
+        "order": {
+          "label": "Ordine di applicazione del credito",
+          "placeholder": "Seleziona l'ordine del credito",
+          "help": "Scegli l'ordine in cui i crediti vengono consumati"
+        },
+        "serviceTypes": {
+          "label": "Tipi di servizio idonei",
+          "help": "Scegli se il credito può essere applicato a tutti gli addebiti o solo agli addebiti dei tipi di servizio selezionati.",
+          "empty": "Nessun tipo di servizio configurato.",
+          "restricted": "Il credito è limitato ai tipi di servizio selezionati.",
+          "mode": {
+            "all": "Tutti i tipi di servizio",
+            "restricted": "Solo i tipi selezionati"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Prima quelli in scadenza",
+        "oldestFirst": "Prima il credito più vecchio",
+        "newestFirst": "Prima il credito più recente"
+      },
+      "toast": {
+        "updated": "Le impostazioni di utilizzo del credito sono state aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni"
+      }
+    },
     "renewal": {
       "title": "Automazione del rinnovamento",
       "description": "Configura il comportamento predefinito quando i contratti raggiungono la data di rinnovo.",

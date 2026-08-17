@@ -88,6 +88,43 @@
         "save": "11111"
       }
     },
+    "creditDrawdown": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "autoApply": {
+          "label": "11111",
+          "help": "11111"
+        },
+        "order": {
+          "label": "11111",
+          "placeholder": "11111",
+          "help": "11111"
+        },
+        "serviceTypes": {
+          "label": "11111",
+          "help": "11111",
+          "empty": "11111",
+          "restricted": "11111",
+          "mode": {
+            "all": "11111",
+            "restricted": "11111"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "11111",
+        "oldestFirst": "11111",
+        "newestFirst": "11111"
+      },
+      "toast": {
+        "updated": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "save": "11111"
+      }
+    },
     "renewal": {
       "title": "11111",
       "description": "11111",

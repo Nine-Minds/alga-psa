@@ -959,6 +959,40 @@
     "updateError": "Nie udało się zaktualizować ustawień",
     "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wygaśnięcia kredytu."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Ustawienia wykorzystania kredytu",
+    "useDefault": "Użyj ustawień domyślnych",
+    "useDefaultHelp": "Użyj domyślnych ustawień wykorzystania kredytu obowiązujących w całym systemie",
+    "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wykorzystania kredytu.",
+    "clientSpecificEnabled": "Włączono ustawienia wykorzystania kredytu specyficzne dla klienta.",
+    "autoApply": "Automatycznie stosuj kredyt przy finalizacji",
+    "autoApplyHelp": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury",
+    "orderLabel": "Kolejność stosowania kredytu",
+    "selectOrder": "Wybierz kolejność kredytu",
+    "orderHelp": "Wybierz kolejność, w jakiej kredyty są wykorzystywane",
+    "serviceTypesLabel": "Kwalifikujące się typy usług",
+    "serviceTypesHelp": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
+    "noServiceTypes": "Nie skonfigurowano typów usług.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Użyj wartości domyślnej organizacji",
+        "all": "Wszystkie typy usług",
+        "restricted": "Tylko wybrane typy",
+        "placeholder": "Wybierz ograniczenie typu usługi"
+      },
+      "inheritedRestricted": "Wartość domyślna organizacji: tylko wybrane typy ({{types}}).",
+      "restricted": "Kredyt jest ograniczony do wybranych typów usług. Wybierz co najmniej jeden, aby zapisać."
+    },
+    "order": {
+      "expirationFirst": "Najpierw wygasające najwcześniej",
+      "oldestFirst": "Najpierw najstarszy kredyt",
+      "newestFirst": "Najpierw najnowszy kredyt"
+    },
+    "updatedSuccess": "Ustawienia wykorzystania kredytu zostały zaktualizowane.",
+    "loadError": "Nie udało się załadować ustawień",
+    "saveError": "Nie udało się zapisać ustawień",
+    "updateError": "Nie udało się zaktualizować ustawień"
+  },
   "clientExternalCreditSettings": {
     "title": "Kredyt zewnętrzny w ewidencji",
     "enable": "Klient posiada środki w systemie księgowym",

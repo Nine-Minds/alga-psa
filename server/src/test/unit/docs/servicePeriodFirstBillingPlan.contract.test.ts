@@ -205,6 +205,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
   'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
   'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
+  // Credit draw-down policy suite (feature/credit-drawdown-policy-controls)
+  // landed after the pass-0 snapshot and seeds invoice charges with persisted
+  // service-period columns in its fixtures.
+  'server/src/test/infrastructure/billing/credits/creditDrawdownPolicy.test.ts',
+  'server/src/test/infrastructure/billing/credits/creditServiceTypeRestrictionMode.test.ts',
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
   'shared/billingClients/recurringDueWork.ts',
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',

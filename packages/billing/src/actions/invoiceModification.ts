@@ -8,7 +8,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@alga-psa/db';
 import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
-import { applyCreditToInvoice, resolveCreditExpirationDate } from './creditActions';
+import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
@@ -951,36 +951,43 @@ export async function finalizeInvoiceWithKnex(
   }
   // For regular invoices, check if there's available credit to apply
   else if (invoice && invoice.client_id) {
-    const availableCredit = await getAvailableCredit(knex, tenant, invoice.client_id, invoice.currency_code ?? undefined);
+    // Auto-apply is a policy-controlled *automatic* path only: with the toggle
+    // off, the invoice finalizes with credit_applied 0 and manual application
+    // (UI / REST) stays available. Eligibility + ordering are enforced inside
+    // the canonical apply engine.
+    const policy = await resolveCreditDrawdownPolicy(knex, tenant, invoice.client_id);
+    if (policy.autoApplyEnabled !== false) {
+      const availableCredit = await getAvailableCredit(knex, tenant, invoice.client_id, invoice.currency_code ?? undefined);
 
-    if (availableCredit > 0) {
-      // Get the current invoice with updated totals
-      const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, tenant, 'invoices')
-          .where({ invoice_id: invoiceId })
-          .first();
-      });
+      if (availableCredit > 0) {
+        // Get the current invoice with updated totals
+        const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await tenantScopedTable(trx, tenant, 'invoices')
+            .where({ invoice_id: invoiceId })
+            .first();
+        });
 
-      if (updatedInvoice && updatedInvoice.total_amount > 0) {
-        // Calculate how much credit to apply
-        const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
+        if (updatedInvoice && updatedInvoice.total_amount > 0) {
+          // Calculate how much credit to apply
+          const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
 
-        if (creditToApply > 0) {
-          // Apply credit to the invoice
-          const creditResult = await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
-          if (
-            typeof creditResult === 'object' &&
-            creditResult !== null &&
-            (
-              typeof (creditResult as { actionError?: unknown }).actionError === 'string' ||
-              typeof (creditResult as { permissionError?: unknown }).permissionError === 'string'
-            )
-          ) {
-            throw new Error(
-              'permissionError' in creditResult
-                ? creditResult.permissionError
-                : creditResult.actionError
-            );
+          if (creditToApply > 0) {
+            // Apply credit to the invoice
+            const creditResult = await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
+            if (
+              typeof creditResult === 'object' &&
+              creditResult !== null &&
+              (
+                typeof (creditResult as { actionError?: unknown }).actionError === 'string' ||
+                typeof (creditResult as { permissionError?: unknown }).permissionError === 'string'
+              )
+            ) {
+              throw new Error(
+                'permissionError' in creditResult
+                  ? creditResult.permissionError
+                  : creditResult.actionError
+              );
+            }
           }
         }
       }
@@ -1104,9 +1111,15 @@ export const unfinalizeInvoice = withAuth(async (
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Check if invoice exists and is finalized
+      // Check if invoice exists and is finalized. FOR UPDATE: this
+      // transaction later deletes credit_tracking rows (project-deposit
+      // rollback) and then writes the invoice row — locking the invoice row
+      // first matches applyCreditToInvoiceInternal's invoice-then-credit
+      // lock order, so a concurrent credit application queues here instead
+      // of deadlocking against the rollback's credit-row locks.
       const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
+      .forUpdate()
       .first();
 
     if (!invoice) {
@@ -1657,12 +1670,16 @@ export const hardDeleteInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
-    // 1. Get invoice details
+    // 1. Get invoice details. FOR UPDATE: deletion rolls back project-deposit
+    // credit_tracking rows before deleting the invoice row — taking the
+    // invoice row lock first preserves the invoice-then-credit lock order
+    // applyCreditToInvoiceInternal relies on (deadlock avoidance).
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
         tenant
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {

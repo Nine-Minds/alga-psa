@@ -909,6 +909,40 @@
     "updateError": "Échec de la mise à jour des paramètres",
     "useDefaultSuccess": "Le client utilisera désormais les paramètres d'expiration du crédit par défaut."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Paramètres de consommation du crédit",
+    "useDefault": "Utiliser les paramètres par défaut",
+    "useDefaultHelp": "Utiliser les paramètres par défaut du système pour la consommation du crédit",
+    "useDefaultSuccess": "Le client utilisera désormais les paramètres de consommation du crédit par défaut.",
+    "clientSpecificEnabled": "Paramètres de consommation du crédit spécifiques au client activés.",
+    "autoApply": "Appliquer automatiquement le crédit à la finalisation",
+    "autoApplyHelp": "Lorsque cette option est activée, le crédit disponible est appliqué automatiquement lors de la finalisation d'une facture",
+    "orderLabel": "Ordre d'application du crédit",
+    "selectOrder": "Sélectionnez l'ordre du crédit",
+    "orderHelp": "Choisissez l'ordre dans lequel les crédits sont consommés",
+    "serviceTypesLabel": "Types de services éligibles",
+    "serviceTypesHelp": "Choisissez si le crédit peut être appliqué à tous les frais ou uniquement aux frais des types de services sélectionnés.",
+    "noServiceTypes": "Aucun type de service configuré.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Utiliser la valeur par défaut du locataire",
+        "all": "Tous les types de services",
+        "restricted": "Uniquement les types sélectionnés",
+        "placeholder": "Sélectionner la restriction de type de service"
+      },
+      "inheritedRestricted": "Valeur par défaut du locataire : uniquement les types sélectionnés ({{types}}).",
+      "restricted": "Le crédit est limité aux types de services sélectionnés. Sélectionnez-en au moins un pour enregistrer."
+    },
+    "order": {
+      "expirationFirst": "Expirant le plus tôt en premier",
+      "oldestFirst": "Crédit le plus ancien en premier",
+      "newestFirst": "Crédit le plus récent en premier"
+    },
+    "updatedSuccess": "Les paramètres de consommation du crédit ont été mis à jour.",
+    "loadError": "Échec du chargement des paramètres",
+    "saveError": "Échec de l'enregistrement des paramètres",
+    "updateError": "Échec de la mise à jour des paramètres"
+  },
   "clientExternalCreditSettings": {
     "title": "Crédit externe enregistré",
     "enable": "Le client détient un crédit dans le système comptable",

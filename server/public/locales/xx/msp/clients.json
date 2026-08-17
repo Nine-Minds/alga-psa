@@ -909,6 +909,40 @@
     "updateError": "11111",
     "useDefaultSuccess": "11111"
   },
+  "clientCreditDrawdownSettings": {
+    "title": "11111",
+    "useDefault": "11111",
+    "useDefaultHelp": "11111",
+    "useDefaultSuccess": "11111",
+    "clientSpecificEnabled": "11111",
+    "autoApply": "11111",
+    "autoApplyHelp": "11111",
+    "orderLabel": "11111",
+    "selectOrder": "11111",
+    "orderHelp": "11111",
+    "serviceTypesLabel": "11111",
+    "serviceTypesHelp": "11111",
+    "noServiceTypes": "11111",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "11111",
+        "all": "11111",
+        "restricted": "11111",
+        "placeholder": "11111"
+      },
+      "inheritedRestricted": "11111",
+      "restricted": "11111"
+    },
+    "order": {
+      "expirationFirst": "11111",
+      "oldestFirst": "11111",
+      "newestFirst": "11111"
+    },
+    "updatedSuccess": "11111",
+    "loadError": "11111",
+    "saveError": "11111",
+    "updateError": "11111"
+  },
   "clientExternalCreditSettings": {
     "title": "11111",
     "enable": "11111",

@@ -17,6 +17,7 @@ function createQueryBuilder(table: string) {
   builder.where = vi.fn(() => builder);
   builder.andWhere = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
   builder.first = vi.fn(async () => {
     if (table === 'invoices') {
       return state.invoice;

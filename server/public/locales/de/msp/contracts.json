@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "Kundenvertrags-ID: {{id}}",
+      "creditDrawdownOptOut": "Von der Guthabenverrechnung ausschließen",
       "empty": "Dieser Vertrag ist noch keinem Kunden zugewiesen.",
       "endDate": "Enddatum",
       "endDateLabel": "Enddatum der Zuweisung",

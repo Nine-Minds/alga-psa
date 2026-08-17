@@ -909,6 +909,40 @@
     "updateError": "Falha ao atualizar as configurações",
     "useDefaultSuccess": "O cliente agora usará as configurações padrão de expiração de crédito."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Configurações de consumo de crédito",
+    "useDefault": "Usar configurações padrão",
+    "useDefaultHelp": "Use as configurações padrão de todo o sistema para consumo de crédito",
+    "useDefaultSuccess": "O cliente agora usará as configurações padrão de consumo de crédito.",
+    "clientSpecificEnabled": "Configurações de consumo de crédito específicas do cliente habilitadas.",
+    "autoApply": "Aplicar crédito automaticamente na finalização",
+    "autoApplyHelp": "Quando ativado, o crédito disponível é aplicado automaticamente quando uma fatura é finalizada",
+    "orderLabel": "Ordem de aplicação de crédito",
+    "selectOrder": "Selecione a ordem de crédito",
+    "orderHelp": "Escolha a ordem em que os créditos são consumidos",
+    "serviceTypesLabel": "Tipos de serviço elegíveis",
+    "serviceTypesHelp": "Escolha se o crédito pode ser aplicado a todas as cobranças ou apenas às cobranças dos tipos de serviço selecionados.",
+    "noServiceTypes": "Nenhum tipo de serviço configurado.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usar o padrão do locatário",
+        "all": "Todos os tipos de serviço",
+        "restricted": "Somente os tipos selecionados",
+        "placeholder": "Selecionar a restrição de tipo de serviço"
+      },
+      "inheritedRestricted": "Padrão do locatário: somente os tipos selecionados ({{types}}).",
+      "restricted": "O crédito está restrito aos tipos de serviço selecionados. Selecione pelo menos um para salvar."
+    },
+    "order": {
+      "expirationFirst": "Vencimento mais próximo primeiro",
+      "oldestFirst": "Crédito mais antigo primeiro",
+      "newestFirst": "Crédito mais recente primeiro"
+    },
+    "updatedSuccess": "As configurações de consumo de crédito foram atualizadas.",
+    "loadError": "Falha ao carregar as configurações",
+    "saveError": "Falha ao salvar as configurações",
+    "updateError": "Falha ao atualizar as configurações"
+  },
   "clientExternalCreditSettings": {
     "title": "Crédito externo registrado",
     "enable": "O cliente possui crédito no sistema contábil",

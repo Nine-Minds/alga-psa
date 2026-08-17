@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID umowy klienta: {{id}}",
+      "creditDrawdownOptOut": "Wyklucz z wykorzystania kredytu",
       "empty": "Ta umowa nie została jeszcze przypisana do klienta.",
       "endDate": "Data zakończenia",
       "endDateLabel": "Data zakończenia przypisania",

@@ -44,6 +44,7 @@ function makeQueryBuilder(returnValue: any = null) {
   builder.select = vi.fn(() => builder);
   builder.increment = vi.fn(() => builder);
   builder.decrement = vi.fn(() => builder);
+  builder.forUpdate = vi.fn(() => builder);
   builder.update = vi.fn(async () => 1);
   builder.insert = vi.fn(async () => [{}]);
   builder.sum = vi.fn(() => builder);
@@ -218,6 +219,12 @@ describe('reverseCreditApplicationsForInvoice', () => {
 interface VoidHarnessOptions {
   /** Some of the issued credit was already spent (trips the guard). */
   consumed?: boolean;
+  /**
+   * The unlocked pre-transaction guard sees the credit untouched, but the
+   * FOR UPDATE re-check inside the transaction sees it consumed — the TOCTOU
+   * window where a concurrent application commits between the two reads.
+   */
+  consumedUnderLockOnly?: boolean;
 }
 
 /**
@@ -247,7 +254,17 @@ function makeVoidHarness(options: VoidHarnessOptions = {}) {
     builder.where = vi.fn((...args: any[]) => { filters.push(['where', args]); return builder; });
     builder.whereIn = vi.fn((...args: any[]) => { filters.push(['whereIn', args]); return builder; });
     builder.sum = vi.fn(() => builder);
-    builder.select = vi.fn(async () => (tableName === 'transactions' ? [issuanceTxn] : []));
+    builder.select = vi.fn(async () => {
+      if (tableName === 'transactions') return [issuanceTxn];
+      if (tableName === 'credit_tracking') {
+        // In-transaction consumed re-check (post-FOR UPDATE): the note's
+        // credit rows as the locks reveal them.
+        return options.consumedUnderLockOnly
+          ? [{ amount: 1800, remaining_amount: 900 }]
+          : [{ amount: 1800, remaining_amount: 1800 }];
+      }
+      return [];
+    });
     builder.first = vi.fn(async () => {
       if (tableName === 'invoices') return invoiceRow;
       if (tableName === 'invoice_payments') return { total: 0 };
@@ -269,6 +286,7 @@ function makeVoidHarness(options: VoidHarnessOptions = {}) {
       return builder;
     });
     builder.increment = vi.fn(() => builder);
+    builder.forUpdate = vi.fn(() => builder);
     return builder;
   });
   knex.raw = vi.fn((sql: string) => sql);
@@ -333,5 +351,28 @@ describe('voidInvoice (credit note)', () => {
 
     // Nothing was mutated.
     expect(log.filter((e) => e.op !== 'decrement').every((e) => e.op !== 'insert' && e.op !== 'update')).toBe(true);
+  });
+
+  it('blocks the void when consumption is visible only under the in-transaction locks', async () => {
+    // The unlocked fast-fail passes; the authoritative FOR UPDATE re-check
+    // inside the transaction must still catch the concurrently-spent credit
+    // and refuse — without it the claw-back zeroes out credit a concurrent
+    // application just applied.
+    const { knex, log } = makeVoidHarness({ consumedUnderLockOnly: true });
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'raced with an application'
+    );
+    expect(result).toEqual({
+      success: false,
+      error: 'This credit note has applied credit. Unapply the credit before voiding.',
+    });
+
+    // Nothing was mutated.
+    expect(log.every((e) => e.op !== 'insert' && e.op !== 'update')).toBe(true);
   });
 });

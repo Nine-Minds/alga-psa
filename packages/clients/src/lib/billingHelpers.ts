@@ -71,6 +71,8 @@ import {
   type BillingCycleCreationResult,
   type BillingHistoryBootstrapPreview,
   type ClientBillingSettings,
+  type CreditDrawdownPolicy,
+  resolveCreditDrawdownPolicy,
   type ServiceListOptions,
   type PaginatedServicesResponse,
   type UpdateClientBillingScheduleInput,
@@ -125,11 +127,17 @@ export const getClientContractLineSettingsAsync = withAuth(async (
 });
 
 export const updateClientContractLineSettingsAsync = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   settings: ClientBillingSettings | null
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | ActionPermissionError> => {
+  // Client billing settings are billing configuration: mirror the tenant-level
+  // gate in billingSettingsActions so authentication alone cannot mutate them.
+  if (!await hasPermission(user, 'billing_settings', 'update')) {
+    return permissionError('Permission denied: Cannot update billing settings');
+  }
+
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -137,6 +145,18 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
   });
 
   return { success: true };
+});
+
+export const getResolvedCreditDrawdownPolicyAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<CreditDrawdownPolicy> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return resolveCreditDrawdownPolicy(trx, tenant, clientId);
+  });
 });
 
 export const createNextBillingCycleAsync = withAuth(async (
