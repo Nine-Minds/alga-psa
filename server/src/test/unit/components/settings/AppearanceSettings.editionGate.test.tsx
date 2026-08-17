@@ -12,6 +12,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: vi.fn() }));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/components/EntityImageUpload', () => ({
@@ -30,11 +34,11 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions', () => ({
   deleteTenantLogo: vi.fn(),
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
-  getCurrentUser: vi.fn(async () => ({ user_id: 'user-1' })),
+  getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),
 }));
 
 const CUSTOM_THEME_HEADING = 'Custom theme';
-const WHITE_LABEL_HEADING = 'White-label the staff app';
+const WHITE_LABEL_HEADING = 'White-label the MSP app';
 
 async function renderAppearance(edition: string) {
   vi.stubEnv('NEXT_PUBLIC_EDITION', edition);
@@ -52,11 +56,15 @@ describe('AppearanceSettings edition gate', () => {
     vi.resetModules();
   });
 
-  it('offers the custom theme editor and staff white-label on Enterprise', async () => {
+  it('offers the custom theme editor and MSP white-label on Enterprise', async () => {
     await renderAppearance('enterprise');
 
     expect(screen.getByText(CUSTOM_THEME_HEADING)).toBeTruthy();
     expect(screen.getByText(WHITE_LABEL_HEADING)).toBeTruthy();
+    // Both logo slots, and no wording that implies a switch has to be found
+    // first: the upload is what puts the mark in the MSP side menu.
+    expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(2);
+    expect(screen.getByText('Use your brand colors in the MSP app')).toBeTruthy();
   });
 
   it('hides both Enterprise sections in Community and keeps the pair picker', async () => {

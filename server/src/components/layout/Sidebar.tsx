@@ -293,16 +293,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-          {tenantLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- tenant uploads are served
-            // from the document route, which next/image cannot optimize without a loader.
+        {tenantLogoUrl ? (
+          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element -- tenant uploads are served
+                from the document route, which next/image cannot optimize without a loader. */}
             <img
               src={tenantLogoUrl}
-              alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
-              className="w-full h-full object-cover"
+              alt={brandDisplayName}
+              className="w-full h-full object-contain"
             />
-          ) : (
+          </div>
+        ) : (
+          <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
             <Image
               src="/images/avatar-purple-background.png"
               alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
@@ -310,8 +312,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               height={200}
               className="w-full h-full object-cover"
             />
-          )}
-        </div>
+          </div>
+        )}
         <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
       </a>
 

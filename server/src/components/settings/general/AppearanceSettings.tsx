@@ -3,6 +3,7 @@
 /* global process */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -39,6 +40,7 @@ const cloneDefaultCustomTheme = (): { light: CustomThemeTokens; dark: CustomThem
 
 const AppearanceSettings = () => {
   const { t } = useTranslation('msp/settings');
+  const router = useRouter();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
   const [loading, setLoading] = useState(true);
@@ -105,6 +107,9 @@ const AppearanceSettings = () => {
       setPairId(nextPairId);
       setMspWhiteLabel(nextWhiteLabel);
       applyPairAttribute(nextPairId);
+      // The shell reads branding on the server, so refresh it instead of making
+      // the admin reload to see the change.
+      router.refresh();
       toast.success(t('appearance.messages.saved', { defaultValue: 'Appearance updated' }));
     } catch (error) {
       handleError(error, t('appearance.messages.saveFailed', { defaultValue: 'Failed to save appearance settings' }));
@@ -114,9 +119,23 @@ const AppearanceSettings = () => {
   };
 
   const handleLogoUpload = (variant: 'default' | 'dark') =>
-    async (entityId: string, formData: FormData) => uploadTenantLogo(entityId, formData, variant);
+    async (entityId: string, formData: FormData) => {
+      const result = await uploadTenantLogo(entityId, formData, variant);
+      // The sidebar mark is resolved server-side; refresh so the new logo lands
+      // in the rail right away rather than on the next full page load.
+      if (result?.success) {
+        router.refresh();
+      }
+      return result;
+    };
   const handleLogoDelete = (variant: 'default' | 'dark') =>
-    async (entityId: string) => deleteTenantLogo(entityId, variant);
+    async (entityId: string) => {
+      const result = await deleteTenantLogo(entityId, variant);
+      if (result?.success) {
+        router.refresh();
+      }
+      return result;
+    };
 
   return (
     <div className="space-y-6">
@@ -131,7 +150,7 @@ const AppearanceSettings = () => {
           <CardDescription>
             {t('appearance.description', {
               defaultValue:
-                'Pick the light/dark pair everyone in this organization sees, on both the staff app and the client portal. Each person still chooses light, dark or system for themselves.',
+                'Pick the light/dark pair everyone in this organization sees, in both the MSP app and the client portal. Each person still chooses light, dark or system for themselves.',
             })}
           </CardDescription>
         </CardHeader>
@@ -224,65 +243,82 @@ const AppearanceSettings = () => {
       {isEEAvailable && (
         <Card>
           <CardHeader>
-            <CardTitle>{t('appearance.whiteLabel.title', { defaultValue: 'White-label the staff app' })}</CardTitle>
+            <CardTitle>{t('appearance.whiteLabel.title', { defaultValue: 'White-label the MSP app' })}</CardTitle>
             <CardDescription>
               {t('appearance.whiteLabel.description', {
                 defaultValue:
-                  'Put your own logo and brand colors on the staff-facing app as well as the client portal. These are the same logos the client portal uses.',
+                  'Upload your logo once. It replaces the Alga mark in the MSP side menu, and the client portal uses the same images.',
               })}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-[rgb(var(--color-text-500))]">
-                {t('appearance.whiteLabel.help', {
-                  defaultValue:
-                    'Off by default. When on, the staff sidebar shows your logo and your brand colors replace the theme accents.',
-                })}
-              </p>
+            {tenantId && (
+              <div className="mb-6">
+                <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
+                  {t('appearance.whiteLabel.logoHelp', {
+                    defaultValue:
+                      'The MSP side menu is dark in both themes, so it uses the dark-background logo when you provide one and falls back to the main logo otherwise.',
+                  })}
+                </p>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      {t('appearance.whiteLabel.fields.logo', { defaultValue: 'Logo' })}
+                    </label>
+                    <EntityImageUpload
+                      entityType="tenant"
+                      entityId={tenantId}
+                      entityName={clientName || 'AlgaPSA'}
+                      imageUrl={logoUrl}
+                      uploadAction={handleLogoUpload('default')}
+                      deleteAction={handleLogoDelete('default')}
+                      onImageChange={(next) => setLogoUrl(next || '')}
+                      size="lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">
+                      {t('appearance.whiteLabel.fields.logoDark', { defaultValue: 'Logo for dark backgrounds' })}
+                    </label>
+                    <EntityImageUpload
+                      entityType="tenant"
+                      entityId={tenantId}
+                      entityName={clientName || 'AlgaPSA'}
+                      imageUrl={logoDarkUrl}
+                      uploadAction={handleLogoUpload('dark')}
+                      deleteAction={handleLogoDelete('dark')}
+                      onImageChange={(next) => setLogoDarkUrl(next || '')}
+                      size="lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-4 border-t border-[rgb(var(--color-border-200))] pt-4">
+              <div>
+                <p className="text-sm font-medium">
+                  {t('appearance.whiteLabel.colors.label', {
+                    defaultValue: 'Use your brand colors in the MSP app',
+                  })}
+                </p>
+                <p className="text-sm text-[rgb(var(--color-text-500))]">
+                  {t('appearance.whiteLabel.colors.help', {
+                    defaultValue:
+                      'Off by default. When on, your primary and secondary colors replace the theme accents for MSP users, the way they already do in the client portal.',
+                  })}
+                </p>
+              </div>
               <Switch
                 id="msp-white-label-toggle"
                 checked={mspWhiteLabel}
                 disabled={loading || saving}
                 onCheckedChange={(checked) => save({ mspWhiteLabel: checked })}
-                aria-label={t('appearance.whiteLabel.title', { defaultValue: 'White-label the staff app' })}
+                aria-label={t('appearance.whiteLabel.colors.label', {
+                  defaultValue: 'Use your brand colors in the MSP app',
+                })}
               />
             </div>
-
-            {tenantId && (
-              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    {t('appearance.whiteLabel.fields.logo', { defaultValue: 'Logo' })}
-                  </label>
-                  <EntityImageUpload
-                    entityType="tenant"
-                    entityId={tenantId}
-                    entityName={clientName || 'AlgaPSA'}
-                    imageUrl={logoUrl}
-                    uploadAction={handleLogoUpload('default')}
-                    deleteAction={handleLogoDelete('default')}
-                    onImageChange={(next) => setLogoUrl(next || '')}
-                    size="lg"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    {t('appearance.whiteLabel.fields.logoDark', { defaultValue: 'Logo for dark backgrounds' })}
-                  </label>
-                  <EntityImageUpload
-                    entityType="tenant"
-                    entityId={tenantId}
-                    entityName={clientName || 'AlgaPSA'}
-                    imageUrl={logoDarkUrl}
-                    uploadAction={handleLogoUpload('dark')}
-                    deleteAction={handleLogoDelete('dark')}
-                    onImageChange={(next) => setLogoDarkUrl(next || '')}
-                    size="lg"
-                  />
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

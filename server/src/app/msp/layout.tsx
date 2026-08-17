@@ -9,9 +9,8 @@ import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingC
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain";
-import type { MspBranding } from "@/components/layout/MspBrandingContext";
+import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -81,23 +80,13 @@ export default async function MspLayout({
   const selfHostLicensing = await isSelfHostLicensing();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
-  // Enterprise white-label, opt-in per tenant: without it the shell keeps the
-  // stock Alga mark even for tenants that branded their client portal.
-  let mspBranding: MspBranding | null = null;
+  // Enterprise white-label: an uploaded tenant logo takes the place of the Alga
+  // mark in the rail. No extra switch — uploading the logo is the opt-in.
   const tenantId = session.user.tenant;
-  if (isEnterprise && tenantId) {
-    const theme = await getTenantThemeByTenantId(tenantId).catch(() => null);
-    if (theme?.mspWhiteLabel) {
-      const branding = await getTenantBrandingByTenantId(tenantId).catch(() => null);
-      if (branding?.logoUrl || branding?.logoDarkUrl) {
-        mspBranding = {
-          logoUrl: branding.logoUrl || null,
-          logoDarkUrl: branding.logoDarkUrl || null,
-          displayName: branding.clientName || null,
-        };
-      }
-    }
-  }
+  const tenantBranding = isEnterprise && tenantId
+    ? await getTenantBrandingByTenantId(tenantId).catch(() => null)
+    : null;
+  const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise });
 
   return (
     <MspLayoutClient
