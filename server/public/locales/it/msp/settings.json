@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Generale",
     "experimentalFeatures": "Funzionalità sperimentali",
+    "appearance": "Aspetto",
     "clientPortal": "Portale clienti",
     "users": "Utenti",
     "teams": "Team",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Nome della tua azienda",
     "brandingPreviewMode": "Modalità tema anteprima branding",
     "brandingUpdated": "Impostazioni di branding aggiornate"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Scegli la coppia chiaro/scuro che tutti in questa organizzazione vedono, sia nell’app dello staff sia nel portale clienti. Ogni persona continua a scegliere chiaro, scuro o sistema per sé.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "L’aspetto predefinito: superfici bianche e pulite di giorno, con sfumatura viola di notte."
+      },
+      "slate": {
+        "label": "Ardesia",
+        "description": "Grigi neutri con il tema scuro blu ardesia originale."
+      },
+      "ocean": {
+        "label": "Oceano",
+        "description": "Blu freddi su superfici nitide e leggermente fredde."
+      },
+      "forest": {
+        "label": "Foresta",
+        "description": "Verdi profondi con un colore di successo turchese, così lo stato resta leggibile."
+      },
+      "sunset": {
+        "label": "Tramonto",
+        "description": "Arancioni caldi su superfici color sabbia."
+      },
+      "highContrast": {
+        "label": "Contrasto elevato",
+        "description": "Massima leggibilità: superfici bianche e nere pure con bordi accentuati."
+      }
+    },
+    "custom": {
+      "title": "Tema personalizzato",
+      "description": "Crea le tue varianti chiara e scura. Le scale di colore complete vengono derivate da questi colori di base e il contrasto viene verificato prima del salvataggio.",
+      "lightMode": "Variante chiara",
+      "darkMode": "Variante scura",
+      "previewAlt": "Anteprima del tema personalizzato",
+      "contrastTitle": "Queste coppie di colori sono sotto il minimo WCAG AA:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (richiesto {{required}}:1)",
+      "tokens": {
+        "background": "Sfondo della pagina",
+        "card": "Superficie della scheda",
+        "surface": "Superficie rialzata",
+        "textPrimary": "Testo principale",
+        "textSecondary": "Testo secondario",
+        "textMuted": "Testo attenuato",
+        "border": "Bordo",
+        "borderStrong": "Bordo marcato",
+        "primary": "Colore principale",
+        "secondary": "Colore secondario",
+        "accent": "Colore d’accento",
+        "sidebarBg": "Sfondo del pannello laterale",
+        "sidebarText": "Testo del pannello laterale",
+        "sidebarHover": "Pannello laterale al passaggio del mouse",
+        "headerBg": "Sfondo dell’intestazione"
+      },
+      "actions": {
+        "save": "Salva e usa il tema personalizzato",
+        "reset": "Reimposta i colori",
+        "resetDone": "Colori personalizzati reimpostati: salva per applicare"
+      }
+    },
+    "whiteLabel": {
+      "title": "Personalizza il marchio dell’app dello staff",
+      "description": "Usa il tuo logo e i tuoi colori aziendali anche nell’app dello staff, non solo nel portale clienti. Sono gli stessi loghi usati dal portale clienti.",
+      "help": "Disattivato per impostazione predefinita. Quando è attivo, il pannello laterale dello staff mostra il tuo logo e i tuoi colori sostituiscono gli accenti del tema.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo per sfondi scuri"
+      }
+    },
+    "messages": {
+      "loadFailed": "Impossibile caricare le impostazioni di aspetto",
+      "saved": "Aspetto aggiornato",
+      "saveFailed": "Impossibile salvare le impostazioni di aspetto"
+    }
   },
   "mspLanguage": {
     "title": "Lingua dell’organizzazione",

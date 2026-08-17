@@ -30,6 +30,7 @@ export interface SettingsTabMeta {
 export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'general', labelKey: 'tabs.general', title: 'General' },
   { id: 'experimental-features', labelKey: 'tabs.experimentalFeatures', title: 'Experimental Features' },
+  { id: 'appearance', labelKey: 'tabs.appearance', title: 'Appearance', hasOwnRoute: true },
   { id: 'client-portal', labelKey: 'tabs.clientPortal', title: 'Client Portal', hasOwnRoute: true },
   { id: 'users', labelKey: 'tabs.users', title: 'Users', hasOwnRoute: true },
   { id: 'teams', labelKey: 'tabs.teams', title: 'Teams' },

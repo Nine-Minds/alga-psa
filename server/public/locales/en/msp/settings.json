@@ -9,6 +9,7 @@
   "tabs": {
     "general": "General",
     "experimentalFeatures": "Experimental Features",
+    "appearance": "Appearance",
     "clientPortal": "Client Portal",
     "users": "Users",
     "teams": "Teams",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
     "brandingUpdated": "Branding settings updated"
+  },
+  "appearance": {
+    "title": "Theme",
+    "description": "Pick the light/dark pair everyone in this organization sees, on both the staff app and the client portal. Each person still chooses light, dark or system for themselves.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "The default look: clean white surfaces by day, purple-tinted by night."
+      },
+      "slate": {
+        "label": "Slate",
+        "description": "Neutral grays with the original blue-slate dark theme."
+      },
+      "ocean": {
+        "label": "Ocean",
+        "description": "Cool blues over crisp, slightly cooled surfaces."
+      },
+      "forest": {
+        "label": "Forest",
+        "description": "Deep greens with a teal success color so status stays readable."
+      },
+      "sunset": {
+        "label": "Sunset",
+        "description": "Warm oranges over sand-tinted surfaces."
+      },
+      "highContrast": {
+        "label": "High contrast",
+        "description": "Maximum legibility: pure black and white surfaces with emphasized borders."
+      }
+    },
+    "custom": {
+      "title": "Custom theme",
+      "description": "Build your own light and dark variants. The full color scales are derived from these core colors, and contrast is checked before the theme can be saved.",
+      "lightMode": "Light variant",
+      "darkMode": "Dark variant",
+      "previewAlt": "Custom theme preview",
+      "contrastTitle": "These color pairs are below the WCAG AA minimum:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (needs {{required}}:1)",
+      "tokens": {
+        "background": "Page background",
+        "card": "Card surface",
+        "surface": "Raised surface",
+        "textPrimary": "Primary text",
+        "textSecondary": "Secondary text",
+        "textMuted": "Muted text",
+        "border": "Border",
+        "borderStrong": "Strong border",
+        "primary": "Primary color",
+        "secondary": "Secondary color",
+        "accent": "Accent color",
+        "sidebarBg": "Side panel background",
+        "sidebarText": "Side panel text",
+        "sidebarHover": "Side panel hover",
+        "headerBg": "Header background"
+      },
+      "actions": {
+        "save": "Save and use custom theme",
+        "reset": "Reset colors",
+        "resetDone": "Custom colors reset — save to apply"
+      }
+    },
+    "whiteLabel": {
+      "title": "White-label the staff app",
+      "description": "Put your own logo and brand colors on the staff-facing app as well as the client portal. These are the same logos the client portal uses.",
+      "help": "Off by default. When on, the staff sidebar shows your logo and your brand colors replace the theme accents.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo for dark backgrounds"
+      }
+    },
+    "messages": {
+      "loadFailed": "Failed to load appearance settings",
+      "saved": "Appearance updated",
+      "saveFailed": "Failed to save appearance settings"
+    }
   },
   "mspLanguage": {
     "title": "Organization Language",

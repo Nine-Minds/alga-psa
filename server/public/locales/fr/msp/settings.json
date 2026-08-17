@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Général",
     "experimentalFeatures": "Fonctionnalités expérimentales",
+    "appearance": "Apparence",
     "clientPortal": "Portail client",
     "users": "Utilisateurs",
     "teams": "Équipes",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Nom de votre entreprise",
     "brandingPreviewMode": "Mode de thème d'aperçu de la marque",
     "brandingUpdated": "Paramètres de marque mis à jour"
+  },
+  "appearance": {
+    "title": "Thème",
+    "description": "Choisissez la paire clair/sombre que tout le monde voit dans cette organisation, dans l’application du personnel comme dans le portail client. Chaque personne continue de choisir clair, sombre ou système pour elle-même.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "L’aspect par défaut : des surfaces blanches et nettes le jour, teintées de violet la nuit."
+      },
+      "slate": {
+        "label": "Ardoise",
+        "description": "Des gris neutres avec le thème sombre bleu ardoise d’origine."
+      },
+      "ocean": {
+        "label": "Océan",
+        "description": "Des bleus froids sur des surfaces nettes et légèrement froides."
+      },
+      "forest": {
+        "label": "Forêt",
+        "description": "Des verts profonds avec une couleur de succès turquoise pour que les statuts restent lisibles."
+      },
+      "sunset": {
+        "label": "Coucher de soleil",
+        "description": "Des oranges chauds sur des surfaces teintées de sable."
+      },
+      "highContrast": {
+        "label": "Contraste élevé",
+        "description": "Lisibilité maximale : surfaces noires et blanches pures avec bordures accentuées."
+      }
+    },
+    "custom": {
+      "title": "Thème personnalisé",
+      "description": "Créez vos propres variantes claire et sombre. Les gammes de couleurs complètes sont dérivées de ces couleurs de base et le contraste est vérifié avant l’enregistrement du thème.",
+      "lightMode": "Variante claire",
+      "darkMode": "Variante sombre",
+      "previewAlt": "Aperçu du thème personnalisé",
+      "contrastTitle": "Ces paires de couleurs sont en dessous du minimum WCAG AA :",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (minimum {{required}}:1)",
+      "tokens": {
+        "background": "Arrière-plan de la page",
+        "card": "Surface de carte",
+        "surface": "Surface surélevée",
+        "textPrimary": "Texte principal",
+        "textSecondary": "Texte secondaire",
+        "textMuted": "Texte atténué",
+        "border": "Bordure",
+        "borderStrong": "Bordure marquée",
+        "primary": "Couleur principale",
+        "secondary": "Couleur secondaire",
+        "accent": "Couleur d’accentuation",
+        "sidebarBg": "Arrière-plan du panneau latéral",
+        "sidebarText": "Texte du panneau latéral",
+        "sidebarHover": "Panneau latéral au survol",
+        "headerBg": "Arrière-plan de l’en-tête"
+      },
+      "actions": {
+        "save": "Enregistrer et utiliser le thème personnalisé",
+        "reset": "Réinitialiser les couleurs",
+        "resetDone": "Couleurs personnalisées réinitialisées — enregistrez pour appliquer"
+      }
+    },
+    "whiteLabel": {
+      "title": "Personnaliser la marque de l’application du personnel",
+      "description": "Utilisez votre propre logo et vos couleurs de marque dans l’application du personnel comme dans le portail client. Ce sont les mêmes logos que ceux du portail client.",
+      "help": "Désactivé par défaut. Une fois activé, le panneau latéral du personnel affiche votre logo et vos couleurs de marque remplacent les accents du thème.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo pour arrière-plans sombres"
+      }
+    },
+    "messages": {
+      "loadFailed": "Impossible de charger les paramètres d’apparence",
+      "saved": "Apparence mise à jour",
+      "saveFailed": "Impossible d’enregistrer les paramètres d’apparence"
+    }
   },
   "mspLanguage": {
     "title": "Langue de l’organisation",

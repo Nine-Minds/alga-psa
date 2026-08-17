@@ -9,6 +9,7 @@
   "tabs": {
     "general": "General",
     "experimentalFeatures": "Funciones experimentales",
+    "appearance": "Apariencia",
     "clientPortal": "Portal de clientes",
     "users": "Usuarios",
     "teams": "Equipos",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Nombre de su empresa",
     "brandingPreviewMode": "Modo de tema de vista previa de marca",
     "brandingUpdated": "Configuración de marca actualizada"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Elija el par claro/oscuro que verá todo el mundo en esta organización, tanto en la aplicación del personal como en el portal de clientes. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "El aspecto predeterminado: superficies blancas y limpias de día, con matiz violeta de noche."
+      },
+      "slate": {
+        "label": "Pizarra",
+        "description": "Grises neutros con el tema oscuro azul pizarra original."
+      },
+      "ocean": {
+        "label": "Océano",
+        "description": "Azules fríos sobre superficies nítidas y ligeramente frías."
+      },
+      "forest": {
+        "label": "Bosque",
+        "description": "Verdes profundos con un color de éxito turquesa para que el estado siga siendo legible."
+      },
+      "sunset": {
+        "label": "Atardecer",
+        "description": "Naranjas cálidos sobre superficies con matiz arena."
+      },
+      "highContrast": {
+        "label": "Alto contraste",
+        "description": "Máxima legibilidad: superficies blancas y negras puras con bordes acentuados."
+      }
+    },
+    "custom": {
+      "title": "Tema personalizado",
+      "description": "Cree sus propias variantes clara y oscura. Las escalas de color completas se derivan de estos colores base y el contraste se comprueba antes de poder guardar el tema.",
+      "lightMode": "Variante clara",
+      "darkMode": "Variante oscura",
+      "previewAlt": "Vista previa del tema personalizado",
+      "contrastTitle": "Estos pares de colores están por debajo del mínimo WCAG AA:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (se necesita {{required}}:1)",
+      "tokens": {
+        "background": "Fondo de página",
+        "card": "Superficie de tarjeta",
+        "surface": "Superficie elevada",
+        "textPrimary": "Texto principal",
+        "textSecondary": "Texto secundario",
+        "textMuted": "Texto atenuado",
+        "border": "Borde",
+        "borderStrong": "Borde intenso",
+        "primary": "Color principal",
+        "secondary": "Color secundario",
+        "accent": "Color de acento",
+        "sidebarBg": "Fondo del panel lateral",
+        "sidebarText": "Texto del panel lateral",
+        "sidebarHover": "Panel lateral al pasar el cursor",
+        "headerBg": "Fondo del encabezado"
+      },
+      "actions": {
+        "save": "Guardar y usar el tema personalizado",
+        "reset": "Restablecer colores",
+        "resetDone": "Colores personalizados restablecidos: guarde para aplicarlos"
+      }
+    },
+    "whiteLabel": {
+      "title": "Marca propia en la aplicación del personal",
+      "description": "Use su propio logotipo y sus colores de marca también en la aplicación del personal, no solo en el portal de clientes. Son los mismos logotipos que usa el portal de clientes.",
+      "help": "Desactivado de forma predeterminada. Cuando está activado, el panel lateral del personal muestra su logotipo y sus colores de marca sustituyen a los acentos del tema.",
+      "fields": {
+        "logo": "Logotipo",
+        "logoDark": "Logotipo para fondos oscuros"
+      }
+    },
+    "messages": {
+      "loadFailed": "No se pudieron cargar los ajustes de apariencia",
+      "saved": "Apariencia actualizada",
+      "saveFailed": "No se pudieron guardar los ajustes de apariencia"
+    }
   },
   "mspLanguage": {
     "title": "Idioma de la organización",

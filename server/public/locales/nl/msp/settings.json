@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Algemeen",
     "experimentalFeatures": "Experimentele functies",
+    "appearance": "Weergave",
     "clientPortal": "Klantenportaal",
     "users": "Gebruikers",
     "teams": "Teams",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
     "brandingUpdated": "Branding-instellingen bijgewerkt"
+  },
+  "appearance": {
+    "title": "Thema",
+    "description": "Kies het licht/donker-paar dat iedereen in deze organisatie ziet, zowel in de medewerkersapp als in het klantenportaal. Elke persoon kiest nog steeds zelf licht, donker of systeem.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Het standaarduiterlijk: heldere witte vlakken overdag, paars getint ’s nachts."
+      },
+      "slate": {
+        "label": "Leisteen",
+        "description": "Neutrale grijstinten met het oorspronkelijke blauwgrijze donkere thema."
+      },
+      "ocean": {
+        "label": "Oceaan",
+        "description": "Koele blauwtinten op heldere, licht gekoelde vlakken."
+      },
+      "forest": {
+        "label": "Bos",
+        "description": "Diepe groentinten met een turquoise succeskleur, zodat statussen leesbaar blijven."
+      },
+      "sunset": {
+        "label": "Zonsondergang",
+        "description": "Warme oranjetinten op zandkleurige vlakken."
+      },
+      "highContrast": {
+        "label": "Hoog contrast",
+        "description": "Maximale leesbaarheid: zuiver zwarte en witte vlakken met nadrukkelijke randen."
+      }
+    },
+    "custom": {
+      "title": "Eigen thema",
+      "description": "Maak uw eigen lichte en donkere varianten. De volledige kleurschalen worden afgeleid van deze basiskleuren en het contrast wordt gecontroleerd voordat het thema kan worden opgeslagen.",
+      "lightMode": "Lichte variant",
+      "darkMode": "Donkere variant",
+      "previewAlt": "Voorbeeld van het eigen thema",
+      "contrastTitle": "Deze kleurcombinaties liggen onder het WCAG AA-minimum:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (vereist {{required}}:1)",
+      "tokens": {
+        "background": "Paginaachtergrond",
+        "card": "Kaartvlak",
+        "surface": "Verhoogd vlak",
+        "textPrimary": "Primaire tekst",
+        "textSecondary": "Secundaire tekst",
+        "textMuted": "Gedempte tekst",
+        "border": "Rand",
+        "borderStrong": "Sterke rand",
+        "primary": "Primaire kleur",
+        "secondary": "Secundaire kleur",
+        "accent": "Accentkleur",
+        "sidebarBg": "Achtergrond zijpaneel",
+        "sidebarText": "Tekst zijpaneel",
+        "sidebarHover": "Zijpaneel bij aanwijzen",
+        "headerBg": "Achtergrond koptekst"
+      },
+      "actions": {
+        "save": "Eigen thema opslaan en gebruiken",
+        "reset": "Kleuren herstellen",
+        "resetDone": "Eigen kleuren hersteld — sla op om toe te passen"
+      }
+    },
+    "whiteLabel": {
+      "title": "Eigen merk voor de medewerkersapp",
+      "description": "Gebruik uw eigen logo en merkkleuren ook in de medewerkersapp, niet alleen in het klantenportaal. Dit zijn dezelfde logo’s als in het klantenportaal.",
+      "help": "Standaard uitgeschakeld. Wanneer ingeschakeld toont het zijpaneel uw logo en vervangen uw merkkleuren de themakleuren.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo voor donkere achtergronden"
+      }
+    },
+    "messages": {
+      "loadFailed": "Weergave-instellingen konden niet worden geladen",
+      "saved": "Weergave bijgewerkt",
+      "saveFailed": "Weergave-instellingen konden niet worden opgeslagen"
+    }
   },
   "mspLanguage": {
     "title": "Organisatietaal",

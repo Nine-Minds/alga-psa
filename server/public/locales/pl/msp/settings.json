@@ -11,6 +11,7 @@
   "tabs": {
     "general": "Ogólne",
     "experimentalFeatures": "Funkcje eksperymentalne",
+    "appearance": "Wygląd",
     "clientPortal": "Portal klienta",
     "users": "Użytkownicy",
     "teams": "Zespoły",
@@ -1296,6 +1297,81 @@
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
     "brandingUpdated": "Ustawienia marki zaktualizowane"
+  },
+  "appearance": {
+    "title": "Motyw",
+    "description": "Wybierz parę jasny/ciemny widoczną dla wszystkich w tej organizacji — zarówno w aplikacji zespołu, jak i w portalu klienta. Każda osoba nadal sama wybiera tryb jasny, ciemny lub systemowy.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Wygląd domyślny: czyste białe powierzchnie za dnia, fioletowy odcień nocą."
+      },
+      "slate": {
+        "label": "Łupek",
+        "description": "Neutralne szarości z pierwotnym niebiesko-szarym motywem ciemnym."
+      },
+      "ocean": {
+        "label": "Ocean",
+        "description": "Chłodne błękity na wyrazistych, lekko schłodzonych powierzchniach."
+      },
+      "forest": {
+        "label": "Las",
+        "description": "Głębokie zielenie z turkusowym kolorem powodzenia, aby statusy pozostały czytelne."
+      },
+      "sunset": {
+        "label": "Zachód słońca",
+        "description": "Ciepłe pomarańcze na powierzchniach w odcieniu piasku."
+      },
+      "highContrast": {
+        "label": "Wysoki kontrast",
+        "description": "Maksymalna czytelność: czysto czarne i białe powierzchnie z wyraźnymi obramowaniami."
+      }
+    },
+    "custom": {
+      "title": "Motyw własny",
+      "description": "Zbuduj własne warianty jasny i ciemny. Pełne skale kolorów są wyprowadzane z tych kolorów podstawowych, a kontrast jest sprawdzany przed zapisaniem motywu.",
+      "lightMode": "Wariant jasny",
+      "darkMode": "Wariant ciemny",
+      "previewAlt": "Podgląd motywu własnego",
+      "contrastTitle": "Te pary kolorów są poniżej minimum WCAG AA:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (wymagane {{required}}:1)",
+      "tokens": {
+        "background": "Tło strony",
+        "card": "Powierzchnia karty",
+        "surface": "Powierzchnia wyniesiona",
+        "textPrimary": "Tekst podstawowy",
+        "textSecondary": "Tekst pomocniczy",
+        "textMuted": "Tekst wyciszony",
+        "border": "Obramowanie",
+        "borderStrong": "Mocne obramowanie",
+        "primary": "Kolor podstawowy",
+        "secondary": "Kolor pomocniczy",
+        "accent": "Kolor akcentu",
+        "sidebarBg": "Tło panelu bocznego",
+        "sidebarText": "Tekst panelu bocznego",
+        "sidebarHover": "Panel boczny po najechaniu",
+        "headerBg": "Tło nagłówka"
+      },
+      "actions": {
+        "save": "Zapisz i użyj motywu własnego",
+        "reset": "Przywróć kolory",
+        "resetDone": "Kolory własne przywrócone — zapisz, aby zastosować"
+      }
+    },
+    "whiteLabel": {
+      "title": "Własna marka w aplikacji zespołu",
+      "description": "Użyj własnego logo i kolorów marki także w aplikacji zespołu, nie tylko w portalu klienta. To te same logo, których używa portal klienta.",
+      "help": "Domyślnie wyłączone. Po włączeniu panel boczny zespołu pokazuje Twoje logo, a kolory marki zastępują akcenty motywu.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo na ciemne tła"
+      }
+    },
+    "messages": {
+      "loadFailed": "Nie udało się wczytać ustawień wyglądu",
+      "saved": "Zaktualizowano wygląd",
+      "saveFailed": "Nie udało się zapisać ustawień wyglądu"
+    }
   },
   "mspLanguage": {
     "title": "Język organizacji",

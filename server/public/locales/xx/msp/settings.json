@@ -9,6 +9,7 @@
   "tabs": {
     "general": "11111",
     "experimentalFeatures": "11111",
+    "appearance": "11111",
     "clientPortal": "11111",
     "users": "11111",
     "teams": "11111",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "11111",
     "brandingPreviewMode": "11111",
     "brandingUpdated": "11111"
+  },
+  "appearance": {
+    "title": "11111",
+    "description": "11111",
+    "pairs": {
+      "alga": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "slate": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "ocean": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "forest": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "sunset": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "highContrast": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "custom": {
+      "title": "11111",
+      "description": "11111",
+      "lightMode": "11111",
+      "darkMode": "11111",
+      "previewAlt": "11111",
+      "contrastTitle": "11111",
+      "contrastIssue": "11111",
+      "tokens": {
+        "background": "11111",
+        "card": "11111",
+        "surface": "11111",
+        "textPrimary": "11111",
+        "textSecondary": "11111",
+        "textMuted": "11111",
+        "border": "11111",
+        "borderStrong": "11111",
+        "primary": "11111",
+        "secondary": "11111",
+        "accent": "11111",
+        "sidebarBg": "11111",
+        "sidebarText": "11111",
+        "sidebarHover": "11111",
+        "headerBg": "11111"
+      },
+      "actions": {
+        "save": "11111",
+        "reset": "11111",
+        "resetDone": "11111"
+      }
+    },
+    "whiteLabel": {
+      "title": "11111",
+      "description": "11111",
+      "help": "11111",
+      "fields": {
+        "logo": "11111",
+        "logoDark": "11111"
+      }
+    },
+    "messages": {
+      "loadFailed": "11111",
+      "saved": "11111",
+      "saveFailed": "11111"
+    }
   },
   "mspLanguage": {
     "title": "11111",

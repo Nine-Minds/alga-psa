@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Allgemein",
     "experimentalFeatures": "Experimentelle Funktionen",
+    "appearance": "Erscheinungsbild",
     "clientPortal": "Kundenportal",
     "users": "Benutzer",
     "teams": "Teams",
@@ -1290,6 +1291,81 @@
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
     "brandingUpdated": "Branding-Einstellungen aktualisiert"
+  },
+  "appearance": {
+    "title": "Design",
+    "description": "Wählen Sie das Hell-/Dunkel-Paar, das alle in dieser Organisation sehen – in der Mitarbeiter-App und im Kundenportal. Jede Person wählt weiterhin selbst zwischen Hell, Dunkel und System.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Das Standarddesign: klare weiße Flächen bei Tag, violett getönt bei Nacht."
+      },
+      "slate": {
+        "label": "Schiefer",
+        "description": "Neutrale Grautöne mit dem ursprünglichen blaugrauen Dunkeldesign."
+      },
+      "ocean": {
+        "label": "Ozean",
+        "description": "Kühle Blautöne auf klaren, leicht kühlen Flächen."
+      },
+      "forest": {
+        "label": "Wald",
+        "description": "Tiefe Grüntöne mit türkisfarbener Erfolgsfarbe, damit Status lesbar bleibt."
+      },
+      "sunset": {
+        "label": "Sonnenuntergang",
+        "description": "Warme Orangetöne auf sandfarbenen Flächen."
+      },
+      "highContrast": {
+        "label": "Hoher Kontrast",
+        "description": "Maximale Lesbarkeit: reine schwarze und weiße Flächen mit betonten Rahmen."
+      }
+    },
+    "custom": {
+      "title": "Eigenes Design",
+      "description": "Erstellen Sie eigene helle und dunkle Varianten. Die vollständigen Farbskalen werden aus diesen Grundfarben abgeleitet, und der Kontrast wird vor dem Speichern geprüft.",
+      "lightMode": "Helle Variante",
+      "darkMode": "Dunkle Variante",
+      "previewAlt": "Vorschau des eigenen Designs",
+      "contrastTitle": "Diese Farbpaare liegen unter dem WCAG-AA-Mindestwert:",
+      "contrastIssue": "{{pair}} — {{ratio}}:1 (erforderlich {{required}}:1)",
+      "tokens": {
+        "background": "Seitenhintergrund",
+        "card": "Kartenfläche",
+        "surface": "Erhöhte Fläche",
+        "textPrimary": "Primärer Text",
+        "textSecondary": "Sekundärer Text",
+        "textMuted": "Gedämpfter Text",
+        "border": "Rahmen",
+        "borderStrong": "Kräftiger Rahmen",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "accent": "Akzentfarbe",
+        "sidebarBg": "Hintergrund der Seitenleiste",
+        "sidebarText": "Text der Seitenleiste",
+        "sidebarHover": "Seitenleiste beim Überfahren",
+        "headerBg": "Kopfzeilenhintergrund"
+      },
+      "actions": {
+        "save": "Eigenes Design speichern und verwenden",
+        "reset": "Farben zurücksetzen",
+        "resetDone": "Eigene Farben zurückgesetzt – zum Übernehmen speichern"
+      }
+    },
+    "whiteLabel": {
+      "title": "Mitarbeiter-App mit eigener Marke",
+      "description": "Verwenden Sie Ihr eigenes Logo und Ihre Markenfarben auch in der Mitarbeiter-App, nicht nur im Kundenportal. Es sind dieselben Logos wie im Kundenportal.",
+      "help": "Standardmäßig deaktiviert. Wenn aktiviert, zeigt die Seitenleiste Ihr Logo, und Ihre Markenfarben ersetzen die Designakzente.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo für dunkle Hintergründe"
+      }
+    },
+    "messages": {
+      "loadFailed": "Einstellungen zum Erscheinungsbild konnten nicht geladen werden",
+      "saved": "Erscheinungsbild aktualisiert",
+      "saveFailed": "Einstellungen zum Erscheinungsbild konnten nicht gespeichert werden"
+    }
   },
   "mspLanguage": {
     "title": "Organisationssprache",
