@@ -62,6 +62,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/billing',
       '/msp/projects',
       '/msp/assets',
+      '/msp/credentials',
       '/msp/documents',
       '/msp/jobs',
       '/msp/user-activities',

@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Blocs d'heures",
+    "description": "Blocs d'heures prépayés à achat unique. Le temps non couvert par une ligne de contrat est décompté de ces blocs, en commençant par l'expiration la plus proche.",
+    "availableBalance": "{{hours}} h disponibles",
+    "noBlocks": "Aucun bloc d'heures pour l'instant. Vendez un bloc à ce client ou accordez des heures offertes.",
+    "loadFailed": "Échec du chargement des blocs d'heures. Réessayez."
+  },
+  "actions": {
+    "sell": "Vendre un bloc",
+    "grant": "Accorder un bloc",
+    "adjust": "Ajuster les heures",
+    "editExpiration": "Modifier l'expiration",
+    "expire": "Faire expirer",
+    "void": "Annuler le bloc",
+    "viewDetails": "Voir les détails",
+    "openMenu": "Ouvrir le menu",
+    "close": "Fermer",
+    "submit": "Enregistrer",
+    "cancel": "Annuler",
+    "confirmVoid": "Annuler le bloc",
+    "viewInvoice": "Voir la facture"
+  },
+  "columns": {
+    "block": "Bloc",
+    "service": "Vendu comme",
+    "scope": "Périmètre",
+    "remaining": "Restant",
+    "value": "Valeur",
+    "status": "Statut",
+    "expiration": "Expiration",
+    "source": "Source",
+    "actions": "Actions"
+  },
+  "status": {
+    "pending": "En attente",
+    "active": "Actif",
+    "expired": "Expiré",
+    "voided": "Annulé",
+    "never": "Jamais",
+    "allLabor": "Toute la main-d'œuvre",
+    "expiringSoon": "Expire dans {{count}} jours"
+  },
+  "sell": {
+    "title": "Vendre un bloc d'heures",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Sélectionnez un service",
+    "rateLabel": "Taux horaire ({{currency}})",
+    "hoursLabel": "Heures",
+    "hoursPlaceholder": "par ex. 10",
+    "expirationLabel": "Expiration (facultatif)",
+    "scopeLabel": "Périmètre — services couverts par ce bloc (vide = toute la main-d'œuvre)",
+    "notesLabel": "Notes (facultatif)",
+    "totalLabel": "Total",
+    "submit": "Créer un brouillon de facture",
+    "submitted": "Brouillon de facture {{invoiceNumber}} créé. Finalisez-le pour activer le bloc.",
+    "invoiceError": "Impossible de créer la facture d'achat du bloc."
+  },
+  "grant": {
+    "title": "Accorder un bloc d'heures",
+    "reasonLabel": "Motif",
+    "reasonPlaceholder": "Pourquoi ces heures sont-elles accordées ?",
+    "submit": "Accorder le bloc",
+    "granted": "Bloc d'heures accordé.",
+    "error": "Impossible d'accorder le bloc d'heures."
+  },
+  "adjust": {
+    "title": "Ajuster les heures restantes",
+    "blockLabel": "Bloc",
+    "currentRemaining": "Actuellement {{hours}} h restantes",
+    "deltaLabel": "Variation d'heures (positive pour ajouter, négative pour retirer)",
+    "reasonLabel": "Motif",
+    "reasonPlaceholder": "Obligatoire",
+    "submit": "Ajuster",
+    "adjusted": "Bloc d'heures ajusté.",
+    "error": "Impossible d'ajuster le bloc d'heures."
+  },
+  "expiration": {
+    "title": "Modifier l'expiration",
+    "label": "Date d'expiration",
+    "clear": "Sans expiration",
+    "submit": "Enregistrer l'expiration",
+    "saved": "Expiration mise à jour.",
+    "error": "Impossible de mettre à jour l'expiration."
+  },
+  "void": {
+    "title": "Annuler le bloc d'heures",
+    "confirm": "Annuler ce bloc ? Cette action est irréversible.",
+    "reasonLabel": "Motif",
+    "reasonPlaceholder": "Obligatoire",
+    "submit": "Annuler le bloc",
+    "voided": "Bloc d'heures annulé.",
+    "error": "Impossible d'annuler le bloc d'heures."
+  },
+  "detail": {
+    "title": "Détails du bloc d'heures",
+    "purchased": "Acheté le {{date}}",
+    "granted": "Accordé le {{date}}",
+    "pending": "En attente — finalisez le brouillon de facture pour activer le bloc",
+    "total": "Total",
+    "remaining": "Restant",
+    "used": "Utilisé",
+    "burnHistory": "Historique de consommation",
+    "noBurn": "Aucun temps n'a encore été décompté de ce bloc.",
+    "audit": "Journal d'audit",
+    "noAudit": "Aucune entrée d'audit.",
+    "sourceInvoice": "Facture d'origine",
+    "invoiceDeleted": "Facture (supprimée)",
+    "directGrant": "Octroi direct",
+    "expires": "Expire le {{date}}",
+    "allLabor": "Toute la main-d'œuvre",
+    "scopeLabel": "Périmètre",
+    "adjusted": "Ajusté",
+    "purchaseLabel": "Acheté",
+    "grantLabel": "Accordé",
+    "expirationChanged": "Expiration modifiée",
+    "manuallyExpired": "Expiré manuellement",
+    "autoExpired": "Expiré automatiquement",
+    "voidedLabel": "Annulé",
+    "purchaseReversed": "Achat annulé (facture définalisée)",
+    "unknownUser": "Système"
+  }
+}

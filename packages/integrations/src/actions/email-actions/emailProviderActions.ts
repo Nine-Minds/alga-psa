@@ -937,6 +937,15 @@ export const upsertEmailProvider = withAuth(async (
           provider.status = 'error';
         }
 
+        // A failed auth-failure recovery leaves the mailbox ingestion-paused
+        // even when the rest of the setup succeeded; never report connected.
+        if (gmailResult.authFailureRecovery === 'failed') {
+          provider.status = 'error';
+          if (!result.setupError) {
+            result.setupError = gmailResult.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+          }
+        }
+
         // Add any warnings
         if (gmailResult.warnings && gmailResult.warnings.length > 0) {
           result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
@@ -1061,6 +1070,46 @@ export const updateEmailProvider = withAuth(async (
 
     result.provider = provider;
 
+    // Auth-pause recovery below mutates the provider row after `provider`
+    // above was assembled (pause cleared + counters reset, or status flipped
+    // to error with the pause left intact). The returned provider must
+    // reflect that persisted post-recovery state — returning the stale
+    // snapshot keeps the settings banner paused after a successful
+    // reconnect.
+    const refreshProviderAfterRecovery = async (): Promise<void> => {
+      try {
+        const { knex: refreshKnex } = await createTenantKnex(tenant);
+        const [freshRow] = await tenantDb(refreshKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .select([
+            ...PROVIDER_COLUMNS,
+            'inbound_auth_failure_count as inboundAuthFailureCount',
+            'inbound_auth_failure_last_at as inboundAuthFailureLastAt',
+            'inbound_auth_failure_code as inboundAuthFailureCode',
+          ]) as unknown as ProviderRow[];
+        if (freshRow) {
+          // Transport setup above may stamp lastSyncAt in memory without
+          // persisting it (initializeProviderWebhook does not write
+          // last_sync_at); keep whichever timestamp is fresher.
+          if (
+            provider.lastSyncAt &&
+            (!freshRow.lastSyncAt || new Date(provider.lastSyncAt) > new Date(freshRow.lastSyncAt))
+          ) {
+            freshRow.lastSyncAt = provider.lastSyncAt;
+          }
+          result.provider = { ...provider, ...freshRow };
+        }
+      } catch (error) {
+        // The save/recovery outcome stands; the caller just gets the
+        // pre-re-read snapshot, as before this refresh existed.
+        console.error('Failed to re-read provider after auth-failure recovery:', error);
+      }
+    };
+
+    let googleRecoveryAttempted = false;
+    let googleAutomationRan = false;
+
     if (!skipAutomation && data.providerType === 'google' && provider.googleConfig) {
       const secretProvider = await getSecretProviderInstance();
       const effectiveProjectId =
@@ -1068,6 +1117,7 @@ export const updateEmailProvider = withAuth(async (
         data.googleConfig?.project_id;
 
       if (effectiveProjectId) {
+        googleAutomationRan = true;
         const gmailResult = await configureGmailProvider({
           tenant,
           providerId: provider.id,
@@ -1084,10 +1134,68 @@ export const updateEmailProvider = withAuth(async (
           provider.status = 'error';
         }
 
+        // A failed auth-failure recovery leaves the mailbox ingestion-paused
+        // even when the rest of the setup succeeded; never report connected.
+        if (gmailResult.authFailureRecovery === 'failed') {
+          provider.status = 'error';
+          if (!result.setupError) {
+            result.setupError = gmailResult.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+          }
+        }
+
+        // The recovery (resumed or failed) rewrote the provider row; the
+        // returned provider must not carry the pre-recovery pause state.
+        if (gmailResult.authFailureRecovery !== undefined) {
+          googleRecoveryAttempted = true;
+        }
+
         // Add any warnings
         if (gmailResult.warnings && gmailResult.warnings.length > 0) {
           result.setupWarnings = [...(result.setupWarnings || []), ...gmailResult.warnings];
         }
+      }
+    }
+
+    if (googleRecoveryAttempted) {
+      await refreshProviderAfterRecovery();
+    }
+
+    if (data.providerType === 'google' && !googleAutomationRan) {
+      // A save of an auth_failure-paused Google provider that did not run
+      // the transport+recovery path above (skipAutomation=true, no Google
+      // config in the payload, or no resolvable project id) must never
+      // return success while the pause persists. Mirrors the IMAP and
+      // Microsoft branches: skipAutomation skips transport automation only
+      // and must not gate auth-pause recovery — recovery validates the
+      // credentials and re-establishes delivery itself.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            {}
+          );
+          if (!recovery.resumed) {
+            result.setupError = recovery.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+            provider.status = 'error';
+          }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
+        }
+      } catch (error) {
+        console.error('Google auth-failure recovery after credential update failed:', error);
+        result.setupError = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+        provider.status = 'error';
       }
     }
 
@@ -1105,6 +1213,102 @@ export const updateEmailProvider = withAuth(async (
           error,
           'Failed to initialize Microsoft webhook. Check Microsoft 365 settings and try again.'
         );
+        provider.status = 'error';
+      }
+    }
+
+    if (data.providerType === 'microsoft') {
+      // An edited Microsoft configuration (e.g. a renewed client secret — the
+      // EQUIT scenario) is a reconnect path for a provider auto-paused on
+      // repeated auth failures. When the webhook initialization above ran, it
+      // already re-established delivery; recovery then reconciles the paused
+      // interval and only then clears the pause. Without this, the provider
+      // stays paused while its freshly registered webhook feeds gated jobs.
+      // This runs even when skipAutomation skipped the webhook setup above:
+      // skipping transport automation must not skip lifecycle recovery, but
+      // the credentialsValidated/deliveryEstablished hints may only be
+      // claimed when that setup actually ran — otherwise recovery validates
+      // the credentials itself.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const webhookInitSucceeded = !skipAutomation && !result.setupError;
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            // When the webhook initialization above succeeded, the freshly
+            // saved credentials are proven and delivery is re-established;
+            // otherwise recovery re-validates the credentials itself and
+            // refuses to clear the pause if they still fail.
+            { credentialsValidated: webhookInitSucceeded, deliveryEstablished: webhookInitSucceeded }
+          );
+          if (!recovery.resumed) {
+            result.setupError = microsoft365ActionErrorMessage(
+              recovery.error,
+              'Microsoft reconnection failed. Verify the client secret and try again.'
+            );
+            provider.status = 'error';
+          }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
+        }
+      } catch (error) {
+        console.error('Microsoft auth-failure recovery after credential update failed:', error);
+        result.setupError = microsoft365ActionErrorMessage(
+          error,
+          'Microsoft reconnection failed. Verify the client secret and try again.'
+        );
+        provider.status = 'error';
+      }
+    }
+
+    if (data.providerType === 'imap') {
+      // Edited IMAP credentials are the reconnect path for a provider
+      // auto-paused on repeated auth failures. Recovery validates the new
+      // credentials while still paused, clears UID/folder cursors so the
+      // poller rescans the paused interval, and only then clears the pause.
+      // This deliberately runs regardless of skipAutomation: that flag means
+      // "don't touch transport automation (Pub/Sub/webhooks)" — IMAP has none
+      // in this action, and credential saves are the only reconnect surface an
+      // auth-paused IMAP provider has. Gating recovery on the flag left the
+      // Reconnect drawer's save (which passes skipAutomation=true) silently
+      // keeping the provider paused after a successful credential save.
+      try {
+        const { knex: pausedKnex } = await createTenantKnex(tenant);
+        const pausedProvider = await tenantDb(pausedKnex, tenant)
+          .table('email_providers')
+          .where({ id: provider.id })
+          .first('inbound_paused_at', 'inbound_pause_reason');
+        if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+          const { EmailProviderLifecycleService } = await import(
+            '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+          );
+          const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+            provider.id,
+            tenant,
+            {}
+          );
+          if (!recovery.resumed) {
+            result.setupError = recovery.error || 'IMAP reconnection failed. Check the credentials and try again.';
+            provider.status = 'error';
+          }
+          // Recovery rewrote the provider row (pause cleared on success;
+          // status/error_message flipped on failure) — re-read it so the
+          // returned provider reflects the persisted post-recovery state.
+          await refreshProviderAfterRecovery();
+        }
+      } catch (error) {
+        console.error('IMAP auth-failure recovery after credential update failed:', error);
+        result.setupError = 'IMAP reconnection failed. Check the credentials and try again.';
         provider.status = 'error';
       }
     }
@@ -1377,6 +1581,35 @@ export const testEmailProviderConnection = withAuth(async (
         error_message: null,
         updated_at: knex.fn.now()
       });
+
+    // A successful connection test validates the current credentials: for a
+    // provider auto-paused on repeated auth failures this is a legitimate
+    // reconnect trigger. Recovery re-establishes delivery, reconciles the
+    // paused interval, and only then clears the pause.
+    if (provider.inbound_paused_at && provider.inbound_pause_reason === 'auth_failure') {
+      try {
+        const { EmailProviderLifecycleService } = await import(
+          '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+        );
+        const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+          providerId,
+          tenant,
+          { credentialsValidated: true }
+        );
+        if (!recovery.resumed) {
+          return emailProviderOperationError(
+            recovery.error || 'Reconnection failed. Try the provider-specific reconnect flow.',
+            'connection_failed'
+          );
+        }
+      } catch (error) {
+        console.error('Auth-failure recovery after successful connection test failed:', error);
+        return emailProviderOperationError(
+          'Reconnection failed. Try the provider-specific reconnect flow.',
+          'connection_failed'
+        );
+      }
+    }
 
     return { success: true };
   } catch (error) {

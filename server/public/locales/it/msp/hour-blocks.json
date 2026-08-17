@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Blocchi ore",
+    "description": "Blocchi di ore prepagate una tantum. Il tempo non coperto da una linea contrattuale viene scalato da questi blocchi, a partire da quello con la scadenza più vicina.",
+    "availableBalance": "{{hours}} ore disponibili",
+    "noBlocks": "Ancora nessun blocco ore. Vendi un blocco a questo cliente o concedi ore in omaggio.",
+    "loadFailed": "Impossibile caricare i blocchi ore. Riprova."
+  },
+  "actions": {
+    "sell": "Vendi blocco",
+    "grant": "Concedi blocco",
+    "adjust": "Rettifica ore",
+    "editExpiration": "Modifica scadenza",
+    "expire": "Fai scadere",
+    "void": "Annulla blocco",
+    "viewDetails": "Visualizza dettagli",
+    "openMenu": "Apri il menu",
+    "close": "Chiudi",
+    "submit": "Salva",
+    "cancel": "Annulla",
+    "confirmVoid": "Annulla blocco",
+    "viewInvoice": "Visualizza fattura"
+  },
+  "columns": {
+    "block": "Blocco",
+    "service": "Fatturato come",
+    "scope": "Ambito",
+    "remaining": "Rimanenti",
+    "value": "Valore",
+    "status": "Stato",
+    "expiration": "Scadenza",
+    "source": "Origine",
+    "actions": "Azioni"
+  },
+  "status": {
+    "pending": "In sospeso",
+    "active": "Attivo",
+    "expired": "Scaduto",
+    "voided": "Annullato",
+    "never": "Mai",
+    "allLabor": "Tutta la manodopera",
+    "expiringSoon": "Scade tra {{count}} giorni"
+  },
+  "sell": {
+    "title": "Vendi blocco ore",
+    "serviceLabel": "Servizio",
+    "servicePlaceholder": "Seleziona un servizio",
+    "rateLabel": "Tariffa oraria ({{currency}})",
+    "hoursLabel": "Ore",
+    "hoursPlaceholder": "es. 10",
+    "expirationLabel": "Scadenza (facoltativa)",
+    "scopeLabel": "Ambito — servizi coperti da questo blocco (vuoto = tutta la manodopera)",
+    "notesLabel": "Note (facoltative)",
+    "totalLabel": "Totale",
+    "submit": "Crea bozza di fattura",
+    "submitted": "Bozza di fattura {{invoiceNumber}} creata. Finalizzala per attivare il blocco.",
+    "invoiceError": "Impossibile creare la fattura di acquisto del blocco."
+  },
+  "grant": {
+    "title": "Concedi blocco ore",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Perché vengono concesse queste ore?",
+    "submit": "Concedi blocco",
+    "granted": "Blocco ore concesso.",
+    "error": "Impossibile concedere il blocco ore."
+  },
+  "adjust": {
+    "title": "Rettifica ore rimanenti",
+    "blockLabel": "Blocco",
+    "currentRemaining": "Attualmente {{hours}} ore rimanenti",
+    "deltaLabel": "Variazione delle ore (positiva aggiunge, negativa rimuove)",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obbligatorio",
+    "submit": "Rettifica",
+    "adjusted": "Blocco ore rettificato.",
+    "error": "Impossibile rettificare il blocco ore."
+  },
+  "expiration": {
+    "title": "Modifica scadenza",
+    "label": "Data di scadenza",
+    "clear": "Nessuna scadenza",
+    "submit": "Salva scadenza",
+    "saved": "Scadenza aggiornata.",
+    "error": "Impossibile aggiornare la scadenza."
+  },
+  "void": {
+    "title": "Annulla blocco ore",
+    "confirm": "Annullare questo blocco? L'azione è irreversibile.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obbligatorio",
+    "submit": "Annulla blocco",
+    "voided": "Blocco ore annullato.",
+    "error": "Impossibile annullare il blocco ore."
+  },
+  "detail": {
+    "title": "Dettagli del blocco ore",
+    "purchased": "Acquistato il {{date}}",
+    "granted": "Concesso il {{date}}",
+    "pending": "In sospeso — finalizza la bozza di fattura per attivarlo",
+    "total": "Totale",
+    "remaining": "Rimanenti",
+    "used": "Utilizzate",
+    "burnHistory": "Cronologia dei consumi",
+    "noBurn": "Nessun tempo è ancora stato scalato da questo blocco.",
+    "audit": "Registro di audit",
+    "noAudit": "Nessuna voce di audit.",
+    "sourceInvoice": "Fattura di origine",
+    "invoiceDeleted": "Fattura (eliminata)",
+    "directGrant": "Concessione diretta",
+    "expires": "Scade il {{date}}",
+    "allLabor": "Tutta la manodopera",
+    "scopeLabel": "Ambito",
+    "adjusted": "Rettificato",
+    "purchaseLabel": "Acquistato",
+    "grantLabel": "Concesso",
+    "expirationChanged": "Scadenza modificata",
+    "manuallyExpired": "Scaduto manualmente",
+    "autoExpired": "Scaduto automaticamente",
+    "voidedLabel": "Annullato",
+    "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
+    "unknownUser": "Sistema"
+  }
+}

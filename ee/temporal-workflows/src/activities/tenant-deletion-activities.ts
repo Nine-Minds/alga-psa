@@ -275,11 +275,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
+  // Low-balance alert ledgers: deliveries FK to alerts, alerts FK to clients,
+  // so deliveries delete before alerts and both before client_billing_settings.
+  'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
+  'contract_line_bucket_services', 'contract_line_buckets',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -296,6 +300,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
@@ -347,6 +352,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
   // Document associations must come before documents
   'document_associations',
+
+  // Credentials (entity passwords): associations and access grants reference
+  // credentials with CASCADE, so they must be deleted before credentials.
+  // credentials itself references clients (client_id) and users (created_by),
+  // so it must be deleted before both (clients at LEVEL 4, users LAST).
+  'credential_associations', 'credential_access_grants', 'credentials',
 
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',

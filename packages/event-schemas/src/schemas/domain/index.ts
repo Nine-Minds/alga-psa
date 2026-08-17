@@ -13,3 +13,4 @@ export * from './emailWorkflowSchemas';
 export * from './inventoryEventSchemas';
 export * from './commonEventPayloadSchemas';
 export * from './workflowEventPayloadSchemas';
+export * from './inboundEmailEventSchemas';

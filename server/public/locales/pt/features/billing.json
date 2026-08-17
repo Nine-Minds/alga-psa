@@ -377,5 +377,14 @@
   "dashboard": {
     "prepaidHours": "Horas pré-pagas",
     "viewBilling": "Ver faturação"
+  },
+  "hourBlocks": {
+    "title": "Blocos de horas pré-pagos",
+    "blockLabel": "Bloco de {{service}}",
+    "expiringSoon": "Expira em {{days}}d",
+    "hoursLeft": "{{hours}}h restantes",
+    "expires": "Expira em {{date}}",
+    "recentBurn": "Uso recente",
+    "timeEntry": "Lançamento de horas"
   }
 }

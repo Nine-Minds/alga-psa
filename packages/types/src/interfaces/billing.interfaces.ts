@@ -127,7 +127,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usageId: string; // Added field for source usage record ID
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block';
 export interface IRecurringChargeDetailPeriod {
   servicePeriodStart?: ISO8601String | null;
   servicePeriodEnd?: ISO8601String | null;
@@ -498,7 +498,8 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   hoursUsed: number;
   overageHours: number;
   overageRate: number;
-  service_catalog_id: string;
+  /** Null when the pool is dormant — the pool identity lives on config_id. */
+  service_catalog_id: string | null;
   isUsageBucket?: boolean;
   unitOfMeasure?: string | null;
   unitsUsed?: number;
@@ -515,6 +516,28 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   total: number;
   material_source_type?: 'ticket' | 'project';
   material_source_id?: string;
+}
+
+/**
+ * Zero-dollar informational line describing prepaid-hour-block consumption on
+ * an invoice. `total` is always 0 — the hours were prepaid; the line exists so
+ * covered time is marked invoiced and the client sees what their block paid
+ * for. `coveredEntryIds` lets invoiceService mark fully-covered entries
+ * invoiced and link invoice_time_entries rows.
+ */
+export interface IHourBlockCharge extends IBillingCharge, TenantEntity {
+  type: 'hour_block';
+  block_id: string;
+  serviceId: string;
+  serviceName: string;
+  /** Hours consumed from this block within the invoice window. */
+  hoursUsed: number;
+  /** Hours remaining on the block after the window. */
+  hoursRemaining: number;
+  /** Time-entry ids whose billable duration is fully covered by this block. */
+  coveredEntryIds: string[];
+  rate: 0;
+  total: 0;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {

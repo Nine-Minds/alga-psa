@@ -68,6 +68,15 @@ export function clearHuduReferenceCache(): void {
   referenceCache.clear();
 }
 
+/** Drop the cached list for one (tenant, company, resource) after a write. */
+export function clearCachedHuduList(
+  tenant: string,
+  huduCompanyId: string,
+  resource: HuduReferenceResource
+): void {
+  referenceCache.delete(cacheKey(tenant, huduCompanyId, resource));
+}
+
 /**
  * Drop every cached list for one tenant (keys are `${tenant}:…`-prefixed).
  * Called on disconnect so a later reconnect with a different key can never be

@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "Klantcontract-ID: {{id}}",
+      "creditDrawdownOptOut": "Uitsluiten van kredietopname",
       "empty": "Dit contract is nog niet aan een klant toegewezen.",
       "endDate": "Einddatum",
       "endDateLabel": "Einddatum toewijzing",
@@ -2329,5 +2330,47 @@
       "description": "De contractsimulator is beschikbaar in AlgaPSA Pro.",
       "title": "Pro-functie"
     }
+  },
+  "bucketPools": {
+    "heading": "Urenbundels",
+    "actions": {
+      "addPool": "Bundel toevoegen",
+      "create": "Bundel aanmaken",
+      "cancel": "Annuleren",
+      "remove": "Verwijderen",
+      "applyRule": "Regel buiten kantooruren toepassen"
+    },
+    "loading": "Urenbundels laden…",
+    "empty": "Geen urenbundels op deze contractregel. Voeg een bundel toe om vooruitbetaalde uren op te nemen.",
+    "labels": {
+      "catchAll": "Alle services op deze contractregel",
+      "pool": "Urenbundel",
+      "scopeCatchAll": "Dekt alle services op de contractregel (aangesloten services overschrijven de vermenigvuldigingsfactor)",
+      "scopeMembers": "Alleen aangesloten services",
+      "totalHours": "Totaal aantal uren",
+      "overageRate": "Overschrijdingstarief ($/uur)",
+      "rollover": "Overdracht toestaan",
+      "afterHours": "Verbruiksfactor buiten kantooruren",
+      "afterHoursMultiplier": "Factor (bijv. 1,5)",
+      "schedule": "Kantoorurenplanning",
+      "default": "standaard",
+      "members": "Aangesloten services",
+      "multiplier": "×",
+      "noMembers": "Geen services aangesloten.",
+      "selectService": "Selecteer een service…",
+      "poolName": "Bundelnaam (optioneel)",
+      "poolNamePlaceholder": "bijv. Standaarduren",
+      "coversAll": "Dekt alle services op deze contractregel"
+    },
+    "badges": {
+      "dormant": "geen services aangesloten — er wordt niets uit deze bundel verbruikt"
+    },
+    "errors": {
+      "catchAllExists": "Deze contractregel heeft al een algemene bundel."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Urenbundels voor deze regel",
+    "empty": "Nog geen urenbundels op deze regel. Voeg een bundel toe om vooruitbetaalde uren op te nemen."
   }
 }

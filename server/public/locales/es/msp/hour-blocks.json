@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Bloques de horas",
+    "description": "Bloques de horas de prepago de compra única. El tiempo que no cubre una línea de contrato se descuenta de estos bloques por fecha de vencimiento (primero los más antiguos).",
+    "availableBalance": "{{hours}} h disponibles",
+    "noBlocks": "Aún no hay bloques de horas. Venda un bloque a este cliente u otorgue horas de cortesía.",
+    "loadFailed": "No se pudieron cargar los bloques de horas. Inténtelo de nuevo."
+  },
+  "actions": {
+    "sell": "Vender bloque",
+    "grant": "Otorgar bloque",
+    "adjust": "Ajustar horas",
+    "editExpiration": "Editar vencimiento",
+    "expire": "Marcar como vencido",
+    "void": "Anular",
+    "viewDetails": "Ver detalles",
+    "openMenu": "Abrir menú",
+    "close": "Cerrar",
+    "submit": "Guardar",
+    "cancel": "Cancelar",
+    "confirmVoid": "Anular bloque",
+    "viewInvoice": "Ver factura"
+  },
+  "columns": {
+    "block": "Bloque",
+    "service": "Vendido como",
+    "scope": "Cobertura",
+    "remaining": "Restante",
+    "value": "Valor",
+    "status": "Estado",
+    "expiration": "Vencimiento",
+    "source": "Origen",
+    "actions": "Acciones"
+  },
+  "status": {
+    "pending": "Pendiente",
+    "active": "Activo",
+    "expired": "Vencido",
+    "voided": "Anulado",
+    "never": "Nunca",
+    "allLabor": "Toda la mano de obra",
+    "expiringSoon": "Vence en {{count}} días"
+  },
+  "sell": {
+    "title": "Vender bloque de horas",
+    "serviceLabel": "Servicio",
+    "servicePlaceholder": "Seleccione un servicio",
+    "rateLabel": "Tarifa por hora ({{currency}})",
+    "hoursLabel": "Horas",
+    "hoursPlaceholder": "p. ej., 10",
+    "expirationLabel": "Vencimiento (opcional)",
+    "scopeLabel": "Cobertura: servicios que cubre este bloque (vacío = toda la mano de obra)",
+    "notesLabel": "Notas (opcional)",
+    "totalLabel": "Total",
+    "submit": "Crear borrador de factura",
+    "submitted": "Se creó el borrador de factura {{invoiceNumber}}. Finalícelo para activar el bloque.",
+    "invoiceError": "No se pudo crear la factura de compra del bloque."
+  },
+  "grant": {
+    "title": "Otorgar bloque de horas",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "¿Por qué se otorgan estas horas?",
+    "submit": "Otorgar bloque",
+    "granted": "Bloque de horas otorgado.",
+    "error": "No se pudo otorgar el bloque de horas."
+  },
+  "adjust": {
+    "title": "Ajustar horas restantes",
+    "blockLabel": "Bloque",
+    "currentRemaining": "Actualmente quedan {{hours}} h",
+    "deltaLabel": "Cambio en horas (un valor positivo agrega, uno negativo quita)",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obligatorio",
+    "submit": "Ajustar",
+    "adjusted": "Bloque de horas ajustado.",
+    "error": "No se pudo ajustar el bloque de horas."
+  },
+  "expiration": {
+    "title": "Editar vencimiento",
+    "label": "Fecha de vencimiento",
+    "clear": "Sin vencimiento",
+    "submit": "Guardar vencimiento",
+    "saved": "Vencimiento actualizado.",
+    "error": "No se pudo actualizar el vencimiento."
+  },
+  "void": {
+    "title": "Anular bloque de horas",
+    "confirm": "¿Anular este bloque? Esta acción no se puede deshacer.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obligatorio",
+    "submit": "Anular bloque",
+    "voided": "Bloque de horas anulado.",
+    "error": "No se pudo anular el bloque de horas."
+  },
+  "detail": {
+    "title": "Detalles del bloque de horas",
+    "purchased": "Comprado el {{date}}",
+    "granted": "Otorgado el {{date}}",
+    "pending": "Pendiente: finalice el borrador de factura para activarlo",
+    "total": "Total",
+    "remaining": "Restante",
+    "used": "Utilizado",
+    "burnHistory": "Historial de consumo",
+    "noBurn": "Aún no se ha descontado tiempo de este bloque.",
+    "audit": "Registro de auditoría",
+    "noAudit": "Sin entradas de auditoría.",
+    "sourceInvoice": "Factura de origen",
+    "invoiceDeleted": "Factura (eliminada)",
+    "directGrant": "Otorgamiento directo",
+    "expires": "Vence el {{date}}",
+    "allLabor": "Toda la mano de obra",
+    "scopeLabel": "Cobertura",
+    "adjusted": "Ajustado",
+    "purchaseLabel": "Comprado",
+    "grantLabel": "Otorgado",
+    "expirationChanged": "Vencimiento modificado",
+    "manuallyExpired": "Vencido manualmente",
+    "autoExpired": "Vencido automáticamente",
+    "voidedLabel": "Anulado",
+    "purchaseReversed": "Compra revertida (factura desfinalizada)",
+    "unknownUser": "Sistema"
+  }
+}

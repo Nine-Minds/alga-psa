@@ -377,5 +377,14 @@
   "dashboard": {
     "prepaidHours": "11111",
     "viewBilling": "11111"
+  },
+  "hourBlocks": {
+    "title": "11111",
+    "blockLabel": "11111 {{service}} 11111",
+    "expiringSoon": "11111 {{days}} 11111",
+    "hoursLeft": "11111 {{hours}} 11111",
+    "expires": "11111 {{date}} 11111",
+    "recentBurn": "11111",
+    "timeEntry": "11111"
   }
 }

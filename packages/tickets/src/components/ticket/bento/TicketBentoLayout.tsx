@@ -26,6 +26,7 @@ import type {
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import TicketChecklistSection from './../TicketChecklistSection';
+import { TicketCredentialsSection } from './../TicketCredentialsSection';
 import { DocumentsTile } from './DocumentsTile';
 import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
@@ -812,6 +813,10 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         allowBlockDocuments={!props.disableAttachmentLinking}
         onDocumentCreated={props.onDocumentCreated}
       />
+
+      {/* Flag-gated; adapts to the bento variant via useContentCardVariant.
+          Mirrors the Entry view's placement after Documents. */}
+      <TicketCredentialsSection ticketId={ticketId} clientId={ticket.client_id ?? null} />
     </div>
   );
 

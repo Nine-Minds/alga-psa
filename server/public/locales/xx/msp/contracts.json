@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "11111 {{id}} 11111",
+      "creditDrawdownOptOut": "11111",
       "empty": "11111",
       "endDate": "11111",
       "endDateLabel": "11111",
@@ -2329,5 +2330,47 @@
       "description": "11111",
       "title": "11111"
     }
+  },
+  "bucketPools": {
+    "heading": "11111",
+    "actions": {
+      "addPool": "11111",
+      "create": "11111",
+      "cancel": "11111",
+      "remove": "11111",
+      "applyRule": "11111"
+    },
+    "loading": "11111",
+    "empty": "11111",
+    "labels": {
+      "catchAll": "11111",
+      "pool": "11111",
+      "scopeCatchAll": "11111",
+      "scopeMembers": "11111",
+      "totalHours": "11111",
+      "overageRate": "11111",
+      "rollover": "11111",
+      "afterHours": "11111",
+      "afterHoursMultiplier": "11111",
+      "schedule": "11111",
+      "default": "11111",
+      "members": "11111",
+      "multiplier": "11111",
+      "noMembers": "11111",
+      "selectService": "11111",
+      "poolName": "11111",
+      "poolNamePlaceholder": "11111",
+      "coversAll": "11111"
+    },
+    "badges": {
+      "dormant": "11111"
+    },
+    "errors": {
+      "catchAllExists": "11111"
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "11111",
+    "empty": "11111"
   }
 }

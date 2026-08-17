@@ -912,6 +912,40 @@
     "updateError": "55555",
     "useDefaultSuccess": "55555"
   },
+  "clientCreditDrawdownSettings": {
+    "title": "55555",
+    "useDefault": "55555",
+    "useDefaultHelp": "55555",
+    "useDefaultSuccess": "55555",
+    "clientSpecificEnabled": "55555",
+    "autoApply": "55555",
+    "autoApplyHelp": "55555",
+    "orderLabel": "55555",
+    "selectOrder": "55555",
+    "orderHelp": "55555",
+    "serviceTypesLabel": "55555",
+    "serviceTypesHelp": "55555",
+    "noServiceTypes": "55555",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "55555",
+        "all": "55555",
+        "restricted": "55555",
+        "placeholder": "55555"
+      },
+      "inheritedRestricted": "55555",
+      "restricted": "55555"
+    },
+    "order": {
+      "expirationFirst": "55555",
+      "oldestFirst": "55555",
+      "newestFirst": "55555"
+    },
+    "updatedSuccess": "55555",
+    "loadError": "55555",
+    "saveError": "55555",
+    "updateError": "55555"
+  },
   "clientExternalCreditSettings": {
     "title": "55555",
     "enable": "55555",
@@ -1621,5 +1655,28 @@
     "taxExempt": "55555",
     "taxExemptInherited": "55555 {{value}} 55555",
     "regionNote": "55555"
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "55555",
+    "scheduleHelp": "55555",
+    "creditSwitch": "55555",
+    "creditSwitchHelp": "55555",
+    "creditThreshold": "55555",
+    "creditThresholdPlaceholder": "55555",
+    "creditThresholdHelp": "55555",
+    "creditCurrency": "55555",
+    "creditAmountError": "55555",
+    "bucketSwitch": "55555",
+    "bucketSwitchHelp": "55555",
+    "bucketPercent": "55555",
+    "bucketPercentPlaceholder": "55555",
+    "bucketPercentHelp": "55555",
+    "percentRangeError": "55555",
+    "notifyClient": "55555",
+    "notifyClientHelp": "55555",
+    "save": "55555",
+    "saveSuccess": "55555",
+    "saveError": "55555",
+    "loadError": "55555"
   }
 }

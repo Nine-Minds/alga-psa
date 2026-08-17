@@ -167,6 +167,11 @@
       "pauseError": "Impossible de modifier l'état de pause des e-mails entrants."
     },
     "pausedHelp": "Les messages reçus pendant que cette boîte est en pause ne sont pas importés rétroactivement.",
+    "authFailure": {
+      "title": "E-mails entrants en pause — reconnexion requise",
+      "description": "Les e-mails entrants de {{mailbox}} sont en pause car ses identifiants ne fonctionnent plus. Aucun message n'est perdu — ils restent dans la boîte source et seront importés après votre reconnexion.",
+      "action": "Reconnecter"
+    },
     "fields": {
       "status": "Statut",
       "lastSync": "Dernière synchronisation",
@@ -237,6 +242,9 @@
         "authorizing": "Autoriser...",
         "authorized": "Autorisé",
         "authorizeAccess": "Autoriser l'accès"
+      },
+      "messages": {
+        "setupIncomplete": "Fournisseur enregistré mais configuration incomplète : {{error}}"
       }
     },
     "microsoft": {

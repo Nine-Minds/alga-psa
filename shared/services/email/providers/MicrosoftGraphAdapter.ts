@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { randomUUID } from 'crypto';
-import { BaseEmailAdapter } from './base/BaseEmailAdapter';
+import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import type {
   Microsoft365DiagnosticsOptions,
@@ -454,7 +454,16 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       await this.loadAuthenticatedUserEmail();
       const connection = await this.testConnection();
       if (!connection.success) {
-        throw new Error(connection.error || 'Microsoft Graph connection test failed');
+        // Preserve structured failure metadata (status, code, responseBody)
+        // so callers can classify terminal OAuth errors instead of parsing
+        // the human-readable message.
+        const failure = new Error(connection.error || 'Microsoft Graph connection test failed');
+        Object.assign(failure, {
+          status: (connection as any).status,
+          code: (connection as any).code,
+          responseBody: (connection as any).responseBody,
+        });
+        throw failure;
       }
       this.log('info', 'Connected to Microsoft Graph API successfully');
     } catch (error) {
@@ -876,7 +885,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   /**
    * Test the connection to Microsoft Graph
    */
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
+  async testConnection(): Promise<AdapterConnectionTestResult> {
     try {
       const mailboxBase = this.getMailboxBasePath();
       // Test mail-data access rather than reading the mailbox's user object:
@@ -901,6 +910,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         error: detail
           ? `${failure.message} (${detail})`
           : failure.message || 'Connection test failed',
+        status: failure.status,
+        code: failure.code,
+        responseBody: failure.responseBody,
       };
     }
   }
@@ -940,8 +952,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     responseBody?: unknown;
   } {
     const res = error?.response;
-    const status = res?.status;
-    const graphErr = res?.data?.error || res?.data;
+    // Already-sanitized errors (e.g. from token refresh inside the request
+    // interceptor) carry status/code/responseBody at the top level.
+    const status = res?.status ?? error?.status;
+    const body = res?.data ?? error?.responseBody;
+    const graphErr = body?.error || body;
     const message =
       graphErr?.message ||
       error?.message ||
@@ -954,7 +969,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       message,
       requestId: ids.requestId,
       clientRequestId: ids.clientRequestId,
-      responseBody: res?.data,
+      responseBody: body,
     };
   }
 
@@ -971,6 +986,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       status: failure.status,
       code: failure.code,
       requestId: failure.requestId,
+      responseBody: failure.responseBody,
     });
     return wrapped;
   }

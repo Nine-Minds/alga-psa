@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, schedulePrepaidBalanceAlertScanJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob, scheduleExpiredHourBlocksJob, scheduleExpiringHourBlocksNotificationJob, scheduleReconcileHourBlockAllocationsJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -65,6 +65,57 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule expiring credits notification job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily prepaid balance alert scan (runs at 9:00 AM)
+      try {
+        const cron = '0 9 * * *';
+        const scanJobId = await schedulePrepaidBalanceAlertScanJob(tenantId, cron);
+        if (scanJobId) {
+          logger.info(`Scheduled prepaid balance alert scan job for tenant ${tenantId} with job ID ${scanJobId}`);
+        } else {
+          logger.info('Prepaid balance alert scan job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: scanJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule prepaid balance alert scan job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily job to expire hour blocks (runs at 1:30 AM)
+      try {
+        const cron = '30 1 * * *';
+        const expiredJobId = await scheduleExpiredHourBlocksJob(tenantId, cron);
+        if (expiredJobId) {
+          logger.info(`Scheduled expired hour blocks job for tenant ${tenantId} with job ID ${expiredJobId}`);
+        } else {
+          logger.info('Expired hour blocks job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: expiredJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule expired hour blocks job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily job to notify about expiring hour blocks (runs at 9:15 AM)
+      try {
+        const cron = '15 9 * * *';
+        const notificationJobId = await scheduleExpiringHourBlocksNotificationJob(tenantId, cron);
+        if (notificationJobId) {
+          logger.info(`Scheduled expiring hour blocks notification job for tenant ${tenantId} with job ID ${notificationJobId}`);
+        } else {
+          logger.info('Expiring hour blocks notification job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: notificationJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule expiring hour blocks notification job for tenant ${tenantId}`, error);
       }
 
       // Schedule daily per-location low-stock alerts (runs at 7:30 AM) — inventory F037/F038
@@ -136,8 +187,25 @@ export async function initializeScheduledJobs(): Promise<void> {
            returnedJobId: reconcileJobId
          });
        }
+       } catch (error) {
+        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
+       }
+
+      // Schedule daily job to reconcile hour-block allocations (runs at 3:15 AM)
+      try {
+        const cron = '15 3 * * *';
+        const reconcileJobId = await scheduleReconcileHourBlockAllocationsJob(tenantId, cron);
+        if (reconcileJobId) {
+          logger.info(`Scheduled hour-block allocation reconciliation job for tenant ${tenantId} with job ID ${reconcileJobId}`);
+        } else {
+          logger.info('Hour-block allocation reconciliation job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: reconcileJobId
+          });
+        }
       } catch (error) {
-       logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
+        logger.error(`Failed to schedule hour-block allocation reconciliation job for tenant ${tenantId}`, error);
       }
 
       // Schedule auto-close scan (every 15 minutes; closes stale tickets per board auto-close rules)

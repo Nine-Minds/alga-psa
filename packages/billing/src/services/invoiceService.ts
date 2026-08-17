@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -168,6 +168,31 @@ async function linkAndMarkSourceBillingRecord(params: {
       tenant,
       created_at: linkedAt,
     });
+  }
+
+  // Prepaid hour block informational line: mark the fully-covered time entries
+  // invoiced and link invoice_time_entries rows so covered time does not linger
+  // forever as "unbilled". Partially covered entries are already marked by
+  // their hourly remainder charge. Best-effort per entry: an entry that is
+  // already invoiced (e.g. re-generated line) is simply skipped.
+  if (charge.type === 'hour_block') {
+    const coveredEntryIds = (charge as { coveredEntryIds?: string[] }).coveredEntryIds ?? [];
+    for (const entryId of coveredEntryIds) {
+      const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
+        .where({ entry_id: entryId, invoiced: false })
+        .update({ invoiced: true });
+
+      if (updatedCount === 1) {
+        await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
+          invoice_time_entry_id: uuidv4(),
+          invoice_id: invoiceId,
+          item_id: invoiceItemId,
+          entry_id: entryId,
+          tenant,
+          created_at: linkedAt,
+        });
+      }
+    }
   }
 }
 
@@ -1051,7 +1076,9 @@ export async function persistInvoiceCharges(
         ? `Product: ${charge.serviceName}`
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
-          : charge.serviceName;
+          : charge.type === 'hour_block'
+            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} hrs consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} hrs remaining`
+            : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -1062,7 +1089,10 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
-      quantity: charge.quantity ?? 1,
+      quantity:
+        charge.type === 'hour_block'
+          ? (charge as IHourBlockCharge).hoursUsed
+          : (charge.quantity ?? 1),
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,
       tax_amount: charge.tax_amount || 0,
@@ -1087,8 +1117,13 @@ export async function persistInvoiceCharges(
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
 
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
+    // Detail rows carry a NOT NULL service_id FK, so a charge without a real
+    // service (e.g. a dormant pool's overage, whose identity lives on
+    // config_id) cannot persist a detail row — skip it rather than leak the
+    // pool's id into the service FK.
     const shouldPersistDetail =
       recurringChargeFamily !== null
+      && Boolean(charge.serviceId)
       && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
     const shouldLinkRecurringServicePeriod =

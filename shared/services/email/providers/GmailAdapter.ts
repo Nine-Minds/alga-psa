@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { BaseEmailAdapter } from './base/BaseEmailAdapter';
+import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
@@ -182,7 +182,19 @@ export class GmailAdapter extends BaseEmailAdapter {
   async connect(): Promise<void> {
     try {
       await this.loadCredentials();
-      await this.testConnection();
+      const connection = await this.testConnection();
+      if (!connection.success) {
+        // Preserve structured failure metadata (status, code, responseBody)
+        // so callers can classify terminal OAuth errors instead of parsing
+        // the human-readable message.
+        const failure = new Error(connection.error || 'Gmail connection test failed');
+        Object.assign(failure, {
+          status: (connection as any).status,
+          code: (connection as any).code,
+          responseBody: (connection as any).responseBody,
+        });
+        throw failure;
+      }
       this.log('info', 'Connected to Gmail API successfully');
     } catch (error) {
       throw this.handleError(error, 'connect');
@@ -302,7 +314,19 @@ This indicates a problem with the OAuth token saving process.`;
       
       this.config.provider_config.watch_expiration = expirationISO || undefined;
 
-      // Save updated history_id and watch_expiration to database
+      // Save updated history_id and watch_expiration to database.
+      // INTENTIONALLY AUTHORITATIVE (not monotonic): a freshly registered
+      // watch's historyId is Gmail's own authoritative snapshot of the current
+      // mailbox state at watch creation — the baseline every subsequent
+      // notification advances from — so it must replace any prior cursor,
+      // including the older one a watch re-establishment after historyId
+      // invalidation (attemptWatchRecovery) is recovering from. Guarding this
+      // write with a monotonic predicate would strand that dead cursor
+      // forever. The only possible regression is against a NEWER
+      // notification-derived cursor persisted concurrently after the watch
+      // call; replaying from the watch baseline is the safe direction (the
+      // durable inbox dedupe re-covers already-staged messages, and the next
+      // notification re-advances the cursor).
       try {
         const knex = await getAdminConnection();
         await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
@@ -479,8 +503,45 @@ This indicates a problem with the OAuth token saving process.`;
     }
   }
 
-  private isHistoryIdNotFoundError(error: any): boolean {
-    if (!error) return false;
+  /**
+   * List Gmail message ids received after a point in time, oldest first.
+   *
+   * Fallback reconciliation path when the saved history cursor has been
+   * invalidated (e.g. after a pause long enough for Gmail to expire it): a
+   * mailbox query bounded by the pause timestamp instead of silently
+   * accepting a gap. Capped by `maxResults`, or fully paginated when
+   * `options.paginateAll` is set (auth-pause recovery must cover the whole
+   * paused interval, never a truncated prefix).
+   */
+  async listMessageIdsSinceTime(
+    since: Date,
+    maxResults = 200,
+    options?: { paginateAll?: boolean }
+  ): Promise<string[]> {
+    await this.ensureValidToken();
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const response: any = await this.gmail.users.messages.list({
+        userId: 'me',
+        q: `after:${Math.floor(since.getTime() / 1000)}`,
+        maxResults: options?.paginateAll ? 500 : Math.min(100, Math.max(1, maxResults - ids.length)),
+        pageToken,
+      });
+      for (const message of response?.data?.messages || []) {
+        if (message?.id && !ids.includes(message.id)) {
+          ids.push(String(message.id));
+        }
+      }
+      pageToken = response?.data?.nextPageToken || undefined;
+    } while (pageToken && (options?.paginateAll || ids.length < maxResults));
+
+    // users.messages.list returns newest-first; reconcile oldest-first.
+    return ids.reverse();
+  }
+
+  private isHistoryIdNotFoundError(error: any): boolean {    if (!error) return false;
     const status = error?.response?.status || error?.status;
     if (status !== 404) return false;
 
@@ -689,11 +750,11 @@ This indicates a problem with the OAuth token saving process.`;
   /**
    * Test the connection to Gmail API
    */
-  async testConnection(): Promise<{ success: boolean; error?: string; }> {
+  async testConnection(): Promise<AdapterConnectionTestResult> {
     try {
       // Try to get the user's profile
       const profile = await this.gmail.users.getProfile({ userId: 'me' });
-      
+
       if (profile.data.emailAddress !== this.config.mailbox) {
         return {
           success: false,
@@ -703,9 +764,15 @@ This indicates a problem with the OAuth token saving process.`;
 
       return { success: true };
     } catch (error: any) {
+      // Preserve structured failure metadata (status, code, responseBody) so
+      // callers can classify terminal OAuth errors instead of parsing the
+      // human-readable message.
       return {
         success: false,
-        error: error.message || 'Failed to connect to Gmail API'
+        error: error.message || 'Failed to connect to Gmail API',
+        status: error?.response?.status ?? error?.status,
+        code: error?.response?.data?.error?.code ?? error?.code,
+        responseBody: error?.response?.data ?? error?.responseBody,
       };
     }
   }

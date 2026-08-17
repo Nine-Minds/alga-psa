@@ -13,6 +13,7 @@ const CATEGORIES = [
   { name: 'messages', description: 'Direct messages and communication', is_enabled: true, is_default_enabled: true },
   { name: 'appointments', description: 'Appointment request and scheduling notifications', is_enabled: true, is_default_enabled: true },
   { name: 'sla', description: 'SLA-related notifications', is_enabled: true, is_default_enabled: true },
+  { name: 'prepaid-alerts', description: 'Low-balance alerts for prepaid credit and bucket hours', is_enabled: true, is_default_enabled: true },
 ];
 
 const SUBTYPES = [
@@ -62,6 +63,9 @@ const SUBTYPES = [
   { category: 'sla', name: 'sla-response-met', description: 'Response SLA was met' },
   { category: 'sla', name: 'sla-resolution-met', description: 'Resolution SLA was met' },
   { category: 'sla', name: 'sla-escalation', description: 'SLA escalation notification' },
+  // Prepaid alerts
+  { category: 'prepaid-alerts', name: 'prepaid-credit-low-balance', description: 'Client prepaid credit dropped below its configured floor' },
+  { category: 'prepaid-alerts', name: 'prepaid-bucket-threshold-reached', description: 'Client prepaid hour bucket reached its configured consumption threshold' },
 ];
 
 /**

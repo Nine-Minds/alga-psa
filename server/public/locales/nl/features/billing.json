@@ -377,5 +377,14 @@
   "dashboard": {
     "prepaidHours": "Vooruitbetaalde uren",
     "viewBilling": "Facturatie bekijken"
+  },
+  "hourBlocks": {
+    "title": "Vooruitbetaalde urenblokken",
+    "blockLabel": "{{service}}-blok",
+    "expiringSoon": "Vervalt over {{days}}d",
+    "hoursLeft": "Nog {{hours}}u",
+    "expires": "Vervalt op {{date}}",
+    "recentBurn": "Recent verbruik",
+    "timeEntry": "Tijdsvermelding"
   }
 }

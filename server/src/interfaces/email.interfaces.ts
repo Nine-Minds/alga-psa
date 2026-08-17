@@ -9,7 +9,7 @@ export interface EmailProviderConfig {
   folder_to_monitor: string; // Defaults to 'Inbox'
   active: boolean;
   inboundPausedAt?: string | null;
-  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
   // Common webhook fields as real columns
   webhook_notification_url: string;
   webhook_subscription_id?: string;

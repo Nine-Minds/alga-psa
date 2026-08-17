@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID de contrato del cliente: {{id}}",
+      "creditDrawdownOptOut": "Excluir del consumo de crédito",
       "empty": "Este contrato aún no está asignado a un cliente.",
       "endDate": "Fecha de finalización",
       "endDateLabel": "Fecha de finalización de la asignación",
@@ -2329,5 +2330,47 @@
       "description": "El simulador de contratos está disponible en AlgaPSA Pro.",
       "title": "Función Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Bolsas de horas",
+    "actions": {
+      "addPool": "Agregar bolsa",
+      "create": "Crear bolsa",
+      "cancel": "Cancelar",
+      "remove": "Quitar",
+      "applyRule": "Aplicar regla fuera de horario"
+    },
+    "loading": "Cargando bolsas de horas…",
+    "empty": "No hay bolsas de horas en esta línea. Agregue una bolsa para incluir horas prepagadas.",
+    "labels": {
+      "catchAll": "Todos los servicios de esta línea",
+      "pool": "Bolsa de horas",
+      "scopeCatchAll": "Cubre todos los servicios de la línea (los servicios miembros anulan el multiplicador)",
+      "scopeMembers": "Solo servicios miembros",
+      "totalHours": "Horas totales",
+      "overageRate": "Tarifa por exceso ($/h)",
+      "rollover": "Permitir acumulación",
+      "afterHours": "Multiplicador de consumo fuera de horario",
+      "afterHoursMultiplier": "Multiplicador (p. ej., 1.5)",
+      "schedule": "Calendario de horario laboral",
+      "default": "predeterminado",
+      "members": "Servicios miembros",
+      "multiplier": "×",
+      "noMembers": "No hay servicios miembros asociados.",
+      "selectService": "Seleccione un servicio…",
+      "poolName": "Nombre de la bolsa (opcional)",
+      "poolNamePlaceholder": "p. ej., Horas estándar",
+      "coversAll": "Cubre todos los servicios de esta línea"
+    },
+    "badges": {
+      "dormant": "sin servicios asociados — nada se consume de esta bolsa"
+    },
+    "errors": {
+      "catchAllExists": "Esta línea ya tiene una bolsa general."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Bolsa de horas para esta línea",
+    "empty": "Aún no hay bolsas de horas en esta línea. Añada una bolsa para incluir horas prepagadas."
   }
 }

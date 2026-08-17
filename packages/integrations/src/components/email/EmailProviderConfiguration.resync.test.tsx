@@ -298,6 +298,7 @@ describe('IMAP resync status recovery', () => {
         onRetryRenewal={vi.fn()}
         onResyncProvider={vi.fn()}
         onRunDiagnostics={vi.fn()}
+        onReconnect={vi.fn()}
         onChangeDefaults={vi.fn()}
         onTogglePause={vi.fn()}
       />

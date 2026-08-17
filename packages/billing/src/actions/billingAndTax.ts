@@ -1055,6 +1055,22 @@ function buildRecurringDueWorkInvoiceCandidates(
             }
 
             const firstMember = members[0];
+            // Client identity is safe from any member: the grouping key is
+            // client + invoice window, so every member shares the client. The
+            // contract identity is NOT: a window can span multiple contracts
+            // (the 'single_contract' split reason), so presenting members[0]'s
+            // contract as THE contract would be arbitrary. Attribute it from
+            // the members' actual shared scope instead — only a unanimous
+            // contract is named.
+            const distinctContractIds = Array.from(new Set(
+                members
+                    .map((member) => member.contractId ?? null)
+                    .filter((contractId): contractId is string => Boolean(contractId)),
+            ));
+            const unanimousContractId = distinctContractIds.length === 1 ? distinctContractIds[0] : null;
+            const unanimousContractName = unanimousContractId
+                ? (members.find((member) => member.contractId === unanimousContractId)?.contractName ?? null)
+                : null;
             const servicePeriodStart = members
                 .map((member) => member.servicePeriodStart)
                 .sort()[0] as ISO8601String;
@@ -1105,8 +1121,8 @@ function buildRecurringDueWorkInvoiceCandidates(
                 servicePeriodLabel: `${servicePeriodStart} to ${servicePeriodEnd}`,
                 cadenceOwners: [...candidate.cadenceOwners],
                 cadenceSources,
-                contractId: firstMember.contractId ?? null,
-                contractName: firstMember.contractName ?? null,
+                contractId: unanimousContractId,
+                contractName: unanimousContractName,
                 purchaseOrderScopeKey: candidate.purchaseOrderScopeKey ?? null,
                 currencyCode: candidate.currencyCode ?? null,
                 taxSource: candidate.taxSource ?? null,

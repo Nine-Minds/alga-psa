@@ -207,6 +207,19 @@ export function ImapProviderForm({
         return;
       }
 
+      // A setup error (e.g. failed auth-pause recovery: the submitted
+      // credentials were rejected by the source) means the reconnect did NOT
+      // succeed — the provider stays paused. Surface the error in the form
+      // and do not report success: closing the drawer would clear the
+      // paused-state banner while ingestion is still stopped.
+      if (result.setupError) {
+        setError(t('forms.common.messages.setupIncomplete', {
+          defaultValue: 'Provider saved but setup incomplete: {{error}}',
+          error: result.setupError,
+        }));
+        return;
+      }
+
       onSuccess(result.provider);
     } catch (err: any) {
       setError(getErrorMessage(err));

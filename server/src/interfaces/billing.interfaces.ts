@@ -379,7 +379,8 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   hoursUsed: number;
   overageHours: number;
   overageRate: number;
-  service_catalog_id: string;
+  /** Null when the pool is dormant — the pool identity lives on config_id. */
+  service_catalog_id: string | null;
   isUsageBucket?: boolean;
   unitOfMeasure?: string | null;
   unitsUsed?: number;

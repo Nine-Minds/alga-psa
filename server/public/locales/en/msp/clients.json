@@ -912,6 +912,40 @@
     "updateError": "Failed to update settings",
     "useDefaultSuccess": "Client will now use default credit expiration settings."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Credit Draw-Down Settings",
+    "useDefault": "Use Default Settings",
+    "useDefaultHelp": "Use the system-wide default settings for credit draw-down",
+    "useDefaultSuccess": "Client will now use default credit draw-down settings.",
+    "clientSpecificEnabled": "Client-specific credit draw-down settings enabled.",
+    "autoApply": "Automatically apply credit at finalization",
+    "autoApplyHelp": "When enabled, available credit is applied automatically when an invoice is finalized",
+    "orderLabel": "Credit application order",
+    "selectOrder": "Select credit order",
+    "orderHelp": "Choose the order in which credits are consumed",
+    "serviceTypesLabel": "Eligible service types",
+    "serviceTypesHelp": "Choose whether credit can be applied to all charges or only to charges for the selected service types.",
+    "noServiceTypes": "No service types configured.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Use tenant default",
+        "all": "All service types",
+        "restricted": "Only selected types",
+        "placeholder": "Select service type restriction"
+      },
+      "inheritedRestricted": "Tenant default: only selected types ({{types}}).",
+      "restricted": "Credit is restricted to the selected service types. Select at least one to save."
+    },
+    "order": {
+      "expirationFirst": "Expiring soonest first",
+      "oldestFirst": "Oldest credit first",
+      "newestFirst": "Newest credit first"
+    },
+    "updatedSuccess": "Credit draw-down settings have been updated.",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "updateError": "Failed to update settings"
+  },
   "clientExternalCreditSettings": {
     "title": "External Credit on File",
     "enable": "Customer holds credit in the accounting system",
@@ -1621,5 +1655,28 @@
     "taxExempt": "Tax exempt",
     "taxExemptInherited": "Inheriting from the client ({{value}})",
     "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Prepaid Balance Alerts",
+    "scheduleHelp": "Checks run daily at 09:00 UTC. Saving does not send anything immediately.",
+    "creditSwitch": "Prepaid credit alerts",
+    "creditSwitchHelp": "Alert when available prepaid credit drops below the configured threshold",
+    "creditThreshold": "Credit threshold",
+    "creditThresholdPlaceholder": "e.g. 500.00",
+    "creditThresholdHelp": "Remaining prepaid credit that triggers an alert",
+    "creditCurrency": "Currency",
+    "creditAmountError": "Enter a positive credit threshold",
+    "bucketSwitch": "Bucket usage alerts",
+    "bucketSwitchHelp": "Alert when a prepaid hour bucket reaches the configured consumption",
+    "bucketPercent": "Consumption threshold (%)",
+    "bucketPercentPlaceholder": "e.g. 80",
+    "bucketPercentHelp": "Percentage of bucket capacity that triggers an alert",
+    "percentRangeError": "Enter a whole number from 1 to 100",
+    "notifyClient": "Also email the client billing recipient",
+    "notifyClientHelp": "Sends the alert to the client’s canonical invoice billing recipient",
+    "save": "Save",
+    "saveSuccess": "Prepaid balance alert settings saved",
+    "saveError": "Failed to save prepaid balance alert settings",
+    "loadError": "Failed to load prepaid balance alert settings"
   }
 }

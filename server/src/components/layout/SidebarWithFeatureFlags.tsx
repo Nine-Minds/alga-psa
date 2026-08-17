@@ -117,6 +117,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
+  const credentialsVaultFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const credentialsVaultEnabled =
+    typeof credentialsVaultFlag === 'boolean'
+      ? credentialsVaultFlag
+      : credentialsVaultFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
@@ -177,6 +182,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ...section,
       items: section.items
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
+        .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
@@ -196,7 +202,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

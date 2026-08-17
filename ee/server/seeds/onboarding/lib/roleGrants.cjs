@@ -12,7 +12,7 @@ module.exports = {
                 'credit:create:msp', 'credit:read:msp', 'credit:update:msp', 'credit:delete:msp', 'credit:transfer:msp', 'credit:reconcile:msp', 'financial:create:msp', 'financial:read:msp', 'financial:update:msp', 'financial:delete:msp', 'financial:transfer:msp',
                 'document:create:msp', 'document:read:msp', 'document:update:msp', 'document:delete:msp',
                 'interaction:create:msp', 'interaction:read:msp', 'interaction:update:msp', 'interaction:delete:msp',
-                'invoice:create:msp', 'invoice:read:msp', 'invoice:update:msp', 'invoice:delete:msp', 'invoice:generate:msp', 'invoice:finalize:msp', 'invoice:send:msp', 'invoice:void:msp',
+                'invoice:create:msp', 'invoice:read:msp', 'invoice:update:msp', 'invoice:delete:msp', 'invoice:generate:msp', 'invoice:finalize:msp', 'invoice:send:msp', 'invoice:void:msp', 'invoice:credit:msp',
                 'profile:create:msp', 'profile:read:msp', 'profile:update:msp',
                 'project:read:msp', 'project:update:msp',
                 'project_task:read:msp', 'project_task:update:msp',

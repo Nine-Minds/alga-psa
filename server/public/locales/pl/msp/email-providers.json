@@ -167,6 +167,11 @@
       "pauseError": "Nie udało się zmienić stanu wstrzymania poczty przychodzącej."
     },
     "pausedHelp": "Wiadomości odebrane w czasie, gdy ta skrzynka jest wstrzymana, nie są importowane wstecznie.",
+    "authFailure": {
+      "title": "E-mail przychodzący wstrzymany — wymagane ponowne połączenie",
+      "description": "E-mail przychodzący dla {{mailbox}} został wstrzymany, ponieważ jego dane logowania przestały działać. Wiadomości nie znikną — pozostają w skrzynce źródłowej i zostaną zaimportowane po ponownym połączeniu.",
+      "action": "Połącz ponownie"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Ostatnia synchronizacja",
@@ -237,6 +242,9 @@
         "authorizing": "Autoryzuję...",
         "authorized": "Upoważniony",
         "authorizeAccess": "Autoryzuj dostęp"
+      },
+      "messages": {
+        "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}"
       }
     },
     "microsoft": {

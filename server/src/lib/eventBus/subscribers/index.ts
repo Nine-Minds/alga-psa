@@ -6,6 +6,11 @@ import { registerInternalNotificationSubscriber, unregisterInternalNotificationS
 import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber';
 import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
 import { registerCreditExpiringSubscriber, unregisterCreditExpiringSubscriber } from './creditExpiringSubscriber';
+import {
+  registerPrepaidBalanceAlertSubscriber,
+  unregisterPrepaidBalanceAlertSubscriber,
+} from './prepaidBalanceAlertSubscriber';
+import { registerHourBlockExpiringSubscriber, unregisterHourBlockExpiringSubscriber } from './hourBlockExpiringSubscriber';
 import { registerTicketAutoCloseWarningSubscriber, unregisterTicketAutoCloseWarningSubscriber } from './ticketAutoCloseWarningSubscriber';
 import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
 import { registerSearchIndexSubscriber, unregisterSearchIndexSubscriber } from './searchIndexSubscriber';
@@ -14,6 +19,10 @@ import { registerProjectWebhookSubscriber, unregisterProjectWebhookSubscriber } 
 import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedSubscriber } from './rmmAlertTicketClosedSubscriber';
 import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
 import { registerMaintenanceJobSubscriber, unregisterMaintenanceJobSubscriber } from './maintenanceJobSubscriber';
+import {
+  registerInboundAuthPauseNotificationSubscriber,
+  unregisterInboundAuthPauseNotificationSubscriber,
+} from './inboundAuthPauseNotificationSubscriber';
 import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
@@ -33,6 +42,8 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'sla', register: registerSlaSubscriber },
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
   { name: 'creditExpiring', register: registerCreditExpiringSubscriber },
+  { name: 'prepaidBalanceAlert', register: registerPrepaidBalanceAlertSubscriber },
+  { name: 'hourBlockExpiring', register: registerHourBlockExpiringSubscriber },
   { name: 'ticketAutoCloseWarning', register: registerTicketAutoCloseWarningSubscriber },
   { name: 'webhook', register: registerWebhookSubscriber },
   { name: 'searchIndex', register: registerSearchIndexSubscriber },
@@ -41,6 +52,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
   { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
+  { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
 ];
 
@@ -53,8 +65,11 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'sla', register: unregisterSlaSubscriber },
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
   { name: 'creditExpiring', register: unregisterCreditExpiringSubscriber },
+  { name: 'prepaidBalanceAlert', register: unregisterPrepaidBalanceAlertSubscriber },
+  { name: 'hourBlockExpiring', register: unregisterHourBlockExpiringSubscriber },
   { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
   { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
+  { name: 'inboundAuthPauseNotification', register: unregisterInboundAuthPauseNotificationSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
   { name: 'inventoryNotification', register: unregisterInventoryNotificationSubscriber },

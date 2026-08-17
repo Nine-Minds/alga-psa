@@ -88,6 +88,43 @@
         "save": "No se pudo guardar la configuración"
       }
     },
+    "creditDrawdown": {
+      "title": "Consumo de crédito",
+      "description": "Controle cuándo se aplican los créditos del cliente a las facturas y cómo se consumen.",
+      "fields": {
+        "autoApply": {
+          "label": "Aplicar crédito automáticamente al finalizar",
+          "help": "Cuando está habilitado, el crédito disponible se aplica automáticamente al finalizar una factura"
+        },
+        "order": {
+          "label": "Orden de aplicación del crédito",
+          "placeholder": "Seleccione el orden del crédito",
+          "help": "Elija el orden en que se consumen los créditos"
+        },
+        "serviceTypes": {
+          "label": "Tipos de servicio elegibles",
+          "help": "Elija si el crédito se puede aplicar a todos los cargos o solo a los cargos de los tipos de servicio seleccionados.",
+          "empty": "No hay tipos de servicio configurados.",
+          "restricted": "El crédito está restringido a los tipos de servicio seleccionados.",
+          "mode": {
+            "all": "Todos los tipos de servicio",
+            "restricted": "Solo los tipos seleccionados"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Primero los que vencen antes",
+        "oldestFirst": "Primero el crédito más antiguo",
+        "newestFirst": "Primero el crédito más reciente"
+      },
+      "toast": {
+        "updated": "Se actualizó la configuración de consumo de crédito."
+      },
+      "errors": {
+        "load": "No se pudo cargar la configuración",
+        "save": "No se pudo guardar la configuración"
+      }
+    },
     "renewal": {
       "title": "Automatización de renovación",
       "description": "Configure el comportamiento predeterminado cuando los contratos lleguen a su fecha de renovación.",

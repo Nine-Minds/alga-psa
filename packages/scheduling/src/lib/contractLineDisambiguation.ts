@@ -154,26 +154,32 @@ export async function getEligibleContractLines(
   db.tenantJoin(query, 'contracts', 'client_contracts.contract_id', 'contracts.contract_id');
   db.tenantJoin(query, 'contract_lines', 'contracts.contract_id', 'contract_lines.contract_id');
   db.tenantJoin(query, 'contract_line_services', 'contract_lines.contract_line_id', 'contract_line_services.contract_line_id');
+  // Scope-resolution rule (weighted-burn model): explicit membership on a line
+  // bucket, else the line's catch-all bucket. Replacement for the legacy
+  // configuration_type='Bucket' overlay join.
   db.tenantJoin(
     query,
-    'contract_line_service_configuration as bucket_config',
-    'bucket_config.contract_line_id',
+    'contract_line_bucket_services as member',
+    'member.contract_line_id',
     'contract_lines.contract_line_id',
     {
       type: 'left',
       on(join) {
-        join
-          .andOn('bucket_config.service_id', '=', 'contract_line_services.service_id')
-          .andOnVal('bucket_config.configuration_type', 'Bucket');
+        join.andOn('member.service_id', '=', 'contract_line_services.service_id');
       },
     }
   );
   db.tenantJoin(
     query,
-    'contract_line_service_bucket_config as bucket_details',
-    'bucket_details.config_id',
-    'bucket_config.config_id',
-    { type: 'left' }
+    'contract_line_buckets as catch_all',
+    'catch_all.contract_line_id',
+    'contract_lines.contract_line_id',
+    {
+      type: 'left',
+      on(join) {
+        join.andOnVal('catch_all.covers_all_services', '=', true);
+      },
+    }
   );
 
   query
@@ -210,18 +216,14 @@ export async function getEligibleContractLines(
     // can prefer the line whose contract belongs to the work item's profile.
     'contract_lines.billing_profile_id',
     'client_contracts.billing_profile_id as contract_billing_profile_id',
-    'bucket_config.config_id as bucket_config_id',
-    'bucket_details.total_minutes as bucket_total_minutes',
-    'bucket_details.overage_rate as bucket_overage_rate',
-    'bucket_details.allow_rollover as bucket_allow_rollover'
+    'member.bucket_id as member_bucket_id',
+    'catch_all.bucket_id as catch_all_bucket_id'
   );
 
   return rows.map((row) => {
     const {
-      bucket_config_id,
-      bucket_total_minutes,
-      bucket_overage_rate,
-      bucket_allow_rollover,
+      member_bucket_id,
+      catch_all_bucket_id,
       start_date,
       end_date,
       ...rest
@@ -229,12 +231,14 @@ export async function getEligibleContractLines(
 
     const { bucket_overlay: existingOverlay, ...restWithoutOverlay } = rest;
 
+    const bucket_config_id = member_bucket_id ?? catch_all_bucket_id ?? null;
+
     const bucket_overlay = bucket_config_id
       ? {
           config_id: bucket_config_id,
-          total_minutes: bucket_total_minutes ?? null,
-          overage_rate: bucket_overage_rate ?? null,
-          allow_rollover: bucket_allow_rollover ?? null,
+          total_minutes: null,
+          overage_rate: null,
+          allow_rollover: null,
         }
       : existingOverlay;
 

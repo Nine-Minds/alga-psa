@@ -377,5 +377,14 @@
   "dashboard": {
     "prepaidHours": "Ore prepagate",
     "viewBilling": "Vai alla fatturazione"
+  },
+  "hourBlocks": {
+    "title": "Blocchi ore prepagati",
+    "blockLabel": "Blocco {{service}}",
+    "expiringSoon": "Scade tra {{days}} gg",
+    "hoursLeft": "{{hours}} h rimanenti",
+    "expires": "Scade il {{date}}",
+    "recentBurn": "Utilizzo recente",
+    "timeEntry": "Inserimento ore"
   }
 }

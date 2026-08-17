@@ -10,6 +10,7 @@ export default defineConfig({
       'tests/**/*.test.ts',
       'tests/**/*.test.tsx',
       'src/actions/projectBillingActions.contract.test.ts',
+      'src/lib/prepaidBalanceAlerts.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/schemas/**/*.test.ts',
     ],
@@ -54,6 +55,14 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
+      },
+      {
+        find: /^@alga-psa\/jobs\/handlers\/expiringHourBlocksNotificationHandler$/,
+        replacement: path.resolve(__dirname, '../jobs/src/lib/handlers/expiringHourBlocksNotificationHandler.ts'),
+      },
+      {
+        find: /^@alga-psa\/jobs\/handlers\/expiredHourBlocksHandler$/,
+        replacement: path.resolve(__dirname, '../jobs/src/lib/handlers/expiredHourBlocksHandler.ts'),
       },
       {
         find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,

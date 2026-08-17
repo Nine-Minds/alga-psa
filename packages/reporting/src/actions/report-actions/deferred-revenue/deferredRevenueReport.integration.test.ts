@@ -219,6 +219,50 @@ async function seedFixtures(trx: Knex.Transaction): Promise<{
     updated_at: now,
   });
 
+  // Pool-keyed model (weighted-burn): seed single-member 1x pools so the
+  // bucket_usage inserts below satisfy the new NOT NULL bucket_id.
+  const poolTablesExist = await trx.schema.hasTable('contract_line_buckets').then(() => true).catch(() => false);
+  if (poolTablesExist) {
+    await trx('contract_line_buckets').insert([
+      {
+        tenant: TENANT,
+        bucket_id: bucketConfigMonthlyId,
+        contract_line_id: lineMonthlyId,
+        total_minutes: 6000,
+        overage_rate: 20000,
+        allow_rollover: false,
+        billing_period: 'monthly',
+        covers_all_services: false,
+      },
+      {
+        tenant: TENANT,
+        bucket_id: bucketConfigRolloverId,
+        contract_line_id: lineRolloverId,
+        total_minutes: 3000,
+        overage_rate: 20000,
+        allow_rollover: true,
+        billing_period: 'monthly',
+        covers_all_services: false,
+      },
+    ]);
+    await trx('contract_line_bucket_services').insert([
+      {
+        tenant: TENANT,
+        bucket_id: bucketConfigMonthlyId,
+        contract_line_id: lineMonthlyId,
+        service_id: serviceId,
+        burn_multiplier: 1,
+      },
+      {
+        tenant: TENANT,
+        bucket_id: bucketConfigRolloverId,
+        contract_line_id: lineRolloverId,
+        service_id: serviceId,
+        burn_multiplier: 1,
+      },
+    ]);
+  }
+
   // Finalized invoice billing the monthly line's Feb service period.
   await trx('invoices').insert({
     tenant: TENANT,
@@ -380,6 +424,7 @@ async function seedFixtures(trx: Knex.Transaction): Promise<{
   await trx('bucket_usage').insert({
     tenant: TENANT,
     usage_id: uuidv4(),
+    bucket_id: bucketConfigMonthlyId,
     contract_line_id: lineMonthlyId,
     client_id: clientAId,
     service_catalog_id: serviceId,
@@ -396,6 +441,7 @@ async function seedFixtures(trx: Knex.Transaction): Promise<{
   await trx('bucket_usage').insert({
     tenant: TENANT,
     usage_id: uuidv4(),
+    bucket_id: bucketConfigRolloverId,
     contract_line_id: lineRolloverId,
     client_id: clientBId,
     service_catalog_id: serviceId,
@@ -408,6 +454,7 @@ async function seedFixtures(trx: Knex.Transaction): Promise<{
   await trx('bucket_usage').insert({
     tenant: TENANT,
     usage_id: uuidv4(),
+    bucket_id: bucketConfigRolloverId,
     contract_line_id: lineRolloverId,
     client_id: clientBId,
     service_catalog_id: serviceId,

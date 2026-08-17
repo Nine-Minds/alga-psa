@@ -131,6 +131,25 @@ export interface HuduAssetPassword {
 /** Metadata-only projection of an asset password (no value-bearing field). */
 export type HuduAssetPasswordSummary = Omit<HuduAssetPassword, 'password' | 'otp_secret'>;
 
+/**
+ * Write input for create/update asset_password (write-through).
+ *
+ * SECURITY: `password` / `otp_secret` are plaintext and exist only in the
+ * request body between the action and the Hudu API — never logged or cached.
+ * v1 Hudu writes are company-scoped (`company_id` required on create); the
+ * Alga asset linkage (`passwordable_*`) is explicitly out of scope.
+ */
+export interface HuduAssetPasswordWriteInput {
+  company_id: number;
+  name: string;
+  username?: string | null;
+  password?: string | null;
+  otp_secret?: string | null;
+  url?: string | null;
+  password_folder_id?: number | null;
+  description?: string | null;
+}
+
 /** Collection responses are keyed by the plural resource name. */
 export interface HuduCompaniesResponse {
   companies: HuduCompany[];

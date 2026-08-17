@@ -962,6 +962,40 @@
     "updateError": "Nie udało się zaktualizować ustawień",
     "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wygaśnięcia kredytu."
   },
+  "clientCreditDrawdownSettings": {
+    "title": "Ustawienia wykorzystania kredytu",
+    "useDefault": "Użyj ustawień domyślnych",
+    "useDefaultHelp": "Użyj domyślnych ustawień wykorzystania kredytu obowiązujących w całym systemie",
+    "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wykorzystania kredytu.",
+    "clientSpecificEnabled": "Włączono ustawienia wykorzystania kredytu specyficzne dla klienta.",
+    "autoApply": "Automatycznie stosuj kredyt przy finalizacji",
+    "autoApplyHelp": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury",
+    "orderLabel": "Kolejność stosowania kredytu",
+    "selectOrder": "Wybierz kolejność kredytu",
+    "orderHelp": "Wybierz kolejność, w jakiej kredyty są wykorzystywane",
+    "serviceTypesLabel": "Kwalifikujące się typy usług",
+    "serviceTypesHelp": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
+    "noServiceTypes": "Nie skonfigurowano typów usług.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Użyj wartości domyślnej organizacji",
+        "all": "Wszystkie typy usług",
+        "restricted": "Tylko wybrane typy",
+        "placeholder": "Wybierz ograniczenie typu usługi"
+      },
+      "inheritedRestricted": "Wartość domyślna organizacji: tylko wybrane typy ({{types}}).",
+      "restricted": "Kredyt jest ograniczony do wybranych typów usług. Wybierz co najmniej jeden, aby zapisać."
+    },
+    "order": {
+      "expirationFirst": "Najpierw wygasające najwcześniej",
+      "oldestFirst": "Najpierw najstarszy kredyt",
+      "newestFirst": "Najpierw najnowszy kredyt"
+    },
+    "updatedSuccess": "Ustawienia wykorzystania kredytu zostały zaktualizowane.",
+    "loadError": "Nie udało się załadować ustawień",
+    "saveError": "Nie udało się zapisać ustawień",
+    "updateError": "Nie udało się zaktualizować ustawień"
+  },
   "clientExternalCreditSettings": {
     "title": "Kredyt zewnętrzny w ewidencji",
     "enable": "Klient posiada środki w systemie księgowym",
@@ -1671,5 +1705,28 @@
     "taxExempt": "Zwolniony z podatku",
     "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
     "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alerty salda przedpłaconego",
+    "scheduleHelp": "Kontrole są uruchamiane codziennie o 09:00 UTC. Zapisanie nie wysyła niczego natychmiast.",
+    "creditSwitch": "Alerty kredytu przedpłaconego",
+    "creditSwitchHelp": "Alert, gdy dostępny kredyt przedpłacony spadnie poniżej skonfigurowanego progu",
+    "creditThreshold": "Próg kredytu",
+    "creditThresholdPlaceholder": "np. 500,00",
+    "creditThresholdHelp": "Pozostały kredyt przedpłacony, który wyzwala alert",
+    "creditCurrency": "Waluta",
+    "creditAmountError": "Wprowadź dodatni próg kredytu",
+    "bucketSwitch": "Alerty wykorzystania pakietu",
+    "bucketSwitchHelp": "Alert, gdy pakiet godzin przedpłaconych osiągnie skonfigurowane zużycie",
+    "bucketPercent": "Próg zużycia (%)",
+    "bucketPercentPlaceholder": "np. 80",
+    "bucketPercentHelp": "Procent pojemności pakietu, który wyzwala alert",
+    "percentRangeError": "Wprowadź liczbę całkowitą od 1 do 100",
+    "notifyClient": "Wyślij również e-mail do odbiorcy faktur klienta",
+    "notifyClientHelp": "Wysyła alert do kanonicznego odbiorcy faktur klienta",
+    "save": "Zapisz",
+    "saveSuccess": "Zapisano ustawienia alertu salda przedpłaconego",
+    "saveError": "Nie udało się zapisać ustawień alertu salda przedpłaconego",
+    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego"
   }
 }

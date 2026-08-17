@@ -87,6 +87,17 @@ type ContractLineServiceBucketConfigRow = Omit<
   overage_rate: DbNumeric | null;
 };
 
+type BucketPoolRow = {
+  bucket_id: string;
+  contract_line_id: string;
+  total_minutes: DbNumeric;
+  billing_period: string;
+  overage_rate: DbNumeric | null;
+  allow_rollover: boolean;
+  created_at: Date;
+  updated_at: Date;
+};
+
 export class ClientContractServiceConfigurationService {
   private knex: Knex;
   private tenant: string;
@@ -343,23 +354,32 @@ export class ClientContractServiceConfigurationService {
         break;
       }
       case 'Bucket': {
-        const bucketConfig = await this.table<ContractLineServiceBucketConfigRow>('contract_line_service_bucket_config')
+        // Weighted-burn model: the bucket config for a (line, service) lives on
+        // the pool the service belongs to (membership, else line catch-all).
+        const member = await this.table<{ bucket_id: string; contract_line_id: string; service_id: string; tenant: string }>('contract_line_bucket_services')
           .where({
-            config_id: baseConfig.config_id,
+            contract_line_id: baseConfig.contract_line_id,
+            service_id: baseConfig.service_id,
             tenant: this.tenant
           })
-          .first();
+          .first<{ bucket_id: string }>('bucket_id');
+        const poolBucketId = member?.bucket_id ?? null;
+        const bucketPool = poolBucketId
+          ? await this.table<BucketPoolRow & { bucket_id: string; tenant: string }>('contract_line_buckets')
+            .where({ bucket_id: poolBucketId, tenant: this.tenant })
+            .first()
+          : null;
 
-        if (bucketConfig) {
+        if (bucketPool) {
           typeConfig = {
             config_id: baseConfig.config_id,
-            total_minutes: Number(bucketConfig.total_minutes),
-            billing_period: bucketConfig.billing_period,
-            overage_rate: bucketConfig.overage_rate != null ? Number(bucketConfig.overage_rate) : 0,
-            allow_rollover: Boolean(bucketConfig.allow_rollover),
+            total_minutes: Number(bucketPool.total_minutes),
+            billing_period: bucketPool.billing_period,
+            overage_rate: bucketPool.overage_rate != null ? Number(bucketPool.overage_rate) : 0,
+            allow_rollover: Boolean(bucketPool.allow_rollover),
             tenant: this.tenant,
-            created_at: bucketConfig.created_at,
-            updated_at: bucketConfig.updated_at
+            created_at: bucketPool.created_at,
+            updated_at: bucketPool.updated_at
           };
         }
         break;

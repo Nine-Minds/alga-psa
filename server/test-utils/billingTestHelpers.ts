@@ -363,6 +363,8 @@ interface CreateBucketUsageOptions {
   contractLineId?: string;
   serviceId: string;
   clientId: string;
+  /** Pool id (bucket_id) under the weighted-burn model; used when the column exists. */
+  bucketId?: string;
   periodStart: string;
   periodEnd: string;
   minutesUsed: number;
@@ -1816,6 +1818,39 @@ export async function createBucketOverlayForPlan(
   // schema; only mirror the overlay into it on schema iterations that still
   // carry those tables.
   if (!(await context.db.schema.hasTable('client_contract_services'))) {
+    // Weighted-burn pool: seed the single-member 1x pool the scope-resolution
+    // rule resolves (the billing engine and bucket service read these tables).
+    const poolTablesExist = await context.db.schema.hasTable('contract_line_buckets');
+    if (poolTablesExist) {
+      await tenantTable(context, 'contract_line_buckets')
+        .insert({
+          tenant: context.tenantId,
+          bucket_id: configId,
+          contract_line_id: planId,
+          total_minutes: totalMinutes,
+          overage_rate: overageRateCents,
+          allow_rollover: allowRollover,
+          billing_period: billingPeriod,
+          covers_all_services: false,
+        })
+        .onConflict(['tenant', 'bucket_id'])
+        .merge({
+          total_minutes: totalMinutes,
+          overage_rate: overageRateCents,
+          allow_rollover: allowRollover,
+          billing_period: billingPeriod,
+        });
+      await tenantTable(context, 'contract_line_bucket_services')
+        .insert({
+          tenant: context.tenantId,
+          bucket_id: configId,
+          service_id: serviceId,
+          contract_line_id: planId,
+          burn_multiplier: 1,
+        })
+        .onConflict(['tenant', 'bucket_id', 'service_id'])
+        .merge({ burn_multiplier: 1 });
+    }
     return { configId, serviceId };
   }
 
@@ -1979,6 +2014,10 @@ export async function createBucketUsageRecord(
     record.service_catalog_id = options.serviceId;
   } else if (usageColumns.service_id) {
     record.service_id = options.serviceId;
+  }
+
+  if (usageColumns.bucket_id) {
+    record.bucket_id = options.bucketId;
   }
 
   const rolledOverColumn = usageColumns.rolled_over_minutes ? 'rolled_over_minutes' : usageColumns.rolled_over_hours ? 'rolled_over_hours' : null;

@@ -111,9 +111,13 @@ const persistedReaderExclusions = new Set([
 // check so the inventory remains an accurate record of its point in time.
 const billingCycleAlignmentPostInventoryRefs = new Set([
   'packages/billing/src/services/quoteConversionService.ts',
+  // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
+  // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
+  'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
+  'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
 ]);
@@ -202,6 +206,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
   'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
   'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
+  // Credit draw-down policy suite (feature/credit-drawdown-policy-controls)
+  // landed after the pass-0 snapshot and seeds invoice charges with persisted
+  // service-period columns in its fixtures.
+  'server/src/test/infrastructure/billing/credits/creditDrawdownPolicy.test.ts',
+  'server/src/test/infrastructure/billing/credits/creditServiceTypeRestrictionMode.test.ts',
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
   'shared/billingClients/recurringDueWork.ts',
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',

@@ -88,6 +88,43 @@
         "save": "Échec de l'enregistrement des paramètres"
       }
     },
+    "creditDrawdown": {
+      "title": "Consommation du crédit",
+      "description": "Contrôlez quand les crédits client sont appliqués aux factures et comment ils sont consommés.",
+      "fields": {
+        "autoApply": {
+          "label": "Appliquer automatiquement le crédit à la finalisation",
+          "help": "Lorsque cette option est activée, le crédit disponible est appliqué automatiquement lors de la finalisation d'une facture"
+        },
+        "order": {
+          "label": "Ordre d'application du crédit",
+          "placeholder": "Sélectionnez l'ordre du crédit",
+          "help": "Choisissez l'ordre dans lequel les crédits sont consommés"
+        },
+        "serviceTypes": {
+          "label": "Types de services éligibles",
+          "help": "Choisissez si le crédit peut être appliqué à tous les frais ou uniquement aux frais des types de services sélectionnés.",
+          "empty": "Aucun type de service configuré.",
+          "restricted": "Le crédit est limité aux types de services sélectionnés.",
+          "mode": {
+            "all": "Tous les types de services",
+            "restricted": "Uniquement les types sélectionnés"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Expirant le plus tôt en premier",
+        "oldestFirst": "Crédit le plus ancien en premier",
+        "newestFirst": "Crédit le plus récent en premier"
+      },
+      "toast": {
+        "updated": "Les paramètres de consommation du crédit ont été mis à jour."
+      },
+      "errors": {
+        "load": "Échec du chargement des paramètres",
+        "save": "Échec de l'enregistrement des paramètres"
+      }
+    },
     "renewal": {
       "title": "Automatisation du renouvellement",
       "description": "Configurez le comportement par défaut lorsque les contrats atteignent leur date de renouvellement.",

@@ -33,6 +33,7 @@ import TicketInfo from "./TicketInfo";
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
+import { TicketCredentialsSection } from "./TicketCredentialsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
@@ -3906,6 +3907,11 @@ const handleClose = () => {
                                 }}
                             />
                         </Suspense>
+
+                        <TicketCredentialsSection
+                            ticketId={ticket.ticket_id || ''}
+                            clientId={ticket.client_id ?? null}
+                        />
 
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">

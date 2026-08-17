@@ -259,12 +259,18 @@ export async function GET(request: NextRequest) {
 
             if (googleConfig?.project_id) {
               console.log(`🔁 Finalizing Gmail provider after OAuth for provider ${stateData.providerId}`);
-              await configureGmailProvider({
+              const gmailResult = await configureGmailProvider({
                 tenant: stateData.tenant,
                 providerId: stateData.providerId,
                 projectId: googleConfig.project_id,
                 force: true
               });
+              if (gmailResult.authFailureRecovery === 'failed') {
+                // The OAuth exchange succeeded but the auth-failure recovery
+                // could not reconcile/clear the pause; the durable settings
+                // banner keeps prompting until a retry completes recovery.
+                console.warn('⚠️ Gmail auth-failure recovery after OAuth reconnect failed (provider stays paused)');
+              }
             } else {
               console.warn('⚠️ Skipping Gmail finalize: project_id missing');
             }
