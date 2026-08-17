@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
 import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
-import { expiredHourBlocksHandler } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import { expiredHourBlocksHandler } from '../src/lib/handlers/expiredHourBlocksHandler';
 import { allocateTimeEntry } from '@alga-psa/shared/billingClients/hourBlockService';
 
 // DB-backed regression test for the auto-expiration handler's "today" boundary
