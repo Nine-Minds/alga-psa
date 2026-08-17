@@ -49,6 +49,10 @@ In dark mode, 50-900 scales are **inverted** (low=dark, high=light), so `bg-prim
 
 **Global dark overrides** in `globals.css` remap common utilities (`bg-white`, `text-gray-700`, `border-slate-200`) to CSS variables. Also overrides for react-day-picker, react-big-calendar, Tiptap/ProseMirror.
 
+**Third-party name collisions**: Radix Themes declares its own `--color-background` on `.radix-themes` and Mantine paints `body` with `--mantine-color-body`. `globals.css` hands our triple back with `html .radix-themes { --color-background: var(--alga-color-background) }` and out-specifies Mantine with `html body`. Keep both — without them every `rgb(var(--color-background))` inside the app resolves to an invalid color and the page ground falls back to a vendor gray.
+
+**Elevation in dark pairs**: `--color-background` < `--color-border-50` < `--color-border-100` (the shell ground, since the MSP shell uses `bg-gray-100`) < `--color-card` < `--color-border-200`. Cards have to sit above the ground or they read as holes. Slate (verbatim legacy palette) and High contrast (flat, border-separated) are the documented exceptions.
+
 ## Provider Chain
 
 ```
