@@ -1339,9 +1339,9 @@
       "lightMode": "55555",
       "darkMode": "55555",
       "previewAlt": "55555",
-      "seededFrom": "55555",
+      "seededFrom": "55555 {{pair}} 55555",
       "contrastTitle": "55555",
-      "contrastIssue": "55555",
+      "contrastIssue": "55555 {{foreground}} 55555 {{background}} 55555 {{ratio}} 55555 {{required}} 55555 {{hint}} 55555",
       "tokens": {
         "background": "55555",
         "card": "55555",
@@ -1362,12 +1362,12 @@
       },
       "actions": {
         "save": "55555",
-        "reset": "55555",
-        "resetDone": "55555"
+        "reset": "55555 {{pair}} 55555",
+        "resetDone": "55555 {{pair}} 55555"
       },
       "contrastHints": {
-        "lighten": "55555",
-        "darken": "55555"
+        "lighten": "55555 {{foreground}} 55555 {{background}} 55555",
+        "darken": "55555 {{foreground}} 55555 {{background}} 55555"
       }
     },
     "whiteLabel": {
