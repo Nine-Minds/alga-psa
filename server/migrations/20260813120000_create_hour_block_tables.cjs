@@ -62,6 +62,22 @@ async function addForeignKeyIfMissing(knex, constraintName, sql) {
   `);
 }
 
+// Helper: whether Citus manages a table at all (distributed, reference, or
+// citus-local). Absent from pg_dist_partition = plain coordinator-local table.
+async function isManagedByCitus(knex, tableName) {
+  try {
+    const managed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition
+        WHERE logicalrelid = '${tableName}'::regclass
+      ) AS is_managed;
+    `);
+    return Boolean(managed.rows?.[0]?.is_managed);
+  } catch (error) {
+    return false;
+  }
+}
+
 // Helper: whether a table is distributed on a live Citus deployment
 async function isDistributedOnCitus(knex, tableName) {
   const citusFn = await knex.raw(`
@@ -72,13 +88,7 @@ async function isDistributedOnCitus(knex, tableName) {
   if (!citusFn.rows?.[0]?.exists) {
     return false;
   }
-  const distributed = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_dist_partition
-      WHERE logicalrelid = '${tableName}'::regclass
-    ) AS is_distributed;
-  `);
-  return Boolean(distributed.rows?.[0]?.is_distributed);
+  return isManagedByCitus(knex, tableName);
 }
 
 exports.up = async function (knex) {
@@ -207,15 +217,24 @@ exports.up = async function (knex) {
       FOREIGN KEY (tenant, service_id)
       REFERENCES service_catalog(tenant, service_id)
   `);
-  // Citus forbids ON DELETE SET NULL on foreign keys that include the
-  // distribution key (tenant), so the backstop degrades to a plain FK there.
-  // Every application path already nulls source_invoice_id before the
-  // purchase invoice is deleted (see voidPendingHourBlocksForInvoiceDeletion
-  // in packages/billing/src/actions/invoiceModification.ts), so the SET NULL
-  // action is only a plain-Postgres backstop.
-  const invoiceFkeyOnDelete = (await isDistributedOnCitus(knex, 'hour_blocks'))
+  // A bare ON DELETE SET NULL on this composite FK would null the tenant
+  // column too, stripping tenancy from the block row (see the
+  // users_tenant_contact_id_foreign precedent); PG 15+ supports nulling only
+  // source_invoice_id. Citus additionally forbids SET NULL outright on FKs
+  // that include the distribution key, so the backstop degrades to a plain
+  // FK there. Every application path already nulls source_invoice_id before
+  // the purchase invoice is deleted (see
+  // voidPendingHourBlocksForInvoiceDeletion in
+  // packages/billing/src/actions/invoiceModification.ts), so the action is
+  // only a plain-Postgres backstop.
+  const hourBlocksDistributed = await isDistributedOnCitus(knex, 'hour_blocks');
+  const pgVersion = parseInt(
+    (await knex.raw("SELECT current_setting('server_version_num')::int AS v")).rows[0].v,
+    10,
+  );
+  const invoiceFkeyOnDelete = hourBlocksDistributed
     ? ''
-    : 'ON DELETE SET NULL';
+    : (pgVersion >= 150000 ? 'ON DELETE SET NULL (source_invoice_id)' : 'ON DELETE SET NULL');
   await addForeignKeyIfMissing(knex, 'hour_blocks_invoice_fkey', `
     ALTER TABLE hour_blocks
       ADD CONSTRAINT hour_blocks_invoice_fkey
@@ -245,13 +264,22 @@ exports.up = async function (knex) {
       REFERENCES hour_blocks(tenant, block_id)
       ON DELETE CASCADE
   `);
-  await addForeignKeyIfMissing(knex, 'hour_block_allocations_entry_fkey', `
-    ALTER TABLE hour_block_time_allocations
-      ADD CONSTRAINT hour_block_allocations_entry_fkey
-      FOREIGN KEY (tenant, time_entry_id)
-      REFERENCES time_entries(tenant, entry_id)
-      ON DELETE CASCADE
-  `);
+  // Citus: time_entries stays a coordinator-local table (no migration ever
+  // distributes it), and a distributed table cannot hold a FK to a local one.
+  // Degrade to a soft reference there — the same discipline
+  // time_entry_change_requests uses — because every edit/delete path reverses
+  // the entry's allocations in-transaction (see reverseTimeEntryAllocations).
+  const allocationsDistributed = await isDistributedOnCitus(knex, 'hour_block_time_allocations');
+  const timeEntriesCitusManaged = await isManagedByCitus(knex, 'time_entries');
+  if (!allocationsDistributed || timeEntriesCitusManaged) {
+    await addForeignKeyIfMissing(knex, 'hour_block_allocations_entry_fkey', `
+      ALTER TABLE hour_block_time_allocations
+        ADD CONSTRAINT hour_block_allocations_entry_fkey
+        FOREIGN KEY (tenant, time_entry_id)
+        REFERENCES time_entries(tenant, entry_id)
+        ON DELETE CASCADE
+    `);
+  }
 
   await addForeignKeyIfMissing(knex, 'hour_block_audit_block_fkey', `
     ALTER TABLE hour_block_audit
