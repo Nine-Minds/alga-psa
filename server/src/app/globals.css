@@ -359,9 +359,9 @@ body {
 }
 
 html.dark {
-    --background: 0, 0, 0;
-    --color-background: 0 0 0;
-    --color-card: 22 28 48;
+    --background: 12, 10, 24;
+    --color-background: 12 10 24;    /* #0c0a18 */
+    --color-card: 21 16 36;          /* #151024 */
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -386,62 +386,62 @@ html.dark {
     --badge-error-bg: 127 29 29;        /* red-900 for dark mode */
     --badge-error-text: 254 202 202;    /* red-200 */
     --badge-error-border: 153 27 27;    /* red-800 */
-    --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
-    --badge-default-text: 203 213 225;  /* slate-300 */
-    --badge-default-border: 51 65 85;   /* slate-700 */
-    --badge-secondary-bg: 51 65 85;    /* slate-700 for dark mode */
-    --badge-secondary-text: 226 232 240; /* slate-200 */
-    --badge-secondary-border: 71 85 105; /* slate-600 */
+    --badge-default-bg: 47 39 82;       /* border-mid */
+    --badge-default-text: 201 195 224;  /* text soft */
+    --badge-default-border: 58 47 89;   /* border strong */
+    --badge-secondary-bg: 58 47 89;    /* border strong */
+    --badge-secondary-text: 224 219 240; /* text bright */
+    --badge-secondary-border: 74 62 110;
 
-    /* STATUS COLORS — muted for dark backgrounds */
-    --color-status-success: 74 190 120; /* muted green */
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129; /* #10b981 */
     --color-status-success-foreground: 255 255 255;
-    --color-status-warning: 235 180 50; /* bright amber */
+    --color-status-warning: 245 158 11; /* #f59e0b */
     --color-status-warning-foreground: 255 255 255;
-    --color-status-error: 210 100 100; /* muted red */
+    --color-status-error: 239 68 68;    /* #ef4444 */
     --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
-    --color-border-base: 100 116 139;
-    --color-border-50: 15 23 42;
-    --color-border-100: 30 41 59;
-    --color-border-200: 51 65 85;
-    --color-border-300: 71 85 105;
-    --color-border-400: 100 116 139;
-    --color-border-500: 148 163 184;
-    --color-border-600: 203 213 225;
-    --color-border-700: 226 232 240;
-    --color-border-800: 241 245 249;
-    --color-border-900: 248 250 252;
+    --color-border-base: 58 47 89;
+    --color-border-50: 27 21 48;     /* #1b1530 muted surface */
+    --color-border-100: 34 23 67;    /* #221743 subtle/hover surface */
+    --color-border-200: 39 32 65;    /* #272041 border base */
+    --color-border-300: 47 39 82;    /* #2f2752 border mid */
+    --color-border-400: 58 47 89;    /* #3a2f59 border strong */
+    --color-border-500: 111 104 144;  /* #6f6890 */
+    --color-border-600: 154 146 184;  /* #9a92b8 */
+    --color-border-700: 201 195 224;  /* #c9c3e0 */
+    --color-border-800: 224 219 240;
+    --color-border-900: 232 228 246;  /* #e8e4f6 */
 
     /* TEXT COLORS */
-    --color-text-base: 100 116 139;
-    --color-text-50: 15 23 42;
-    --color-text-100: 30 41 59;
-    --color-text-200: 51 65 85;
-    --color-text-300: 71 85 105;
-    --color-text-400: 100 116 139;
-    --color-text-500: 148 163 184;
-    --color-text-600: 203 213 225;
-    --color-text-700: 226 232 240;
-    --color-text-800: 241 245 249;
-    --color-text-900: 248 250 252;
+    --color-text-base: 111 104 144;
+    --color-text-50: 27 21 48;
+    --color-text-100: 34 23 67;
+    --color-text-200: 39 32 65;
+    --color-text-300: 58 47 89;
+    --color-text-400: 111 104 144;   /* #6f6890 dim */
+    --color-text-500: 154 146 184;   /* #9a92b8 muted */
+    --color-text-600: 201 195 224;   /* #c9c3e0 soft */
+    --color-text-700: 214 209 233;
+    --color-text-800: 224 219 240;
+    --color-text-900: 232 228 246;   /* #e8e4f6 primary */
 
     /* Switch — muted in dark mode for softer contrast */
-    --color-switch-thumb: 190 200 215;
+    --color-switch-thumb: 214 209 233;
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
-    --color-primary-50: 82 46 140;
-    --color-primary-100: 96 54 164;
-    --color-primary-200: 110 61 187;
-    --color-primary-300: 124 69 211;
-    --color-primary-400: 138 77 234;
-    --color-primary-500: 152 85 238;
-    --color-primary-600: 166 115 242;
-    --color-primary-700: 184 145 245;
-    --color-primary-800: 202 168 249;
-    --color-primary-900: 220 197 251;
+    --color-primary-50: 34 23 67;     /* #221743 subtle fill */
+    --color-primary-100: 49 32 92;
+    --color-primary-200: 71 42 129;
+    --color-primary-300: 95 53 168;
+    --color-primary-400: 117 65 202;
+    --color-primary-500: 138 77 234;  /* #8a4dea fill */
+    --color-primary-600: 163 102 240; /* #a366f0 ink */
+    --color-primary-700: 181 137 246;
+    --color-primary-800: 196 181 253; /* #c4b5fd bright accent */
+    --color-primary-900: 222 212 254;
 
     /* Blue (#40cff9) */
     --color-secondary-50: 38 124 149;
@@ -475,7 +475,7 @@ html.dark {
     --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
     --color-alert-warning-bg: 50 40 8;         /* golden amber */
     --color-alert-success-bg: 15 40 25;       /* deep dark green */
-    --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+    --color-alert-info-bg: 30 24 66;          /* deep purple */
     --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
@@ -489,29 +489,29 @@ html.dark {
     --color-event-opportunity-hover: 48 108 168;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
-    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
-    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
-    --color-table-status-approved: 10 30 20;     /* muted dark green */
-    --color-table-status-warning: 50 35 18;      /* muted dark orange */
+    --color-table-row-alt: 27 21 48;             /* #1b1530 muted surface */
+    --color-table-hover: 34 23 67;               /* #221743 subtle purple wash */
+    --color-table-selected: 45 30 86;            /* a touch stronger than hover */
+    --color-table-status-approved: 10 34 26;     /* muted dark green */
+    --color-table-status-warning: 48 33 16;      /* muted dark orange */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: 15 23 42;
-    --color-sidebar-text: 245 245 245;
-    --color-sidebar-hover: 30 41 59;
-    --color-sidebar-icon: 148 163 184;
+    --color-sidebar-bg: 21 16 36;      /* #151024 */
+    --color-sidebar-text: 232 228 246; /* #e8e4f6 */
+    --color-sidebar-hover: 34 23 67;   /* #221743 */
+    --color-sidebar-icon: 154 146 184; /* #9a92b8 */
 
     /* Header Colors  */
-    --color-header-bg: 22 28 48;
-    --color-header-text: 245 245 245;
-    --color-header-border: 51 65 85;
+    --color-header-bg: 21 16 36;       /* #151024 */
+    --color-header-text: 232 228 246;
+    --color-header-border: 39 32 65;   /* #272041 */
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: 30 41 59;
-    --color-submenu-text: 245 245 245;
-    --color-submenu-hover: 128 128 128;
-    --color-submenu-icon: 144 144 144;
+    --color-submenu-bg: 30 24 54;      /* #1e1836 elevated surface */
+    --color-submenu-text: 232 228 246;
+    --color-submenu-hover: 47 39 82;   /* #2f2752 */
+    --color-submenu-icon: 154 146 184;
 
 
     background: rgba(var(--background), 1);
@@ -1079,27 +1079,27 @@ html.dark {
 }
 
 .dark .expression-editor-placeholder {
-  color: #6b7280;
+  color: rgb(var(--color-text-400));
 }
 
 /* ReactFlow dark mode overrides */
 .dark .react-flow__minimap {
-  background-color: #334155;
-  border: 1px solid #475569;
+  background-color: rgb(var(--color-border-200));
+  border: 1px solid rgb(var(--color-border-300));
   border-radius: 6px;
 }
 
 .dark .react-flow__controls {
-  background: #1e293b;
-  border: 1px solid #475569;
+  background: rgb(var(--color-border-100));
+  border: 1px solid rgb(var(--color-border-300));
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .dark .react-flow__controls-button {
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
-  fill: #cbd5e1;
+  background: rgb(var(--color-border-100));
+  border-bottom: 1px solid rgb(var(--color-border-200));
+  fill: rgb(var(--color-text-700));
 }
 
 .dark .react-flow__controls-button:last-child {
@@ -1107,7 +1107,7 @@ html.dark {
 }
 
 .dark .react-flow__controls-button:hover {
-  background: #334155;
+  background: rgb(var(--color-border-200));
 }
 
 /* Override BlockNote theme so parent background shows through (light + dark) */
