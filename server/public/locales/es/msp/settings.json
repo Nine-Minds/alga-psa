@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Tema",
-    "description": "Elija el par claro/oscuro que verá todo el mundo en esta organización, tanto en la aplicación del personal como en el portal de clientes. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
+    "description": "Elija el par claro/oscuro que verá todo el mundo en esta organización, tanto en la aplicación MSP como en el portal de clientes. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Marca propia en la aplicación del personal",
-      "description": "Use su propio logotipo y sus colores de marca también en la aplicación del personal, no solo en el portal de clientes. Son los mismos logotipos que usa el portal de clientes.",
-      "help": "Desactivado de forma predeterminada. Cuando está activado, el panel lateral del personal muestra su logotipo y sus colores de marca sustituyen a los acentos del tema.",
+      "title": "Marca propia en la aplicación MSP",
+      "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
+      "logoHelp": "El menú lateral MSP es oscuro en ambos temas, así que usa el logotipo para fondos oscuros cuando lo proporciona y, si no, el logotipo principal.",
       "fields": {
         "logo": "Logotipo",
         "logoDark": "Logotipo para fondos oscuros"
+      },
+      "colors": {
+        "label": "Usar sus colores de marca en la aplicación MSP",
+        "help": "Desactivado de forma predeterminada. Cuando está activado, sus colores primario y secundario sustituyen a los acentos del tema para los usuarios MSP, igual que ya ocurre en el portal de clientes."
       }
     },
     "messages": {

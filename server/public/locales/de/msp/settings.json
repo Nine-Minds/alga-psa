@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Design",
-    "description": "Wählen Sie das Hell-/Dunkel-Paar, das alle in dieser Organisation sehen – in der Mitarbeiter-App und im Kundenportal. Jede Person wählt weiterhin selbst zwischen Hell, Dunkel und System.",
+    "description": "Wählen Sie das Hell-/Dunkel-Paar, das alle in dieser Organisation sehen – in der MSP-App und im Kundenportal. Jede Person wählt weiterhin selbst zwischen Hell, Dunkel und System.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Mitarbeiter-App mit eigener Marke",
-      "description": "Verwenden Sie Ihr eigenes Logo und Ihre Markenfarben auch in der Mitarbeiter-App, nicht nur im Kundenportal. Es sind dieselben Logos wie im Kundenportal.",
-      "help": "Standardmäßig deaktiviert. Wenn aktiviert, zeigt die Seitenleiste Ihr Logo, und Ihre Markenfarben ersetzen die Designakzente.",
+      "title": "MSP-App mit eigener Marke",
+      "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
+      "logoHelp": "Das MSP-Seitenmenü ist in beiden Designs dunkel. Es verwendet daher das Logo für dunkle Hintergründe, sofern vorhanden, und sonst das Hauptlogo.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo für dunkle Hintergründe"
+      },
+      "colors": {
+        "label": "Markenfarben in der MSP-App verwenden",
+        "help": "Standardmäßig deaktiviert. Wenn aktiviert, ersetzen Ihre Primär- und Sekundärfarben die Designakzente für MSP-Benutzer, so wie bereits im Kundenportal."
       }
     },
     "messages": {

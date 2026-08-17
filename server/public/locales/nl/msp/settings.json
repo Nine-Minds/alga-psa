@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Thema",
-    "description": "Kies het licht/donker-paar dat iedereen in deze organisatie ziet, zowel in de medewerkersapp als in het klantenportaal. Elke persoon kiest nog steeds zelf licht, donker of systeem.",
+    "description": "Kies het licht/donker-paar dat iedereen in deze organisatie ziet, zowel in de MSP-app als in het klantenportaal. Elke persoon kiest nog steeds zelf licht, donker of systeem.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Eigen merk voor de medewerkersapp",
-      "description": "Gebruik uw eigen logo en merkkleuren ook in de medewerkersapp, niet alleen in het klantenportaal. Dit zijn dezelfde logo’s als in het klantenportaal.",
-      "help": "Standaard uitgeschakeld. Wanneer ingeschakeld toont het zijpaneel uw logo en vervangen uw merkkleuren de themakleuren.",
+      "title": "Eigen merk voor de MSP-app",
+      "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
+      "logoHelp": "Het MSP-zijmenu is in beide thema’s donker en gebruikt daarom het logo voor donkere achtergronden als u dat toevoegt, en anders het hoofdlogo.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo voor donkere achtergronden"
+      },
+      "colors": {
+        "label": "Uw merkkleuren in de MSP-app gebruiken",
+        "help": "Standaard uitgeschakeld. Wanneer ingeschakeld vervangen uw primaire en secundaire kleuren de themakleuren voor MSP-gebruikers, net zoals al in het klantenportaal."
       }
     },
     "messages": {

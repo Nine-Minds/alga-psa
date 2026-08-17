@@ -1331,7 +1331,7 @@
       "darkMode": "11111",
       "previewAlt": "11111",
       "contrastTitle": "11111",
-      "contrastIssue": "11111",
+      "contrastIssue": "11111 {{pair}} 11111 {{ratio}} 11111 {{required}} 11111",
       "tokens": {
         "background": "11111",
         "card": "11111",
@@ -1358,10 +1358,14 @@
     "whiteLabel": {
       "title": "11111",
       "description": "11111",
-      "help": "11111",
+      "logoHelp": "11111",
       "fields": {
         "logo": "11111",
         "logoDark": "11111"
+      },
+      "colors": {
+        "label": "11111",
+        "help": "11111"
       }
     },
     "messages": {

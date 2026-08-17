@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Thème",
-    "description": "Choisissez la paire clair/sombre que tout le monde voit dans cette organisation, dans l’application du personnel comme dans le portail client. Chaque personne continue de choisir clair, sombre ou système pour elle-même.",
+    "description": "Choisissez la paire clair/sombre que tout le monde voit dans cette organisation, dans l’application MSP comme dans le portail client. Chaque personne continue de choisir clair, sombre ou système pour elle-même.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Personnaliser la marque de l’application du personnel",
-      "description": "Utilisez votre propre logo et vos couleurs de marque dans l’application du personnel comme dans le portail client. Ce sont les mêmes logos que ceux du portail client.",
-      "help": "Désactivé par défaut. Une fois activé, le panneau latéral du personnel affiche votre logo et vos couleurs de marque remplacent les accents du thème.",
+      "title": "Personnaliser la marque de l’application MSP",
+      "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
+      "logoHelp": "Le menu latéral MSP est sombre dans les deux thèmes : il utilise le logo pour arrière-plans sombres lorsque vous en fournissez un, sinon le logo principal.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo pour arrière-plans sombres"
+      },
+      "colors": {
+        "label": "Utiliser vos couleurs de marque dans l’application MSP",
+        "help": "Désactivé par défaut. Une fois activé, vos couleurs primaire et secondaire remplacent les accents du thème pour les utilisateurs MSP, comme elles le font déjà dans le portail client."
       }
     },
     "messages": {

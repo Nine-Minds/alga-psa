@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Theme",
-    "description": "Pick the light/dark pair everyone in this organization sees, on both the staff app and the client portal. Each person still chooses light, dark or system for themselves.",
+    "description": "Pick the light/dark pair everyone in this organization sees, in both the MSP app and the client portal. Each person still chooses light, dark or system for themselves.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "White-label the staff app",
-      "description": "Put your own logo and brand colors on the staff-facing app as well as the client portal. These are the same logos the client portal uses.",
-      "help": "Off by default. When on, the staff sidebar shows your logo and your brand colors replace the theme accents.",
+      "title": "White-label the MSP app",
+      "description": "Upload your logo once. It replaces the Alga mark in the MSP side menu, and the client portal uses the same images.",
+      "logoHelp": "The MSP side menu is dark in both themes, so it uses the dark-background logo when you provide one and falls back to the main logo otherwise.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo for dark backgrounds"
+      },
+      "colors": {
+        "label": "Use your brand colors in the MSP app",
+        "help": "Off by default. When on, your primary and secondary colors replace the theme accents for MSP users, the way they already do in the client portal."
       }
     },
     "messages": {

@@ -1297,7 +1297,7 @@
   },
   "appearance": {
     "title": "Tema",
-    "description": "Scegli la coppia chiaro/scuro che tutti in questa organizzazione vedono, sia nell’app dello staff sia nel portale clienti. Ogni persona continua a scegliere chiaro, scuro o sistema per sé.",
+    "description": "Scegli la coppia chiaro/scuro che tutti in questa organizzazione vedono, sia nell’app MSP sia nel portale clienti. Ogni persona continua a scegliere chiaro, scuro o sistema per sé.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1356,12 +1356,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Personalizza il marchio dell’app dello staff",
-      "description": "Usa il tuo logo e i tuoi colori aziendali anche nell’app dello staff, non solo nel portale clienti. Sono gli stessi loghi usati dal portale clienti.",
-      "help": "Disattivato per impostazione predefinita. Quando è attivo, il pannello laterale dello staff mostra il tuo logo e i tuoi colori sostituiscono gli accenti del tema.",
+      "title": "Personalizza il marchio dell’app MSP",
+      "description": "Carica il tuo logo una volta sola. Sostituisce il marchio Alga nel menu laterale MSP e il portale clienti usa le stesse immagini.",
+      "logoHelp": "Il menu laterale MSP è scuro in entrambi i temi, quindi usa il logo per sfondi scuri quando lo fornisci e altrimenti ricorre al logo principale.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo per sfondi scuri"
+      },
+      "colors": {
+        "label": "Usa i colori del tuo marchio nell’app MSP",
+        "help": "Disattivato per impostazione predefinita. Quando è attivo, i tuoi colori primario e secondario sostituiscono gli accenti del tema per gli utenti MSP, come già avviene nel portale clienti."
       }
     },
     "messages": {

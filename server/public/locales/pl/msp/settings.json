@@ -1303,7 +1303,7 @@
   },
   "appearance": {
     "title": "Motyw",
-    "description": "Wybierz parę jasny/ciemny widoczną dla wszystkich w tej organizacji — zarówno w aplikacji zespołu, jak i w portalu klienta. Każda osoba nadal sama wybiera tryb jasny, ciemny lub systemowy.",
+    "description": "Wybierz parę jasny/ciemny widoczną dla wszystkich w tej organizacji — zarówno w aplikacji MSP, jak i w portalu klienta. Każda osoba nadal sama wybiera tryb jasny, ciemny lub systemowy.",
     "pairs": {
       "alga": {
         "label": "Alga",
@@ -1362,12 +1362,16 @@
       }
     },
     "whiteLabel": {
-      "title": "Własna marka w aplikacji zespołu",
-      "description": "Użyj własnego logo i kolorów marki także w aplikacji zespołu, nie tylko w portalu klienta. To te same logo, których używa portal klienta.",
-      "help": "Domyślnie wyłączone. Po włączeniu panel boczny zespołu pokazuje Twoje logo, a kolory marki zastępują akcenty motywu.",
+      "title": "Własna marka w aplikacji MSP",
+      "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
+      "logoHelp": "Menu boczne MSP jest ciemne w obu motywach, dlatego używa logo na ciemne tła, jeśli je prześlesz, a w przeciwnym razie logo głównego.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo na ciemne tła"
+      },
+      "colors": {
+        "label": "Używaj kolorów swojej marki w aplikacji MSP",
+        "help": "Domyślnie wyłączone. Po włączeniu kolory podstawowy i dodatkowy zastępują akcenty motywu dla użytkowników MSP, tak jak już dzieje się to w portalu klienta."
       }
     },
     "messages": {
