@@ -128,6 +128,18 @@ describe.skipIf(!ENABLED)('bucket usage with an Hourly + Bucket overlay (real DB
           overage_rate: 18500, allow_rollover: false,
         });
 
+        // Pool-keyed model (weighted-burn): seed the single-member 1x pool the
+        // scope-resolution rule resolves.
+        await trx('contract_line_buckets').insert({
+          tenant, bucket_id: bucketConfigId, contract_line_id: contractLineId,
+          total_minutes: TOTAL_MINUTES, overage_rate: 18500,
+          allow_rollover: false, covers_all_services: false,
+        });
+        await trx('contract_line_bucket_services').insert({
+          tenant, bucket_id: bucketConfigId, contract_line_id: contractLineId,
+          service_id: serviceId, burn_multiplier: 1,
+        });
+
         await body({
           trx, tenant, clientId, serviceId, contractLineId,
           bucketConfigId, hourlyConfigId, entryDate: '2026-03-10T09:00:00Z',

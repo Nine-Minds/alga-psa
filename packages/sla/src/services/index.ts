@@ -13,7 +13,10 @@ export {
   calculateDeadline,
   getRemainingBusinessMinutes,
   formatRemainingTime,
-  type BusinessTimeResult
+  segmentSpanByBusinessHours,
+  type BusinessTimeResult,
+  type BusinessHourSegment,
+  type BusinessHoursScheduleInput
 } from './businessHoursCalculator';
 
 // Main SLA lifecycle service

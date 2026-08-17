@@ -2324,5 +2324,47 @@
       "description": "55555",
       "title": "55555"
     }
+  },
+  "bucketPools": {
+    "heading": "55555",
+    "actions": {
+      "addPool": "55555",
+      "create": "55555",
+      "cancel": "55555",
+      "remove": "55555",
+      "applyRule": "55555"
+    },
+    "loading": "55555",
+    "empty": "55555",
+    "labels": {
+      "catchAll": "55555",
+      "pool": "55555",
+      "scopeCatchAll": "55555",
+      "scopeMembers": "55555",
+      "totalHours": "55555",
+      "overageRate": "55555",
+      "rollover": "55555",
+      "afterHours": "55555",
+      "afterHoursMultiplier": "55555",
+      "schedule": "55555",
+      "default": "55555",
+      "members": "55555",
+      "multiplier": "55555",
+      "noMembers": "55555",
+      "selectService": "55555",
+      "poolName": "55555",
+      "poolNamePlaceholder": "55555",
+      "coversAll": "55555"
+    },
+    "badges": {
+      "dormant": "55555"
+    },
+    "errors": {
+      "catchAllExists": "55555"
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "55555",
+    "empty": "55555"
   }
 }

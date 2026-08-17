@@ -889,6 +889,7 @@
       "workflow.event",
       "{{count}} folder",
       "| null",
+      "×",
       "—",
       "• VPN",
       "• Wi-Fi"

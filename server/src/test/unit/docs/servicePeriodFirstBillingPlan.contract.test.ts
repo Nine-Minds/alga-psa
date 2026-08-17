@@ -117,6 +117,7 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
+  'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
 ]);

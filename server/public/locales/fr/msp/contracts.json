@@ -2324,5 +2324,47 @@
       "description": "Le simulateur de contrat est disponible dans AlgaPSA Pro.",
       "title": "Fonctionnalité Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Forfaits d’heures",
+    "actions": {
+      "addPool": "Ajouter un forfait",
+      "create": "Créer le forfait",
+      "cancel": "Annuler",
+      "remove": "Retirer",
+      "applyRule": "Appliquer la règle hors horaires"
+    },
+    "loading": "Chargement des forfaits d’heures…",
+    "empty": "Aucun forfait d’heures sur cette ligne. Ajoutez un forfait pour inclure des heures prépayées.",
+    "labels": {
+      "catchAll": "Tous les services de cette ligne",
+      "pool": "Forfait d’heures",
+      "scopeCatchAll": "Couvre tous les services de la ligne (les services membres remplacent le multiplicateur)",
+      "scopeMembers": "Services membres uniquement",
+      "totalHours": "Heures totales",
+      "overageRate": "Tarif de dépassement ($/h)",
+      "rollover": "Autoriser le report",
+      "afterHours": "Multiplicateur de consommation hors horaires",
+      "afterHoursMultiplier": "Multiplicateur (p. ex. 1,5)",
+      "schedule": "Planning des heures ouvrées",
+      "default": "par défaut",
+      "members": "Services membres",
+      "multiplier": "×",
+      "noMembers": "Aucun service membre associé.",
+      "selectService": "Sélectionner un service…",
+      "poolName": "Nom du forfait (facultatif)",
+      "poolNamePlaceholder": "p. ex. Heures standard",
+      "coversAll": "Couvre tous les services de cette ligne"
+    },
+    "badges": {
+      "dormant": "aucun service associé — rien n’est décompté de ce forfait"
+    },
+    "errors": {
+      "catchAllExists": "Cette ligne possède déjà un forfait global."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Forfaits d’heures pour cette ligne",
+    "empty": "Aucun forfait d’heures sur cette ligne pour le moment. Ajoutez un forfait pour inclure des heures prépayées."
   }
 }

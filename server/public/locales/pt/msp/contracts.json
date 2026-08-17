@@ -2324,5 +2324,47 @@
       "description": "O simulador de contratos está disponível no AlgaPSA Pro.",
       "title": "Recurso Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Bancos de horas",
+    "actions": {
+      "addPool": "Adicionar banco",
+      "create": "Criar banco",
+      "cancel": "Cancelar",
+      "remove": "Remover",
+      "applyRule": "Aplicar regra fora do horário"
+    },
+    "loading": "Carregando bancos de horas…",
+    "empty": "Nenhum banco de horas nesta linha. Adicione um banco para incluir horas pré-pagas.",
+    "labels": {
+      "catchAll": "Todos os serviços desta linha",
+      "pool": "Banco de horas",
+      "scopeCatchAll": "Cobre todos os serviços da linha (os serviços membros substituem o multiplicador)",
+      "scopeMembers": "Somente serviços membros",
+      "totalHours": "Horas totais",
+      "overageRate": "Taxa de excedente ($/h)",
+      "rollover": "Permitir transferência de saldo",
+      "afterHours": "Multiplicador de consumo fora do horário",
+      "afterHoursMultiplier": "Multiplicador (ex.: 1,5)",
+      "schedule": "Agenda de horário comercial",
+      "default": "padrão",
+      "members": "Serviços membros",
+      "multiplier": "×",
+      "noMembers": "Nenhum serviço membro vinculado.",
+      "selectService": "Selecione um serviço…",
+      "poolName": "Nome do banco (opcional)",
+      "poolNamePlaceholder": "ex.: Horas padrão",
+      "coversAll": "Cobre todos os serviços desta linha"
+    },
+    "badges": {
+      "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
+    },
+    "errors": {
+      "catchAllExists": "Esta linha já tem um banco abrangente."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Banco de horas para esta linha",
+    "empty": "Ainda não há bancos de horas nesta linha. Adicione um banco para incluir horas pré-pagas."
   }
 }

@@ -24,6 +24,7 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import {
     actionError,
     permissionError,
@@ -526,28 +527,23 @@ export const copyPresetToContractLine = withAuth(async (
                     if (presetService.bucket_total_minutes != null && presetService.bucket_overage_rate != null) {
                         console.log(`[copyPresetToContractLine] Creating bucket overlay for service ${presetService.service_id}`);
 
-                        const bucketConfigId = uuidv4();
-
-                        // Create bucket service configuration
-                        const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-                            contract_line_id: contractLineId,
-                            service_id: presetService.service_id,
-                            configuration_type: 'Bucket',
-                            custom_rate: undefined,
-                            quantity: undefined,
-                            instance_name: undefined,
-                            tenant: tenantId
-                        };
-
-                        // Create bucket-specific config matching the contract line's billing frequency
-                        const bucketTypeConfig = {
-                            total_minutes: Math.max(0, Math.round(presetService.bucket_total_minutes)),
-                            billing_period: contractLine.billing_frequency,
-                            overage_rate: Math.max(0, Math.round(presetService.bucket_overage_rate)),
-                            allow_rollover: presetService.bucket_allow_rollover ?? false
-                        };
-
-                        await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+                        // Route through the compat layer so the overlay is
+                        // created as the single-member 1x pool for this
+                        // (line, service) under the weighted-burn model.
+                        await upsertBucketOverlayInTransaction(
+                            trx,
+                            tenantId,
+                            contractLineId,
+                            presetService.service_id,
+                            {
+                                total_minutes: Math.max(0, Math.round(presetService.bucket_total_minutes)),
+                                overage_rate: Math.max(0, Math.round(presetService.bucket_overage_rate)),
+                                allow_rollover: presetService.bucket_allow_rollover ?? false,
+                                billing_period: (contractLine.billing_frequency as 'weekly' | 'monthly') ?? 'monthly',
+                            },
+                            null,
+                            null,
+                        );
 
                         console.log(`[copyPresetToContractLine] Successfully created bucket configuration for service ${presetService.service_id}`);
                     }
@@ -768,24 +764,22 @@ export const createCustomContractLine = withAuth(async (
                     serviceConfig.bucket_overlay.total_minutes != null &&
                     serviceConfig.bucket_overlay.overage_rate != null) {
 
-                    const bucketConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-                        contract_line_id: contractLineId,
-                        service_id: serviceConfig.service_id,
-                        configuration_type: 'Bucket',
-                        custom_rate: undefined,
-                        quantity: undefined,
-                        instance_name: undefined,
-                        tenant: tenantId
-                    };
-
-                    const bucketTypeConfig = {
-                        total_minutes: Math.max(0, Math.round(serviceConfig.bucket_overlay.total_minutes)),
-                        billing_period: serviceConfig.bucket_overlay.billing_period || input.billing_frequency,
-                        overage_rate: Math.max(0, Math.round(serviceConfig.bucket_overlay.overage_rate)),
-                        allow_rollover: serviceConfig.bucket_overlay.allow_rollover ?? false
-                    };
-
-                    await configService.createConfiguration(bucketConfig, bucketTypeConfig);
+                    // Route through the compat layer so the overlay is created
+                    // as the single-member 1x pool for this (line, service).
+                    await upsertBucketOverlayInTransaction(
+                        trx,
+                        tenantId,
+                        contractLineId,
+                        serviceConfig.service_id,
+                        {
+                            total_minutes: Math.max(0, Math.round(serviceConfig.bucket_overlay.total_minutes)),
+                            overage_rate: Math.max(0, Math.round(serviceConfig.bucket_overlay.overage_rate)),
+                            allow_rollover: serviceConfig.bucket_overlay.allow_rollover ?? false,
+                            billing_period: (serviceConfig.bucket_overlay.billing_period || input.billing_frequency) as 'weekly' | 'monthly',
+                        },
+                        null,
+                        null,
+                    );
                 }
             }
 
