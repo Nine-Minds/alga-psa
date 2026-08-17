@@ -818,6 +818,11 @@ export async function applyCreditToInvoiceInternal(
         // (finalize auto-apply, the manual applyCreditToInvoice action, and
         // the REST services) funnels through this function, which always owns
         // this transaction, so this is the single serialization point.
+        //
+        // It also honours the shared lock order every credit writer follows —
+        // invoice row first, then credit rows in stable credit_id order — so
+        // application serializes against a concurrent void/unfinalize/
+        // hard-delete reversal instead of interleaving with it.
         const invoice = await tenantScopedTable(trx, tenant, 'invoices')
             .where({
                 invoice_id: invoiceId,
@@ -1024,23 +1029,42 @@ export async function applyCreditToInvoiceInternal(
             return;
         }
 
+        // Lock the candidate credit rows in stable credit_id order (the same
+        // order the reversal primitive uses after locking the invoice row) and
+        // re-read remaining_amount under the lock: a concurrent apply or
+        // reversal that committed between the unlocked candidate scan above
+        // and this point must be visible before any balance is drawn down, or
+        // the pool could be over-drawn / a restore lost.
+        const candidateCreditIds = creditEntries
+            .map((credit) => String(credit.credit_id))
+            .sort();
+        const lockedCreditRows = await tenantScopedTable(trx, tenant, 'credit_tracking')
+            .whereIn('credit_id', candidateCreditIds)
+            .orderBy('credit_id', 'asc')
+            .forUpdate()
+            .select('credit_id', 'remaining_amount');
+        const lockedRemainingByCreditId = new Map<string, number>(
+            lockedCreditRows.map((row) => [String(row.credit_id), Number(row.remaining_amount)])
+        );
+
         let remainingRequestedAmount = requestedAmount;
         let totalAppliedAmount = 0;
         const appliedCredits: { creditId: string, amount: number, transactionId: string }[] = [];
-        
+
         // Apply credits in order of expiration date until the requested amount is fulfilled
         for (const credit of creditEntries) {
             if (remainingRequestedAmount <= 0) break;
-            
+
+            const lockedRemainingAmount = lockedRemainingByCreditId.get(String(credit.credit_id)) ?? 0;
             const amountToApplyFromCredit = Math.min(
                 remainingRequestedAmount,
-                Number(credit.remaining_amount)
+                lockedRemainingAmount
             );
-            
+
             if (amountToApplyFromCredit <= 0) continue;
-            
+
             // Update the credit tracking entry
-            const newRemainingAmount = Number(credit.remaining_amount) - amountToApplyFromCredit;
+            const newRemainingAmount = lockedRemainingAmount - amountToApplyFromCredit;
             await tenantScopedTable(trx, tenant, 'credit_tracking')
                 .where({ credit_id: credit.credit_id })
                 .update({
