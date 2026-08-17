@@ -445,6 +445,8 @@ export class TaxService {
       throw new Error('Tenant context is required for ensuring default tax settings');
     }
 
+    const resolvedProfileId = await ensureClientDefaultBillingProfile(knex, tenant, clientId);
+
     await knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
       const existingDefault = await db.table('client_tax_rates')
@@ -467,12 +469,13 @@ export class TaxService {
       }
 
       const existingSettings = await db.table<IClientTaxSettings>('client_tax_settings')
-        .where({ client_id: clientId })
+        .where({ client_id: clientId, billing_profile_id: resolvedProfileId })
         .first();
 
       if (!existingSettings) {
         await db.table<IClientTaxSettings>('client_tax_settings').insert({
           client_id: clientId,
+          billing_profile_id: resolvedProfileId,
           is_reverse_charge_applicable: false,
           tenant
         });
