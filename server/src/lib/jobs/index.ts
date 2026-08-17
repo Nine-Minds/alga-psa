@@ -162,6 +162,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register prepaid balance alert scan handler (daily 09:00 UTC)
     jobScheduler.registerJobHandler<PrepaidBalanceAlertScanJobData>(PREPAID_BALANCE_ALERT_SCAN_JOB, async (job: Job<PrepaidBalanceAlertScanJobData>) => {
       await prepaidBalanceAlertScanHandler(job.data);
+    });
     // Register expired hour blocks handler
     jobScheduler.registerJobHandler<ExpiredHourBlocksJobData>('expired-hour-blocks', async (job: Job<ExpiredHourBlocksJobData>) => {
       await expiredHourBlocksHandler(job.data);
@@ -516,6 +517,19 @@ export const scheduleExpiringCreditsNotificationJob = async (
 export const schedulePrepaidBalanceAlertScanJob = async (
   tenantId: string,
   cronExpression: string = '0 9 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<PrepaidBalanceAlertScanJobData>(
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+/**
  * Schedule a daily job to expire hour blocks whose expiration date has passed
  * (default 1:30 AM, just after the expired-credits sweep).
  */
@@ -527,8 +541,6 @@ export const scheduleExpiredHourBlocksJob = async (
     return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
   }
   const scheduler = await initializeScheduler();
-  return await scheduler.scheduleRecurringJob<PrepaidBalanceAlertScanJobData>(
-    PREPAID_BALANCE_ALERT_SCAN_JOB,
   return await scheduler.scheduleRecurringJob<ExpiredHourBlocksJobData>(
     'expired-hour-blocks',
     cronExpression,
