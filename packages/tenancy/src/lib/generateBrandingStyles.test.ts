@@ -43,6 +43,27 @@ describe('generateBrandingStyles portal sidebar tint', () => {
     expect(secondaryCss).toContain('--color-sidebar-bg: 50 51 121');
   });
 
+  it('tints from an arbitrary color when the custom option is chosen', () => {
+    const css = generateBrandingStyles({
+      ...baseBranding,
+      portalSidebarStyle: 'custom',
+      portalSidebarColor: '#6366F1',
+    });
+
+    expect(css).toContain(`${SIDEBAR_SELECTOR} {`);
+    // Same 800 shade the secondary palette would produce for the same hex.
+    expect(css).toContain('--color-sidebar-bg: 50 51 121');
+  });
+
+  it('ignores the custom option until a color is picked', () => {
+    const baseline = generateBrandingStyles(baseBranding);
+
+    expect(generateBrandingStyles({ ...baseBranding, portalSidebarStyle: 'custom' })).toBe(baseline);
+    expect(
+      generateBrandingStyles({ ...baseBranding, portalSidebarStyle: 'custom', portalSidebarColor: '' }),
+    ).toBe(baseline);
+  });
+
   it('keeps returning nothing when the tenant has no colors at all', () => {
     expect(
       generateBrandingStyles({
