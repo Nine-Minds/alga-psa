@@ -80,6 +80,8 @@ Used in: MSP layout (`server/src/app/layout.tsx`), client portal (`server/src/ap
 
 Tenant colors override primary/secondary CSS vars. Dark mode inverts shade scales (`packages/tenancy/src/lib/generateBrandingStyles.ts`): `invertShades()` flips 50<->900, 100<->800, etc. (400/500 stay). FOUC prevention: server-side `<style id="server-tenant-branding-styles">` injection for client-portal routes.
 
+**Portal theme opt-in**: `branding.portalFollowsTheme` (Settings → Client Portal) makes `generateBrandingStyles` return `''`, so the portal wears the tenant's theme pair instead of the brand accents — the cached `computedStyles`, the SSR injection and the `BrandingProvider` fallback all go through that one generator. The Enterprise MSP shell asks for `{ surface: 'msp' }`, which ignores the opt-in because it has its own white-label switch. Absent/false is the default and reproduces the pre-existing CSS byte for byte.
+
 ## Extension Iframe Bridge
 
 Extensions receive theme tokens via postMessage (`server/src/lib/extensions/ui/iframeBridge.ts`):
