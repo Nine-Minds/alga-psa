@@ -32,6 +32,12 @@ import {
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
 } from '@alga-psa/shared/rmm/alerts';
+// Device syncs are far heavier than alert polls, so the floor is higher.
+import {
+  DEVICE_SYNC_DEFAULT_MINUTES,
+  DEVICE_SYNC_MAX_MINUTES,
+  DEVICE_SYNC_MIN_MINUTES,
+} from '@alga-psa/integrations/lib/rmm/deviceSyncBounds';
 import { buildRmmAlertPipelineDeps } from '@alga-psa/integrations/lib/rmm/alerts/pipelineDeps';
 import { tacticalRmmAlertFetcher } from '@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher';
 import type { Knex } from 'knex';
@@ -56,10 +62,6 @@ const RMM_ALERT_POLLING_PROVIDERS = ['ninjaone', 'tacticalrmm'];
  */
 const RMM_DEVICE_SYNC_PROVIDERS = ['ninjaone', 'levelio', 'tacticalrmm', 'tanium'];
 
-/** Device syncs are far heavier than alert polls, so the floor is higher. */
-const DEVICE_SYNC_MIN_MINUTES = 15;
-const DEVICE_SYNC_MAX_MINUTES = 1440;
-const DEVICE_SYNC_DEFAULT_MINUTES = 60;
 const RMM_POLLING_RECONCILE_TENANT = '__rmm_polling_reconcile__';
 const RMM_POLLING_RECONCILE_REASON = 'RMM polling reconciler scans integration schedules across tenants';
 

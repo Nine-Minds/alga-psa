@@ -15,6 +15,11 @@ import {
   updateRmmDeviceSyncSettings,
   type RmmIntegrationStatus,
 } from '../../../actions/integrations/rmmIntegrationStatusActions';
+import {
+  DEVICE_SYNC_DEFAULT_MINUTES,
+  DEVICE_SYNC_MAX_MINUTES,
+  DEVICE_SYNC_MIN_MINUTES,
+} from '../../../lib/rmm/deviceSyncBounds';
 
 /**
  * Providers with a device sync strategy the rmm-device-sync job can drive.
@@ -26,12 +31,6 @@ export const DEVICE_SYNC_SUPPORTED_PROVIDERS: readonly RmmProvider[] = ['ninjaon
 export function supportsScheduledDeviceSync(provider: RmmProvider): boolean {
   return DEVICE_SYNC_SUPPORTED_PROVIDERS.includes(provider);
 }
-
-// Kept in step with the clamp in rmmIntegrationStatusActions by hand: that
-// module is 'use server', so a client component cannot import its constants.
-export const DEVICE_SYNC_MIN_MINUTES = 15;
-export const DEVICE_SYNC_MAX_MINUTES = 1440;
-export const DEVICE_SYNC_DEFAULT_MINUTES = 60;
 
 export interface RmmDeviceSyncSettingsProps {
   provider: RmmProvider;

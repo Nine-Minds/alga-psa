@@ -31,10 +31,15 @@ export interface RmmIntegrationStatus {
   lastIncrementalSyncAt: string | null;
 }
 
-/** Mirrors the clamp the reconciler applies; callers must not offer what the server will not honour. */
-export const DEVICE_SYNC_MIN_MINUTES = 15;
-export const DEVICE_SYNC_MAX_MINUTES = 1440;
-export const DEVICE_SYNC_DEFAULT_MINUTES = 60;
+// Imported for the clamp below and re-exported so existing importers of this
+// module keep working; the values live in the dependency-free bounds module.
+import {
+  DEVICE_SYNC_MIN_MINUTES,
+  DEVICE_SYNC_MAX_MINUTES,
+  DEVICE_SYNC_DEFAULT_MINUTES,
+} from './deviceSyncBounds';
+
+export { DEVICE_SYNC_MIN_MINUTES, DEVICE_SYNC_MAX_MINUTES, DEVICE_SYNC_DEFAULT_MINUTES };
 
 export function safeParseSettings(value: string): Record<string, unknown> {
   try {

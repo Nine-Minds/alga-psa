@@ -12,14 +12,8 @@ import {
 
 export type { RmmIntegrationStatus };
 
-// Re-exported for callers that already import them from here. The values live
-// in the lib module so the v1 API can share them without importing a
-// 'use server' file.
-export {
-  DEVICE_SYNC_MIN_MINUTES,
-  DEVICE_SYNC_MAX_MINUTES,
-  DEVICE_SYNC_DEFAULT_MINUTES,
-} from '../../lib/rmm/rmmIntegrationStatus';
+// The device-sync bounds are NOT re-exported here: a 'use server' module may
+// only export async functions. Import them from lib/rmm/contracts instead.
 
 export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Promise<{
   success: boolean;
