@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The hour-blocks section is injected into the client billing dashboard via
-// ClientCrossFeatureContext.renderClientHourBlocks (the renderClientOpportunities
+// ClientCrossFeatureContext.renderHourBlocksSection (the renderClientOpportunities
 // pattern) so the clients package never imports billing directly. This test
 // pins the composition side of that seam: the provider supplies the callback
 // and it renders HourBlocksSection with the caller's clientId/currencyCode.
@@ -64,10 +64,10 @@ const { MspClientCrossFeatureProvider } = await import('./MspClientCrossFeatureP
 const { useClientCrossFeature } = await import('@alga-psa/clients/context/ClientCrossFeatureContext');
 
 function HourBlocksProbe() {
-  const { renderClientHourBlocks } = useClientCrossFeature();
+  const { renderHourBlocksSection } = useClientCrossFeature();
   return (
     <div>
-      {renderClientHourBlocks?.({ clientId: 'client-1', currencyCode: 'EUR' }) ?? 'no-callback'}
+      {renderHourBlocksSection?.({ clientId: 'client-1', currencyCode: 'EUR' }) ?? 'no-callback'}
     </div>
   );
 }
@@ -78,7 +78,7 @@ describe('MspClientCrossFeatureProvider hour-blocks injection', () => {
     hourBlocksProps.length = 0;
   });
 
-  it('provides renderClientHourBlocks rendering HourBlocksSection with the caller props', () => {
+  it('provides renderHourBlocksSection rendering HourBlocksSection with the caller props', () => {
     render(
       <MspClientCrossFeatureProvider>
         <HourBlocksProbe />

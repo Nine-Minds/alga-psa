@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientHourBlocksRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -11,9 +11,9 @@ import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
+import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
-import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
 import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
 import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';
@@ -54,6 +54,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
     []
   );
 
+  const renderHourBlocksSection = useCallback(
+    (props: HourBlocksSectionRenderProps) => (
+      <HourBlocksSection clientId={props.clientId} currencyCode={props.currencyCode} />
+    ),
+    []
+  );
+
   const renderClientOpportunities = useCallback(
     (props: ClientOpportunitiesRenderProps) => (
       <ClientOpportunitiesTab
@@ -64,13 +71,6 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       />
     ),
     [openOpportunityDetails]
-  );
-
-  const renderClientHourBlocks = useCallback(
-    (props: ClientHourBlocksRenderProps) => (
-      <HourBlocksSection clientId={props.clientId} currencyCode={props.currencyCode} />
-    ),
-    []
   );
 
   const renderClientTickets = useCallback(
@@ -151,8 +151,8 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderHourBlocksSection,
       renderClientOpportunities,
-      renderClientHourBlocks,
       renderClientTickets,
       renderContactTickets,
       renderContractWizard,
@@ -168,8 +168,8 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderHourBlocksSection,
       renderClientOpportunities,
-      renderClientHourBlocks,
       renderClientTickets,
       renderContactTickets,
       renderContractWizard,

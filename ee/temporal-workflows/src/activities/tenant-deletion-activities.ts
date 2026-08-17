@@ -132,6 +132,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
+  // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
+  // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
+  // clients, so the whole group has to precede time tracking below.
+  'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
+  'hour_blocks',
+
   // Time tracking
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',

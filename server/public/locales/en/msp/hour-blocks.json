@@ -42,55 +42,45 @@
     "expiringSoon": "Expires in {{count}} days"
   },
   "sell": {
-    "title": "Sell hour block",
-    "serviceLabel": "Service",
-    "servicePlaceholder": "Select a service",
-    "rateLabel": "Rate per hour ({{currency}})",
+    "expirationLabel": "Expiration (optional)",
     "hoursLabel": "Hours",
     "hoursPlaceholder": "e.g. 10",
-    "expirationLabel": "Expiration (optional)",
-    "scopeLabel": "Scope — services this block covers (empty = all labor)",
+    "hoursRequired": "Enter the number of hours.",
+    "invoiceError": "Could not create the block purchase invoice.",
+    "noServices": "No services available",
     "notesLabel": "Notes (optional)",
-    "totalLabel": "Total",
+    "rateLabel": "Rate per hour ({{currency}})",
+    "rateRequired": "Enter a valid rate.",
+    "scopeLabel": "Scope — services this block covers (empty = all labor)",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Select a service",
+    "serviceRequired": "Select a service.",
     "submit": "Create draft invoice",
     "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
-    "invoiceError": "Could not create the block purchase invoice.",
-    "serviceRequired": "Select a service.",
-    "hoursRequired": "Enter the number of hours.",
-    "rateRequired": "Enter a valid rate.",
-    "noServices": "No services available"
+    "title": "Sell hour block",
+    "totalLabel": "Total"
   },
   "grant": {
-    "title": "Grant hour block",
+    "error": "Could not grant the hour block.",
+    "granted": "Hour block granted.",
     "reasonLabel": "Reason",
     "reasonPlaceholder": "Why are these hours being granted?",
+    "reasonRequired": "A reason is required.",
     "submit": "Grant block",
-    "granted": "Hour block granted.",
-    "error": "Could not grant the hour block.",
-    "reasonRequired": "A reason is required."
+    "title": "Grant hour block"
   },
   "adjust": {
-    "title": "Adjust remaining hours",
+    "adjusted": "Hour block adjusted.",
     "blockLabel": "Block",
     "currentRemaining": "Currently {{hours}} hrs remaining",
     "deltaLabel": "Change in hours (positive adds, negative removes)",
-    "reasonLabel": "Reason",
-    "reasonPlaceholder": "Required",
-    "submit": "Adjust",
-    "adjusted": "Hour block adjusted.",
-    "error": "Could not adjust the hour block.",
     "deltaRequired": "Enter a non-zero change in hours.",
-    "reasonRequired": "A reason is required."
-  },
-  "expire": {
-    "reasonRequired": "A reason is required.",
-    "expired": "Hour block expired.",
-    "error": "Could not expire the hour block.",
-    "title": "Expire hour block",
-    "remaining": "{{hours}} hrs unused will be lost.",
+    "error": "Could not adjust the hour block.",
     "reasonLabel": "Reason",
     "reasonPlaceholder": "Required",
-    "submit": "Expire block"
+    "reasonRequired": "A reason is required.",
+    "submit": "Adjust",
+    "title": "Adjust remaining hours"
   },
   "expiration": {
     "title": "Edit expiration",
@@ -101,14 +91,14 @@
     "error": "Could not update the expiration."
   },
   "void": {
-    "title": "Void hour block",
     "confirm": "Void this block? It cannot be undone.",
+    "error": "Could not void the hour block.",
     "reasonLabel": "Reason",
     "reasonPlaceholder": "Required",
+    "reasonRequired": "A reason is required.",
     "submit": "Void block",
-    "voided": "Hour block voided.",
-    "error": "Could not void the hour block.",
-    "reasonRequired": "A reason is required."
+    "title": "Void hour block",
+    "voided": "Hour block voided."
   },
   "detail": {
     "title": "Hour block details",
@@ -137,5 +127,15 @@
     "voidedLabel": "Voided",
     "purchaseReversed": "Purchase reversed (invoice unfinalized)",
     "unknownUser": "System"
+  },
+  "expire": {
+    "error": "Could not expire the hour block.",
+    "expired": "Hour block expired.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Required",
+    "reasonRequired": "A reason is required.",
+    "remaining": "{{hours}} hrs unused will be lost.",
+    "submit": "Expire block",
+    "title": "Expire hour block"
   }
 }

@@ -42,55 +42,45 @@
     "expiringSoon": "Expire dans {{count}} jours"
   },
   "sell": {
-    "title": "Vendre un bloc d'heures",
-    "serviceLabel": "Service",
-    "servicePlaceholder": "Sélectionnez un service",
-    "rateLabel": "Taux horaire ({{currency}})",
+    "expirationLabel": "Expiration (facultatif)",
     "hoursLabel": "Heures",
     "hoursPlaceholder": "par ex. 10",
-    "expirationLabel": "Expiration (facultatif)",
-    "scopeLabel": "Périmètre — services couverts par ce bloc (vide = toute la main-d'œuvre)",
+    "hoursRequired": "Saisissez le nombre d'heures.",
+    "invoiceError": "Impossible de créer la facture d'achat du bloc.",
+    "noServices": "Aucun service disponible",
     "notesLabel": "Notes (facultatif)",
-    "totalLabel": "Total",
+    "rateLabel": "Taux horaire ({{currency}})",
+    "rateRequired": "Saisissez un taux valide.",
+    "scopeLabel": "Périmètre — services couverts par ce bloc (vide = toute la main-d'œuvre)",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Sélectionnez un service",
+    "serviceRequired": "Sélectionnez un service.",
     "submit": "Créer un brouillon de facture",
     "submitted": "Brouillon de facture {{invoiceNumber}} créé. Finalisez-le pour activer le bloc.",
-    "invoiceError": "Impossible de créer la facture d'achat du bloc.",
-    "serviceRequired": "Sélectionnez un service.",
-    "hoursRequired": "Saisissez le nombre d'heures.",
-    "rateRequired": "Saisissez un taux valide.",
-    "noServices": "Aucun service disponible"
+    "title": "Vendre un bloc d'heures",
+    "totalLabel": "Total"
   },
   "grant": {
-    "title": "Accorder un bloc d'heures",
+    "error": "Impossible d'accorder le bloc d'heures.",
+    "granted": "Bloc d'heures accordé.",
     "reasonLabel": "Motif",
     "reasonPlaceholder": "Pourquoi ces heures sont-elles accordées ?",
+    "reasonRequired": "Un motif est obligatoire.",
     "submit": "Accorder le bloc",
-    "granted": "Bloc d'heures accordé.",
-    "error": "Impossible d'accorder le bloc d'heures.",
-    "reasonRequired": "Un motif est obligatoire."
+    "title": "Accorder un bloc d'heures"
   },
   "adjust": {
-    "title": "Ajuster les heures restantes",
+    "adjusted": "Bloc d'heures ajusté.",
     "blockLabel": "Bloc",
     "currentRemaining": "Actuellement {{hours}} h restantes",
     "deltaLabel": "Variation d'heures (positive pour ajouter, négative pour retirer)",
-    "reasonLabel": "Motif",
-    "reasonPlaceholder": "Obligatoire",
-    "submit": "Ajuster",
-    "adjusted": "Bloc d'heures ajusté.",
+    "deltaRequired": "Saisissez une variation d'heures différente de zéro.",
     "error": "Impossible d'ajuster le bloc d'heures.",
-    "deltaRequired": "Saisissez une variation d'heures non nulle.",
-    "reasonRequired": "Un motif est obligatoire."
-  },
-  "expire": {
-    "reasonRequired": "Un motif est obligatoire.",
-    "expired": "Bloc d'heures expiré.",
-    "error": "Impossible de faire expirer le bloc d'heures.",
-    "title": "Faire expirer le bloc d'heures",
-    "remaining": "{{hours}} h non utilisées seront perdues.",
     "reasonLabel": "Motif",
     "reasonPlaceholder": "Obligatoire",
-    "submit": "Faire expirer le bloc"
+    "reasonRequired": "Un motif est obligatoire.",
+    "submit": "Ajuster",
+    "title": "Ajuster les heures restantes"
   },
   "expiration": {
     "title": "Modifier l'expiration",
@@ -101,14 +91,14 @@
     "error": "Impossible de mettre à jour l'expiration."
   },
   "void": {
-    "title": "Annuler le bloc d'heures",
     "confirm": "Annuler ce bloc ? Cette action est irréversible.",
+    "error": "Impossible d'annuler le bloc d'heures.",
     "reasonLabel": "Motif",
     "reasonPlaceholder": "Obligatoire",
+    "reasonRequired": "Un motif est obligatoire.",
     "submit": "Annuler le bloc",
-    "voided": "Bloc d'heures annulé.",
-    "error": "Impossible d'annuler le bloc d'heures.",
-    "reasonRequired": "Un motif est obligatoire."
+    "title": "Annuler le bloc d'heures",
+    "voided": "Bloc d'heures annulé."
   },
   "detail": {
     "title": "Détails du bloc d'heures",
@@ -137,5 +127,15 @@
     "voidedLabel": "Annulé",
     "purchaseReversed": "Achat annulé (facture définalisée)",
     "unknownUser": "Système"
+  },
+  "expire": {
+    "error": "Impossible de faire expirer le bloc d'heures.",
+    "expired": "Bloc d'heures expiré.",
+    "reasonLabel": "Motif",
+    "reasonPlaceholder": "Obligatoire",
+    "reasonRequired": "Un motif est obligatoire.",
+    "remaining": "{{hours}} h inutilisées seront perdues.",
+    "submit": "Faire expirer le bloc",
+    "title": "Faire expirer le bloc d'heures"
   }
 }

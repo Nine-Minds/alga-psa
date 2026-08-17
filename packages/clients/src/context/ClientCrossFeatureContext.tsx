@@ -31,15 +31,15 @@ export interface ClientAssetsRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksSectionRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface ClientOpportunitiesRenderProps {
   clientId: string;
   clientName: string;
   clientLifecycleStatus?: string | null;
-}
-
-export interface ClientHourBlocksRenderProps {
-  clientId: string;
-  currencyCode: string;
 }
 
 export interface ClientTicketsRenderProps {
@@ -112,10 +112,10 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /** Optional: prepaid hour blocks on the client billing tab (billing owns the component; clients must not import it directly). */
+  renderHourBlocksSection?: (props: HourBlocksSectionRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
   renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
-  /** Optional: the Hour Blocks section on the client billing dashboard tab (provided by the composition layer when the module is available). */
-  renderClientHourBlocks?: (props: ClientHourBlocksRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;

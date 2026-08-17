@@ -42,55 +42,45 @@
     "expiringSoon": "Wygasa za {{count}} dni"
   },
   "sell": {
-    "title": "Sprzedaj pakiet godzin",
-    "serviceLabel": "Usługa",
-    "servicePlaceholder": "Wybierz usługę",
-    "rateLabel": "Stawka za godzinę ({{currency}})",
+    "expirationLabel": "Wygaśnięcie (opcjonalnie)",
     "hoursLabel": "Godziny",
     "hoursPlaceholder": "np. 10",
-    "expirationLabel": "Wygaśnięcie (opcjonalnie)",
-    "scopeLabel": "Zakres — usługi objęte pakietem (puste = wszystkie prace)",
+    "hoursRequired": "Podaj liczbę godzin.",
+    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu.",
+    "noServices": "Brak dostępnych usług",
     "notesLabel": "Notatki (opcjonalnie)",
-    "totalLabel": "Suma",
+    "rateLabel": "Stawka za godzinę ({{currency}})",
+    "rateRequired": "Podaj prawidłową stawkę.",
+    "scopeLabel": "Zakres — usługi objęte pakietem (puste = wszystkie prace)",
+    "serviceLabel": "Usługa",
+    "servicePlaceholder": "Wybierz usługę",
+    "serviceRequired": "Wybierz usługę.",
     "submit": "Utwórz wersję roboczą faktury",
     "submitted": "Utworzono wersję roboczą faktury {{invoiceNumber}}. Sfinalizuj ją, aby aktywować pakiet.",
-    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu.",
-    "serviceRequired": "Wybierz usługę.",
-    "hoursRequired": "Wprowadź liczbę godzin.",
-    "rateRequired": "Wprowadź prawidłową stawkę.",
-    "noServices": "Brak dostępnych usług"
+    "title": "Sprzedaj pakiet godzin",
+    "totalLabel": "Suma"
   },
   "grant": {
-    "title": "Przyznaj pakiet godzin",
+    "error": "Nie udało się przyznać pakietu godzin.",
+    "granted": "Pakiet godzin został przyznany.",
     "reasonLabel": "Powód",
     "reasonPlaceholder": "Dlaczego te godziny są przyznawane?",
+    "reasonRequired": "Powód jest wymagany.",
     "submit": "Przyznaj pakiet",
-    "granted": "Pakiet godzin został przyznany.",
-    "error": "Nie udało się przyznać pakietu godzin.",
-    "reasonRequired": "Powód jest wymagany."
+    "title": "Przyznaj pakiet godzin"
   },
   "adjust": {
-    "title": "Skoryguj pozostałe godziny",
+    "adjusted": "Pakiet godzin został skorygowany.",
     "blockLabel": "Pakiet",
     "currentRemaining": "Obecnie pozostało {{hours}} godz.",
     "deltaLabel": "Zmiana liczby godzin (dodatnia dodaje, ujemna odejmuje)",
-    "reasonLabel": "Powód",
-    "reasonPlaceholder": "Wymagane",
-    "submit": "Skoryguj",
-    "adjusted": "Pakiet godzin został skorygowany.",
+    "deltaRequired": "Podaj zmianę liczby godzin różną od zera.",
     "error": "Nie udało się skorygować pakietu godzin.",
-    "deltaRequired": "Wprowadź niezerową zmianę godzin.",
-    "reasonRequired": "Powód jest wymagany."
-  },
-  "expire": {
-    "reasonRequired": "Powód jest wymagany.",
-    "expired": "Pakiet godzin wygasł.",
-    "error": "Nie udało się wygasić pakietu godzin.",
-    "title": "Wygaś pakiet godzin",
-    "remaining": "{{hours}} godz. niewykorzystanych przepadnie.",
     "reasonLabel": "Powód",
     "reasonPlaceholder": "Wymagane",
-    "submit": "Wygaś pakiet"
+    "reasonRequired": "Powód jest wymagany.",
+    "submit": "Skoryguj",
+    "title": "Skoryguj pozostałe godziny"
   },
   "expiration": {
     "title": "Edytuj wygaśnięcie",
@@ -101,14 +91,14 @@
     "error": "Nie udało się zaktualizować terminu wygaśnięcia."
   },
   "void": {
-    "title": "Unieważnij pakiet godzin",
     "confirm": "Unieważnić ten pakiet? Tej operacji nie można cofnąć.",
+    "error": "Nie udało się unieważnić pakietu godzin.",
     "reasonLabel": "Powód",
     "reasonPlaceholder": "Wymagane",
+    "reasonRequired": "Powód jest wymagany.",
     "submit": "Unieważnij pakiet",
-    "voided": "Pakiet godzin został unieważniony.",
-    "error": "Nie udało się unieważnić pakietu godzin.",
-    "reasonRequired": "Powód jest wymagany."
+    "title": "Unieważnij pakiet godzin",
+    "voided": "Pakiet godzin został unieważniony."
   },
   "detail": {
     "title": "Szczegóły pakietu godzin",
@@ -137,5 +127,15 @@
     "voidedLabel": "Unieważniono",
     "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
     "unknownUser": "System"
+  },
+  "expire": {
+    "error": "Nie udało się wygasić pakietu godzin.",
+    "expired": "Pakiet godzin wygasł.",
+    "reasonLabel": "Powód",
+    "reasonPlaceholder": "Wymagane",
+    "reasonRequired": "Powód jest wymagany.",
+    "remaining": "Niewykorzystane {{hours}} godz. przepadnie.",
+    "submit": "Wygaś pakiet",
+    "title": "Wygaś pakiet godzin"
   }
 }

@@ -28,6 +28,7 @@ import {
   updateLevelIoOrganizationMapping,
 } from '../../../lib/actions/integrations/levelIoActions';
 import { RmmAlertAutomationSettings } from '@alga-psa/integrations/components/settings/integrations/RmmAlertAutomationSettings';
+import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
 
 type MappingRow = {
   mapping_id: string;
@@ -534,6 +535,9 @@ export default function LevelIoIntegrationSettings() {
           )}
         </CardContent>
       </Card>
+      {isActive && (
+        <RmmDeviceSyncSettings provider="levelio" onSaved={() => void refresh(true)} />
+      )}
       {isActive && integrationId && (
         <RmmAlertAutomationSettings integrationId={integrationId} provider="levelio" />
       )}
