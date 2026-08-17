@@ -62,6 +62,25 @@ async function addForeignKeyIfMissing(knex, constraintName, sql) {
   `);
 }
 
+// Helper: whether a table is distributed on a live Citus deployment
+async function isDistributedOnCitus(knex, tableName) {
+  const citusFn = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table'
+    ) AS exists;
+  `);
+  if (!citusFn.rows?.[0]?.exists) {
+    return false;
+  }
+  const distributed = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition
+      WHERE logicalrelid = '${tableName}'::regclass
+    ) AS is_distributed;
+  `);
+  return Boolean(distributed.rows?.[0]?.is_distributed);
+}
+
 exports.up = async function (knex) {
   // --- hour_blocks --------------------------------------------------------
   if (!(await knex.schema.hasTable('hour_blocks'))) {
@@ -188,12 +207,21 @@ exports.up = async function (knex) {
       FOREIGN KEY (tenant, service_id)
       REFERENCES service_catalog(tenant, service_id)
   `);
+  // Citus forbids ON DELETE SET NULL on foreign keys that include the
+  // distribution key (tenant), so the backstop degrades to a plain FK there.
+  // Every application path already nulls source_invoice_id before the
+  // purchase invoice is deleted (see voidPendingHourBlocksForInvoiceDeletion
+  // in packages/billing/src/actions/invoiceModification.ts), so the SET NULL
+  // action is only a plain-Postgres backstop.
+  const invoiceFkeyOnDelete = (await isDistributedOnCitus(knex, 'hour_blocks'))
+    ? ''
+    : 'ON DELETE SET NULL';
   await addForeignKeyIfMissing(knex, 'hour_blocks_invoice_fkey', `
     ALTER TABLE hour_blocks
       ADD CONSTRAINT hour_blocks_invoice_fkey
       FOREIGN KEY (tenant, source_invoice_id)
       REFERENCES invoices(tenant, invoice_id)
-      ON DELETE SET NULL
+      ${invoiceFkeyOnDelete}
   `);
 
   await addForeignKeyIfMissing(knex, 'hour_block_scopes_block_fkey', `
