@@ -54,7 +54,11 @@
     "totalLabel": "Total",
     "submit": "Create draft invoice",
     "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
-    "invoiceError": "Could not create the block purchase invoice."
+    "invoiceError": "Could not create the block purchase invoice.",
+    "serviceRequired": "Select a service.",
+    "hoursRequired": "Enter the number of hours.",
+    "rateRequired": "Enter a valid rate.",
+    "noServices": "No services available"
   },
   "grant": {
     "title": "Grant hour block",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "Why are these hours being granted?",
     "submit": "Grant block",
     "granted": "Hour block granted.",
-    "error": "Could not grant the hour block."
+    "error": "Could not grant the hour block.",
+    "reasonRequired": "A reason is required."
   },
   "adjust": {
     "title": "Adjust remaining hours",
@@ -73,7 +78,19 @@
     "reasonPlaceholder": "Required",
     "submit": "Adjust",
     "adjusted": "Hour block adjusted.",
-    "error": "Could not adjust the hour block."
+    "error": "Could not adjust the hour block.",
+    "deltaRequired": "Enter a non-zero change in hours.",
+    "reasonRequired": "A reason is required."
+  },
+  "expire": {
+    "reasonRequired": "A reason is required.",
+    "expired": "Hour block expired.",
+    "error": "Could not expire the hour block.",
+    "title": "Expire hour block",
+    "remaining": "{{hours}} hrs unused will be lost.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Required",
+    "submit": "Expire block"
   },
   "expiration": {
     "title": "Edit expiration",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "Required",
     "submit": "Void block",
     "voided": "Hour block voided.",
-    "error": "Could not void the hour block."
+    "error": "Could not void the hour block.",
+    "reasonRequired": "A reason is required."
   },
   "detail": {
     "title": "Hour block details",

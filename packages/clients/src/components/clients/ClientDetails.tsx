@@ -64,7 +64,6 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ClientContractLineDashboard from './ClientContractLineDashboard';
-import { HourBlocksSection } from '@alga-psa/billing/components';
 import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
@@ -237,7 +236,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientHourBlocks, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1449,9 +1448,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
-          {hourBlocksFlag.enabled && (
-            <HourBlocksSection clientId={client.client_id} currencyCode={client.default_currency_code ?? 'USD'} />
-          )}
+          {hourBlocksFlag.enabled && renderClientHourBlocks?.({
+            clientId: client.client_id,
+            currencyCode: client.default_currency_code ?? 'USD',
+          })}
         </div>
       )
     },

@@ -54,7 +54,11 @@
     "totalLabel": "Total",
     "submit": "Crear borrador de factura",
     "submitted": "Se creó el borrador de factura {{invoiceNumber}}. Finalícelo para activar el bloque.",
-    "invoiceError": "No se pudo crear la factura de compra del bloque."
+    "invoiceError": "No se pudo crear la factura de compra del bloque.",
+    "serviceRequired": "Selecciona un servicio.",
+    "hoursRequired": "Introduce el número de horas.",
+    "rateRequired": "Introduce una tarifa válida.",
+    "noServices": "No hay servicios disponibles"
   },
   "grant": {
     "title": "Otorgar bloque de horas",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "¿Por qué se otorgan estas horas?",
     "submit": "Otorgar bloque",
     "granted": "Bloque de horas otorgado.",
-    "error": "No se pudo otorgar el bloque de horas."
+    "error": "No se pudo otorgar el bloque de horas.",
+    "reasonRequired": "Se requiere un motivo."
   },
   "adjust": {
     "title": "Ajustar horas restantes",
@@ -73,7 +78,19 @@
     "reasonPlaceholder": "Obligatorio",
     "submit": "Ajustar",
     "adjusted": "Bloque de horas ajustado.",
-    "error": "No se pudo ajustar el bloque de horas."
+    "error": "No se pudo ajustar el bloque de horas.",
+    "deltaRequired": "Introduce un cambio de horas distinto de cero.",
+    "reasonRequired": "Se requiere un motivo."
+  },
+  "expire": {
+    "reasonRequired": "Se requiere un motivo.",
+    "expired": "Bloque de horas vencido.",
+    "error": "No se pudo vencer el bloque de horas.",
+    "title": "Vencer bloque de horas",
+    "remaining": "Se perderán {{hours}} h sin usar.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obligatorio",
+    "submit": "Vencer bloque"
   },
   "expiration": {
     "title": "Editar vencimiento",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "Obligatorio",
     "submit": "Anular bloque",
     "voided": "Bloque de horas anulado.",
-    "error": "No se pudo anular el bloque de horas."
+    "error": "No se pudo anular el bloque de horas.",
+    "reasonRequired": "Se requiere un motivo."
   },
   "detail": {
     "title": "Detalles del bloque de horas",

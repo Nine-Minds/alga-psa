@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
@@ -139,10 +141,13 @@ async function cleanupToSnapshot(snap: SubtreeSnapshot) {
   await dropMarkerTableIfExists();
 }
 
+const require = createRequire(import.meta.url);
+const MIGRATION_PATH = path.resolve(__dirname, '../20260813120100_add_hour_block_expiration_notification.cjs');
+
 describe.runIf(enabled)('20260813120100 hour block notification migration rollback safety', () => {
   beforeAll(async () => {
     db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
-    const loaded = (await import('../../../server/migrations/20260813120100_add_hour_block_expiration_notification.cjs')) as any;
+    const loaded = require(MIGRATION_PATH) as { up: (knex: Knex) => Promise<void>; down: (knex: Knex) => Promise<void> };
     migration = { up: loaded.up, down: loaded.down };
   });
 

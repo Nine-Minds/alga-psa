@@ -54,7 +54,11 @@
     "totalLabel": "55555",
     "submit": "55555",
     "submitted": "55555 {{invoiceNumber}} 55555",
-    "invoiceError": "55555"
+    "invoiceError": "55555",
+    "serviceRequired": "55555",
+    "hoursRequired": "55555",
+    "rateRequired": "55555",
+    "noServices": "55555"
   },
   "grant": {
     "title": "55555",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "55555",
     "submit": "55555",
     "granted": "55555",
-    "error": "55555"
+    "error": "55555",
+    "reasonRequired": "55555"
   },
   "adjust": {
     "title": "55555",
@@ -73,7 +78,19 @@
     "reasonPlaceholder": "55555",
     "submit": "55555",
     "adjusted": "55555",
-    "error": "55555"
+    "error": "55555",
+    "deltaRequired": "55555",
+    "reasonRequired": "55555"
+  },
+  "expire": {
+    "reasonRequired": "55555",
+    "expired": "55555",
+    "error": "55555",
+    "title": "55555",
+    "remaining": "55555 {{hours}} 55555",
+    "reasonLabel": "55555",
+    "reasonPlaceholder": "55555",
+    "submit": "55555"
   },
   "expiration": {
     "title": "55555",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "55555",
     "submit": "55555",
     "voided": "55555",
-    "error": "55555"
+    "error": "55555",
+    "reasonRequired": "55555"
   },
   "detail": {
     "title": "55555",

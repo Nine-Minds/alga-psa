@@ -37,6 +37,11 @@ export interface ClientOpportunitiesRenderProps {
   clientLifecycleStatus?: string | null;
 }
 
+export interface ClientHourBlocksRenderProps {
+  clientId: string;
+  currencyCode: string;
+}
+
 export interface ClientTicketsRenderProps {
   clientId: string;
   clientName?: string;
@@ -109,6 +114,8 @@ export interface ClientCrossFeatureCallbacks {
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
   renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
+  /** Optional: the Hour Blocks section on the client billing dashboard tab (provided by the composition layer when the module is available). */
+  renderClientHourBlocks?: (props: ClientHourBlocksRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;

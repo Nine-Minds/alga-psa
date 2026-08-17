@@ -86,6 +86,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // calculateUnresolvedNonContractCharges selects block_allocated_minutes via
+    // knex.raw; the stubbed builder ignores the column, it just must exist.
+    (billingEngine as any).knex.raw = vi.fn(() => 'block_allocated_minutes_raw');
 
     vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-1']);
 
@@ -129,6 +132,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // calculateUnresolvedNonContractCharges selects block_allocated_minutes via
+    // knex.raw; the stubbed builder ignores the column, it just must exist.
+    (billingEngine as any).knex.raw = vi.fn(() => 'block_allocated_minutes_raw');
 
     vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-2']);
 
@@ -210,6 +216,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // calculateUnresolvedNonContractCharges selects block_allocated_minutes via
+    // knex.raw; the stubbed builder ignores the column, it just must exist.
+    (billingEngine as any).knex.raw = vi.fn(() => 'block_allocated_minutes_raw');
 
     const eligibleSpy = vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate');
     eligibleSpy.mockImplementation(async ({ serviceId }: { serviceId: string }) => {

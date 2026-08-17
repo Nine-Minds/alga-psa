@@ -54,7 +54,11 @@
     "totalLabel": "Total",
     "submit": "Criar fatura em rascunho",
     "submitted": "Fatura em rascunho {{invoiceNumber}} criada. Finalize-a para ativar o bloco.",
-    "invoiceError": "Não foi possível criar a fatura de compra do bloco."
+    "invoiceError": "Não foi possível criar a fatura de compra do bloco.",
+    "serviceRequired": "Selecione um serviço.",
+    "hoursRequired": "Insira o número de horas.",
+    "rateRequired": "Insira uma taxa válida.",
+    "noServices": "Nenhum serviço disponível"
   },
   "grant": {
     "title": "Conceder bloco de horas",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "Por que essas horas estão sendo concedidas?",
     "submit": "Conceder bloco",
     "granted": "Bloco de horas concedido.",
-    "error": "Não foi possível conceder o bloco de horas."
+    "error": "Não foi possível conceder o bloco de horas.",
+    "reasonRequired": "Um motivo é obrigatório."
   },
   "adjust": {
     "title": "Ajustar horas restantes",
@@ -73,7 +78,19 @@
     "reasonPlaceholder": "Obrigatório",
     "submit": "Ajustar",
     "adjusted": "Bloco de horas ajustado.",
-    "error": "Não foi possível ajustar o bloco de horas."
+    "error": "Não foi possível ajustar o bloco de horas.",
+    "deltaRequired": "Insira uma alteração de horas diferente de zero.",
+    "reasonRequired": "Um motivo é obrigatório."
+  },
+  "expire": {
+    "reasonRequired": "Um motivo é obrigatório.",
+    "expired": "Bloco de horas expirado.",
+    "error": "Não foi possível expirar o bloco de horas.",
+    "title": "Expirar bloco de horas",
+    "remaining": "{{hours}} h não utilizadas serão perdidas.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obrigatório",
+    "submit": "Expirar bloco"
   },
   "expiration": {
     "title": "Editar expiração",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "Obrigatório",
     "submit": "Anular bloco",
     "voided": "Bloco de horas anulado.",
-    "error": "Não foi possível anular o bloco de horas."
+    "error": "Não foi possível anular o bloco de horas.",
+    "reasonRequired": "Um motivo é obrigatório."
   },
   "detail": {
     "title": "Detalhes do bloco de horas",

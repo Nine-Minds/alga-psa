@@ -54,7 +54,11 @@
     "totalLabel": "Suma",
     "submit": "Utwórz wersję roboczą faktury",
     "submitted": "Utworzono wersję roboczą faktury {{invoiceNumber}}. Sfinalizuj ją, aby aktywować pakiet.",
-    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu."
+    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu.",
+    "serviceRequired": "Wybierz usługę.",
+    "hoursRequired": "Wprowadź liczbę godzin.",
+    "rateRequired": "Wprowadź prawidłową stawkę.",
+    "noServices": "Brak dostępnych usług"
   },
   "grant": {
     "title": "Przyznaj pakiet godzin",
@@ -62,7 +66,8 @@
     "reasonPlaceholder": "Dlaczego te godziny są przyznawane?",
     "submit": "Przyznaj pakiet",
     "granted": "Pakiet godzin został przyznany.",
-    "error": "Nie udało się przyznać pakietu godzin."
+    "error": "Nie udało się przyznać pakietu godzin.",
+    "reasonRequired": "Powód jest wymagany."
   },
   "adjust": {
     "title": "Skoryguj pozostałe godziny",
@@ -73,7 +78,19 @@
     "reasonPlaceholder": "Wymagane",
     "submit": "Skoryguj",
     "adjusted": "Pakiet godzin został skorygowany.",
-    "error": "Nie udało się skorygować pakietu godzin."
+    "error": "Nie udało się skorygować pakietu godzin.",
+    "deltaRequired": "Wprowadź niezerową zmianę godzin.",
+    "reasonRequired": "Powód jest wymagany."
+  },
+  "expire": {
+    "reasonRequired": "Powód jest wymagany.",
+    "expired": "Pakiet godzin wygasł.",
+    "error": "Nie udało się wygasić pakietu godzin.",
+    "title": "Wygaś pakiet godzin",
+    "remaining": "{{hours}} godz. niewykorzystanych przepadnie.",
+    "reasonLabel": "Powód",
+    "reasonPlaceholder": "Wymagane",
+    "submit": "Wygaś pakiet"
   },
   "expiration": {
     "title": "Edytuj wygaśnięcie",
@@ -90,7 +107,8 @@
     "reasonPlaceholder": "Wymagane",
     "submit": "Unieważnij pakiet",
     "voided": "Pakiet godzin został unieważniony.",
-    "error": "Nie udało się unieważnić pakietu godzin."
+    "error": "Nie udało się unieważnić pakietu godzin.",
+    "reasonRequired": "Powód jest wymagany."
   },
   "detail": {
     "title": "Szczegóły pakietu godzin",
