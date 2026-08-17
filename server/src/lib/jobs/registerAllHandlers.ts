@@ -23,6 +23,7 @@ import {
   prepaidBalanceAlertScanHandler,
   PrepaidBalanceAlertScanJobData,
 } from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import {
   expiredHourBlocksHandler,
   ExpiredHourBlocksJobData,
 } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
@@ -91,10 +92,13 @@ import {
 import {
   rmmAlertReconciliationHandler,
   huntressIncidentPollHandler,
+  rmmDeviceSyncHandler,
   RmmAlertReconciliationJobData,
+  RmmDeviceSyncJobData,
   HuntressIncidentPollJobData,
   RMM_ALERT_RECONCILIATION_JOB,
   HUNTRESS_INCIDENT_POLL_JOB,
+  RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -274,6 +278,12 @@ export async function registerAllJobHandlers(
       name: PREPAID_BALANCE_ALERT_SCAN_JOB,
       handler: async (_jobId, data) => {
         await prepaidBalanceAlertScanHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   // Expired hour blocks handler
   JobHandlerRegistry.register<ExpiredHourBlocksJobData & BaseJobData>(
     {
@@ -685,6 +695,20 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 600000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<RmmDeviceSyncJobData & BaseJobData>(
+    {
+      name: RMM_DEVICE_SYNC_JOB,
+      handler: async (jobId, data) => {
+        await rmmDeviceSyncHandler(jobId, data);
+      },
+      retry: { maxAttempts: 3 },
+      // A device sync walks the provider's whole device list; give it more
+      // room than an alert poll, which only reads recent alerts.
+      timeoutMs: 1800000,
     },
     registerOpts
   );

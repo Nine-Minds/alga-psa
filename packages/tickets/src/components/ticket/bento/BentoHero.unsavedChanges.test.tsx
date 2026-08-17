@@ -373,15 +373,29 @@ describe('BentoHero unsaved change model', () => {
     const onLiveDirtyFieldsChange = vi.fn();
     renderHero({ onBatchSelectChange, onLiveDirtyFieldsChange });
 
-    await waitFor(() => expect(getTicketCategoriesByBoardMock).toHaveBeenCalledWith('board-a'));
+    // Wait for the board-a fetches to be APPLIED (not merely called): the
+    // category option proves the categories fetch committed savedBoardConfig.
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Support category' })).toBeInTheDocument();
+    });
 
     fireEvent.change(screen.getByTestId('bento-hero-board-select'), {
       target: { value: 'board-b' },
     });
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
 
-    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b'));
-    await waitFor(() => expect(getTicketCategoriesByBoardMock).toHaveBeenCalledWith('board-b'));
+    // Same for board-b: wait until its statuses/categories are rendered AND the
+    // async priority-type reset (custom → itil) has staged priority_id — the
+    // last async stager. Only then is the pending diff fully built; switching
+    // back mid-flight is legal but a different scenario than this test covers,
+    // and syncing here removes the fetch-ordering races that flaked in CI.
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'New board open' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Project category' })).toBeInTheDocument();
+      expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith(
+        expect.arrayContaining(['board_id', 'priority_id']),
+      );
+    });
 
     fireEvent.change(screen.getByTestId('bento-hero-board-select'), {
       target: { value: 'board-a' },
@@ -389,16 +403,12 @@ describe('BentoHero unsaved change model', () => {
 
     // Returning to the saved board restores status/category/priority, so the
     // pending diff self-cleans: no save bar, no warning, no {status_id: null}.
-    // Generous timeout: under Nx parallel load the board-a refetch chain that
-    // self-cleans the diff can outlast waitFor's 1s default — and on a wide
-    // affected set (many projects at --parallel=3 on a 4-vCPU runner) fork
-    // starvation has blown through 5s too.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
-    }, { timeout: 15_000 });
+    });
     await waitFor(() => {
       expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith([]);
-    }, { timeout: 15_000 });
+    });
     expect(screen.queryByText('Select a status for the new board before saving.')).not.toBeInTheDocument();
     expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
   });
