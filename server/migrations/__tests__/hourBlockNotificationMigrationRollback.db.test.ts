@@ -142,7 +142,7 @@ async function cleanupToSnapshot(snap: SubtreeSnapshot) {
 describe.runIf(enabled)('20260813120100 hour block notification migration rollback safety', () => {
   beforeAll(async () => {
     db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
-    const loaded = (await import('../../../server/migrations/20260813120100_add_hour_block_expiration_notification.cjs')) as any;
+    const loaded = (await import('../20260813120100_add_hour_block_expiration_notification.cjs')) as any;
     migration = { up: loaded.up, down: loaded.down };
   });
 

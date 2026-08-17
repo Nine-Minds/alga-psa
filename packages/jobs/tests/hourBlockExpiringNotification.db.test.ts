@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
 import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
-import { expiringHourBlocksNotificationHandler } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
+import { expiringHourBlocksNotificationHandler } from '../src/lib/handlers/expiringHourBlocksNotificationHandler';
 
 // DB-backed regression test for the expiring-hour-blocks notification handler
 // (29.8.18 mitigation). The invariant: the "today + N days" window is computed
