@@ -587,3 +587,27 @@ its imports restricted to modules that exist at the pre-S1 commit.
 The F002 guard is tested behaviorally by
 `server/src/test/integration/billing/billingProfilesDefaultGuard.integration.test.ts`
 (T053); the migration is `server/migrations/20260817000000_enforce_client_billing_profile_default_guard.cjs`.
+
+### Mitigation-round verification evidence (2026-08-16, branch tip 6be044213c)
+
+Fresh runs against the scratch test Postgres (127.0.0.1:5472,
+`TEST_DB_NAME=test_bp_mitigation` so no sibling worktree can interfere):
+
+- **T053** `billingProfilesDefaultGuard.integration.test.ts` — **7/7 passed**
+  (incl. key-moving UPDATE rejection, first-insert-as-non-default rejection,
+  atomic default switch, sole-profile move preserving both clients' invariants).
+- **S1 suite** `billingProfilesS1.integration.test.ts` — **4/4 passed**.
+- **T013 gate** `goldenOutput/goldenOutputBaseline.integration.test.ts` —
+  **passed**; post-S1 output byte-identical to the committed `baseline.json`
+  (schemaVersion 2, incl. portal output and export identity fields).
+- **Provenance** `verify-baseline-provenance.sh` (verify mode) — **OK**:
+  a fresh pre-S1 (`fcd7f8cfdf`) capture is byte-identical to the committed
+  baseline; sha256 `7913a9ba…7221` matches `baseline.provenance.json`.
+- **Typecheck** `NODE_OPTIONS=--max-old-space-size=12288 npx tsc --noEmit`
+  in `server/` — **exit 0** (default heap OOMs; the flag is required).
+
+Also committed this round: `6be044213c` — the `use server` bare
+`export type { ClientBillingProfileRow }` in
+`packages/billing/src/actions/billingProfileActions.ts` re-exported with an
+explicit `from` clause (the bare specifier list over a local import binding is
+emitted as `registerServerReference` and throws at module evaluation).
