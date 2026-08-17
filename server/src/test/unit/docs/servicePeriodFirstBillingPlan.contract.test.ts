@@ -144,6 +144,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/loaders.ts',
+  // Prepaid hour-block charge computation stamps servicePeriodStart/End onto
+  // the charges it emits; it landed with the ad-hoc hour-blocks work, well
+  // after the pass-0 snapshot.
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.test.ts',
   // Project-billing wave tests (feature/project-billing) landed after the
   // pass-0 snapshot and reference service-period fields in fixtures/assertions.
   'packages/billing/src/actions/accountingExportActions.test.ts',
