@@ -156,7 +156,7 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
   // Generate gradient based on branding colors or use defaults
   const gradientStyle = useMemo(() => {
     if (!branding?.primaryColor || !branding?.secondaryColor) {
-      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
+      return 'auth-page-surface';
     }
 
     // Create CSS gradient from hex colors with opacity
@@ -172,7 +172,7 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
       };
     }
 
-    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
+    return 'auth-page-surface';
   }, [branding]);
 
   // Use branded colors for accents

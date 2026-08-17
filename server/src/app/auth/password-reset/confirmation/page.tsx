@@ -28,11 +28,7 @@ export default async function PasswordResetConfirmation({
   const { t } = await getServerTranslation(undefined, 'msp/auth');
 
   return (
-    <div className={`flex flex-col items-center p-20 min-h-screen ${
-      branding
-        ? 'bg-gradient-to-br from-[rgb(var(--color-primary-50))] to-[rgb(var(--color-secondary-100))] dark:from-[rgb(var(--color-primary-950))] dark:to-[rgb(var(--color-secondary-950))]'
-        : 'bg-[rgb(var(--color-background-50))] dark:bg-[rgb(var(--color-background))]'
-    }`}>
+    <div className="flex flex-col items-center p-20 min-h-screen auth-page-surface">
       <PortalBrandingStyles branding={branding} />
       <div className="w-full max-w-md p-8 space-y-8 text-center">
         <div>

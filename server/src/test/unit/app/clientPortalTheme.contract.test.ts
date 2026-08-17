@@ -11,6 +11,22 @@ const PORTAL_SIDEBAR = path.resolve(
 );
 const portalSidebar = fs.readFileSync(PORTAL_SIDEBAR, 'utf8');
 
+const GLOBALS = path.resolve(__dirname, '../../../app/globals.css');
+const globals = fs.readFileSync(GLOBALS, 'utf8');
+
+const repoRoot = path.resolve(__dirname, '../../../../..');
+const AUTH_SHELLS = [
+  'packages/auth/src/components/ClientPortalSignIn.tsx',
+  'packages/auth/src/components/MspSignIn.tsx',
+  'packages/auth/src/components/PortalSwitchPrompt.tsx',
+  'packages/client-portal/src/components/auth/ClientPortalTenantDiscovery.tsx',
+  'server/src/app/auth/check-email/CheckEmailClient.tsx',
+  'server/src/app/auth/client-portal/forgot-password/ClientPortalForgotPassword.tsx',
+  'server/src/app/auth/msp/forgot-password/page.tsx',
+  'server/src/app/auth/password-reset/confirmation/page.tsx',
+  'server/src/app/auth/password-reset/set-new-password/SetNewPasswordClient.tsx',
+];
+
 describe('client portal theming contract', () => {
   it('treats portal pages and portal auth pages as client portal routes', () => {
     expect(layout).toContain("pathname.includes('/client-portal')");
@@ -41,6 +57,20 @@ describe('client portal theming contract', () => {
 
   it('prefers the dark logo on the always-dark portal side panel', () => {
     expect(portalSidebar).toContain('logoDarkUrl');
+  });
+
+  it('paints every auth shell from the pair tokens instead of literal palette colors', () => {
+    // The sign-in, discovery, password-reset and portal-switch screens are the
+    // first thing a portal user sees, so they have to follow the tenant pair.
+    expect(globals).toContain('.auth-page-surface');
+    expect(globals).toContain('rgb(var(--color-primary-500) / 0.16)');
+    expect(globals).toContain('html[data-theme-pair="high-contrast"] .auth-page-surface');
+
+    for (const relPath of AUTH_SHELLS) {
+      const source = fs.readFileSync(path.resolve(repoRoot, relPath), 'utf8');
+      expect(source, relPath).toContain('auth-page-surface');
+      expect(source, relPath).not.toMatch(/dark:(from|via|to)-(blue|indigo|purple)-9\d0/);
+    }
   });
 
   it('swaps the logo per mode on the portal auth screens', () => {

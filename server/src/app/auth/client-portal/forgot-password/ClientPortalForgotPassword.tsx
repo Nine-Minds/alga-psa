@@ -50,11 +50,7 @@ const ClientPortalForgotPassword: React.FC<ClientPortalForgotPasswordProps> = ({
   };
 
   return (
-    <div className={`flex flex-col items-center pt-20 min-h-screen ${
-      branding
-        ? 'bg-gradient-to-br from-[rgb(var(--color-primary-50))] to-[rgb(var(--color-secondary-100))] dark:from-[rgb(var(--color-primary-950))] dark:to-[rgb(var(--color-secondary-950))]'
-        : 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950'
-    }`}>
+    <div className="flex flex-col items-center pt-20 min-h-screen auth-page-surface">
       <div className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">

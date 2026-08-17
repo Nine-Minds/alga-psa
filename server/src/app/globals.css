@@ -1899,6 +1899,25 @@ html.dark {
     --alga-success: rgb(var(--color-status-success));
 }
 
+/* Full-bleed background for the sign-in, password-reset and portal-switch
+   shells. It washes the pair's primary over the pair background instead of
+   literal blue/indigo, so auth follows the tenant's pair — and their branding,
+   which overrides the same primary vars. */
+.auth-page-surface {
+    /* --alga-bg, not --color-background: Radix Themes redeclares the latter
+       inside its wrapper, so the raw token is not resolvable down here. */
+    background-color: var(--alga-bg);
+    background-image: linear-gradient(to bottom right,
+        rgb(var(--color-primary-500) / 0.16) 0%,
+        rgb(var(--color-primary-500) / 0.05) 45%,
+        rgb(var(--color-primary-400) / 0.14) 100%);
+}
+
+/* The high-contrast pair keeps surfaces flat — no translucent washes. */
+html[data-theme-pair="high-contrast"] .auth-page-surface {
+    background-image: none;
+}
+
 /* Give a remote user a caret */
 .collaboration-cursor__caret {
     border-left: 1px solid rgb(var(--color-text-900));
