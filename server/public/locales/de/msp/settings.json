@@ -1118,7 +1118,7 @@
         "supportPhone": "Support-Telefon",
         "heroGradient": "Dashboard-Hintergrundverlauf",
         "sidebarStyle": "Farbe der Seitenleiste",
-        "sidebarColor": "Farbe der Seitenleiste"
+        "sidebarColor": "Eigene Farbe der Seitenleiste"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",

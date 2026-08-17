@@ -1118,7 +1118,7 @@
         "supportPhone": "Telefono di supporto",
         "heroGradient": "Gradiente dell’intestazione della dashboard",
         "sidebarStyle": "Colore del pannello laterale",
-        "sidebarColor": "Colore del pannello laterale"
+        "sidebarColor": "Colore personalizzato del pannello laterale"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",

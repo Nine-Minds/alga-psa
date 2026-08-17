@@ -1118,7 +1118,7 @@
         "supportPhone": "Telefone de suporte",
         "heroGradient": "Gradiente do cabeçalho do painel",
         "sidebarStyle": "Cor do painel lateral",
-        "sidebarColor": "Cor do painel lateral"
+        "sidebarColor": "Cor personalizada do painel lateral"
       },
       "help": {
         "companyName": "Isso será exibido no cabeçalho do portal do cliente",

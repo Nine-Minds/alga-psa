@@ -1118,7 +1118,7 @@
         "supportPhone": "Téléphone du support",
         "heroGradient": "Dégradé de l’en-tête du tableau de bord",
         "sidebarStyle": "Couleur du panneau latéral",
-        "sidebarColor": "Couleur du panneau latéral"
+        "sidebarColor": "Couleur personnalisée du panneau latéral"
       },
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",

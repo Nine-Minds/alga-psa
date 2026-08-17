@@ -709,7 +709,7 @@ const ClientPortalSettings = () => {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-2">
                     {t('clientPortal.branding.fields.sidebarColor', {
-                      defaultValue: 'Side panel color',
+                      defaultValue: 'Custom side panel color',
                     })}
                   </label>
                   <ColorPicker

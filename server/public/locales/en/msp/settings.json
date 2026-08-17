@@ -1118,7 +1118,7 @@
         "supportPhone": "Support Phone",
         "heroGradient": "Dashboard hero gradient",
         "sidebarStyle": "Side panel color",
-        "sidebarColor": "Side panel color"
+        "sidebarColor": "Custom side panel color"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",

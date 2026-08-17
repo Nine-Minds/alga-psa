@@ -1124,7 +1124,7 @@
         "supportPhone": "Telefon wsparcia",
         "heroGradient": "Gradient nagłówka pulpitu",
         "sidebarStyle": "Kolor panelu bocznego",
-        "sidebarColor": "Kolor panelu bocznego"
+        "sidebarColor": "Własny kolor panelu bocznego"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",

@@ -76,16 +76,18 @@ export function CustomThemeEditor({
         ))}
       </div>
 
-      <ThemePairPreview
-        swatch={{
-          background: tokens.background,
-          card: tokens.card,
-          text: tokens.textPrimary,
-          primary: tokens.primary,
-          sidebar: tokens.sidebarBg,
-        }}
-        label={t('appearance.custom.previewAlt', { defaultValue: 'Custom theme preview' })}
-      />
+      <div className="max-w-sm">
+        <ThemePairPreview
+          swatch={{
+            background: tokens.background,
+            card: tokens.card,
+            text: tokens.textPrimary,
+            primary: tokens.primary,
+            sidebar: tokens.sidebarBg,
+          }}
+          label={t('appearance.custom.previewAlt', { defaultValue: 'Custom theme preview' })}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {CUSTOM_THEME_TOKEN_KEYS.map((key) => (

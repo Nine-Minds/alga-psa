@@ -1118,7 +1118,7 @@
         "supportPhone": "Support-telefoonnummer",
         "heroGradient": "Verloop van dashboardkop",
         "sidebarStyle": "Kleur van zijpaneel",
-        "sidebarColor": "Kleur zijpaneel"
+        "sidebarColor": "Eigen kleur zijpaneel"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",

@@ -95,8 +95,11 @@ const AppearanceSettings = () => {
     setSaving(true);
     try {
       await updateTenantThemeAction({
+        // Only the custom card sends colors. Switching to a predefined pair
+        // leaves the saved palette to the action's carry-forward, so an
+        // unsaved, contrast-failing edit can never block a pair change.
         pairId: nextPairId,
-        ...(customTheme ? { customTheme } : {}),
+        ...(nextPairId === 'custom' ? { customTheme: customTheme ?? cloneDefaultCustomTheme() } : {}),
         mspWhiteLabel: nextWhiteLabel,
       });
       setPairId(nextPairId);
