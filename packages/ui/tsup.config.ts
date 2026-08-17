@@ -27,5 +27,8 @@ export default defineConfig({
   ],
   esbuildOptions(options) {
     options.jsx = 'automatic';
+    // `/fonts/*` in TicketDetails.module.css are runtime URLs served by Next from
+    // server/public; esbuild would otherwise try to resolve them off disk and fail.
+    options.external = [...(options.external ?? []), '/fonts/*'];
   },
 });
