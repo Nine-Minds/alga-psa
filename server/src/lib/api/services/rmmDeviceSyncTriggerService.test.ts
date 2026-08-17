@@ -34,7 +34,7 @@ const {
   RmmIntegrationInactiveError,
   RmmIntegrationNotFoundError,
   RmmProviderNotSchedulableError,
-} = await import('./rmmDeviceSyncTrigger');
+} = await import('./rmmDeviceSyncTriggerService');
 
 const knex = { fn: { now: () => new Date('2026-08-16T12:00:00.000Z') } } as never;
 
@@ -131,5 +131,23 @@ describe('triggerRmmDeviceSync', () => {
   it('reports what the strategy processed', async () => {
     const result = await triggerRmmDeviceSync(knex, 'tenant-1', 'ninjaone' as never, 'incremental');
     expect(result).toMatchObject({ provider: 'ninjaone', syncType: 'incremental', devicesProcessed: 9 });
+  });
+});
+
+/**
+ * Tenant scoping, carried over from the RMM contract suite in
+ * packages/integrations when this module moved here to break an
+ * integrations -> jobs dependency cycle. CitusDB requires structural scoping;
+ * a raw .where({ tenant }) is not equivalent and does not survive sharding.
+ */
+describe('rmmDeviceSyncTriggerService tenant scoping', () => {
+  it('reaches rmm_integrations only through tenantDb', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync(new URL('./rmmDeviceSyncTriggerService.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
+    expect(source).toContain("tenantDb(knex, tenant).table('rmm_integrations')");
+    expect(source).not.toContain("knex('rmm_integrations')");
+    expect(source).not.toContain('.where({ tenant })');
   });
 });

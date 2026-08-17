@@ -29,14 +29,6 @@ describe('RMM integrations tenant-scoped query contracts', () => {
     expect(source).not.toContain('.where({ tenant })');
   });
 
-  it('scopes the on-demand sync trigger through tenantDb', () => {
-    const source = readSource('../../lib/rmm/rmmDeviceSyncTrigger.ts');
-
-    expect(source).toContain("import { tenantDb } from '@alga-psa/db';");
-    expect(source).toContain("tenantDb(knex, tenant).table('rmm_integrations')");
-    expect(source).not.toContain("knex('rmm_integrations')");
-    expect(source).not.toContain('.where({ tenant })');
-  });
 
   it('uses tenantDb for registered RMM alert settings and option roots', () => {
     const source = readSource('rmmAlertRuleActions.ts');

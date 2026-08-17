@@ -22,7 +22,7 @@ import {
   RmmIntegrationNotFoundError,
   RmmProviderNotSchedulableError,
   triggerRmmDeviceSync,
-} from '@alga-psa/integrations/lib/rmm/rmmDeviceSyncTrigger';
+} from '@/lib/api/services/rmmDeviceSyncTriggerService';
 
 const bodySchema = z.object({
   syncType: z.enum(['full', 'incremental']).default('incremental'),
