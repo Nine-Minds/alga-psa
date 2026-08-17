@@ -9,7 +9,7 @@ import type {
   ContactTicketsRenderProps,
   HourBlocksRenderProps,
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import { HourBlocksSection } from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
+import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import MspClientTickets from './MspClientTickets';
