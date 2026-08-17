@@ -5,9 +5,16 @@ import {
   renewPostgresLeaseForV2Job,
 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
 import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+import { assertInboundAuthPauseNotifierRegistered } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
 import { processUnifiedInboundEmailQueueJob } from '../services/email/unifiedInboundEmailQueueJobProcessor';
+import { registerInboundAuthPauseNotifications } from '../services/email/inboundAuthPauseNotificationService';
 
 async function main(): Promise<void> {
+  // This process can perform the atomic auth-failure auto-pause; without a
+  // registered notifier those pauses would be silent to tenant admins.
+  registerInboundAuthPauseNotifications();
+  assertInboundAuthPauseNotifierRegistered('server/bin/unifiedInboundEmailQueueConsumer');
+
   const consumer = new UnifiedInboundEmailQueueConsumer({
     pollDelayMs: 250,
     handleJob: async (job) => {

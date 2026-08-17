@@ -731,6 +731,40 @@ export async function GET(request: NextRequest) {
               },
             });
           });
+
+          // A successful reconnect for a provider auto-paused on repeated
+          // auth failures must resume ingestion only after durably
+          // reconciling the paused interval. Credentials are freshly
+          // exchanged and the setup hook above established delivery, so this
+          // only reconciles and clears the pause.
+          try {
+            const { knex: recoveryKnex } = await createTenantKnex(stateContext.tenant!);
+            const pausedProvider = await tenantDb(recoveryKnex, stateContext.tenant!)
+              .table('email_providers')
+              .where({ id: stateContext.providerId })
+              .first('inbound_paused_at', 'inbound_pause_reason');
+            if (pausedProvider?.inbound_paused_at && pausedProvider.inbound_pause_reason === 'auth_failure') {
+              const { EmailProviderLifecycleService } = await import(
+                '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+              );
+              const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+                stateContext.providerId!,
+                stateContext.tenant!,
+                { credentialsValidated: true, deliveryEstablished: true }
+              );
+              console.info('[MS OAuth Callback] auth-failure recovery after reconnect', {
+                tenant: stateContext.tenant,
+                providerId: stateContext.providerId,
+                resumed: recovery.resumed,
+                reconciliation: recovery.reconciliation,
+                error: recovery.error,
+              });
+            }
+          } catch (recoveryError: any) {
+            // The reconnect itself succeeded; the durable settings banner
+            // keeps prompting until a retry completes the recovery.
+            console.warn('⚠️ Microsoft auth-failure recovery after reconnect failed (provider stays paused):', recoveryError?.message || recoveryError);
+          }
         } catch (persistErr: any) {
           // `persistMicrosoftEmailOAuthResult` already compensated the Graph
           // side and restored the provider to its prior connected/polling

@@ -55,15 +55,51 @@ export interface RecoverySweepResult {
 
 export async function sweepTenantDurableWork(tenant: string, limit: number = 10): Promise<RecoverySweepResult> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
+  const { tenantDb } = await import('@alga-psa/db');
   const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0, deliveries: 0 } };
   const maxAttempts = getDurableMaxAttempts();
 
-  const ingressRows = await findDueIngress(db, { tenant, limit });
+  // Ingress staging requires live provider credentials. While a provider is
+  // ingestion-paused (auth_failure or manual), its ingress rows are left
+  // untouched: no wake-up (which would burn attempts against the dead
+  // credential) and no over-cap dead-letter (attempts accrued during the pause
+  // must not terminalize a paused-interval message). The paused ids are passed
+  // INTO the capped due-row query so paused rows never consume cap slots that
+  // belong to unpaused providers' due work; a provider that pauses AFTER the
+  // snapshot is still safe because the dead-letter decision re-checks the
+  // pause state at the write itself (see deadletterIngress). Once the pause
+  // clears, the next sweep re-drives every still-non-terminal row.
+  // Inbox/artifact/outbox rows process staged sources only — no credential
+  // access — and stay eligible during a pause.
+  const pausedProviderIds = new Set<string>(
+    ((await tenantDb(db, tenant).table('email_providers')
+      .whereNotNull('inbound_paused_at')
+      .select('id')) as Array<{ id: string }>).map((row) => row.id)
+  );
+
+  const ingressRows = await findDueIngress(db, {
+    tenant,
+    limit,
+    excludeProviderIds: [...pausedProviderIds],
+  });
   for (const row of ingressRows) {
+    if (pausedProviderIds.has(row.provider_id)) {
+      continue;
+    }
     // Exhausted retryable rows dead-letter into a queryable terminal state
-    // instead of being re-woken forever.
+    // instead of being re-woken forever. The terminal write is pause-guarded
+    // at the SQL level: a provider paused between the snapshot above and this
+    // decision has its row PARKED (retryable, attempt budget voided), never
+    // terminalized.
     if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
-      await deadletterIngress(db, row);
+      const outcome = await deadletterIngress(db, row);
+      if (outcome === 'parked_while_paused') {
+        console.info('[InboundEmailRecovery] over-cap ingress parked: provider paused at dead-letter decision', {
+          event: 'inbound_email_recovery_ingress_parked_while_paused',
+          tenantId: tenant,
+          ingressId: row.ingress_id,
+        });
+      }
       continue;
     }
     try {

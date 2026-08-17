@@ -19,6 +19,10 @@ import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedS
 import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
 import { registerMaintenanceJobSubscriber, unregisterMaintenanceJobSubscriber } from './maintenanceJobSubscriber';
 import {
+  registerInboundAuthPauseNotificationSubscriber,
+  unregisterInboundAuthPauseNotificationSubscriber,
+} from './inboundAuthPauseNotificationSubscriber';
+import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
@@ -46,6 +50,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
   { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
+  { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
 ];
 
@@ -61,6 +66,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'prepaidBalanceAlert', register: unregisterPrepaidBalanceAlertSubscriber },
   { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
   { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
+  { name: 'inboundAuthPauseNotification', register: unregisterInboundAuthPauseNotificationSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
   { name: 'inventoryNotification', register: unregisterInventoryNotificationSubscriber },

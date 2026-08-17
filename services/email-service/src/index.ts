@@ -10,8 +10,19 @@ import {
   renewPostgresLeaseForV2Job,
 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
 import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+import {
+  assertInboundAuthPauseNotifierRegistered,
+} from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
+import { registerInboundAuthPauseEventPublisher } from '@alga-psa/shared/services/email/inboundAuthPauseEventNotifier';
 
 dotenv.config();
+
+// This process performs the atomic auth-failure auto-pause, but its build
+// graph cannot load the @alga-psa/notifications vertical: publish the pause
+// on the event bus and let the server-side subscriber deliver the admin
+// notifications (same hand-off as MAINTENANCE_JOB_REQUESTED).
+registerInboundAuthPauseEventPublisher();
+assertInboundAuthPauseNotifierRegistered('services/email-service');
 
 const service = new EmailService();
 let healthServer: http.Server | undefined;

@@ -141,6 +141,7 @@ import {
   mediaProcessingSucceededEventPayloadSchema,
 } from './domain/assetMediaEventSchemas';
 import { maintenanceJobRequestedEventPayloadSchema } from './domain/maintenanceEventSchemas';
+import { inboundEmailProviderAutoPausedEventPayloadSchema } from './domain/inboundEmailEventSchemas';
 import {
   ticketApprovalGrantedEventPayloadSchema,
   ticketApprovalRejectedEventPayloadSchema,
@@ -196,6 +197,9 @@ export const EVENT_TYPES = [
   'TICKET_AUTO_CLOSE_WARNING',
   // Maintenance / system (worker emits; server subscriber runs the handler)
   'MAINTENANCE_JOB_REQUESTED',
+  // Inbound email (worker emits after atomic auth-failure auto-pause; server
+  // subscriber delivers admin notifications)
+  'INBOUND_EMAIL_PROVIDER_AUTO_PAUSED',
   'TICKET_ASSIGNED',
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
@@ -1154,6 +1158,7 @@ const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpda
 const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
 const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
+const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
 const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
@@ -1183,6 +1188,7 @@ export const EventPayloadSchemas = {
   TICKET_CLOSED: TicketClosedPayloadSchema,
   TICKET_AUTO_CLOSE_WARNING: TicketAutoCloseWarningPayloadSchema,
   MAINTENANCE_JOB_REQUESTED: MaintenanceJobRequestedPayloadSchema,
+  INBOUND_EMAIL_PROVIDER_AUTO_PAUSED: InboundEmailProviderAutoPausedPayloadSchema,
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,

@@ -2,6 +2,18 @@ import { EmailProviderAdapter } from '../../../../interfaces/emailProvider.inter
 import { EmailProviderConfig, EmailMessageDetails } from '../../../../interfaces/inbound-email.interfaces';
 
 /**
+ * Connection-test outcome with structured failure metadata so callers can
+ * classify terminal OAuth errors without parsing the human-readable message.
+ */
+export interface AdapterConnectionTestResult {
+  success: boolean;
+  error?: string;
+  status?: number;
+  code?: string;
+  responseBody?: unknown;
+}
+
+/**
  * Base abstract class for email provider adapters
  * Provides common functionality and enforces interface implementation
  */
@@ -91,12 +103,16 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
     const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
     this.log('error', errorMessage, error);
     const wrapped = new Error(errorMessage);
-    // Propagate metadata for outer catch blocks
+    // Propagate metadata for outer catch blocks. Already-sanitized errors
+    // (thrown by token refresh paths) carry status/code/responseBody at the
+    // top level and no axios `response`; keep those instead of stripping them.
     try {
-      (wrapped as any).status = res?.status;
-      (wrapped as any).code = (res?.data?.error?.code || res?.status) ?? undefined;
-      (wrapped as any).requestId = res?.headers?.['request-id'] || res?.headers?.['client-request-id'];
-      (wrapped as any).responseBody = res?.data;
+      (wrapped as any).status = res?.status ?? error?.status;
+      (wrapped as any).code = (res?.data?.error?.code || res?.status || error?.code) ?? undefined;
+      (wrapped as any).requestId = res?.headers?.['request-id']
+        || res?.headers?.['client-request-id']
+        || error?.requestId;
+      (wrapped as any).responseBody = res?.data ?? error?.responseBody;
     } catch { /* no-op */ }
     return wrapped;
   }
@@ -109,6 +125,6 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
   abstract markMessageProcessed(messageId: string): Promise<void>;
   abstract getMessageDetails(messageId: string): Promise<EmailMessageDetails>;
   abstract downloadMessageSource(messageId: string): Promise<Buffer>;
-  abstract testConnection(): Promise<{ success: boolean; error?: string; }>;
+  abstract testConnection(): Promise<AdapterConnectionTestResult>;
   abstract disconnect(): Promise<void>;
 }

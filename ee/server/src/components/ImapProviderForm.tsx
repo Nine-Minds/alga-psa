@@ -14,6 +14,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const eeImapProviderSchema = z.object({
   providerName: z.string().min(1, 'Configuration name is required'),
@@ -166,6 +170,24 @@ export function ImapProviderForm({
       const result = isEditing
         ? await updateEmailProvider(provider.id, payload, true)
         : await createEmailProvider(payload, true);
+
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
+      // A setup error (e.g. failed auth-pause recovery: the submitted
+      // credentials were rejected by the source) means the reconnect did NOT
+      // succeed — the provider stays paused. Surface the error in the form
+      // and do not report success: closing the drawer would clear the
+      // paused-state banner while ingestion is still stopped.
+      if (result.setupError) {
+        setError(t('forms.common.messages.setupIncomplete', {
+          defaultValue: 'Provider saved but setup incomplete: {{error}}',
+          error: result.setupError,
+        }));
+        return;
+      }
 
       onSuccess(result.provider);
     } catch (err: any) {

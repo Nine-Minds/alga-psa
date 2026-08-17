@@ -146,4 +146,43 @@ describe('GmailProviderForm', () => {
 
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
+
+  it('surfaces setupError in the form and does not report success when reconnect recovery fails', async () => {
+    // The reconnect save on an auth-paused Gmail provider: OAuth recovery
+    // failed (revoked credentials / watch registration failure), so the
+    // action returns setupError AND the still-paused provider. The form
+    // must keep the drawer open with the error shown and never call
+    // onSuccess — EmailProviderConfiguration wires onSuccess to
+    // closeDrawer, which would destroy the error message and the
+    // paused-state context while ingestion is still stopped.
+    const pausedGmailProvider = {
+      id: 'paused-gmail-1',
+      tenant: defaultProps.tenant,
+      providerType: 'google',
+      providerName: 'Support Gmail (paused)',
+      mailbox: 'support@gmail.com',
+      isActive: true,
+      status: 'error',
+      googleConfig: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    vi.mocked(emailProviderActions.updateEmailProvider).mockResolvedValueOnce({
+      provider: { ...pausedGmailProvider },
+      setupError: 'Gmail reconnection failed. Reconnect the mailbox and try again.',
+    } as any);
+
+    const user = userEvent.setup();
+    renderWithProviders(<GmailProviderForm {...defaultProps} provider={pausedGmailProvider as any} />);
+
+    await user.click(screen.getByRole('button', { name: /update provider/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Provider saved but setup incomplete: Gmail reconnection failed/)
+      ).toBeInTheDocument();
+    });
+
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
 });

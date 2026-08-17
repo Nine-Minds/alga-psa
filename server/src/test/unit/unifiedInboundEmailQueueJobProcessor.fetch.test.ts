@@ -157,6 +157,9 @@ function createDbMock(params: {
         where() {
           return builder;
         },
+        whereRaw() {
+          return builder;
+        },
         async first() {
           return params.googleConfigRow || null;
         },

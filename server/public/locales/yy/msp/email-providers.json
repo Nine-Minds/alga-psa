@@ -167,6 +167,11 @@
       "pauseError": "55555"
     },
     "pausedHelp": "55555",
+    "authFailure": {
+      "title": "55555",
+      "description": "55555 {{mailbox}} 55555",
+      "action": "55555"
+    },
     "fields": {
       "status": "55555",
       "lastSync": "55555",
@@ -237,6 +242,9 @@
         "authorizing": "55555",
         "authorized": "55555",
         "authorizeAccess": "55555"
+      },
+      "messages": {
+        "setupIncomplete": "55555 {{error}} 55555"
       }
     },
     "microsoft": {

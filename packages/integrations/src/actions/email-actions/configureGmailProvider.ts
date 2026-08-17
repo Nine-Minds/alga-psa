@@ -36,6 +36,13 @@ export interface ConfigureGmailProviderResult {
   watchRegistered: boolean;
   error?: string;
   warnings: string[];
+  /**
+   * Outcome of the auth-failure recovery attempted when the provider was
+   * auto-paused: 'resumed' — pause cleared and the paused interval fully
+   * reconciled; 'failed' — still paused, reconnect required; undefined — no
+   * recovery was attempted (provider was not auth-paused).
+   */
+  authFailureRecovery?: 'resumed' | 'failed';
 }
 
 /**
@@ -65,8 +72,23 @@ export async function configureGmailProvider({
 
   try {
     await runWithTenant(tenant, async () => {
+      // Capture the pre-watch history cursor and pause state before any
+      // registration overwrites them: the auth-failure recovery path must
+      // reconcile from the cursor that was valid when the provider paused.
+      const { knex: boundaryKnex } = await createTenantKnex(tenant);
+      const boundaryDb = tenantDb(boundaryKnex, tenant);
+      const [boundaryProvider, boundaryGoogleConfig] = await Promise.all([
+        boundaryDb.table('email_providers').where({ id: providerId }).first('inbound_paused_at', 'inbound_pause_reason'),
+        boundaryDb.table('google_email_provider_config').where({ email_provider_id: providerId }).first('history_id'),
+      ]);
+      const savedHistoryId = boundaryGoogleConfig?.history_id ? String(boundaryGoogleConfig.history_id) : null;
+      const pausedForAuthFailure = Boolean(
+        boundaryProvider?.inbound_paused_at && boundaryProvider.inbound_pause_reason === 'auth_failure'
+      );
+
       // Check if Pub/Sub was already initialized recently (within 24 hours) unless force=true
-      if (!force) {
+      // or the provider is paused for auth failure (reconnect must re-establish the watch).
+      if (!force && !pausedForAuthFailure) {
         const {knex} = await createTenantKnex(tenant);
         const db = tenantDb(knex, tenant);
         const config = await db.table('google_email_provider_config')
@@ -156,7 +178,18 @@ export async function configureGmailProvider({
             hasRefreshToken: !!googleConfig.refresh_token
           });
           result.warnings.push('OAuth tokens missing - Gmail watch registration skipped');
-          result.success = result.pubsubConfigured; // Still considered success if pubsub was configured
+          // Without tokens the watch — and the auth-pause recovery behind
+          // it — cannot be re-established. For a provider auto-paused on
+          // auth failures this exit is a failed reconnect that must not
+          // masquerade as success over a still-paused mailbox; for everyone
+          // else it stays the historical warning-tolerant partial success.
+          if (pausedForAuthFailure) {
+            result.authFailureRecovery = 'failed';
+            result.success = false;
+            result.error = 'Gmail reconnection failed: OAuth authorization is required. Reconnect the mailbox and try again.';
+          } else {
+            result.success = result.pubsubConfigured; // Still considered success if pubsub was configured
+          }
           return;
         }
 
@@ -217,6 +250,53 @@ export async function configureGmailProvider({
         console.log(`✅ Successfully registered Gmail watch subscription for provider ${providerId}`);
         result.watchRegistered = true;
         result.success = true;
+
+        // A successful reconnect for a provider auto-paused on repeated auth
+        // failures must resume ingestion only after durably reconciling the
+        // paused interval. Tokens are freshly saved and the watch above
+        // re-established delivery, so recovery only reconciles from the
+        // saved pre-watch cursor and clears the pause.
+        if (pausedForAuthFailure) {
+          try {
+            const { EmailProviderLifecycleService } = await import(
+              '@alga-psa/shared/services/email/EmailProviderLifecycleService'
+            );
+            const recovery = await new EmailProviderLifecycleService().recoverAuthPausedProvider(
+              providerId,
+              tenant,
+              { credentialsValidated: true, deliveryEstablished: true, savedHistoryId }
+            );
+            console.info('Gmail auth-failure recovery after reconnect', {
+              tenant,
+              providerId,
+              resumed: recovery.resumed,
+              reconciliation: recovery.reconciliation,
+              error: recovery.error,
+            });
+            // The recovery outcome is part of the action result: the caller
+            // must not toast success while the mailbox is still paused.
+            // (There is no partial outcome: recovery either fully reconciles
+            // the paused interval before clearing the pause or fails with the
+            // provider left paused.)
+            if (!recovery.resumed) {
+              result.authFailureRecovery = 'failed';
+              result.success = false;
+              result.error = recovery.error || 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+            } else {
+              result.authFailureRecovery = 'resumed';
+            }
+          } catch (recoveryError) {
+            console.warn('Gmail auth-failure recovery after reconnect failed (provider stays paused)', {
+              tenant,
+              providerId,
+              savedHistoryId,
+              error: recoveryError instanceof Error ? recoveryError.message : String(recoveryError),
+            });
+            result.authFailureRecovery = 'failed';
+            result.success = false;
+            result.error = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+          }
+        }
       } catch (watchError) {
         const errorMessage = watchError instanceof Error ? watchError.message : String(watchError);
         console.error(`❌ Failed to register Gmail watch subscription for provider ${providerId}:`, {
@@ -227,8 +307,19 @@ export async function configureGmailProvider({
         });
         // Record the error but don't throw - provider is saved, Pub/Sub may still work
         result.warnings.push('Gmail watch registration failed. Reconnect the mailbox or retry setup after verifying Google permissions.');
-        // If Pub/Sub was configured, we're partially successful
-        result.success = result.pubsubConfigured;
+        // For a provider auto-paused on auth failures this catch is the
+        // revoked/invalid-credential case: delivery was not re-established,
+        // recovery never ran, and the caller must not report success over a
+        // still-paused mailbox. Non-paused providers keep the historical
+        // warning-tolerant partial success.
+        if (pausedForAuthFailure) {
+          result.authFailureRecovery = 'failed';
+          result.success = false;
+          result.error = 'Gmail reconnection failed. Reconnect the mailbox and try again.';
+        } else {
+          // If Pub/Sub was configured, we're partially successful
+          result.success = result.pubsubConfigured;
+        }
       }
     });
   } catch (pubsubError) {

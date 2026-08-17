@@ -167,6 +167,11 @@
       "pauseError": "Failed to change inbound email pause state."
     },
     "pausedHelp": "Messages received while this inbox is paused are not imported retroactively.",
+    "authFailure": {
+      "title": "Inbound email paused — reconnection required",
+      "description": "Inbound email for {{mailbox}} is paused because its credentials no longer work. Messages are not lost — they remain in the source mailbox and will be imported after you reconnect.",
+      "action": "Reconnect"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Last Sync",
@@ -237,6 +242,9 @@
         "authorizing": "Authorizing...",
         "authorized": "Authorized",
         "authorizeAccess": "Authorize Access"
+      },
+      "messages": {
+        "setupIncomplete": "Provider saved but setup incomplete: {{error}}"
       }
     },
     "microsoft": {

@@ -48,6 +48,12 @@ interface EmailProviderCardProps {
   onRunDiagnostics: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
   onTogglePause: (provider: EmailProvider) => void | Promise<void>;
+  /**
+   * Provider-specific reconnect dispatch for providers auto-paused on
+   * repeated auth failures. Threaded from EmailProviderConfiguration so the
+   * card never owns OAuth logic.
+   */
+  onReconnect: (provider: EmailProvider) => void;
 }
 
 const getProviderIcon = (providerType: string) => {
@@ -80,8 +86,10 @@ export function EmailProviderCard({
   onRunDiagnostics,
   onChangeDefaults,
   onTogglePause,
+  onReconnect,
 }: EmailProviderCardProps) {
   const { t } = useTranslation('msp/email-providers');
+  const authFailurePaused = Boolean(provider.inboundPausedAt) && provider.inboundPauseReason === 'auth_failure';
 
   const getExpirationStatus = (activeProvider: EmailProvider) => {
     if (activeProvider.providerType !== 'microsoft' || !activeProvider.microsoftConfig?.webhook_expires_at) {
@@ -249,18 +257,23 @@ export function EmailProviderCard({
                       : t('providerCard.actions.resyncMailbox', { defaultValue: 'Resync Mailbox' })}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
-                  onClick={() => onTogglePause(provider)}
-                  disabled={interactionBusy}
-                >
-                  {provider.inboundPausedAt
-                    ? <PlayCircle className="h-4 w-4 mr-2" />
-                    : <PauseCircle className="h-4 w-4 mr-2" />}
-                  {provider.inboundPausedAt
-                    ? t('providerCard.actions.resume')
-                    : t('providerCard.actions.pause')}
-                </DropdownMenuItem>
+                {/* A bare Resume must not be offered for an auth_failure
+                    pause: resuming dead credentials would recreate the
+                    alert loop. Reconnect is the only path back. */}
+                {!authFailurePaused && (
+                  <DropdownMenuItem
+                    id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
+                    onClick={() => onTogglePause(provider)}
+                    disabled={interactionBusy}
+                  >
+                    {provider.inboundPausedAt
+                      ? <PlayCircle className="h-4 w-4 mr-2" />
+                      : <PauseCircle className="h-4 w-4 mr-2" />}
+                    {provider.inboundPausedAt
+                      ? t('providerCard.actions.resume')
+                      : t('providerCard.actions.pause')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onDelete(provider.id)}
@@ -335,7 +348,10 @@ export function EmailProviderCard({
           )}
         </div>
 
-        {provider.status === 'error' && provider.errorMessage && (
+        {/* The auth-failure banner already carries the actionable error
+            context; stacking the generic status-error alert on top of it is
+            redundant noise. */}
+        {provider.status === 'error' && provider.errorMessage && !authFailurePaused && (
           <Alert variant="destructive" className="mt-3">
             <AlertDescription>
               <strong>{t('providerCard.fields.error', { defaultValue: 'Error:' })}</strong> {provider.errorMessage}
@@ -343,7 +359,41 @@ export function EmailProviderCard({
           </Alert>
         )}
 
-        {provider.inboundPausedAt && (
+        {authFailurePaused ? (
+          <Alert
+            id={`provider-auth-failure-banner-${provider.id}`}
+            variant="destructive"
+            className="mt-3"
+            role="alert"
+          >
+            <AlertDescription>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <strong id={`provider-auth-failure-title-${provider.id}`}>
+                    {t('providerCard.authFailure.title')}
+                  </strong>
+                  <p className="mt-1">
+                    {t('providerCard.authFailure.description', {
+                      defaultValue: 'Inbound email for {{mailbox}} is paused because its credentials no longer work. Messages are not lost — they remain in the source mailbox.',
+                      mailbox: provider.mailbox,
+                    })}
+                  </p>
+                </div>
+                <Button
+                  id={`reconnect-provider-${provider.id}`}
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => onReconnect(provider)}
+                  disabled={interactionBusy}
+                  className="shrink-0"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {t('providerCard.authFailure.action')}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : provider.inboundPausedAt && (
           <Alert id={`provider-paused-help-${provider.id}`} className="mt-3">
             <AlertDescription>{t('providerCard.pausedHelp')}</AlertDescription>
           </Alert>
