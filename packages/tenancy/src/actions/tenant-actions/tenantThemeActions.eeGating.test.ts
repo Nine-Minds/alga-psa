@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOM_THEME } from '../../lib/customTheme';
 
 const settingsRow: { settings: Record<string, unknown> } = { settings: {} };
-const update = vi.fn(async () => 1);
-const insert = vi.fn(async () => [1]);
+type SettingsPatch = { settings: { theme: Record<string, any> } };
+const update = vi.fn(async (_patch: SettingsPatch) => 1);
+const insert = vi.fn(async (_row: SettingsPatch) => [1]);
 
 function mockDeps() {
   vi.doMock('@alga-psa/db', () => ({
