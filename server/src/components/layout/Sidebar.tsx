@@ -332,7 +332,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <button
               id="settings-back-to-main-button"
               onClick={handleBackToMain}
-              className="w-full px-3 py-2 flex items-center gap-2 text-base text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-2 text-base text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
               <span>{backToMainLabel}</span>
@@ -344,7 +344,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     id="settings-back-to-main-button"
                     onClick={handleBackToMain}
-                    className="w-full p-2 flex items-center justify-center text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
+                    className="w-full p-2 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
