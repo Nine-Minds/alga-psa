@@ -1118,7 +1118,8 @@
         "supportPhone": "Support-Telefon",
         "heroGradient": "Dashboard-Hintergrundverlauf",
         "sidebarStyle": "Farbe der Seitenleiste",
-        "sidebarColor": "Eigene Farbe der Seitenleiste"
+        "sidebarColor": "Eigene Farbe der Seitenleiste",
+        "followTheme": "Organisationsdesign im Kundenportal verwenden"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
         "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard.",
         "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe.",
-        "sidebarColor": "Eine beliebige Farbe. Das Panel verwendet einen abgedunkelten Farbton davon, damit der helle Text der Seitenleiste lesbar bleibt."
+        "sidebarColor": "Eine beliebige Farbe. Das Panel verwendet einen abgedunkelten Farbton davon, damit der helle Text der Seitenleiste lesbar bleibt.",
+        "followTheme": "Wenn aktiviert, verwendet das Kundenportal das unter Einstellungen → Erscheinungsbild gewählte Design. Wenn deaktiviert, überschreiben die Farben unten dieses Design.",
+        "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",

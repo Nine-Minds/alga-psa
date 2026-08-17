@@ -1118,7 +1118,8 @@
         "supportPhone": "Support-telefoonnummer",
         "heroGradient": "Verloop van dashboardkop",
         "sidebarStyle": "Kleur van zijpaneel",
-        "sidebarColor": "Eigen kleur zijpaneel"
+        "sidebarColor": "Eigen kleur zijpaneel",
+        "followTheme": "Organisatiethema in het portaal gebruiken"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten.",
         "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard.",
         "sidebarStyle": "Geeft het zijpaneel van het klantenportaal uw primaire of secundaire kleur.",
-        "sidebarColor": "Elke kleur die u wilt. Het paneel gebruikt een donkerdere tint zodat de lichte tekst in het zijpaneel leesbaar blijft."
+        "sidebarColor": "Elke kleur die u wilt. Het paneel gebruikt een donkerdere tint zodat de lichte tekst in het zijpaneel leesbaar blijft.",
+        "followTheme": "Als dit aanstaat, gebruikt het klantenportaal het thema dat is gekozen bij Instellingen → Weergave. Staat het uit, dan overschrijven de kleuren hieronder dat thema.",
+        "followThemeActive": "De kleuren hieronder blijven bewaard maar worden niet toegepast zolang het portaal het organisatiethema volgt."
       },
       "heroGradient": {
         "primaryShades": "Primaire kleur naar primaire tint",

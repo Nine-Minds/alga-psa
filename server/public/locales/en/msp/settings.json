@@ -1118,7 +1118,8 @@
         "supportPhone": "Support Phone",
         "heroGradient": "Dashboard hero gradient",
         "sidebarStyle": "Side panel color",
-        "sidebarColor": "Custom side panel color"
+        "sidebarColor": "Custom side panel color",
+        "followTheme": "Use the organization theme in the portal"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Optional. Shown alongside the support email in client-facing emails.",
         "heroGradient": "Controls the welcome banner gradient on the client dashboard.",
         "sidebarStyle": "Tints the client portal side panel with your primary or secondary color.",
-        "sidebarColor": "Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable."
+        "sidebarColor": "Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable.",
+        "followTheme": "When on, the client portal uses the theme chosen under Settings → Appearance. When off, the colors below override it.",
+        "followThemeActive": "The colors below are kept but not applied while the portal follows the organization theme."
       },
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",

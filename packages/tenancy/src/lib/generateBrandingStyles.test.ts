@@ -75,3 +75,30 @@ describe('generateBrandingStyles portal sidebar tint', () => {
     ).toBe('');
   });
 });
+
+describe('generateBrandingStyles portal theme opt-in', () => {
+  it('leaves branding in charge of the portal by default', () => {
+    const baseline = generateBrandingStyles(baseBranding);
+
+    expect(baseline).not.toBe('');
+    expect(generateBrandingStyles({ ...baseBranding, portalFollowsTheme: undefined })).toBe(baseline);
+    expect(generateBrandingStyles({ ...baseBranding, portalFollowsTheme: false })).toBe(baseline);
+  });
+
+  it('drops the portal accents once the tenant follows the organization theme', () => {
+    expect(
+      generateBrandingStyles({
+        ...baseBranding,
+        portalSidebarStyle: 'primary',
+        portalFollowsTheme: true,
+      }),
+    ).toBe('');
+  });
+
+  it('still paints the Enterprise MSP shell, which has its own switch', () => {
+    const branded = generateBrandingStyles({ ...baseBranding, portalFollowsTheme: true }, { surface: 'msp' });
+
+    expect(branded).toBe(generateBrandingStyles(baseBranding, { surface: 'msp' }));
+    expect(branded).toContain('--color-primary-500');
+  });
+});

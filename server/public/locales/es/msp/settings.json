@@ -1118,7 +1118,8 @@
         "supportPhone": "Teléfono de soporte",
         "heroGradient": "Degradado del encabezado del panel",
         "sidebarStyle": "Color del panel lateral",
-        "sidebarColor": "Color personalizado del panel lateral"
+        "sidebarColor": "Color personalizado del panel lateral",
+        "followTheme": "Usar el tema de la organización en el portal"
       },
       "help": {
         "companyName": "Esto se mostrará en el encabezado del portal del cliente",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Opcional. Se muestra junto al correo de soporte en los correos enviados a los clientes.",
         "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente.",
         "sidebarStyle": "Aplica su color primario o secundario al panel lateral del portal del cliente.",
-        "sidebarColor": "Cualquier color que desee. El panel usa un tono oscurecido para que el texto claro del panel lateral siga siendo legible."
+        "sidebarColor": "Cualquier color que desee. El panel usa un tono oscurecido para que el texto claro del panel lateral siga siendo legible.",
+        "followTheme": "Si está activado, el portal de clientes usa el tema elegido en Configuración → Apariencia. Si está desactivado, los colores de abajo lo sustituyen.",
+        "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",

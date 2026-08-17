@@ -1118,7 +1118,8 @@
         "supportPhone": "Telefono di supporto",
         "heroGradient": "Gradiente dell’intestazione della dashboard",
         "sidebarStyle": "Colore del pannello laterale",
-        "sidebarColor": "Colore personalizzato del pannello laterale"
+        "sidebarColor": "Colore personalizzato del pannello laterale",
+        "followTheme": "Usa il tema dell’organizzazione nel portale"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti.",
         "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente.",
         "sidebarStyle": "Applica il colore primario o secondario al pannello laterale del portale clienti.",
-        "sidebarColor": "Qualsiasi colore preferisci. Il pannello usa una tonalità più scura, così il testo chiaro del pannello laterale resta leggibile."
+        "sidebarColor": "Qualsiasi colore preferisci. Il pannello usa una tonalità più scura, così il testo chiaro del pannello laterale resta leggibile.",
+        "followTheme": "Se attivo, il portale clienti usa il tema scelto in Impostazioni → Aspetto. Se disattivato, i colori qui sotto lo sostituiscono.",
+        "followThemeActive": "I colori qui sotto vengono conservati ma non applicati finché il portale segue il tema dell’organizzazione."
       },
       "heroGradient": {
         "primaryShades": "Dal colore primario a una tonalità primaria",

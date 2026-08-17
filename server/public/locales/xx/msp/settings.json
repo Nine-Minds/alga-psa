@@ -1118,7 +1118,8 @@
         "supportPhone": "11111",
         "heroGradient": "11111",
         "sidebarStyle": "11111",
-        "sidebarColor": "11111"
+        "sidebarColor": "11111",
+        "followTheme": "11111"
       },
       "help": {
         "companyName": "11111",
@@ -1131,7 +1132,9 @@
         "supportPhone": "11111",
         "heroGradient": "11111",
         "sidebarStyle": "11111",
-        "sidebarColor": "11111"
+        "sidebarColor": "11111",
+        "followTheme": "11111",
+        "followThemeActive": "11111"
       },
       "heroGradient": {
         "primaryShades": "11111",

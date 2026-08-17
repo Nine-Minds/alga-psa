@@ -33,6 +33,12 @@ export interface TenantBranding {
   portalSidebarStyle?: PortalSidebarStyle;
   /** Arbitrary side panel tint, used only when portalSidebarStyle is 'custom'. */
   portalSidebarColor?: string;
+  /**
+   * When true the client portal drops these brand accents and wears the
+   * organization theme instead. Missing/false keeps the portal branding in
+   * charge, which is what every existing tenant configured.
+   */
+  portalFollowsTheme?: boolean;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
@@ -63,6 +69,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
   const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
+  const portalFollowsTheme = branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme;
 
   // Precompute CSS styles for performance
   const computedStyles = generateBrandingStyles({
@@ -72,6 +79,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     clientName: branding.clientName,
     portalSidebarStyle,
     portalSidebarColor,
+    portalFollowsTheme,
   });
 
   // Build updated settings with branding and computed styles.
@@ -90,6 +98,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
       portalHeroGradient: branding.portalHeroGradient,
       portalSidebarStyle,
       portalSidebarColor,
+      portalFollowsTheme,
       computedStyles, // Store precomputed CSS
     }
   };

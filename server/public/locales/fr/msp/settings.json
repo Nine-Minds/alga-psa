@@ -1118,7 +1118,8 @@
         "supportPhone": "Téléphone du support",
         "heroGradient": "Dégradé de l’en-tête du tableau de bord",
         "sidebarStyle": "Couleur du panneau latéral",
-        "sidebarColor": "Couleur personnalisée du panneau latéral"
+        "sidebarColor": "Couleur personnalisée du panneau latéral",
+        "followTheme": "Utiliser le thème de l’organisation dans le portail"
       },
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",
@@ -1131,7 +1132,9 @@
         "supportPhone": "Facultatif. Affiché à côté de l'e-mail du support dans les e-mails destinés aux clients.",
         "heroGradient": "Contrôle le dégradé de la bannière d’accueil du tableau de bord client.",
         "sidebarStyle": "Applique votre couleur principale ou secondaire au panneau latéral du portail client.",
-        "sidebarColor": "La couleur de votre choix. Le panneau utilise une nuance assombrie afin que le texte clair du panneau latéral reste lisible."
+        "sidebarColor": "La couleur de votre choix. Le panneau utilise une nuance assombrie afin que le texte clair du panneau latéral reste lisible.",
+        "followTheme": "Lorsque cette option est activée, le portail client utilise le thème choisi dans Paramètres → Apparence. Lorsqu’elle est désactivée, les couleurs ci-dessous le remplacent.",
+        "followThemeActive": "Les couleurs ci-dessous sont conservées mais ne sont pas appliquées tant que le portail suit le thème de l’organisation."
       },
       "heroGradient": {
         "primaryShades": "Couleur principale vers une nuance principale",

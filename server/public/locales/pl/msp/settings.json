@@ -1124,7 +1124,8 @@
         "supportPhone": "Telefon wsparcia",
         "heroGradient": "Gradient nagłówka pulpitu",
         "sidebarStyle": "Kolor panelu bocznego",
-        "sidebarColor": "Własny kolor panelu bocznego"
+        "sidebarColor": "Własny kolor panelu bocznego",
+        "followTheme": "Użyj motywu organizacji w portalu"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
@@ -1137,7 +1138,9 @@
         "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów.",
         "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta.",
         "sidebarStyle": "Nadaje panelowi bocznemu portalu klienta kolor główny lub dodatkowy.",
-        "sidebarColor": "Dowolny kolor. Panel używa jego przyciemnionego odcienia, aby jasny tekst panelu bocznego pozostał czytelny."
+        "sidebarColor": "Dowolny kolor. Panel używa jego przyciemnionego odcienia, aby jasny tekst panelu bocznego pozostał czytelny.",
+        "followTheme": "Gdy włączone, portal klienta używa motywu wybranego w Ustawienia → Wygląd. Gdy wyłączone, kolory poniżej go zastępują.",
+        "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",

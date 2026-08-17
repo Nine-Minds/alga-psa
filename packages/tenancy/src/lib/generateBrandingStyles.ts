@@ -206,8 +206,18 @@ const sidebarOverrides = (shades: Record<number, string>): string => `
  * Generate CSS styles for tenant branding.
  * Each color is applied independently — if only one is set, the other falls
  * back to the globals.css palette rather than a hardcoded default.
+ *
+ * `surface: 'msp'` is the Enterprise white-label shell, which has its own
+ * switch — only the portal honors `portalFollowsTheme`.
  */
-export function generateBrandingStyles(branding: TenantBranding | null): string {
+export function generateBrandingStyles(
+  branding: TenantBranding | null,
+  options: { surface?: 'portal' | 'msp' } = {},
+): string {
+  if (branding?.portalFollowsTheme && options.surface !== 'msp') {
+    return '';
+  }
+
   const primaryShades = branding?.primaryColor ? generateColorShades(branding.primaryColor) : null;
   const secondaryShades = branding?.secondaryColor ? generateColorShades(branding.secondaryColor) : null;
 

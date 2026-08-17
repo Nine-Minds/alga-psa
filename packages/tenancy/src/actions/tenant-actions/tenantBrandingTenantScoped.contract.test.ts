@@ -26,6 +26,13 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
     expect(source).toContain('branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl');
     expect(source).toContain('branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle');
+    expect(source).toContain('branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme');
+  });
+
+  it('persists the portal theme opt-in and feeds it to the style generator', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain('portalFollowsTheme?: boolean');
+    expect(source).toContain('portalFollowsTheme,');
   });
 
   it('writes each tenant logo variant to its own branding key', () => {

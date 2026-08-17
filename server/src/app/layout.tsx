@@ -165,7 +165,9 @@ export default async function RootLayout({
   // configuration must not repaint the staff-facing app on its own.
   if (!isClientPortal && tenant && isEnterprise && theme.mspWhiteLabel) {
     const branding = await getTenantBrandingByTenantId(tenant);
-    brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
+    // The cached computedStyles belong to the portal (and are empty once the
+    // portal opts into the theme), so the MSP shell builds its own copy.
+    brandingStyles = generateBrandingStyles(branding, { surface: 'msp' });
   }
 
   // Drives screen-reader pronunciation, browser translation prompts and CSS
