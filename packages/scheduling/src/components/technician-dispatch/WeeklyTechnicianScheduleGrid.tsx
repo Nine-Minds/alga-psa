@@ -102,7 +102,7 @@ const TechnicianSidebar = ({
             } ${tech.is_inactive ? 'text-[rgb(var(--color-text-300))] opacity-75' : 'text-[rgb(var(--color-text-600))]'}`}
           >
             <span className={`truncate ${tech.is_inactive ? 'text-[rgb(var(--color-text-400))]' : ''}`}>{tech.first_name} {tech.last_name}</span>
-            <div className="flex items-center flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {!isFocus && (
                 <Button
                   id={`view-week-${tech.user_id}`}
