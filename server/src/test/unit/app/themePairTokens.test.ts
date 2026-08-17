@@ -83,13 +83,37 @@ describe('theme pair token blocks', () => {
     expect(slate['--color-table-row-alt']).toBe('30 33 52');
   });
 
+  // Anchors read off the product mock on nineminds.com, our design reference:
+  // --background 12 10 24, --card 21 16 36 (the mock's dark sidebar), --muted
+  // 27 21 48, --accent 30 24 54 (the mock's content surface), --border 39 32 65,
+  // --foreground 232 228 246, --primary #8a4dea. Light mode keeps the mock's
+  // #0C111D sidebar.
   it('paints the default dark theme in the Alga purple anchors', () => {
     const dark = tokensOf('html.dark');
 
     expect(dark['--color-background']).toBe('12 10 24');
-    expect(dark['--color-card']).toBe('21 16 36');
+    expect(dark['--color-card']).toBe('30 24 54');
+    expect(dark['--color-border-50']).toBe('21 16 36');
+    expect(dark['--color-border-200']).toBe('39 32 65');
     expect(dark['--color-text-900']).toBe('232 228 246');
     expect(dark['--color-primary-500']).toBe('138 77 234');
     expect(dark['--color-sidebar-bg']).toBe('21 16 36');
+  });
+
+  // Cards carry the tint, so they have to sit above the page and the chrome while
+  // staying inside the neutral ramp: wells (border-50) below, chips and shells
+  // (border-100) above, flyouts above that.
+  it('lifts dark cards above the page and the sidebar so the tint reads', () => {
+    const dark = tokensOf('html.dark');
+
+    expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-background']));
+    expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-sidebar-bg']));
+    expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-border-50']));
+    expect(sum(dark['--color-card'])).toBeLessThan(sum(dark['--color-border-100']));
+    expect(sum(dark['--color-submenu-bg'])).toBeGreaterThan(sum(dark['--color-card']));
+  });
+
+  it('keeps the reference light sidebar', () => {
+    expect(tokensOf('html.light')['--color-sidebar-bg']).toBe('12 17 29');
   });
 });

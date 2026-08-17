@@ -60,7 +60,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     descriptionKey: 'appearance.pairs.alga.description',
     description: 'The default look: clean white surfaces by day, purple-tinted by night.',
     light: { background: '#ffffff', card: '#ffffff', text: '#0f172a', primary: '#8a4dea', sidebar: '#0c111d' },
-    dark: { background: '#0c0a18', card: '#151024', text: '#e8e4f6', primary: '#8a4dea', sidebar: '#151024' },
+    dark: { background: '#0c0a18', card: '#1e1836', text: '#e8e4f6', primary: '#8a4dea', sidebar: '#151024' },
   },
   {
     id: 'slate',

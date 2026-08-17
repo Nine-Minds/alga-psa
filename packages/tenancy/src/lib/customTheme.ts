@@ -59,7 +59,7 @@ export const DEFAULT_CUSTOM_THEME: { light: CustomThemeTokens; dark: CustomTheme
   },
   dark: {
     background: '#0c0a18',
-    card: '#151024',
+    card: '#1e1836',
     surface: '#1b1530',
     textPrimary: '#e8e4f6',
     textSecondary: '#c9c3e0',

@@ -360,8 +360,8 @@ body {
 
 html.dark {
     --background: 12, 10, 24;
-    --color-background: 12 10 24;    /* #0c0a18 */
-    --color-card: 21 16 36;          /* #151024 */
+    --color-background: 12 10 24;    /* #0c0a18 — site --background */
+    --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -403,8 +403,8 @@ html.dark {
 
     /* BORDER COLOR */
     --color-border-base: 58 47 89;
-    --color-border-50: 27 21 48;     /* #1b1530 muted surface */
-    --color-border-100: 34 23 67;    /* #221743 subtle/hover surface */
+    --color-border-50: 21 16 36;     /* #151024 — site --card, the deepest well */
+    --color-border-100: 34 23 67;    /* #221743 — chips and shells, one step above the card */
     --color-border-200: 39 32 65;    /* #272041 border base */
     --color-border-300: 47 39 82;    /* #2f2752 border mid */
     --color-border-400: 58 47 89;    /* #3a2f59 border strong */
@@ -416,7 +416,7 @@ html.dark {
 
     /* TEXT COLORS */
     --color-text-base: 111 104 144;
-    --color-text-50: 27 21 48;
+    --color-text-50: 21 16 36;
     --color-text-100: 34 23 67;
     --color-text-200: 39 32 65;
     --color-text-300: 58 47 89;
@@ -475,7 +475,7 @@ html.dark {
     --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
     --color-alert-warning-bg: 50 40 8;         /* golden amber */
     --color-alert-success-bg: 15 40 25;       /* deep dark green */
-    --color-alert-info-bg: 30 24 66;          /* deep purple */
+    --color-alert-info-bg: 49 32 92;          /* #31205c — stays legible on the lifted card */
     --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
@@ -508,7 +508,7 @@ html.dark {
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: 30 24 54;      /* #1e1836 elevated surface */
+    --color-submenu-bg: 39 32 65;      /* #272041 — one step above the card so flyouts read as elevated */
     --color-submenu-text: 232 228 246;
     --color-submenu-hover: 47 39 82;   /* #2f2752 */
     --color-submenu-icon: 154 146 184;
