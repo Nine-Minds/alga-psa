@@ -40,7 +40,7 @@ describe('generateBrandingStyles portal sidebar tint', () => {
     expect(secondaryCss).toContain(`${SIDEBAR_SELECTOR} {`);
     expect(secondaryCss).not.toBe(primaryCss);
     // secondary #6366F1 -> shade 800 is each channel at 50%
-    expect(secondaryCss).toContain('--color-sidebar-bg: rgb(50 51 121)');
+    expect(secondaryCss).toContain('--color-sidebar-bg: 50 51 121');
   });
 
   it('keeps returning nothing when the tenant has no colors at all', () => {

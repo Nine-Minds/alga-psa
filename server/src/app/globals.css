@@ -50,7 +50,7 @@
   .sidebar-nav {
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--color-border-300)) var(--color-sidebar-bg);
+    scrollbar-color: rgb(var(--color-border-300)) rgb(var(--color-sidebar-bg));
   }
 
   .sidebar-nav::-webkit-scrollbar {
@@ -58,7 +58,7 @@
   }
 
   .sidebar-nav::-webkit-scrollbar-track {
-    background: var(--color-sidebar-bg);
+    background: rgb(var(--color-sidebar-bg));
   }
 
   .sidebar-nav::-webkit-scrollbar-thumb {
@@ -496,17 +496,22 @@ html.dark {
     --color-table-status-warning: 50 35 18;      /* muted dark orange */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: #0f172a;
-    --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #1e293b;
-    --color-sidebar-icon: #94a3b8;
+    --color-sidebar-bg: 15 23 42;
+    --color-sidebar-text: 245 245 245;
+    --color-sidebar-hover: 30 41 59;
+    --color-sidebar-icon: 148 163 184;
+
+    /* Header Colors  */
+    --color-header-bg: 22 28 48;
+    --color-header-text: 245 245 245;
+    --color-header-border: 51 65 85;
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #1e293b;
-    --color-submenu-text: #f5f5f5;
-    --color-submenu-hover: #808080;
-    --color-submenu-icon: #909090;
+    --color-submenu-bg: 30 41 59;
+    --color-submenu-text: 245 245 245;
+    --color-submenu-hover: 128 128 128;
+    --color-submenu-icon: 144 144 144;
 
 
     background: rgba(var(--background), 1);
@@ -651,17 +656,22 @@ html.light {
     --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: #0C111D;
-    --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #808080;
-    --color-sidebar-icon: #909090;
+    --color-sidebar-bg: 12 17 29;
+    --color-sidebar-text: 245 245 245;
+    --color-sidebar-hover: 128 128 128;
+    --color-sidebar-icon: 144 144 144;
+
+    /* Header Colors  */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 15 23 42;
+    --color-header-border: 226 232 240;
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #1b1a1a;
-    --color-submenu-text: #f5f5f5;
-    --color-submenu-hover: #808080;
-    --color-submenu-icon: #909090;
+    --color-submenu-bg: 27 26 26;
+    --color-submenu-text: 245 245 245;
+    --color-submenu-hover: 128 128 128;
+    --color-submenu-icon: 144 144 144;
 
 
     background: rgba(var(--background), 1);

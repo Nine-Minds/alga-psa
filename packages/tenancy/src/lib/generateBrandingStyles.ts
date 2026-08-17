@@ -191,15 +191,15 @@ const secondaryOverrides = `
 const sidebarOverrides = (shades: Record<number, string>): string => `
 
     [data-automation-id="client-portal-sidebar"] {
-      --color-sidebar-bg: rgb(${shades[800]});
-      --color-sidebar-hover: rgb(${shades[700]});
-      --color-sidebar-icon: rgb(${shades[300]});
+      --color-sidebar-bg: ${shades[800]};
+      --color-sidebar-hover: ${shades[700]};
+      --color-sidebar-icon: ${shades[300]};
     }
 
     html.dark [data-automation-id="client-portal-sidebar"] {
-      --color-sidebar-bg: rgb(${shades[900]});
-      --color-sidebar-hover: rgb(${shades[800]});
-      --color-sidebar-icon: rgb(${shades[300]});
+      --color-sidebar-bg: ${shades[900]};
+      --color-sidebar-hover: ${shades[800]};
+      --color-sidebar-icon: ${shades[300]};
     }`;
 
 /**
