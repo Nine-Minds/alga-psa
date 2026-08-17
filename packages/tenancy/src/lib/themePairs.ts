@@ -14,6 +14,8 @@ export const THEME_PAIR_IDS = [
   'ocean',
   'forest',
   'sunset',
+  'cappuccino',
+  'vice',
   'high-contrast',
   'custom',
 ] as const;
@@ -97,6 +99,24 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     description: 'Warm oranges over sand-tinted surfaces.',
     light: { background: '#ffffff', card: '#ffffff', text: '#1c1917', primary: '#c2410c', sidebar: '#1a1008' },
     dark: { background: '#140b05', card: '#211408', text: '#f6ede4', primary: '#ea580c', sidebar: '#211408' },
+  },
+  {
+    id: 'cappuccino',
+    labelKey: 'appearance.pairs.cappuccino.label',
+    label: 'Cappuccino',
+    descriptionKey: 'appearance.pairs.cappuccino.description',
+    description: 'Coffee browns over cream, roasted espresso after dark.',
+    light: { background: '#ffffff', card: '#ffffff', text: '#211a14', primary: '#8b5e3c', sidebar: '#241a12' },
+    dark: { background: '#140e09', card: '#2a1d13', text: '#f5ece2', primary: '#a9713f', sidebar: '#1a120c' },
+  },
+  {
+    id: 'vice',
+    labelKey: 'appearance.pairs.vice.label',
+    label: 'Vice',
+    descriptionKey: 'appearance.pairs.vice.description',
+    description: 'Neon pink and cyan over a Miami-night purple.',
+    light: { background: '#ffffff', card: '#ffffff', text: '#211722', primary: '#c4187f', sidebar: '#190431' },
+    dark: { background: '#0d0221', card: '#241050', text: '#fdeff9', primary: '#e01f8b', sidebar: '#170538' },
   },
   {
     id: 'high-contrast',

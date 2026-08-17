@@ -1320,6 +1320,14 @@
         "label": "Zonsondergang",
         "description": "Warme oranjetinten op zandkleurige vlakken."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Koffiebruin op crème, geroosterde espresso na zonsondergang."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonroze en cyaan op een Miami-nachtpaars."
+      },
       "highContrast": {
         "label": "Hoog contrast",
         "description": "Maximale leesbaarheid: zuiver zwarte en witte vlakken met nadrukkelijke randen."

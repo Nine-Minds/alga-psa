@@ -1320,6 +1320,14 @@
         "label": "Pôr do sol",
         "description": "Laranjas quentes sobre superfícies em tom de areia."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Marrons de café sobre creme, com um espresso torrado no escuro."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa e ciano neon sobre um roxo de noite em Miami."
+      },
       "highContrast": {
         "label": "Alto contraste",
         "description": "Legibilidade máxima: superfícies pretas e brancas puras com bordas destacadas."

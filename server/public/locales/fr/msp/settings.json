@@ -1320,6 +1320,14 @@
         "label": "Coucher de soleil",
         "description": "Des oranges chauds sur des surfaces teintées de sable."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Bruns café sur crème, expresso torréfié à la nuit tombée."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rose et cyan néon sur un violet nuit de Miami."
+      },
       "highContrast": {
         "label": "Contraste élevé",
         "description": "Lisibilité maximale : surfaces noires et blanches pures avec bordures accentuées."

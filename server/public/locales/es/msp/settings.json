@@ -1320,6 +1320,14 @@
         "label": "Atardecer",
         "description": "Naranjas cálidos sobre superficies con matiz arena."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Marrones de café sobre crema y un espresso tostado al oscurecer."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa y cian de neón sobre un púrpura de noche en Miami."
+      },
       "highContrast": {
         "label": "Alto contraste",
         "description": "Máxima legibilidad: superficies blancas y negras puras con bordes acentuados."

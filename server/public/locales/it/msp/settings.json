@@ -1320,6 +1320,14 @@
         "label": "Tramonto",
         "description": "Arancioni caldi su superfici color sabbia."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Marroni caffè su crema, espresso tostato al buio."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa e ciano neon su un viola notte di Miami."
+      },
       "highContrast": {
         "label": "Contrasto elevato",
         "description": "Massima leggibilità: superfici bianche e nere pure con bordi accentuati."

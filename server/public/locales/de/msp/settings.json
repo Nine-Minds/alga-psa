@@ -1320,6 +1320,14 @@
         "label": "Sonnenuntergang",
         "description": "Warme Orangetöne auf sandfarbenen Flächen."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kaffeebraun auf Creme, geröstetes Espresso-Dunkel."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonpink und Cyan auf einem Miami-Nachtviolett."
+      },
       "highContrast": {
         "label": "Hoher Kontrast",
         "description": "Maximale Lesbarkeit: reine schwarze und weiße Flächen mit betonten Rahmen."

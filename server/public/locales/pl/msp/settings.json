@@ -1326,6 +1326,14 @@
         "label": "Zachód słońca",
         "description": "Ciepłe pomarańcze na powierzchniach w odcieniu piasku."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kawowe brązy na kremowym tle, wypalone espresso po zmroku."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonowy róż i cyjan na fiolecie nocnego Miami."
+      },
       "highContrast": {
         "label": "Wysoki kontrast",
         "description": "Maksymalna czytelność: czysto czarne i białe powierzchnie z wyraźnymi obramowaniami."

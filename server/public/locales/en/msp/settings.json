@@ -1320,6 +1320,14 @@
         "label": "Sunset",
         "description": "Warm oranges over sand-tinted surfaces."
       },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Coffee browns over cream, roasted espresso after dark."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neon pink and cyan over a Miami-night purple."
+      },
       "highContrast": {
         "label": "High contrast",
         "description": "Maximum legibility: pure black and white surfaces with emphasized borders."
