@@ -17,7 +17,11 @@ import {
  * whether a client is segmented.
  */
 
-export type { ClientBillingProfileRow };
+// Re-exported with an explicit `from` clause, not as a bare `export type { X }`
+// over the local import binding: in a 'use server' file the latter is enumerated
+// as an action export and emitted as registerServerReference(ClientBillingProfileRow),
+// which throws ReferenceError at module evaluation once the type is erased.
+export type { ClientBillingProfileRow } from '@alga-psa/shared/billingClients/billingProfiles';
 
 async function assertBillingRead(user: any): Promise<void> {
   if (!(await hasPermission(user, 'billing', 'read'))) {
