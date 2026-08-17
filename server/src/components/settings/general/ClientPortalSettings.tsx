@@ -1,5 +1,6 @@
 'use client';
 
+/* global process */
 
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
@@ -77,6 +78,9 @@ const getSidebarShade = (hex: string, isDark: boolean): string | null => {
 
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
+  // Only Enterprise puts the tenant mark on MSP surfaces, so only there does the
+  // portal logo deserve the extra sentence.
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -528,6 +532,11 @@ const ClientPortalSettings = () => {
               )}
               <p className="text-sm text-gray-500 mt-2">
                 {t('clientPortal.branding.help.companyLogo')}
+                {isEEAvailable
+                  ? ` ${t('clientPortal.branding.help.companyLogoMsp', {
+                      defaultValue: 'This logo also replaces the Alga mark in the MSP side menu.',
+                    })}`
+                  : ''}
               </p>
             </div>
 

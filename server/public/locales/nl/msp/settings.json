@@ -1123,6 +1123,7 @@
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
+        "companyLogoMsp": "Dit logo vervangt ook het Alga-merk in het MSP-zijmenu.",
         "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",

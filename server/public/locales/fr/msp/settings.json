@@ -1123,6 +1123,7 @@
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",
         "companyLogo": "Recommandé : PNG ou SVG, 2 Mo max, fond transparent",
+        "companyLogoMsp": "Ce logo remplace également la marque Alga dans le menu latéral MSP.",
         "companyLogoDark": "Facultatif. Utilisé dans le panneau latéral du portail et sur les écrans en mode sombre. À défaut, le logo de l'entreprise est utilisé.",
         "primaryColor": "Utilisée pour les boutons, les liens et les éléments mis en avant",
         "secondaryColor": "Utilisée pour les accents et les actions secondaires",

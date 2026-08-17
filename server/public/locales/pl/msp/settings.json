@@ -1129,6 +1129,7 @@
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
+        "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
         "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",

@@ -1123,6 +1123,7 @@
       "help": {
         "companyName": "This will be displayed in the client portal header",
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
+        "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
         "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
