@@ -42,38 +42,45 @@
     "expiringSoon": "Scade tra {{count}} giorni"
   },
   "sell": {
-    "title": "Vendi blocco ore",
-    "serviceLabel": "Servizio",
-    "servicePlaceholder": "Seleziona un servizio",
-    "rateLabel": "Tariffa oraria ({{currency}})",
+    "expirationLabel": "Scadenza (facoltativa)",
     "hoursLabel": "Ore",
     "hoursPlaceholder": "es. 10",
-    "expirationLabel": "Scadenza (facoltativa)",
-    "scopeLabel": "Ambito — servizi coperti da questo blocco (vuoto = tutta la manodopera)",
+    "hoursRequired": "Inserisci il numero di ore.",
+    "invoiceError": "Impossibile creare la fattura di acquisto del blocco.",
+    "noServices": "Nessun servizio disponibile",
     "notesLabel": "Note (facoltative)",
-    "totalLabel": "Totale",
+    "rateLabel": "Tariffa oraria ({{currency}})",
+    "rateRequired": "Inserisci una tariffa valida.",
+    "scopeLabel": "Ambito — servizi coperti da questo blocco (vuoto = tutta la manodopera)",
+    "serviceLabel": "Servizio",
+    "servicePlaceholder": "Seleziona un servizio",
+    "serviceRequired": "Seleziona un servizio.",
     "submit": "Crea bozza di fattura",
     "submitted": "Bozza di fattura {{invoiceNumber}} creata. Finalizzala per attivare il blocco.",
-    "invoiceError": "Impossibile creare la fattura di acquisto del blocco."
+    "title": "Vendi blocco ore",
+    "totalLabel": "Totale"
   },
   "grant": {
-    "title": "Concedi blocco ore",
+    "error": "Impossibile concedere il blocco ore.",
+    "granted": "Blocco ore concesso.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Perché vengono concesse queste ore?",
+    "reasonRequired": "È necessario un motivo.",
     "submit": "Concedi blocco",
-    "granted": "Blocco ore concesso.",
-    "error": "Impossibile concedere il blocco ore."
+    "title": "Concedi blocco ore"
   },
   "adjust": {
-    "title": "Rettifica ore rimanenti",
+    "adjusted": "Blocco ore rettificato.",
     "blockLabel": "Blocco",
     "currentRemaining": "Attualmente {{hours}} ore rimanenti",
     "deltaLabel": "Variazione delle ore (positiva aggiunge, negativa rimuove)",
+    "deltaRequired": "Inserisci una variazione di ore diversa da zero.",
+    "error": "Impossibile rettificare il blocco ore.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obbligatorio",
+    "reasonRequired": "È necessario un motivo.",
     "submit": "Rettifica",
-    "adjusted": "Blocco ore rettificato.",
-    "error": "Impossibile rettificare il blocco ore."
+    "title": "Rettifica ore rimanenti"
   },
   "expiration": {
     "title": "Modifica scadenza",
@@ -84,13 +91,14 @@
     "error": "Impossibile aggiornare la scadenza."
   },
   "void": {
-    "title": "Annulla blocco ore",
     "confirm": "Annullare questo blocco? L'azione è irreversibile.",
+    "error": "Impossibile annullare il blocco ore.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obbligatorio",
+    "reasonRequired": "È necessario un motivo.",
     "submit": "Annulla blocco",
-    "voided": "Blocco ore annullato.",
-    "error": "Impossibile annullare il blocco ore."
+    "title": "Annulla blocco ore",
+    "voided": "Blocco ore annullato."
   },
   "detail": {
     "title": "Dettagli del blocco ore",
@@ -119,5 +127,15 @@
     "voidedLabel": "Annullato",
     "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
     "unknownUser": "Sistema"
+  },
+  "expire": {
+    "error": "Impossibile far scadere il blocco ore.",
+    "expired": "Blocco ore scaduto.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obbligatorio",
+    "reasonRequired": "È necessario un motivo.",
+    "remaining": "{{hours}} ore non utilizzate andranno perse.",
+    "submit": "Fai scadere il blocco",
+    "title": "Far scadere il blocco ore"
   }
 }
