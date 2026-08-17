@@ -20,6 +20,12 @@ const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null; entity
   />
 ));
 
+// DocumentCredentialsSection reaches useFeatureFlag, which calls useSession.
+// The drawer is rendered bare here, with no SessionProvider above it.
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: null, status: 'unauthenticated' }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: mockRefresh,
