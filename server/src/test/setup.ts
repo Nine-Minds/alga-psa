@@ -80,12 +80,15 @@ afterEach(async () => {
 // Guarded vars: EDITION flips Temporal-vs-PgBoss and CE/EE dispatch; the
 // base-URL trio feeds getEmailWebhookBaseUrl and friends (a leaked
 // localhost NEXTAUTH_URL makes webhook probes silently enter polling mode).
+// TZ shifts every date the process formats — a timezone test that sets it
+// and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
   'EDITION',
   'NEXT_PUBLIC_EDITION',
   'APPLICATION_URL',
   'NEXTAUTH_URL',
   'NEXT_PUBLIC_BASE_URL',
+  'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];
 
