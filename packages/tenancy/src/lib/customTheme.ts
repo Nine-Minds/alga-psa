@@ -531,9 +531,23 @@ function modeBlock(selector: string, tokens: CustomThemeTokens, mode: CustomThem
   const sidebarBg = rgb('sidebarBg');
   const sidebarText = rgb('sidebarText');
 
+  // Shades 50 and 100 are large surfaces in dark mode — wells inside cards and
+  // the app shell's own ground (bg-gray-100) — so they have to stay under the
+  // card. A palette whose border is far lighter than its card would otherwise
+  // interpolate a ground that swallows the cards standing on it.
+  const brightness = (color: Rgb) => color[0] + color[1] + color[2];
+  const lowStops: Array<[number, Rgb]> = (() => {
+    const ground = mix(surface, border, 0.5);
+    if (mode === 'light' || brightness(ground) <= brightness(card)) {
+      return [[0, surface], [2 / 9, border]];
+    }
+    const cappedGround = mix(background, card, 0.7);
+    const well = brightness(surface) <= brightness(cappedGround) ? surface : mix(background, cappedGround, 0.5);
+    return [[0, well], [1 / 9, cappedGround], [2 / 9, border]];
+  })();
+
   const neutral = rampFromStops([
-    [0, surface],
-    [2 / 9, border],
+    ...lowStops,
     [3 / 9, borderStrong],
     [5 / 9, textMuted],
     [6 / 9, textSecondary],

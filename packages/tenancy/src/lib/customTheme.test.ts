@@ -135,6 +135,21 @@ describe('custom theme presets', () => {
     });
   });
 
+  // Same rule the predefined pairs follow: the shell ground (border-100, what
+  // bg-gray-100 resolves to in dark mode) has to stay under the card.
+  it('generates dark CSS whose ground stays under the card', () => {
+    Object.entries(CUSTOM_THEME_PRESETS).forEach(([pairId, preset]) => {
+      const css = generateCustomThemeStyles(preset);
+      const darkBlock = css.slice(css.indexOf('html.dark[data-theme-pair="custom"]'));
+      const value = (name: string) => {
+        const match = new RegExp(`--color-${name}: (\\d+ \\d+ \\d+);`).exec(darkBlock);
+        return match![1].split(' ').map(Number).reduce((sum, channel) => sum + channel, 0);
+      };
+
+      expect(value('border-100'), pairId).toBeLessThanOrEqual(value('card'));
+    });
+  });
+
   it('hands back a mutable copy and falls back to the default pair', () => {
     const forest = customThemePresetFor('forest');
     forest.light.primary = '#000000';
