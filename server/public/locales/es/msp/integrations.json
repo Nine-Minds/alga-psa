@@ -2522,6 +2522,29 @@
           "updateContact": "No se pudo actualizar el contacto predeterminado",
           "updateAutoSync": "No se pudo actualizar la configuración de sincronización automática"
         }
+      },
+      "deviceSync": {
+        "title": "Sincronización programada de dispositivos",
+        "description": "Actualice este inventario de dispositivos según una programación en lugar de esperar a que alguien ejecute una sincronización completa. Cada ejecución llama a la API del proveedor y, en algunos proveedores, una ejecución incremental sigue leyendo la lista completa de dispositivos, por lo que un intervalo más corto supone proporcionalmente más llamadas a la API.",
+        "enabledLabel": "Sincronizar dispositivos según una programación",
+        "intervalLabel": "Ejecutar cada (minutos)",
+        "intervalHelp": "Elija entre {{min}} y {{max}} minutos. Un intervalo más corto mantiene los datos de los dispositivos más actualizados y llama a la API del proveedor con más frecuencia.",
+        "intervalInvalid": "Introduzca un número entero de minutos entre {{min}} y {{max}}.",
+        "lastScheduledRun": "Última ejecución programada: {{time}}",
+        "lastScheduledRunNever": "La sincronización programada aún no se ha ejecutado.",
+        "lastAnySync": "Última sincronización de cualquier tipo, incluidas las sincronizaciones completas manuales: {{time}}",
+        "lastAnySyncNever": "Todavía no se ha ejecutado ninguna sincronización de dispositivos de ningún tipo.",
+        "lastSyncError": "La última sincronización falló: {{error}}",
+        "actions": {
+          "save": "Guardar programación de sincronización",
+          "saving": "Guardando..."
+        },
+        "success": {
+          "saved": "Programación de sincronización de dispositivos guardada. El programador la aplicará en unos minutos."
+        },
+        "errors": {
+          "saveFailed": "No se ha podido guardar la programación de sincronización de dispositivos."
+        }
       }
     },
     "sso": {

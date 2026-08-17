@@ -86,6 +86,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries a raw COALESCE over
+    // hour_block_time_allocations, so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-1']);
 
@@ -129,6 +132,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries a raw COALESCE over
+    // hour_block_time_allocations, so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-2']);
 
@@ -210,6 +216,9 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries a raw COALESCE over
+    // hour_block_time_allocations, so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     const eligibleSpy = vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate');
     eligibleSpy.mockImplementation(async ({ serviceId }: { serviceId: string }) => {

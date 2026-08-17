@@ -42,38 +42,45 @@
     "expiringSoon": "Expira em {{count}} dias"
   },
   "sell": {
-    "title": "Vender bloco de horas",
-    "serviceLabel": "Serviço",
-    "servicePlaceholder": "Selecione um serviço",
-    "rateLabel": "Taxa por hora ({{currency}})",
+    "expirationLabel": "Expiração (opcional)",
     "hoursLabel": "Horas",
     "hoursPlaceholder": "ex.: 10",
-    "expirationLabel": "Expiração (opcional)",
-    "scopeLabel": "Escopo — serviços que este bloco cobre (vazio = toda a mão de obra)",
+    "hoursRequired": "Introduza o número de horas.",
+    "invoiceError": "Não foi possível criar a fatura de compra do bloco.",
+    "noServices": "Nenhum serviço disponível",
     "notesLabel": "Notas (opcional)",
-    "totalLabel": "Total",
+    "rateLabel": "Taxa por hora ({{currency}})",
+    "rateRequired": "Introduza uma taxa válida.",
+    "scopeLabel": "Escopo — serviços que este bloco cobre (vazio = toda a mão de obra)",
+    "serviceLabel": "Serviço",
+    "servicePlaceholder": "Selecione um serviço",
+    "serviceRequired": "Selecione um serviço.",
     "submit": "Criar fatura em rascunho",
     "submitted": "Fatura em rascunho {{invoiceNumber}} criada. Finalize-a para ativar o bloco.",
-    "invoiceError": "Não foi possível criar a fatura de compra do bloco."
+    "title": "Vender bloco de horas",
+    "totalLabel": "Total"
   },
   "grant": {
-    "title": "Conceder bloco de horas",
+    "error": "Não foi possível conceder o bloco de horas.",
+    "granted": "Bloco de horas concedido.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Por que essas horas estão sendo concedidas?",
+    "reasonRequired": "É necessário um motivo.",
     "submit": "Conceder bloco",
-    "granted": "Bloco de horas concedido.",
-    "error": "Não foi possível conceder o bloco de horas."
+    "title": "Conceder bloco de horas"
   },
   "adjust": {
-    "title": "Ajustar horas restantes",
+    "adjusted": "Bloco de horas ajustado.",
     "blockLabel": "Bloco",
     "currentRemaining": "Atualmente {{hours}} h restantes",
     "deltaLabel": "Variação em horas (positivo adiciona, negativo remove)",
+    "deltaRequired": "Introduza uma alteração de horas diferente de zero.",
+    "error": "Não foi possível ajustar o bloco de horas.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obrigatório",
+    "reasonRequired": "É necessário um motivo.",
     "submit": "Ajustar",
-    "adjusted": "Bloco de horas ajustado.",
-    "error": "Não foi possível ajustar o bloco de horas."
+    "title": "Ajustar horas restantes"
   },
   "expiration": {
     "title": "Editar expiração",
@@ -84,13 +91,14 @@
     "error": "Não foi possível atualizar a expiração."
   },
   "void": {
-    "title": "Anular bloco de horas",
     "confirm": "Anular este bloco? Esta ação não pode ser desfeita.",
+    "error": "Não foi possível anular o bloco de horas.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obrigatório",
+    "reasonRequired": "É necessário um motivo.",
     "submit": "Anular bloco",
-    "voided": "Bloco de horas anulado.",
-    "error": "Não foi possível anular o bloco de horas."
+    "title": "Anular bloco de horas",
+    "voided": "Bloco de horas anulado."
   },
   "detail": {
     "title": "Detalhes do bloco de horas",
@@ -119,5 +127,15 @@
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (fatura desfinalizada)",
     "unknownUser": "Sistema"
+  },
+  "expire": {
+    "error": "Não foi possível expirar o bloco de horas.",
+    "expired": "Bloco de horas expirado.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obrigatório",
+    "reasonRequired": "É necessário um motivo.",
+    "remaining": "{{hours}} h não utilizadas serão perdidas.",
+    "submit": "Expirar bloco",
+    "title": "Expirar bloco de horas"
   }
 }

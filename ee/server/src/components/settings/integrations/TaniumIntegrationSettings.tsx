@@ -23,6 +23,7 @@ import {
   triggerTaniumFullSync,
   updateTaniumOrganizationMapping,
 } from '../../../lib/actions/integrations/taniumActions';
+import { RmmDeviceSyncSettings } from '@alga-psa/integrations/components/settings/integrations/RmmDeviceSyncSettings';
 
 type MappingRow = {
   mapping_id: string;
@@ -418,6 +419,10 @@ export default function TaniumIntegrationSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {isActive && (
+        <RmmDeviceSyncSettings provider="tanium" onSaved={() => void refresh()} />
+      )}
 
       {renderQuickAddContact({
         isOpen: !!quickAddContactFor,
