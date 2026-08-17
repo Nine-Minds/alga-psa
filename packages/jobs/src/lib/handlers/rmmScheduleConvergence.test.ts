@@ -15,6 +15,19 @@ import { convergeSchedule, RMM_DEVICE_SYNC_JOB } from './rmmAlertPollingHandlers
 import type { Knex } from 'knex';
 import type { IJobRunner } from '../jobs/interfaces';
 
+// rmmAlertPollingHandlers pulls in the whole alert pipeline (Redis publishers,
+// provider fetchers) that these pure-function tests never exercise. Stubbing
+// the heavy specifiers keeps the suite independent of built dist artifacts,
+// matching rmmDeviceSyncHandler.test.ts in this directory.
+vi.mock('@alga-psa/shared/rmm/alerts', () => ({
+  getRmmAlertFetcher: () => undefined,
+  registerRmmAlertFetcher: vi.fn(),
+  runRmmAlertReconciliation: vi.fn(),
+}));
+vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({ buildRmmAlertPipelineDeps: vi.fn() }));
+vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tacticalRmmAlertFetcher: {} }));
+
+
 const adminKnex = {} as Knex;
 
 /** Only the two methods convergeSchedule touches; cast at the call site. */

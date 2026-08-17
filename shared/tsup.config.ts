@@ -64,14 +64,11 @@ export default defineConfig({
     'extensions/domain': 'extensions/domain.ts',
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
-    // packages/jobs runs vitest from its own root, so its imports of these
-    // resolve through the exports map into dist/ rather than being transpiled
-    // from source the way the Next-built consumers are. Without an entry each
-    // one is a "Cannot find package" at test time.
-    'rmm/alerts': 'rmm/alerts/index.ts',
-    'rmm/contracts': 'rmm/contracts.ts',
-    'rmm/sharedAssetIngestionService': 'rmm/sharedAssetIngestionService.ts',
     'billingClients/index': 'billingClients/index.ts',
+    // packages/jobs runs vitest from its own root, so this resolves through the
+    // exports map into dist/ rather than being transpiled from source the way
+    // the Next-built consumers are. Without an entry it is "Cannot find
+    // package" at test time.
     'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',

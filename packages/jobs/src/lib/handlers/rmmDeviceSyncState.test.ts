@@ -1,5 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseRmmDeviceSyncState } from './rmmAlertPollingHandlers';
+
+// rmmAlertPollingHandlers pulls in the whole alert pipeline (Redis publishers,
+// provider fetchers) that these pure-function tests never exercise. Stubbing
+// the heavy specifiers keeps the suite independent of built dist artifacts,
+// matching rmmDeviceSyncHandler.test.ts in this directory.
+vi.mock('@alga-psa/shared/rmm/alerts', () => ({
+  getRmmAlertFetcher: () => undefined,
+  registerRmmAlertFetcher: vi.fn(),
+  runRmmAlertReconciliation: vi.fn(),
+}));
+vi.mock('@alga-psa/integrations/lib/rmm/alerts/pipelineDeps', () => ({ buildRmmAlertPipelineDeps: vi.fn() }));
+vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/alertFetcher', () => ({ tacticalRmmAlertFetcher: {} }));
+
 
 /**
  * Desired-state parsing for the recurring device sync.
