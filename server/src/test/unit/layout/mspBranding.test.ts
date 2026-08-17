@@ -36,6 +36,8 @@ describe('MSP sidebar branding', () => {
   it('resolves the rail logo from tenant branding, not from the color switch', () => {
     expect(mspLayout).toContain('resolveMspBranding(tenantBranding, { isEnterprise })');
     expect(mspLayout).not.toContain('mspWhiteLabel');
+    // Community builds must not even read tenant branding for the shell.
+    expect(mspLayout).toContain('isEnterprise && tenantId');
   });
 
   it('renders the tenant mark in place of the Alga avatar', () => {
