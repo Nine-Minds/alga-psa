@@ -12,12 +12,15 @@ import {
   prepaidBalanceAlertScanHandler,
   PrepaidBalanceAlertScanJobData,
 } from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import { expiredHourBlocksHandler, ExpiredHourBlocksJobData } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import { expiringHourBlocksNotificationHandler, ExpiringHourBlocksNotificationJobData } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
+import { handleReconcileHourBlockAllocations, ReconcileHourBlockAllocationsJobData } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import {
@@ -159,6 +162,14 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register prepaid balance alert scan handler (daily 09:00 UTC)
     jobScheduler.registerJobHandler<PrepaidBalanceAlertScanJobData>(PREPAID_BALANCE_ALERT_SCAN_JOB, async (job: Job<PrepaidBalanceAlertScanJobData>) => {
       await prepaidBalanceAlertScanHandler(job.data);
+    // Register expired hour blocks handler
+    jobScheduler.registerJobHandler<ExpiredHourBlocksJobData>('expired-hour-blocks', async (job: Job<ExpiredHourBlocksJobData>) => {
+      await expiredHourBlocksHandler(job.data);
+    });
+
+    // Register expiring hour blocks notification handler
+    jobScheduler.registerJobHandler<ExpiringHourBlocksNotificationJobData>('expiring-hour-blocks-notification', async (job: Job<ExpiringHourBlocksNotificationJobData>) => {
+      await expiringHourBlocksNotificationHandler(job.data);
     });
 
     // Register per-location low-stock alert handler (inventory F037/F038)
@@ -207,6 +218,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ReconcileBucketUsageJobData>('reconcile-bucket-usage', async (job: Job<ReconcileBucketUsageJobData>) => {
       // Directly call the handler function
       await handleReconcileBucketUsage(job);
+    });
+
+    // Register reconcile hour-block allocations handler
+    jobScheduler.registerJobHandler<ReconcileHourBlockAllocationsJobData>('reconcile-hour-block-allocations', async (job: Job<ReconcileHourBlockAllocationsJobData>) => {
+      await handleReconcileHourBlockAllocations(job);
     });
 
     // Register auto-close tickets handler
@@ -347,7 +363,10 @@ export type {
   ExpiredCreditsJobData,
   ExpiringCreditsNotificationJobData,
   PrepaidBalanceAlertScanJobData,
+  ExpiredHourBlocksJobData,
+  ExpiringHourBlocksNotificationJobData,
   ReconcileBucketUsageJobData,
+  ReconcileHourBlockAllocationsJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData,
@@ -497,6 +516,12 @@ export const scheduleExpiringCreditsNotificationJob = async (
 export const schedulePrepaidBalanceAlertScanJob = async (
   tenantId: string,
   cronExpression: string = '0 9 * * *'
+ * Schedule a daily job to expire hour blocks whose expiration date has passed
+ * (default 1:30 AM, just after the expired-credits sweep).
+ */
+export const scheduleExpiredHourBlocksJob = async (
+  tenantId: string,
+  cronExpression: string = '30 1 * * *'
 ): Promise<string | null> => {
   if (isEnterpriseWorkflowEdition()) {
     return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
@@ -504,6 +529,28 @@ export const schedulePrepaidBalanceAlertScanJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<PrepaidBalanceAlertScanJobData>(
     PREPAID_BALANCE_ALERT_SCAN_JOB,
+  return await scheduler.scheduleRecurringJob<ExpiredHourBlocksJobData>(
+    'expired-hour-blocks',
+    cronExpression,
+    { tenantId }
+  );
+};
+
+/**
+ * Schedule a daily job to notify about hour blocks that will expire soon
+ * (default 9:15 AM, after the expiring-credits notification). Reuses the
+ * credit notification lead-time settings.
+ */
+export const scheduleExpiringHourBlocksNotificationJob = async (
+  tenantId: string,
+  cronExpression: string = '15 9 * * *'
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpiringHourBlocksNotificationJobData>(
+    'expiring-hour-blocks-notification',
     cronExpression,
     { tenantId }
   );
@@ -660,6 +707,21 @@ export const scheduleReconcileBucketUsageJob = async (
     'reconcile-bucket-usage',
     cronExpression,
     { tenantId } // Only needs tenantId
+  );
+};
+
+export const scheduleReconcileHourBlockAllocationsJob = async (
+  tenantId: string,
+  cronExpression: string = '0 3 * * *' // Default: daily at 3:00 AM, alongside bucket reconcile
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ReconcileHourBlockAllocationsJobData>(
+    'reconcile-hour-block-allocations',
+    cronExpression,
+    { tenantId }
   );
 };
 

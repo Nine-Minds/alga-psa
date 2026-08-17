@@ -376,5 +376,14 @@
   "dashboard": {
     "prepaidHours": "Vorausbezahlte Stunden",
     "viewBilling": "Zur Abrechnung"
+  },
+  "hourBlocks": {
+    "title": "Vorausbezahlte Stundenblöcke",
+    "blockLabel": "{{service}}-Block",
+    "expiringSoon": "Läuft in {{days}} Tagen ab",
+    "hoursLeft": "Noch {{hours}} Std.",
+    "expires": "Läuft am {{date}} ab",
+    "recentBurn": "Letzte Nutzung",
+    "timeEntry": "Zeiteintrag"
   }
 }

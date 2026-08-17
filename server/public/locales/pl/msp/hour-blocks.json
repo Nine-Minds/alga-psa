@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Pakiety godzin",
+    "description": "Jednorazowe przedpłacone pakiety godzin. Czas nieobjęty linią umowy jest pobierany z tych pakietów, począwszy od najwcześniej wygasającego.",
+    "availableBalance": "Dostępne: {{hours}} godz.",
+    "noBlocks": "Brak pakietów godzin. Sprzedaj temu klientowi pakiet lub przyznaj godziny bezpłatnie.",
+    "loadFailed": "Nie udało się załadować pakietów godzin. Spróbuj ponownie."
+  },
+  "actions": {
+    "sell": "Sprzedaj pakiet",
+    "grant": "Przyznaj pakiet",
+    "adjust": "Skoryguj godziny",
+    "editExpiration": "Edytuj wygaśnięcie",
+    "expire": "Wygaś",
+    "void": "Unieważnij",
+    "viewDetails": "Zobacz szczegóły",
+    "openMenu": "Otwórz menu",
+    "close": "Zamknij",
+    "submit": "Zapisz",
+    "cancel": "Anuluj",
+    "confirmVoid": "Unieważnij pakiet",
+    "viewInvoice": "Zobacz fakturę"
+  },
+  "columns": {
+    "block": "Pakiet",
+    "service": "Sprzedano jako",
+    "scope": "Zakres",
+    "remaining": "Pozostało",
+    "value": "Wartość",
+    "status": "Status",
+    "expiration": "Wygaśnięcie",
+    "source": "Źródło",
+    "actions": "Działania"
+  },
+  "status": {
+    "pending": "Oczekujący",
+    "active": "Aktywny",
+    "expired": "Wygasły",
+    "voided": "Unieważniony",
+    "never": "Bezterminowo",
+    "allLabor": "Wszystkie prace",
+    "expiringSoon": "Wygasa za {{count}} dni"
+  },
+  "sell": {
+    "title": "Sprzedaj pakiet godzin",
+    "serviceLabel": "Usługa",
+    "servicePlaceholder": "Wybierz usługę",
+    "rateLabel": "Stawka za godzinę ({{currency}})",
+    "hoursLabel": "Godziny",
+    "hoursPlaceholder": "np. 10",
+    "expirationLabel": "Wygaśnięcie (opcjonalnie)",
+    "scopeLabel": "Zakres — usługi objęte pakietem (puste = wszystkie prace)",
+    "notesLabel": "Notatki (opcjonalnie)",
+    "totalLabel": "Suma",
+    "submit": "Utwórz wersję roboczą faktury",
+    "submitted": "Utworzono wersję roboczą faktury {{invoiceNumber}}. Sfinalizuj ją, aby aktywować pakiet.",
+    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu."
+  },
+  "grant": {
+    "title": "Przyznaj pakiet godzin",
+    "reasonLabel": "Powód",
+    "reasonPlaceholder": "Dlaczego te godziny są przyznawane?",
+    "submit": "Przyznaj pakiet",
+    "granted": "Pakiet godzin został przyznany.",
+    "error": "Nie udało się przyznać pakietu godzin."
+  },
+  "adjust": {
+    "title": "Skoryguj pozostałe godziny",
+    "blockLabel": "Pakiet",
+    "currentRemaining": "Obecnie pozostało {{hours}} godz.",
+    "deltaLabel": "Zmiana liczby godzin (dodatnia dodaje, ujemna odejmuje)",
+    "reasonLabel": "Powód",
+    "reasonPlaceholder": "Wymagane",
+    "submit": "Skoryguj",
+    "adjusted": "Pakiet godzin został skorygowany.",
+    "error": "Nie udało się skorygować pakietu godzin."
+  },
+  "expiration": {
+    "title": "Edytuj wygaśnięcie",
+    "label": "Data wygaśnięcia",
+    "clear": "Bezterminowo",
+    "submit": "Zapisz wygaśnięcie",
+    "saved": "Termin wygaśnięcia został zaktualizowany.",
+    "error": "Nie udało się zaktualizować terminu wygaśnięcia."
+  },
+  "void": {
+    "title": "Unieważnij pakiet godzin",
+    "confirm": "Unieważnić ten pakiet? Tej operacji nie można cofnąć.",
+    "reasonLabel": "Powód",
+    "reasonPlaceholder": "Wymagane",
+    "submit": "Unieważnij pakiet",
+    "voided": "Pakiet godzin został unieważniony.",
+    "error": "Nie udało się unieważnić pakietu godzin."
+  },
+  "detail": {
+    "title": "Szczegóły pakietu godzin",
+    "purchased": "Zakupiono {{date}}",
+    "granted": "Przyznano {{date}}",
+    "pending": "Oczekujący — sfinalizuj wersję roboczą faktury, aby aktywować",
+    "total": "Łącznie",
+    "remaining": "Pozostało",
+    "used": "Wykorzystano",
+    "burnHistory": "Historia wykorzystania",
+    "noBurn": "Z tego pakietu nie pobrano jeszcze żadnego czasu.",
+    "audit": "Dziennik audytu",
+    "noAudit": "Brak wpisów audytu.",
+    "sourceInvoice": "Faktura źródłowa",
+    "invoiceDeleted": "Faktura (usunięta)",
+    "directGrant": "Przyznanie bezpośrednie",
+    "expires": "Wygasa {{date}}",
+    "allLabor": "Wszystkie prace",
+    "scopeLabel": "Zakres",
+    "adjusted": "Skorygowano",
+    "purchaseLabel": "Zakupiono",
+    "grantLabel": "Przyznano",
+    "expirationChanged": "Zmieniono termin wygaśnięcia",
+    "manuallyExpired": "Wygaszono ręcznie",
+    "autoExpired": "Wygasł automatycznie",
+    "voidedLabel": "Unieważniono",
+    "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
+    "unknownUser": "System"
+  }
+}

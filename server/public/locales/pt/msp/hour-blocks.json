@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Blocos de horas",
+    "description": "Blocos de horas pré-pagos avulsos. O tempo que não é coberto por uma linha de contrato consome esses blocos, começando pelo que expira primeiro.",
+    "availableBalance": "{{hours}} h disponíveis",
+    "noBlocks": "Ainda não há blocos de horas. Venda um bloco para este cliente ou conceda horas de cortesia.",
+    "loadFailed": "Falha ao carregar os blocos de horas. Tente novamente."
+  },
+  "actions": {
+    "sell": "Vender bloco",
+    "grant": "Conceder bloco",
+    "adjust": "Ajustar horas",
+    "editExpiration": "Editar expiração",
+    "expire": "Expirar",
+    "void": "Anular",
+    "viewDetails": "Ver detalhes",
+    "openMenu": "Abrir menu",
+    "close": "Fechar",
+    "submit": "Salvar",
+    "cancel": "Cancelar",
+    "confirmVoid": "Anular bloco",
+    "viewInvoice": "Ver fatura"
+  },
+  "columns": {
+    "block": "Bloco",
+    "service": "Vendido como",
+    "scope": "Escopo",
+    "remaining": "Restante",
+    "value": "Valor",
+    "status": "Status",
+    "expiration": "Expiração",
+    "source": "Origem",
+    "actions": "Ações"
+  },
+  "status": {
+    "pending": "Pendente",
+    "active": "Ativo",
+    "expired": "Expirado",
+    "voided": "Anulado",
+    "never": "Nunca",
+    "allLabor": "Toda a mão de obra",
+    "expiringSoon": "Expira em {{count}} dias"
+  },
+  "sell": {
+    "title": "Vender bloco de horas",
+    "serviceLabel": "Serviço",
+    "servicePlaceholder": "Selecione um serviço",
+    "rateLabel": "Taxa por hora ({{currency}})",
+    "hoursLabel": "Horas",
+    "hoursPlaceholder": "ex.: 10",
+    "expirationLabel": "Expiração (opcional)",
+    "scopeLabel": "Escopo — serviços que este bloco cobre (vazio = toda a mão de obra)",
+    "notesLabel": "Notas (opcional)",
+    "totalLabel": "Total",
+    "submit": "Criar fatura em rascunho",
+    "submitted": "Fatura em rascunho {{invoiceNumber}} criada. Finalize-a para ativar o bloco.",
+    "invoiceError": "Não foi possível criar a fatura de compra do bloco."
+  },
+  "grant": {
+    "title": "Conceder bloco de horas",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Por que essas horas estão sendo concedidas?",
+    "submit": "Conceder bloco",
+    "granted": "Bloco de horas concedido.",
+    "error": "Não foi possível conceder o bloco de horas."
+  },
+  "adjust": {
+    "title": "Ajustar horas restantes",
+    "blockLabel": "Bloco",
+    "currentRemaining": "Atualmente {{hours}} h restantes",
+    "deltaLabel": "Variação em horas (positivo adiciona, negativo remove)",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obrigatório",
+    "submit": "Ajustar",
+    "adjusted": "Bloco de horas ajustado.",
+    "error": "Não foi possível ajustar o bloco de horas."
+  },
+  "expiration": {
+    "title": "Editar expiração",
+    "label": "Data de expiração",
+    "clear": "Sem expiração",
+    "submit": "Salvar expiração",
+    "saved": "Expiração atualizada.",
+    "error": "Não foi possível atualizar a expiração."
+  },
+  "void": {
+    "title": "Anular bloco de horas",
+    "confirm": "Anular este bloco? Esta ação não pode ser desfeita.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obrigatório",
+    "submit": "Anular bloco",
+    "voided": "Bloco de horas anulado.",
+    "error": "Não foi possível anular o bloco de horas."
+  },
+  "detail": {
+    "title": "Detalhes do bloco de horas",
+    "purchased": "Comprado em {{date}}",
+    "granted": "Concedido em {{date}}",
+    "pending": "Pendente — finalize a fatura em rascunho para ativar",
+    "total": "Total",
+    "remaining": "Restante",
+    "used": "Usado",
+    "burnHistory": "Histórico de consumo",
+    "noBurn": "Nenhum tempo foi descontado deste bloco ainda.",
+    "audit": "Trilha de auditoria",
+    "noAudit": "Nenhum registro de auditoria.",
+    "sourceInvoice": "Fatura de origem",
+    "invoiceDeleted": "Fatura (excluída)",
+    "directGrant": "Concessão direta",
+    "expires": "Expira em {{date}}",
+    "allLabor": "Toda a mão de obra",
+    "scopeLabel": "Escopo",
+    "adjusted": "Ajustado",
+    "purchaseLabel": "Comprado",
+    "grantLabel": "Concedido",
+    "expirationChanged": "Expiração alterada",
+    "manuallyExpired": "Expirado manualmente",
+    "autoExpired": "Expirado automaticamente",
+    "voidedLabel": "Anulado",
+    "purchaseReversed": "Compra revertida (fatura desfinalizada)",
+    "unknownUser": "Sistema"
+  }
+}

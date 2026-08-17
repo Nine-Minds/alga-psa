@@ -1,0 +1,123 @@
+{
+  "section": {
+    "title": "Urenblokken",
+    "description": "Eenmalige vooruitbetaalde urenblokken. Tijd die niet onder een contractregel valt, wordt afgeboekt van deze blokken, het blok met de oudste vervaldatum eerst.",
+    "availableBalance": "{{hours}} uur beschikbaar",
+    "noBlocks": "Nog geen urenblokken. Verkoop een blok aan deze klant of ken kosteloos uren toe.",
+    "loadFailed": "Kan urenblokken niet laden. Probeer het opnieuw."
+  },
+  "actions": {
+    "sell": "Blok verkopen",
+    "grant": "Blok toekennen",
+    "adjust": "Uren aanpassen",
+    "editExpiration": "Vervaldatum bewerken",
+    "expire": "Laten vervallen",
+    "void": "Ongeldig maken",
+    "viewDetails": "Details bekijken",
+    "openMenu": "Menu openen",
+    "close": "Sluiten",
+    "submit": "Opslaan",
+    "cancel": "Annuleren",
+    "confirmVoid": "Blok ongeldig maken",
+    "viewInvoice": "Factuur bekijken"
+  },
+  "columns": {
+    "block": "Blok",
+    "service": "Verkocht als",
+    "scope": "Dekking",
+    "remaining": "Resterend",
+    "value": "Waarde",
+    "status": "Status",
+    "expiration": "Vervaldatum",
+    "source": "Bron",
+    "actions": "Acties"
+  },
+  "status": {
+    "pending": "In afwachting",
+    "active": "Actief",
+    "expired": "Vervallen",
+    "voided": "Ongeldig gemaakt",
+    "never": "Nooit",
+    "allLabor": "Alle werkzaamheden",
+    "expiringSoon": "Vervalt over {{count}} dagen"
+  },
+  "sell": {
+    "title": "Urenblok verkopen",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Selecteer een service",
+    "rateLabel": "Tarief per uur ({{currency}})",
+    "hoursLabel": "Uren",
+    "hoursPlaceholder": "bijv. 10",
+    "expirationLabel": "Vervaldatum (optioneel)",
+    "scopeLabel": "Dekking — services die dit blok dekt (leeg = alle werkzaamheden)",
+    "notesLabel": "Notities (optioneel)",
+    "totalLabel": "Totaal",
+    "submit": "Conceptfactuur maken",
+    "submitted": "Conceptfactuur {{invoiceNumber}} gemaakt. Finaliseer deze om het blok te activeren.",
+    "invoiceError": "Kan de factuur voor de aankoop van het blok niet maken."
+  },
+  "grant": {
+    "title": "Urenblok toekennen",
+    "reasonLabel": "Reden",
+    "reasonPlaceholder": "Waarom worden deze uren toegekend?",
+    "submit": "Blok toekennen",
+    "granted": "Urenblok toegekend.",
+    "error": "Kan het urenblok niet toekennen."
+  },
+  "adjust": {
+    "title": "Resterende uren aanpassen",
+    "blockLabel": "Blok",
+    "currentRemaining": "Momenteel {{hours}} uur resterend",
+    "deltaLabel": "Wijziging in uren (positief voegt toe, negatief haalt af)",
+    "reasonLabel": "Reden",
+    "reasonPlaceholder": "Verplicht",
+    "submit": "Aanpassen",
+    "adjusted": "Urenblok aangepast.",
+    "error": "Kan het urenblok niet aanpassen."
+  },
+  "expiration": {
+    "title": "Vervaldatum bewerken",
+    "label": "Vervaldatum",
+    "clear": "Geen vervaldatum",
+    "submit": "Vervaldatum opslaan",
+    "saved": "Vervaldatum bijgewerkt.",
+    "error": "Kan de vervaldatum niet bijwerken."
+  },
+  "void": {
+    "title": "Urenblok ongeldig maken",
+    "confirm": "Dit blok ongeldig maken? Dit kan niet ongedaan worden gemaakt.",
+    "reasonLabel": "Reden",
+    "reasonPlaceholder": "Verplicht",
+    "submit": "Blok ongeldig maken",
+    "voided": "Urenblok ongeldig gemaakt.",
+    "error": "Kan het urenblok niet ongeldig maken."
+  },
+  "detail": {
+    "title": "Details van het urenblok",
+    "purchased": "Gekocht op {{date}}",
+    "granted": "Toegekend op {{date}}",
+    "pending": "In afwachting — finaliseer de conceptfactuur om te activeren",
+    "total": "Totaal",
+    "remaining": "Resterend",
+    "used": "Gebruikt",
+    "burnHistory": "Verbruiksgeschiedenis",
+    "noBurn": "Er is nog geen tijd van dit blok afgeboekt.",
+    "audit": "Auditspoor",
+    "noAudit": "Geen auditvermeldingen.",
+    "sourceInvoice": "Bronfactuur",
+    "invoiceDeleted": "Factuur (verwijderd)",
+    "directGrant": "Directe toekenning",
+    "expires": "Vervalt op {{date}}",
+    "allLabor": "Alle werkzaamheden",
+    "scopeLabel": "Dekking",
+    "adjusted": "Aangepast",
+    "purchaseLabel": "Gekocht",
+    "grantLabel": "Toegekend",
+    "expirationChanged": "Vervaldatum gewijzigd",
+    "manuallyExpired": "Handmatig vervallen",
+    "autoExpired": "Automatisch vervallen",
+    "voidedLabel": "Ongeldig gemaakt",
+    "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
+    "unknownUser": "Systeem"
+  }
+}

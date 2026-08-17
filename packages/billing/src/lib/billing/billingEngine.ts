@@ -14,6 +14,7 @@ import {
   IFixedPriceCharge,
   IProductCharge,
   ILicenseCharge,
+  IHourBlockCharge,
   IProjectBillingConfig,
   IProjectBillingScheduleEntry,
   IProjectPhaseRateOverride,
@@ -1570,6 +1571,17 @@ export class BillingEngine {
               selection,
             );
       totalCharges = totalCharges.concat(nonContractCharges);
+
+      // Zero-dollar prepaid-hour-block informational lines. Emitted alongside
+      // the non-contract billing they offset so covered time is marked
+      // invoiced; fully-covered entries therefore produce no hourly charge.
+      if (!options.projectTarget) {
+        const hourBlockCharges = await this.calculateHourBlockUsageCharges(
+          clientId,
+          billingPeriod,
+        );
+        totalCharges = totalCharges.concat(hourBlockCharges);
+      }
     }
 
     const capResult = projectBillingContext
@@ -2088,6 +2100,11 @@ export class BillingEngine {
       "service_catalog.tax_rate_id",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
+      this.knex.raw(
+        "COALESCE((SELECT SUM(a.minutes) FROM hour_block_time_allocations a " +
+        "WHERE a.tenant = time_entries.tenant AND a.time_entry_id = time_entries.entry_id), 0) " +
+        "as block_allocated_minutes"
+      ),
     );
 
     for (const entry of timeEntries) {
@@ -2156,7 +2173,23 @@ export class BillingEngine {
       // Unresolved (non-contract) entries have no contract-line rounding
       // config, so fall back to exact time rather than Math.ceil to a whole
       // hour, which overbilled every partial-hour entry.
-      const duration = Number(entry.billable_duration) / 60;
+      //
+      // Prepaid hour blocks offset this bucket: minutes the entry burned from
+      // an hour block (hour_block_time_allocations) were already paid for and
+      // must not be billed here. Fully covered entries produce no charge; the
+      // zero-dollar hour_block info line marks them invoiced downstream.
+      const blockAllocatedMinutes = Math.max(
+        0,
+        Number(entry.block_allocated_minutes ?? 0),
+      );
+      const billableMinutes = Math.max(
+        0,
+        Number(entry.billable_duration) - blockAllocatedMinutes,
+      );
+      if (billableMinutes <= 0) {
+        continue;
+      }
+      const duration = billableMinutes / 60;
       const phaseOverride = this.resolveProjectPhaseRateOverride(
         projectBillingContext ?? null,
         entry.project_phase_id,
@@ -2380,6 +2413,57 @@ export class BillingEngine {
     }
 
     return unresolvedCharges;
+  }
+
+  /**
+   * Zero-dollar informational lines for prepaid-hour-block consumption in the
+   * invoice window: one `hour_block` charge per block with burn, carrying the
+   * fully-covered entry ids so invoiceService marks them invoiced. Burns only
+   * ever come from non-contract (block-eligible) entries, so a covered entry
+   * is by construction never billed hourly — no double-billing.
+   */
+  private async calculateHourBlockUsageCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+  ): Promise<IHourBlockCharge[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("hour_block_time_allocations as hba");
+    db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
+    db.tenantJoin(query, "time_entries as te", "hba.time_entry_id", "te.entry_id");
+    db.tenantJoin(query, "service_catalog as sc", "hb.service_id", "sc.service_id", {
+      type: "left",
+    });
+
+    const rows = await query
+      .where({
+        "hb.client_id": clientId,
+        "te.invoiced": false,
+      })
+      .whereNull("te.contract_line_id")
+      .where("te.approval_status", "APPROVED")
+      .where("te.start_time", ">=", billingPeriod.startDate)
+      .where("te.end_time", "<", billingPeriod.endDate)
+      .select(
+        "hb.block_id",
+        "hb.remaining_minutes",
+        "hb.service_id",
+        "sc.service_name as service_name",
+        "hba.time_entry_id",
+        "hba.minutes",
+        "te.billable_duration",
+      );
+
+    const { aggregateHourBlockBurnRows, computeHourBlockCharges } = await import(
+      "./compute/computeHourBlockCharges"
+    );
+    const blocks = aggregateHourBlockBurnRows(rows);
+
+    return computeHourBlockCharges({ billingPeriod, blocks }).charges;
   }
 
   private async getClientContractLinesForBillingPeriod(

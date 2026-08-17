@@ -14,6 +14,7 @@ const featureFlagState = vi.hoisted(() => ({
 
 const checkClientPortalPermissionsMock = vi.hoisted(() => vi.fn());
 const getClientBucketUsageMock = vi.hoisted(() => vi.fn());
+const getClientHourBlocksMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => featureFlagState,
@@ -37,6 +38,7 @@ vi.mock('next/link', () => ({
 vi.mock('@alga-psa/client-portal/actions', () => ({
   checkClientPortalPermissions: (...args: unknown[]) => checkClientPortalPermissionsMock(...args),
   getClientBucketUsage: (...args: unknown[]) => getClientBucketUsageMock(...args),
+  getClientHourBlocks: (...args: unknown[]) => getClientHourBlocksMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -80,6 +82,7 @@ describe('PrepaidHoursCard dashboard widget (release-v1.5-feature)', () => {
     featureFlagState.error = null;
     checkClientPortalPermissionsMock.mockResolvedValue({ hasBillingAccess: true });
     getClientBucketUsageMock.mockResolvedValue([bucketRow()]);
+    getClientHourBlocksMock.mockResolvedValue([]);
   });
 
   afterEach(() => {

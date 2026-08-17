@@ -55,6 +55,262 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(tableExpression);
 }
 
+/**
+ * Finalize hook for ad-hoc prepaid hour blocks. A draft purchase invoice is
+ * editable before finalization (line qty/rate/service edits, line removal), so
+ * the pending block can hold stale mint-time values. The finalized invoice line
+ * is the authority: inside one transaction each pending block is synchronized
+ * to its source line (total/remaining minutes from quantity, hourly_rate from
+ * unit_price, purchase_amount, service) and flipped to `active` with a
+ * `purchase` audit row. A block whose line no longer survives as a positive
+ * charge on the finalized invoice is voided instead — never activated with
+ * values that drift from the invoice.
+ *
+ * Resolution is strictly linkage-based (source_invoice_charge_id). Removing a
+ * draft line fires the FK's ON DELETE SET NULL, which erases the linkage —
+ * indistinguishable from a block that never had one — so a NULL linkage at
+ * finalization CANNOT be resolved by service/sole-charge matching: any
+ * surviving line picked that way may belong to a different (re-added or
+ * foreign) line, activating the block from data it cannot prove ownership of
+ * (verified in review run b2b3038e). NULL or dangling linkage ⇒ void.
+ *
+ * The finalize flow passes its own transaction, which withTransaction joins
+ * (a passed trx is reused, not nested), so invoice finalization and block
+ * activation are one atomic unit — mirroring unfinalize/draft-delete, whose
+ * hour-block hooks also run inside the caller's trx. The pending-block
+ * selection itself runs INSIDE that transaction as SELECT ... FOR UPDATE in
+ * canonical block_id order, and every status write re-checks `pending`:
+ * a concurrent void/manual-expire/unfinalize that commits mid-flight
+ * serialized on the same row lock, so activation can never resurrect a block
+ * that left `pending` (29.8.18 mitigation round 3).
+ */
+export async function activateHourBlocksForFinalizedInvoice(
+  invoiceId: string,
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  userId: string
+): Promise<void> {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Row-lock the pending blocks (canonical block_id order — the same order
+    // every other hour_blocks check-then-act site locks in; see
+    // selectEligibleBlocks in shared/billingClients/hourBlockService) inside
+    // the transaction that flips them. Pre-fix, this snapshot was an unlocked
+    // read outside the transaction and the activation UPDATE did not re-check
+    // status, so a void/expire committing in between resurrected the block to
+    // `active` on top of the void audit.
+    const pendingBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
+      .where({
+        tenant,
+        source_invoice_id: invoiceId,
+        status: 'pending',
+      })
+      .orderBy('block_id', 'asc')
+      .forUpdate()
+      .select('block_id', 'service_id', 'source_invoice_charge_id');
+
+    if (pendingBlocks.length === 0) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    for (const block of pendingBlocks) {
+      const line = await resolvePurchaseLineForBlock(trx, tenant, invoiceId, block);
+
+      if (!line) {
+        await voidPendingBlockAtFinalization(
+          trx,
+          tenant,
+          block.block_id,
+          userId,
+          now,
+          'Purchase line removed from the invoice before finalization',
+          { source_invoice_id: invoiceId, source_invoice_charge_id: block.source_invoice_charge_id ?? null },
+        );
+        continue;
+      }
+
+      const quantity = Number(line.quantity);
+      const unitPrice = Number(line.unit_price);
+      const totalMinutes = Math.round(quantity * 60);
+      if (!Number.isFinite(quantity) || quantity <= 0 || totalMinutes <= 0) {
+        await voidPendingBlockAtFinalization(
+          trx,
+          tenant,
+          block.block_id,
+          userId,
+          now,
+          'Purchase line no longer has a positive quantity at finalization',
+          { source_invoice_id: invoiceId, item_id: line.item_id },
+        );
+        continue;
+      }
+
+      await tenantScopedTable(trx, tenant, 'hour_blocks')
+        // Belt-and-suspenders alongside the row lock: only a still-pending row
+        // may flip to active, so drift in the locked select can never
+        // resurrect a voided/expired block.
+        .where({ tenant, block_id: block.block_id, status: 'pending' })
+        .update({
+          status: 'active',
+          purchased_at: now,
+          updated_at: now,
+          // Sync from the authoritative final line. A pending block has never
+          // been burnable, so remaining resets with total.
+          total_minutes: totalMinutes,
+          remaining_minutes: totalMinutes,
+          hourly_rate: Math.round(unitPrice),
+          purchase_amount: Math.round(quantity * unitPrice),
+          service_id: line.service_id ?? block.service_id,
+          source_invoice_charge_id: line.item_id,
+        });
+      await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+        tenant,
+        block_id: block.block_id,
+        type: 'purchase',
+        minutes_delta: null,
+        reason: null,
+        created_by: userId,
+        metadata: {
+          source_invoice_id: invoiceId,
+          source_invoice_charge_id: line.item_id,
+          synced_from_line: { item_id: line.item_id, quantity, unit_price: unitPrice },
+        },
+      });
+    }
+    console.log(`Activated ${pendingBlocks.length} pending hour block(s) from invoice ${invoiceId}`);
+  });
+}
+
+/**
+ * Resolves the authoritative invoice charge for a pending block: exactly the
+ * recorded source line, still present on the invoice being finalized. There is
+ * deliberately NO fallback: line deletion nulls the linkage (FK ON DELETE SET
+ * NULL), so a pending block without a resolvable linkage at finalization is a
+ * block whose line was removed (or whose lineage cannot be proven), and any
+ * surviving-line match could bind it to a line it was never minted against.
+ */
+async function resolvePurchaseLineForBlock(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  block: { service_id: string; source_invoice_charge_id: string | null },
+): Promise<Record<string, unknown> | null> {
+  if (!block.source_invoice_charge_id) {
+    return null;
+  }
+
+  return await tenantScopedTable(trx, tenant, 'invoice_charges')
+    .where({ tenant, item_id: block.source_invoice_charge_id, invoice_id: invoiceId })
+    .first() ?? null;
+}
+
+async function voidPendingBlockAtFinalization(
+  trx: Knex.Transaction,
+  tenant: string,
+  blockId: string,
+  userId: string,
+  now: string,
+  reason: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  await tenantScopedTable(trx, tenant, 'hour_blocks')
+    // Belt-and-suspenders alongside the row lock: only a still-pending row may
+    // be voided here, keeping the activation/void writes symmetric.
+    .where({ tenant, block_id: blockId, status: 'pending' })
+    .update({
+      status: 'voided',
+      voided_at: now,
+      voided_by: userId,
+      void_reason: reason,
+      updated_at: now,
+    });
+  await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+    tenant,
+    block_id: blockId,
+    type: 'void',
+    minutes_delta: null,
+    reason,
+    created_by: userId,
+    metadata,
+  });
+}
+
+/**
+ * Unfinalize hook for ad-hoc prepaid hour blocks. Runs inside the unfinalize
+ * transaction so the invoice and its blocks move together or not at all:
+ *   - an ACTIVE block that was never used (immutable `first_allocated_at`
+ *     marker null, no live allocation rows) returns to `pending` so FIFO burn
+ *     can no longer select it, with a `purchase_reversal` audit row;
+ *   - an ACTIVE block that has been used blocks unfinalization with an
+ *     actionable error naming the block and its usage (v1 answer: reject, never
+ *     half-reverse);
+ *   - terminal states (expired/voided) and already-pending blocks are left as-is.
+ */
+async function deactivateHourBlocksForUnfinalizedInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string,
+): Promise<void> {
+  // Row-lock the affected blocks (canonical block_id order) so the used-check
+  // and the pending transition serialize against allocateTimeEntry, which
+  // locks the same rows before writing allocations/first_allocated_at. Without
+  // the lock, a concurrent allocation committing between the check and the
+  // update left a `pending` (unburnable) block with live allocations against
+  // it (review run b2b3038e). Holding the lock means an in-flight allocation
+  // has necessarily committed (marker visible, allocation rows countable) or
+  // rolled back before the check runs.
+  const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
+    .where({ tenant, source_invoice_id: invoiceId })
+    .orderBy('block_id', 'asc')
+    .forUpdate()
+    .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at');
+
+  for (const block of linkedBlocks) {
+    if (block.status !== 'active') {
+      continue;
+    }
+
+    // Authoritative "ever used" marker first (survives reversal), live rows as
+    // belt-and-suspenders — same guard shape as voidHourBlock.
+    const hasLiveAllocations = Number(
+      (
+        await tenantScopedTable(trx, tenant, 'hour_block_time_allocations')
+          .where({ tenant, block_id: block.block_id })
+          .count({ count: '*' })
+          .first()
+      )?.count ?? 0,
+    ) > 0;
+
+    if (block.first_allocated_at != null || hasLiveAllocations) {
+      const usedMinutes = Number(block.total_minutes) - Number(block.remaining_minutes);
+      const usedHours = (usedMinutes / 60).toFixed(1);
+      const totalHours = (Number(block.total_minutes) / 60).toFixed(1);
+      throw expectedInvoiceActionError(
+        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Expire or adjust the hour block instead of unfinalizing the invoice.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    await tenantScopedTable(trx, tenant, 'hour_blocks')
+      .where({ tenant, block_id: block.block_id })
+      .update({
+        status: 'pending',
+        purchased_at: null,
+        updated_at: now,
+      });
+    await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+      tenant,
+      block_id: block.block_id,
+      type: 'purchase_reversal',
+      minutes_delta: null,
+      reason: 'Invoice unfinalized',
+      created_by: userId,
+      metadata: { source_invoice_id: invoiceId },
+    });
+  }
+}
+
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
   service_id?: string;
@@ -216,6 +472,95 @@ async function releaseMaterialsForDeletedInvoice(
         billed_at: null,
         updated_at: releasedAt,
       });
+  }
+}
+
+/**
+ * Draft-deletion hook for ad-hoc prepaid hour blocks: voids any `pending`
+ * hour_blocks linked to this invoice (via source_invoice_id) and writes the
+ * `void` audit row, then detaches the FK reference. Must run before the
+ * invoice row is deleted — the `hour_blocks_invoice_fkey` FK is `ON DELETE
+ * SET NULL` on the composite `(tenant, source_invoice_id)`, so without this
+ * the block would be silently detached (or the delete would abort trying to
+ * null the NOT NULL tenant column) and left `pending` forever. Mirrors the
+ * manual `voidHourBlock` shape (status/voided_at/voided_by/void_reason +
+ * audit); the audit metadata retains the deleted invoice's id as provenance.
+ *
+ * Lock discipline (29.8.18 mitigation round 4): runs inside the
+ * hardDeleteInvoice transaction (deletion + void stay atomic) and takes the
+ * linked rows SELECT ... FOR UPDATE in canonical block_id order — the same
+ * order every other hour_blocks check-then-act site locks in — so a
+ * concurrent finalize-activation holding the row lock parks this read until
+ * it commits, and the read then re-evaluates the block's committed state.
+ * Every status write below additionally re-checks the expected status in its
+ * WHERE clause; a block that left `pending` under the deletion is skipped,
+ * never overwritten from the locked snapshot.
+ */
+async function voidPendingHourBlocksForDeletedInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string,
+  now: string,
+): Promise<void> {
+  const linkedBlocks = await tenantScopedTable(trx, tenant, 'hour_blocks')
+    .where({ tenant, source_invoice_id: invoiceId })
+    .orderBy('block_id', 'asc')
+    .forUpdate()
+    .select('block_id', 'status');
+
+  // Non-pending, non-voided linked blocks are an impossible state for a draft
+  // invoice deletion — refuse rather than silently voiding an active/expired
+  // block. Already-voided blocks are left alone. Under the lock this check is
+  // also the deletion-vs-finalization race outcome: if a concurrent
+  // finalization won the row lock and activated the block, the whole deletion
+  // transaction rolls back (invoice included) — the finalized invoice, not
+  // the deletion, owns the block now, so it must not be voided, re-voided,
+  // or detached from stale snapshot state.
+  for (const block of linkedBlocks) {
+    if (block.status !== 'pending' && block.status !== 'voided') {
+      throw expectedInvoiceActionError(
+        `Cannot delete invoice ${invoiceId}: linked hour block ${block.block_id} is ${block.status}, not pending. Void or expire it first.`,
+      );
+    }
+  }
+
+  for (const block of linkedBlocks) {
+    if (block.status === 'pending') {
+      const voidedCount = await tenantScopedTable(trx, tenant, 'hour_blocks')
+        // Belt-and-suspenders alongside the row lock: only a still-pending row
+        // may be voided here. If a concurrent transition somehow beat the
+        // lock (0 affected rows), the block is skipped — never overwritten —
+        // and no void audit row is fabricated for a void that did not happen.
+        .where({ tenant, block_id: block.block_id, status: 'pending' })
+        .update({
+          status: 'voided',
+          voided_at: now,
+          voided_by: userId,
+          void_reason: 'Draft purchase invoice deleted',
+          updated_at: now,
+          source_invoice_id: null,
+        });
+      if (voidedCount === 0) {
+        continue;
+      }
+      await tenantScopedTable(trx, tenant, 'hour_block_audit').insert({
+        tenant,
+        block_id: block.block_id,
+        type: 'void',
+        minutes_delta: null,
+        reason: 'Draft purchase invoice deleted',
+        created_by: userId,
+        metadata: { source_invoice_id: invoiceId },
+      });
+    } else {
+      await tenantScopedTable(trx, tenant, 'hour_blocks')
+        // Same guard for the detach of an already-voided block: a row that
+        // left `voided` under the deletion keeps its current linkage — the
+        // deletion no longer owns it.
+        .where({ tenant, block_id: block.block_id, status: 'voided' })
+        .update({ source_invoice_id: null, updated_at: now });
+    }
   }
 }
 
@@ -774,6 +1119,16 @@ export async function finalizeInvoiceWithKnex(
       invoice = { ...invoice, ...identityUpdates };
     }
 
+    // Ad-hoc prepaid hour blocks linked to this invoice go active at finalize
+    // — inside the SAME transaction as the invoice's own finalization: the
+    // hook joins this trx (withTransaction reuses a passed trx), so a block
+    // activation failure rolls the finalization back with it, and the block
+    // row-locks serialize against concurrent void/expire on the same rows.
+    // Mirrors unfinalize/draft-delete, whose hour-block hooks also run inside
+    // the caller's trx (29.8.18 mitigation round 3: pre-fix this ran as a
+    // separate transaction after the invoice was already finalized).
+    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+
     // Record audit log
     // await auditLog(
     //   trx,
@@ -994,6 +1349,9 @@ export async function finalizeInvoiceWithKnex(
     }
   }
 
+  // (Ad-hoc prepaid hour blocks went active inside the finalization
+  // transaction above — see activateHourBlocksForFinalizedInvoice.)
+
   if (invoice) {
     projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(
       knex,
@@ -1141,6 +1499,10 @@ export const unfinalizeInvoice = withAuth(async (
       invoiceId,
       invoice.client_id,
     );
+
+    // Hour blocks minted by this invoice follow it back to draft — unused
+    // blocks return to pending; used blocks abort the whole unfinalization.
+    await deactivateHourBlocksForUnfinalizedInvoice(trx, tenant, invoiceId, user.user_id);
 
     // When unfinalizing make sure the invoice returns to draft status even if some
     // environments only toggle the status flag without storing finalized_at.
@@ -1823,6 +2185,9 @@ export const hardDeleteInvoice = withAuth(async (
 
     await releaseProjectBillingForDeletedInvoice(trx, tenant, invoiceId);
     await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);
+    // Void pending hour blocks minted by this draft purchase invoice before the
+    // invoice row is deleted (the FK nulls source_invoice_id on delete).
+    await voidPendingHourBlocksForDeletedInvoice(trx, tenant, invoiceId, user.user_id, now);
 
     // 4. Unmark time entries
     await tenantScopedTable(trx, tenant, 'time_entries')

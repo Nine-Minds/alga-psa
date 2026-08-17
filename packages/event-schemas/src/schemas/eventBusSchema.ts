@@ -39,6 +39,7 @@ import {
   contractStatusChangedEventPayloadSchema,
   contractUpdatedEventPayloadSchema,
   creditExpiringEventPayloadSchema,
+  hourBlockExpiringEventPayloadSchema,
   creditNoteAppliedEventPayloadSchema,
   creditNoteCreatedEventPayloadSchema,
   creditNoteVoidedEventPayloadSchema,
@@ -333,6 +334,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CREDIT_EXPIRING',
   'PREPAID_BALANCE_ALERT_SCAN_REQUESTED',
+  'HOUR_BLOCK_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
   'CONTRACT_DELETED',
@@ -1322,6 +1324,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
   CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   PREPAID_BALANCE_ALERT_SCAN_REQUESTED: prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  HOUR_BLOCK_EXPIRING: hourBlockExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
   CONTRACT_DELETED: ContractSearchEventPayloadSchema,
@@ -1576,6 +1579,7 @@ export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATE
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type PrepaidBalanceAlertScanRequestedEvent = z.infer<typeof EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED>;
+export type HourBlockExpiringEvent = z.infer<typeof EventSchemas.HOUR_BLOCK_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
 export type AccountingExportCompletedEvent = z.infer<typeof EventSchemas.ACCOUNTING_EXPORT_COMPLETED>;

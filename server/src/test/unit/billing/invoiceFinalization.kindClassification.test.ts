@@ -34,6 +34,17 @@ function createMockDb() {
       orderBy() {
         return builder;
       },
+      // hour-block activation hook chain: where(...).orderBy(...).forUpdate().select(...)
+      forUpdate() {
+        return builder;
+      },
+      select() {
+        return builder;
+      },
+      // The activation hook awaits the builder itself for the row list.
+      then(onFulfilled: any, onRejected: any) {
+        return Promise.resolve(filteredRows).then(onFulfilled, onRejected);
+      },
       async insert(payload: Row) {
         rows.push(payload);
         return [payload];
