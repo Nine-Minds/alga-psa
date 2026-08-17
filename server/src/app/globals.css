@@ -109,9 +109,24 @@ body,
     margin: 0;
 }
 
-body {
+/* `html body`, not `body`: Mantine's global stylesheet paints the body with its
+   own neutral gray (#242424 in dark), and a bare `body` selector ties with it on
+   specificity, so import order would decide the page ground. */
+html body {
     background-color: rgb(var(--color-background));
     color: rgb(var(--color-text-900));
+}
+
+/* Radix Themes declares `--color-background` on its own theme root, which
+   shadows our identically named token for the entire app subtree — every
+   `rgb(var(--color-background))` below it resolves to an invalid color and
+   paints nothing. Hand the inherited triple back on that element so page
+   grounds keep the pair's background. Radix's own uses of the variable are all
+   surfaces we paint ourselves. The `html` prefix is load-bearing: Radix's dark
+   rule matches the same element through `:is(.dark, .dark-theme)`, so a bare
+   `.radix-themes` selector only ties with it. */
+html .radix-themes {
+    --color-background: var(--alga-color-background);
 }
 
 .dark .bg-white {
@@ -222,8 +237,10 @@ body {
     border-color: rgb(var(--color-border-200)) !important;
 }
 
+/* Chrome, not page: the top bar belongs with the rail, the way the product mock
+   on nineminds.com pitches it one step above the page ground. */
 .dark header {
-    background-color: rgb(var(--color-background)) !important;
+    background-color: rgb(var(--color-header-bg)) !important;
     border-color: rgb(var(--color-border-200)) !important;
 }
 
@@ -403,8 +420,8 @@ html.dark {
 
     /* BORDER COLOR */
     --color-border-base: 58 47 89;
-    --color-border-50: 21 16 36;     /* #151024 — site --card, the deepest well */
-    --color-border-100: 34 23 67;    /* #221743 — chips and shells, one step above the card */
+    --color-border-50: 19 13 36;     /* #130d24 — site deep well, wells inside cards */
+    --color-border-100: 27 21 48;    /* #1b1530 — the site's muted surface, the shell ground one step under the card */
     --color-border-200: 39 32 65;    /* #272041 border base */
     --color-border-300: 47 39 82;    /* #2f2752 border mid */
     --color-border-400: 58 47 89;    /* #3a2f59 border strong */
@@ -416,8 +433,8 @@ html.dark {
 
     /* TEXT COLORS */
     --color-text-base: 111 104 144;
-    --color-text-50: 21 16 36;
-    --color-text-100: 34 23 67;
+    --color-text-50: 19 13 36;
+    --color-text-100: 27 21 48;
     --color-text-200: 39 32 65;
     --color-text-300: 58 47 89;
     --color-text-400: 111 104 144;   /* #6f6890 dim */
@@ -1072,8 +1089,8 @@ html.dark[data-theme-pair="ocean"] {
 
     /* BORDER COLOR */
     --color-border-base: 42 60 82;
-    --color-border-50: 10 20 32;
-    --color-border-100: 16 31 49;
+    --color-border-50: 7 13 22;
+    --color-border-100: 10 20 32;
     --color-border-200: 28 43 61;
     --color-border-300: 35 53 73;
     --color-border-400: 42 60 82;
@@ -1085,8 +1102,8 @@ html.dark[data-theme-pair="ocean"] {
 
     /* TEXT COLORS */
     --color-text-base: 42 60 82;
-    --color-text-50: 10 20 32;
-    --color-text-100: 16 31 49;
+    --color-text-50: 7 13 22;
+    --color-text-100: 10 20 32;
     --color-text-200: 28 43 61;
     --color-text-300: 35 53 73;
     --color-text-400: 42 60 82;
@@ -1294,8 +1311,8 @@ html.dark[data-theme-pair="forest"] {
 
     /* BORDER COLOR */
     --color-border-base: 51 81 60;
-    --color-border-50: 20 35 26;
-    --color-border-100: 23 52 36;
+    --color-border-50: 12 21 15;
+    --color-border-100: 15 26 19;
     --color-border-200: 30 50 38;
     --color-border-300: 40 64 47;
     --color-border-400: 51 81 60;
@@ -1307,8 +1324,8 @@ html.dark[data-theme-pair="forest"] {
 
     /* TEXT COLORS */
     --color-text-base: 51 81 60;
-    --color-text-50: 20 35 26;
-    --color-text-100: 23 52 36;
+    --color-text-50: 12 21 15;
+    --color-text-100: 15 26 19;
     --color-text-200: 30 50 38;
     --color-text-300: 40 64 47;
     --color-text-400: 51 81 60;
@@ -1366,7 +1383,7 @@ html.dark[data-theme-pair="forest"] {
     --color-alert-info-bg: 18 48 33;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 20 35 26;
+    --color-table-row-alt: 15 26 19;
     --color-table-hover: 23 52 36;
     --color-table-selected: 29 69 48;
     --color-table-status-approved: 13 49 38;
@@ -1516,8 +1533,8 @@ html.dark[data-theme-pair="sunset"] {
 
     /* BORDER COLOR */
     --color-border-base: 110 72 38;
-    --color-border-50: 38 23 9;
-    --color-border-100: 58 36 18;
+    --color-border-50: 24 14 6;
+    --color-border-100: 28 17 7;
     --color-border-200: 74 47 23;
     --color-border-300: 92 59 30;
     --color-border-400: 110 72 38;
@@ -1529,8 +1546,8 @@ html.dark[data-theme-pair="sunset"] {
 
     /* TEXT COLORS */
     --color-text-base: 110 72 38;
-    --color-text-50: 38 23 9;
-    --color-text-100: 58 36 18;
+    --color-text-50: 24 14 6;
+    --color-text-100: 28 17 7;
     --color-text-200: 74 47 23;
     --color-text-300: 92 59 30;
     --color-text-400: 110 72 38;
@@ -1588,7 +1605,7 @@ html.dark[data-theme-pair="sunset"] {
     --color-alert-info-bg: 58 29 10;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 38 23 9;
+    --color-table-row-alt: 28 17 7;
     --color-table-hover: 58 36 18;
     --color-table-selected: 74 47 23;
     --color-table-status-approved: 15 42 28;

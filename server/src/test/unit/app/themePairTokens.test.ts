@@ -93,7 +93,8 @@ describe('theme pair token blocks', () => {
 
     expect(dark['--color-background']).toBe('12 10 24');
     expect(dark['--color-card']).toBe('30 24 54');
-    expect(dark['--color-border-50']).toBe('21 16 36');
+    expect(dark['--color-border-50']).toBe('19 13 36');
+    expect(dark['--color-border-100']).toBe('27 21 48');
     expect(dark['--color-border-200']).toBe('39 32 65');
     expect(dark['--color-text-900']).toBe('232 228 246');
     expect(dark['--color-primary-500']).toBe('138 77 234');
@@ -101,16 +102,45 @@ describe('theme pair token blocks', () => {
   });
 
   // Cards carry the tint, so they have to sit above the page and the chrome while
-  // staying inside the neutral ramp: wells (border-50) below, chips and shells
-  // (border-100) above, flyouts above that.
+  // staying inside the neutral ramp: wells (border-50) and the shell ground
+  // (border-100) below, flyouts above.
   it('lifts dark cards above the page and the sidebar so the tint reads', () => {
     const dark = tokensOf('html.dark');
 
     expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-background']));
     expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-sidebar-bg']));
     expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-border-50']));
-    expect(sum(dark['--color-card'])).toBeLessThan(sum(dark['--color-border-100']));
+    expect(sum(dark['--color-card'])).toBeGreaterThan(sum(dark['--color-border-100']));
     expect(sum(dark['--color-submenu-bg'])).toBeGreaterThan(sum(dark['--color-card']));
+  });
+
+  // The MSP shell paints its whole content area with bg-gray-100, which the dark
+  // shim maps to --color-border-100. When that ground is brighter than the card,
+  // cards sink into the page instead of lifting off it — the mismatch against
+  // the nineminds.com reference, where the content panel is the lightest large
+  // surface. Slate is exempt (it restores the pre-purple values verbatim) and so
+  // is high contrast (flat black surfaces, separated by borders, by design).
+  const elevationPairs = pairIds.filter((id) => id !== 'slate' && id !== 'high-contrast');
+
+  it.each(elevationPairs)('%s keeps the dark shell ground under the card', (pairId) => {
+    const base = tokensOf('html.dark');
+    const dark = { ...base, ...tokensOf(`html.dark[data-theme-pair="${pairId}"]`) };
+
+    expect(sum(dark['--color-background'])).toBeLessThan(sum(dark['--color-border-50']));
+    expect(sum(dark['--color-border-50'])).toBeLessThan(sum(dark['--color-border-100']));
+    expect(sum(dark['--color-border-100'])).toBeLessThan(sum(dark['--color-card']));
+    expect(sum(dark['--color-card'])).toBeLessThan(sum(dark['--color-border-200']));
+  });
+
+  // Radix Themes declares its own --color-background on the theme root, which
+  // shadows ours for the whole app subtree unless we hand the value back.
+  it('keeps --color-background resolvable inside the Radix theme root', () => {
+    expect(css).toContain('--alga-color-background: var(--color-background);');
+    // `html .radix-themes`, not `.radix-themes`: Radix's dark rule matches the
+    // same element and would otherwise win the tie on source order.
+    expect(css).toMatch(/html \.radix-themes \{\s*--color-background: var\(--alga-color-background\);/);
+    // Mantine's own `body` rule ties on specificity, so ours has to out-specify it.
+    expect(css).toContain('html body {');
   });
 
   it('keeps the reference light sidebar', () => {
