@@ -23,6 +23,7 @@ import {
   prepaidBalanceAlertScanHandler,
   PrepaidBalanceAlertScanJobData,
 } from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import {
   expiredHourBlocksHandler,
   ExpiredHourBlocksJobData,
 } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
@@ -277,6 +278,12 @@ export async function registerAllJobHandlers(
       name: PREPAID_BALANCE_ALERT_SCAN_JOB,
       handler: async (_jobId, data) => {
         await prepaidBalanceAlertScanHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   // Expired hour blocks handler
   JobHandlerRegistry.register<ExpiredHourBlocksJobData & BaseJobData>(
     {
