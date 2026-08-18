@@ -172,6 +172,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts',
   'packages/billing/src/lib/billing/compute/productionGolden.test.ts',
   'packages/billing/src/lib/billing/compute/types.ts',
+  // Ad-hoc prepaid hour blocks (feature/ad-hoc-prepaid-hour-blocks) compute
+  // landed after the pass-0 snapshot and reads persisted service-period
+  // boundaries when allocating hour-block charges.
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.test.ts',
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.ts',
   // Contract-simulator scenario interfaces mirror service-period fields for
   // simulated invoice lines; the simulator landed after the pass-0 snapshot.
   'packages/types/src/interfaces/contractSimulation.interfaces.ts',
