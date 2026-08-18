@@ -75,7 +75,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
   };
 
   const footer = (
-    <div className="flex justify-between">
+    <div className="flex w-full justify-between">
       <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
         {t('common:actions.cancel', 'Cancel')}
       </Button>
