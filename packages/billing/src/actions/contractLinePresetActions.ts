@@ -258,6 +258,30 @@ export const getContractLinePresetServices = withAuth(async (user, { tenant }, p
 });
 
 /**
+ * Get the service count for every contract line preset in a single round trip
+ */
+export const getContractLinePresetServiceCounts = withAuth(async (user, { tenant }): Promise<Record<string, number> | ContractLinePresetActionError> => {
+    try {
+        const { knex } = await createTenantKnex();
+
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(user, 'billing', 'read')) {
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset services');
+            }
+
+            return await ContractLinePresetService.getServiceCountsByPreset(trx);
+        });
+    } catch (error) {
+        console.error('Error fetching contract line preset service counts:', error);
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
+});
+
+/**
  * Update services for a contract line preset
  */
 export const updateContractLinePresetServices = withAuth(async (

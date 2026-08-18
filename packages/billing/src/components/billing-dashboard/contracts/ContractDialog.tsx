@@ -26,7 +26,7 @@ import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins 
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
+import { getContractLinePresetServices, getContractLinePresetServiceCounts, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -134,17 +134,10 @@ export function ContractDialog({
   const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
   const [hourlyPresetInputs, setHourlyPresetInputs] = useState<Record<string, { minimum_billable_time: string; round_up_to_nearest: string }>>({});
 
-  // Load clients and contract line presets on mount
-  useEffect(() => {
-    loadClients();
-    loadContractLinePresets();
-  }, []);
-
-  // Reload clients when dialog opens
+  // Load clients and contract line presets when the dialog opens
   useEffect(() => {
     if (open) {
-      loadClients();
-      loadContractLinePresets();
+      void Promise.all([loadClients(), loadContractLinePresets()]);
       if (initialClientId) {
         setClientId(initialClientId);
       }
@@ -177,25 +170,12 @@ export function ContractDialog({
       }
       setAvailableContractLinePresets(presets);
 
-      // Load service counts for each preset
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        presets.map(async (preset) => {
-          if (preset.preset_id) {
-            try {
-              const services = await getContractLinePresetServices(preset.preset_id);
-              if (isReturnedActionError(services)) {
-                counts[preset.preset_id] = 0;
-                return;
-              }
-              counts[preset.preset_id] = services.length;
-            } catch (error) {
-              console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
-              counts[preset.preset_id] = 0;
-            }
-          }
-        })
-      );
+      // Service counts for every preset arrive in one round trip
+      const counts = await getContractLinePresetServiceCounts();
+      if (isReturnedActionError(counts)) {
+        setContractLinePresetServiceCounts({});
+        return;
+      }
       setContractLinePresetServiceCounts(counts);
     } catch (error) {
       console.error('Error loading contract line presets:', error);
