@@ -987,7 +987,11 @@ async function attachFixedContractLineAmountsToRows(
                 group.end,
                 previewSession,
             );
-        } catch {
+        } catch (error) {
+            console.warn(
+                `[RecurringDueWork] Fixed-charge preview failed for client ${group.clientId}, window ${group.start} to ${group.end}.`,
+                error,
+            );
             return;
         }
         for (const row of group.members) {
@@ -1010,15 +1014,23 @@ async function attachFixedContractLineAmountsToRows(
     }
     const clientBuckets = Array.from(groupsByClientId.values());
     const CLIENT_PRICING_CONCURRENCY = 4;
-    for (let offset = 0; offset < clientBuckets.length; offset += CLIENT_PRICING_CONCURRENCY) {
-        await Promise.all(
-            clientBuckets.slice(offset, offset + CLIENT_PRICING_CONCURRENCY).map(async (clientGroups) => {
-                for (const group of clientGroups) {
-                    await priceGroup(group);
-                }
-            }),
-        );
-    }
+    let nextClientBucketIndex = 0;
+    const priceNextClientBucket = async (): Promise<void> => {
+        while (nextClientBucketIndex < clientBuckets.length) {
+            // JavaScript runs this increment synchronously before the first await,
+            // so each worker claims a distinct client bucket.
+            const clientGroups = clientBuckets[nextClientBucketIndex++];
+            for (const group of clientGroups) {
+                await priceGroup(group);
+            }
+        }
+    };
+    await Promise.all(
+        Array.from(
+            { length: Math.min(CLIENT_PRICING_CONCURRENCY, clientBuckets.length) },
+            () => priceNextClientBucket(),
+        ),
+    );
 }
 
 function buildRecurringDueWorkInvoiceCandidates(

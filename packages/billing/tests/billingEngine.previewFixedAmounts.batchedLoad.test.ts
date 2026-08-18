@@ -402,6 +402,143 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
     expect(Object.fromEntries(batched)).toEqual(Object.fromEntries(perLine));
   });
 
+  it('matches PostgreSQL date boundaries in a timezone ahead of UTC', async () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = 'Europe/Athens';
+
+    try {
+      // node-postgres materializes DATE as local midnight. A schedule starting
+      // exactly on the service-period end must remain excluded by [start, end).
+      store.rowsByTable.contract_pricing_schedules = [
+        {
+          tenant: TENANT,
+          schedule_id: 'schedule-at-window-end',
+          contract_id: 'contract-2',
+          custom_rate: 30000,
+          effective_date: new Date(2025, 3, 1),
+          end_date: null,
+        },
+      ];
+      const endBoundaryAmounts = await (
+        await createEngine()
+      ).previewFixedChargeAmountsForInvoiceWindow(
+        CLIENT_ID,
+        WINDOW_START,
+        WINDOW_END,
+      );
+      expect(endBoundaryAmounts.get('line-schedule')).toBe(20000);
+
+      // An end date one calendar day after the service-period start is active;
+      // converting its local-midnight Date through UTC would shift it to the
+      // boundary and incorrectly exclude it.
+      store.rowsByTable.contract_pricing_schedules = [
+        {
+          tenant: TENANT,
+          schedule_id: 'schedule-ending-after-window-start',
+          contract_id: 'contract-2',
+          custom_rate: 30000,
+          effective_date: new Date(2025, 0, 1),
+          end_date: new Date(2025, 2, 2),
+        },
+      ];
+      const endDateAmounts = await (
+        await createEngine()
+      ).previewFixedChargeAmountsForInvoiceWindow(
+        CLIENT_ID,
+        WINDOW_START,
+        WINDOW_END,
+      );
+      expect(endDateAmounts.get('line-schedule')).toBe(30000);
+    } finally {
+      if (previousTimezone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimezone;
+      }
+    }
+  });
+
+  it.each([
+    {
+      name: 'contract custom rate',
+      contractRate: 50000,
+      assignmentRate: 40000,
+      services: [planService('line-rate', 'svc-rate', { service_base_rate: 3000 })],
+      expectedMajorUnits: 500,
+    },
+    {
+      name: 'assignment custom rate',
+      contractRate: null,
+      assignmentRate: 40000,
+      services: [planService('line-rate', 'svc-rate', { service_base_rate: 3000 })],
+      expectedMajorUnits: 400,
+    },
+    {
+      name: 'service base rate and quantity',
+      contractRate: null,
+      assignmentRate: null,
+      services: [
+        planService('line-rate', 'svc-rate', {
+          service_base_rate: 3000,
+          configuration_quantity: 2,
+        }),
+      ],
+      expectedMajorUnits: 60,
+    },
+    {
+      name: 'catalog default rate and quantity',
+      contractRate: null,
+      assignmentRate: null,
+      services: [
+        planService('line-rate', 'svc-rate', {
+          service_base_rate: null,
+          default_rate: 2500,
+          configuration_quantity: 3,
+        }),
+      ],
+      expectedMajorUnits: 75,
+    },
+    {
+      name: 'explicit zero service base rate',
+      contractRate: null,
+      assignmentRate: null,
+      services: [
+        planService('line-rate', 'svc-rate', {
+          service_base_rate: 0,
+          default_rate: 2500,
+        }),
+      ],
+      expectedMajorUnits: 0,
+    },
+    {
+      name: 'no resolvable rate',
+      contractRate: null,
+      assignmentRate: null,
+      services: [planService('line-rate', 'svc-rate')],
+      expectedMajorUnits: null,
+    },
+  ])('uses the shared production base-rate cascade for $name', async ({
+    contractRate,
+    assignmentRate,
+    services,
+    expectedMajorUnits,
+  }) => {
+    const { resolveFixedPlanLevelBaseRate } = await import(
+      '../src/lib/billing/compute/computeFixedCharges'
+    );
+
+    expect(
+      resolveFixedPlanLevelBaseRate({
+        clientContractLine: { custom_rate: assignmentRate ?? undefined },
+        contractLineDetails: {
+          contract_line_type: 'Fixed',
+          custom_rate: contractRate,
+        },
+        planServices: services as any[],
+      }),
+    ).toBe(expectedMajorUnits);
+  });
+
   it('loads line details, services and pricing schedules once per window', async () => {
     const engine = await createEngine();
 
@@ -445,5 +582,26 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
     ).toHaveLength(0);
 
     baseRateError.mockRestore();
+  });
+
+  it('logs the failed batch stage while retaining best-effort preview behavior', async () => {
+    const engine = await createEngine();
+    const failure = new Error('static batch failed');
+    vi.spyOn(engine, 'loadFixedChargeLineStaticInputs').mockRejectedValueOnce(failure);
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const amounts = await engine.previewFixedChargeAmountsForInvoiceWindow(
+      CLIENT_ID,
+      WINDOW_START,
+      WINDOW_END,
+    );
+
+    expect(amounts.size).toBe(0);
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('static-input batch load failed'),
+      failure,
+    );
+
+    warning.mockRestore();
   });
 });

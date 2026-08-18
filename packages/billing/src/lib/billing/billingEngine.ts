@@ -48,6 +48,7 @@ import {
   toPlainDate,
   toISODate,
   toISOTimestamp,
+  toCalendarDateString,
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
@@ -85,6 +86,7 @@ import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import {
   computeFixedCharges,
+  resolveFixedPlanLevelBaseRate,
   computeTimeBasedCharges,
   computeUsageBasedCharges,
   computeBucketCharges,
@@ -269,7 +271,7 @@ const normalizeScheduleDate = (value: unknown): string | null => {
     return null;
   }
   try {
-    return toISODate(toPlainDate(value as any));
+    return toCalendarDateString(value as Date | string) as string | null;
   } catch {
     return null;
   }
@@ -293,13 +295,7 @@ const selectActivePricingSchedule = (
     return endDate === null || endDate > servicePeriodStartExclusive;
   });
 
-/**
- * Mirrors computeFixedCharges' base-rate resolution order (plan custom rate →
- * assignment custom rate → service base rates → catalog default rates) so a
- * line that resolves to nothing can be skipped before the compute call.
- * Pricing-schedule overrides are deliberately not consulted: they never feed
- * planLevelBaseRate, so they cannot rescue a line the compute layer rejects.
- */
+/** Pricing-schedule overrides cannot rescue a missing plan-level base rate. */
 const isFixedLineUnpriceable = (
   clientContractLine: IClientContractLine,
   contractLineDetails: any,
@@ -309,37 +305,13 @@ const isFixedLineUnpriceable = (
     return false;
   }
 
-  const parseRate = (value: unknown): number | null => {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    const parsed = typeof value === "string" ? parseFloat(value) : Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
-  if (parseRate(contractLineDetails.custom_rate) !== null) {
-    return false;
-  }
-  if (parseRate(clientContractLine.custom_rate) !== null) {
-    return false;
-  }
-  if (
-    planServices.some(
-      (service) => parseRate(service.service_base_rate) !== null,
-    )
-  ) {
-    return false;
-  }
-
-  const totalDefaultRateCents = planServices.reduce((sum, service) => {
-    const rate = Number(service.default_rate ?? 0);
-    const quantity =
-      Number(service.configuration_quantity ?? service.service_quantity ?? 1) ||
-      1;
-    return sum + rate * quantity;
-  }, 0);
-
-  return totalDefaultRateCents === 0;
+  return (
+    resolveFixedPlanLevelBaseRate({
+      clientContractLine,
+      contractLineDetails,
+      planServices,
+    }) === null
+  );
 };
 
 export class BillingEngine {
@@ -2923,7 +2895,23 @@ export class BillingEngine {
     session?: FixedChargePreviewSession,
   ): Promise<Map<string, number>> {
     const result = new Map<string, number>();
-    await this.initKnex();
+    const warnPreviewFailure = (
+      stage: string,
+      error: unknown,
+      contractLineId?: string,
+    ) => {
+      console.warn(
+        `[BillingEngine] Fixed-charge preview ${stage} failed for client ${clientId}, window ${invoiceWindowStart} to ${invoiceWindowEnd}${contractLineId ? `, contract line ${contractLineId}` : ""}.`,
+        error,
+      );
+    };
+
+    try {
+      await this.initKnex();
+    } catch (error) {
+      warnPreviewFailure("initialization", error);
+      return result;
+    }
     if (!this.tenant) {
       return result;
     }
@@ -2938,7 +2926,8 @@ export class BillingEngine {
         clientId,
         billingPeriod,
       );
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("contract-line load", error);
       return result;
     }
     let persistedSelections: RecurringChargeTimingSelections | null;
@@ -2947,7 +2936,8 @@ export class BillingEngine {
         billingPeriod,
         lines,
       );
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("persisted-timing load", error);
       return result;
     }
     if (!persistedSelections) {
@@ -2976,7 +2966,8 @@ export class BillingEngine {
           staticInputsByLineId.get(line.client_contract_line_id)?.unpriceable ===
           false,
       );
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("static-input batch load", error);
       return result;
     }
     if (priceableLines.length === 0) {
@@ -2993,13 +2984,18 @@ export class BillingEngine {
         .where({ client_id: clientId, tenant: this.tenant })
         .first()) as IClient;
       if (!client) {
+        warnPreviewFailure(
+          "client load",
+          new Error(`Client ${clientId} was not found in tenant ${this.tenant}`),
+        );
         return result;
       }
       pricingSchedulesByContractId =
         await this.loadFixedChargePricingSchedules(priceableLines);
-      // One tax context for the whole window: the compute layer only reads its
-      // own line's location, and the taxable-service probe that provisions
-      // default tax settings sees the same services it would have line by line.
+      // One tax context for the whole window: the compute layer reads only its
+      // own line's location. The provisioning probe intentionally sees the
+      // union of all priceable lines' services, which preserves the resulting
+      // default settings while avoiding one settings read per line.
       taxContext = await this.loadChargeComputeTaxContext({
         client,
         locationId: null,
@@ -3011,7 +3007,8 @@ export class BillingEngine {
             : inputs.planServices;
         }),
       });
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("shared client/tax-context load", error);
       return result;
     }
 
@@ -3035,7 +3032,12 @@ export class BillingEngine {
             taxContext,
           },
         );
-      } catch {
+      } catch (error) {
+        warnPreviewFailure(
+          "line computation",
+          error,
+          String(line.contract_line_id ?? line.client_contract_line_id),
+        );
         continue;
       }
       if (charges.length === 0) {
