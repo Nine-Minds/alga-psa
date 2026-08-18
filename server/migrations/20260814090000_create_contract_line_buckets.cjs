@@ -761,12 +761,23 @@ exports.up = async function up(knex) {
 
   // 3i. minutes_used / overage_minutes: bigint -> numeric(12,2) (weighted
   // minutes are fractional). Distributed tables need the shard-aware form.
+  //
+  // One command per call. run_command_on_shards substitutes the shard-qualified
+  // name with format(command, shard_name) — a SINGLE argument — so a body
+  // carrying two %s dies with "too few arguments for format()". Two calls is
+  // the house pattern (see 20251205120000_change_template_tasks_estimated_
+  // hours_to_minutes.cjs, which alters one column per call on the same table).
   if (usageCitusDistributed) {
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
         'bucket_usage',
-        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE NUMERIC(12,2) USING minutes_used::NUMERIC(12,2);
-          ALTER TABLE %s ALTER COLUMN overage_minutes TYPE NUMERIC(12,2) USING overage_minutes::NUMERIC(12,2)$$
+        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE NUMERIC(12,2) USING minutes_used::NUMERIC(12,2)$$
+      )
+    `);
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'bucket_usage',
+        $$ALTER TABLE %s ALTER COLUMN overage_minutes TYPE NUMERIC(12,2) USING overage_minutes::NUMERIC(12,2)$$
       )
     `);
   } else {
@@ -812,11 +823,17 @@ exports.down = async function down(knex) {
 
   const usageCitusDistributed = await isCitusDistributed(knex, 'bucket_usage');
   if (usageCitusDistributed) {
+    // One command per call — see the note in 3i on format()'s single argument.
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
         'bucket_usage',
-        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE BIGINT USING minutes_used::BIGINT;
-          ALTER TABLE %s ALTER COLUMN overage_minutes TYPE BIGINT USING overage_minutes::BIGINT$$
+        $$ALTER TABLE %s ALTER COLUMN minutes_used TYPE BIGINT USING minutes_used::BIGINT$$
+      )
+    `);
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'bucket_usage',
+        $$ALTER TABLE %s ALTER COLUMN overage_minutes TYPE BIGINT USING overage_minutes::BIGINT$$
       )
     `);
     await knex.raw(`
