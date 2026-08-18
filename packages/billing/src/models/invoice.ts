@@ -440,12 +440,12 @@ const Invoice = {
           'c.client_name',
           'c.properties',
           knexOrTrx.raw(`CONCAT_WS(', ',
-            cl.address_line1,
+            NULLIF(cl.address_line1, 'N/A'),
             cl.address_line2,
-            cl.city,
+            NULLIF(cl.city, 'N/A'),
             cl.state_province,
             cl.postal_code,
-            cl.country_name
+            NULLIF(cl.country_name, 'Unknown')
           ) as location_address`)
         )
         .where({
@@ -463,12 +463,12 @@ const Invoice = {
           'tc.client_id',
           'c.client_name',
           knexOrTrx.raw(`CONCAT_WS(', ',
-            cl.address_line1,
+            NULLIF(cl.address_line1, 'N/A'),
             cl.address_line2,
-            cl.city,
+            NULLIF(cl.city, 'N/A'),
             cl.state_province,
             cl.postal_code,
-            cl.country_name
+            NULLIF(cl.country_name, 'Unknown')
           ) as location_address`)
         )
         .where({

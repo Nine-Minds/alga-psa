@@ -329,6 +329,33 @@
         "help": "55555"
       }
     },
+    "address": {
+      "title": "55555",
+      "description": "55555",
+      "fields": {
+        "addressLine1": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "addressLine2": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "city": {
+          "label": "55555"
+        },
+        "stateProvince": {
+          "label": "55555"
+        },
+        "postalCode": {
+          "label": "55555"
+        },
+        "country": {
+          "label": "55555",
+          "placeholder": "55555"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "55555",

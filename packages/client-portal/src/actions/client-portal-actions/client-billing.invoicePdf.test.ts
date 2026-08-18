@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const currentUser = { user_id: 'user-1', tenant: 'tenant-1', roles: [] };
 
 const getConnectionMock = vi.fn();
-const scheduleInvoiceZipActionMock = vi.fn();
+const generateAndStoreMock = vi.fn();
 let storedInvoiceDocument: { file_id: string } | undefined;
 let invoiceRow: Record<string, unknown> | undefined;
 
@@ -32,13 +32,15 @@ vi.mock('./clientBillingPermissions', () => ({
 
 vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({
   scheduleInvoiceEmailAction: vi.fn(),
-  scheduleInvoiceZipAction: (...args: any[]) => scheduleInvoiceZipActionMock(...args),
 }));
 
 vi.mock('@alga-psa/billing/models/invoice', () => ({ default: {} }));
 vi.mock('@alga-psa/billing/models/quote', () => ({ default: {} }));
 vi.mock('@alga-psa/billing/models/quoteActivity', () => ({ default: {} }));
-vi.mock('@alga-psa/billing/services', () => ({ recalculateQuoteFinancials: vi.fn() }));
+vi.mock('@alga-psa/billing/services', () => ({
+  recalculateQuoteFinancials: vi.fn(),
+  createPDFGenerationService: vi.fn(() => ({ generateAndStore: generateAndStoreMock })),
+}));
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesByClient: vi.fn(),
   getInvoiceLineItems: vi.fn(),
@@ -64,7 +66,7 @@ describe('downloadClientInvoicePdf', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storedInvoiceDocument = undefined;
-    invoiceRow = { invoice_id: 'invoice-1', client_id: 'client-1', status: 'sent' };
+    invoiceRow = { invoice_id: 'invoice-1', client_id: 'client-1', status: 'sent', invoice_number: 'INV-001' };
 
     getConnectionMock.mockResolvedValue((table: string) => {
       if (table === 'invoices') return makeChain(invoiceRow);
@@ -80,18 +82,25 @@ describe('downloadClientInvoicePdf', () => {
     const result = await downloadClientInvoicePdf('invoice-1');
 
     expect(result).toEqual({ success: true, fileId: 'stored-invoice-file-1' });
-    expect(scheduleInvoiceZipActionMock).not.toHaveBeenCalled();
+    expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 
-  it('falls back to generating one for invoices filed before documents existed', async () => {
+  it('generates and files a PDF directly when no published copy exists', async () => {
     storedInvoiceDocument = undefined;
-    scheduleInvoiceZipActionMock.mockResolvedValue({ actionError: 'scheduled' });
+    generateAndStoreMock.mockResolvedValue({ file_id: 'generated-file-1', storage_path: '/x' });
 
     const { downloadClientInvoicePdf } = await import('./client-billing');
     const result = await downloadClientInvoicePdf('invoice-1');
 
-    expect(scheduleInvoiceZipActionMock).toHaveBeenCalledWith(['invoice-1']);
-    expect(result).toEqual({ actionError: 'scheduled' });
+    // Direct generation, not the zip job: the job resolves its acting user
+    // from the request session, which a background job does not have.
+    expect(generateAndStoreMock).toHaveBeenCalledWith({
+      invoiceId: 'invoice-1',
+      invoiceNumber: 'INV-001',
+      version: 1,
+      userId: 'user-1',
+    });
+    expect(result).toEqual({ success: true, fileId: 'generated-file-1' });
   });
 
   it('refuses invoices the portal user cannot see before looking for a document', async () => {
@@ -101,6 +110,6 @@ describe('downloadClientInvoicePdf', () => {
     const result = await downloadClientInvoicePdf('invoice-other-client');
 
     expect(result).toEqual({ actionError: 'Invoice not found or access denied' });
-    expect(scheduleInvoiceZipActionMock).not.toHaveBeenCalled();
+    expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 });

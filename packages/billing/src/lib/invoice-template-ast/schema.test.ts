@@ -487,4 +487,104 @@ describe('templateAstSchema', () => {
       expect(invalidNodeTokenIds.errors.some((error) => error.message.includes('Invalid CSS identifier'))).toBe(true);
     }
   });
+  describe('key-or-literal display strings', () => {
+    const buildAst = (
+      title: unknown,
+      label: unknown,
+      header: unknown,
+      emptyStateText: unknown,
+      totalsLabel: unknown,
+      textContent: unknown
+    ) => ({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: { invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' } },
+        collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'header',
+            type: 'section',
+            title,
+            children: [
+              { id: 'heading', type: 'text', content: textContent },
+              { id: 'invoice-number', type: 'field', label, binding: { bindingId: 'invoiceNumber' } },
+            ],
+          },
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+            emptyStateText,
+            columns: [{ id: 'description', header, value: { type: 'path', path: 'description' } }],
+          },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [{ id: 'subtotal', label: totalsLabel, value: { type: 'path', path: 'subtotal' } }],
+          },
+        ],
+      },
+    });
+
+    // The additive-change guarantee: nothing authored before key references
+    // existed becomes invalid because they do now.
+    it('still validates a template whose display strings are all literals', () => {
+      const result = validateTemplateAst(
+        buildAst('Invoice', 'Invoice #', 'Description', 'No line items', 'Subtotal', {
+          type: 'literal',
+          value: 'Bill To',
+        })
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('validates key references in every display position', () => {
+      const ref = (i18nKey: string, defaultValue: string) => ({ i18nKey, defaultValue });
+      const result = validateTemplateAst(
+        buildAst(
+          ref('labels.invoice', 'Invoice'),
+          ref('labels.invoiceNumber', 'Invoice #'),
+          ref('labels.description', 'Description'),
+          ref('labels.emptyState.noLineItems', 'No line items'),
+          ref('labels.subtotal', 'Subtotal'),
+          { type: 'i18n', i18nKey: 'labels.billTo', defaultValue: 'Bill To' }
+        )
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a key reference that cannot fall back to English', () => {
+      const result = validateTemplateAst(
+        buildAst('Invoice', { i18nKey: 'labels.invoiceNumber' }, 'Description', 'No line items', 'Subtotal', {
+          type: 'literal',
+          value: 'Bill To',
+        })
+      );
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown members on a key reference', () => {
+      const result = validateTemplateAst(
+        buildAst(
+          'Invoice',
+          { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #', locale: 'de' },
+          'Description',
+          'No line items',
+          'Subtotal',
+          { type: 'literal', value: 'Bill To' }
+        )
+      );
+
+      expect(result.success).toBe(false);
+    });
+  });
 });

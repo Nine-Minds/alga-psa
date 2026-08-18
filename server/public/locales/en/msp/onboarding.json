@@ -329,6 +329,33 @@
         "help": "Becomes the organization default for everyone: MSP staff and client portal users. Individual users and clients can override it later."
       }
     },
+    "address": {
+      "title": "Company Address",
+      "description": "Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.",
+      "fields": {
+        "addressLine1": {
+          "label": "Address Line 1",
+          "placeholder": "123 Main St"
+        },
+        "addressLine2": {
+          "label": "Address Line 2",
+          "placeholder": "Suite 100"
+        },
+        "city": {
+          "label": "City"
+        },
+        "stateProvince": {
+          "label": "State/Province"
+        },
+        "postalCode": {
+          "label": "Postal Code"
+        },
+        "country": {
+          "label": "Country",
+          "placeholder": "Select Country"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Password Reset Required",

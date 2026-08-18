@@ -10,7 +10,7 @@ import {
   IInvoiceCharge
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
@@ -513,13 +513,14 @@ export const fetchInvoicesPaginated = withAuth(async (
 
         // Format location address
         const addressParts: string[] = [];
-        if (invoice.address_line1) addressParts.push(invoice.address_line1);
+        const addressLine1 = displayAddressField(invoice.address_line1);
+        if (addressLine1) addressParts.push(addressLine1);
         if (invoice.address_line2) addressParts.push(invoice.address_line2);
-        if (invoice.city || invoice.state_province || invoice.postal_code) {
-          const cityStateZip = [invoice.city, invoice.state_province, invoice.postal_code].filter(Boolean).join(', ');
-          addressParts.push(cityStateZip);
-        }
-        if (invoice.country_name) addressParts.push(invoice.country_name);
+        const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
+          .filter(Boolean).join(', ');
+        if (cityStateZip) addressParts.push(cityStateZip);
+        const countryName = displayCountry(invoice.country_name);
+        if (countryName) addressParts.push(countryName);
 
         return getBasicInvoiceViewModel(invoice, {
           client_name: invoice.client_name,
@@ -640,19 +641,30 @@ export const fetchInvoicesByClient = withAuth(async (
 
     console.log(`Got ${invoices.length} invoices for client ${clientId}`);
 
+    // Deduplicate by invoice_id: the location join matches billing OR default
+    // address, which are two rows for some clients. The ORDER BY ranks the
+    // billing address first, so the first row per invoice is the right one.
+    const seenIds = new Set<string>();
+    const uniqueInvoices = invoices.filter(invoice => {
+      if (seenIds.has(invoice.invoice_id)) return false;
+      seenIds.add(invoice.invoice_id);
+      return true;
+    });
+
     // Map to view models without line items
-    return Promise.all(invoices.map(invoice => {
+    return Promise.all(uniqueInvoices.map(invoice => {
       const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
       const addressParts: string[] = [];
-      if (invoice.address_line1) addressParts.push(invoice.address_line1);
+      const addressLine1 = displayAddressField(invoice.address_line1);
+      if (addressLine1) addressParts.push(addressLine1);
       if (invoice.address_line2) addressParts.push(invoice.address_line2);
-      if (invoice.city || invoice.state_province || invoice.postal_code) {
-        const cityStateZip = [invoice.city, invoice.state_province, invoice.postal_code].filter(Boolean).join(', ');
-        addressParts.push(cityStateZip);
-      }
-      if (invoice.country_name) addressParts.push(invoice.country_name);
+      const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
+        .filter(Boolean).join(', ');
+      if (cityStateZip) addressParts.push(cityStateZip);
+      const countryName = displayCountry(invoice.country_name);
+      if (countryName) addressParts.push(countryName);
       
       return getBasicInvoiceViewModel(invoice, {
         client_name: invoice.client_name,

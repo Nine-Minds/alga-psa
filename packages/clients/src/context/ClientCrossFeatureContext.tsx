@@ -80,6 +80,11 @@ export interface ContractQuickAddRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface TeamsMeetingCapability {
   available: boolean;
   reason?: string;
@@ -120,6 +125,8 @@ export interface ClientCrossFeatureCallbacks {
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  /** Optional: the Hour Blocks section on client detail (provided by the composition layer). */
+  renderHourBlocks?: (props: HourBlocksRenderProps) => ReactNode;
   /** Open a ticket in the shared drawer, keeping the current page underneath. */
   openTicketDetails?: (ticketId: string) => Promise<void>;
   getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;

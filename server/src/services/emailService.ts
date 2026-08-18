@@ -4,9 +4,8 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { ensureInvoiceEmailLinks } from '@alga-psa/billing/services';
 
 const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
@@ -250,6 +249,22 @@ export class EmailService {
     }
   }
 
+  /** The tenant's default client name, readable without a request scope. */
+  private async getDefaultClientName(tenantId: string): Promise<string | null> {
+    try {
+      const knex = await getConnection();
+      const db = tenantDb(knex, tenantId);
+      const query = db.table('tenant_companies as tc')
+        .where('tc.is_default', true)
+        .whereNull('tc.deleted_at');
+      db.tenantJoin(query, 'clients as c', 'tc.client_id', 'c.client_id');
+      const row = await query.first<{ client_name?: string | null } | undefined>('c.client_name');
+      return row?.client_name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   public async sendInvoiceEmail(
     invoice: InvoiceViewModel & { 
       contact?: { name: string; address: string };
@@ -263,9 +278,11 @@ export class EmailService {
       companyName?: string;
     }
   ) {
-    const { clients } = await getTenantDetails();
-    const defaultClient = clients.find(c => c.is_default);
-    const senderClient = options?.companyName || defaultClient?.client_name || 'Our Client';
+    // No withAuth action here: invoice emails are also sent from background
+    // jobs, where there is no request scope to resolve a session user from.
+    const senderClient = options?.companyName
+      || (await this.getDefaultClientName(invoice.tenantId))
+      || 'Our Client';
 
     const hasPaymentLink = !!options?.paymentLink;
     const hasPortalLink = !!options?.portalLink;

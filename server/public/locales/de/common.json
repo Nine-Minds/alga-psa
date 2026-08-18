@@ -163,6 +163,7 @@
     "selectLanguage": "Sprache auswählen",
     "changeLanguage": "Sprache ändern",
     "currentLanguage": "Aktuelle Sprache",
+    "previewLanguage": "Vorschausprache",
     "preference": {
       "label": "Sprachpräferenz",
       "helper": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche und E-Mail-Benachrichtigungen aus. Diese Einstellung überschreibt für Sie die Standardvorgaben der Organisation und des Kundenportals.",

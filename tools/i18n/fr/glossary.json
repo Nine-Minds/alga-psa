@@ -162,6 +162,12 @@
       "notes": "Utiliser filtre comme nom et filtrer comme action."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "traitement",
+      "notes": "Employer traitement pour la colonne fulfillment des documents client : elle indique le mode de traitement de la ligne (depuis le stock, expédition directe) et non l’expédition elle-même, que la colonne voisine libelle livré."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "secteur d’activité",
@@ -270,6 +276,12 @@
       "notes": "Utiliser devis pour un sales/service quote ; le nom est masculin et invariable (un devis accepté, des devis). Ne jamais employer citation, qui désigne un extrait cité ou une convocation."
     },
     {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "tarif",
+      "notes": "Employer tarif pour la colonne de tarif des documents client et réserver prix unitaire à unit price : les deux libellés doivent rester distincts lorsqu’un document affiche les deux colonnes."
+    },
+    {
       "id": "report",
       "en-term": "report",
       "term": "rapport",
@@ -348,6 +360,12 @@
       "notes": "Utiliser tâche pour les tâches de projet, de workflow et de boîte de réception. Employer tâche d’arrière-plan en toutes lettres pour un background job."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "taxes",
+      "notes": "Employer le terme neutre taxes pour les libellés fiscaux des documents client ; ne nommer la TVA que lorsque la taxe sur la valeur ajoutée est effectivement visée."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "technicien",
@@ -376,6 +394,12 @@
       "en-term": "timesheet",
       "term": "feuille de temps",
       "notes": "Utiliser feuille de temps pour le regroupement hebdomadaire des saisies et son circuit d’approbation, conformément à msp/time-entry."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "prix unitaire",
+      "notes": "Employer prix unitaire pour la colonne de prix à l’unité et tarif pour rate ; ne jamais confondre les deux."
     },
     {
       "id": "user",
@@ -724,6 +748,7 @@
       "Service",
       "Services",
       "Shift",
+      "Signature",
       "Solo",
       "Stripe",
       "T&M",

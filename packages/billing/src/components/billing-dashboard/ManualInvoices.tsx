@@ -731,7 +731,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           items: itemsToSave
         });
 
-        if (!result.success) {
+        // `=== false` (not `!result.success`): the ee/server typecheck compiles
+        // this file with strictNullChecks off, where truthiness narrowing does
+        // not discriminate the union but literal equality does.
+        if (result.success === false) {
           setError(translateManualInvoiceError(result));
           return;
         }

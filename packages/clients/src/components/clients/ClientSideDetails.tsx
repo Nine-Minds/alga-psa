@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import type { IClient } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -20,17 +21,20 @@ const ClientSideDetails = ({ client }: ClientSideDetailsProps) => {
     // Format location address
     const formatAddress = () => {
         const parts: string[] = [];
-        if (client.address_line1) parts.push(client.address_line1);
+        const addressLine1 = displayAddressField(client.address_line1);
+        if (addressLine1) parts.push(addressLine1);
         if (client.address_line2) parts.push(client.address_line2);
-        
+
         const cityStateZip: string[] = [];
-        if (client.city) cityStateZip.push(client.city);
+        const city = displayAddressField(client.city);
+        if (city) cityStateZip.push(city);
         if (client.state_province) cityStateZip.push(client.state_province);
         if (client.postal_code) cityStateZip.push(client.postal_code);
-        
+
         if (cityStateZip.length > 0) parts.push(cityStateZip.join(', '));
-        if (client.country_name) parts.push(client.country_name);
-        
+        const country = displayCountry(client.country_name);
+        if (country) parts.push(country);
+
         return parts.join('\n');
     };
 

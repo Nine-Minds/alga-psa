@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "55555"
+      "templateBoundary": "55555",
+      "translatableHint": "55555"
     },
     "dragOverlay": {
       "component": "55555"

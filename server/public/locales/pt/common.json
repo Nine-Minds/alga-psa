@@ -253,6 +253,7 @@
     "selectLanguage": "Selecione o idioma",
     "changeLanguage": "Alterar idioma",
     "currentLanguage": "Idioma atual",
+    "previewLanguage": "Idioma da visualização",
     "preference": {
       "label": "Preferência de idioma",
       "helper": "Selecione seu idioma preferido para a interface e notificações por e-mail. Substitui os padrões da organização e do portal do cliente para você.",

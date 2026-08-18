@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Template Boundary"
+      "templateBoundary": "Template Boundary",
+      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead."
     },
     "dragOverlay": {
       "component": "Component"

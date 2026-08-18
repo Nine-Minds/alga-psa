@@ -169,8 +169,11 @@ async function resolveClientBillingCurrencyInternal(
   return (settings?.default_currency_code || 'USD').toUpperCase();
 }
 
+// Fields are optional here (not required): the ee/server typecheck compiles
+// this file with strictNullChecks off, where zod's inference of the parsed
+// config collapses to all-optional. The runtime contract is unchanged.
 function validateConfigModelFields(input: {
-  billing_model: 'fixed_price' | 'time_and_materials';
+  billing_model?: 'fixed_price' | 'time_and_materials' | null;
   total_price?: number | null;
 }): void {
   if (input.billing_model === 'fixed_price' && input.total_price == null) {
@@ -456,8 +459,14 @@ export const createProjectBillingConfig = withAuth(withProjectBillingActionError
       throw new Error(`Project billing currency must match the client's billing currency (${clientCurrency})`);
     }
 
+    // The required fields are restated explicitly (identical values): under
+    // the ee/server typecheck (strictNullChecks off) zod infers the spread of
+    // `parsed` as all-optional, which fails the model input's required props.
     return ProjectBillingConfig.insert({
       ...parsed,
+      project_id: parsed.project_id,
+      billing_model: parsed.billing_model,
+      invoice_mode: parsed.invoice_mode,
       currency: clientCurrency,
       cap_behavior: parsed.cap_amount != null ? 'hard_cap' : parsed.cap_behavior,
     }, trx);

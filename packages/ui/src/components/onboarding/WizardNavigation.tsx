@@ -49,7 +49,7 @@ export function WizardNavigation({
   const isFirstStep = currentStep === 0;
 
   return (
-    <div className="flex justify-between items-center mt-8 pt-6 border-t">
+    <div className="flex w-full justify-between items-center">
       <div className="flex gap-2">
         <Button
           id="wizard-back"

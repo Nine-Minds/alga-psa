@@ -584,11 +584,8 @@ function buildPreviewInvoiceFailure(
 }
 
 function previewInvoiceErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return 'An error occurred while previewing the invoice';
-  }
+  const message = error instanceof Error ? error.message : '';
 
-  const { message } = error;
   if (message.startsWith('Permission denied:')) {
     return message;
   }
@@ -625,9 +622,29 @@ function previewInvoiceErrorMessage(error: unknown): string {
     'Recurring selector input is missing contract-cadence assignment identity (contract line).',
   ]);
 
-  return expectedMessages.has(message)
+  if (expectedMessages.has(message)) {
+    return message;
+  }
+
+  // Same mapping the generation path uses, so preview surfaces database and
+  // validation causes with the same actionable text as its sibling flows.
+  const mapped = invoiceGenerationActionErrorFrom(error);
+  if (mapped) {
+    return 'permissionError' in mapped ? mapped.permissionError : mapped.actionError;
+  }
+
+  // Last resort only: never swallow an actionable cause behind the generic string.
+  return message.trim() !== ''
     ? message
     : 'An error occurred while previewing the invoice';
+}
+
+function logPreviewInvoiceFailure(
+  action: string,
+  context: Record<string, unknown>,
+  error: unknown,
+): void {
+  console.error(`[${action}] Invoice preview failed:`, context, error);
 }
 
 function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
@@ -686,7 +703,12 @@ async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Pro
     return await work();
   } catch (error) {
     const expected = invoiceGenerationActionErrorFrom(error);
-    if (expected) return expected;
+    if (expected) {
+      // Expected errors are returned (not thrown) to the client; log the original
+      // server-side so the real cause is never silently discarded.
+      console.error('[withInvoiceGenerationActionErrors] Returning expected action error:', error);
+      return expected;
+    }
     throw error;
   }
 }
@@ -2045,6 +2067,18 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
       previews,
     };
   } catch (error) {
+    logPreviewInvoiceFailure(
+      'previewGroupedInvoicesForSelectionInputs',
+      {
+        tenant,
+        executionIdentityKeys: normalizedGroupedSelections.flatMap((group) =>
+          (group.selectorInputs ?? []).map(
+            (selectorInput) => selectorInput?.executionWindow?.identityKey,
+          ),
+        ),
+      },
+      error,
+    );
     const fallbackSelectorInput = normalizedGroupedSelections[0]?.selectorInputs?.[0];
     return fallbackSelectorInput
       ? buildPreviewInvoiceFailure(
@@ -2084,6 +2118,14 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       }),
     };
   } catch (error) {
+    logPreviewInvoiceFailure(
+      'previewInvoiceForSelectionInput',
+      {
+        tenant,
+        executionIdentityKey: normalizedSelectorInput?.executionWindow?.identityKey,
+      },
+      error,
+    );
     return buildPreviewInvoiceFailure(
       normalizedSelectorInput,
       previewInvoiceErrorMessage(error),
@@ -2153,6 +2195,15 @@ export const previewInvoice = withAuth(async (
       })
     };
   } catch (error) {
+    logPreviewInvoiceFailure(
+      'previewInvoice',
+      {
+        tenant,
+        billingCycleId: billing_cycle_id,
+        executionIdentityKey: selectorInput?.executionWindow?.identityKey,
+      },
+      error,
+    );
     return selectorInput
       ? buildPreviewInvoiceFailure(
           selectorInput,

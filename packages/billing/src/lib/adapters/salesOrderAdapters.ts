@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { SalesOrderDocumentParty, SalesOrderViewModel } from '@alga-psa/types';
 
 import { fetchTenantParty } from './tenantPartyAdapter';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import {
   asTrimmedString,
   assembleSalesOrderViewModel,
@@ -24,15 +25,14 @@ export {
 const buildAddress = (record: Record<string, unknown> | null | undefined): string | null => {
   if (!record) return null;
   const parts = [
-    record.address_line1,
-    record.address_line2,
-    record.address_line3,
-    record.city,
-    record.state_province,
-    record.postal_code,
-    record.country_name,
+    displayAddressField(record.address_line1),
+    displayAddressField(record.address_line2),
+    displayAddressField(record.address_line3),
+    displayAddressField(record.city),
+    displayAddressField(record.state_province),
+    displayAddressField(record.postal_code),
+    displayCountry(record.country_name),
   ]
-    .map(asTrimmedString)
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
   return parts.length > 0 ? parts.join(', ') : null;
 };

@@ -153,7 +153,8 @@
       "previewPdf": "Aperçu PDF",
       "backToQuotes": "Retour aux devis",
       "backToTemplates": "Retour aux modèles de devis",
-      "convertToSalesOrder": "Convertir en commande client"
+      "convertToSalesOrder": "Convertir en commande client",
+      "convert": "Convertir en…"
     },
     "headings": {
       "editQuote": "Modifier le devis",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Articles du contrat",
       "conversionMode": "Mode de conversion",
-      "excludedItems": "Articles exclus",
       "excludedFromConversion": "Exclus de la conversion",
+      "excludedItems": "Articles exclus",
       "invoiceItems": "Postes de facture",
       "itemMappingPreview": "Aperçu du mappage d'éléments",
+      "onSalesOrder": "Sur la commande client {{soNumber}}",
       "quoteTotal": "Total du devis",
+      "salesOrderItems": "Lignes de commande client",
       "statusAfterConversion": "Statut après conversion",
       "willBecomeContractLines": "Deviendront des lignes contractuelles",
-      "willBecomeInvoiceCharges": "Deviendront des frais facturés"
+      "willBecomeInvoiceCharges": "Deviendront des frais facturés",
+      "willBecomeSalesOrderLines": "Deviendront des lignes de commande client"
     },
     "empty": {
       "contractItems": "Aucun élément récurrent ne sera converti en contrat.",
-      "invoiceItems": "Aucun élément ponctuel ne sera converti en facture."
+      "invoiceItems": "Aucun élément ponctuel ne sera converti en facture.",
+      "invoiceItemsOnSalesOrder": "Toutes les lignes ponctuelles figurent sur la commande client {{soNumber}} et seront facturées depuis celle-ci à l'exécution.",
+      "salesOrderItems": "Aucune ligne de produit ne passera dans une commande client."
     },
     "summary": {
+      "billedViaSalesOrder": "Facturé depuis la commande client {{soNumber}} à l'exécution",
       "converted": "Converti",
       "discount": "Rabais",
       "fixed": "fixé",
@@ -628,10 +635,11 @@
       "title": "Erreur"
     },
     "salesOrder": {
-      "successTitle": "Commande client {{number}} créée",
-      "successBody": "Les lignes de produit seront facturées à l'exécution.",
+      "existingNote": "Ce devis a déjà été converti en commande client {{soNumber}}.",
+      "note": "Les lignes de produit peuvent être facturées de deux façons : créer une commande client pour les facturer à l'exécution, ou les facturer directement. La création de la commande client les exclut de la conversion en facture, donc rien n'est facturé deux fois.",
       "openSalesOrders": "Ouvrir les commandes clients",
-      "note": "Les lignes de produit ponctuelles passent dans une commande client provisoire (facturée à l'exécution) et sont exclues de toute conversion en facture provisoire, afin que rien ne soit facturé deux fois."
+      "successBody": "Les lignes de produit seront facturées à l'exécution.",
+      "successTitle": "Commande client {{number}} créée"
     }
   },
   "quoteApproval": {
