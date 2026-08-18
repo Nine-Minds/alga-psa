@@ -21,9 +21,14 @@
  * config, and only while every config in the group grants the same
  * entitlement; a group that disagrees hard-fails instead.
  *
+ * Usage rows that no pool can hold are moved to
+ * `bucket_usage_unmappable_archive` rather than deleted — `bucket_id` goes NOT
+ * NULL, so they cannot stay, but absence of a config today does not prove a row
+ * was never billable (see 3e).
+ *
  * Down-migration drops the new tables and the `bucket_usage.bucket_id` column
  * and reverts the numeric types; the frozen legacy tables still describe the
- * old world.
+ * old world. The archive survives `down` on purpose.
  *
  * Re-runnability: every DDL step is guarded (hasTable / hasColumn /
  * IF NOT EXISTS / constraint-existence checks) so a failed run — including the
@@ -495,56 +500,38 @@ exports.up = async function up(knex) {
   //     windows genuinely overlap the usage period, the row matches both and
   //     the ambiguity guard below fails loudly rather than silently picking one.
   //
-  //     Ambiguity guard: client_contracts is many-to-many (a client may hold
-  //     several overlapping assignments on the same line), so a usage row can
-  //     match several pools. That would silently pick an arbitrary bucket —
-  //     fail loudly instead. Without the effective-window predicate this guard
-  //     also fired falsely on *sequential, non-overlapping* assignments (an
-  //     ended contract followed by its replacement), which is healthy data.
+  //     Precedence, not raw overlap. Widening the window to an overlap made
+  //     *sequential replacement* look ambiguous: an assignment ending 06-15 and
+  //     its replacement starting 06-16 both overlap a 06-01..06-30 usage period,
+  //     so a perfectly healthy mid-period contract switch matched two pools and
+  //     aborted the migration — a case the point test resolved cleanly and the
+  //     existing tests miss (they only cover replacement on a period boundary).
+  //     So candidates are ranked: an assignment whose window contains
+  //     period_start is the row's real owner, because that is the anchor the old
+  //     write path resolved the draw with. Overlap-only candidates are the
+  //     fallback that rescues a mid-period contract *start*, where nothing
+  //     contains period_start. A row is ambiguous only when two distinct pools
+  //     tie at its best rank — genuinely concurrent assignments, not consecutive
+  //     ones.
   //
-  //     The COUNT(DISTINCT ...) is projected and filtered in an outer WHERE for
-  //     the Citus reason spelled out on assertDuplicateBucketConfigsAreEquivalent():
-  //     the same count tested in HAVING does not survive push-down reliably.
-  const ambiguousMatches = await knex.raw(`
-    WITH canon AS (${CANONICAL_BUCKET_CONFIGS}),
-    matches AS (
-      SELECT bu.usage_id, COUNT(DISTINCT c.config_id) AS pool_count
-      FROM bucket_usage bu
-      JOIN canon c
-        ON c.tenant = bu.tenant
-        AND c.service_id = bu.service_catalog_id
-      JOIN contract_lines cl
-        ON cl.tenant = c.tenant
-        AND cl.contract_line_id = c.contract_line_id
-      JOIN client_contracts cc
-        ON cc.tenant = c.tenant
-        AND cc.contract_id = cl.contract_id
-      WHERE bu.bucket_id IS NULL
-        AND bu.client_id = cc.client_id
-        AND ${ASSIGNMENT_COVERS_USAGE_PERIOD}
-      GROUP BY bu.usage_id
-    )
-    SELECT usage_id, pool_count FROM matches WHERE pool_count > 1 LIMIT 5
-  `);
-  if (ambiguousMatches.rows.length > 0) {
-    const sample = ambiguousMatches.rows.map((row) => row.usage_id).join(', ');
-    throw new Error(
-      `[create_contract_line_buckets] ${ambiguousMatches.rows.length} bucket_usage rows map to multiple legacy Bucket configs ` +
-      `(sample usage_ids: ${sample}). A bucket_usage row must belong to exactly one pool; ` +
-      'resolve the duplicate client assignments before re-running.'
-    );
-  }
-
-  // Citus rejects the equivalent UPDATE ... FROM multi-table join even when
-  // every join includes the tenant distribution key. Materialize the mapping
-  // with the supported SELECT above, then issue distribution-key-qualified
-  // point updates against bucket_usage. The effective-window predicate is
-  // byte-identical to the ambiguity guard's — the guard proves at most one
-  // match per row only under the exact match set this query maps with.
-  const mappedUsageRows = await knex.raw(`
-    SELECT DISTINCT bu.tenant, bu.usage_id, c.config_id AS bucket_id
+  //     Citus rejects the equivalent UPDATE ... FROM multi-table join even when
+  //     every join includes the tenant distribution key, so the candidates are
+  //     materialized here and applied as distribution-key-qualified point
+  //     updates. Ranking in JS also keeps the guard and the mapping reading the
+  //     one identical candidate set — they cannot drift apart the way two
+  //     separately-written SQL queries could.
+  const usageCandidates = await knex.raw(`
+    WITH canon AS (${CANONICAL_BUCKET_CONFIGS})
+    SELECT DISTINCT
+      bu.tenant,
+      bu.usage_id,
+      c.config_id AS bucket_id,
+      bool_or(
+        cc.start_date <= (bu.period_start AT TIME ZONE 'UTC')::date
+        AND (cc.end_date IS NULL OR cc.end_date >= (bu.period_start AT TIME ZONE 'UTC')::date)
+      ) AS covers_period_start
     FROM bucket_usage bu
-    JOIN (${CANONICAL_BUCKET_CONFIGS}) c
+    JOIN canon c
       ON c.tenant = bu.tenant
       AND c.service_id = bu.service_catalog_id
     JOIN contract_lines cl
@@ -556,28 +543,101 @@ exports.up = async function up(knex) {
     WHERE bu.bucket_id IS NULL
       AND bu.client_id = cc.client_id
       AND ${ASSIGNMENT_COVERS_USAGE_PERIOD}
+    GROUP BY bu.tenant, bu.usage_id, c.config_id
   `);
 
-  for (const row of mappedUsageRows.rows) {
+  const candidatesByUsage = new Map();
+  for (const row of usageCandidates.rows) {
+    const key = `${row.tenant}/${row.usage_id}`;
+    if (!candidatesByUsage.has(key)) {
+      candidatesByUsage.set(key, { tenant: row.tenant, usage_id: row.usage_id, candidates: [] });
+    }
+    candidatesByUsage.get(key).candidates.push(row);
+  }
+
+  const resolvedUsageRows = [];
+  const ambiguousUsage = [];
+  for (const entry of candidatesByUsage.values()) {
+    const anchored = entry.candidates.filter((row) => row.covers_period_start);
+    const best = anchored.length > 0 ? anchored : entry.candidates;
+    const pools = [...new Set(best.map((row) => row.bucket_id))];
+    if (pools.length > 1) {
+      ambiguousUsage.push({ ...entry, pools, anchored: anchored.length > 0 });
+    } else {
+      resolvedUsageRows.push({ tenant: entry.tenant, usage_id: entry.usage_id, bucket_id: pools[0] });
+    }
+  }
+
+  if (ambiguousUsage.length > 0) {
+    const sample = ambiguousUsage
+      .slice(0, 5)
+      .map((row) => `${row.usage_id} -> ${row.pools.join(' | ')}`)
+      .join(', ');
+    throw new Error(
+      `[create_contract_line_buckets] ${ambiguousUsage.length} bucket_usage rows match more than one bucket pool ` +
+      `even after preferring the assignment that covers period_start (sample: ${sample}). ` +
+      'This means the client holds two assignments that are in force at the same time and whose lines both ' +
+      'carry a Bucket config for the service — consecutive contracts that merely abut or replace each other ' +
+      'are already handled and will not appear here. A usage row must belong to exactly one pool, so resolve ' +
+      'the concurrent assignments before re-running.'
+    );
+  }
+
+  for (const row of resolvedUsageRows) {
     await knex('bucket_usage')
       .where({ tenant: row.tenant, usage_id: row.usage_id })
       .whereNull('bucket_id')
       .update({ bucket_id: row.bucket_id });
   }
 
-  // 3e. Drop usage rows that no pool can ever hold. A row whose service has no
+  // 3e. Quarantine usage rows that no pool can hold. A row whose service has no
   //     Bucket config anywhere in the tenant — and whose own line has none
-  //     either — was never billable under the old schema (the invoice read
-  //     filtered on the config), and bucket_id goes NOT NULL below, so there is
-  //     no shape in the new model for it to keep. Nothing references
-  //     bucket_usage (no inbound foreign keys; invoice charges land in
-  //     invoice_items / invoice_item_details), so the delete is self-contained.
+  //     either — has nothing to attach to, and bucket_id goes NOT NULL below, so
+  //     it cannot stay in bucket_usage.
   //
-  //     Scoped deliberately narrow: a row that HAS a candidate config but fails
-  //     the client/window join is a mapping problem, not debris, and still hits
-  //     the hard-fail guard below. Every removed row is logged with its minutes
-  //     so the loss is on the record rather than inferred from a count.
+  //     It is NOT safe to call these rows "never billable", which is why they are
+  //     copied out rather than deleted. Config lineage was snapshotted on
+  //     2025-10-08: 20251008000001 backfilled contract_line_service_configuration
+  //     from plan_service_configuration, and 20251008000003 then dropped
+  //     plan_service_configuration CASCADE. Any bucket config retired before that
+  //     snapshot — a service removed from a plan, a plan deleted (the old rows
+  //     cascaded from billing_plans), a restructure — is simply absent today
+  //     while its usage rows survive. On an appliance that ran buckets through
+  //     2024 and retired the plan in 2025, those rows are real invoiced history,
+  //     not debris. bucket_usage.contract_line_id compounds it: the old write
+  //     path populated it unreliably, so the line half of the test can miss too.
   //
+  //     So the rows move to bucket_usage_unmappable_archive, which no later step
+  //     touches and `down` drops only alongside the rest of the new model. The
+  //     migration stays runnable, nothing is destroyed, and an operator who finds
+  //     history missing can reconstruct it from a table rather than from console
+  //     scrollback.
+  //
+  //     Scoped deliberately narrow either way: a row that HAS a candidate config
+  //     but fails the client/window join is a mapping problem, not debris, and
+  //     still hits the hard-fail guard below.
+  if (!(await knex.schema.hasTable('bucket_usage_unmappable_archive'))) {
+    await knex.schema.createTable('bucket_usage_unmappable_archive', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('usage_id').notNullable();
+      table.uuid('client_id').nullable();
+      table.uuid('contract_line_id').nullable();
+      table.uuid('service_catalog_id').nullable();
+      table.timestamp('period_start', { useTz: true }).notNullable();
+      table.timestamp('period_end', { useTz: true }).notNullable();
+      table.decimal('minutes_used', 12, 2).notNullable();
+      table.decimal('overage_minutes', 12, 2).notNullable();
+      table.decimal('rolled_over_minutes', 12, 2).nullable();
+      table.timestamp('archived_at', { useTz: true }).defaultTo(knex.fn.now()).notNullable();
+      table.text('archived_reason').notNullable();
+
+      table.primary(['tenant', 'usage_id']);
+      // No foreign keys on purpose: the archive has to outlive whatever made the
+      // row unmappable, including a deleted service, line, or client.
+    });
+  }
+  await distributeColocatedWithContractLines(knex, 'bucket_usage_unmappable_archive');
+
   //     Written as top-level anti-joins rather than NOT EXISTS for the Citus
   //     reason noted at 3a: a correlated subquery cannot read from a CTE. The
   //     LEFT JOINs may fan out on the matching side, but only non-matching rows
@@ -585,7 +645,8 @@ exports.up = async function up(knex) {
   const unmappableUsage = await knex.raw(`
     WITH canon AS (${CANONICAL_BUCKET_CONFIGS})
     SELECT DISTINCT bu.tenant, bu.usage_id, bu.client_id, bu.contract_line_id,
-           bu.service_catalog_id, bu.period_start, bu.minutes_used, bu.overage_minutes
+           bu.service_catalog_id, bu.period_start, bu.period_end,
+           bu.minutes_used, bu.overage_minutes, bu.rolled_over_minutes
     FROM bucket_usage bu
     LEFT JOIN canon by_service
       ON by_service.tenant = bu.tenant AND by_service.service_id = bu.service_catalog_id
@@ -598,16 +659,38 @@ exports.up = async function up(knex) {
 
   for (const row of unmappableUsage.rows) {
     console.log(
-      `[create_contract_line_buckets] deleting unmappable bucket_usage ${row.usage_id} ` +
+      `[create_contract_line_buckets] archiving unmappable bucket_usage ${row.usage_id} ` +
       `(tenant ${row.tenant}, client ${row.client_id}, line ${row.contract_line_id}, ` +
       `service ${row.service_catalog_id}, period ${row.period_start}, ` +
       `minutes_used ${row.minutes_used}, overage ${row.overage_minutes}): ` +
       'no Bucket config exists for its service or its line'
     );
+    await knex('bucket_usage_unmappable_archive')
+      .insert({
+        tenant: row.tenant,
+        usage_id: row.usage_id,
+        client_id: row.client_id,
+        contract_line_id: row.contract_line_id,
+        service_catalog_id: row.service_catalog_id,
+        period_start: row.period_start,
+        period_end: row.period_end,
+        minutes_used: row.minutes_used,
+        overage_minutes: row.overage_minutes,
+        rolled_over_minutes: row.rolled_over_minutes,
+        archived_reason: 'no Bucket config exists for its service or its line',
+      })
+      .onConflict(['tenant', 'usage_id'])
+      .ignore();
     await knex('bucket_usage')
       .where({ tenant: row.tenant, usage_id: row.usage_id })
       .whereNull('bucket_id')
       .del();
+  }
+  if (unmappableUsage.rows.length > 0) {
+    console.log(
+      `[create_contract_line_buckets] archived ${unmappableUsage.rows.length} unmappable bucket_usage row(s) ` +
+      'to bucket_usage_unmappable_archive; no usage data was destroyed'
+    );
   }
 
   // 3f. Guard: any usage row still unmapped had a pool to reach and did not
@@ -753,4 +836,14 @@ exports.down = async function down(knex) {
   // Drop membership before pools (FK order), pools after.
   await knex.schema.dropTableIfExists('contract_line_bucket_services');
   await knex.schema.dropTableIfExists('contract_line_buckets');
+
+  // The archive is deliberately NOT dropped. It holds usage rows this migration
+  // moved out of bucket_usage, and `down` has no way to decide where they should
+  // land back — the pool that would have received them no longer exists. Leaving
+  // it is the only option that does not destroy data; a re-`up` re-uses it, and
+  // an operator who has reconciled the rows can drop it by hand.
+  //
+  // This also covers the down/up round trip: usage accrued after the migration
+  // against a pool created in the new UI has no legacy config behind it, so a
+  // re-`up` finds it unmappable. It is archived rather than lost.
 };
