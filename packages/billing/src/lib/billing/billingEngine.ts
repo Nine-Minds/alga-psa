@@ -2278,7 +2278,7 @@ export class BillingEngine {
        * is unresolved *because more than one contract line covers its service*
        * may not be billed at catalog rate unless the biller has explicitly
        * chosen catalog pricing for it. See F139 and the migration
-       * 20260820000000 for why the two unresolved reasons diverge here.
+       * 20260818020000 for why the two unresolved reasons diverge here.
        */
       requireCatalogPricingDecision?: boolean;
     },

@@ -26,7 +26,7 @@ const require = createRequire(import.meta.url);
 const HOOK_TIMEOUT = 300_000;
 const MIGRATION_DIR = path.resolve(process.cwd(), 'migrations');
 const s7Migration = require(
-  path.join(MIGRATION_DIR, '20260822000000_add_billing_profile_bill_to_and_tax.cjs'),
+  path.join(MIGRATION_DIR, '20260818040000_add_billing_profile_bill_to_and_tax.cjs'),
 );
 
 let db: Knex;
