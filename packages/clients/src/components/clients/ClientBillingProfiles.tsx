@@ -62,6 +62,12 @@ const ClientBillingProfiles: React.FC<ClientBillingProfilesProps> = ({ clientId 
         return;
       }
       setProfiles(result);
+    } catch (error) {
+      // The action can also *throw* (e.g. withAuth rejects before the action
+      // body runs). Swallowing it into the toast keeps the promise returned by
+      // this callback settled — otherwise an unauthenticated render surfaces
+      // as an unhandled rejection instead of an error message.
+      toast.error(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

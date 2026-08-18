@@ -228,6 +228,10 @@ const servicePeriodPostInventoryRefs = new Set([
   // landed after the pass-0 snapshot and seeds invoice candidates with persisted
   // service-period columns in its fixtures.
   'packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx',
+  // T013 golden-output gate (billing-profiles S1) landed after the pass-0
+  // snapshot; its baseline fixtures assert persisted service-period columns.
+  'server/src/test/integration/billing/goldenOutput/baseline.json',
+  'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
