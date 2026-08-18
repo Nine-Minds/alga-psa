@@ -56,6 +56,7 @@ export default defineConfig({
     'extension-utils/index': 'extension-utils/index.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
+    'models/kbArticleModel': 'models/kbArticleModel.ts',
     'models/scheduleEntry': 'models/scheduleEntry.ts',
     'models/tagModel': 'models/tagModel.ts',
     'models/ticketModel': 'models/ticketModel.ts',

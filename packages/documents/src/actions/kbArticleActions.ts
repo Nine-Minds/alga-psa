@@ -7,11 +7,15 @@ import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  KB_ARTICLE_SELECT_COLUMNS,
+  createKbArticle,
+  generateKbArticleSlug as generateSlug,
+} from '@alga-psa/shared/models/kbArticleModel';
 import type {
   ArticleAudience,
   ArticleStatus,
   ArticleType,
-  IDocument,
   IKBArticle,
   IKBArticleReviewer,
   IKBArticleTemplate,
@@ -75,39 +79,6 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(alias ? `${table} as ${alias}` : table);
 }
 
-const KB_ARTICLE_SELECT_COLUMNS = [
-  'article_id',
-  'tenant',
-  'document_id',
-  'slug',
-  'article_type',
-  'audience',
-  'status',
-  'next_review_due',
-  'review_cycle_days',
-  'last_reviewed_at',
-  'last_reviewed_by',
-  'view_count',
-  'helpful_count',
-  'not_helpful_count',
-  'category_id',
-  'created_at',
-  'updated_at',
-  'created_by',
-  'updated_by',
-  'published_at',
-  'published_by',
-] as const;
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .substring(0, 100);
-}
-
 async function publishKbArticleSearchEvent(
   eventType: 'KB_ARTICLE_CREATED' | 'KB_ARTICLE_UPDATED' | 'KB_ARTICLE_DELETED',
   tenant: string,
@@ -139,122 +110,6 @@ async function publishKbArticleSearchEvent(
 }
 
 /**
- * Internal helper for creating a KB article. Not wrapped in withAuth —
- * intended to be called from already-authenticated contexts.
- */
-async function _createArticleInternal(
-  knex: Knex,
-  user: { user_id: string },
-  tenant: string,
-  input: ICreateArticleInput
-): Promise<IKBArticleWithDocument> {
-  if (!input.title?.trim()) {
-    throw new Error('Title is required');
-  }
-
-  let slug = input.slug?.trim() || generateSlug(input.title);
-  const articleType = input.articleType || 'how_to';
-  const audience = input.audience || 'internal';
-
-  // Ensure slug uniqueness — append a numeric suffix if needed
-  const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
-    .where({ slug })
-    .first();
-  if (existingSlug) {
-    // If the caller provided an explicit slug, treat collision as an error
-    if (input.slug?.trim()) {
-      throw new Error('An article with this slug already exists');
-    }
-    // Otherwise auto-deduplicate
-    let suffix = 2;
-    while (true) {
-      const candidate = `${slug}-${suffix}`;
-      const collision = await tenantScopedTable(knex, 'kb_articles', tenant)
-        .where({ slug: candidate })
-        .first();
-      if (!collision) {
-        slug = candidate;
-        break;
-      }
-      suffix++;
-    }
-  }
-
-  // Create the underlying document.
-  const documentId = randomUUID();
-  const now = new Date();
-
-  await tenantScopedTable(knex, 'documents', tenant).insert({
-    tenant,
-    document_id: documentId,
-    document_name: input.title.trim(),
-    user_id: user.user_id,
-    created_by: user.user_id,
-    order_number: 0,
-    folder_path: '/Knowledge Base',
-    entered_at: now,
-    updated_at: now,
-  });
-
-  // Store block content if provided
-  if (input.content && Array.isArray(input.content) && input.content.length > 0) {
-    await tenantScopedTable(knex, 'document_block_content', tenant).insert({
-      content_id: randomUUID(),
-      document_id: documentId,
-      tenant,
-      block_data: JSON.stringify(input.content),
-      created_at: now,
-      updated_at: now,
-    });
-  }
-
-  const document = await tenantScopedTable(knex, 'documents', tenant)
-    .where({ document_id: documentId })
-    .first() as IDocument;
-
-  // Create the KB article record — clean up document on failure
-  const articleId = randomUUID();
-  const nextReviewDue = input.reviewCycleDays
-    ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
-    : null;
-
-  try {
-    await tenantScopedTable(knex, 'kb_articles', tenant).insert({
-      tenant,
-      article_id: articleId,
-      document_id: document.document_id,
-      slug,
-      article_type: articleType,
-      audience,
-      status: 'draft',
-      review_cycle_days: input.reviewCycleDays || null,
-      next_review_due: nextReviewDue,
-      category_id: input.categoryId || null,
-      created_by: user.user_id,
-      updated_by: user.user_id,
-    });
-  } catch (err) {
-    // Clean up orphaned document if kb_articles insert fails
-    await tenantScopedTable(knex, 'documents', tenant)
-      .where({ document_id: document.document_id })
-      .del()
-      .catch(() => {}); // best effort cleanup
-    throw err;
-  }
-
-  const article = await tenantScopedTable(knex, 'kb_articles', tenant)
-    .select(KB_ARTICLE_SELECT_COLUMNS)
-    .where({ article_id: articleId })
-    .first();
-
-  return {
-    ...article,
-    document,
-    document_name: document.document_name,
-  } as unknown as IKBArticleWithDocument;
-}
-
-/**
  * Creates a new KB article with its underlying document.
  * F081: Creates both document and kb_articles record atomically.
  */
@@ -270,14 +125,8 @@ export const createArticle = withAuth(
       return permissionError('Permission denied');
     }
 
-    const article = await _createArticleInternal(knex, user, tenant, input);
-    await publishKbArticleSearchEvent('KB_ARTICLE_CREATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: ['document_name', 'content'],
-      status: article.status,
-    });
-    return article;
+    // The shared model publishes KB_ARTICLE_CREATED for search indexing.
+    return createKbArticle(knex, { tenant, userId: user.user_id }, input);
   }
 );
 
@@ -1509,7 +1358,7 @@ export const importArticles = withAuth(
           slug = `${slug}-${Date.now()}`;
         }
 
-        await _createArticleInternal(knex, user, tenant, {
+        await createKbArticle(knex, { tenant, userId: user.user_id }, {
           title,
           slug,
           content: blocks,
@@ -1583,8 +1432,8 @@ export const createArticleFromTicket = withAuth(
       },
     ];
 
-    // Create the article using internal helper (avoids nested withAuth calls)
-    return _createArticleInternal(knex, user, tenant, {
+    // Create the article through the shared model (avoids nested withAuth calls)
+    return createKbArticle(knex, { tenant, userId: user.user_id }, {
       title,
       articleType: 'troubleshooting',
       audience: 'internal',
