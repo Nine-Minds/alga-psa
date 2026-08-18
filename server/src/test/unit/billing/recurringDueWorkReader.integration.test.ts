@@ -248,6 +248,22 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+const engineMocks = vi.hoisted(() => ({
+  previewFixedChargeAmountsForInvoiceWindow: vi.fn(async () => new Map<string, number>()),
+}));
+
+vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  // Only the fixed-amount preview is stubbed; the rest of the engine stays real
+  // so unresolved non-contract charge reads keep working.
+  class PreviewSpyBillingEngine extends actual.BillingEngine {
+    previewFixedChargeAmountsForInvoiceWindow(...args: any[]) {
+      return engineMocks.previewFixedChargeAmountsForInvoiceWindow(...(args as []));
+    }
+  }
+  return { ...actual, BillingEngine: PreviewSpyBillingEngine };
+});
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
@@ -1194,5 +1210,75 @@ describe('recurring due-work reader', () => {
         }),
       ]),
     );
+  });
+
+  describe('fixed-amount pricing runs after pagination', () => {
+    const fixedRow = (suffix: string, windowStart: string, windowEnd: string) => ({
+      tenant: 'tenant-1',
+      record_id: `rsp-fixed-${suffix}`,
+      schedule_key: `schedule:tenant-1:client_contract_line:line-${suffix}:client:arrears`,
+      period_key: `period:${windowStart}:${windowEnd}`,
+      lifecycle_state: 'generated',
+      cadence_owner: 'client',
+      obligation_type: 'client_contract_line',
+      service_period_start: windowStart,
+      service_period_end: windowEnd,
+      invoice_window_start: windowStart,
+      invoice_window_end: windowEnd,
+      invoice_charge_detail_id: null,
+      client_id: `client-${suffix}`,
+      client_name: `Client ${suffix.toUpperCase()}`,
+      billing_cycle_id: null,
+      contract_id: `contract-${suffix}`,
+      contract_name: `Contract ${suffix}`,
+      contract_line_id: `line-${suffix}`,
+      contract_line_name: `Line ${suffix}`,
+      contract_line_type: 'Fixed',
+      client_contract_id: `cc-${suffix}`,
+    });
+
+    beforeEach(() => {
+      mocks.rowsByTable.client_billing_cycles = [];
+      mocks.rowsByTable.client_contracts = [];
+      mocks.rowsByTable.recurring_service_periods = [
+        fixedRow('a', '2025-05-01', '2025-06-01'),
+        fixedRow('b', '2025-04-01', '2025-05-01'),
+        fixedRow('c', '2025-03-01', '2025-04-01'),
+      ];
+      engineMocks.previewFixedChargeAmountsForInvoiceWindow.mockImplementation(
+        async (clientId: string) => new Map([[`line-${clientId.replace('client-', '')}`, 4500]]),
+      );
+    });
+
+    it('T121: prices only the visible page of invoice candidates', async () => {
+      const result = await getAvailableRecurringDueWork({ page: 1, pageSize: 1 });
+
+      expect(result.total).toBe(3);
+      expect(result.totalPages).toBe(3);
+      expect(result.invoiceCandidates).toHaveLength(1);
+      expect(result.invoiceCandidates[0]?.clientId).toBe('client-a');
+      expect(result.invoiceCandidates[0]?.members[0]?.amountCents).toBe(4500);
+      expect(engineMocks.previewFixedChargeAmountsForInvoiceWindow).toHaveBeenCalledTimes(1);
+      expect(engineMocks.previewFixedChargeAmountsForInvoiceWindow).toHaveBeenCalledWith(
+        'client-a',
+        '2025-05-01',
+        '2025-06-01',
+        expect.anything(),
+      );
+    });
+
+    it('T122: prices the requested page rather than the first one', async () => {
+      const result = await getAvailableRecurringDueWork({ page: 3, pageSize: 1 });
+
+      expect(result.invoiceCandidates[0]?.clientId).toBe('client-c');
+      expect(result.invoiceCandidates[0]?.members[0]?.amountCents).toBe(4500);
+      expect(engineMocks.previewFixedChargeAmountsForInvoiceWindow).toHaveBeenCalledTimes(1);
+      expect(engineMocks.previewFixedChargeAmountsForInvoiceWindow).toHaveBeenCalledWith(
+        'client-c',
+        '2025-03-01',
+        '2025-04-01',
+        expect.anything(),
+      );
+    });
   });
 });
