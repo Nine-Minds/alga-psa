@@ -46,7 +46,7 @@ function lastTwelveMonths(): { start: string; end: string } {
 }
 
 export function BillingSegmentsTab({ formatCurrency, formatDate }: BillingSegmentsTabProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
   const [period] = useState(() => lastTwelveMonths());
   const [spend, setSpend] = useState<PortalSegmentSpend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
