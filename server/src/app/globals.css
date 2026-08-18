@@ -138,6 +138,25 @@ html .radix-themes {
     background-color: rgb(var(--color-app-ground));
 }
 
+/* Loading placeholders. Hardcoded palette grays sat too dark on light cards and
+   — for the shades with no dark shim — glared on dark ones, so every skeleton
+   block reads through these two steps of the pair's own neutral ramp instead. */
+.skeleton-fill {
+    background-color: rgb(var(--color-border-200));
+}
+
+.dark .skeleton-fill {
+    background-color: rgb(var(--color-border-300));
+}
+
+.skeleton-fill-strong {
+    background-color: rgb(var(--color-border-300));
+}
+
+.dark .skeleton-fill-strong {
+    background-color: rgb(var(--color-border-400));
+}
+
 .dark .bg-white {
     background-color: rgb(var(--color-card)) !important;
 }
