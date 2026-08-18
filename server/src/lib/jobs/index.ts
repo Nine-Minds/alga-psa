@@ -163,6 +163,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<PrepaidBalanceAlertScanJobData>(PREPAID_BALANCE_ALERT_SCAN_JOB, async (job: Job<PrepaidBalanceAlertScanJobData>) => {
       await prepaidBalanceAlertScanHandler(job.data);
     });
+
     // Register expired hour blocks handler
     jobScheduler.registerJobHandler<ExpiredHourBlocksJobData>('expired-hour-blocks', async (job: Job<ExpiredHourBlocksJobData>) => {
       await expiredHourBlocksHandler(job.data);

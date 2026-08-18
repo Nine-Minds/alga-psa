@@ -563,13 +563,15 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
     scopedDb.tenantJoin(servicesQuery, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
     scopedDb.tenantJoin(servicesQuery, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
     // Removed old join to bucket_plans
-    scopedDb.tenantJoin(servicesQuery, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
+    // Weighted-burn pool: a service shows bucket info when it is a member of a
+    // line pool (or the line has a catch-all pool).
+    scopedDb.tenantJoin(servicesQuery, 'contract_line_bucket_services as pbs', 'ps.contract_line_id', 'pbs.contract_line_id', {
       type: 'left',
       on: (join) => {
-        join.andOn('ps.service_id', '=', 'psc.service_id');
+        join.andOn('pbs.service_id', '=', 'ps.service_id');
       },
     });
-    scopedDb.tenantJoin(servicesQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id', { type: 'left' });
+    scopedDb.tenantJoin(servicesQuery, 'contract_line_buckets as clb', 'pbs.bucket_id', 'clb.bucket_id', { type: 'left' });
 
     return await servicesQuery
       .where({
@@ -598,10 +600,10 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period as bucket_period', // Removed old bucket field
-        'psc.config_id', // Added config_id
-        'psbc.total_minutes as psbc_total_minutes', // Added new bucket field
-        'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
-        'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
+        'pbs.bucket_id as config_id', // Added pool id
+        'clb.total_minutes as psbc_total_minutes', // Added new bucket field
+        'clb.overage_rate as psbc_overage_rate', // Added new bucket field
+        'clb.allow_rollover as psbc_allow_rollover', // Added new bucket field
         trx.raw("'active' as status"),
         'cc.start_date',
         'cc.end_date'
@@ -622,10 +624,10 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period', // Removed old bucket field
-        'psc.config_id', // Added config_id
-        'psbc.total_minutes', // Added new bucket field
-        'psbc.overage_rate', // Added new bucket field
-        'psbc.allow_rollover', // Added new bucket field
+        'pbs.bucket_id', // Added pool id
+        'clb.total_minutes', // Added new bucket field
+        'clb.overage_rate', // Added new bucket field
+        'clb.allow_rollover', // Added new bucket field
         'cc.start_date',
         'cc.end_date'
       );

@@ -845,7 +845,8 @@
       "workflow-id",
       "workflow.event",
       "| null",
-      "Sage"
+      "Sage",
+      "×"
     ],
     "caseInsensitive": [
       "api",

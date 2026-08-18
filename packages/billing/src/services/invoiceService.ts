@@ -1074,8 +1074,13 @@ export async function persistInvoiceCharges(
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
 
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
+    // Detail rows carry a NOT NULL service_id FK, so a charge without a real
+    // service (e.g. a dormant pool's overage, whose identity lives on
+    // config_id) cannot persist a detail row — skip it rather than leak the
+    // pool's id into the service FK.
     const shouldPersistDetail =
       recurringChargeFamily !== null
+      && Boolean(charge.serviceId)
       && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
     const shouldLinkRecurringServicePeriod =

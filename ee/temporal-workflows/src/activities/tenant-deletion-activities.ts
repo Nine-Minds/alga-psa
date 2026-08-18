@@ -127,6 +127,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
+  // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
+  // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
+  // clients, so the whole group has to precede time tracking below.
+  'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
+  'hour_blocks',
+
   // Time tracking
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',
@@ -279,10 +285,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // so deliveries delete before alerts and both before client_billing_settings.
   'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
-  'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
+  // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
+  // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
+  'contract_line_bucket_services', 'contract_line_buckets',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -299,6 +308,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',

@@ -702,6 +702,211 @@ describe("computeBucketCharges", () => {
       overageQuantity: 0,
     });
   });
+
+  it("apportions pool overage per contributing service with largest-remainder rounding and per-service tax metadata", async () => {
+    const PER_SERVICE_TAX_PORTS: ChargeComputeTaxPorts = {
+      getTaxInfoFromService: (service) =>
+        service.service_id === "svc-a"
+          ? { taxRegion: "US-TESTA", isTaxable: true }
+          : service.service_id === "svc-b"
+            ? { taxRegion: "US-TESTB", isTaxable: true }
+            : { taxRegion: null, isTaxable: false },
+      getLocationTaxRegionCode: () => null,
+      getClientDefaultTaxRegionCode: () => null,
+      calculateTax: (_clientId, netAmountInCents, _date, regionCode) => ({
+        taxRate: regionCode === "US-TESTA" ? 8.25 : 5,
+        taxAmount:
+          regionCode === "US-TESTA"
+            ? Math.round(netAmountInCents * 0.0825)
+            : Math.round(netAmountInCents * 0.05),
+      }),
+    };
+
+    const result = await computeBucketCharges(
+      {
+        billingPeriod: PERIOD,
+        clientContractLine: line({ contract_line_type: "Hourly" }),
+        client: CLIENT,
+        config: {
+          config_id: "cfg-pool",
+          service_id: null,
+          service_name: "Shared pool",
+          total_minutes: 600,
+          overage_rate: 15000,
+          allow_rollover: false,
+        },
+        usageRecords: [
+          {
+            period_start: "2026-08-01",
+            period_end: "2026-08-31",
+            minutes_used: 721,
+          },
+        ],
+        contractCurrency: "USD",
+        serviceContributions: [
+          {
+            periodStart: "2026-08-01",
+            periodEnd: "2026-08-31",
+            services: [
+              { service_id: "svc-a", service_name: "Service A", tax_rate_id: "tax-a", unit_of_measure: "hour", billing_method: "hourly", weightedMinutes: 480 },
+              { service_id: "svc-b", service_name: "Service B", tax_rate_id: "tax-b", unit_of_measure: "hour", billing_method: "hourly", weightedMinutes: 240 },
+            ],
+          },
+        ],
+      },
+      PER_SERVICE_TAX_PORTS,
+    );
+
+    // 721 consumed − 600 included = 121 overage minutes = 121/60 hrs × $150 =
+    // $302.50 → the two portions carry the largest-remainder split (201.67 →
+    // 201, 100.83 → 100, remainder 1 cent to the largest fraction) and sum
+    // exactly to the pool charge.
+    expect(result.charges).toHaveLength(2);
+    const chargeA = result.charges.find((charge) => charge.serviceId === "svc-a")!;
+    const chargeB = result.charges.find((charge) => charge.serviceId === "svc-b")!;
+    expect(chargeA.total).toBe(20167);
+    expect(chargeB.total).toBe(10083);
+    expect(chargeA.total + chargeB.total).toBe(30250);
+    expect(chargeA.overageHours + chargeB.overageHours).toBeCloseTo(121 / 60, 10);
+
+    // Per-portion quantities are share-scaled and consistent: hoursUsed sums to
+    // the pool's consumed hours, and the invoice-style derivation
+    // `hoursUsed − overageHours` is non-negative and sums to the pool's
+    // included+rollover hours (so no invoice line claims the full pool).
+    expect(chargeA.hoursUsed).toBeCloseTo((721 / 60) * (2 / 3), 10);
+    expect(chargeB.hoursUsed).toBeCloseTo((721 / 60) * (1 / 3), 10);
+    expect(chargeA.hoursUsed + chargeB.hoursUsed).toBeCloseTo(721 / 60, 10);
+    const includedA = chargeA.hoursUsed - chargeA.overageHours;
+    const includedB = chargeB.hoursUsed - chargeB.overageHours;
+    expect(includedA).toBeGreaterThanOrEqual(0);
+    expect(includedB).toBeGreaterThanOrEqual(0);
+    expect(includedA).toBeCloseTo((600 / 60) * (2 / 3), 10);
+    expect(includedB).toBeCloseTo((600 / 60) * (1 / 3), 10);
+    expect(includedA + includedB).toBeCloseTo(600 / 60, 10);
+
+    // The explanation step equation holds for each portion: used − (included +
+    // rollover) = overage, all share-scaled.
+    for (const explanation of result.explanations) {
+      expect(explanation.steps[0]).toMatch(/^[0-9.]+ − \([0-9.]+ \+ [0-9.]+\) = [0-9.]+ (weighted )?hrs overage$/);
+    }
+
+    // Pool identity travels on every portion; bucket id never leaks into a
+    // service FK.
+    for (const charge of result.charges) {
+      expect(charge.config_id).toBe("cfg-pool");
+      expect(charge.service_catalog_id).not.toBe("cfg-pool");
+    }
+
+    // Each portion carries its own service's tax metadata.
+    expect(chargeA.tax_region).toBe("US-TESTA");
+    expect(chargeA.tax_amount).toBe(Math.round(20167 * 0.0825));
+    expect(chargeB.tax_region).toBe("US-TESTB");
+    expect(chargeB.tax_amount).toBe(Math.round(10083 * 0.05));
+  });
+
+  it("emits a null-service-FK single charge when contribution data is supplied but nothing contributed", async () => {
+    const result = await computeBucketCharges(
+      {
+        billingPeriod: PERIOD,
+        clientContractLine: line({ contract_line_type: "Hourly" }),
+        client: CLIENT,
+        config: {
+          config_id: "cfg-pool",
+          service_id: null,
+          service_name: "Shared pool",
+          total_minutes: 600,
+          overage_rate: 15000,
+          allow_rollover: false,
+        },
+        usageRecords: [
+          {
+            period_start: "2026-08-01",
+            period_end: "2026-08-31",
+            minutes_used: 720,
+          },
+        ],
+        contractCurrency: "USD",
+        serviceContributions: [
+          {
+            periodStart: "2026-08-01",
+            periodEnd: "2026-08-31",
+            services: [],
+          },
+        ],
+      },
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(1);
+    expect(result.charges[0].serviceId).toBeUndefined();
+    expect(result.charges[0].service_catalog_id).toBeNull();
+    expect(result.charges[0].config_id).toBe("cfg-pool");
+    expect(result.charges[0].total).toBe(30000);
+  });
+
+  it("apportions usage-bucket units so per-portion unitsUsed/includedUnits/overageUnits are share-scaled and sum to the pool truth", async () => {
+    const result = await computeBucketCharges(
+      {
+        billingPeriod: PERIOD,
+        clientContractLine: line({ contract_line_type: "Usage" }),
+        client: CLIENT,
+        config: {
+          config_id: "cfg-pool-u",
+          service_id: null,
+          service_name: "Shared transfer pool",
+          unit_of_measure: "GB",
+          billing_method: "usage",
+          total_minutes: 1000,
+          overage_rate: 20,
+          allow_rollover: false,
+        },
+        usageRecords: [
+          {
+            period_start: "2026-08-01",
+            period_end: "2026-08-31",
+            minutes_used: 1250,
+          },
+        ],
+        contractCurrency: "USD",
+        serviceContributions: [
+          {
+            periodStart: "2026-08-01",
+            periodEnd: "2026-08-31",
+            services: [
+              { service_id: "svc-a", service_name: "Service A", unit_of_measure: "GB", billing_method: "usage", weightedMinutes: 750 },
+              { service_id: "svc-b", service_name: "Service B", unit_of_measure: "GB", billing_method: "usage", weightedMinutes: 500 },
+            ],
+          },
+        ],
+      },
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(2);
+    const chargeA = result.charges.find((charge) => charge.serviceId === "svc-a")!;
+    const chargeB = result.charges.find((charge) => charge.serviceId === "svc-b")!;
+
+    // Share-scaled units: each portion reads as its own slice of the pool.
+    expect(chargeA.unitsUsed).toBeCloseTo(1250 * (3 / 5), 10);
+    expect(chargeB.unitsUsed).toBeCloseTo(1250 * (2 / 5), 10);
+    expect((chargeA.unitsUsed ?? 0) + (chargeB.unitsUsed ?? 0)).toBeCloseTo(1250, 10);
+
+    expect(chargeA.includedUnits).toBeCloseTo(1000 * (3 / 5), 10);
+    expect(chargeB.includedUnits).toBeCloseTo(1000 * (2 / 5), 10);
+    expect((chargeA.includedUnits ?? 0) + (chargeB.includedUnits ?? 0)).toBeCloseTo(1000, 10);
+
+    expect(chargeA.overageUnits).toBeCloseTo(250 * (3 / 5), 10);
+    expect(chargeB.overageUnits).toBeCloseTo(250 * (2 / 5), 10);
+    expect((chargeA.overageUnits ?? 0) + (chargeB.overageUnits ?? 0)).toBeCloseTo(250, 10);
+
+    // Invoice-style derivation unitsUsed − overageUnits = includedUnits (no
+    // rollover in this pool), non-negative, and sums to the pool's included.
+    expect((chargeA.unitsUsed ?? 0) - (chargeA.overageUnits ?? 0)).toBeCloseTo(chargeA.includedUnits ?? 0, 10);
+    expect((chargeB.unitsUsed ?? 0) - (chargeB.overageUnits ?? 0)).toBeCloseTo(chargeB.includedUnits ?? 0, 10);
+
+    // Amounts still sum exactly to the pool charge (250 units × $0.20).
+    expect(chargeA.total + chargeB.total).toBe(5000);
+  });
 });
 
 describe("computeRecurringQuantityCharges", () => {

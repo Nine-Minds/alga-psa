@@ -2324,5 +2324,47 @@
       "description": "Der Vertragssimulator ist in AlgaPSA Pro verfügbar.",
       "title": "Pro-Funktion"
     }
+  },
+  "bucketPools": {
+    "heading": "Stundenkontingente",
+    "actions": {
+      "addPool": "Kontingent hinzufügen",
+      "create": "Kontingent erstellen",
+      "cancel": "Abbrechen",
+      "remove": "Entfernen",
+      "applyRule": "Regel für Zeiten außerhalb der Geschäftszeiten anwenden"
+    },
+    "loading": "Stundenkontingente werden geladen…",
+    "empty": "Keine Stundenkontingente auf dieser Vertragslinie. Fügen Sie ein Kontingent hinzu, um vorausbezahlte Stunden aufzunehmen.",
+    "labels": {
+      "catchAll": "Alle Dienste dieser Vertragslinie",
+      "pool": "Stundenkontingent",
+      "scopeCatchAll": "Deckt alle Dienste der Vertragslinie ab (zugeordnete Dienste überschreiben den Multiplikator)",
+      "scopeMembers": "Nur zugeordnete Dienste",
+      "totalHours": "Gesamtstunden",
+      "overageRate": "Überschreitungstarif ($/Std.)",
+      "rollover": "Übertrag erlauben",
+      "afterHours": "Verbrauchsmultiplikator außerhalb der Geschäftszeiten",
+      "afterHoursMultiplier": "Multiplikator (z. B. 1,5)",
+      "schedule": "Geschäftszeitenplan",
+      "default": "Standard",
+      "members": "Zugeordnete Dienste",
+      "multiplier": "×",
+      "noMembers": "Keine Dienste zugeordnet.",
+      "selectService": "Dienst auswählen…",
+      "poolName": "Kontingentname (optional)",
+      "poolNamePlaceholder": "z. B. Standardstunden",
+      "coversAll": "Deckt alle Dienste dieser Vertragslinie ab"
+    },
+    "badges": {
+      "dormant": "keine Dienste zugeordnet — aus diesem Kontingent wird nichts verbraucht"
+    },
+    "errors": {
+      "catchAllExists": "Diese Vertragslinie hat bereits ein Sammelkontingent."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Stundenkontingente für diese Zeile",
+    "empty": "Noch keine Stundenkontingente auf dieser Zeile. Fügen Sie ein Kontingent hinzu, um vorausbezahlte Stunden einzuschließen."
   }
 }

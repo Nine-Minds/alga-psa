@@ -12,10 +12,27 @@
  * - When SLA timers should be running vs paused
  * - Elapsed business time for tickets
  * - SLA deadline calculations
+ *
+ * The classification math (isWithinBusinessHours + segmentSpanByBusinessHours)
+ * is owned by @alga-psa/shared/lib/businessHours/businessHoursSegmentation and
+ * re-exported here — see the weighted-burn plan §2 for the dependency
+ * inversion. Do NOT fork the business-hours math elsewhere.
  */
 
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
-import { IBusinessHoursScheduleWithEntries, IBusinessHoursEntry, IHoliday } from '../types';
+import { IBusinessHoursScheduleWithEntries } from '../types';
+import {
+  isWithinBusinessHours,
+  segmentSpanByBusinessHours,
+  convertToTimezone,
+  convertFromTimezone,
+  formatTimeString,
+  formatDateString,
+  isHoliday,
+  type BusinessHourSegment,
+  type BusinessHoursScheduleInput,
+} from '@alga-psa/shared/lib/businessHours/businessHoursSegmentation';
+
+export { isWithinBusinessHours, segmentSpanByBusinessHours, type BusinessHourSegment, type BusinessHoursScheduleInput };
 
 /**
  * Result of a business hours calculation
@@ -27,42 +44,6 @@ export interface BusinessTimeResult {
   isWithinBusinessHours: boolean;
   /** Next time business hours start (if not currently in business hours) */
   nextBusinessHoursStart?: Date;
-}
-
-/**
- * Check if a given date/time is within business hours for a schedule.
- *
- * @param schedule - The business hours schedule with entries and holidays
- * @param datetime - The datetime to check (in any timezone, will be converted)
- * @returns true if the datetime is within business hours
- */
-export function isWithinBusinessHours(
-  schedule: IBusinessHoursScheduleWithEntries,
-  datetime: Date
-): boolean {
-  // 24x7 schedules are always within business hours
-  if (schedule.is_24x7) {
-    return true;
-  }
-
-  // Convert to schedule timezone
-  const localTime = convertToTimezone(datetime, schedule.timezone);
-  const dayOfWeek = localTime.getDay(); // 0 = Sunday
-  const timeString = formatTimeString(localTime);
-
-  // Check if it's a holiday
-  if (isHoliday(schedule.holidays || [], localTime)) {
-    return false;
-  }
-
-  // Find the entry for this day
-  const entry = schedule.entries.find(e => e.day_of_week === dayOfWeek);
-  if (!entry || !entry.is_enabled) {
-    return false;
-  }
-
-  // Check if time is within range
-  return timeString >= entry.start_time && timeString < entry.end_time;
 }
 
 /**
@@ -271,54 +252,12 @@ export function getRemainingBusinessMinutes(
 // Helper Functions
 // ============================================================================
 
-/**
- * Check if a date is a holiday in the given list.
- */
-function isHoliday(holidays: IHoliday[], date: Date): boolean {
-  const dateStr = formatDateString(date);
-  const year = date.getFullYear();
-
-  return holidays.some(holiday => {
-    if (holiday.is_recurring) {
-      // For recurring holidays, compare only month and day
-      const holidayMonthDay = holiday.holiday_date.slice(5); // MM-DD
-      const dateMonthDay = dateStr.slice(5);
-      return holidayMonthDay === dateMonthDay;
-    }
-    return holiday.holiday_date === dateStr;
-  });
-}
-
-/**
- * Convert a Date to a different timezone.
- * Returns a new Date object whose wall-clock getters (getHours, getDay, etc.)
- * reflect the target timezone.
- */
-function convertToTimezone(date: Date, timezone: string): Date {
-  return toZonedTime(date, timezone);
-}
-
-/**
- * Convert a Date from a timezone back to UTC.
- * This is the inverse of convertToTimezone.
- */
-function convertFromTimezone(localDate: Date, timezone: string): Date {
-  return fromZonedTime(localDate, timezone);
-}
-
-/**
- * Format time as HH:MM string (24-hour format).
- */
-function formatTimeString(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-/**
- * Format date as YYYY-MM-DD string.
- */
-function formatDateString(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+// The classification helpers (isHoliday, convertToTimezone, convertFromTimezone,
+// formatTimeString, formatDateString) are imported from
+// @alga-psa/shared/lib/businessHours/businessHoursSegmentation above — the
+// canonical home of the business-hours math (see file header). They were
+// previously defined locally; removing the local copies is what keeps a single
+// source of truth.
 
 /**
  * Format remaining time as a human-readable string.

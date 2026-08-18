@@ -2545,6 +2545,29 @@
           "updateContact": "Failed to update default contact",
           "updateAutoSync": "Failed to update auto-sync setting"
         }
+      },
+      "deviceSync": {
+        "title": "Scheduled device sync",
+        "description": "Refresh this device inventory on a schedule instead of waiting for someone to run a full sync. Every run calls the provider API, and for some providers an incremental run still reads the whole device list, so a shorter interval costs proportionally more API calls.",
+        "enabledLabel": "Sync devices on a schedule",
+        "intervalLabel": "Run every (minutes)",
+        "intervalHelp": "Choose between {{min}} and {{max}} minutes. A shorter interval keeps device data fresher and calls the provider API more often.",
+        "intervalInvalid": "Enter a whole number of minutes between {{min}} and {{max}}.",
+        "lastScheduledRun": "Last scheduled run: {{time}}",
+        "lastScheduledRunNever": "The scheduled sync has not run yet.",
+        "lastAnySync": "Last sync of any kind, including manual full syncs: {{time}}",
+        "lastAnySyncNever": "No device sync of any kind has run yet.",
+        "lastSyncError": "The last sync failed: {{error}}",
+        "actions": {
+          "save": "Save sync schedule",
+          "saving": "Saving..."
+        },
+        "success": {
+          "saved": "Device sync schedule saved. The scheduler applies it within a few minutes."
+        },
+        "errors": {
+          "saveFailed": "Unable to save the device sync schedule."
+        }
       }
     },
     "sso": {

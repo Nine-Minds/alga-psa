@@ -982,17 +982,16 @@ describe('BillingEngine', () => {
         is_tax_exempt: false,
       };
 
-      const bucketConfigRow = {
-        config_id: 'bucket-config-1',
+      const bucketPoolRow = {
+        bucket_id: 'bucket-config-1',
         tenant: mockTenant,
-        service_id: 'service_bucket',
         contract_line_id: 'test_contract_line_id',
-        configuration_type: 'Bucket',
         total_minutes: 2400,
         overage_rate: 50,
         allow_rollover: false,
-        service_name: 'Emerald City Consulting Hours',
-        tax_rate_id: 'tax-rate-1'
+        bucket_name: null,
+        after_hours_multiplier: null,
+        covers_all_services: false,
       };
 
       const bucketUsageRows = [
@@ -1001,6 +1000,9 @@ describe('BillingEngine', () => {
           client_id: mockClientId,
           contract_line_id: 'test_contract_line_id',
           service_catalog_id: 'service_bucket',
+          bucket_id: 'bucket-config-1',
+          period_start: '2023-01-01',
+          period_end: '2023-01-31',
           minutes_used: 45 * 60,
           overage_minutes: 5 * 60
         }
@@ -1008,9 +1010,9 @@ describe('BillingEngine', () => {
 
       const baseKnex = (billingEngine as any).knex;
 
-      const configurationBuilder = buildChainableQuery({
-        selectResult: [bucketConfigRow],
-        thenResult: [bucketConfigRow]
+      const poolBuilder = buildChainableQuery({
+        selectResult: [bucketPoolRow],
+        thenResult: [bucketPoolRow]
       });
 
       const clientsBuilder = buildChainableQuery({
@@ -1024,6 +1026,33 @@ describe('BillingEngine', () => {
         thenResult: bucketUsageRows
       });
 
+      const membersBuilder = buildChainableQuery({
+        selectResult: [{ service_id: 'service_bucket', service_name: 'Emerald City Consulting Hours', tax_rate_id: 'tax-rate-1', unit_of_measure: 'hour', billing_method: 'hourly' }],
+        thenResult: [{ service_id: 'service_bucket', service_name: 'Emerald City Consulting Hours', tax_rate_id: 'tax-rate-1', unit_of_measure: 'hour', billing_method: 'hourly' }]
+      });
+
+      const multipliersBuilder = buildChainableQuery({
+        selectResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }],
+        thenResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }]
+      });
+
+      // The engine attributes overage by actual contribution: a real 60-minute
+      // entry for the member service, inside the period.
+      const timeEntriesBuilder = buildChainableQuery({
+        selectResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2023-01-05T10:00:00Z'),
+          end_time: new Date('2023-01-05T11:00:00Z'),
+          billable_duration: 60
+        }],
+        thenResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2023-01-05T10:00:00Z'),
+          end_time: new Date('2023-01-05T11:00:00Z'),
+          billable_duration: 60
+        }]
+      });
+
       const taxRatesBuilder = buildChainableQuery({
         selectResult: [],
         firstResult: { region_code: 'US-CA' },
@@ -1031,14 +1060,23 @@ describe('BillingEngine', () => {
       });
 
       const mockKnex = vi.fn((tableName: string) => {
-        if (tableName.startsWith('contract_line_service_configuration as clsc')) {
-          return configurationBuilder;
+        if (tableName.startsWith('contract_line_buckets as clb')) {
+          return poolBuilder;
         }
         if (tableName === 'clients') {
           return clientsBuilder;
         }
         if (tableName === 'bucket_usage') {
           return bucketUsageBuilder;
+        }
+        if (tableName.startsWith('contract_line_bucket_services as clbs')) {
+          return membersBuilder;
+        }
+        if (tableName === 'contract_line_bucket_services') {
+          return multipliersBuilder;
+        }
+        if (tableName === 'time_entries') {
+          return timeEntriesBuilder;
         }
         if (tableName === 'tax_rates') {
           return taxRatesBuilder;
@@ -1087,7 +1125,7 @@ describe('BillingEngine', () => {
         }
       ]);
 
-      expect(mockKnex).toHaveBeenCalledWith('contract_line_service_configuration as clsc');
+      expect(mockKnex).toHaveBeenCalledWith('contract_line_buckets as clb');
       expect(mockKnex).toHaveBeenCalledWith('clients');
       expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
 
@@ -1109,17 +1147,16 @@ describe('BillingEngine', () => {
         is_tax_exempt: false,
       };
 
-      const bucketConfigRow = {
-        config_id: 'bucket-config-1',
+      const bucketPoolRow = {
+        bucket_id: 'bucket-config-1',
         tenant: mockTenant,
-        service_id: 'service_bucket',
         contract_line_id: 'test_contract_line_id',
-        configuration_type: 'Bucket',
         total_minutes: 2400,
         overage_rate: 50,
         allow_rollover: false,
-        service_name: 'Emerald City Consulting Hours',
-        tax_rate_id: 'tax-rate-1'
+        bucket_name: null,
+        after_hours_multiplier: null,
+        covers_all_services: false,
       };
 
       const bucketUsageRows = [
@@ -1128,6 +1165,7 @@ describe('BillingEngine', () => {
           client_id: mockClientId,
           contract_line_id: 'test_contract_line_id',
           service_catalog_id: 'service_bucket',
+          bucket_id: 'bucket-config-1',
           period_start: '2025-01-01',
           period_end: '2025-01-07',
           minutes_used: 45 * 60,
@@ -1138,6 +1176,7 @@ describe('BillingEngine', () => {
           client_id: mockClientId,
           contract_line_id: 'test_contract_line_id',
           service_catalog_id: 'service_bucket',
+          bucket_id: 'bucket-config-1',
           period_start: '2025-01-08',
           period_end: '2025-01-14',
           minutes_used: 42 * 60,
@@ -1147,9 +1186,9 @@ describe('BillingEngine', () => {
 
       const baseKnex = (billingEngine as any).knex;
 
-      const configurationBuilder = buildChainableQuery({
-        selectResult: [bucketConfigRow],
-        thenResult: [bucketConfigRow]
+      const poolBuilder = buildChainableQuery({
+        selectResult: [bucketPoolRow],
+        thenResult: [bucketPoolRow]
       });
 
       const clientsBuilder = buildChainableQuery({
@@ -1163,6 +1202,33 @@ describe('BillingEngine', () => {
         thenResult: bucketUsageRows
       });
 
+      const membersBuilder = buildChainableQuery({
+        selectResult: [{ service_id: 'service_bucket', service_name: 'Emerald City Consulting Hours', tax_rate_id: 'tax-rate-1', unit_of_measure: 'hour', billing_method: 'hourly' }],
+        thenResult: [{ service_id: 'service_bucket', service_name: 'Emerald City Consulting Hours', tax_rate_id: 'tax-rate-1', unit_of_measure: 'hour', billing_method: 'hourly' }]
+      });
+
+      const multipliersBuilder = buildChainableQuery({
+        selectResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }],
+        thenResult: [{ service_id: 'service_bucket', burn_multiplier: 1 }]
+      });
+
+      // The engine attributes overage by actual contribution: a real 60-minute
+      // entry for the member service, inside both periods.
+      const timeEntriesBuilder = buildChainableQuery({
+        selectResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2025-01-05T10:00:00Z'),
+          end_time: new Date('2025-01-05T11:00:00Z'),
+          billable_duration: 60
+        }],
+        thenResult: [{
+          service_id: 'service_bucket',
+          start_time: new Date('2025-01-05T10:00:00Z'),
+          end_time: new Date('2025-01-05T11:00:00Z'),
+          billable_duration: 60
+        }]
+      });
+
       const taxRatesBuilder = buildChainableQuery({
         selectResult: [],
         firstResult: { region_code: 'US-CA' },
@@ -1170,14 +1236,23 @@ describe('BillingEngine', () => {
       });
 
       const mockKnex = vi.fn((tableName: string) => {
-        if (tableName.startsWith('contract_line_service_configuration as clsc')) {
-          return configurationBuilder;
+        if (tableName.startsWith('contract_line_buckets as clb')) {
+          return poolBuilder;
         }
         if (tableName === 'clients') {
           return clientsBuilder;
         }
         if (tableName === 'bucket_usage') {
           return bucketUsageBuilder;
+        }
+        if (tableName.startsWith('contract_line_bucket_services as clbs')) {
+          return membersBuilder;
+        }
+        if (tableName === 'contract_line_bucket_services') {
+          return multipliersBuilder;
+        }
+        if (tableName === 'time_entries') {
+          return timeEntriesBuilder;
         }
         if (tableName === 'tax_rates') {
           return taxRatesBuilder;

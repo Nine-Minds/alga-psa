@@ -217,21 +217,10 @@ export async function loadBucketPeriods(
 ): Promise<RawBucketPeriodRow[]> {
   const db = tenantDb(conn, tenant);
   const query = db.table('bucket_usage as bu');
-  db.tenantJoin(query, 'contract_lines as cl', 'bu.contract_line_id', 'cl.contract_line_id');
+  // Weighted-burn pool keying: usage rows point at the pool.
+  db.tenantJoin(query, 'contract_line_buckets as clb', 'bu.bucket_id', 'clb.bucket_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'clb.contract_line_id', 'cl.contract_line_id');
   db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id');
-  db.tenantJoin(
-    query,
-    'contract_line_service_configuration as clsc',
-    'bu.contract_line_id',
-    'clsc.contract_line_id',
-    {
-      on: (join) => {
-        join.andOn('bu.service_catalog_id', '=', 'clsc.service_id');
-        join.andOn('clsc.configuration_type', '=', conn.raw('?', ['Bucket']));
-      },
-    },
-  );
-  db.tenantJoin(query, 'contract_line_service_bucket_config as bc', 'clsc.config_id', 'bc.config_id');
   db.tenantJoin(query, 'service_catalog as sc', 'bu.service_catalog_id', 'sc.service_id');
 
   const rows = await query.select(
@@ -243,8 +232,8 @@ export async function loadBucketPeriods(
     'bu.period_end',
     'bu.minutes_used',
     'bu.rolled_over_minutes',
-    'bc.total_minutes',
-    'bc.allow_rollover',
+    'clb.total_minutes',
+    'clb.allow_rollover',
     'ct.contract_id',
     'cl.contract_line_name',
     'cl.custom_rate',

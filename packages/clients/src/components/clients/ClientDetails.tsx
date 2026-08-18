@@ -236,7 +236,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails, renderHourBlocks } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1448,9 +1448,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
-          {hourBlocksFlag.enabled && renderHourBlocks && (
-            renderHourBlocks({ clientId: client.client_id, currencyCode: client.default_currency_code ?? 'USD' })
-          )}
+          {hourBlocksFlag.enabled && renderHourBlocksSection?.({
+            clientId: client.client_id,
+            currencyCode: client.default_currency_code ?? 'USD',
+          })}
         </div>
       )
     },

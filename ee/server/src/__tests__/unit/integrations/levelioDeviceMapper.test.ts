@@ -184,4 +184,61 @@ describe('mapLevelIoDeviceToSnapshot', () => {
     expect(snapshot.status).toBe('inactive');
     expect(snapshot.extension?.uptimeSeconds).toBeNull();
   });
+
+  /**
+   * pending_patches was permanently null on every Level.io asset in production
+   * because the mapper never emitted it. Of the five columns in that state,
+   * this is the only one Level.io actually exposes — agent version, WAN IP and
+   * failed-patch counts have no field in the API at all, so those stay null
+   * legitimately (recorded in the plan scratchpad).
+   */
+  describe('pending patch counts', () => {
+    it('emits pendingPatches so the column stops being null', () => {
+      const snapshot = mapLevelIoDeviceToSnapshot({
+        integrationId: 'int-1',
+        device: makeDevice({}),
+        scopeId: 'g-root',
+        pendingOsPatches: 4,
+      });
+
+      expect(snapshot.extension?.pendingPatches).toBe(4);
+    });
+
+    it('reports the same total for both counts until categories can be split', () => {
+      // Level.io types update.category as free text; splitting OS from software
+      // updates would be a guess, and a wrong split looks precise.
+      const snapshot = mapLevelIoDeviceToSnapshot({
+        integrationId: 'int-1',
+        device: makeDevice({}),
+        scopeId: 'g-root',
+        pendingOsPatches: 7,
+      });
+
+      expect(snapshot.extension?.pendingPatches).toBe(snapshot.extension?.pendingOsPatches);
+    });
+
+    it('prefers an explicit pendingPatches when the caller can distinguish them', () => {
+      const snapshot = mapLevelIoDeviceToSnapshot({
+        integrationId: 'int-1',
+        device: makeDevice({}),
+        scopeId: 'g-root',
+        pendingOsPatches: 2,
+        pendingPatches: 9,
+      });
+
+      expect(snapshot.extension?.pendingPatches).toBe(9);
+      expect(snapshot.extension?.pendingOsPatches).toBe(2);
+    });
+
+    it('leaves both null when no count was supplied', () => {
+      const snapshot = mapLevelIoDeviceToSnapshot({
+        integrationId: 'int-1',
+        device: makeDevice({}),
+        scopeId: 'g-root',
+      });
+
+      expect(snapshot.extension?.pendingPatches).toBeNull();
+      expect(snapshot.extension?.pendingOsPatches).toBeNull();
+    });
+  });
 });
