@@ -331,7 +331,7 @@
     },
     "address": {
       "title": "Dirección de la empresa",
-      "description": "Precargada con sus datos de facturación: revísela y corríjala si es necesario. Esta dirección aparece en sus facturas y presupuestos.",
+      "description": "Precargada con sus datos de facturación: revísela y corríjala si es necesario. Esta dirección aparece en sus facturas y cotizaciones.",
       "fields": {
         "addressLine1": {
           "label": "Dirección línea 1",

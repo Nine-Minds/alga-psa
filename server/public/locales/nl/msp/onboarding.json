@@ -339,7 +339,7 @@
         },
         "addressLine2": {
           "label": "Adresregel 2",
-          "placeholder": "Suite 100"
+          "placeholder": "3e verdieping"
         },
         "city": {
           "label": "Plaats"
