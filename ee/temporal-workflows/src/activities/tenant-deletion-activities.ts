@@ -285,7 +285,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // so deliveries delete before alerts and both before client_billing_settings.
   'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
-  'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
+  // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
+  // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',

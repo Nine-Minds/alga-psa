@@ -38,7 +38,7 @@
  *     normalizeEligibleServiceTypeIds() maps null/undefined to null.
  *
  * So the constraints only restated invariants the application already keeps.
- * 20260818090000_drop_credit_restriction_mode_constraints.cjs removes them from
+ * 20260817130000_drop_credit_restriction_mode_constraints.cjs removes them from
  * databases that installed them before this migration was changed.
  */
 
