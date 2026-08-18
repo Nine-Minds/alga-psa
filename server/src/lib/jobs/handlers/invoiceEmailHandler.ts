@@ -274,10 +274,12 @@ export class InvoiceEmailHandler {
             // Get tenant company name for email template
             const companyName = await getTenantCompanyName(tenantId);
 
-            // Send email using the new email service
+            // Send email using the new email service. The raw invoice row
+            // carries every column the template reads; the view-model type
+            // names them individually, which an index signature cannot satisfy.
             const success = await emailService.sendInvoiceEmail(
               {
-                ...invoice,
+                ...(invoice as unknown as import('server/src/interfaces/invoice.interfaces').InvoiceViewModel),
                 recipientEmail,
                 tenantId,
                 client: {
