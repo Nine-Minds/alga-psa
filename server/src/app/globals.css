@@ -140,21 +140,15 @@ html .radix-themes {
 
 /* Loading placeholders. Hardcoded palette grays sat too dark on light cards and
    — for the shades with no dark shim — glared on dark ones, so every skeleton
-   block reads through these two steps of the pair's own neutral ramp instead. */
+   block reads through a token instead. The token follows the pair's neutral ramp
+   unless the pair says otherwise (high contrast would otherwise pulse in solid
+   black and white). */
 .skeleton-fill {
-    background-color: rgb(var(--color-border-200));
-}
-
-.dark .skeleton-fill {
-    background-color: rgb(var(--color-border-300));
+    background-color: rgb(var(--color-skeleton));
 }
 
 .skeleton-fill-strong {
-    background-color: rgb(var(--color-border-300));
-}
-
-.dark .skeleton-fill-strong {
-    background-color: rgb(var(--color-border-400));
+    background-color: rgb(var(--color-skeleton-strong));
 }
 
 .dark .bg-white {
@@ -409,6 +403,9 @@ html.dark {
     --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
     /* Shell ground: the page itself, so cards read as the lightest large surface. */
     --color-app-ground: var(--color-background);
+    /* Loading placeholders, one step above the card so they read without glaring. */
+    --color-skeleton: var(--color-border-300);
+    --color-skeleton-strong: var(--color-border-400);
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -571,6 +568,9 @@ html.light {
     --color-card: 255 255 255;
     /* Shell ground: the neutral step the shell has always worn under white cards. */
     --color-app-ground: var(--color-border-100);
+    /* Loading placeholders, one step below the border so they read as a fill. */
+    --color-skeleton: var(--color-border-200);
+    --color-skeleton-strong: var(--color-border-300);
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -1976,6 +1976,10 @@ html.light[data-theme-pair="high-contrast"] {
     --color-table-status-approved: 255 255 255;
     --color-table-status-warning: 255 255 255;
 
+    /* Achromatic, but not the solid black the emphasized borders use. */
+    --color-skeleton: 212 212 212;
+    --color-skeleton-strong: 163 163 163;
+
     /* Sidebar Colors */
     --color-sidebar-bg: 0 0 0;
     --color-sidebar-text: 255 255 255;
@@ -2106,6 +2110,10 @@ html.dark[data-theme-pair="high-contrast"] {
     --color-table-selected: 46 46 46;
     --color-table-status-approved: 0 0 0;
     --color-table-status-warning: 0 0 0;
+
+    /* Achromatic, but not the solid white the emphasized borders use. */
+    --color-skeleton: 64 64 64;
+    --color-skeleton-strong: 82 82 82;
 
     /* Sidebar Colors */
     --color-sidebar-bg: 0 0 0;
