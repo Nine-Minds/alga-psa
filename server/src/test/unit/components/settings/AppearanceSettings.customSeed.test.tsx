@@ -126,10 +126,54 @@ describe('AppearanceSettings custom theme seeding', () => {
 
     await waitFor(() => expect(swatch('light', 'primary')).toBe(CUSTOM_THEME_PRESETS.cappuccino.light.primary));
     expect(byAutomationId('custom-theme-seeded-from')?.textContent).toContain('Cappuccino');
+    // Picking a pair only previews it.
+    expect(updateTenantThemeAction).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Apply to everyone' }));
+
     // Pair changes never ship unsaved editor colors to the server.
-    expect(updateTenantThemeAction).toHaveBeenCalledWith(
+    await waitFor(() => expect(updateTenantThemeAction).toHaveBeenCalledWith(
       expect.objectContaining({ pairId: 'cappuccino' }),
-    );
+    ));
     expect(updateTenantThemeAction.mock.calls[0][0]).not.toHaveProperty('customTheme');
+  });
+
+  // Picking a pair used to persist on click, so an admin who only wanted to look
+  // had already changed it for everyone.
+  it('previews a pair on the whole app but persists nothing until it is applied', async () => {
+    getTenantThemeAction.mockResolvedValue({ pairId: 'forest', customTheme: null });
+    await renderAppearance();
+
+    expect(byAutomationId('appearance-unsaved-bar')).toBeNull();
+
+    await userEvent.click(byAutomationId('theme-pair-vice')!);
+
+    expect(document.documentElement.getAttribute('data-theme-pair')).toBe('vice');
+    expect(byAutomationId('appearance-unsaved-bar')).toBeTruthy();
+    expect(updateTenantThemeAction).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => expect(document.documentElement.getAttribute('data-theme-pair')).toBe('forest'));
+    expect(byAutomationId('appearance-unsaved-bar')).toBeNull();
+    expect(updateTenantThemeAction).not.toHaveBeenCalled();
+  });
+
+  it('previews the custom pair and saves its colors on apply', async () => {
+    getTenantThemeAction.mockResolvedValue({ pairId: 'forest', customTheme: null });
+    await renderAppearance();
+
+    await userEvent.click(byAutomationId('theme-pair-custom')!);
+    expect(document.documentElement.getAttribute('data-theme-pair')).toBe('custom');
+    // The preview needs real CSS for the custom pair, which no stylesheet ships.
+    expect(document.getElementById('preview-tenant-theme-styles')?.textContent)
+      .toContain('html.dark[data-theme-pair="custom"]');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Apply to everyone' }));
+
+    await waitFor(() => expect(updateTenantThemeAction).toHaveBeenCalled());
+    const payload = updateTenantThemeAction.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload.pairId).toBe('custom');
+    expect(payload).toHaveProperty('customTheme');
   });
 });

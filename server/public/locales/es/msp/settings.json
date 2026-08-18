@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "Alto contraste",
         "description": "Solo blanco y negro, con bordes acentuados. Solo los colores de estado conservan su tono."
+      },
+      "custom": {
+        "label": "Personalizado",
+        "description": "Sus propios colores, editados abajo."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Elija un {{foreground}} más claro o un {{background}} más oscuro.",
         "darken": "Elija un {{foreground}} más oscuro o un {{background}} más claro."
+      },
+      "mock": {
+        "caption": "Señale un color de abajo para ver qué parte de la aplicación pinta.",
+        "showing": "Resaltado: {{token}}",
+        "nav": "Inicio",
+        "navActive": "Tickets",
+        "navMuted": "Informes",
+        "headerTitle": "Tickets",
+        "cardTitle": "Impresora sin conexión en recepción",
+        "cardBody": "Asignado a Dana Reyes",
+        "cardMuted": "Actualizado hace 2 horas",
+        "primaryAction": "Guardar",
+        "secondaryAction": "Asignar",
+        "ghostAction": "Cancelar",
+        "surface": "Actividad reciente"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "No se pudieron cargar los ajustes de apariencia",
       "saved": "Apariencia actualizada",
-      "saveFailed": "No se pudieron guardar los ajustes de apariencia"
+      "saveFailed": "No se pudieron guardar los ajustes de apariencia",
+      "discarded": "Vista previa descartada"
+    },
+    "unsaved": {
+      "notice": "Está viendo una vista previa de un tema sin guardar. El resto conserva el tema guardado hasta que lo aplique.",
+      "save": "Aplicar para todos",
+      "discard": "Descartar"
     }
   },
   "mspLanguage": {

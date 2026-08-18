@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "Hoher Kontrast",
         "description": "Nur Schwarz und Weiß mit betonten Rahmen. Nur die Statusfarben behalten ihren Farbton."
+      },
+      "custom": {
+        "label": "Benutzerdefiniert",
+        "description": "Ihre eigenen Farben, unten bearbeitet."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Wählen Sie ein helleres {{foreground}} oder ein dunkleres {{background}}.",
         "darken": "Wählen Sie ein dunkleres {{foreground}} oder ein helleres {{background}}."
+      },
+      "mock": {
+        "caption": "Zeigen Sie unten auf eine Farbe, um zu sehen, welchen Teil der App sie einfärbt.",
+        "showing": "Hervorgehoben: {{token}}",
+        "nav": "Start",
+        "navActive": "Tickets",
+        "navMuted": "Berichte",
+        "headerTitle": "Tickets",
+        "cardTitle": "Drucker am Empfang offline",
+        "cardBody": "Zugewiesen an Dana Reyes",
+        "cardMuted": "Vor 2 Stunden aktualisiert",
+        "primaryAction": "Speichern",
+        "secondaryAction": "Zuweisen",
+        "ghostAction": "Abbrechen",
+        "surface": "Letzte Aktivität"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "Einstellungen zum Erscheinungsbild konnten nicht geladen werden",
       "saved": "Erscheinungsbild aktualisiert",
-      "saveFailed": "Einstellungen zum Erscheinungsbild konnten nicht gespeichert werden"
+      "saveFailed": "Einstellungen zum Erscheinungsbild konnten nicht gespeichert werden",
+      "discarded": "Vorschau verworfen"
+    },
+    "unsaved": {
+      "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
+      "save": "Für alle übernehmen",
+      "discard": "Verwerfen"
     }
   },
   "mspLanguage": {

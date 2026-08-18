@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "High contrast",
         "description": "Black and white only, with emphasized borders. Just the status colors keep their hue."
+      },
+      "custom": {
+        "label": "Custom",
+        "description": "Your own colors, edited below."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Pick a lighter {{foreground}} or a darker {{background}}.",
         "darken": "Pick a darker {{foreground}} or a lighter {{background}}."
+      },
+      "mock": {
+        "caption": "Point at a color below to see which part of the app it paints.",
+        "showing": "Highlighted: {{token}}",
+        "nav": "Home",
+        "navActive": "Tickets",
+        "navMuted": "Reports",
+        "headerTitle": "Tickets",
+        "cardTitle": "Printer offline at the front desk",
+        "cardBody": "Assigned to Dana Reyes",
+        "cardMuted": "Updated 2 hours ago",
+        "primaryAction": "Save",
+        "secondaryAction": "Assign",
+        "ghostAction": "Cancel",
+        "surface": "Recent activity"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "Failed to load appearance settings",
       "saved": "Appearance updated",
-      "saveFailed": "Failed to save appearance settings"
+      "saveFailed": "Failed to save appearance settings",
+      "discarded": "Preview discarded"
+    },
+    "unsaved": {
+      "notice": "You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.",
+      "save": "Apply to everyone",
+      "discard": "Discard"
     }
   },
   "mspLanguage": {

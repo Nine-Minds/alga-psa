@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "11111",
         "description": "11111"
+      },
+      "custom": {
+        "label": "11111",
+        "description": "11111"
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "11111 {{foreground}} 11111 {{background}} 11111",
         "darken": "11111 {{foreground}} 11111 {{background}} 11111"
+      },
+      "mock": {
+        "caption": "11111",
+        "showing": "11111 {{token}} 11111",
+        "nav": "11111",
+        "navActive": "11111",
+        "navMuted": "11111",
+        "headerTitle": "11111",
+        "cardTitle": "11111",
+        "cardBody": "11111",
+        "cardMuted": "11111",
+        "primaryAction": "11111",
+        "secondaryAction": "11111",
+        "ghostAction": "11111",
+        "surface": "11111"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "11111",
       "saved": "11111",
-      "saveFailed": "11111"
+      "saveFailed": "11111",
+      "discarded": "11111"
+    },
+    "unsaved": {
+      "notice": "11111",
+      "save": "11111",
+      "discard": "11111"
     }
   },
   "mspLanguage": {

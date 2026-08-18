@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "Contraste élevé",
         "description": "Uniquement du noir et blanc, avec des bordures accentuées. Seules les couleurs de statut gardent leur teinte."
+      },
+      "custom": {
+        "label": "Personnalisé",
+        "description": "Vos propres couleurs, modifiées ci-dessous."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Choisissez un {{foreground}} plus clair ou un {{background}} plus sombre.",
         "darken": "Choisissez un {{foreground}} plus sombre ou un {{background}} plus clair."
+      },
+      "mock": {
+        "caption": "Pointez une couleur ci-dessous pour voir quelle partie de l’application elle colore.",
+        "showing": "Mis en évidence : {{token}}",
+        "nav": "Accueil",
+        "navActive": "Tickets",
+        "navMuted": "Rapports",
+        "headerTitle": "Tickets",
+        "cardTitle": "Imprimante hors ligne à l’accueil",
+        "cardBody": "Attribué à Dana Reyes",
+        "cardMuted": "Mis à jour il y a 2 heures",
+        "primaryAction": "Enregistrer",
+        "secondaryAction": "Attribuer",
+        "ghostAction": "Annuler",
+        "surface": "Activité récente"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "Impossible de charger les paramètres d’apparence",
       "saved": "Apparence mise à jour",
-      "saveFailed": "Impossible d’enregistrer les paramètres d’apparence"
+      "saveFailed": "Impossible d’enregistrer les paramètres d’apparence",
+      "discarded": "Aperçu abandonné"
+    },
+    "unsaved": {
+      "notice": "Vous prévisualisez un thème non enregistré. Les autres gardent le thème enregistré jusqu’à ce que vous l’appliquiez.",
+      "save": "Appliquer pour tous",
+      "discard": "Abandonner"
     }
   },
   "mspLanguage": {

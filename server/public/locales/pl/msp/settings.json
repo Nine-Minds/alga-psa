@@ -1344,6 +1344,10 @@
       "highContrast": {
         "label": "Wysoki kontrast",
         "description": "Tylko czerń i biel z wyraźnymi obramowaniami. Tylko kolory statusów zachowują swoją barwę."
+      },
+      "custom": {
+        "label": "Własny",
+        "description": "Twoje własne kolory, edytowane poniżej."
       }
     },
     "custom": {
@@ -1383,6 +1387,21 @@
       "contrastHints": {
         "lighten": "Wybierz jaśniejszy {{foreground}} lub ciemniejszy {{background}}.",
         "darken": "Wybierz ciemniejszy {{foreground}} lub jaśniejszy {{background}}."
+      },
+      "mock": {
+        "caption": "Wskaż kolor poniżej, aby zobaczyć, którą część aplikacji maluje.",
+        "showing": "Wyróżnione: {{token}}",
+        "nav": "Start",
+        "navActive": "Zgłoszenia",
+        "navMuted": "Raporty",
+        "headerTitle": "Zgłoszenia",
+        "cardTitle": "Drukarka w recepcji offline",
+        "cardBody": "Przypisano do Dana Reyes",
+        "cardMuted": "Zaktualizowano 2 godziny temu",
+        "primaryAction": "Zapisz",
+        "secondaryAction": "Przypisz",
+        "ghostAction": "Anuluj",
+        "surface": "Ostatnia aktywność"
       }
     },
     "whiteLabel": {
@@ -1401,7 +1420,13 @@
     "messages": {
       "loadFailed": "Nie udało się wczytać ustawień wyglądu",
       "saved": "Zaktualizowano wygląd",
-      "saveFailed": "Nie udało się zapisać ustawień wyglądu"
+      "saveFailed": "Nie udało się zapisać ustawień wyglądu",
+      "discarded": "Podgląd odrzucony"
+    },
+    "unsaved": {
+      "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
+      "save": "Zastosuj dla wszystkich",
+      "discard": "Odrzuć"
     }
   },
   "mspLanguage": {

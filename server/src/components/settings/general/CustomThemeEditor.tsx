@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -11,7 +11,7 @@ import {
   type CustomThemeTokenKey,
   type CustomThemeTokens,
 } from '@alga-psa/tenancy/lib/customTheme';
-import ThemePairPreview from './ThemePairPreview';
+import CustomThemeMock from './CustomThemeMock';
 
 const TOKEN_FALLBACK_LABELS: Record<CustomThemeTokenKey, string> = {
   background: 'Page background',
@@ -51,6 +51,9 @@ export function CustomThemeEditor({
 }: CustomThemeEditorProps) {
   const { t } = useTranslation('msp/settings');
   const tokens = theme[mode];
+  // Which token the mock and the color list are pointing at, so it is obvious
+  // which surface a color paints before it is changed.
+  const [highlight, setHighlight] = useState<CustomThemeTokenKey | null>(null);
 
   const colorName = (key: CustomThemeContrastForeground) =>
     key === 'buttonLabel'
@@ -95,22 +98,29 @@ export function CustomThemeEditor({
         ))}
       </div>
 
-      <div className="max-w-sm">
-        <ThemePairPreview
-          swatch={{
-            background: tokens.background,
-            card: tokens.card,
-            text: tokens.textPrimary,
-            primary: tokens.primary,
-            sidebar: tokens.sidebarBg,
-          }}
-          label={t('appearance.custom.previewAlt', { defaultValue: 'Custom theme preview' })}
-        />
+      <div>
+        <CustomThemeMock tokens={tokens} highlight={highlight} onHighlight={setHighlight} />
+        <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]" data-automation-id="custom-theme-mock-caption">
+          {highlight
+            ? t('appearance.custom.mock.showing', {
+                defaultValue: 'Highlighted: {{token}}',
+                token: colorName(highlight),
+              })
+            : t('appearance.custom.mock.caption', {
+                defaultValue: 'Point at a color below to see which part of the app it paints.',
+              })}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {CUSTOM_THEME_TOKEN_KEYS.map((key) => (
-          <div key={key}>
+          <div
+            key={key}
+            onMouseEnter={() => setHighlight(key)}
+            onMouseLeave={() => setHighlight(null)}
+            onFocus={() => setHighlight(key)}
+            onBlur={() => setHighlight(null)}
+          >
             <label className="mb-1 block text-xs font-medium text-[rgb(var(--color-text-600))]">
               {t(`appearance.custom.tokens.${key}`, { defaultValue: TOKEN_FALLBACK_LABELS[key] })}
             </label>
@@ -123,7 +133,11 @@ export function CustomThemeEditor({
                 <button
                   type="button"
                   disabled={disabled}
-                  className="flex w-full items-center gap-2 rounded-md border border-[rgb(var(--color-border-400))] px-3 py-2 transition-colors"
+                  className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 transition-colors ${
+                    highlight === key
+                      ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))]'
+                      : 'border-[rgb(var(--color-border-400))]'
+                  }`}
                   data-automation-id={`custom-theme-${mode}-${key}`}
                 >
                   <span

@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "Contrasto elevato",
         "description": "Solo bianco e nero, con bordi accentuati. Solo i colori di stato mantengono la loro tonalità."
+      },
+      "custom": {
+        "label": "Personalizzato",
+        "description": "I tuoi colori, modificati qui sotto."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Scegli un {{foreground}} più chiaro o un {{background}} più scuro.",
         "darken": "Scegli un {{foreground}} più scuro o un {{background}} più chiaro."
+      },
+      "mock": {
+        "caption": "Punta un colore qui sotto per vedere quale parte dell’app colora.",
+        "showing": "Evidenziato: {{token}}",
+        "nav": "Pagina iniziale",
+        "navActive": "Ticket",
+        "navMuted": "Report",
+        "headerTitle": "Ticket",
+        "cardTitle": "Stampante offline alla reception",
+        "cardBody": "Assegnato a Dana Reyes",
+        "cardMuted": "Aggiornato 2 ore fa",
+        "primaryAction": "Salva",
+        "secondaryAction": "Assegna",
+        "ghostAction": "Annulla",
+        "surface": "Attività recente"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "Impossibile caricare le impostazioni di aspetto",
       "saved": "Aspetto aggiornato",
-      "saveFailed": "Impossibile salvare le impostazioni di aspetto"
+      "saveFailed": "Impossibile salvare le impostazioni di aspetto",
+      "discarded": "Anteprima annullata"
+    },
+    "unsaved": {
+      "notice": "Stai visualizzando l’anteprima di un tema non salvato. Gli altri mantengono quello salvato finché non lo applichi.",
+      "save": "Applica a tutti",
+      "discard": "Annulla modifiche"
     }
   },
   "mspLanguage": {

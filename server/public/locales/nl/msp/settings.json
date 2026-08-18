@@ -1338,6 +1338,10 @@
       "highContrast": {
         "label": "Hoog contrast",
         "description": "Alleen zwart-wit, met nadrukkelijke randen. Alleen de statuskleuren behouden hun kleur."
+      },
+      "custom": {
+        "label": "Aangepast",
+        "description": "Uw eigen kleuren, hieronder bewerkt."
       }
     },
     "custom": {
@@ -1377,6 +1381,21 @@
       "contrastHints": {
         "lighten": "Kies een lichtere {{foreground}} of een donkerdere {{background}}.",
         "darken": "Kies een donkerdere {{foreground}} of een lichtere {{background}}."
+      },
+      "mock": {
+        "caption": "Wijs hieronder een kleur aan om te zien welk deel van de app die kleurt.",
+        "showing": "Uitgelicht: {{token}}",
+        "nav": "Start",
+        "navActive": "Tickets",
+        "navMuted": "Rapporten",
+        "headerTitle": "Tickets",
+        "cardTitle": "Printer offline bij de receptie",
+        "cardBody": "Toegewezen aan Dana Reyes",
+        "cardMuted": "2 uur geleden bijgewerkt",
+        "primaryAction": "Opslaan",
+        "secondaryAction": "Toewijzen",
+        "ghostAction": "Annuleren",
+        "surface": "Recente activiteit"
       }
     },
     "whiteLabel": {
@@ -1395,7 +1414,13 @@
     "messages": {
       "loadFailed": "Weergave-instellingen konden niet worden geladen",
       "saved": "Weergave bijgewerkt",
-      "saveFailed": "Weergave-instellingen konden niet worden opgeslagen"
+      "saveFailed": "Weergave-instellingen konden niet worden opgeslagen",
+      "discarded": "Voorbeeld verworpen"
+    },
+    "unsaved": {
+      "notice": "U bekijkt een voorbeeld van een niet-opgeslagen thema. De rest houdt het opgeslagen thema tot u dit toepast.",
+      "save": "Voor iedereen toepassen",
+      "discard": "Verwerpen"
     }
   },
   "mspLanguage": {

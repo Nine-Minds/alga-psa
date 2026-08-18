@@ -2,12 +2,13 @@
 
 /* global process */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { Palette, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -27,12 +28,25 @@ import {
 } from '@alga-psa/tenancy/lib/themePairs';
 import {
   customThemePresetFor,
+  generateCustomThemeStyles,
   type CustomThemeMode,
   type CustomThemeTokenKey,
   type CustomThemeTokens,
 } from '@alga-psa/tenancy/lib/customTheme';
 import ThemePairPreview from './ThemePairPreview';
 import CustomThemeEditor from './CustomThemeEditor';
+
+type CustomThemePair = { light: CustomThemeTokens; dark: CustomThemeTokens };
+
+/** Everything the Save button persists — kept together so "dirty" is one compare. */
+interface ThemeDraft {
+  pairId: ThemePairId;
+  customTheme: CustomThemePair;
+  mspWhiteLabel: boolean;
+}
+
+/** Live preview style element, appended after the server-rendered theme styles. */
+const PREVIEW_STYLE_ID = 'preview-tenant-theme-styles';
 
 const AppearanceSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -41,22 +55,38 @@ const AppearanceSettings = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [pairId, setPairId] = useState<ThemePairId>(DEFAULT_THEME_PAIR_ID);
-  const [customTheme, setCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens }>(
-    () => customThemePresetFor(DEFAULT_THEME_PAIR_ID),
-  );
+  // `saved` is what the rest of the organization sees; `draft` is what this tab
+  // is previewing. Nothing reaches the tenant until Save.
+  const [saved, setSaved] = useState<ThemeDraft>(() => ({
+    pairId: DEFAULT_THEME_PAIR_ID,
+    customTheme: customThemePresetFor(DEFAULT_THEME_PAIR_ID),
+    mspWhiteLabel: false,
+  }));
+  const [draft, setDraft] = useState<ThemeDraft>(() => ({
+    pairId: DEFAULT_THEME_PAIR_ID,
+    customTheme: customThemePresetFor(DEFAULT_THEME_PAIR_ID),
+    mspWhiteLabel: false,
+  }));
   // Which predefined pair the editor colors were seeded from, or null while the
   // tenant's own saved palette is on screen.
   const [customSeedPairId, setCustomSeedPairId] = useState<ThemePairId | null>(DEFAULT_THEME_PAIR_ID);
-  const [savedCustomTheme, setSavedCustomTheme] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens } | null>(
-    null,
-  );
+  const [savedCustomTheme, setSavedCustomTheme] = useState<CustomThemePair | null>(null);
   const [customMode, setCustomMode] = useState<CustomThemeMode>('light');
-  const [mspWhiteLabel, setMspWhiteLabel] = useState(false);
   const [tenantId, setTenantId] = useState('');
   const [clientName, setClientName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [logoDarkUrl, setLogoDarkUrl] = useState('');
+
+  const isDirty = useMemo(() => {
+    if (draft.pairId !== saved.pairId) return true;
+    if (draft.mspWhiteLabel !== saved.mspWhiteLabel) return true;
+    // Colors only count while the custom pair is the one selected — a stale edit
+    // on a predefined pair is never persisted.
+    return draft.pairId === 'custom'
+      && JSON.stringify(draft.customTheme) !== JSON.stringify(saved.customTheme);
+  }, [draft, saved]);
+
+  useRegisterUnsavedChanges('appearance-theme', isDirty);
 
   useEffect(() => {
     const load = async () => {
@@ -66,14 +96,15 @@ const AppearanceSettings = () => {
           getTenantBrandingAction(),
           getCurrentUser(),
         ]);
-        setPairId(theme.pairId);
-        const saved = theme.customTheme
+        const persisted = theme.customTheme
           ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
           : null;
-        setSavedCustomTheme(saved);
-        if (theme.pairId === 'custom' && saved) {
+        setSavedCustomTheme(persisted);
+
+        let colors: CustomThemePair;
+        if (theme.pairId === 'custom' && persisted) {
           // The custom palette is what the tenant is running, so edit that.
-          setCustomTheme(saved);
+          colors = persisted;
           setCustomSeedPairId(null);
         } else {
           // Running a predefined pair: open on that pair's colors, so tweaking a
@@ -81,10 +112,17 @@ const AppearanceSettings = () => {
           // an earlier visit must not shadow the pair on screen — it stays one
           // button away instead.
           const seed = theme.pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : theme.pairId;
-          setCustomTheme(customThemePresetFor(seed));
+          colors = customThemePresetFor(seed);
           setCustomSeedPairId(seed);
         }
-        setMspWhiteLabel(!!theme.mspWhiteLabel);
+
+        const loaded: ThemeDraft = {
+          pairId: theme.pairId,
+          customTheme: colors,
+          mspWhiteLabel: !!theme.mspWhiteLabel,
+        };
+        setSaved(loaded);
+        setDraft(loaded);
         setLogoUrl(branding?.logoUrl || '');
         setLogoDarkUrl(branding?.logoDarkUrl || '');
         setClientName(branding?.clientName || '');
@@ -98,45 +136,84 @@ const AppearanceSettings = () => {
     load();
   }, []);
 
+  // Paint the draft on the whole app while the tab is open. The pair attribute
+  // is server-rendered, so this only has to keep it in step; custom colors need
+  // their CSS too, appended after the server-rendered block so it wins.
+  useEffect(() => {
+    if (loading) return;
+    document.documentElement.setAttribute('data-theme-pair', draft.pairId);
+
+    const existing = document.getElementById(PREVIEW_STYLE_ID);
+    if (draft.pairId !== 'custom') {
+      existing?.remove();
+      return;
+    }
+    const style = existing ?? document.createElement('style');
+    style.id = PREVIEW_STYLE_ID;
+    style.textContent = generateCustomThemeStyles(draft.customTheme);
+    if (!existing) document.head.appendChild(style);
+  }, [draft, loading]);
+
+  // Leaving the tab drops the preview: the shell goes back to what is saved,
+  // without waiting for a full page load to re-render the attribute.
+  const savedPairRef = React.useRef(saved.pairId);
+  savedPairRef.current = saved.pairId;
+  useEffect(() => () => {
+    document.getElementById(PREVIEW_STYLE_ID)?.remove();
+    document.documentElement.setAttribute('data-theme-pair', savedPairRef.current);
+  }, []);
+
   const handleTokenChange = useCallback((mode: CustomThemeMode, key: CustomThemeTokenKey, value: string) => {
-    setCustomTheme((current) => ({ ...current, [mode]: { ...current[mode], [key]: value } }));
+    setDraft((current) => ({
+      ...current,
+      // Touching a color is the request to preview it, so the custom pair takes
+      // over the shell right away.
+      pairId: 'custom',
+      customTheme: { ...current.customTheme, [mode]: { ...current.customTheme[mode], [key]: value } },
+    }));
   }, []);
 
   const pairLabel = (id: ThemePairId) => {
+    if (id === 'custom') {
+      return t('appearance.pairs.custom.label', { defaultValue: 'Custom' });
+    }
     const meta = getThemePairMeta(id);
     return meta ? t(meta.labelKey, { defaultValue: meta.label }) : id;
   };
 
-  const applyPairAttribute = (nextPairId: ThemePairId) => {
-    // The attribute is server-rendered; keep the open tab in sync so the admin
-    // sees the pair they just saved without a reload.
-    document.documentElement.setAttribute('data-theme-pair', nextPairId);
+  const seedFrom = (seed: ThemePairId) => {
+    setDraft((current) => ({ ...current, pairId: 'custom', customTheme: customThemePresetFor(seed) }));
+    setCustomSeedPairId(seed);
   };
 
-  const save = async (overrides: { pairId?: ThemePairId; mspWhiteLabel?: boolean } = {}) => {
-    const nextPairId = overrides.pairId ?? pairId;
-    const nextWhiteLabel = overrides.mspWhiteLabel ?? mspWhiteLabel;
+  const selectPair = (id: ThemePairId) => {
+    // While the editor is still on seeded colors, following the previewed pair
+    // keeps the mock and the app showing the same palette.
+    const reseed = id !== 'custom' && customSeedPairId !== null;
+    setDraft((current) => ({
+      ...current,
+      pairId: id,
+      customTheme: reseed ? customThemePresetFor(id) : current.customTheme,
+    }));
+    if (reseed) setCustomSeedPairId(id);
+  };
+
+  const save = async () => {
     setSaving(true);
     try {
       await updateTenantThemeAction({
-        // Only the custom card sends colors. Switching to a predefined pair
-        // leaves the saved palette to the action's carry-forward, so an
-        // unsaved, contrast-failing edit can never block a pair change.
-        pairId: nextPairId,
-        ...(nextPairId === 'custom' ? { customTheme } : {}),
-        mspWhiteLabel: nextWhiteLabel,
+        // Only a custom selection sends colors. Switching to a predefined pair
+        // leaves the saved palette to the action's carry-forward, so an unsaved,
+        // contrast-failing edit can never block a pair change.
+        pairId: draft.pairId,
+        ...(draft.pairId === 'custom' ? { customTheme: draft.customTheme } : {}),
+        mspWhiteLabel: draft.mspWhiteLabel,
       });
-      setPairId(nextPairId);
-      if (nextPairId === 'custom') {
-        setSavedCustomTheme(customTheme);
+      setSaved(draft);
+      if (draft.pairId === 'custom') {
+        setSavedCustomTheme(draft.customTheme);
         setCustomSeedPairId(null);
-      } else if (customSeedPairId) {
-        // Still on seeded colors, so follow the pair they just chose.
-        setCustomTheme(customThemePresetFor(nextPairId));
-        setCustomSeedPairId(nextPairId);
       }
-      setMspWhiteLabel(nextWhiteLabel);
-      applyPairAttribute(nextPairId);
       // The shell reads branding on the server, so refresh it instead of making
       // the admin reload to see the change.
       router.refresh();
@@ -146,6 +223,12 @@ const AppearanceSettings = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const discard = () => {
+    setDraft(saved);
+    setCustomSeedPairId(saved.pairId === 'custom' ? null : saved.pairId);
+    toast.success(t('appearance.messages.discarded', { defaultValue: 'Preview discarded' }));
   };
 
   const handleLogoUpload = (variant: 'default' | 'dark') =>
@@ -167,8 +250,44 @@ const AppearanceSettings = () => {
       return result;
     };
 
+  const customSwatch = (mode: CustomThemeMode) => ({
+    background: draft.customTheme[mode].background,
+    card: draft.customTheme[mode].card,
+    text: draft.customTheme[mode].textPrimary,
+    primary: draft.customTheme[mode].primary,
+    sidebar: draft.customTheme[mode].sidebarBg,
+  });
+
   return (
     <div className="space-y-6">
+      {isDirty && (
+        <div
+          className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[rgb(var(--color-primary-300))] bg-[rgb(var(--color-primary-50))] px-4 py-3"
+          data-automation-id="appearance-unsaved-bar"
+        >
+          <p className="text-sm text-[rgb(var(--color-text-700))]">
+            {t('appearance.unsaved.notice', {
+              defaultValue:
+                'You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.',
+            })}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              id="discard-appearance"
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={discard}
+            >
+              {t('appearance.unsaved.discard', { defaultValue: 'Discard' })}
+            </Button>
+            <Button id="save-appearance" type="button" disabled={saving} onClick={save}>
+              {t('appearance.unsaved.save', { defaultValue: 'Apply to everyone' })}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>
@@ -187,14 +306,14 @@ const AppearanceSettings = () => {
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {THEME_PAIRS.map((pair) => {
-              const selected = pairId === pair.id;
+              const selected = draft.pairId === pair.id;
               return (
                 <button
                   key={pair.id}
                   id={`theme-pair-${pair.id}`}
                   type="button"
                   disabled={loading || saving}
-                  onClick={() => save({ pairId: pair.id })}
+                  onClick={() => selectPair(pair.id)}
                   data-automation-id={`theme-pair-${pair.id}`}
                   aria-pressed={selected}
                   className={`rounded-lg border-2 p-3 text-left transition-colors ${
@@ -214,6 +333,35 @@ const AppearanceSettings = () => {
                 </button>
               );
             })}
+
+            {isEEAvailable && (
+              <button
+                id="theme-pair-custom"
+                type="button"
+                disabled={loading || saving}
+                onClick={() => selectPair('custom')}
+                data-automation-id="theme-pair-custom"
+                aria-pressed={draft.pairId === 'custom'}
+                className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                  draft.pairId === 'custom'
+                    ? 'border-[rgb(var(--color-primary-500))]'
+                    : 'border-[rgb(var(--color-border-200))] hover:border-[rgb(var(--color-border-400))]'
+                }`}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <ThemePairPreview swatch={customSwatch('light')} label="Custom light" />
+                  <ThemePairPreview swatch={customSwatch('dark')} label="Custom dark" />
+                </div>
+                <div className="mt-2 text-sm font-medium">
+                  {t('appearance.pairs.custom.label', { defaultValue: 'Custom' })}
+                </div>
+                <p className="text-xs text-[rgb(var(--color-text-500))]">
+                  {t('appearance.pairs.custom.description', {
+                    defaultValue: 'Your own colors, edited below.',
+                  })}
+                </p>
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -236,7 +384,7 @@ const AppearanceSettings = () => {
           </CardHeader>
           <CardContent>
             <CustomThemeEditor
-              theme={customTheme}
+              theme={draft.customTheme}
               mode={customMode}
               onModeChange={setCustomMode}
               onTokenChange={handleTokenChange}
@@ -245,22 +393,13 @@ const AppearanceSettings = () => {
             />
             <div className="mt-4 flex flex-wrap gap-2">
               <Button
-                id="save-custom-theme"
-                type="button"
-                disabled={loading || saving}
-                onClick={() => save({ pairId: 'custom' })}
-              >
-                {t('appearance.custom.actions.save', { defaultValue: 'Save and use custom theme' })}
-              </Button>
-              <Button
                 id="reset-custom-theme"
                 type="button"
                 variant="outline"
                 disabled={loading || saving}
                 onClick={() => {
-                  const seed = pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : pairId;
-                  setCustomTheme(customThemePresetFor(seed));
-                  setCustomSeedPairId(seed);
+                  const seed = saved.pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : saved.pairId;
+                  seedFrom(seed);
                   toast.success(
                     t('appearance.custom.actions.resetDone', {
                       defaultValue: 'Colors reset to the {{pair}} theme — save to apply',
@@ -271,7 +410,7 @@ const AppearanceSettings = () => {
               >
                 {t('appearance.custom.actions.reset', {
                   defaultValue: 'Reset to {{pair}} colors',
-                  pair: pairLabel(pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : pairId),
+                  pair: pairLabel(saved.pairId === 'custom' ? DEFAULT_THEME_PAIR_ID : saved.pairId),
                 })}
               </Button>
               {savedCustomTheme && customSeedPairId && (
@@ -281,7 +420,7 @@ const AppearanceSettings = () => {
                   variant="outline"
                   disabled={loading || saving}
                   onClick={() => {
-                    setCustomTheme(savedCustomTheme);
+                    setDraft((current) => ({ ...current, pairId: 'custom', customTheme: savedCustomTheme }));
                     setCustomSeedPairId(null);
                     toast.success(
                       t('appearance.custom.actions.useSavedDone', {
@@ -369,9 +508,9 @@ const AppearanceSettings = () => {
               </div>
               <Switch
                 id="msp-white-label-toggle"
-                checked={mspWhiteLabel}
+                checked={draft.mspWhiteLabel}
                 disabled={loading || saving}
-                onCheckedChange={(checked) => save({ mspWhiteLabel: checked })}
+                onCheckedChange={(checked) => setDraft((current) => ({ ...current, mspWhiteLabel: checked }))}
                 aria-label={t('appearance.whiteLabel.colors.label', {
                   defaultValue: 'Use your brand colors in the MSP app',
                 })}
