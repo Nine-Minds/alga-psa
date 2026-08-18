@@ -13,8 +13,9 @@
  * deliberately left alone: a tenant who customized a template keeps exactly
  * what they authored, in the language they authored it.
  *
- * Idempotent: a value that is already a key reference is left as is, and only
- * display fields are walked. Node ids, binding ids, transform ids, column ids
+ * Idempotent: a value that is already a key reference is left as is (retired
+ * keys in CONSOLIDATED_KEYS are folded into their canonical replacement), and
+ * only display fields are walked. Node ids, binding ids, transform ids, column ids
  * and paths are machine identifiers and are never rewritten.
  */
 
@@ -80,7 +81,6 @@ const LABEL_KEYS = {
   'Accepted By': 'labels.acceptedBy',
   'Authorized By': 'labels.authorizedBy',
   Signature: 'labels.signature',
-  ESTIMATE: 'labels.estimateTitle',
   'ORDER CONFIRMATION': 'labels.orderConfirmationTitle',
   'Ship To': 'labels.shipTo',
   'PACKING SLIP': 'labels.packingSlipTitle',
@@ -99,15 +99,36 @@ const LABEL_KEYS = {
 
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
+// Retired wordings folded into their canonical key. The Grouped quote template
+// once titled itself ESTIMATE; the product has no estimate concept, so it is
+// consolidated into the quote title (default text included).
+const CONSOLIDATED_LITERALS = {
+  ESTIMATE: { i18nKey: 'labels.quoteTitle', defaultValue: 'QUOTE' },
+};
+const CONSOLIDATED_KEYS = {
+  'labels.estimateTitle': { i18nKey: 'labels.quoteTitle', defaultValue: 'QUOTE' },
+};
+
 const localizeText = (value) => {
+  if (isRecord(value) && CONSOLIDATED_KEYS[value.i18nKey]) {
+    return { ...CONSOLIDATED_KEYS[value.i18nKey] };
+  }
   if (typeof value !== 'string') return value;
+  if (CONSOLIDATED_LITERALS[value]) return { ...CONSOLIDATED_LITERALS[value] };
   const key = LABEL_KEYS[value];
   return key ? { i18nKey: key, defaultValue: value } : value;
 };
 
 const localizeContent = (expression) => {
-  if (!isRecord(expression) || expression.type !== 'literal' || typeof expression.value !== 'string') {
+  if (!isRecord(expression)) return expression;
+  if (expression.type === 'i18n' && CONSOLIDATED_KEYS[expression.i18nKey]) {
+    return { type: 'i18n', ...CONSOLIDATED_KEYS[expression.i18nKey] };
+  }
+  if (expression.type !== 'literal' || typeof expression.value !== 'string') {
     return expression;
+  }
+  if (CONSOLIDATED_LITERALS[expression.value]) {
+    return { type: 'i18n', ...CONSOLIDATED_LITERALS[expression.value] };
   }
   const key = LABEL_KEYS[expression.value];
   return key ? { type: 'i18n', i18nKey: key, defaultValue: expression.value } : expression;

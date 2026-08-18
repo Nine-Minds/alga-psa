@@ -27,6 +27,13 @@ const mocks = vi.hoisted(() => ({
   // Shared billing-recipient resolver and invoice-email link context
   resolveInvoiceBillingRecipient: vi.fn(),
   getInvoiceEmailLinkContext: vi.fn(),
+  // Direct DB rows served by the fake tenantDb (the handler reads invoices
+  // and clients straight from the database — no withAuth actions in jobs).
+  dbRows: {
+    invoice: undefined as unknown,
+    client: undefined as unknown,
+    invoiceQueue: [] as unknown[],
+  },
   // fs
   writeFile: vi.fn(),
   unlink: vi.fn(),
@@ -68,6 +75,31 @@ vi.mock('fs/promises', () => {
 vi.mock('server/src/lib/db/db', () => ({
   getConnection: mocks.getConnection,
 }));
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    tenantDb: () => ({
+      table: (name: string) => {
+        const chain: any = {};
+        for (const method of ['where', 'whereNull', 'select', 'orderBy']) {
+          chain[method] = () => chain;
+        }
+        chain.first = async () => {
+          if (name.startsWith('invoices')) {
+            return mocks.dbRows.invoiceQueue.length > 0
+              ? mocks.dbRows.invoiceQueue.shift()
+              : mocks.dbRows.invoice;
+          }
+          return mocks.dbRows.client;
+        };
+        return chain;
+      },
+      tenantJoin: (query: unknown) => query,
+    }),
+  };
+});
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getInvoiceForRendering: mocks.getInvoiceForRendering,
@@ -157,8 +189,9 @@ describe('InvoiceEmailHandler', () => {
     mocks.writeFile.mockResolvedValue(undefined);
     mocks.unlink.mockResolvedValue(undefined);
 
-    mocks.getInvoiceForRendering.mockResolvedValue(buildInvoice());
-    mocks.getClientById.mockResolvedValue(buildClient());
+    mocks.dbRows.invoice = buildInvoice();
+    mocks.dbRows.client = buildClient();
+    mocks.dbRows.invoiceQueue = [];
     mocks.getContactByContactNameId.mockResolvedValue(null);
     mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
       clientId: 'client-1',
@@ -310,7 +343,7 @@ describe('InvoiceEmailHandler', () => {
     });
 
     it('should not request a payment link for paid invoices', async () => {
-      mocks.getInvoiceForRendering.mockResolvedValue(buildInvoice({ status: 'paid' }));
+      mocks.dbRows.invoice = buildInvoice({ status: 'paid' });
       mocks.getInvoiceEmailLinkContext.mockResolvedValue({});
 
       await InvoiceEmailHandler.handle('pg-1', buildJobData());
@@ -413,15 +446,16 @@ describe('InvoiceEmailHandler', () => {
     });
 
     // BUG (reported): pdfDetailId/emailDetailId are declared once outside the per-invoice loop in
-    // server/src/lib/jobs/handlers/invoiceEmailHandler.ts (lines 57-58). When a later invoice fails
-    // before its own createJobDetail calls run (e.g. getInvoiceForRendering returns null), the catch
-    // block (lines 301-324) updates the PREVIOUS invoice's detail records to 'failed' even though that
-    // invoice was already processed and marked 'completed'. Skipped until the product bug is fixed.
+    // server/src/lib/jobs/handlers/invoiceEmailHandler.ts. When a later invoice fails before its own
+    // createJobDetail calls run (e.g. the invoice row lookup returns null), the catch block updates
+    // the PREVIOUS invoice's detail records to 'failed' even though that invoice was already
+    // processed and marked 'completed'. Skipped until the product bug is fixed.
     it('should not overwrite a completed invoice\'s step details when a later invoice fails early', async () => {
-      mocks.getInvoiceForRendering
-        .mockResolvedValueOnce(buildInvoice()) // invoice-1 succeeds
-        .mockResolvedValueOnce(null) // invoice-2 fails before job details are created
-        .mockResolvedValueOnce(null); // catch-block re-fetch for error context
+      mocks.dbRows.invoiceQueue = [
+        buildInvoice(), // invoice-1 succeeds
+        null, // invoice-2 fails before job details are created
+        null, // catch-block re-fetch for error context
+      ];
       mocks.createJobDetail.mockReset();
       mocks.createJobDetail
         .mockResolvedValueOnce('pdf-detail-1')

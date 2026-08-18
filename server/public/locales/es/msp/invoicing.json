@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Límite de la plantilla"
+      "templateBoundary": "Límite de la plantilla",
+      "translatableHint": "Se traduce automáticamente al idioma del destinatario. Si edita el texto, se usará su propio texto fijo."
     },
     "dragOverlay": {
       "component": "Componente"

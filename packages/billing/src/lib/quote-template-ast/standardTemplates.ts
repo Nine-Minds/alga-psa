@@ -452,7 +452,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '10px', padding: '14px 16px', backgroundColor: '#f9fafb', gap: '6px' } },
             children: [
-              { id: 'quote-title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.estimateTitle', defaultValue: 'ESTIMATE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
+              { id: 'quote-title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.quoteTitle', defaultValue: 'QUOTE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
               { id: 'quote-number', type: 'field', label: { i18nKey: 'labels.quoteNumber', defaultValue: 'Quote #' }, binding: { bindingId: 'quoteNumber' }, style: { inline: { justifyContent: 'space-between' } } },
               { id: 'quote-date', type: 'field', label: { i18nKey: 'labels.date', defaultValue: 'Date' }, binding: { bindingId: 'quoteDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
               { id: 'valid-until', type: 'field', label: { i18nKey: 'labels.validUntil', defaultValue: 'Valid Until' }, binding: { bindingId: 'validUntil' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },

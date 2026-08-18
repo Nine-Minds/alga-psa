@@ -153,7 +153,8 @@
       "previewPdf": "Preview PDF",
       "backToQuotes": "Back to Quotes",
       "backToTemplates": "Back to Quote Templates",
-      "convertToSalesOrder": "Convert to Sales Order"
+      "convertToSalesOrder": "Convert to Sales Order",
+      "convert": "Convert to…"
     },
     "headings": {
       "editQuote": "Edit Quote",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
-      "excludedItems": "Excluded Items",
       "excludedFromConversion": "Excluded from Conversion",
+      "excludedItems": "Excluded Items",
       "invoiceItems": "Invoice Items",
       "itemMappingPreview": "Item Mapping Preview",
+      "onSalesOrder": "On Sales Order {{soNumber}}",
       "quoteTotal": "Quote Total",
+      "salesOrderItems": "Sales Order Lines",
       "statusAfterConversion": "Status After Conversion",
       "willBecomeContractLines": "Will Become Contract Lines",
-      "willBecomeInvoiceCharges": "Will Become Invoice Charges"
+      "willBecomeInvoiceCharges": "Will Become Invoice Charges",
+      "willBecomeSalesOrderLines": "Will Become Sales Order Lines"
     },
     "empty": {
       "contractItems": "No recurring items will convert to a contract.",
-      "invoiceItems": "No one-time items will convert to an invoice."
+      "invoiceItems": "No one-time items will convert to an invoice.",
+      "invoiceItemsOnSalesOrder": "All one-time lines are on sales order {{soNumber}} and will be invoiced from there on fulfillment.",
+      "salesOrderItems": "No product lines will move to a sales order."
     },
     "summary": {
+      "billedViaSalesOrder": "Billed from sales order {{soNumber}} on fulfillment",
       "converted": "Converted",
       "discount": "Discount",
       "fixed": "fixed",
@@ -628,10 +635,11 @@
       "title": "Error"
     },
     "salesOrder": {
-      "successTitle": "Sales order {{number}} created",
-      "successBody": "Product lines will bill on fulfillment.",
+      "existingNote": "This quote was already converted to sales order {{soNumber}}.",
+      "note": "Product lines can be billed one of two ways: create a sales order to bill them on fulfillment, or invoice them directly. Creating the sales order removes them from invoice conversion, so nothing double-bills.",
       "openSalesOrders": "Open sales orders",
-      "note": "Product one-time lines move to a draft sales order (billed on fulfillment) and are excluded from any draft-invoice conversion, so nothing double-bills."
+      "successBody": "Product lines will bill on fulfillment.",
+      "successTitle": "Sales order {{number}} created"
     }
   },
   "quoteApproval": {

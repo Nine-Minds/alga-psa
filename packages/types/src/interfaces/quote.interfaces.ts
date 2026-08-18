@@ -130,7 +130,7 @@ export interface IQuoteListItem extends IQuote {
   display_quote_number: string;
 }
 
-export type QuoteConversionTarget = 'contract' | 'invoice' | 'excluded';
+export type QuoteConversionTarget = 'contract' | 'invoice' | 'sales_order' | 'excluded';
 
 export interface QuoteConversionPreviewItem {
   quote_item_id: string;
@@ -153,8 +153,16 @@ export interface QuoteConversionPreview {
   quote_id: string;
   available_actions: Array<'contract' | 'invoice' | 'both'>;
   contract_items: QuoteConversionPreviewItem[];
+  /** One-time items an invoice conversion would bill right now — mirrors the
+   *  runtime exclusion of product lines already claimed by a sales order. */
   invoice_items: QuoteConversionPreviewItem[];
+  /** With no sales order yet: the product lines a new sales order would take
+   *  (these still invoice directly if invoice conversion runs first). With an
+   *  existing sales order: the lines it claimed, billed on fulfillment. */
+  sales_order_items: QuoteConversionPreviewItem[];
   excluded_items: QuoteConversionPreviewItem[];
+  /** The sales order already converted from this quote, when one exists. */
+  existing_sales_order: { so_id: string; so_number: string | null } | null;
 }
 
 export interface QuoteViewModelParty {

@@ -153,7 +153,8 @@
       "previewPdf": "Vista previa del PDF",
       "backToQuotes": "Volver a cotizaciones",
       "backToTemplates": "Volver a plantillas de cotización",
-      "convertToSalesOrder": "Convertir a orden de venta"
+      "convertToSalesOrder": "Convertir a orden de venta",
+      "convert": "Convertir en…"
     },
     "headings": {
       "editQuote": "Editar cotización",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Artículos del contrato",
       "conversionMode": "Modo de conversión",
-      "excludedItems": "Artículos excluidos",
       "excludedFromConversion": "Excluido de la conversión",
+      "excludedItems": "Artículos excluidos",
       "invoiceItems": "Artículos de factura",
       "itemMappingPreview": "Vista previa de asignación de elementos",
+      "onSalesOrder": "En la orden de venta {{soNumber}}",
       "quoteTotal": "Total de cotización",
+      "salesOrderItems": "Líneas de orden de venta",
       "statusAfterConversion": "Estado después de la conversión",
       "willBecomeContractLines": "Se convertirán en líneas de contrato",
-      "willBecomeInvoiceCharges": "Se convertirán en cargos de factura"
+      "willBecomeInvoiceCharges": "Se convertirán en cargos de factura",
+      "willBecomeSalesOrderLines": "Se convertirán en líneas de orden de venta"
     },
     "empty": {
       "contractItems": "Ningún elemento recurrente se convertirá en un contrato.",
-      "invoiceItems": "Ningún artículo único se convertirá en una factura."
+      "invoiceItems": "Ningún artículo único se convertirá en una factura.",
+      "invoiceItemsOnSalesOrder": "Todas las líneas únicas están en la orden de venta {{soNumber}} y se facturarán desde allí al completarse.",
+      "salesOrderItems": "Ninguna línea de producto pasará a una orden de venta."
     },
     "summary": {
+      "billedViaSalesOrder": "Se factura desde la orden de venta {{soNumber}} al completarse",
       "converted": "Convertido",
       "discount": "Descuento",
       "fixed": "fijado",
@@ -628,10 +635,11 @@
       "title": "Error"
     },
     "salesOrder": {
-      "successTitle": "Orden de venta {{number}} creada",
-      "successBody": "Las líneas de producto se facturarán al cumplirse.",
+      "existingNote": "Esta cotización ya se convirtió en la orden de venta {{soNumber}}.",
+      "note": "Las líneas de producto pueden facturarse de dos maneras: creando una orden de venta para facturarlas al completarse, o facturándolas directamente. Al crear la orden de venta quedan excluidas de la conversión a factura, así nada se factura dos veces.",
       "openSalesOrders": "Abrir órdenes de venta",
-      "note": "Las líneas únicas de producto pasan a un borrador de orden de venta (facturado al cumplirse) y se excluyen de cualquier conversión a factura borrador, por lo que nada se factura dos veces."
+      "successBody": "Las líneas de producto se facturarán al cumplirse.",
+      "successTitle": "Orden de venta {{number}} creada"
     }
   },
   "quoteApproval": {

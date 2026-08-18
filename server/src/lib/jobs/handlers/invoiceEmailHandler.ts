@@ -3,15 +3,13 @@ import { PDFGenerationService, createPDFGenerationService, publishGeneratedDocum
 import { resolveInvoiceBillingRecipient } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { getClientById } from '@alga-psa/clients/actions';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import { JobStatus } from 'server/src/types/job';
-import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceEmailLinkContext } from '@alga-psa/billing/actions/invoiceEmailLinkContext';
 import { fetchTenantParty } from '@alga-psa/billing/lib/adapters/tenantPartyAdapter';
 import logger from '@alga-psa/core/logger';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Gets the tenant company name for email templates.
@@ -24,6 +22,44 @@ async function getTenantCompanyName(tenantId: string): Promise<string> {
   } catch {
     return 'Your Company';
   }
+}
+
+// Direct reads: this handler runs inside a background job with no request
+// scope, so withAuth actions (which resolve the user from request headers)
+// cannot be called here.
+
+type JobInvoiceRow = Record<string, any> & {
+  invoice_id: string;
+  invoice_number: string | null;
+  client_id: string;
+};
+
+async function getInvoiceRow(tenantId: string, invoiceId: string): Promise<JobInvoiceRow | undefined> {
+  const knex = await getConnection();
+  const row = await tenantDb(knex, tenantId).table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first<JobInvoiceRow | undefined>();
+  if (row) {
+    // The email template reads the view-model field name.
+    row.currencyCode = row.currency_code;
+  }
+  return row;
+}
+
+async function getClientRow(
+  tenantId: string,
+  clientId: string
+): Promise<{ client_name: string; location_address: string | null } | undefined> {
+  const knex = await getConnection();
+  const db = tenantDb(knex, tenantId);
+  const query = db.table('clients as c').where('c.client_id', clientId);
+  db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('cl.is_default', '=', knex.raw('true'));
+    },
+  });
+  return query.first('c.client_name', 'cl.address_line1 as location_address');
 }
 
 export interface InvoiceEmailJobData extends Record<string, unknown> {
@@ -73,15 +109,12 @@ export class InvoiceEmailHandler {
 
         try {
           // Get invoice details first for better logging
-          const invoice = await getInvoiceForRendering(invoiceId);
-          if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
-            throw new Error(getErrorMessage(invoice));
-          }
+          const invoice = await getInvoiceRow(tenantId, invoiceId);
           if (!invoice || !invoice.invoice_number) {
             throw new Error(`Failed to get details for Invoice ID ${invoiceId}`);
           }
 
-          const client = await getClientById(invoice.client_id);
+          const client = await getClientRow(tenantId, invoice.client_id);
           if (!client) {
             throw new Error(`Client not found for Invoice #${invoice.invoice_number}`);
           }
@@ -305,16 +338,13 @@ export class InvoiceEmailHandler {
 
         } catch (error) {
           console.log('failed to process invoice:', error);
-          const invoice = await getInvoiceForRendering(invoiceId);
-          const invoiceError = isActionMessageError(invoice) || isActionPermissionError(invoice)
-            ? getErrorMessage(invoice)
-            : null;
-          const client = invoice && !invoiceError ? await getClientById(invoice.client_id) : null;
-          const invoiceNumber = invoice && !invoiceError ? invoice.invoice_number || invoiceId : invoiceId;
+          const invoice = await getInvoiceRow(tenantId, invoiceId).catch(() => undefined);
+          const client = invoice ? await getClientRow(tenantId, invoice.client_id).catch(() => undefined) : undefined;
+          const invoiceNumber = invoice?.invoice_number || invoiceId;
           const clientName = client?.client_name || 'Unknown Client';
-          
+
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${clientName}: ${invoiceError ?? errorMessage}`;
+          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${clientName}: ${errorMessage}`;
           
           // Record the failure in job_details
           // Update existing job detail records to failed status

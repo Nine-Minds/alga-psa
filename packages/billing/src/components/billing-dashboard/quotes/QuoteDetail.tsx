@@ -17,7 +17,7 @@ import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
-import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
@@ -54,7 +54,7 @@ function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
   return oneTimeItems.some((item) => item.is_discount && (!item.applies_to_item_id || oneTimeItemIds.has(item.applies_to_item_id) || (item.applies_to_service_id ? oneTimeServiceIds.has(item.applies_to_service_id) : true)));
 }
 
-type ConversionMode = 'contract' | 'invoice' | 'both' | 'sales_order';
+type ConversionMode = 'contract' | 'invoice' | 'sales_order';
 
 // Product one-time lines are what convert to a sales order (F002/D2): a product-kind
 // service, not recurring, not a discount, and either non-optional or an accepted option.
@@ -152,7 +152,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [conversionMode, setConversionMode] = useState<ConversionMode | null>(null);
   const [conversionPreview, setConversionPreview] = useState<QuoteConversionPreview | null>(null);
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -262,7 +261,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   }, [quote?.client_id]);
   const canConvertToContract = useMemo(() => hasConvertibleRecurringItems(quote), [quote]);
   const canConvertToInvoice = useMemo(() => hasConvertibleOneTimeItems(quote), [quote]);
-  const canConvertToBoth = canConvertToContract && canConvertToInvoice;
   const canConvertToSalesOrder = useMemo(() => hasConvertibleProductOneTimeItems(quote), [quote]);
 
   // Backlink to the sales order this quote produced, if any (F010). Advisory — a failure
@@ -780,7 +778,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleOpenConversionDialog = async (mode: ConversionMode) => {
+  const handleOpenConversionDialog = async () => {
     if (!quote) {
       return;
     }
@@ -789,7 +787,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsPreviewLoading(true);
       setError(null);
       setNotice(null);
-      setConversionMode(mode);
       const preview = await getQuoteConversionPreview(quote.quote_id);
 
       if (isActionMessageError(preview) || isActionPermissionError(preview)) {
@@ -811,8 +808,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleConfirmConversion = async () => {
-    if (!quote || !conversionMode) {
+  const handleConfirmConversion = async (mode: ConversionMode) => {
+    if (!quote) {
       return;
     }
 
@@ -821,7 +818,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setError(null);
       setNotice(null);
 
-      if (conversionMode === 'contract') {
+      if (mode === 'contract') {
         const result = await convertQuoteToContract(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           throw new Error(getErrorMessage(result));
@@ -833,7 +830,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             name: result.contract.contract_name,
           }),
         );
-      } else if (conversionMode === 'invoice') {
+      } else if (mode === 'invoice') {
         const result = await convertQuoteToInvoice(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           throw new Error(getErrorMessage(result));
@@ -845,7 +842,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             name: result.invoice.invoice_number,
           }),
         );
-      } else if (conversionMode === 'sales_order') {
+      } else if (mode === 'sales_order') {
         const result = await convertQuoteToSalesOrder(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           throw new Error(getErrorMessage(result));
@@ -858,25 +855,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             number: result.so_number,
           }),
         );
-      } else {
-        const result = await convertQuoteToBoth(quote.quote_id);
-        if (isActionMessageError(result) || isActionPermissionError(result)) {
-          throw new Error(getErrorMessage(result));
-        }
-        setQuote(result.quote);
-        setNotice(
-          t('quoteForm.notices.createdDraftContractAndInvoice', {
-            defaultValue:
-              'Created draft contract {{contractName}} and draft invoice {{invoiceName}}.',
-            contractName: result.contract.contract_name,
-            invoiceName: result.invoice.invoice_number,
-          }),
-        );
       }
 
       setIsConversionDialogOpen(false);
       setConversionPreview(null);
-      setConversionMode(null);
     } catch (conversionError) {
       setError(
         conversionError instanceof Error
@@ -931,12 +913,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       case 'accepted':
         return (
           <>
-            <Button id="quote-detail-convert-contract" onClick={() => void handleOpenConversionDialog('contract')} disabled={isWorking || isPreviewLoading || !canConvertToContract}>{t('quoteForm.actions.convertToContract', { defaultValue: 'Convert to Contract' })}</Button>
-            <Button id="quote-detail-convert-invoice" onClick={() => void handleOpenConversionDialog('invoice')} disabled={isWorking || isPreviewLoading || !canConvertToInvoice}>{t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to Invoice' })}</Button>
-            <Button id="quote-detail-convert-both" onClick={() => void handleOpenConversionDialog('both')} disabled={isWorking || isPreviewLoading || !canConvertToBoth}>{t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to Both' })}</Button>
-            {canConvertToSalesOrder ? (
-              <Button id="quote-detail-convert-sales-order" onClick={() => void handleOpenConversionDialog('sales_order')} disabled={isWorking || isPreviewLoading}>{t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to Sales Order' })}</Button>
-            ) : null}
+            {(canConvertToContract || canConvertToInvoice || canConvertToSalesOrder) && (
+              <Button id="quote-detail-convert" onClick={() => void handleOpenConversionDialog()} disabled={isWorking || isPreviewLoading}>
+                {t('quoteForm.actions.convert', { defaultValue: 'Convert to…' })}
+              </Button>
+            )}
             <Button id="quote-detail-revise" variant="outline" onClick={() => void handleReviseQuote()} disabled={isWorking}>{t('common.actions.revise', { defaultValue: 'Revise' })}</Button>
           </>
         );
@@ -1305,17 +1286,31 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         isOpen={isConversionDialogOpen}
         onClose={() => setIsConversionDialogOpen(false)}
         footer={(
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button id="quote-conversion-cancel" variant="outline" onClick={() => setIsConversionDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="quote-conversion-confirm" onClick={() => void handleConfirmConversion()} disabled={isWorking || !conversionPreview || (conversionMode === 'contract' && !conversionPreview.contract_items.length) || (conversionMode === 'invoice' && !conversionPreview.invoice_items.length) || (conversionMode === 'both' && (!conversionPreview.contract_items.length || !conversionPreview.invoice_items.length))}>
-              {conversionMode === 'contract'
-                ? t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })
-                : conversionMode === 'invoice'
-                  ? t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })
-                  : conversionMode === 'sales_order'
-                    ? t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })
-                    : t('quoteConversion.actions.both', { defaultValue: 'Create Both Records' })}
-            </Button>
+            {conversionPreview && conversionPreview.sales_order_items.length > 0 && !conversionPreview.existing_sales_order && (
+              <Button id="quote-conversion-sales-order" onClick={() => void handleConfirmConversion('sales_order')} disabled={isWorking}>
+                {t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })}
+              </Button>
+            )}
+            {conversionPreview && conversionPreview.contract_items.length > 0 && (
+              <Button id="quote-conversion-contract" onClick={() => void handleConfirmConversion('contract')} disabled={isWorking}>
+                {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
+              </Button>
+            )}
+            {conversionPreview && conversionPreview.invoice_items.length > 0 && (
+              <Button
+                id="quote-conversion-invoice"
+                // Secondary while it competes with the sales-order path: both
+                // would bill the same product lines, so only one reads as the
+                // default action.
+                variant={conversionPreview.sales_order_items.length > 0 && !conversionPreview.existing_sales_order ? 'outline' : 'default'}
+                onClick={() => void handleConfirmConversion('invoice')}
+                disabled={isWorking}
+              >
+                {t('quoteConversion.actions.invoice', { defaultValue: 'Create Draft Invoice' })}
+              </Button>
+            )}
           </div>
         )}
       >
@@ -1331,15 +1326,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
           {conversionPreview ? (
             <div className="space-y-4">
-              {conversionMode === 'sales_order' ? (
+              {conversionPreview.sales_order_items.length > 0 ? (
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-                  {t('quoteConversion.salesOrder.note', {
-                    defaultValue:
-                      'Product one-time lines move to a draft sales order (billed on fulfillment) and are excluded from any draft-invoice conversion, so nothing double-bills.',
-                  })}
+                  {conversionPreview.existing_sales_order
+                    ? t('quoteConversion.salesOrder.existingNote', {
+                        defaultValue: 'This quote was already converted to sales order {{soNumber}}.',
+                        soNumber: conversionPreview.existing_sales_order.so_number ?? '',
+                      })
+                    : t('quoteConversion.salesOrder.note', {
+                        defaultValue:
+                          'Product lines can be billed one of two ways: create a sales order to bill them on fulfillment, or invoice them directly. Creating the sales order removes them from invoice conversion, so nothing double-bills.',
+                      })}
                 </div>
               ) : null}
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-4">
                 <div className="rounded-lg border border-border p-3">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.contractItems', { defaultValue: 'Contract Items' })}</div>
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.contract_items.length}</div>
@@ -1349,10 +1349,49 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.invoice_items.length}</div>
                 </div>
                 <div className="rounded-lg border border-border p-3">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.salesOrderItems', { defaultValue: 'Sales Order Lines' })}</div>
+                  <div className="mt-1 text-lg font-semibold">{conversionPreview.sales_order_items.length}</div>
+                </div>
+                <div className="rounded-lg border border-border p-3">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('quoteConversion.sections.excludedItems', { defaultValue: 'Excluded Items' })}</div>
                   <div className="mt-1 text-lg font-semibold">{conversionPreview.excluded_items.length}</div>
                 </div>
               </div>
+
+              {conversionPreview.sales_order_items.length > 0 && (
+                <section className="space-y-2 rounded-lg border border-border p-4">
+                  <h3 className="text-base font-semibold">
+                    {conversionPreview.existing_sales_order
+                      ? t('quoteConversion.sections.onSalesOrder', {
+                          defaultValue: 'On Sales Order {{soNumber}}',
+                          soNumber: conversionPreview.existing_sales_order.so_number ?? '',
+                        })
+                      : t('quoteConversion.sections.willBecomeSalesOrderLines', { defaultValue: 'Will Become Sales Order Lines' })}
+                  </h3>
+                  {conversionPreview.sales_order_items.length ? (
+                    <div className="space-y-2">
+                      {conversionPreview.sales_order_items.map((item) => (
+                        <div key={item.quote_item_id} className="rounded-md border border-border p-3">
+                          <div className="font-medium text-foreground">{item.description}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.billing_method || t('quoteConversion.summary.fixed', { defaultValue: 'fixed' })} • {t('quoteLineItems.columns.quantity', { defaultValue: 'Qty' })} {item.quantity} • {formatCurrency(item.total_price, quote.currency_code || 'USD')}
+                          </div>
+                          {conversionPreview.existing_sales_order ? (
+                            <div className="text-sm text-muted-foreground">
+                              {t('quoteConversion.summary.billedViaSalesOrder', {
+                                defaultValue: 'Billed from sales order {{soNumber}} on fulfillment',
+                                soNumber: conversionPreview.existing_sales_order.so_number ?? '',
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('quoteConversion.empty.salesOrderItems', { defaultValue: 'No product lines will move to a sales order.' })}</p>
+                  )}
+                </section>
+              )}
 
               <section className="space-y-2 rounded-lg border border-border p-4">
                 <h3 className="text-base font-semibold">{t('quoteConversion.sections.willBecomeContractLines', { defaultValue: 'Will Become Contract Lines' })}</h3>
@@ -1388,7 +1427,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t('quoteConversion.empty.invoiceItems', { defaultValue: 'No one-time items will convert to an invoice.' })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {conversionPreview.existing_sales_order
+                      ? t('quoteConversion.empty.invoiceItemsOnSalesOrder', {
+                          defaultValue: 'All one-time lines are on sales order {{soNumber}} and will be invoiced from there on fulfillment.',
+                          soNumber: conversionPreview.existing_sales_order.so_number ?? '',
+                        })
+                      : t('quoteConversion.empty.invoiceItems', { defaultValue: 'No one-time items will convert to an invoice.' })}
+                  </p>
                 )}
               </section>
 

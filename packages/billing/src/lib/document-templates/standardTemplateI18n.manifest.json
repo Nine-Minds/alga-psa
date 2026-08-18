@@ -998,7 +998,7 @@
       "$.layout.children[0].children[0].children[2].content.bindingId=tenantAddress",
       "$.layout.children[0].children[0].children[2].id=issuer-address",
       "$.layout.children[0].children[0].id=issuer-brand",
-      "$.layout.children[0].children[1].children[0].content.i18nKey=labels.estimateTitle",
+      "$.layout.children[0].children[1].children[0].content.i18nKey=labels.quoteTitle",
       "$.layout.children[0].children[1].children[0].id=quote-title",
       "$.layout.children[0].children[1].children[1].binding.bindingId=quoteNumber",
       "$.layout.children[0].children[1].children[1].id=quote-number",
