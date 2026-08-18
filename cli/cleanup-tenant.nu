@@ -322,6 +322,10 @@ def "main cleanup" [
         "quote_activities" "quote_items" "quote_document_template_assignments"
         "quote_document_templates" "standard_quote_document_templates" "quotes"
 
+        # Hour blocks (ad-hoc prepaid hour blocks): allocations/scopes/audit
+        # reference hour_blocks, which references invoices/clients/service_catalog.
+        "hour_block_time_allocations" "hour_block_service_scopes" "hour_block_audit" "hour_blocks"
+
         # Invoice details
         "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
         "invoice_charge_details" "invoice_charge_fixed_details" "invoice_items"
