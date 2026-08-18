@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "Isso será exibido no cabeçalho do portal do cliente",
+        "colorPalette": "São acentos sobre o tema da organização: a cor primária pinta botões, ligações e o banner de boas-vindas, a cor secundária a segunda metade do banner e os acentos de apoio, e o painel lateral adota a que escolher. Todas as outras superfícies — página, cartões, texto, contornos — vêm do tema em Definições → Aparência.",
         "companyLogo": "Recomendado: PNG ou SVG, máximo de 2 MB, fundo transparente",
         "companyLogoMsp": "Este logotipo também substitui a marca Alga no menu lateral MSP.",
         "companyLogoDark": "Opcional. Usado no painel lateral do portal e nas telas em modo escuro. Se ficar vazio, o logotipo da empresa é usado.",

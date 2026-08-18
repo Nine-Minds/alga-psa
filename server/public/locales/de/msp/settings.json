@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
+        "colorPalette": "Das sind Akzente auf dem Organisations-Theme: Die Primärfarbe färbt Schaltflächen, Links und das Willkommensbanner, die Sekundärfarbe die zweite Hälfte des Banners und ergänzende Akzente, und das Seitenmenü übernimmt die von Ihnen gewählte Farbe. Alle übrigen Flächen – Seite, Karten, Text, Rahmen – stammen aus dem Theme unter Einstellungen → Darstellung.",
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
         "companyLogoMsp": "Dieses Logo ersetzt außerdem die Alga-Marke im MSP-Seitenmenü.",
         "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",

@@ -528,61 +528,63 @@ const ClientPortalSettings = () => {
               </p>
             </div>
 
-            {/* Logo Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('clientPortal.branding.fields.companyLogo')}
-              </label>
-              {tenantId && (
-                <EntityImageUpload
-                  entityType="tenant"
-                  entityId={tenantId}
-                  entityName={clientName || 'Client Portal'}
-                  imageUrl={logoUrl}
-                  uploadAction={handleLogoUpload}
-                  deleteAction={handleLogoDelete}
-                  onImageChange={(newLogoUrl) => {
-                    setLogoUrl(newLogoUrl || '');
-                  }}
-                  size="lg"
-                />
-              )}
-              <p className="text-sm text-gray-500 mt-2">
-                {t('clientPortal.branding.help.companyLogo')}
-                {isEEAvailable
-                  ? ` ${t('clientPortal.branding.help.companyLogoMsp', {
-                      defaultValue: 'This logo also replaces the Alga mark in the MSP side menu.',
-                    })}`
-                  : ''}
-              </p>
-            </div>
+            {/* Logo uploads — the light and dark marks side by side, since they
+                are two versions of the same thing. */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('clientPortal.branding.fields.companyLogo')}
+                </label>
+                {tenantId && (
+                  <EntityImageUpload
+                    entityType="tenant"
+                    entityId={tenantId}
+                    entityName={clientName || 'Client Portal'}
+                    imageUrl={logoUrl}
+                    uploadAction={handleLogoUpload}
+                    deleteAction={handleLogoDelete}
+                    onImageChange={(newLogoUrl) => {
+                      setLogoUrl(newLogoUrl || '');
+                    }}
+                    size="lg"
+                  />
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  {t('clientPortal.branding.help.companyLogo')}
+                  {isEEAvailable
+                    ? ` ${t('clientPortal.branding.help.companyLogoMsp', {
+                        defaultValue: 'This logo also replaces the Alga mark in the MSP side menu.',
+                      })}`
+                    : ''}
+                </p>
+              </div>
 
-            {/* Dark-surface Logo Upload (optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('clientPortal.branding.fields.companyLogoDark', {
-                  defaultValue: 'Logo for dark backgrounds',
-                })}
-              </label>
-              {tenantId && (
-                <EntityImageUpload
-                  entityType="tenant"
-                  entityId={tenantId}
-                  entityName={clientName || 'Client Portal'}
-                  imageUrl={logoDarkUrl}
-                  uploadAction={handleDarkLogoUpload}
-                  deleteAction={handleDarkLogoDelete}
-                  onImageChange={(newLogoUrl) => {
-                    setLogoDarkUrl(newLogoUrl || '');
-                  }}
-                  size="lg"
-                />
-              )}
-              <p className="text-sm text-gray-500 mt-2">
-                {t('clientPortal.branding.help.companyLogoDark', {
-                  defaultValue: 'Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.',
-                })}
-              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('clientPortal.branding.fields.companyLogoDark', {
+                    defaultValue: 'Logo for dark backgrounds',
+                  })}
+                </label>
+                {tenantId && (
+                  <EntityImageUpload
+                    entityType="tenant"
+                    entityId={tenantId}
+                    entityName={clientName || 'Client Portal'}
+                    imageUrl={logoDarkUrl}
+                    uploadAction={handleDarkLogoUpload}
+                    deleteAction={handleDarkLogoDelete}
+                    onImageChange={(newLogoUrl) => {
+                      setLogoDarkUrl(newLogoUrl || '');
+                    }}
+                    size="lg"
+                  />
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  {t('clientPortal.branding.help.companyLogoDark', {
+                    defaultValue: 'Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.',
+                  })}
+                </p>
+              </div>
             </div>
 
             {/* Color Palette */}
@@ -590,6 +592,12 @@ const ClientPortalSettings = () => {
               <label className="block text-sm font-medium text-gray-700">
                 {t('clientPortal.branding.fields.colorPalette')}
               </label>
+              <p className="text-sm text-gray-500" data-automation-id="client-portal-palette-scope">
+                {t('clientPortal.branding.help.colorPalette', {
+                  defaultValue:
+                    'These are accents on top of the organization theme: the primary color paints buttons, links and the welcome banner, the secondary color the banner’s second half and supporting accents, and the side panel picks up whichever you choose. Every other surface — page, cards, text, borders — comes from the theme under Settings → Appearance.',
+                })}
+              </p>
 
               <div className="flex items-start justify-between gap-6 rounded-md border border-[rgb(var(--color-border-200))] p-3">
                 <div>

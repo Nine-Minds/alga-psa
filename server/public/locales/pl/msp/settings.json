@@ -1129,6 +1129,7 @@
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
+        "colorPalette": "To akcenty nałożone na motyw organizacji: kolor podstawowy maluje przyciski, linki i baner powitalny, kolor dodatkowy drugą połowę banera i akcenty pomocnicze, a panel boczny przejmuje ten, który wybierzesz. Wszystkie pozostałe powierzchnie — strona, karty, tekst, obramowania — pochodzą z motywu w Ustawieniach → Wygląd.",
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
         "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
         "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",

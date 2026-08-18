@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
+        "colorPalette": "Dit zijn accenten boven op het organisatiethema: de primaire kleur kleurt knoppen, links en de welkomstbanner, de secundaire kleur de tweede helft van de banner en ondersteunende accenten, en het zijpaneel neemt de kleur over die u kiest. Alle andere vlakken — pagina, kaarten, tekst, randen — komen uit het thema onder Instellingen → Weergave.",
         "companyLogo": "Aanbevolen: PNG of SVG, maximaal 2 MB, transparante achtergrond",
         "companyLogoMsp": "Dit logo vervangt ook het Alga-merk in het MSP-zijmenu.",
         "companyLogoDark": "Optioneel. Wordt gebruikt in het zijpaneel van het portaal en in de donkere modus. Zonder logo wordt het bedrijfslogo gebruikt.",

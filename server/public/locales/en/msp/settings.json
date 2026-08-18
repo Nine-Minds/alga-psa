@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
+        "colorPalette": "These are accents on top of the organization theme: the primary color paints buttons, links and the welcome banner, the secondary color the banner’s second half and supporting accents, and the side panel picks up whichever you choose. Every other surface — page, cards, text, borders — comes from the theme under Settings → Appearance.",
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
         "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
         "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",

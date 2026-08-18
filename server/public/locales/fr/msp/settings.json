@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",
+        "colorPalette": "Ce sont des accents posés sur le thème de l’organisation : la couleur primaire colore les boutons, les liens et la bannière de bienvenue, la couleur secondaire la seconde moitié de la bannière et les accents d’appoint, et le panneau latéral reprend celle que vous choisissez. Toutes les autres surfaces — page, cartes, texte, bordures — viennent du thème sous Paramètres → Apparence.",
         "companyLogo": "Recommandé : PNG ou SVG, 2 Mo max, fond transparent",
         "companyLogoMsp": "Ce logo remplace également la marque Alga dans le menu latéral MSP.",
         "companyLogoDark": "Facultatif. Utilisé dans le panneau latéral du portail et sur les écrans en mode sombre. À défaut, le logo de l'entreprise est utilisé.",

@@ -1123,6 +1123,7 @@
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
+        "colorPalette": "Sono accenti sopra il tema dell’organizzazione: il colore primario dipinge pulsanti, link e il banner di benvenuto, il colore secondario la seconda metà del banner e gli accenti di supporto, e il pannello laterale adotta quello che scegli. Tutte le altre superfici — pagina, schede, testo, bordi — vengono dal tema in Impostazioni → Aspetto.",
         "companyLogo": "Consigliato: PNG o SVG, massimo 2 MB, sfondo trasparente",
         "companyLogoMsp": "Questo logo sostituisce anche il marchio Alga nel menu laterale MSP.",
         "companyLogoDark": "Facoltativo. Utilizzato nel pannello laterale del portale e nelle schermate in modalità scura. Se vuoto, viene usato il logo dell'azienda.",
