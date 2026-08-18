@@ -140,6 +140,7 @@ export async function kbArticleImportHandler(
       progress.processed += 1;
       if (row.status === 'imported') progress.imported += 1;
       else progress.failed += 1;
+      await updateJobProgress(knex, tenant, jobRecordId, progress);
       continue;
     }
 

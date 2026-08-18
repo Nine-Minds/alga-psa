@@ -143,6 +143,10 @@ describe('kb-article-import handler execution', () => {
 
     expect(createKbArticleMock).not.toHaveBeenCalled();
     expect(result).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
+    // A retry that finds every row already consumed must still leave the final
+    // counts on the job row, or the dialog polls a batch that never settles.
+    const metadata = JSON.parse(tables.jobs[0].metadata as string);
+    expect(metadata.kbImport).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
   });
 
   it('maps user-facing failures onto the staged row', async () => {
