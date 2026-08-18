@@ -14,6 +14,10 @@ import type { JobStatus } from '../types/job.js';
 import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 import { TemporalJobRunner } from '@alga-psa/jobs/runners/TemporalJobRunner';
 import { extensionScheduledInvocationHandler } from '@alga-psa/jobs/handlers/extensionScheduledInvocationHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
@@ -94,6 +98,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     );
   } catch (error) {
     logger.error('Failed to register extension scheduled invocation handler', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
+  // KB article import: the handler's graph is Node-ESM clean (@alga-psa/db,
+  // @alga-psa/shared, marked/htmlparser2), so it runs here rather than being
+  // forwarded — forwarding would put the parse back on a web pod, which is the
+  // whole reason the import moved to a job.
+  try {
+    registerJobHandlerForActivities(KB_ARTICLE_IMPORT_JOB, async (jobId, data) => {
+      await kbArticleImportHandler(jobId, data as any);
+    });
+  } catch (error) {
+    logger.error('Failed to register KB article import handler', {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;

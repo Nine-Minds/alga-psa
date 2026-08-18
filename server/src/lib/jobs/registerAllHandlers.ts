@@ -13,6 +13,11 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+  KbArticleImportJobData,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
   expiringCreditsNotificationHandler,
@@ -360,6 +365,21 @@ export async function registerAllJobHandlers(
         await handleAssetImportJob({ id: jobId, data } as Job<AssetImportJobData>);
       },
       retry: { maxAttempts: 3 },
+      timeoutMs: 600000, // 10 minutes for large imports
+    },
+    registerOpts
+  );
+
+  // KB article import handler — parses staged markdown/HTML off the web
+  // request. Retries are safe: kb_import_files rows are consumed only while
+  // they are still 'pending'.
+  JobHandlerRegistry.register<KbArticleImportJobData & BaseJobData>(
+    {
+      name: KB_ARTICLE_IMPORT_JOB,
+      handler: async (jobId, data) => {
+        await kbArticleImportHandler(jobId, data);
+      },
+      retry: { maxAttempts: 2 },
       timeoutMs: 600000, // 10 minutes for large imports
     },
     registerOpts
@@ -795,6 +815,7 @@ export function getAvailableJobHandlers(): string[] {
     'opportunity-generators',
     // Assets & Import
     'asset_import',
+    KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
