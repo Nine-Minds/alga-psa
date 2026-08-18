@@ -109,7 +109,8 @@ export async function kbArticleImportHandler(
     throw new Error('At least one import file is required');
   }
 
-  const { knex, tenant } = await createTenantKnex(data.tenantId);
+  const { knex, tenant: resolvedTenant } = await createTenantKnex(data.tenantId);
+  const tenant = resolvedTenant ?? data.tenantId;
   const jobRecordId = data.jobServiceId || jobId;
   const progress: KbArticleImportResult = {
     total: fileIds.length,

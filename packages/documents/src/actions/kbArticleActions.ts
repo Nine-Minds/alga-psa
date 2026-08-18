@@ -7,6 +7,12 @@ import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { enqueueImmediateJob } from '@alga-psa/core';
+import {
+  KB_IMPORT_ALLOWED_EXTENSIONS,
+  KB_IMPORT_MAX_FILES,
+  KB_IMPORT_MAX_FILE_BYTES,
+} from '../lib/kbImportLimits';
 import {
   KB_ARTICLE_SELECT_COLUMNS,
   createKbArticle,
@@ -1040,254 +1046,7 @@ export const getArticleTemplates = withAuth(
 );
 
 // ---------------------------------------------------------------------------
-// Markdown / HTML → BlockNote conversion helpers
-// ---------------------------------------------------------------------------
-
-interface BlockNoteBlock {
-  type: string;
-  props?: Record<string, any>;
-  content?:
-    | Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>
-    | { type: 'tableContent'; rows: Array<{ cells: Array<Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>>; isHeader?: boolean }> };
-  children?: BlockNoteBlock[];
-}
-
-function isTableSeparatorRow(line: string): boolean {
-  // Matches a GFM separator row like `| --- | :---: | ---: |`
-  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
-}
-
-function splitTableRow(line: string): string[] {
-  // Strip leading/trailing pipes, then split. Cells are trimmed.
-  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
-  return trimmed.split('|').map((c) => c.trim());
-}
-
-function markdownToBlocks(markdown: string): BlockNoteBlock[] {
-  const lines = markdown.split('\n');
-  const blocks: BlockNoteBlock[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Horizontal rule
-    if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
-      blocks.push({ type: 'horizontalRule' });
-      i++;
-      continue;
-    }
-
-    // Blockquote
-    if (line.startsWith('> ') || line === '>') {
-      const quoteLines: string[] = [];
-      while (i < lines.length && (lines[i].startsWith('> ') || lines[i] === '>')) {
-        quoteLines.push(lines[i].replace(/^>\s?/, ''));
-        i++;
-      }
-      // Parse blockquote content as inline markdown
-      const quoteText = quoteLines.join(' ');
-      blocks.push({
-        type: 'blockquote',
-        content: parseInlineMarkdown(quoteText),
-      });
-      continue;
-    }
-
-    // Fenced code block
-    if (line.startsWith('```')) {
-      const lang = line.slice(3).trim();
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      i++; // skip closing ```
-      blocks.push({
-        type: 'codeBlock',
-        props: { language: lang || 'plain' },
-        content: [{ type: 'text', text: codeLines.join('\n') }],
-      });
-      continue;
-    }
-
-    // Headings
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
-    if (headingMatch) {
-      blocks.push({
-        type: 'heading',
-        props: { level: headingMatch[1].length },
-        content: parseInlineMarkdown(headingMatch[2]),
-      });
-      i++;
-      continue;
-    }
-
-    // Unordered list items
-    if (/^\s*[-*+]\s+/.test(line)) {
-      const items: BlockNoteBlock[] = [];
-      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
-        const text = lines[i].replace(/^\s*[-*+]\s+/, '');
-        items.push({
-          type: 'bulletListItem',
-          content: parseInlineMarkdown(text),
-        });
-        i++;
-      }
-      blocks.push(...items);
-      continue;
-    }
-
-    // Ordered list items
-    if (/^\s*\d+[.)]\s+/.test(line)) {
-      const items: BlockNoteBlock[] = [];
-      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
-        const text = lines[i].replace(/^\s*\d+[.)]\s+/, '');
-        items.push({
-          type: 'numberedListItem',
-          content: parseInlineMarkdown(text),
-        });
-        i++;
-      }
-      blocks.push(...items);
-      continue;
-    }
-
-    // GFM table — header row, separator row (---), then body rows
-    // Detect: current line looks like a row (`| a | b |` or `a | b`) and the next line is a separator.
-    if (
-      line.includes('|') &&
-      i + 1 < lines.length &&
-      isTableSeparatorRow(lines[i + 1])
-    ) {
-      const headerCells = splitTableRow(line);
-      const bodyRows: string[][] = [];
-      let j = i + 2;
-      while (j < lines.length && lines[j].trim() && lines[j].includes('|')) {
-        bodyRows.push(splitTableRow(lines[j]));
-        j++;
-      }
-      const allRows = [
-        { cells: headerCells, isHeader: true },
-        ...bodyRows.map((cells) => ({ cells, isHeader: false })),
-      ];
-      blocks.push({
-        type: 'table',
-        content: {
-          type: 'tableContent',
-          rows: allRows.map((r) => ({
-            isHeader: r.isHeader,
-            cells: r.cells.map((cellText) => parseInlineMarkdown(cellText)),
-          })),
-        },
-      });
-      i = j;
-      continue;
-    }
-
-    // Blank line → skip
-    if (!line.trim()) {
-      i++;
-      continue;
-    }
-
-    // Regular paragraph — collect consecutive non-blank, non-special lines
-    const paraLines: string[] = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() &&
-      !lines[i].startsWith('#') &&
-      !lines[i].startsWith('```') &&
-      !/^\s*[-*+]\s+/.test(lines[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lines[i]) &&
-      // stop if a GFM table starts on the next line
-      !(lines[i].includes('|') && i + 1 < lines.length && isTableSeparatorRow(lines[i + 1]))
-    ) {
-      paraLines.push(lines[i]);
-      i++;
-    }
-    if (paraLines.length > 0) {
-      blocks.push({
-        type: 'paragraph',
-        content: parseInlineMarkdown(paraLines.join(' ')),
-      });
-    }
-  }
-
-  return blocks;
-}
-
-function parseInlineMarkdown(
-  text: string
-): Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> {
-  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }> = [];
-  // Handle **bold**, *italic*, `code`, and [text](url)
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ type: 'text', text: text.slice(lastIndex, match.index) });
-    }
-    if (match[2]) {
-      segments.push({ type: 'text', text: match[2], styles: { bold: true } });
-    } else if (match[3]) {
-      segments.push({ type: 'text', text: match[3], styles: { italic: true } });
-    } else if (match[4]) {
-      segments.push({ type: 'text', text: match[4], styles: { code: true } });
-    } else if (match[5] && match[6]) {
-      segments.push({ type: 'text', text: match[5], styles: { link: { href: match[6] } } });
-    }
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    segments.push({ type: 'text', text: text.slice(lastIndex) });
-  }
-
-  return segments.length > 0 ? segments : [{ type: 'text', text }];
-}
-
-function htmlToBlocks(html: string): BlockNoteBlock[] {
-  // Simple HTML → text conversion, then parse as markdown
-  const text = html
-    // Convert common block elements to newlines
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, (_, level, content) => {
-      return '#'.repeat(parseInt(level)) + ' ' + stripTags(content) + '\n\n';
-    })
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, (_, content) => {
-      return '```\n' + stripTags(content) + '\n```\n\n';
-    })
-    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
-    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
-    .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
-    .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
-    .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
-
-  return markdownToBlocks(stripTags(text));
-}
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
-}
-
-function titleFromFilename(filename: string): string {
-  return filename
-    .replace(/\.(md|markdown|html|htm)$/i, '')
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
-}
-
-// ---------------------------------------------------------------------------
-// Import articles from file contents
+// Import articles from uploaded files
 // ---------------------------------------------------------------------------
 
 export interface IImportFileInput {
@@ -1308,75 +1067,161 @@ export interface IImportResult {
   failed: Array<{ filename: string; error: string }>;
 }
 
-/**
- * Imports KB articles from markdown/HTML file contents.
- * Each file becomes one article. Filename → title, content → BlockNote blocks.
- */
-function kbArticleImportErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
-  if (
-    message === 'Title is required' ||
-    message === 'An article with this slug already exists'
-  ) {
-    return message;
-  }
-
-  return 'Failed to import article';
+export interface IStartArticleImportResult {
+  jobId: string;
+  total: number;
 }
 
-export const importArticles = withAuth(
+export interface IArticleImportStatus extends IImportResult {
+  status: ImportJobStatus;
+}
+
+/** Job name is inlined: a vertical package must not import @alga-psa/jobs. */
+const KB_ARTICLE_IMPORT_JOB = 'kb-article-import';
+
+function importFileExtension(filename: string): string {
+  const match = /\.[^.]+$/.exec(filename.trim().toLowerCase());
+  return match ? match[0] : '';
+}
+
+/**
+ * Stages uploaded markdown/HTML files and hands the parsing to the
+ * 'kb-article-import' background job. Parsing a multi-megabyte file used to run
+ * inline in this action and could block the event loop for minutes; the action
+ * now only validates and writes staging rows.
+ */
+export const startArticleImport = withAuth(
   async (
     user,
     { tenant },
     input: IImportArticlesInput
-  ): Promise<IImportResult | ActionPermissionError> => {
+  ): Promise<IStartArticleImportResult | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'create'))) {
       return permissionError('Permission denied');
     }
 
-    if (!input.files?.length) {
+    const files = input.files ?? [];
+    if (files.length === 0) {
       throw new Error('No files provided');
     }
+    if (files.length > KB_IMPORT_MAX_FILES) {
+      throw new Error(`You can import at most ${KB_IMPORT_MAX_FILES} files at a time`);
+    }
 
-    const result: IImportResult = { total: input.files.length, imported: 0, failed: [] };
-
-    for (const file of input.files) {
-      try {
-        const title = titleFromFilename(file.filename);
-        const isHtml = /\.(html|htm)$/i.test(file.filename);
-        const blocks = isHtml ? htmlToBlocks(file.content) : markdownToBlocks(file.content);
-
-        // Deduplicate slug: append a suffix if needed
-        let slug = generateSlug(title);
-        const existingSlug = await tenantScopedTable(knex, 'kb_articles', tenant)
-          .where({ slug })
-          .first();
-        if (existingSlug) {
-          slug = `${slug}-${Date.now()}`;
-        }
-
-        await createKbArticle(knex, { tenant, userId: user.user_id }, {
-          title,
-          slug,
-          content: blocks,
-          articleType: input.articleType || 'reference',
-          audience: input.audience || 'internal',
-          categoryId: input.categoryId,
-        });
-
-        result.imported++;
-      } catch (err) {
-        result.failed.push({
-          filename: file.filename,
-          error: kbArticleImportErrorMessage(err),
-        });
+    for (const file of files) {
+      if (!file.filename?.trim()) {
+        throw new Error('Each file must have a name');
+      }
+      if (!KB_IMPORT_ALLOWED_EXTENSIONS.includes(importFileExtension(file.filename))) {
+        throw new Error(`${file.filename}: unsupported file type. Use .md or .html`);
+      }
+      if (!file.content?.trim()) {
+        throw new Error(`${file.filename} is empty`);
+      }
+      if (Buffer.byteLength(file.content, 'utf8') > KB_IMPORT_MAX_FILE_BYTES) {
+        throw new Error(
+          `${file.filename} is larger than ${Math.floor(KB_IMPORT_MAX_FILE_BYTES / (1024 * 1024))}MB`,
+        );
       }
     }
 
-    return result;
+    // Rows are written before the job is enqueued so the handler can never win
+    // the race and find nothing to import. The batch id is replaced by the job
+    // record id below, which is what the status action polls on.
+    const importBatchId = randomUUID();
+    const now = new Date();
+    const rows = files.map((file) => ({
+      tenant,
+      import_file_id: randomUUID(),
+      job_id: importBatchId,
+      filename: file.filename,
+      content: file.content,
+      status: 'pending',
+      audience: input.audience || 'internal',
+      article_type: input.articleType || 'reference',
+      category_id: input.categoryId || null,
+      created_at: now,
+      updated_at: now,
+    }));
+
+    await tenantScopedTable(knex, 'kb_import_files', tenant).insert(rows);
+
+    const fileIds = rows.map((row) => row.import_file_id);
+
+    let jobId: string;
+    try {
+      const enqueued = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
+        tenantId: tenant,
+        userId: user.user_id,
+        fileIds,
+        metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
+      });
+      jobId = enqueued.jobId;
+    } catch (error) {
+      await tenantScopedTable(knex, 'kb_import_files', tenant)
+        .where({ job_id: importBatchId })
+        .del()
+        .catch(() => {});
+      throw error;
+    }
+
+    await tenantScopedTable(knex, 'kb_import_files', tenant)
+      .where({ job_id: importBatchId })
+      .update({ job_id: jobId, updated_at: new Date() });
+
+    return { jobId, total: rows.length };
+  }
+);
+
+/**
+ * Progress for a running import, polled by the import dialog.
+ */
+export const getArticleImportStatus = withAuth(
+  async (
+    user,
+    { tenant },
+    jobId: string
+  ): Promise<IArticleImportStatus | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'create'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!jobId) {
+      throw new Error('jobId is required');
+    }
+
+    const rows: Array<{ filename: string; status: string; error: string | null }> =
+      await tenantScopedTable(knex, 'kb_import_files', tenant)
+        .where({ job_id: jobId })
+        .select(['filename', 'status', 'error'])
+        .orderBy('created_at', 'asc');
+
+    const job = await tenantScopedTable(knex, 'jobs', tenant)
+      .where({ job_id: jobId })
+      .first('status');
+
+    const imported = rows.filter((row) => row.status === 'imported').length;
+    const failed = rows
+      .filter((row) => row.status === 'failed')
+      .map((row) => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
+    const settled = imported + failed.length === rows.length && rows.length > 0;
+
+    let status: ImportJobStatus = 'processing';
+    if (job?.status === 'failed') {
+      status = 'failed';
+    } else if (settled || job?.status === 'completed') {
+      status = 'completed';
+    } else if (job?.status === 'pending' && imported + failed.length === 0) {
+      status = 'pending';
+    }
+
+    return { status, total: rows.length, imported, failed };
   }
 );
 
