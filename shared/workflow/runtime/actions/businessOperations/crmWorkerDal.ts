@@ -1151,7 +1151,12 @@ export async function buildQuoteConversionPreview(
     available_actions: availableActions,
     contract_items: contractItems,
     invoice_items: invoiceItems,
+    // The worker DAL predates sales orders and does not model the sales-order
+    // exclusion; the server-side quoteConversionService preview is the
+    // authoritative one. Empty here means "not computed", not "none".
+    sales_order_items: [],
     excluded_items: excludedItems,
+    existing_sales_order: null,
   };
 }
 

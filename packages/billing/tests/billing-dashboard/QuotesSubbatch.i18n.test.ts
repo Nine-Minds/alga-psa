@@ -71,7 +71,10 @@ describe('Quotes i18n wiring contract', () => {
       'quoteForm.headings.newTemplate',
       'common.actions.submitForApproval',
       'quoteForm.actions.cancelQuote',
-      'quoteForm.actions.convertToBoth',
+      // Conversion collapsed to one entry button; the dialog footer offers the
+      // per-target actions from quoteConversion.actions.*.
+      'quoteForm.actions.convert',
+      'quoteConversion.actions.salesOrder',
       'quoteForm.fields.createFromTemplate',
       'quoteForm.fields.recipients',
       'quoteForm.dialogs.send.title',
