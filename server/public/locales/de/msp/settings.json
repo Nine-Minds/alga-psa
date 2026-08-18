@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Ozean",
-        "description": "Kühle Blautöne auf klaren, leicht kühlen Flächen."
+        "description": "Ein marineblaues Seitenmenü mit kühlen Blautönen auf klaren, leicht kühlen Flächen."
+      },
+      "sky": {
+        "label": "Himmel",
+        "description": "Ein helleres, luftigeres Blau mit indigofarbener Sekundärfarbe."
       },
       "forest": {
         "label": "Wald",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Sonnenuntergang",
-        "description": "Warme Orangetöne auf sandfarbenen Flächen."
+        "description": "Warme Orangetöne und Dämmerungsrosa auf sandfarbenen Flächen."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "Hoher Kontrast",
-        "description": "Maximale Lesbarkeit: reine schwarze und weiße Flächen mit betonten Rahmen."
+        "description": "Nur Schwarz und Weiß mit betonten Rahmen. Nur die Statusfarben behalten ihren Farbton."
       }
     },
     "custom": {

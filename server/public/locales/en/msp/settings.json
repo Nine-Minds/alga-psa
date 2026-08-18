@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Ocean",
-        "description": "Cool blues over crisp, slightly cooled surfaces."
+        "description": "A navy side panel with cool blues over crisp, slightly cooled surfaces."
+      },
+      "sky": {
+        "label": "Sky",
+        "description": "A lighter, airier blue with an indigo secondary."
       },
       "forest": {
         "label": "Forest",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Sunset",
-        "description": "Warm oranges over sand-tinted surfaces."
+        "description": "Warm oranges and dusk pink over sand-tinted surfaces."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "High contrast",
-        "description": "Maximum legibility: pure black and white surfaces with emphasized borders."
+        "description": "Black and white only, with emphasized borders. Just the status colors keep their hue."
       }
     },
     "custom": {

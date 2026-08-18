@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Oceaan",
-        "description": "Koele blauwtinten op heldere, licht gekoelde vlakken."
+        "description": "Een marineblauw zijpaneel met koele blauwtinten op heldere, licht gekoelde vlakken."
+      },
+      "sky": {
+        "label": "Hemel",
+        "description": "Een lichter, luchtiger blauw met een indigo secundaire kleur."
       },
       "forest": {
         "label": "Bos",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Zonsondergang",
-        "description": "Warme oranjetinten op zandkleurige vlakken."
+        "description": "Warme oranjetinten en schemerroze op zandkleurige vlakken."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "Hoog contrast",
-        "description": "Maximale leesbaarheid: zuiver zwarte en witte vlakken met nadrukkelijke randen."
+        "description": "Alleen zwart-wit, met nadrukkelijke randen. Alleen de statuskleuren behouden hun kleur."
       }
     },
     "custom": {

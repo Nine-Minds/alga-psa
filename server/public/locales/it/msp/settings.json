@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Oceano",
-        "description": "Blu freddi su superfici nitide e leggermente fredde."
+        "description": "Un pannello laterale blu navy con blu freddi su superfici nitide e leggermente fredde."
+      },
+      "sky": {
+        "label": "Cielo",
+        "description": "Un blu più chiaro e leggero con un secondario indaco."
       },
       "forest": {
         "label": "Foresta",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Tramonto",
-        "description": "Arancioni caldi su superfici color sabbia."
+        "description": "Arancioni caldi e rosa del crepuscolo su superfici color sabbia."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "Contrasto elevato",
-        "description": "Massima leggibilità: superfici bianche e nere pure con bordi accentuati."
+        "description": "Solo bianco e nero, con bordi accentuati. Solo i colori di stato mantengono la loro tonalità."
       }
     },
     "custom": {

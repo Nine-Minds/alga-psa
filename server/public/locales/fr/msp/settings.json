@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Océan",
-        "description": "Des bleus froids sur des surfaces nettes et légèrement froides."
+        "description": "Un panneau latéral bleu marine avec des bleus froids sur des surfaces nettes et légèrement froides."
+      },
+      "sky": {
+        "label": "Ciel",
+        "description": "Un bleu plus clair et plus aérien avec un secondaire indigo."
       },
       "forest": {
         "label": "Forêt",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Coucher de soleil",
-        "description": "Des oranges chauds sur des surfaces teintées de sable."
+        "description": "Des oranges chauds et un rose crépusculaire sur des surfaces teintées de sable."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "Contraste élevé",
-        "description": "Lisibilité maximale : surfaces noires et blanches pures avec bordures accentuées."
+        "description": "Uniquement du noir et blanc, avec des bordures accentuées. Seules les couleurs de statut gardent leur teinte."
       }
     },
     "custom": {

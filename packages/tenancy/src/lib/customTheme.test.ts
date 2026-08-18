@@ -28,7 +28,7 @@ describe('theme pairs', () => {
 
   it('offers a swatch for every predefined pair', () => {
     expect(THEME_PAIRS.map((pair) => pair.id)).toEqual([
-      'alga', 'slate', 'ocean', 'forest', 'sunset', 'cappuccino', 'vice', 'high-contrast',
+      'alga', 'slate', 'ocean', 'sky', 'forest', 'sunset', 'cappuccino', 'vice', 'high-contrast',
     ]);
     THEME_PAIRS.forEach((pair) => {
       [pair.light, pair.dark].forEach((swatch) => {
@@ -121,7 +121,7 @@ describe('custom theme validation', () => {
 describe('custom theme presets', () => {
   it('seeds every predefined pair, including the new ones', () => {
     expect(Object.keys(CUSTOM_THEME_PRESETS)).toEqual([
-      'alga', 'slate', 'ocean', 'forest', 'sunset', 'cappuccino', 'vice', 'high-contrast',
+      'alga', 'slate', 'ocean', 'sky', 'forest', 'sunset', 'cappuccino', 'vice', 'high-contrast',
     ]);
   });
 

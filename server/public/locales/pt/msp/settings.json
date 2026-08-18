@@ -1313,7 +1313,11 @@
       },
       "ocean": {
         "label": "Oceano",
-        "description": "Azuis frios sobre superfícies nítidas e levemente frias."
+        "description": "Um painel lateral azul-marinho com azuis frios sobre superfícies nítidas e levemente frias."
+      },
+      "sky": {
+        "label": "Céu",
+        "description": "Um azul mais claro e leve com um secundário índigo."
       },
       "forest": {
         "label": "Floresta",
@@ -1321,7 +1325,7 @@
       },
       "sunset": {
         "label": "Pôr do sol",
-        "description": "Laranjas quentes sobre superfícies em tom de areia."
+        "description": "Laranjas quentes e rosa do crepúsculo sobre superfícies em tom de areia."
       },
       "cappuccino": {
         "label": "Capuccino",
@@ -1333,7 +1337,7 @@
       },
       "highContrast": {
         "label": "Alto contraste",
-        "description": "Legibilidade máxima: superfícies pretas e brancas puras com bordas destacadas."
+        "description": "Apenas preto e branco, com bordas destacadas. Só as cores de estado mantêm o seu tom."
       }
     },
     "custom": {

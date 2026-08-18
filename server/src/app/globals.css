@@ -1070,9 +1070,9 @@ html.light[data-theme-pair="ocean"] {
     --color-table-status-warning: 255 242 221;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 11 22 32;
+    --color-sidebar-bg: 16 47 82;
     --color-sidebar-text: 226 236 246;
-    --color-sidebar-hover: 22 40 58;
+    --color-sidebar-hover: 23 65 111;
     --color-sidebar-icon: 138 164 187;
 
     /* Header Colors */
@@ -1081,9 +1081,9 @@ html.light[data-theme-pair="ocean"] {
     --color-header-border: 217 226 236;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 18 32 45;
+    --color-submenu-bg: 22 55 93;
     --color-submenu-text: 226 236 246;
-    --color-submenu-hover: 28 49 69;
+    --color-submenu-hover: 29 72 119;
     --color-submenu-icon: 138 164 187;
 }
 
@@ -1181,9 +1181,9 @@ html.dark[data-theme-pair="ocean"] {
     --color-table-status-warning: 46 36 16;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 13 23 38;
+    --color-sidebar-bg: 15 37 64;
     --color-sidebar-text: 226 236 246;
-    --color-sidebar-hover: 23 41 61;
+    --color-sidebar-hover: 22 58 95;
     --color-sidebar-icon: 138 164 187;
 
     /* Header Colors */
@@ -1192,10 +1192,232 @@ html.dark[data-theme-pair="ocean"] {
     --color-header-border: 28 43 61;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 19 37 57;
+    --color-submenu-bg: 26 58 94;
     --color-submenu-text: 226 236 246;
-    --color-submenu-hover: 29 51 73;
+    --color-submenu-hover: 34 73 111;
     --color-submenu-icon: 138 164 187;
+}
+
+html.light[data-theme-pair="sky"] {
+    --background: 247, 251, 255;
+    --color-background: 247 251 255;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 22 163 74;
+    --color-status-success-foreground: 14 34 51;
+    --color-status-warning: 217 119 6;
+    --color-status-warning-foreground: 14 34 51;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 14 34 51;
+
+    /* BORDER COLOR */
+    --color-border-base: 157 190 223;
+    --color-border-50: 239 246 253;
+    --color-border-100: 227 238 251;
+    --color-border-200: 211 228 246;
+    --color-border-300: 185 210 236;
+    --color-border-400: 157 190 223;
+    --color-border-500: 95 127 156;
+    --color-border-600: 70 97 123;
+    --color-border-700: 43 66 87;
+    --color-border-800: 28 47 64;
+    --color-border-900: 14 34 51;
+
+    /* TEXT COLORS */
+    --color-text-base: 157 190 223;
+    --color-text-50: 239 246 253;
+    --color-text-100: 227 238 251;
+    --color-text-200: 211 228 246;
+    --color-text-300: 185 210 236;
+    --color-text-400: 157 190 223;
+    --color-text-500: 95 127 156;
+    --color-text-600: 70 97 123;
+    --color-text-700: 43 66 87;
+    --color-text-800: 28 47 64;
+    --color-text-900: 14 34 51;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 240 249 252;
+    --color-primary-100: 195 229 244;
+    --color-primary-200: 149 209 236;
+    --color-primary-300: 104 189 228;
+    --color-primary-400: 58 169 220;
+    --color-primary-500: 13 149 212;
+    --color-primary-600: 11 129 183;
+    --color-primary-700: 10 108 154;
+    --color-primary-800: 8 88 124;
+    --color-primary-900: 6 67 95;
+
+    /* secondary */
+    --color-secondary-50: 246 246 254;
+    --color-secondary-100: 217 217 251;
+    --color-secondary-200: 187 188 249;
+    --color-secondary-300: 158 160 246;
+    --color-secondary-400: 128 131 244;
+    --color-secondary-500: 99 102 241;
+    --color-secondary-600: 86 88 208;
+    --color-secondary-700: 72 74 175;
+    --color-secondary-800: 59 60 141;
+    --color-secondary-900: 45 46 108;
+
+    /* accent */
+    --color-accent-50: 254 249 240;
+    --color-accent-100: 252 231 194;
+    --color-accent-200: 250 213 148;
+    --color-accent-300: 249 194 103;
+    --color-accent-400: 247 176 57;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 211 136 10;
+    --color-accent-700: 178 115 8;
+    --color-accent-800: 144 93 7;
+    --color-accent-900: 110 71 5;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 240 253 244;
+    --color-alert-info-bg: 238 248 254;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 239 246 253;
+    --color-table-hover: 230 244 253;
+    --color-table-selected: 207 233 251;
+    --color-table-status-approved: 240 253 244;
+    --color-table-status-warning: 255 242 221;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 30 58 95;
+    --color-sidebar-text: 230 241 251;
+    --color-sidebar-hover: 42 79 125;
+    --color-sidebar-icon: 168 196 222;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 14 34 51;
+    --color-header-border: 211 228 246;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 36 70 111;
+    --color-submenu-text: 230 241 251;
+    --color-submenu-hover: 47 87 135;
+    --color-submenu-icon: 168 196 222;
+}
+
+html.dark[data-theme-pair="sky"] {
+    --background: 10, 20, 32;
+    --color-background: 10 20 32;
+    --color-card: 22 39 60;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 57 84 112;
+    --color-border-50: 13 26 41;
+    --color-border-100: 17 36 56;
+    --color-border-200: 36 55 79;
+    --color-border-300: 46 69 95;
+    --color-border-400: 57 84 112;
+    --color-border-500: 126 154 180;
+    --color-border-600: 169 195 218;
+    --color-border-700: 203 220 236;
+    --color-border-800: 220 235 247;
+    --color-border-900: 230 241 251;
+
+    /* TEXT COLORS */
+    --color-text-base: 57 84 112;
+    --color-text-50: 13 26 41;
+    --color-text-100: 17 36 56;
+    --color-text-200: 36 55 79;
+    --color-text-300: 46 69 95;
+    --color-text-400: 57 84 112;
+    --color-text-500: 126 154 180;
+    --color-text-600: 169 195 218;
+    --color-text-700: 203 220 236;
+    --color-text-800: 220 235 247;
+    --color-text-900: 230 241 251;
+
+    --color-switch-thumb: 220 235 247;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 3 30 42;
+    --color-primary-100: 5 54 76;
+    --color-primary-200: 7 78 110;
+    --color-primary-300: 9 101 144;
+    --color-primary-400: 11 125 178;
+    --color-primary-500: 13 149 212;
+    --color-primary-600: 46 164 218;
+    --color-primary-700: 80 178 224;
+    --color-primary-800: 113 193 230;
+    --color-primary-900: 146 207 236;
+
+    /* secondary */
+    --color-secondary-50: 20 20 48;
+    --color-secondary-100: 36 36 87;
+    --color-secondary-200: 52 53 125;
+    --color-secondary-300: 67 69 164;
+    --color-secondary-400: 83 86 202;
+    --color-secondary-500: 99 102 241;
+    --color-secondary-600: 121 123 243;
+    --color-secondary-700: 142 144 245;
+    --color-secondary-800: 164 165 247;
+    --color-secondary-900: 185 186 249;
+
+    /* accent */
+    --color-accent-50: 49 32 2;
+    --color-accent-100: 88 57 4;
+    --color-accent-200: 127 82 6;
+    --color-accent-300: 167 108 7;
+    --color-accent-400: 206 133 9;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 247 171 45;
+    --color-accent-700: 248 185 78;
+    --color-accent-800: 250 198 112;
+    --color-accent-900: 251 211 145;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 51 25 26;
+    --color-alert-warning-bg: 51 40 7;
+    --color-alert-success-bg: 11 42 32;
+    --color-alert-info-bg: 12 43 67;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 13 26 41;
+    --color-table-hover: 20 48 74;
+    --color-table-selected: 27 62 94;
+    --color-table-status-approved: 10 36 25;
+    --color-table-status-warning: 46 36 16;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 22 39 60;
+    --color-sidebar-text: 230 241 251;
+    --color-sidebar-hover: 34 54 79;
+    --color-sidebar-icon: 169 195 218;
+
+    /* Header Colors */
+    --color-header-bg: 22 39 60;
+    --color-header-text: 230 241 251;
+    --color-header-border: 36 55 79;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 32 58 85;
+    --color-submenu-text: 230 241 251;
+    --color-submenu-hover: 42 74 107;
+    --color-submenu-icon: 169 195 218;
 }
 
 html.light[data-theme-pair="forest"] {
@@ -1474,16 +1696,16 @@ html.light[data-theme-pair="sunset"] {
     --color-primary-900: 81 26 5;
 
     /* secondary */
-    --color-secondary-50: 239 252 250;
-    --color-secondary-100: 194 231 227;
-    --color-secondary-200: 149 210 204;
-    --color-secondary-300: 103 190 182;
-    --color-secondary-400: 58 169 159;
-    --color-secondary-500: 13 148 136;
-    --color-secondary-600: 11 128 118;
-    --color-secondary-700: 10 109 100;
-    --color-secondary-800: 8 89 82;
-    --color-secondary-900: 6 69 64;
+    --color-secondary-50: 253 242 247;
+    --color-secondary-100: 246 201 221;
+    --color-secondary-200: 239 161 196;
+    --color-secondary-300: 233 120 170;
+    --color-secondary-400: 226 80 145;
+    --color-secondary-500: 219 39 119;
+    --color-secondary-600: 189 34 103;
+    --color-secondary-700: 159 29 87;
+    --color-secondary-800: 129 23 70;
+    --color-secondary-900: 99 18 54;
 
     /* accent */
     --color-accent-50: 254 251 232;
@@ -1585,16 +1807,16 @@ html.dark[data-theme-pair="sunset"] {
     --color-primary-900: 254 215 170;
 
     /* secondary */
-    --color-secondary-50: 8 43 40;
-    --color-secondary-100: 9 64 59;
-    --color-secondary-200: 10 85 78;
-    --color-secondary-300: 11 106 98;
-    --color-secondary-400: 12 127 117;
-    --color-secondary-500: 13 148 136;
-    --color-secondary-600: 48 173 159;
-    --color-secondary-700: 83 197 182;
-    --color-secondary-800: 118 222 205;
-    --color-secondary-900: 153 246 228;
+    --color-secondary-50: 47 14 31;
+    --color-secondary-100: 85 26 55;
+    --color-secondary-200: 123 37 80;
+    --color-secondary-300: 160 49 104;
+    --color-secondary-400: 198 60 129;
+    --color-secondary-500: 236 72 153;
+    --color-secondary-600: 239 97 167;
+    --color-secondary-700: 241 123 181;
+    --color-secondary-800: 244 148 195;
+    --color-secondary-900: 246 173 209;
 
     /* accent */
     --color-accent-50: 43 36 5;
@@ -1684,28 +1906,28 @@ html.light[data-theme-pair="high-contrast"] {
     --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 242 236 253;
-    --color-primary-100: 212 195 239;
-    --color-primary-200: 182 155 225;
-    --color-primary-300: 151 114 210;
-    --color-primary-400: 121 74 196;
-    --color-primary-500: 91 33 182;
-    --color-primary-600: 80 29 160;
-    --color-primary-700: 69 24 137;
-    --color-primary-800: 57 20 115;
-    --color-primary-900: 46 15 92;
+    --color-primary-50: 245 245 245;
+    --color-primary-100: 229 229 229;
+    --color-primary-200: 196 196 196;
+    --color-primary-300: 143 143 143;
+    --color-primary-400: 69 69 69;
+    --color-primary-500: 26 26 26;
+    --color-primary-600: 13 13 13;
+    --color-primary-700: 8 8 8;
+    --color-primary-800: 4 4 4;
+    --color-primary-900: 0 0 0;
 
     /* secondary */
-    --color-secondary-50: 232 239 253;
-    --color-secondary-100: 191 207 246;
-    --color-secondary-200: 151 175 238;
-    --color-secondary-300: 110 142 231;
-    --color-secondary-400: 70 110 223;
-    --color-secondary-500: 29 78 216;
-    --color-secondary-600: 25 67 187;
-    --color-secondary-700: 21 56 159;
-    --color-secondary-800: 17 45 130;
-    --color-secondary-900: 13 34 101;
+    --color-secondary-50: 245 245 245;
+    --color-secondary-100: 229 229 229;
+    --color-secondary-200: 196 196 196;
+    --color-secondary-300: 143 143 143;
+    --color-secondary-400: 69 69 69;
+    --color-secondary-500: 26 26 26;
+    --color-secondary-600: 13 13 13;
+    --color-secondary-700: 8 8 8;
+    --color-secondary-800: 4 4 4;
+    --color-secondary-900: 0 0 0;
 
     /* accent */
     --color-accent-50: 253 241 226;
@@ -1730,8 +1952,8 @@ html.light[data-theme-pair="high-contrast"] {
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 245 245 245;
-    --color-table-hover: 232 224 248;
-    --color-table-selected: 213 199 242;
+    --color-table-hover: 235 235 235;
+    --color-table-selected: 214 214 214;
     --color-table-status-approved: 255 255 255;
     --color-table-status-warning: 255 255 255;
 
@@ -1815,28 +2037,28 @@ html.dark[data-theme-pair="high-contrast"] {
     --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 28 15 56;
-    --color-primary-100: 47 24 92;
-    --color-primary-200: 66 32 128;
-    --color-primary-300: 86 41 165;
-    --color-primary-400: 105 49 201;
-    --color-primary-500: 124 58 237;
-    --color-primary-600: 148 95 241;
-    --color-primary-700: 173 133 246;
-    --color-primary-800: 197 171 250;
-    --color-primary-900: 221 208 254;
+    --color-primary-50: 13 13 13;
+    --color-primary-100: 26 26 26;
+    --color-primary-200: 38 38 38;
+    --color-primary-300: 56 56 56;
+    --color-primary-400: 84 84 84;
+    --color-primary-500: 115 115 115;
+    --color-primary-600: 153 153 153;
+    --color-primary-700: 192 192 192;
+    --color-primary-800: 224 224 224;
+    --color-primary-900: 255 255 255;
 
     /* secondary */
-    --color-secondary-50: 11 22 54;
-    --color-secondary-100: 21 44 92;
-    --color-secondary-200: 30 65 131;
-    --color-secondary-300: 40 87 169;
-    --color-secondary-400: 49 108 208;
-    --color-secondary-500: 59 130 246;
-    --color-secondary-600: 96 154 248;
-    --color-secondary-700: 133 177 250;
-    --color-secondary-800: 170 201 252;
-    --color-secondary-900: 207 224 254;
+    --color-secondary-50: 13 13 13;
+    --color-secondary-100: 26 26 26;
+    --color-secondary-200: 38 38 38;
+    --color-secondary-300: 56 56 56;
+    --color-secondary-400: 84 84 84;
+    --color-secondary-500: 115 115 115;
+    --color-secondary-600: 153 153 153;
+    --color-secondary-700: 192 192 192;
+    --color-secondary-800: 224 224 224;
+    --color-secondary-900: 255 255 255;
 
     /* accent */
     --color-accent-50: 43 26 5;
@@ -1861,8 +2083,8 @@ html.dark[data-theme-pair="high-contrast"] {
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 10 10 10;
-    --color-table-hover: 36 21 70;
-    --color-table-selected: 51 29 99;
+    --color-table-hover: 31 31 31;
+    --color-table-selected: 46 46 46;
     --color-table-status-approved: 0 0 0;
     --color-table-status-warning: 0 0 0;
 

@@ -1319,7 +1319,11 @@
       },
       "ocean": {
         "label": "Ocean",
-        "description": "Chłodne błękity na wyrazistych, lekko schłodzonych powierzchniach."
+        "description": "Granatowy panel boczny z chłodnymi błękitami na wyrazistych, lekko schłodzonych powierzchniach."
+      },
+      "sky": {
+        "label": "Niebo",
+        "description": "Jaśniejszy, lżejszy błękit z indygo jako kolorem dodatkowym."
       },
       "forest": {
         "label": "Las",
@@ -1327,7 +1331,7 @@
       },
       "sunset": {
         "label": "Zachód słońca",
-        "description": "Ciepłe pomarańcze na powierzchniach w odcieniu piasku."
+        "description": "Ciepłe pomarańcze i zmierzchowy róż na powierzchniach w odcieniu piasku."
       },
       "cappuccino": {
         "label": "Cappuccino",
@@ -1339,7 +1343,7 @@
       },
       "highContrast": {
         "label": "Wysoki kontrast",
-        "description": "Maksymalna czytelność: czysto czarne i białe powierzchnie z wyraźnymi obramowaniami."
+        "description": "Tylko czerń i biel z wyraźnymi obramowaniami. Tylko kolory statusów zachowują swoją barwę."
       }
     },
     "custom": {
