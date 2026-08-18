@@ -150,6 +150,12 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
   registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  // Invoice bundling/delivery, enqueued from billing UI actions through the
+  // shared enqueueImmediateJob seam (Temporal on EE). The handlers need
+  // StorageService and PDF generation, so the worker forwards them to the
+  // server like the jobs above.
+  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
+  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
