@@ -163,20 +163,18 @@ export function ContractDialog({
   const loadContractLinePresets = async () => {
     setIsLoadingContractLinePresets(true);
     try {
-      const presets = await getContractLinePresets();
+      // Service counts for every preset arrive in one round trip, alongside the
+      // presets themselves rather than after them.
+      const [presets, counts] = await Promise.all([
+        getContractLinePresets(),
+        getContractLinePresetServiceCounts(),
+      ]);
       if (isReturnedActionError(presets)) {
         setValidationErrors([getErrorMessage(presets)]);
         return;
       }
       setAvailableContractLinePresets(presets);
-
-      // Service counts for every preset arrive in one round trip
-      const counts = await getContractLinePresetServiceCounts();
-      if (isReturnedActionError(counts)) {
-        setContractLinePresetServiceCounts({});
-        return;
-      }
-      setContractLinePresetServiceCounts(counts);
+      setContractLinePresetServiceCounts(isReturnedActionError(counts) ? {} : counts);
     } catch (error) {
       console.error('Error loading contract line presets:', error);
     } finally {
