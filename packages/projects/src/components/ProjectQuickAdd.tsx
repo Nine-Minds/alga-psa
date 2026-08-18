@@ -219,7 +219,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   const footer = (
-    <div className="flex justify-between">
+    <div className="flex w-full justify-between">
       <Button id='cancel-button' variant="ghost" onClick={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);

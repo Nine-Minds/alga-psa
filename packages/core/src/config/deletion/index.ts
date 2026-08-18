@@ -394,6 +394,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       },
       { type: 'usage', table: 'usage_tracking', foreignKey: 'contract_line_id', label: 'usage record' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'contract_line_id', label: 'bucket usage record' },
+      { type: 'bucket', table: 'contract_line_buckets', foreignKey: 'contract_line_id', label: 'bucket pool' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'contract_line_id', label: 'time entry' }
     ]
   },
@@ -404,6 +405,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'time_entry', table: 'time_entries', foreignKey: 'service_id', label: 'time entry' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'service_catalog_id', label: 'bucket usage record' },
+      { type: 'bucket_member', table: 'contract_line_bucket_services', foreignKey: 'service_id', label: 'bucket pool member' },
       { type: 'usage', table: 'usage_tracking', foreignKey: 'service_id', label: 'usage record' },
       {
         type: 'contract_line_service',

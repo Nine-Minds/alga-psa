@@ -222,6 +222,7 @@
     "selectLanguage": "Seleziona lingua",
     "changeLanguage": "Cambia lingua",
     "currentLanguage": "Lingua corrente",
+    "previewLanguage": "Lingua dell’anteprima",
     "preference": {
       "label": "Preferenza lingua",
       "helper": "Seleziona la lingua preferita per l'interfaccia e le notifiche email",

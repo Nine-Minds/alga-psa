@@ -153,7 +153,8 @@
       "previewPdf": "Pdf-voorvertoning",
       "backToQuotes": "Terug naar offertes",
       "backToTemplates": "Terug naar offertesjablonen",
-      "convertToSalesOrder": "Converteren naar verkooporder"
+      "convertToSalesOrder": "Converteren naar verkooporder",
+      "convert": "Omzetten naar…"
     },
     "headings": {
       "editQuote": "Offerte bewerken",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Contractartikelen",
       "conversionMode": "Conversiemodus",
-      "excludedItems": "Uitgesloten artikelen",
       "excludedFromConversion": "Uitgesloten van conversie",
+      "excludedItems": "Uitgesloten artikelen",
       "invoiceItems": "Factuurartikelen",
       "itemMappingPreview": "Voorbeeld van itemtoewijzing",
+      "onSalesOrder": "Op verkooporder {{soNumber}}",
       "quoteTotal": "Offerte Totaal",
+      "salesOrderItems": "Verkooporderregels",
       "statusAfterConversion": "Status na conversie",
       "willBecomeContractLines": "Worden contractregels",
-      "willBecomeInvoiceCharges": "Worden factuurkosten"
+      "willBecomeInvoiceCharges": "Worden factuurkosten",
+      "willBecomeSalesOrderLines": "Worden verkooporderregels"
     },
     "empty": {
       "contractItems": "Terugkerende items worden niet omgezet in een contract.",
-      "invoiceItems": "Eenmalige items worden niet omgezet in een factuur."
+      "invoiceItems": "Eenmalige items worden niet omgezet in een factuur.",
+      "invoiceItemsOnSalesOrder": "Alle eenmalige regels staan op verkooporder {{soNumber}} en worden van daaruit gefactureerd bij levering.",
+      "salesOrderItems": "Er gaan geen productregels naar een verkooporder."
     },
     "summary": {
+      "billedViaSalesOrder": "Wordt bij levering gefactureerd via verkooporder {{soNumber}}",
       "converted": "Geconverteerd",
       "discount": "Korting",
       "fixed": "vast",
@@ -628,10 +635,11 @@
       "title": "Fout"
     },
     "salesOrder": {
-      "successTitle": "Verkooporder {{number}} aangemaakt",
-      "successBody": "Productregels worden bij levering gefactureerd.",
+      "existingNote": "Deze offerte is al omgezet naar verkooporder {{soNumber}}.",
+      "note": "Productregels kunnen op twee manieren worden gefactureerd: maak een verkooporder om ze bij levering te factureren, of factureer ze direct. Bij het aanmaken van de verkooporder vallen ze buiten de factuurconversie, zodat niets dubbel wordt gefactureerd.",
       "openSalesOrders": "Verkooporders openen",
-      "note": "Eenmalige productregels gaan naar een concept-verkooporder (gefactureerd bij levering) en worden uitgesloten van elke conversie naar een conceptfactuur, zodat niets dubbel wordt gefactureerd."
+      "successBody": "Productregels worden bij levering gefactureerd.",
+      "successTitle": "Verkooporder {{number}} aangemaakt"
     }
   },
   "quoteApproval": {

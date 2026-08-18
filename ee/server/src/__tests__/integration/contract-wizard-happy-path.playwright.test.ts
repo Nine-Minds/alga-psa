@@ -295,6 +295,25 @@ async function getBucketOverlayForService(
   serviceId: string
 ) {
   const scopedDb = tenantDb(db, tenantId);
+  // Pool-keyed model (weighted-burn): the wizard's compat layer creates a
+  // single-member pool for the (line, service); read it via the pool tables.
+  const poolTablesExist = await scopedDb.table('contract_line_buckets').select('bucket_id').first().then(() => true).catch(() => false);
+  if (poolTablesExist) {
+    return scopedDb.table('contract_line_bucket_services as clbs')
+      .modify((query) => scopedDb.tenantJoin(query, 'contract_line_buckets as clb', 'clbs.bucket_id', 'clb.bucket_id'))
+      .where('clbs.tenant', tenantId)
+      .whereIn('clbs.contract_line_id', contractLineIds)
+      .andWhere('clbs.service_id', serviceId)
+      .select(
+        'clbs.contract_line_id',
+        'clbs.bucket_id as config_id',
+        'clb.total_minutes',
+        'clb.billing_period',
+        'clb.overage_rate',
+        'clb.allow_rollover'
+      )
+      .first();
+  }
   return scopedDb.table('contract_line_service_configuration as clsc')
     .modify((query) => scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as clsb', 'clsc.config_id', 'clsb.config_id'))
     .where('clsc.tenant', tenantId)

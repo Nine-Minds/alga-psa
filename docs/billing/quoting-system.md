@@ -290,7 +290,11 @@ Fetch quote → mapDbQuoteToViewModel → Evaluate AST → Render HTML → Puppe
 
 ### Preview
 
-In-browser preview renders the template without Puppeteer, using the same AST evaluation and React rendering pipeline as invoices.
+In-browser preview renders the template without Puppeteer, using the same AST evaluation and React rendering pipeline as invoices. Previewing a real quote renders it in the client's language, the same as the PDF the client receives; the designer's language selector previews sample data in any supported locale.
+
+### Localization
+
+Standard quote templates carry `{ i18nKey, defaultValue }` labels, so their chrome, dates, numbers and currency render in the recipient's locale. Customized templates are literals and are never re-worded. See [document-template-translation.md](./document-template-translation.md).
 
 ### Template Selection Priority
 
@@ -371,7 +375,36 @@ A "Quotes" tab is added to the client portal billing overview, accessible to all
 
 ## Conversion Workflows
 
-Accepted quotes can be converted into contracts, invoices, or both.
+An accepted quote's items convert along three routes, by item kind:
+
+- **Recurring items** → contract lines.
+- **One-time product items** (catalog `item_kind: 'product'`) → a **sales
+  order**, billed on fulfillment. Once a sales order exists for the quote,
+  those lines (and discounts tied to them) are excluded from invoice
+  conversion — sales order and direct invoicing are mutually exclusive fates
+  for the same product line, so nothing double-bills.
+- **Remaining one-time items** → invoice charges.
+
+The UI exposes this as a single **Convert to…** button on an accepted quote.
+It opens the Conversion Preview dialog, and the dialog's footer offers only the
+actions the preview says are possible — Create Sales Order, Create Draft
+Contract, Create Draft Invoice. When the sales-order and invoice paths compete
+for the same product lines, Create Sales Order is the primary button and
+Create Draft Invoice renders as the secondary (outline) action. There is no
+combined-conversion button (the `convertQuoteToBoth` action still exists for
+API callers); impossible actions simply don't render, so a conversion can no
+longer be launched into an error the preview didn't show.
+
+### Quote to Sales Order
+
+For each selected, non-discount **product** one-time item:
+1. Creates a draft `sales_orders` row (`invoice_mode: 'on_fulfillment'`,
+   linked by `quote_id`) with `sales_order_lines` per product
+2. Product lines validate first: catalog reference, positive integer quantity,
+   integer unit price in cents
+3. From then on, invoice conversion excludes those lines
+   (`excludeSalesOrderProductItems`); they bill from the sales order when
+   fulfilled
 
 ### Quote to Contract
 
@@ -392,7 +425,7 @@ For each **one-time** quote item (where `is_selected = true`):
 
 ### Combined Conversion
 
-For quotes with both recurring and one-time items:
+`convertQuoteToBoth` (action-level; not offered in the dialog):
 1. Contract conversion runs for recurring items
 2. Invoice conversion runs for one-time items
 3. Both run in a single transaction (atomic — rolls back on failure)
@@ -401,11 +434,16 @@ For quotes with both recurring and one-time items:
 
 ### Conversion Preview
 
-Before converting, a preview dialog shows:
-- Which items map to contract lines vs invoice charges
-- Contract details (name, billing config)
-- Invoice details
-- User confirms before proceeding
+`buildQuoteConversionPreview` mirrors the conversions exactly — including the
+sales-order exclusion — so the dialog can never promise charges the conversion
+then refuses. It buckets every item into `contract_items`, `invoice_items`,
+`sales_order_items` and `excluded_items` (with a per-item reason), and reports
+`existing_sales_order` when the quote already converted to one. With an
+existing sales order, its claimed lines appear under "On Sales Order {number}"
+annotated "billed on fulfillment", and the invoice bucket holds only what
+direct invoicing would actually bill. With no sales order yet, product lines
+appear in both the invoice and sales-order buckets — they go to whichever
+conversion runs first.
 
 ### Post-Conversion Links
 

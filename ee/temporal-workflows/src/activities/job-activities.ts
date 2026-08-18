@@ -24,6 +24,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 // them would pull the unresolvable handler module back into the worker's static graph.
 const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
+const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -119,6 +120,9 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
+  // Device sync reaches provider clients under ee/server, so it forwards to the
+  // server like the other RMM jobs rather than running in the worker.
+  registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
   // Teams meeting Graph cleanup (cancel/decline): the handler imports

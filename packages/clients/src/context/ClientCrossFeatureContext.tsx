@@ -31,6 +31,11 @@ export interface ClientAssetsRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksSectionRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface ClientOpportunitiesRenderProps {
   clientId: string;
   clientName: string;
@@ -75,6 +80,11 @@ export interface ContractQuickAddRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface TeamsMeetingCapability {
   available: boolean;
   reason?: string;
@@ -107,12 +117,16 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /** Optional: prepaid hour blocks on the client billing tab (billing owns the component; clients must not import it directly). */
+  renderHourBlocksSection?: (props: HourBlocksSectionRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
   renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  /** Optional: the Hour Blocks section on client detail (provided by the composition layer). */
+  renderHourBlocks?: (props: HourBlocksRenderProps) => ReactNode;
   /** Open a ticket in the shared drawer, keeping the current page underneath. */
   openTicketDetails?: (ticketId: string) => Promise<void>;
   getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;

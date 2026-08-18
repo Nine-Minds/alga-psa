@@ -203,7 +203,7 @@ export function VendorPriceList({
                       </Badge>
                     )}
                   </td>
-                  <td className="py-2 pl-2 text-right whitespace-nowrap">
+                  <td className="py-2 pl-2 text-right whitespace-nowrap space-x-2">
                     <Button
                       id={`vendor-offer-edit-${o.service_id}`}
                       variant="ghost"

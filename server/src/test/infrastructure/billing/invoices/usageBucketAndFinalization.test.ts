@@ -329,7 +329,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         materializeServicePeriods: true
       });
 
-      await createBucketOverlayForPlan(context, contractLineId, {
+      const { configId } = await createBucketOverlayForPlan(context, contractLineId, {
         serviceId,
         totalHours: 40,
         overageRateCents: 7500,
@@ -351,6 +351,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         contractLineId,
         serviceId,
         clientId: context.clientId,
+        bucketId: configId,
         periodStart: '2023-01-01',
         periodEnd: '2023-01-31',
         minutesUsed: 45 * 60,

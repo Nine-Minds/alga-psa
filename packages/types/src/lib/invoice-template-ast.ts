@@ -17,10 +17,28 @@ export interface TemplateAst {
 export interface TemplateAstMetadata {
   templateName?: string;
   description?: string;
+  /**
+   * Authoring-time default locale, used for preview and when no recipient
+   * locale can be resolved. The recipient's locale wins at render time for
+   * both labels and number/date/currency formatting, so the two never diverge.
+   */
   locale?: string;
   currencyCode?: string;
   printSettings?: TemplatePrintSettings;
 }
+
+/**
+ * A translatable display string. A plain string is a literal, used exactly as
+ * written; a key reference is resolved against the recipient's locale at render
+ * time. Literals pass through untouched, which is what keeps every template
+ * authored before this existed rendering byte-identically.
+ */
+export interface TemplateI18nRef {
+  i18nKey: string;
+  defaultValue: string;
+}
+
+export type TemplateI18nText = string | TemplateI18nRef;
 
 export type TemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
 export type TemplateFieldDisplayFormat = 'single-line' | 'multiline' | 'raw';
@@ -52,7 +70,7 @@ export interface TemplateDocumentNode extends TemplateNodeBase {
 
 export interface TemplateSectionNode extends TemplateNodeBase {
   type: 'section';
-  title?: string;
+  title?: TemplateI18nText;
   children: TemplateNode[];
 }
 
@@ -81,7 +99,7 @@ export interface TemplateTextNode extends TemplateNodeBase {
 export interface TemplateFieldNode extends TemplateNodeBase {
   type: 'field';
   binding: TemplateBindingRef;
-  label?: string;
+  label?: TemplateI18nText;
   labelStyle?: TemplateNodeStyleRef;
   emptyValue?: string;
   placeholder?: string;
@@ -105,7 +123,7 @@ export interface TemplateDividerNode extends TemplateNodeBase {
 
 export interface TemplateTableColumn {
   id: string;
-  header?: string;
+  header?: TemplateI18nText;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   style?: TemplateNodeStyleRef;
@@ -117,7 +135,7 @@ export interface TemplateTableNode extends TemplateNodeBase {
   rowBinding: string;
   columns: TemplateTableColumn[];
   headerStyle?: TemplateNodeStyleRef;
-  emptyStateText?: string;
+  emptyStateText?: TemplateI18nText;
   children?: never;
 }
 
@@ -132,7 +150,7 @@ export interface TemplateDynamicTableNode extends TemplateNodeBase {
   repeat: TemplateRepeatRegionBinding;
   columns: TemplateTableColumn[];
   headerStyle?: TemplateNodeStyleRef;
-  emptyStateText?: string;
+  emptyStateText?: TemplateI18nText;
   children?: never;
 }
 
@@ -145,7 +163,7 @@ export interface TemplateTotalsNode extends TemplateNodeBase {
 
 export interface TemplateTotalsRow {
   id: string;
-  label: string;
+  label: TemplateI18nText;
   labelStyle?: TemplateNodeStyleRef;
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
@@ -243,7 +261,11 @@ export type TemplateValueExpression =
   | { type: 'literal'; value: string | number | boolean | null }
   | { type: 'binding'; bindingId: string }
   | { type: 'path'; path: string }
-  | { type: 'template'; template: string; args?: Record<string, TemplateValueExpression> };
+  | { type: 'template'; template: string; args?: Record<string, TemplateValueExpression> }
+  // Standing headings authored as text nodes ("Bill To", "From",
+  // "Terms & Conditions"). Resolved against the recipient's locale; falls back
+  // to `defaultValue` when the key is missing.
+  | { type: 'i18n'; i18nKey: string; defaultValue: string };
 
 export interface TemplateTransformPipeline {
   sourceBindingId: string;

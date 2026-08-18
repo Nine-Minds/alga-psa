@@ -18,6 +18,7 @@ export * from './billingCycleAnchorActions';
 export * from './billingScheduleActions';
 export * from './billingSettingsActions';
 export * from './bucketOverlayActions';
+export * from './bucketPoolActions';
 export * from './accountingExportActions';
 export * from './contractLineAction';
 export * from './contractLinePresetActions';

@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
+import { localizeTemplateAstForLocale } from './i18nLabels';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
@@ -23,6 +24,13 @@ export interface TemplateHtmlDocumentOptions {
    * protected document images from the API.
    */
   knex?: Knex | Knex.Transaction;
+  /**
+   * The recipient's locale. When set, template label keys are resolved against
+   * it and the same locale formats numbers, dates and currency — one locale per
+   * document, so the frame never disagrees with itself. Literal labels (every
+   * customized template) are unaffected.
+   */
+  locale?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +94,8 @@ export const renderTemplateAstHtmlDocument = async (
   evaluation: TemplateEvaluationResult,
   options: TemplateHtmlDocumentOptions = {}
 ): Promise<string> => {
-  const { html, css } = await renderEvaluatedTemplateAst(ast, evaluation);
+  const { ast: localizedAst, locale } = await localizeTemplateAstForLocale(ast, options.locale);
+  const { html, css } = await renderEvaluatedTemplateAst(localizedAst, evaluation, { locale });
   const title = escapeHtml(options.title ?? 'Invoice');
   const additionalCss = options.additionalCss ?? '';
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
@@ -98,7 +107,7 @@ export const renderTemplateAstHtmlDocument = async (
   const baseTag = baseUrl ? `\n    <base href="${escapeHtml(baseUrl)}" />` : '';
 
   let renderedHtml = `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(locale ?? 'en')}">
   <head>
     <meta charset="utf-8" />${baseTag}
     <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -96,6 +96,8 @@ const TENANT_TABLE_METADATA = {
   contracts: { scope: 'tenant' },
   contract_pricing_schedules: { scope: 'tenant' },
   contract_lines: { scope: 'tenant' },
+  contract_line_buckets: { scope: 'tenant' },
+  contract_line_bucket_services: { scope: 'tenant' },
   contract_line_mappings: { scope: 'tenant' },
   contract_line_service_bucket_config: { scope: 'tenant' },
   contract_line_service_configuration: { scope: 'tenant' },

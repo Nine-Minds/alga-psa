@@ -642,7 +642,7 @@ export function OnboardingWizard({
           </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {wizardBody}
-            {wizardNavigation}
+            <div className="mt-8 pt-6 border-t">{wizardNavigation}</div>
           </div>
         </div>
       </div>

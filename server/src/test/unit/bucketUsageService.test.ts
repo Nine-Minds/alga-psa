@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   findOrCreateCurrentBucketUsageRecord,
   reconcileBucketUsageRecord,
+  resolveBucketDraw,
   updateBucketUsageMinutes,
 } from "@alga-psa/billing/services/bucketUsageService";
 
@@ -12,6 +13,7 @@ type BucketUsageRow = {
   client_id: string;
   contract_line_id: string;
   service_catalog_id: string;
+  bucket_id: string;
   period_start: string;
   period_end: string;
   minutes_used: number;
@@ -19,36 +21,104 @@ type BucketUsageRow = {
   rolled_over_minutes: number;
 };
 
-type ServiceConfigurationRow = {
-  config_id: string;
-  configuration_type: string;
+type MemberRow = {
+  bucket_id: string;
+  contract_line_id: string;
+  service_id: string;
+  burn_multiplier: number;
+};
+
+type ClientContractRow = {
+  client_contract_id: string;
+  client_contract_line_id: string;
+  contract_line_id: string;
+  start_date: string;
+  billing_frequency: string;
+  cadence_owner: "client" | "contract" | null;
+};
+
+const PRIMARY_ASSIGNMENT: ClientContractRow = {
+  client_contract_id: "assignment-1",
+  client_contract_line_id: "contract-line-1",
+  contract_line_id: "contract-line-1",
+  start_date: "2025-01-01",
+  billing_frequency: "monthly",
+  cadence_owner: "client",
+};
+
+const DEFAULT_MEMBER: MemberRow = {
+  bucket_id: "bucket-1",
+  contract_line_id: "contract-line-1",
+  service_id: "service-1",
+  burn_multiplier: 1,
+};
+
+const DEFAULT_BUCKET = {
+  bucket_id: "bucket-1",
+  contract_line_id: "contract-line-1",
+  total_minutes: 120,
+  overage_rate: 2.5,
+  allow_rollover: false,
+  covers_all_services: false,
+  after_hours_multiplier: null,
+  business_hours_schedule_id: null,
 };
 
 /**
- * A (contract line, service) pair holds one configuration row per
- * configuration_type. Default to the single-Bucket shape; tests that care about
- * the multi-configuration case pass their own set.
+ * Build a fake transaction that answers like the new pool keying.
+ * `trx` is wrapped by the real tenantDb, so every table call gets a leading
+ * `.where(<table>.tenant, ...)` — the fakes tolerate that.
  */
-const DEFAULT_SERVICE_CONFIGURATIONS: ServiceConfigurationRow[] = [
-  { config_id: "bucket-config-1", configuration_type: "Bucket" },
-];
-
 function buildBucketUsageTransaction(config: {
   existingUsage?: BucketUsageRow;
   previousUsage?: BucketUsageRow;
   allowRollover?: boolean;
-  bucketConfig?: Record<string, unknown> | null;
-  serviceConfigurations?: ServiceConfigurationRow[];
+  bucket?: Record<string, unknown> | null;
+  members?: MemberRow[];
+  // Adds a second assignment whose line also pools the service → ambiguity.
+  conflictingAssignment?: boolean;
+  // The services configured on the line (contract_line_service_configuration).
+  // Defaults to the known service so a catch-all draw legitimately resolves.
+  lineConfiguredServices?: string[];
 }) {
-  const serviceConfigurations = config.serviceConfigurations ?? DEFAULT_SERVICE_CONFIGURATIONS;
+  const members = config.members
+    ?? (config.conflictingAssignment
+      // The second assignment's line also pools the service — both lines
+      // resolve a bucket, so the ambiguity guard must fire.
+      ? [DEFAULT_MEMBER, { ...DEFAULT_MEMBER, contract_line_id: "contract-line-2" }]
+      : [DEFAULT_MEMBER]);
+  const lineConfiguredServices = config.lineConfiguredServices ?? [DEFAULT_MEMBER.service_id];
   const state = {
     bucketUsageFirstCalls: 0,
     clientContractFirstCalls: 0,
     insertedRecord: null as Record<string, unknown> | null,
     tablesCalled: [] as string[],
     whereCalls: [] as Array<{ tableName: string; args: unknown[] }>,
-    /** config_id the service resolved and then looked up a detail row for. */
-    requestedBucketConfigId: null as string | null,
+  };
+
+  const listRowsFor = (tableName: string): unknown[] => {
+    if (tableName === "contract_line_service_configuration") {
+      // The line's roster of configured services — the catch-all draw set.
+      return lineConfiguredServices.map((service_id) => ({ service_id }));
+    }
+    if (tableName === "client_contracts as cc") {
+      // The service reads the active assignments as a list and resolves each
+      // line's pool itself (scope rule per line, then the ambiguity guard).
+      if (config.conflictingAssignment) {
+        return [
+          PRIMARY_ASSIGNMENT,
+          {
+            client_contract_id: "assignment-2",
+            contract_line_id: "contract-line-2",
+            start_date: "2025-01-01",
+            billing_frequency: "monthly",
+            cadence_owner: "client",
+          },
+        ];
+      }
+      return [PRIMARY_ASSIGNMENT];
+    }
+    return [];
   };
 
   const trx: any = ((tableName: string) => {
@@ -56,11 +126,12 @@ function buildBucketUsageTransaction(config: {
     if (baseTableName === "client_contract_lines") {
       throw new Error('relation "client_contract_lines" does not exist');
     }
+    if (baseTableName === "contract_line_service_bucket_config") {
+      throw new Error("legacy bucket configuration should not be queried by the pool-keyed service");
+    }
 
     state.tablesCalled.push(tableName);
     const builder: any = {};
-    // Track the filter this builder actually applied, so the fakes can answer
-    // like a real table rather than ignoring the predicate.
     const appliedWhere: Record<string, unknown> = {};
     builder.where = vi.fn().mockImplementation((...args: unknown[]) => {
       state.whereCalls.push({ tableName, args });
@@ -72,28 +143,29 @@ function buildBucketUsageTransaction(config: {
     builder.andWhere = vi.fn().mockImplementation(() => builder);
     builder.whereNotNull = vi.fn().mockImplementation(() => builder);
     builder.whereNotIn = vi.fn().mockImplementation(() => builder);
+    builder.whereIn = vi.fn().mockImplementation(() => builder);
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
     builder.andOn = vi.fn().mockImplementation(() => builder);
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.orderBy = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
+    builder.sum = vi.fn().mockImplementation(() => builder);
+
+    // List reads are awaited directly (`await q.select(...)`): make the
+    // builder thenable. Chainable `.orderBy(...).first()` still works.
+    builder.then = (resolve: (value: unknown[]) => void, reject: (reason?: unknown) => void) => {
+      if (tableName === config.firstErrorTable) {
+        reject(new Error(`${tableName} aggregation failed`));
+        return;
+      }
+      resolve(listRowsFor(tableName));
+    };
 
     builder.first = vi.fn().mockImplementation(async () => {
       if (tableName === "client_contracts as cc") {
         state.clientContractFirstCalls += 1;
-        if (state.clientContractFirstCalls > 1) {
-          return undefined;
-        }
-
-        return {
-          client_contract_id: "assignment-1",
-          client_contract_line_id: "contract-line-1",
-          contract_line_id: "contract-line-1",
-          start_date: "2025-01-01",
-          billing_frequency: "monthly",
-          cadence_owner: "client",
-        };
+        return PRIMARY_ASSIGNMENT;
       }
 
       if (tableName === "recurring_service_periods") {
@@ -107,44 +179,32 @@ function buildBucketUsageTransaction(config: {
           : config.previousUsage;
       }
 
-      if (tableName === "contract_line_service_configuration") {
-        // Honour configuration_type when the caller pins it. Omitting it is the
-        // alga0002175 defect: the pair can hold an Hourly row too, and picking
-        // that one leaves the bucket detail lookup below with nothing.
-        const matches = "configuration_type" in appliedWhere
-          ? serviceConfigurations.filter(
-              (row) => row.configuration_type === appliedWhere.configuration_type,
-            )
-          : serviceConfigurations;
-
-        return matches.length > 0 ? { config_id: matches[0].config_id } : undefined;
+      if (tableName === "contract_line_bucket_services") {
+        const lineId = appliedWhere.contract_line_id as string | undefined;
+        const serviceId = appliedWhere.service_id as string | undefined;
+        return members.find(
+          (member) =>
+            (lineId === undefined || member.contract_line_id === lineId) &&
+            (serviceId === undefined || member.service_id === serviceId),
+        );
       }
 
-      if (tableName === "contract_line_service_bucket_config") {
-        const requestedConfigId = appliedWhere.config_id as string | undefined;
-        state.requestedBucketConfigId = requestedConfigId ?? null;
-
-        if (config.bucketConfig === null) {
+      if (tableName === "contract_line_buckets") {
+        if (config.bucket === null) {
           return undefined;
         }
-
-        // Only Bucket configurations have a detail row.
-        const owningConfiguration = serviceConfigurations.find(
-          (row) => row.config_id === requestedConfigId,
-        );
-        if (owningConfiguration && owningConfiguration.configuration_type !== "Bucket") {
+        const requestedBucketId = appliedWhere.bucket_id as string | undefined;
+        const bucket = config.bucket ?? { ...DEFAULT_BUCKET, allow_rollover: config.allowRollover ?? false };
+        if (requestedBucketId && requestedBucketId !== bucket.bucket_id) {
           return undefined;
         }
-
-        return config.bucketConfig ?? {
-          config_id: requestedConfigId ?? "bucket-config-1",
-          contract_line_id: "contract-line-1",
-          service_catalog_id: "service-1",
-          total_minutes: 120,
-          allow_rollover: config.allowRollover ?? false,
-          overage_rate: 2.5,
-          tenant: "test-tenant",
-        };
+        // Catch-all lookups filter on covers_all_services — honor it so a
+        // member-scoped bucket never answers a catch-all probe.
+        if (appliedWhere.covers_all_services !== undefined
+            && Boolean(bucket.covers_all_services) !== Boolean(appliedWhere.covers_all_services)) {
+          return undefined;
+        }
+        return bucket;
       }
 
       return undefined;
@@ -177,10 +237,12 @@ function buildBucketUsageTransaction(config: {
 
 function buildBucketUsageUpdateTransaction(config: {
   currentUsage: Record<string, unknown>;
-  timeEntryMinutes?: string | number | null;
-  usageMinutes?: string | number | null;
+  members?: MemberRow[];
+  timeEntries?: Array<Record<string, unknown>>;
+  usageRows?: Array<Record<string, unknown>>;
   updateCount?: number;
-  firstErrorTable?: "time_entries" | "usage_tracking";
+  firstErrorTable?: string;
+  afterHours?: boolean;
 }) {
   const state = {
     tablesCalled: [] as string[],
@@ -188,38 +250,88 @@ function buildBucketUsageUpdateTransaction(config: {
     updates: [] as Array<{ tableName: string; payload: Record<string, unknown> }>,
   };
 
+  const listRowsFor = (tableName: string): unknown[] => {
+    if (tableName === "time_entries") {
+      return config.timeEntries ?? [];
+    }
+    if (tableName === "usage_tracking") {
+      return config.usageRows ?? [];
+    }
+    if (tableName === "contract_line_bucket_services") {
+      return config.members ?? [DEFAULT_MEMBER];
+    }
+    if (tableName === "business_hours_entries") {
+      return [];
+    }
+    if (tableName === "holidays") {
+      return [];
+    }
+    return [];
+  };
+
   const trx: any = ((tableName: string) => {
+    const baseTableName = tableName.split(/\s+as\s+/i)[0];
     state.tablesCalled.push(tableName);
 
     const builder: any = {};
+    const appliedWhere: Record<string, unknown> = {};
     builder.where = vi.fn().mockImplementation((...args: unknown[]) => {
       state.whereCalls.push({ tableName, args });
+      if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+        Object.assign(appliedWhere, args[0] as Record<string, unknown>);
+      }
       return builder;
     });
     builder.andWhere = vi.fn().mockImplementation(() => builder);
+    builder.whereIn = vi.fn().mockImplementation(() => builder);
+    builder.whereNull = vi.fn().mockImplementation(() => builder);
+    builder.whereNotIn = vi.fn().mockImplementation(() => builder);
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
     builder.andOn = vi.fn().mockImplementation(() => builder);
     builder.andOnVal = vi.fn().mockImplementation(() => builder);
     builder.select = vi.fn().mockImplementation(() => builder);
     builder.sum = vi.fn().mockImplementation(() => builder);
+
+    // List reads are awaited directly (`await q.select(...)`): make the
+    // builder thenable. `.first()` still works because chainable methods keep
+    // returning the builder.
+    builder.then = (resolve: (value: unknown[]) => void, reject: (reason?: unknown) => void) => {
+      if (tableName === config.firstErrorTable) {
+        reject(new Error(`${tableName} aggregation failed`));
+        return;
+      }
+      resolve(listRowsFor(tableName));
+    };
+
     builder.first = vi.fn().mockImplementation(async () => {
       if (tableName === config.firstErrorTable) {
         throw new Error(`${tableName} aggregation failed`);
       }
-
       if (tableName === "bucket_usage as bu") {
         return config.currentUsage;
       }
-
-      if (tableName === "time_entries") {
-        return { total_duration_minutes: config.timeEntryMinutes ?? null };
+      if (tableName === "contract_line_buckets") {
+        if (config.afterHours) {
+          return {
+            bucket_id: "bucket-1",
+            contract_line_id: "contract-line-1",
+            total_minutes: 120,
+            overage_rate: 0,
+            allow_rollover: false,
+            covers_all_services: false,
+            after_hours_multiplier: 1.5,
+            business_hours_schedule_id: "schedule-1",
+          };
+        }
+        return undefined;
       }
-
-      if (tableName === "usage_tracking") {
-        return { total_quantity: config.usageMinutes ?? null };
+      if (tableName === "business_hours_schedules") {
+        return config.afterHours ? { timezone: "UTC", is_24x7: false } : undefined;
       }
-
+      if (tableName === "contract_line_bucket_services") {
+        return config.members?.[0];
+      }
       return undefined;
     });
     builder.update = vi.fn().mockImplementation(async (payload: Record<string, unknown>) => {
@@ -231,9 +343,6 @@ function buildBucketUsageUpdateTransaction(config: {
   }) as any;
 
   trx.raw = (value: string) => value;
-  trx.fn = {
-    now: vi.fn(() => "NOW"),
-  };
   trx.client = {
     config: {
       tenant: "test-tenant",
@@ -243,314 +352,360 @@ function buildBucketUsageUpdateTransaction(config: {
   return { trx, state };
 }
 
-describe("BucketUsageService Unit Tests", () => {
-  describe("findOrCreateCurrentBucketUsageRecord", () => {
-    it("returns an existing bucket usage record without creating one", async () => {
-      const existingUsage: BucketUsageRow = {
-        usage_id: "usage-existing",
-        tenant: "test-tenant",
-        client_id: "client-1",
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-1",
-        period_start: "2025-02-01",
-        period_end: "2025-02-28",
-        minutes_used: 45,
-        overage_minutes: 0,
-        rolled_over_minutes: 0,
-      };
-      const { trx, state } = buildBucketUsageTransaction({ existingUsage });
+describe("resolveBucketDraw", () => {
+  it("resolves an explicit member pool via membership", async () => {
+    const { trx } = buildBucketUsageTransaction({});
 
-      const record = await findOrCreateCurrentBucketUsageRecord(
-        trx,
-        "client-1",
-        "service-1",
-        "2025-02-10T00:00:00Z",
-      );
+    const draw = await resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z");
 
-      expect(record).toBe(existingUsage);
-      expect(state.insertedRecord).toBeNull();
-      expect(state.tablesCalled).not.toContain("contract_line_service_configuration");
-      expect(state.whereCalls).toContainEqual({
-        tableName: "bucket_usage",
-        args: ["bucket_usage.tenant", "test-tenant"],
-      });
-    });
-
-    it("creates a zeroed usage record when rollover is disabled", async () => {
-      const { trx, state } = buildBucketUsageTransaction({
-        bucketConfig: {
-          config_id: "bucket-config-1",
-          contract_line_id: "contract-line-1",
-          service_catalog_id: "service-1",
-          total_minutes: 120,
-          allow_rollover: false,
-          overage_rate: 2.5,
-          tenant: "test-tenant",
-        },
-      });
-
-      const record = await findOrCreateCurrentBucketUsageRecord(
-        trx,
-        "client-1",
-        "service-1",
-        "2025-02-10T00:00:00Z",
-      );
-
-      expect(state.insertedRecord).toEqual({
-        tenant: "test-tenant",
-        client_id: "client-1",
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-1",
-        period_start: "2025-02-01",
-        period_end: "2025-02-28",
-        minutes_used: 0,
-        overage_minutes: 0,
-        rolled_over_minutes: 0,
-      });
-      expect(record).toEqual({ usage_id: "usage-new", ...state.insertedRecord });
-      expect(state.bucketUsageFirstCalls).toBe(1);
-    });
-
-    it("creates a record with zero rollover when no previous period exists", async () => {
-      const { trx, state } = buildBucketUsageTransaction({
-        allowRollover: true,
-      });
-
-      const record = await findOrCreateCurrentBucketUsageRecord(
-        trx,
-        "client-1",
-        "service-1",
-        "2025-02-10T00:00:00Z",
-      );
-
-      expect(state.bucketUsageFirstCalls).toBe(2);
-      expect(state.insertedRecord).toMatchObject({
-        contract_line_id: "contract-line-1",
-        period_start: "2025-02-01",
-        period_end: "2025-02-28",
-        rolled_over_minutes: 0,
-      });
-      expect(record.rolled_over_minutes).toBe(0);
-    });
-
-    it("throws when the service has no bucket configuration", async () => {
-      const { trx, state } = buildBucketUsageTransaction({ bucketConfig: null });
-
-      await expect(
-        findOrCreateCurrentBucketUsageRecord(
-          trx,
-          "client-1",
-          "service-1",
-          "2025-02-10T00:00:00Z",
-        ),
-      ).rejects.toMatchObject({ code: "MISSING_BUCKET_CONFIG" });
-      expect(state.insertedRecord).toBeNull();
-    });
-
-    // Regression: alga0002175. An Hourly contract line carrying a bucket
-    // overlay ("7 hours included, overage above that") has BOTH an 'Hourly' and
-    // a 'Bucket' configuration row for the one service. Resolving on
-    // (contract_line_id, service_id) alone can return the Hourly row, whose
-    // bucket detail lookup finds nothing — so every bucket time entry in the
-    // tenant fails. Ordered Hourly-first here so an unqualified query picks it.
-    it("resolves the Bucket configuration when the line also has an Hourly one", async () => {
-      const { trx, state } = buildBucketUsageTransaction({
-        serviceConfigurations: [
-          { config_id: "hourly-config-1", configuration_type: "Hourly" },
-          { config_id: "bucket-config-1", configuration_type: "Bucket" },
-        ],
-      });
-
-      const record = await findOrCreateCurrentBucketUsageRecord(
-        trx,
-        "client-1",
-        "service-1",
-        "2025-02-10T00:00:00Z",
-      );
-
-      expect(state.requestedBucketConfigId).toBe("bucket-config-1");
-      expect(record).toMatchObject({
-        contract_line_id: "contract-line-1",
-        service_catalog_id: "service-1",
-        minutes_used: 0,
-      });
-    });
-
-    it("pins configuration_type when querying contract_line_service_configuration", async () => {
-      const { trx, state } = buildBucketUsageTransaction({});
-
-      await findOrCreateCurrentBucketUsageRecord(
-        trx,
-        "client-1",
-        "service-1",
-        "2025-02-10T00:00:00Z",
-      );
-
-      const configurationFilters = state.whereCalls
-        .filter((call) => call.tableName === "contract_line_service_configuration")
-        .flatMap((call) => call.args)
-        .filter((arg): arg is Record<string, unknown> =>
-          typeof arg === "object" && arg !== null,
-        );
-
-      expect(
-        configurationFilters.some((filter) => filter.configuration_type === "Bucket"),
-      ).toBe(true);
-    });
-
-    it("reports a missing Bucket configuration distinctly from a missing detail row", async () => {
-      const { trx } = buildBucketUsageTransaction({
-        // Line covers the service, but only with an Hourly configuration.
-        serviceConfigurations: [
-          { config_id: "hourly-config-1", configuration_type: "Hourly" },
-        ],
-      });
-
-      await expect(
-        findOrCreateCurrentBucketUsageRecord(
-          trx,
-          "client-1",
-          "service-1",
-          "2025-02-10T00:00:00Z",
-        ),
-      ).rejects.toMatchObject({ code: "MISSING_PLAN_SERVICE_CONFIG" });
+    expect(draw).toMatchObject({
+      bucketId: "bucket-1",
+      contractLineId: "contract-line-1",
+      serviceId: "service-1",
+      memberMultiplier: 1,
+      coversAllServices: false,
     });
   });
 
-  describe("updateBucketUsageMinutes", () => {
-    it("calculates overage when a positive delta exceeds total minutes", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          minutes_used: 90,
-          rolled_over_minutes: 0,
-          total_minutes: 100,
-        },
-      });
-
-      await updateBucketUsageMinutes(trx, "usage-1", 25);
-
-      expect(state.updates).toEqual([
-        {
-          tableName: "bucket_usage",
-          payload: {
-            minutes_used: 115,
-            overage_minutes: 15,
-          },
-        },
-      ]);
+  it("resolves the line catch-all pool when the service has no explicit membership", async () => {
+    const { trx } = buildBucketUsageTransaction({
+      bucket: { ...DEFAULT_BUCKET, covers_all_services: true },
+      members: [],
     });
 
-    it("reduces overage to zero after a negative delta", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          minutes_used: 150,
-          rolled_over_minutes: 0,
-          total_minutes: 100,
-        },
-      });
+    const draw = await resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z");
 
-      await updateBucketUsageMinutes(trx, "usage-1", -60);
-
-      expect(state.updates).toEqual([
-        {
-          tableName: "bucket_usage",
-          payload: {
-            minutes_used: 90,
-            overage_minutes: 0,
-          },
-        },
-      ]);
-    });
-
-    it("does no database work for a zero delta", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          minutes_used: 20,
-          rolled_over_minutes: 0,
-          total_minutes: 100,
-        },
-      });
-
-      await expect(updateBucketUsageMinutes(trx, "usage-1", 0)).resolves.toBeUndefined();
-
-      expect(state.tablesCalled).toEqual([]);
-      expect(state.updates).toEqual([]);
-    });
-
-    it("throws when the tenant-scoped update affects no usage row", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          minutes_used: 20,
-          rolled_over_minutes: 0,
-          total_minutes: 100,
-        },
-        updateCount: 0,
-      });
-
-      await expect(updateBucketUsageMinutes(trx, "usage-missing", 10)).rejects.toThrow(
-        "Failed to update bucket usage record with ID usage-missing. Record might not exist or tenant mismatch.",
-      );
-      expect(state.whereCalls).toContainEqual({
-        tableName: "bucket_usage",
-        args: ["bucket_usage.tenant", "test-tenant"],
-      });
-      expect(state.updates).toHaveLength(1);
+    expect(draw).toMatchObject({
+      bucketId: "bucket-1",
+      memberMultiplier: 1,
+      coversAllServices: true,
     });
   });
 
-  describe("reconcileBucketUsageRecord", () => {
-    it("writes zero sums when no time entries or usage rows exist", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          client_id: "client-1",
-          service_catalog_id: "service-1",
-          period_start: "2025-02-01",
-          period_end: "2025-02-28",
-          rolled_over_minutes: 0,
-          total_minutes: 120,
+  it("does not resolve the line catch-all pool for a service the line does not offer", async () => {
+    // The line's catch-all pool exists, but service-1 is NOT configured on this
+    // line (contract_line_service_configuration membership) — a catch-all
+    // covers all LINE services, never anything this client bills elsewhere.
+    const { trx } = buildBucketUsageTransaction({
+      bucket: { ...DEFAULT_BUCKET, covers_all_services: true },
+      members: [],
+      lineConfiguredServices: ["service-other-line"],
+    });
+
+    const draw = await resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z");
+
+    expect(draw).toBeNull();
+  });
+
+  it("returns null when the service draws from no bucket (plain hourly)", async () => {
+    const { trx } = buildBucketUsageTransaction({
+      bucket: null,
+      members: [],
+    });
+
+    const draw = await resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z");
+
+    expect(draw).toBeNull();
+  });
+
+  it("throws AMBIGUOUS_ASSIGNMENT when another active assignment pools the service", async () => {
+    const { trx } = buildBucketUsageTransaction({ conflictingAssignment: true });
+
+    await expect(
+      resolveBucketDraw(trx, "client-1", "service-1", "2025-02-10T00:00:00Z"),
+    ).rejects.toMatchObject({ code: "AMBIGUOUS_ASSIGNMENT" });
+  });
+});
+
+describe("findOrCreateCurrentBucketUsageRecord", () => {
+  it("returns an existing bucket usage record keyed by bucket without creating one", async () => {
+    const existingUsage: BucketUsageRow = {
+      usage_id: "usage-existing",
+      tenant: "test-tenant",
+      client_id: "client-1",
+      contract_line_id: "contract-line-1",
+      service_catalog_id: "service-1",
+      bucket_id: "bucket-1",
+      period_start: "2025-02-01",
+      period_end: "2025-02-28",
+      minutes_used: 45,
+      overage_minutes: 0,
+      rolled_over_minutes: 0,
+    };
+    const { trx, state } = buildBucketUsageTransaction({ existingUsage });
+
+    const record = await findOrCreateCurrentBucketUsageRecord(
+      trx,
+      "client-1",
+      "service-1",
+      "2025-02-10T00:00:00Z",
+    );
+
+    expect(record).toBe(existingUsage);
+    expect(state.insertedRecord).toBeNull();
+    expect(state.tablesCalled).not.toContain("contract_line_service_configuration");
+    expect(state.whereCalls).toContainEqual({
+      tableName: "bucket_usage",
+      args: ["bucket_usage.tenant", "test-tenant"],
+    });
+  });
+
+  it("creates a zeroed usage record keyed by bucket when rollover is disabled", async () => {
+    const { trx, state } = buildBucketUsageTransaction({
+      bucket: { ...DEFAULT_BUCKET, allow_rollover: false },
+    });
+
+    const record = await findOrCreateCurrentBucketUsageRecord(
+      trx,
+      "client-1",
+      "service-1",
+      "2025-02-10T00:00:00Z",
+    );
+
+    expect(state.insertedRecord).toEqual({
+      tenant: "test-tenant",
+      client_id: "client-1",
+      contract_line_id: "contract-line-1",
+      service_catalog_id: "service-1",
+      bucket_id: "bucket-1",
+      period_start: "2025-02-01",
+      period_end: "2025-02-28",
+      minutes_used: 0,
+      overage_minutes: 0,
+      rolled_over_minutes: 0,
+    });
+    expect(record).toEqual({ usage_id: "usage-new", ...state.insertedRecord });
+    expect(state.bucketUsageFirstCalls).toBe(1);
+  });
+
+  it("computes weighted rollover from the pool total across periods", async () => {
+    const previousUsage: BucketUsageRow = {
+      usage_id: "usage-prev",
+      tenant: "test-tenant",
+      client_id: "client-1",
+      contract_line_id: "contract-line-1",
+      service_catalog_id: "service-1",
+      bucket_id: "bucket-1",
+      period_start: "2025-01-01",
+      period_end: "2025-01-31",
+      minutes_used: 60,
+      overage_minutes: 0,
+      rolled_over_minutes: 0,
+    };
+    const { trx, state } = buildBucketUsageTransaction({
+      allowRollover: true,
+      previousUsage,
+    });
+
+    const record = await findOrCreateCurrentBucketUsageRecord(
+      trx,
+      "client-1",
+      "service-1",
+      "2025-02-10T00:00:00Z",
+    );
+
+    // 120 total - 60 used = 60 unused minutes roll into the new period.
+    expect(record.rolled_over_minutes).toBe(60);
+    expect(state.insertedRecord).toMatchObject({
+      bucket_id: "bucket-1",
+      period_start: "2025-02-01",
+      rolled_over_minutes: 60,
+    });
+  });
+
+  it("throws when the service draws from no bucket pool", async () => {
+    const { trx, state } = buildBucketUsageTransaction({ bucket: null, members: [] });
+
+    await expect(
+      findOrCreateCurrentBucketUsageRecord(
+        trx,
+        "client-1",
+        "service-1",
+        "2025-02-10T00:00:00Z",
+      ),
+    ).rejects.toMatchObject({ code: "NO_ACTIVE_CONTRACT_LINE" });
+    expect(state.insertedRecord).toBeNull();
+  });
+});
+
+describe("updateBucketUsageMinutes", () => {
+  it("accepts a weighted numeric delta and calculates overage from the pool total", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        minutes_used: 90,
+        rolled_over_minutes: 0,
+        total_minutes: 100,
+      },
+    });
+
+    await updateBucketUsageMinutes(trx, "usage-1", 25);
+
+    expect(state.updates).toEqual([
+      {
+        tableName: "bucket_usage",
+        payload: {
+          minutes_used: 115,
+          overage_minutes: 15,
         },
-        timeEntryMinutes: null,
-        usageMinutes: null,
-      });
+      },
+    ]);
+  });
 
-      await reconcileBucketUsageRecord(trx, "usage-1");
+  it("accrues fractional weighted overage", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        minutes_used: 99.5,
+        rolled_over_minutes: 0,
+        total_minutes: 100,
+      },
+    });
 
-      expect(state.updates).toEqual([
+    await updateBucketUsageMinutes(trx, "usage-1", 2.5);
+
+    expect(state.updates).toEqual([
+      {
+        tableName: "bucket_usage",
+        payload: {
+          minutes_used: 102,
+          overage_minutes: 2,
+        },
+      },
+    ]);
+  });
+
+  it("does no database work for a zero delta", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        minutes_used: 20,
+        rolled_over_minutes: 0,
+        total_minutes: 100,
+      },
+    });
+
+    await expect(updateBucketUsageMinutes(trx, "usage-1", 0)).resolves.toBeUndefined();
+
+    expect(state.tablesCalled).toEqual([]);
+    expect(state.updates).toEqual([]);
+  });
+
+  it("throws when the tenant-scoped update affects no usage row", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: {
+        minutes_used: 20,
+        rolled_over_minutes: 0,
+        total_minutes: 100,
+      },
+      updateCount: 0,
+    });
+
+    await expect(updateBucketUsageMinutes(trx, "usage-missing", 10)).rejects.toThrow(
+      "Failed to update bucket usage record with ID usage-missing. Record might not exist or tenant mismatch.",
+    );
+    expect(state.whereCalls).toContainEqual({
+      tableName: "bucket_usage",
+      args: ["bucket_usage.tenant", "test-tenant"],
+    });
+    expect(state.updates).toHaveLength(1);
+  });
+});
+
+describe("reconcileBucketUsageRecord", () => {
+  const reconcileUsage = {
+    client_id: "client-1",
+    service_catalog_id: "service-1",
+    contract_line_id: "contract-line-1",
+    bucket_id: "bucket-1",
+    period_start: "2025-02-01",
+    period_end: "2025-02-28",
+    rolled_over_minutes: 0,
+    total_minutes: 120,
+    allow_rollover: false,
+    covers_all_services: false,
+    after_hours_multiplier: null,
+    business_hours_schedule_id: null,
+  };
+
+  it("writes zero weighted sums when no time entries or usage rows exist", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({ currentUsage: reconcileUsage });
+
+    await reconcileBucketUsageRecord(trx, "usage-1");
+
+    expect(state.updates).toEqual([
+      {
+        tableName: "bucket_usage",
+        payload: {
+          minutes_used: 0,
+          overage_minutes: 0,
+        },
+      },
+    ]);
+    expect(state.whereCalls).toEqual(
+      expect.arrayContaining([
+        { tableName: "bucket_usage", args: ["bucket_usage.tenant", "test-tenant"] },
+      ]),
+    );
+  });
+
+  it("recomputes weighted minutes through the calculator with member multipliers", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: reconcileUsage,
+      members: [
+        { bucket_id: "bucket-1", contract_line_id: "contract-line-1", service_id: "service-1", burn_multiplier: 2 },
+      ],
+      timeEntries: [
         {
-          tableName: "bucket_usage",
-          payload: {
-            minutes_used: 0,
-            overage_minutes: 0,
-          },
+          entry_id: "entry-1",
+          service_id: "service-1",
+          start_time: "2025-02-10T10:00:00Z",
+          end_time: "2025-02-10T11:00:00Z",
+          billable_duration: 60,
         },
-      ]);
-      expect(state.whereCalls).toEqual(
-        expect.arrayContaining([
-          { tableName: "time_entries", args: ["time_entries.tenant", "test-tenant"] },
-          { tableName: "usage_tracking", args: ["usage_tracking.tenant", "test-tenant"] },
-          { tableName: "bucket_usage", args: ["bucket_usage.tenant", "test-tenant"] },
-        ]),
-      );
+      ],
+      usageRows: [
+        { service_id: "service-1", quantity: "30" },
+      ],
     });
 
-    it("propagates reconciliation query failures without updating usage", async () => {
-      const { trx, state } = buildBucketUsageUpdateTransaction({
-        currentUsage: {
-          client_id: "client-1",
-          service_catalog_id: "service-1",
-          period_start: "2025-02-01",
-          period_end: "2025-02-28",
-          rolled_over_minutes: 0,
-          total_minutes: 120,
-        },
-        firstErrorTable: "time_entries",
-      });
+    await reconcileBucketUsageRecord(trx, "usage-1");
 
-      await expect(reconcileBucketUsageRecord(trx, "usage-1")).rejects.toThrow(
-        "time_entries aggregation failed",
-      );
-      expect(state.tablesCalled).not.toContain("usage_tracking");
-      expect(state.updates).toEqual([]);
+    // 60 in-hours minutes at 2x = 120, plus 30 usage units at 2x = 60 → 180 used.
+    expect(state.updates[0].payload.minutes_used).toBe(180);
+    expect(state.updates[0].payload.overage_minutes).toBe(60);
+  });
+
+  it("re-weights after a multiplier change (reweighting in-flight periods)", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: reconcileUsage,
+      members: [
+        { bucket_id: "bucket-1", contract_line_id: "contract-line-1", service_id: "service-1", burn_multiplier: 3 },
+      ],
+      timeEntries: [
+        {
+          entry_id: "entry-1",
+          service_id: "service-1",
+          start_time: "2025-02-10T10:00:00Z",
+          end_time: "2025-02-10T11:00:00Z",
+          billable_duration: 60,
+        },
+      ],
     });
+
+    await reconcileBucketUsageRecord(trx, "usage-1");
+
+    // Multiplier changed 1 → 3: reconcile rewrites 60 in-hours minutes to 180.
+    expect(state.updates[0].payload.minutes_used).toBe(180);
+    expect(state.updates[0].payload.overage_minutes).toBe(60);
+  });
+
+  it("propagates reconciliation query failures without updating usage", async () => {
+    const { trx, state } = buildBucketUsageUpdateTransaction({
+      currentUsage: reconcileUsage,
+      firstErrorTable: "time_entries",
+    });
+
+    await expect(reconcileBucketUsageRecord(trx, "usage-1")).rejects.toThrow(
+      "time_entries aggregation failed",
+    );
+    expect(state.updates).toEqual([]);
   });
 });

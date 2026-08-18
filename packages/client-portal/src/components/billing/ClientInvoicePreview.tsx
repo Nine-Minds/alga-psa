@@ -172,6 +172,7 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
               <TemplateRenderer
                 template={template}
                 invoiceData={invoiceData}
+                invoiceId={invoiceId}
               />
             </PaperInvoice>
           </div>

@@ -7,6 +7,7 @@ import type { QuoteViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 
@@ -14,6 +15,8 @@ type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
   quoteData: QuoteViewModel | null;
   tolerancePx?: number;
+  /** Preview the document as a client in this locale would receive it. */
+  locale?: string;
 };
 
 type AuthoritativePreviewDiagnostic = {
@@ -117,7 +120,9 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
 
     try {
       const evaluation = evaluateTemplateAst(validation.ast, input.quoteData as unknown as Record<string, unknown>);
-      const rendered = await renderEvaluatedTemplateAst(validation.ast, evaluation);
+      // Same seam the PDF path uses, so the preview is authoritative.
+      const localized = await localizeTemplateAstForLocale(validation.ast, input.locale);
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
       return {
         success: true,
         sourceHash,

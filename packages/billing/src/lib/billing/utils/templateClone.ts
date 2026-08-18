@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
+import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 
 interface CloneTemplateOptions {
   tenant: string;
@@ -62,7 +63,8 @@ export async function cloneTemplateContractLine(
   }
 
   // Clone services from template to contract_line_services
-  await cloneServices(trx, tenant, templateContractLineId, targetContractLineId);
+  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateContractLineId, targetContractLineId);
+  await cloneServices(trx, tenant, templateContractLineId, targetContractLineId, hasTemplatePools);
 
   // Resolve the custom rate to apply
   const templateCustomRate = await resolveTemplateCustomRate(
@@ -91,7 +93,8 @@ async function cloneServices(
   trx: Knex.Transaction,
   tenant: string,
   templateContractLineId: string,
-  contractLineId: string
+  contractLineId: string,
+  hasTemplatePools = false
 ) {
   type TemplateServiceRow = {
     service_id: string;
@@ -127,7 +130,8 @@ async function cloneServices(
       tenant,
       templateContractLineId,
       contractLineId,
-      service.service_id
+      service.service_id,
+      hasTemplatePools
     );
   }
 }
@@ -144,7 +148,8 @@ async function cloneServiceConfiguration(
   tenant: string,
   templateContractLineId: string,
   contractLineId: string,
-  serviceId: string
+  serviceId: string,
+  hasTemplatePools = false
 ) {
   const configurations = await tenantDb(trx, tenant).table('contract_template_line_service_configuration')
     .where('template_line_id', templateContractLineId)
@@ -167,8 +172,11 @@ async function cloneServiceConfiguration(
       updated_at: trx.fn.now()
     });
 
-    if (configuration.configuration_type === 'Bucket') {
-      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId);
+    // When the template carries pool rows, the pools were already cloned in
+    // full by cloneTemplateLinePools — cloning the legacy per-config bucket
+    // here would mint a duplicate pool.
+    if (configuration.configuration_type === 'Bucket' && !hasTemplatePools) {
+      await cloneBucketConfig(trx, tenant, configuration.config_id, newConfigId, contractLineId, serviceId);
     }
 
     if (configuration.configuration_type === 'Hourly') {
@@ -196,7 +204,9 @@ async function cloneBucketConfig(
   trx: Knex.Transaction,
   tenant: string,
   sourceConfigId: string,
-  targetConfigId: string
+  targetConfigId: string,
+  contractLineId: string,
+  serviceId: string
 ) {
   const bucketConfig = await tenantDb(trx, tenant).table('contract_template_line_service_bucket_config')
     .where('config_id', sourceConfigId)
@@ -204,13 +214,29 @@ async function cloneBucketConfig(
 
   if (!bucketConfig) return;
 
-  await tenantDb(trx, tenant).table('contract_line_service_bucket_config').insert({
+  // Weighted-burn model: clone into the line-owned pool tables (single-member
+  // 1x pool) rather than the frozen legacy per-service bucket config.
+  await tenantDb(trx, tenant).table('contract_line_buckets').insert({
     tenant,
-    config_id: targetConfigId,
+    bucket_id: targetConfigId,
+    contract_line_id: contractLineId,
+    bucket_name: null,
     total_minutes: bucketConfig.total_minutes,
-    billing_period: bucketConfig.billing_period,
     overage_rate: normalizeNumeric(bucketConfig.overage_rate) ?? 0,
     allow_rollover: bucketConfig.allow_rollover,
+    billing_period: bucketConfig.billing_period,
+    after_hours_multiplier: null,
+    business_hours_schedule_id: null,
+    covers_all_services: false,
+    created_at: trx.fn.now(),
+    updated_at: trx.fn.now()
+  });
+  await tenantDb(trx, tenant).table('contract_line_bucket_services').insert({
+    tenant,
+    bucket_id: targetConfigId,
+    service_id: serviceId,
+    contract_line_id: contractLineId,
+    burn_multiplier: 1,
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

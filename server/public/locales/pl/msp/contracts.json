@@ -2328,5 +2328,47 @@
       "description": "Symulator umów jest dostępny w AlgaPSA Pro.",
       "title": "Funkcja Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Pakiety godzin",
+    "actions": {
+      "addPool": "Dodaj pakiet",
+      "create": "Utwórz pakiet",
+      "cancel": "Anuluj",
+      "remove": "Usuń",
+      "applyRule": "Zastosuj regułę poza godzinami pracy"
+    },
+    "loading": "Ładowanie pakietów godzin…",
+    "empty": "Brak pakietów godzin w tej linii. Dodaj pakiet, aby uwzględnić przedpłacone godziny.",
+    "labels": {
+      "catchAll": "Wszystkie usługi w tej linii",
+      "pool": "Pakiet godzin",
+      "scopeCatchAll": "Obejmuje wszystkie usługi linii (usługi członkowskie nadpisują mnożnik)",
+      "scopeMembers": "Tylko usługi członkowskie",
+      "totalHours": "Łączna liczba godzin",
+      "overageRate": "Stawka za przekroczenie ($/godz.)",
+      "rollover": "Zezwól na przeniesienie",
+      "afterHours": "Mnożnik zużycia poza godzinami pracy",
+      "afterHoursMultiplier": "Mnożnik (np. 1,5)",
+      "schedule": "Harmonogram godzin pracy",
+      "default": "domyślny",
+      "members": "Usługi członkowskie",
+      "multiplier": "×",
+      "noMembers": "Brak przypisanych usług.",
+      "selectService": "Wybierz usługę…",
+      "poolName": "Nazwa pakietu (opcjonalnie)",
+      "poolNamePlaceholder": "np. Godziny standardowe",
+      "coversAll": "Obejmuje wszystkie usługi w tej linii"
+    },
+    "badges": {
+      "dormant": "brak przypisanych usług — nic nie jest zużywane z tego pakietu"
+    },
+    "errors": {
+      "catchAllExists": "Ta linia ma już pakiet ogólny."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Pakiety godzin dla tej linii",
+    "empty": "Brak pakietów godzin w tej linii. Dodaj pakiet, aby uwzględnić godziny z góry opłacone."
   }
 }

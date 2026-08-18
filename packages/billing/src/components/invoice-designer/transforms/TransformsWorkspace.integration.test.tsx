@@ -120,13 +120,17 @@ describe('TransformsWorkspace', () => {
       writable: true,
       value: () => undefined,
     });
+    // writable too: a later suite in the same environment may plain-assign
+    // these (jsdom lacks them), and a non-writable stub makes that throw.
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       value: () => false,
       configurable: true,
+      writable: true,
     });
     Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
       value: () => undefined,
       configurable: true,
+      writable: true,
     });
     useInvoiceDesignerStore.getState().resetWorkspace();
     installWorkspace();

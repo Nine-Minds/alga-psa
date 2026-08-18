@@ -162,6 +162,12 @@
       "notes": "Używać filtr jako rzeczownik i filtruj jako etykietę działania."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "realizacja",
+      "notes": "Używać realizacja dla kolumny fulfillment w zamówieniach sprzedaży i dla odpowiadającej etykiety na dokumentach klienta; dostawa oznacza samo dostarczenie."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "branża",
@@ -270,6 +276,12 @@
       "notes": "Używać oferta dla dokumentu sales quote wysyłanego klientowi (konwencja HubSpot/Dynamics: oferta handlowa). Wycena oznacza czynność lub wynik wyceny — używać dla akcji wyceniania (np. ponowna wycena). W plikach dominuje dziś wycena (~148) — do normalizacji. Przegląd kontradyktoryjny 2026-08."
     },
     {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "stawka",
+      "notes": "Używać stawka dla kolumny stawki na dokumentach klienta, a cena jednostkowa dla unit price — oba określenia muszą pozostać rozróżnialne, gdy dokument pokazuje obie kolumny."
+    },
+    {
       "id": "report",
       "en-term": "report",
       "term": "raport",
@@ -348,6 +360,12 @@
       "notes": "Używać zadanie dla zadań projektowych, przepływów pracy i skrzynki zadań (zadanie, zadania, zadań). Dla background job pisać zadanie w tle."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "podatek",
+      "notes": "Używać neutralnego podatek na dokumentach klienta; VAT wskazywać tylko wtedy, gdy chodzi wyłącznie o podatek od towarów i usług."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "technik",
@@ -376,6 +394,12 @@
       "en-term": "timesheet",
       "term": "arkusz czasu pracy",
       "notes": "Używać arkusz czasu pracy dla tygodniowego grupowania wpisów i procesu zatwierdzania. msp/time-entry używa również karta czasu pracy w komunikatach zbiorczych, a addWorkItemDialog błędnie używa grafik; nie używać grafik dla timesheet."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "cena jednostkowa",
+      "notes": "Używać cena jednostkowa dla kolumny ceny za sztukę, a stawka dla rate; nie zamieniać tych pojęć."
     },
     {
       "id": "user",
@@ -749,8 +773,8 @@
     },
     {
       "id": "ticket-and-quote-register",
-      "rule": "Support ticket tłumaczyć jako zgłoszenie, a sales quote jako wycena.",
-      "notes": "Nie używać bilet ani ticket dla wsparcia oraz cytat/cytowanie dla dokumentu handlowego. Oferta jest istniejącym wariantem w features/billing, ale jedna ścieżka produktu powinna używać jednej nazwy."
+      "rule": "Support ticket tłumaczyć jako zgłoszenie, a sales quote jako oferta.",
+      "notes": "Nie używać bilet ani ticket dla wsparcia oraz cytat/cytowanie dla dokumentu handlowego. Dokument handlowy to oferta (przegląd kontradyktoryjny 2026-08, zgodnie z terminem słownikowym i listą zakazaną); wycena oznacza czynność wyceniania i pozostaje dla akcji, np. ponowna wycena."
     },
     {
       "id": "loanwords",
@@ -889,6 +913,7 @@
       "workflow.event",
       "{{count}} folder",
       "| null",
+      "×",
       "—",
       "• VPN",
       "• Wi-Fi"

@@ -2522,6 +2522,29 @@
           "updateContact": "Kan standaardcontact niet bijwerken",
           "updateAutoSync": "Kan instelling voor automatisch synchroniseren niet bijwerken"
         }
+      },
+      "deviceSync": {
+        "title": "Geplande apparaatsynchronisatie",
+        "description": "Werk deze apparaatinventaris volgens een schema bij in plaats van te wachten tot iemand een volledige synchronisatie uitvoert. Elke uitvoering roept de API van de provider aan en bij sommige providers leest ook een incrementele uitvoering de volledige apparaatlijst, waardoor een korter interval evenredig meer API-aanroepen kost.",
+        "enabledLabel": "Apparaten volgens een schema synchroniseren",
+        "intervalLabel": "Uitvoeren elke (minuten)",
+        "intervalHelp": "Kies tussen {{min}} en {{max}} minuten. Een korter interval houdt de apparaatgegevens actueler en roept de API van de provider vaker aan.",
+        "intervalInvalid": "Voer een geheel aantal minuten tussen {{min}} en {{max}} in.",
+        "lastScheduledRun": "Laatste geplande uitvoering: {{time}}",
+        "lastScheduledRunNever": "De geplande synchronisatie is nog niet uitgevoerd.",
+        "lastAnySync": "Laatste synchronisatie van welke aard dan ook, inclusief handmatige volledige synchronisaties: {{time}}",
+        "lastAnySyncNever": "Er is nog geen enkele apparaatsynchronisatie uitgevoerd.",
+        "lastSyncError": "De laatste synchronisatie is mislukt: {{error}}",
+        "actions": {
+          "save": "Synchronisatieschema opslaan",
+          "saving": "Opslaan..."
+        },
+        "success": {
+          "saved": "Schema voor apparaatsynchronisatie opgeslagen. De planner past het binnen enkele minuten toe."
+        },
+        "errors": {
+          "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
+        }
       }
     },
     "sso": {

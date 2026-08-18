@@ -28,7 +28,7 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
-import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
+import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
@@ -877,7 +877,9 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
         'da.entity_type': 'invoice',
       })
       .whereNotNull('d.file_id')
-      .orderBy('d.is_client_visible', 'desc')
+      // Only the published copy: an MSP-side render stays hidden until the
+      // invoice is sent, and serving its file id would just 403 at download.
+      .where('d.is_client_visible', true)
       .orderBy('da.created_at', 'desc')
       .select('d.file_id')
       .first<{ file_id: string } | undefined>();
@@ -888,25 +890,23 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       return { success: true, fileId: storedDoc.file_id };
     }
 
-    // Schedule PDF generation
-    const result = await scheduleInvoiceZipAction([invoiceId]);
+    // No stored PDF yet — generate and file one directly, same as the quote
+    // path. The zip job exists for MSP bulk export and resolves its acting
+    // user from the request session, which a background job does not have.
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .first<{ invoice_number?: string | null } | undefined>('invoice_number');
 
-    if (isClientBillingActionError(result)) {
-      return result;
-    }
+    const { createPDFGenerationService } = await import('@alga-psa/billing/services');
+    const pdfService = createPDFGenerationService(tenant);
+    const fileRecord = await pdfService.generateAndStore({
+      invoiceId,
+      invoiceNumber: invoice?.invoice_number ?? undefined,
+      version: 1,
+      userId: user.user_id,
+    });
 
-    if (!result?.jobId) {
-      return actionError('Failed to start PDF generation');
-    }
-
-    // Poll until job completes
-    const status = await pollJobUntilComplete(result.jobId, tenant);
-
-    if (status.status === 'completed' && status.fileId) {
-      return { success: true, fileId: status.fileId };
-    } else {
-      return actionError(status.error || 'PDF generation failed');
-    }
+    return { success: true, fileId: fileRecord.file_id };
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

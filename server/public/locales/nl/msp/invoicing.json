@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Sjabloongrens"
+      "templateBoundary": "Sjabloongrens",
+      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt."
     },
     "dragOverlay": {
       "component": "Component"

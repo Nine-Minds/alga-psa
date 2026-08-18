@@ -5,6 +5,7 @@
 - [billing_cycles.md](./billing_cycles.md)
 - [invoice_finalization.md](./invoice_finalization.md)
 - [quoting-system.md](./quoting-system.md) — the quoting system reuses the AST engine for quote document templates
+- [document-template-translation.md](./document-template-translation.md) — how standard templates render in the recipient's language
 
 ## 1. Overview
 
@@ -101,6 +102,16 @@ PDF rendering uses the same AST evaluator + renderer path. The server wrapper pr
 
 Key entry point:
 - `packages/billing/src/services/pdfGenerationService.ts`
+
+### 3.4 Localization
+
+A template label is either a literal or a `{ i18nKey, defaultValue }` reference. Standard templates use references, so their chrome — and the document's dates, numbers and currency — render in the recipient's locale (billing contact → client → tenant, English when nothing resolves). Customized templates are literals and render exactly as authored in every locale.
+
+Key entry points:
+- `packages/billing/src/lib/invoice-template-ast/i18nLabels.ts` — the single localization seam used by PDF generation and previews alike
+- `server/public/locales/*/documents.json` — the label strings
+
+Full detail: [document-template-translation.md](./document-template-translation.md)
 
 ## 4. Template Management
 

@@ -222,6 +222,7 @@
     "selectLanguage": "Seleccionar idioma",
     "changeLanguage": "Cambiar idioma",
     "currentLanguage": "Idioma actual",
+    "previewLanguage": "Idioma de la vista previa",
     "preference": {
       "label": "Preferencia de idioma",
       "helper": "Seleccione su idioma preferido para la interfaz y las notificaciones por correo electrónico",

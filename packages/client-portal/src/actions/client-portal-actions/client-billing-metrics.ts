@@ -343,37 +343,49 @@ export const getClientBucketUsageHistory = withAuth(async (
 
       let query: any = scopedDb.table('bucket_usage as bu')
         .where('bu.client_id', clientId)
-      scopedDb.tenantJoin(query, 'contract_line_service_configuration as clsc', 'bu.contract_line_id', 'clsc.contract_line_id', {
+      // Weighted-burn pool keying: usage rows point at the pool.
+      scopedDb.tenantJoin(query, 'contract_line_buckets as clb', 'bu.bucket_id', 'clb.bucket_id');
+      scopedDb.tenantJoin(query, 'contract_lines as cl', 'clb.contract_line_id', 'cl.contract_line_id');
+      scopedDb.tenantJoin(query, 'contract_line_bucket_services as first_member', 'first_member.bucket_id', 'clb.bucket_id', {
+        type: 'left',
         on(join) {
-          join.andOn('bu.service_catalog_id', '=', 'clsc.service_id')
-            .andOnVal('clsc.configuration_type', 'Bucket');
+          join.andOn('first_member.service_id', '=', trx.raw('(' +
+            'SELECT ms.service_id FROM contract_line_bucket_services ms ' +
+            'WHERE ms.tenant = first_member.tenant AND ms.bucket_id = first_member.bucket_id ' +
+            'ORDER BY ms.service_id ASC LIMIT 1' +
+          ')'));
         },
       });
-      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as clsb', 'clsc.config_id', 'clsb.config_id');
-      scopedDb.tenantJoin(query, 'contract_lines as cl', 'clsc.contract_line_id', 'cl.contract_line_id');
-      scopedDb.tenantJoin(query, 'service_catalog as sc', 'clsc.service_id', 'sc.service_id');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'first_member.service_id', 'sc.service_id', {
+        type: 'left',
+      });
 
       if (serviceId) {
-        query = query.andWhere('clsc.service_id', serviceId);
+        query = query.andWhere('clb.covers_all_services', false).andWhere('first_member.service_id', serviceId);
       }
 
       query = query
         .select(
-          'clsc.service_id',
+          'clb.bucket_id',
+          'clb.bucket_name',
+          'clb.covers_all_services',
+          'clb.total_minutes',
+          'first_member.service_id',
           'sc.service_name',
           'cl.contract_line_id',
           'cl.contract_line_name',
           'bu.period_start',
           'bu.period_end',
           'bu.minutes_used',
-          'bu.rolled_over_minutes',
-          'clsb.total_minutes'
+          'bu.rolled_over_minutes'
         )
-        .orderBy('clsc.service_id')
+        .orderBy('clb.bucket_id')
         .orderBy('bu.period_start', 'desc');
 
       const rawResults: any[] = await query;
 
+      // Group by pool; the display identity is the pool name, the single
+      // member service, or the catch-all label.
       const serviceMap = new Map<string, { service_id: string; service_name: string; history: Array<{ period_start: string; period_end: string; percentage_used: number; hours_used: number; hours_total: number; }>; }>();
 
       rawResults.forEach(row => {
@@ -385,11 +397,20 @@ export const getClientBucketUsageHistory = withAuth(async (
         const hoursUsed = minutesUsed / 60;
         const hoursTotal = totalWithRollover / 60;
 
-        if (!serviceMap.has(row.service_id)) {
-          serviceMap.set(row.service_id, { service_id: row.service_id, service_name: row.service_name, history: [] });
+        const serviceIdKey = row.service_id ?? row.bucket_id;
+        const serviceName = row.bucket_name
+          ? String(row.bucket_name)
+          : row.service_name
+            ? String(row.service_name)
+            : row.covers_all_services
+              ? 'All services'
+              : 'Bucket pool';
+
+        if (!serviceMap.has(serviceIdKey)) {
+          serviceMap.set(serviceIdKey, { service_id: serviceIdKey, service_name: serviceName, history: [] });
         }
 
-        serviceMap.get(row.service_id)!.history.push({
+        serviceMap.get(serviceIdKey)!.history.push({
           period_start: row.period_start.toISOString().split('T')[0],
           period_end: row.period_end.toISOString().split('T')[0],
           percentage_used: Math.round(percentageUsed * 100) / 100,
@@ -466,24 +487,33 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
         .select(
           'cl.contract_line_id',
           'cl.contract_line_name',
-          'ps.service_id',
+          'clb.bucket_id',
+          'clb.bucket_name',
+          'clb.covers_all_services',
+          'clb.total_minutes',
+          'first_member.service_id',
           'sc.service_name',
-          'psbc.total_minutes',
           trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
           trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
           'bu.period_start',
           'bu.period_end'
         );
       scopedDb.tenantJoin(query, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
-      scopedDb.tenantJoin(query, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
-      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
-      scopedDb.tenantJoin(query, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
+      scopedDb.tenantJoin(query, 'contract_line_buckets as clb', 'cl.contract_line_id', 'clb.contract_line_id');
+      scopedDb.tenantJoin(query, 'contract_line_bucket_services as first_member', 'first_member.bucket_id', 'clb.bucket_id', {
+        type: 'left',
         on(join) {
-          join.andOn('ps.service_id', '=', 'psc.service_id');
+          join.andOn('first_member.service_id', '=', trx.raw('(' +
+            'SELECT ms.service_id FROM contract_line_bucket_services ms ' +
+            'WHERE ms.tenant = first_member.tenant AND ms.bucket_id = first_member.bucket_id ' +
+            'ORDER BY ms.service_id ASC LIMIT 1' +
+          ')'));
         },
       });
-      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
-      scopedDb.tenantJoin(query, 'bucket_usage as bu', 'cl.contract_line_id', 'bu.contract_line_id', {
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'first_member.service_id', 'sc.service_id', {
+        type: 'left',
+      });
+      scopedDb.tenantJoin(query, 'bucket_usage as bu', 'clb.bucket_id', 'bu.bucket_id', {
         type: 'left',
         on(join) {
           join.andOn('cc.client_id', '=', 'bu.client_id')
@@ -499,7 +529,14 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
       const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
       const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
       const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
-      const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
+      const serviceName = row.service_name
+        ? String(row.service_name)
+        : row.covers_all_services
+          ? 'All services'
+          : 'Bucket pool';
+      const displayLabel = row.bucket_name
+        ? String(row.bucket_name)
+        : `${row.contract_line_name} - ${serviceName}`;
 
       // Calculate additional metrics for enhanced display
       const totalWithRollover = totalMinutes + rolledOverMinutes;
@@ -514,8 +551,8 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
         return {
           contract_line_id: row.contract_line_id,
           contract_line_name: row.contract_line_name,
-          service_id: row.service_id,
-          service_name: row.service_name,
+          service_id: row.service_id ?? row.bucket_id,
+          service_name: serviceName,
           display_label: displayLabel,
           total_minutes: totalMinutes,
           minutes_used: minutesUsed,
