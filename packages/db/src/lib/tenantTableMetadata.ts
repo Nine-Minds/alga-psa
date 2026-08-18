@@ -258,6 +258,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   kb_article_reviewers: { scope: 'tenant' },
   kb_article_templates: { scope: 'tenant' },
   kb_articles: { scope: 'tenant' },
+  kb_import_files: { scope: 'tenant' },
   kit_components: { scope: 'tenant' },
   knex_migrations: { scope: 'global' },
   layout_blocks: { scope: 'tenant' },

@@ -85,6 +85,22 @@ describe('kb-article-import handler tenant-scoped query contract', () => {
     expect(KB_ARTICLE_IMPORT_JOB).toBe('kb-article-import');
     expect(source).toContain('maxDurationMs: KB_IMPORT_PARSE_BUDGET_MS');
   });
+
+  it('registers every table it queries in the tenant table metadata', () => {
+    // tenantDb() throws "No tenant table metadata registered for <table>" at
+    // runtime for unknown tables. Every test here mocks @alga-psa/db, so a new
+    // table that never made it into the registry looks perfectly healthy until
+    // the job runs for real against a database.
+    const metadata = readFileSync(
+      resolve(__dirname, '../../../../db/src/lib/tenantTableMetadata.ts'),
+      'utf8',
+    );
+    for (const table of ['kb_import_files', 'kb_articles', 'jobs']) {
+      expect(metadata, `${table} is missing from tenantTableMetadata`).toContain(
+        `${table}: { scope: 'tenant' }`,
+      );
+    }
+  });
 });
 
 describe('kb-article-import handler execution', () => {
