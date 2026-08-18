@@ -106,7 +106,7 @@ function LayoutShell({
   }, [pathname, t]);
 
   return (
-    <div className="flex min-h-screen bg-gray-100" data-product-shell={productCode}>
+    <div className="flex min-h-screen app-shell-ground" data-product-shell={productCode}>
       <ClientPortalSidebar
         productCode={productCode}
         permissions={{

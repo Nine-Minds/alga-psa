@@ -114,12 +114,12 @@ describe('theme pair token blocks', () => {
     expect(sum(dark['--color-submenu-bg'])).toBeGreaterThan(sum(dark['--color-card']));
   });
 
-  // The MSP shell paints its whole content area with bg-gray-100, which the dark
-  // shim maps to --color-border-100. When that ground is brighter than the card,
-  // cards sink into the page instead of lifting off it — the mismatch against
-  // the nineminds.com reference, where the content panel is the lightest large
-  // surface. Slate is exempt (it restores the pre-purple values verbatim) and so
-  // is high contrast (flat black surfaces, separated by borders, by design).
+  // Everything the shell can paint behind a card — the app ground, the wells and
+  // the chip surfaces — has to stay under the card, or cards sink into the page
+  // instead of lifting off it (the mismatch against the nineminds.com reference,
+  // where the content panel is the lightest large surface). Slate is exempt (it
+  // restores the pre-purple values verbatim) and so is high contrast (flat black
+  // surfaces, separated by borders, by design).
   const elevationPairs = pairIds.filter((id) => id !== 'slate' && id !== 'high-contrast');
 
   it.each(elevationPairs)('%s keeps the dark shell ground under the card', (pairId) => {
@@ -145,5 +145,27 @@ describe('theme pair token blocks', () => {
 
   it('keeps the reference light sidebar', () => {
     expect(tokensOf('html.light')['--color-sidebar-bg']).toBe('12 17 29');
+  });
+
+  // The shell, the scrolling body and <main> all paint the same ground, so the
+  // pt-2/px-3 gutter between the side menu and the content can never show a
+  // different color than the panel it frames.
+  it('gives the app shell one ground token in both modes', () => {
+    expect(tokensOf('html.light')['--color-app-ground']).toBe('var(--color-border-100)');
+    expect(tokensOf('html.dark')['--color-app-ground']).toBe('var(--color-background)');
+    expect(css).toContain('.app-shell-ground {\n    background-color: rgb(var(--color-app-ground));');
+    expect(css).toMatch(/\.dark main \{\s*background-color: rgb\(var\(--color-app-ground\)\);/);
+  });
+
+  // A page ground identical to the card leaves nothing for cards to lift off, and
+  // reads as two identical swatches in the theme editor.
+  it('keeps every light page background off the card color', () => {
+    ['html.light', ...pairIds.map((id) => `html.light[data-theme-pair="${id}"]`)]
+      // High contrast is flat white by design; its cards are separated by borders.
+      .filter((selector) => !selector.includes('high-contrast'))
+      .forEach((selector) => {
+        const tokens = tokensOf(selector);
+        expect(tokens['--color-background'], selector).not.toBe(tokens['--color-card']);
+      });
   });
 });

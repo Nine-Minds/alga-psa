@@ -61,7 +61,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Alga',
     descriptionKey: 'appearance.pairs.alga.description',
     description: 'The default look: clean white surfaces by day, purple-tinted by night.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#0f172a', primary: '#8a4dea', sidebar: '#0c111d' },
+    light: { background: '#f7f8fa', card: '#ffffff', text: '#0f172a', primary: '#8a4dea', sidebar: '#0c111d' },
     dark: { background: '#0c0a18', card: '#1e1836', text: '#e8e4f6', primary: '#8a4dea', sidebar: '#151024' },
   },
   {
@@ -79,7 +79,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Ocean',
     descriptionKey: 'appearance.pairs.ocean.description',
     description: 'Cool blues over crisp, slightly cooled surfaces.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#0f1e29', primary: '#0284c7', sidebar: '#0b1620' },
+    light: { background: '#f7fafd', card: '#ffffff', text: '#0f1e29', primary: '#0284c7', sidebar: '#0b1620' },
     dark: { background: '#05080f', card: '#0d1726', text: '#e2ecf6', primary: '#0284c7', sidebar: '#0d1726' },
   },
   {
@@ -88,7 +88,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Forest',
     descriptionKey: 'appearance.pairs.forest.description',
     description: 'Deep greens with a teal success color so status stays readable.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#131c16', primary: '#16a34a', sidebar: '#0c1510' },
+    light: { background: '#f7fbf8', card: '#ffffff', text: '#131c16', primary: '#16a34a', sidebar: '#0c1510' },
     dark: { background: '#0a120d', card: '#121f17', text: '#e4f2e8', primary: '#16a34a', sidebar: '#121f17' },
   },
   {
@@ -97,7 +97,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Sunset',
     descriptionKey: 'appearance.pairs.sunset.description',
     description: 'Warm oranges over sand-tinted surfaces.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#1c1917', primary: '#c2410c', sidebar: '#1a1008' },
+    light: { background: '#fdfaf6', card: '#ffffff', text: '#1c1917', primary: '#c2410c', sidebar: '#1a1008' },
     dark: { background: '#140b05', card: '#211408', text: '#f6ede4', primary: '#ea580c', sidebar: '#211408' },
   },
   {
@@ -106,7 +106,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Cappuccino',
     descriptionKey: 'appearance.pairs.cappuccino.description',
     description: 'Coffee browns over cream, roasted espresso after dark.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#211a14', primary: '#8b5e3c', sidebar: '#241a12' },
+    light: { background: '#fdfaf7', card: '#ffffff', text: '#211a14', primary: '#8b5e3c', sidebar: '#241a12' },
     dark: { background: '#140e09', card: '#2a1d13', text: '#f5ece2', primary: '#a9713f', sidebar: '#1a120c' },
   },
   {
@@ -115,7 +115,7 @@ export const THEME_PAIRS: readonly ThemePairMeta[] = [
     label: 'Vice',
     descriptionKey: 'appearance.pairs.vice.description',
     description: 'Neon pink and cyan over a Miami-night purple.',
-    light: { background: '#ffffff', card: '#ffffff', text: '#211722', primary: '#c4187f', sidebar: '#190431' },
+    light: { background: '#fefafd', card: '#ffffff', text: '#211722', primary: '#c4187f', sidebar: '#190431' },
     dark: { background: '#0d0221', card: '#241050', text: '#fdeff9', primary: '#e01f8b', sidebar: '#170538' },
   },
   {

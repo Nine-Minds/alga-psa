@@ -129,6 +129,15 @@ html .radix-themes {
     --color-background: var(--alga-color-background);
 }
 
+/* The ground the app shell paints behind the cards. Light keeps the neutral
+   step the shell always wore; dark drops to the pair's page background so cards
+   lift off it the way the product mock on nineminds.com pitches them. One class
+   for the shell, the scroll body and <main>, so the pt-2/px-3 gutter between the
+   side menu and the content never shows a different color than the panel. */
+.app-shell-ground {
+    background-color: rgb(var(--color-app-ground));
+}
+
 .dark .bg-white {
     background-color: rgb(var(--color-card)) !important;
 }
@@ -245,7 +254,7 @@ html .radix-themes {
 }
 
 .dark main {
-    background-color: rgb(var(--color-background));
+    background-color: rgb(var(--color-app-ground));
 }
 
 .dark input,
@@ -379,6 +388,8 @@ html.dark {
     --background: 12, 10, 24;
     --color-background: 12 10 24;    /* #0c0a18 — site --background */
     --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
+    /* Shell ground: the page itself, so cards read as the lightest large surface. */
+    --color-app-ground: var(--color-background);
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -536,9 +547,11 @@ html.dark {
 
 
 html.light {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 247, 248, 250;
+    --color-background: 247 248 250;
     --color-card: 255 255 255;
+    /* Shell ground: the neutral step the shell has always worn under white cards. */
+    --color-app-ground: var(--color-border-100);
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -964,8 +977,8 @@ html.dark[data-theme-pair="slate"] {
 }
 
 html.light[data-theme-pair="ocean"] {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 247, 250, 253;
+    --color-background: 247 250 253;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
@@ -1186,8 +1199,8 @@ html.dark[data-theme-pair="ocean"] {
 }
 
 html.light[data-theme-pair="forest"] {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 247, 251, 248;
+    --color-background: 247 251 248;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
@@ -1408,8 +1421,8 @@ html.dark[data-theme-pair="forest"] {
 }
 
 html.light[data-theme-pair="sunset"] {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 253, 250, 246;
+    --color-background: 253 250 246;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
@@ -1892,8 +1905,8 @@ html.dark[data-theme-pair="high-contrast"] {
 }
 
 html.light[data-theme-pair="cappuccino"] {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 253, 250, 247;
+    --color-background: 253 250 247;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
@@ -2114,8 +2127,8 @@ html.dark[data-theme-pair="cappuccino"] {
 }
 
 html.light[data-theme-pair="vice"] {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 254, 250, 253;
+    --color-background: 254 250 253;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */

@@ -51,7 +51,7 @@ export interface CustomTheme {
 export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: CustomThemeTokens; dark: CustomThemeTokens }> = {
   alga: {
     light: {
-      background: '#ffffff',
+      background: '#f7f8fa',
       card: '#ffffff',
       surface: '#f8fafc',
       textPrimary: '#0f172a',
@@ -123,7 +123,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
   },
   ocean: {
     light: {
-      background: '#ffffff',
+      background: '#f7fafd',
       card: '#ffffff',
       surface: '#f4f8fb',
       textPrimary: '#0f1e29',
@@ -159,7 +159,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
   },
   forest: {
     light: {
-      background: '#ffffff',
+      background: '#f7fbf8',
       card: '#ffffff',
       surface: '#f2f7f3',
       textPrimary: '#131c16',
@@ -195,7 +195,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
   },
   sunset: {
     light: {
-      background: '#ffffff',
+      background: '#fdfaf6',
       card: '#ffffff',
       surface: '#fbf6ef',
       textPrimary: '#1c1917',
@@ -231,7 +231,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
   },
   cappuccino: {
     light: {
-      background: '#ffffff',
+      background: '#fdfaf7',
       card: '#ffffff',
       surface: '#faf6f1',
       textPrimary: '#211a14',
@@ -267,7 +267,7 @@ export const CUSTOM_THEME_PRESETS: Record<PredefinedThemePairId, { light: Custom
   },
   vice: {
     light: {
-      background: '#ffffff',
+      background: '#fefafd',
       card: '#ffffff',
       surface: '#fdf5fa',
       textPrimary: '#211722',
