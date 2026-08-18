@@ -12,7 +12,7 @@ import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/cl
 import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
-import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
+import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import { sendUserInvitation, getUserInvitations, revokeUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 
 type PendingUserInvitation = Awaited<ReturnType<typeof getUserInvitations>>[number];
@@ -159,7 +159,6 @@ const UserManagement = (): React.JSX.Element => {
     email: []
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
-  const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
   const [pendingInvitations, setPendingInvitations] = useState<PendingUserInvitation[]>([]);
   const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
@@ -325,37 +324,6 @@ const UserManagement = (): React.JSX.Element => {
       } catch (err) {
         console.error('Error fetching license usage:', err);
       }
-    }
-  };
-
-  const handleCopyPortalLink = async (): Promise<void> => {
-    if (isCopyingPortalLink) {
-      return;
-    }
-
-    try {
-      setIsCopyingPortalLink(true);
-      const linkResult = await getTenantPortalLoginLink();
-      if (!linkResult.success) {
-        toast.error(linkResult.error);
-        return;
-      }
-
-      const portalLink = linkResult.data;
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(portalLink.url);
-        toast.success(
-          portalLink.source === 'vanity'
-            ? t('users.messages.success.copiedVanityLink')
-            : t('users.messages.success.copiedCanonicalLink')
-        );
-      } else {
-        toast.error(t('users.messages.error.clipboardUnavailable'));
-      }
-    } catch (error) {
-      handleError(error, t('users.messages.error.copyPortalLink'));
-    } finally {
-      setIsCopyingPortalLink(false);
     }
   };
 
@@ -1020,16 +988,7 @@ const fetchContacts = async (): Promise<void> => {
 
   const renderCreateUserActions = () => (
     <div className="flex items-center gap-3">
-      {portalType === 'client' && (
-        <Button
-          id="copy-client-portal-link-button"
-          variant="outline"
-          onClick={handleCopyPortalLink}
-          disabled={isCopyingPortalLink}
-        >
-          {isCopyingPortalLink ? t('users.actions.copying') : t('users.actions.copyPortalLink')}
-        </Button>
-      )}
+      {portalType === 'client' && <CopyClientPortalLinkButton />}
       {!showNewUserForm && (
         <div className="flex flex-col items-end gap-1">
           <Button

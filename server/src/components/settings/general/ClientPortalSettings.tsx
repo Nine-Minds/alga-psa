@@ -34,6 +34,7 @@ import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/t
 import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
 import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
+import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -374,6 +375,11 @@ const ClientPortalSettings = () => {
 
   return (
     <div className="space-y-6">
+      {/* The address clients sign in at — the same link the user list hands out. */}
+      <div className="flex justify-end">
+        <CopyClientPortalLinkButton id="copy-client-portal-link-branding-button" />
+      </div>
+
       <ClientPortalDomainSettings />
 
       <Card>
