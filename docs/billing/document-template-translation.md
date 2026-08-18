@@ -72,9 +72,16 @@ The recipient's locale wins for both labels and formatting. A document with
 German labels and American dates is worse than a consistently English one, so
 the two can never diverge:
 
-1. `PDFGenerationService.resolveRenderLocale()` resolves the recipient —
-   billing contact → client → tenant, through the same `resolveEmailLocale`
-   hierarchy the outbound email uses.
+1. `PDFGenerationService.resolveRenderLocale()` resolves the recipient through
+   the same `resolveEmailLocale` hierarchy the outbound email uses, in order:
+   the billing contact's own user preference (`user_preferences.locale`), the
+   client's default (`clients.properties.defaultLocale` — region-tagged values
+   like `pt_BR` normalize to the shipped language pack, here `pt`), the
+   client-portal default, the tenant default
+   (`tenant_settings.settings.defaultLocale`), and finally `en`. The viewer's
+   own UI language never enters this chain: a portal user with an English
+   preference still receives their client's German documents unless they *are*
+   the billing contact.
 2. `localizeTemplateAstForLocale(ast, locale)`
    (`packages/billing/src/lib/invoice-template-ast/i18nLabels.ts`) loads the
    `documents` namespace for that locale, resolves the key references, and
@@ -119,6 +126,24 @@ and does not try to.
 | Standard template | Key references | Renders in the recipient's language |
 | Customized template | Literals | Renders exactly as authored, in every locale |
 
+The designer canvas makes the difference visible: a label that is still a key
+reference carries a small language chip (`TranslatableMark` in
+`DesignCanvas.tsx`, backed by `utils/translatableText.ts`), with a tooltip
+explaining it will render in the recipient's language. The moment an author
+retypes the text, the reference is dropped on export (the round-trip rule in
+`workspaceAst.ts`) and the chip disappears — customizing a label freezes it,
+and the canvas now says so. The chip appears on field labels, standing text
+headings, table column headers and totals rows.
+
+One wording was retired rather than translated: the Grouped standard quote
+template used to title itself `ESTIMATE`, a concept nothing else in the product
+has. It is consolidated into the quote title — the catalog in code uses
+`labels.quoteTitle`, the refresh migration folds both the old literal and any
+already-written `labels.estimateTitle` reference into it (`CONSOLIDATED_KEYS`
+in `20260813120000_upsert_i18n_standard_document_template_asts.cjs`), and the
+key is gone from the packs. Retiring a key in the future follows the same
+pattern: map it in `CONSOLIDATED_KEYS` so previously refreshed rows heal.
+
 Editing a label in the designer inspector replaces its key reference with the
 literal you typed (`exportI18nText` in
 `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` keeps the
@@ -153,7 +178,50 @@ and the quote preview are the opposite: they render a specific document for a
 specific client, so they use that client's language, without a selector,
 because the question they answer is "what will this client receive?".
 
-## 7. Adding or changing a label
+## 7. The client portal
+
+The portal shows documents in two forms, with different language rules:
+
+- **On-screen previews** (the invoice preview panel, reached with a real
+  `invoiceId`) render live through the recipient-locale seam — same labels and
+  formatting the PDF will have.
+- **Downloads serve the published artifact first.** `downloadClientInvoicePdf`
+  and `downloadClientQuotePdf` return the stored, client-visible PDF when one
+  exists — the copy the client was issued is immutable, so a later language
+  switch never rewrites history. Only when no published copy exists do they
+  generate (and file) one fresh, in the recipient's language at that moment.
+  Invoice PDFs file as not-client-visible until the invoice is *sent*; the
+  portal action only ever serves visible copies, and a portal-triggered
+  generation is owned by the requesting user.
+- **Portal generation is direct**, not via the MSP bulk-export job: background
+  jobs have no request session (see §8), and a single document does not need a
+  zip pipeline.
+
+Authorization: a stored document reaches a portal user through its entity
+associations. `resolveDocumentAuthorizationRecords`
+(`packages/documents/src/actions/documentActions.ts`) maps `quote`, `invoice`
+and `sales_order` associations (alongside contact/ticket/project-task/contract)
+to their `client_id`, so the `same_client` rule admits the owning client's
+portal users and nobody else's.
+
+The portal's own chrome (the quote detail page, billing tabs) is ordinary UI
+i18n — `features/billing` namespace, `quotes.detail.*` keys — and follows the
+viewer's UI language, not the document language. The two can legitimately
+differ on one screen: an English-preferring viewer at a German client sees
+English page chrome around a German document.
+
+## 8. Background jobs never call `withAuth` actions
+
+`withAuth` resolves its user from the request session; a pg-boss job has no
+request, so any handler calling a `withAuth` action fails with "`headers` was
+called outside a request scope". The invoice zip and invoice email handlers
+(`server/src/lib/jobs/handlers/`) read the database directly with
+tenant-scoped queries and act as the `requesterId` recorded in the job data.
+Follow that pattern in any new handler. (Known debt: `generateInvoiceHandler`
+and `assetImportHandler` still call `withAuth` actions and need the same
+treatment.)
+
+## 9. Adding or changing a label
 
 1. Add the key to `server/public/locales/en/documents.json` under `labels.`
    (`labels.emptyState.` for empty-state text, `labels.note.` for the sentences
@@ -163,14 +231,14 @@ because the question they answer is "what will this client receive?".
 3. Translate it in all seven locales — `de`, `es`, `fr`, `it`, `nl`, `pl`, `pt`.
    Check the locale's glossary first (`tools/i18n/<locale>/glossary.json`): it
    carries the domain terms, forbidden terms and register rules, including the
-   document-specific ones (see §8).
+   document-specific ones (see §10).
 4. Update `standardTemplateI18n.manifest.json` if the template's structure
-   changed, and re-run the gates in §9.
+   changed, and re-run the gates in §11.
 
 Keep an eye on column width when translating: the standard templates were
 checked at their longest locale, not just English.
 
-## 8. Glossary rules that came out of document review
+## 10. Glossary rules that came out of document review
 
 Recorded as domain terms in every locale glossary, after a native-speaker review
 of the shipped labels:
@@ -200,7 +268,7 @@ the `fulfilled` and `ordered` quantity columns got their Dutch, Spanish and
 Portuguese wording. And when two labels sit in the same header row, they have to
 be tellable apart in that language, even where the English shares a stem.
 
-## 9. Tests and gates
+## 11. Tests and gates
 
 - `npm run test:i18n` — pseudo-locale generation, translation validation, the
   per-locale audits, glossary schema/invariants and template parity. This is the
@@ -222,6 +290,14 @@ be tellable apart in that language, even where the English shares a stem.
 - `packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.i18n.test.ts`
   — key references survive a designer round trip, and an edited label becomes a
   literal.
+- `packages/billing/src/components/invoice-designer/utils/translatableText.test.ts`
+  — the canvas chip appears only while a label still matches its key reference.
+- `server/src/test/integration/journeys/documentLanguageResolution.journey.integration.test.ts`
+  — the Tier-1 journey: the full resolution hierarchy against real rows
+  (contact `fr` → client `pt_BR` → tenant `de`), real localized renders of the
+  migration-seeded standard quote template, and the portal download leg — real
+  Chromium PDF, `rendered_locale` on the filed document, and the authorizer
+  admitting only the owning client's portal user.
 
 Note that `tools/i18n/find-untranslated-ui.cjs` cannot see any of this: it scans
 `server/src` and `ee/server/src`, while document chrome lives in
