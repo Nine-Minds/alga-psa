@@ -1,7 +1,16 @@
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: [
+      {
+        find: /^@alga-psa\/shared\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../../shared')}/$1`,
+      },
+    ],
+  },
   test: {
     globals: true,
     environment: 'node',
