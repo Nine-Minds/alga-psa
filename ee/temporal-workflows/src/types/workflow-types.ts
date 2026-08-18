@@ -3,6 +3,18 @@ export type ISO8601String = string;
 
 export type BillingSource = 'stripe' | 'apple_iap' | 'manual';
 
+// Billing address captured from Stripe (checkout session customer_details or
+// the customer record), used to seed the default client location.
+export interface TenantBillingAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  countryCode?: string; // ISO-3166 alpha-2
+  phone?: string;
+}
+
 export interface AppleIapTenantInput {
   originalTransactionId: string;
   productId: string;
@@ -58,6 +70,10 @@ export interface TenantCreationInput {
   stripeBaseItemId?: string;        // Base fee subscription item ID (si_...) — multi-item only
   stripeBasePriceId?: string;       // Base fee price ID (price_...) — multi-item only
 
+  // Billing address for the default client location; normally fetched from the
+  // checkout session, but callers may pass it directly.
+  billingAddress?: TenantBillingAddress;
+
   // Add-ons purchased with this subscription
   addons?: string[];                // Add-on codes (e.g. ['ai-addon'])
 }
@@ -103,6 +119,9 @@ export interface CreateTenantActivityInput {
   stripePriceId?: string;           // Per-user price ID (price_...)
   stripeBaseItemId?: string;        // Base fee subscription item ID (si_...) — multi-item only
   stripeBasePriceId?: string;       // Base fee price ID (price_...) — multi-item only
+
+  // Billing address from Stripe used to seed the default client location.
+  billingAddress?: TenantBillingAddress;
 
   // Add-ons purchased with this subscription
   addons?: string[];                // Add-on codes (e.g. ['ai-addon'])

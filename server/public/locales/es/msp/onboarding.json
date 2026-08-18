@@ -329,6 +329,33 @@
         "help": "Se convierte en el idioma predeterminado de la organización para todos: personal MSP y usuarios del portal del cliente. Los usuarios individuales y los clientes pueden anularlo más tarde."
       }
     },
+    "address": {
+      "title": "Dirección de la empresa",
+      "description": "Precargada con sus datos de facturación: revísela y corríjala si es necesario. Esta dirección aparece en sus facturas y cotizaciones.",
+      "fields": {
+        "addressLine1": {
+          "label": "Dirección línea 1",
+          "placeholder": "Calle Mayor 123"
+        },
+        "addressLine2": {
+          "label": "Dirección línea 2",
+          "placeholder": "Oficina 100"
+        },
+        "city": {
+          "label": "Ciudad"
+        },
+        "stateProvince": {
+          "label": "Estado/Provincia"
+        },
+        "postalCode": {
+          "label": "Código postal"
+        },
+        "country": {
+          "label": "País",
+          "placeholder": "Seleccionar país"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Se requiere restablecer la contraseña",

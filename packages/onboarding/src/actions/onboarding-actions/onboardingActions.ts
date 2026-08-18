@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
+import { randomUUID } from 'crypto';
 import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
@@ -26,6 +27,15 @@ export interface ClientInfoData {
   tenantName: string;
   email: string;
   newPassword?: string;
+  // MSP company address (default location on the MSP's own client record)
+  companyLocationId?: string;
+  companyAddressLine1?: string;
+  companyAddressLine2?: string;
+  companyCity?: string;
+  companyStateProvince?: string;
+  companyPostalCode?: string;
+  companyCountryCode?: string;
+  companyCountryName?: string;
 }
 
 export interface TeamMember {
@@ -138,6 +148,74 @@ export const saveClientInfo = withAuth(async (
             setting_value: true,
             updated_at: new Date()
           });
+        }
+      }
+
+      // Persist the MSP company address on the default location of the MSP's
+      // own client record (seeded from Stripe at tenant creation). Address
+      // lives in client_locations, not in onboarding progress — the DB row is
+      // the source of truth the wizard prefills from.
+      const hasAddressInput = [
+        data.companyAddressLine1,
+        data.companyAddressLine2,
+        data.companyCity,
+        data.companyStateProvince,
+        data.companyPostalCode,
+        data.companyCountryCode,
+      ].some(v => v !== undefined);
+
+      if (hasAddressInput) {
+        const mspClient = await tenantDb(trx, tenant).table('clients')
+          .where({ is_inactive: false })
+          .orderBy('created_at', 'asc')
+          .first('client_id');
+
+        if (mspClient) {
+          let countryCode = data.companyCountryCode?.toUpperCase() || '';
+          let countryName = '';
+          if (countryCode) {
+            const country = await tenantDb(trx, tenant).table('countries')
+              .where({ code: countryCode })
+              .first('code', 'name');
+            countryCode = country?.code || '';
+            countryName = country?.name || '';
+          }
+
+          const locationFields = {
+            address_line1: data.companyAddressLine1 || 'N/A',
+            address_line2: data.companyAddressLine2 || null,
+            city: data.companyCity || 'N/A',
+            state_province: data.companyStateProvince || null,
+            postal_code: data.companyPostalCode || null,
+            // Keep the not-null placeholders when no country was chosen —
+            // never silently default to a real country.
+            country_code: countryCode || 'XX',
+            country_name: countryName || 'Unknown',
+            updated_at: new Date()
+          };
+
+          const defaultLocation = await tenantDb(trx, tenant).table('client_locations')
+            .where({ client_id: mspClient.client_id, is_default: true })
+            .first('location_id');
+
+          if (defaultLocation) {
+            await tenantDb(trx, tenant).table('client_locations')
+              .where({ location_id: defaultLocation.location_id })
+              .update(locationFields);
+          } else {
+            await tenantDb(trx, tenant).table('client_locations').insert({
+              location_id: randomUUID(),
+              client_id: mspClient.client_id,
+              tenant,
+              location_name: 'Main Office',
+              email: currentUser.email?.toLowerCase() || '',
+              phone: '',
+              ...locationFields,
+              is_default: true,
+              is_active: true,
+              created_at: new Date()
+            });
+          }
         }
       }
 
@@ -1209,13 +1287,43 @@ export const getOnboardingInitialData = withAuth(async (
       .orderBy('created_at', 'asc')
       .first();
 
+    // Default location of the MSP's own client (seeded from the Stripe billing
+    // address at tenant creation). Placeholder values ('N/A'/'XX'/'Unknown')
+    // are blanked so the wizard shows empty editable fields instead.
+    let location: Record<string, any> | undefined;
+    if (client) {
+      location = await tenantDb(knex, tenant).table('client_locations')
+        .where({ client_id: client.client_id, is_default: true })
+        .first(
+          'location_id',
+          'address_line1',
+          'address_line2',
+          'city',
+          'state_province',
+          'postal_code',
+          'country_code',
+          'country_name'
+        );
+    }
+    const blankPlaceholder = (value: string | null | undefined) =>
+      !value || value === 'N/A' ? '' : value;
+    const hasRealCountry = location?.country_code && location.country_code !== 'XX';
+
     return {
       success: true,
       data: {
         firstName: currentUser.first_name || '',
         lastName: currentUser.last_name || '',
         email: currentUser.email || '',
-        tenantName: client?.client_name || tenant // Use tenant name as fallback
+        tenantName: client?.client_name || tenant, // Use tenant name as fallback
+        companyLocationId: location?.location_id,
+        companyAddressLine1: blankPlaceholder(location?.address_line1),
+        companyAddressLine2: blankPlaceholder(location?.address_line2),
+        companyCity: blankPlaceholder(location?.city),
+        companyStateProvince: blankPlaceholder(location?.state_province),
+        companyPostalCode: blankPlaceholder(location?.postal_code),
+        companyCountryCode: hasRealCountry ? location!.country_code : '',
+        companyCountryName: hasRealCountry ? location!.country_name : ''
       }
     };
   } catch (error) {

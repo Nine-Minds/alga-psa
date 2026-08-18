@@ -184,7 +184,13 @@ export function OnboardingWizard({
             lastName: wizardData.lastName,
             tenantName: wizardData.tenantName,
             email: wizardData.email,
-            newPassword: wizardData.newPassword
+            newPassword: wizardData.newPassword,
+            companyAddressLine1: wizardData.companyAddressLine1,
+            companyAddressLine2: wizardData.companyAddressLine2,
+            companyCity: wizardData.companyCity,
+            companyStateProvince: wizardData.companyStateProvince,
+            companyPostalCode: wizardData.companyPostalCode,
+            companyCountryCode: wizardData.companyCountryCode
           });
           if (!clientResult.success) {
             setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || t('onboardingWizard.errors.saveClientInfo', {

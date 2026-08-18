@@ -329,6 +329,33 @@
         "help": "Diventa l'impostazione predefinita dell'organizzazione per tutti: personale MSP e utenti del portale cliente. I singoli utenti e i clienti possono sovrascriverla in seguito."
       }
     },
+    "address": {
+      "title": "Indirizzo dell'azienda",
+      "description": "Precompilato dai dati di fatturazione — controlla e correggi se necessario. Questo indirizzo compare su fatture e preventivi.",
+      "fields": {
+        "addressLine1": {
+          "label": "Indirizzo riga 1",
+          "placeholder": "Via Principale 123"
+        },
+        "addressLine2": {
+          "label": "Indirizzo riga 2",
+          "placeholder": "Interno 100"
+        },
+        "city": {
+          "label": "Città"
+        },
+        "stateProvince": {
+          "label": "Stato/Provincia"
+        },
+        "postalCode": {
+          "label": "Codice postale"
+        },
+        "country": {
+          "label": "Paese",
+          "placeholder": "Seleziona paese"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Reimpostazione password richiesta",

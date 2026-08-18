@@ -18,6 +18,7 @@ import type {
   SendWelcomeEmailActivityResult,
   CreatePortalUserActivityInput,
   CreatePortalUserActivityResult,
+  TenantBillingAddress,
 } from '../../types/workflow-types.js';
 
 const activities = proxyActivities<{
@@ -47,6 +48,7 @@ const activities = proxyActivities<{
     stripePriceId?: string;
     stripeBaseItemId?: string;
     stripeBasePriceId?: string;
+    billingAddress?: TenantBillingAddress;
     addons?: string[];
   }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
@@ -104,6 +106,7 @@ const activities = proxyActivities<{
     stripeBaseItemId?: string;
     stripeBasePriceId?: string;
     licenseCount?: number;
+    billingAddress?: TenantBillingAddress;
   }>;
 }>({
   startToCloseTimeout: '5m',
@@ -164,7 +167,16 @@ export async function runTenantCreationOrchestration(
     log.info('Starting tenant creation workflow', { input });
 
     // Step 0.5: Fetch Stripe details from checkout session if provided
-    let stripeDetails = {
+    let stripeDetails: {
+      stripeCustomerId?: string;
+      stripeSubscriptionId?: string;
+      stripeSubscriptionItemId?: string;
+      stripePriceId?: string;
+      stripeBaseItemId?: string;
+      stripeBasePriceId?: string;
+      licenseCount?: number;
+      billingAddress?: TenantBillingAddress;
+    } = {
       stripeCustomerId: input.stripeCustomerId,
       stripeSubscriptionId: input.stripeSubscriptionId,
       stripeSubscriptionItemId: input.stripeSubscriptionItemId,
@@ -172,6 +184,7 @@ export async function runTenantCreationOrchestration(
       stripeBaseItemId: input.stripeBaseItemId,
       stripeBasePriceId: input.stripeBasePriceId,
       licenseCount: input.licenseCount,
+      billingAddress: input.billingAddress,
     };
 
     if (input.checkoutSessionId && !input.stripeCustomerId) {
@@ -190,6 +203,7 @@ export async function runTenantCreationOrchestration(
         stripeDetails = {
           ...stripeDetails,
           ...fetchedStripeDetails,
+          billingAddress: fetchedStripeDetails.billingAddress ?? stripeDetails.billingAddress,
         };
 
         log.info('Stripe details fetched successfully', {
@@ -236,6 +250,7 @@ export async function runTenantCreationOrchestration(
       stripeSubscriptionId: stripeDetails.stripeSubscriptionId,
       stripeSubscriptionItemId: stripeDetails.stripeSubscriptionItemId,
       stripePriceId: stripeDetails.stripePriceId,
+      billingAddress: stripeDetails.billingAddress,
       stripeBaseItemId: stripeDetails.stripeBaseItemId,
       stripeBasePriceId: stripeDetails.stripeBasePriceId,
       addons: input.addons,

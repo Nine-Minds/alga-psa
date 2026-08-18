@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -10,17 +11,16 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   }
 
   const parts = [
-    record.address_line1,
-    record.address_line2,
-    record.address_line3,
-    record.city,
-    record.state_province,
-    record.postal_code,
-    record.country_name,
-    record.location_address,
-    record.address,
+    displayAddressField(record.address_line1),
+    displayAddressField(record.address_line2),
+    displayAddressField(record.address_line3),
+    displayAddressField(record.city),
+    displayAddressField(record.state_province),
+    displayAddressField(record.postal_code),
+    displayCountry(record.country_name),
+    displayAddressField(record.location_address),
+    displayAddressField(record.address),
   ]
-    .map(asTrimmedString)
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
 
   return parts.length > 0 ? parts.join(', ') : null;
