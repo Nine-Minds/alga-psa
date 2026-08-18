@@ -60,12 +60,31 @@ export default function OnboardingPage() {
           };
         }
       } else {
-        // For returning users, just prefill company name from tenant data
+        // For returning users, just prefill company name and address from tenant data
         const initialDataResult = await getOnboardingInitialData();
-        if (initialDataResult.success && initialDataResult.data?.tenantName) {
+        if (initialDataResult.success && initialDataResult.data) {
+          const {
+            tenantName,
+            companyLocationId,
+            companyAddressLine1,
+            companyAddressLine2,
+            companyCity,
+            companyStateProvince,
+            companyPostalCode,
+            companyCountryCode,
+            companyCountryName,
+          } = initialDataResult.data;
           data = {
             ...data,
-            tenantName: initialDataResult.data.tenantName
+            ...(tenantName ? { tenantName } : {}),
+            companyLocationId,
+            companyAddressLine1,
+            companyAddressLine2,
+            companyCity,
+            companyStateProvince,
+            companyPostalCode,
+            companyCountryCode,
+            companyCountryName,
           };
         }
       }

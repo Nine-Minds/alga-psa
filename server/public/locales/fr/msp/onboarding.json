@@ -329,6 +329,33 @@
         "help": "Devient la valeur par défaut de l'organisation pour tout le monde : personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
       }
     },
+    "address": {
+      "title": "Adresse de l'entreprise",
+      "description": "Préremplie à partir de vos informations de facturation — vérifiez et corrigez si nécessaire. Cette adresse figure sur vos factures et devis.",
+      "fields": {
+        "addressLine1": {
+          "label": "Adresse ligne 1",
+          "placeholder": "123 rue Principale"
+        },
+        "addressLine2": {
+          "label": "Adresse ligne 2",
+          "placeholder": "Bureau 100"
+        },
+        "city": {
+          "label": "Ville"
+        },
+        "stateProvince": {
+          "label": "État/Province"
+        },
+        "postalCode": {
+          "label": "Code postal"
+        },
+        "country": {
+          "label": "Pays",
+          "placeholder": "Sélectionner un pays"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Réinitialisation du mot de passe requise",

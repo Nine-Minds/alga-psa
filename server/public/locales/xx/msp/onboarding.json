@@ -329,6 +329,33 @@
         "help": "11111"
       }
     },
+    "address": {
+      "title": "11111",
+      "description": "11111",
+      "fields": {
+        "addressLine1": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "addressLine2": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "city": {
+          "label": "11111"
+        },
+        "stateProvince": {
+          "label": "11111"
+        },
+        "postalCode": {
+          "label": "11111"
+        },
+        "country": {
+          "label": "11111",
+          "placeholder": "11111"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "11111",

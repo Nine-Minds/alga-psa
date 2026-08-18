@@ -331,6 +331,33 @@
         "help": "Staje się domyślnym językiem organizacji dla wszystkich: personelu MSP i użytkowników portalu klienta. Poszczególni użytkownicy i klienci mogą go później nadpisać."
       }
     },
+    "address": {
+      "title": "Adres firmy",
+      "description": "Wstępnie wypełniony na podstawie danych rozliczeniowych — sprawdź i popraw w razie potrzeby. Ten adres pojawia się na fakturach i wycenach.",
+      "fields": {
+        "addressLine1": {
+          "label": "Adres wiersz 1",
+          "placeholder": "ul. Główna 123"
+        },
+        "addressLine2": {
+          "label": "Adres wiersz 2",
+          "placeholder": "Lokal 100"
+        },
+        "city": {
+          "label": "Miasto"
+        },
+        "stateProvince": {
+          "label": "Województwo/Region"
+        },
+        "postalCode": {
+          "label": "Kod pocztowy"
+        },
+        "country": {
+          "label": "Kraj",
+          "placeholder": "Wybierz kraj"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Wymagany reset hasła",
