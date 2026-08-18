@@ -57,11 +57,6 @@
     "serviceRequired": "Wählen Sie einen Dienst aus.",
     "submit": "Rechnungsentwurf erstellen",
     "submitted": "Rechnungsentwurf {{invoiceNumber}} erstellt. Stellen Sie ihn fertig, um den Block zu aktivieren.",
-    "invoiceError": "Die Rechnung für den Blockkauf konnte nicht erstellt werden.",
-    "serviceRequired": "Wählen Sie einen Dienst aus.",
-    "hoursRequired": "Geben Sie die Anzahl der Stunden ein.",
-    "rateRequired": "Geben Sie einen gültigen Satz ein.",
-    "noServices": "Keine Dienste verfügbar"
     "title": "Stundenblock verkaufen",
     "totalLabel": "Gesamt"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Warum werden diese Stunden gewährt?",
     "reasonRequired": "Ein Grund ist erforderlich.",
     "submit": "Block gewähren",
-    "granted": "Stundenblock gewährt.",
-    "error": "Der Stundenblock konnte nicht gewährt werden.",
-    "reasonRequired": "Ein Grund ist erforderlich."
     "title": "Stundenblock gewähren"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Erforderlich",
     "reasonRequired": "Ein Grund ist erforderlich.",
     "submit": "Anpassen",
-    "adjusted": "Stundenblock angepasst.",
-    "error": "Der Stundenblock konnte nicht angepasst werden.",
-    "deltaRequired": "Geben Sie eine Stundenänderung ungleich null ein.",
-    "reasonRequired": "Ein Grund ist erforderlich."
     "title": "Verbleibende Stunden anpassen"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Ablaufdatum aktualisiert.",
     "error": "Das Ablaufdatum konnte nicht aktualisiert werden."
   },
-  "expire": {
-    "title": "Stundenblock ablaufen lassen",
-    "remaining": "{{hours}} ungenutzte Std. gehen verloren.",
-    "reasonLabel": "Grund",
-    "reasonPlaceholder": "Erforderlich",
-    "reasonRequired": "Ein Grund ist erforderlich.",
-    "submit": "Block ablaufen lassen",
-    "expired": "Stundenblock abgelaufen.",
-    "error": "Der Stundenblock konnte nicht als abgelaufen markiert werden."
-  },
   "void": {
     "confirm": "Diesen Block stornieren? Dies kann nicht rückgängig gemacht werden.",
     "error": "Der Stundenblock konnte nicht storniert werden.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Erforderlich",
     "reasonRequired": "Ein Grund ist erforderlich.",
     "submit": "Block stornieren",
-    "voided": "Stundenblock storniert.",
-    "error": "Der Stundenblock konnte nicht storniert werden.",
-    "reasonRequired": "Ein Grund ist erforderlich."
     "title": "Stundenblock stornieren",
     "voided": "Stundenblock storniert."
   },

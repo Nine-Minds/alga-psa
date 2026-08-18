@@ -57,11 +57,6 @@
     "serviceRequired": "Selecione um serviço.",
     "submit": "Criar fatura em rascunho",
     "submitted": "Fatura em rascunho {{invoiceNumber}} criada. Finalize-a para ativar o bloco.",
-    "invoiceError": "Não foi possível criar a fatura de compra do bloco.",
-    "serviceRequired": "Selecione um serviço.",
-    "hoursRequired": "Insira o número de horas.",
-    "rateRequired": "Insira uma taxa válida.",
-    "noServices": "Nenhum serviço disponível"
     "title": "Vender bloco de horas",
     "totalLabel": "Total"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Por que essas horas estão sendo concedidas?",
     "reasonRequired": "É necessário um motivo.",
     "submit": "Conceder bloco",
-    "granted": "Bloco de horas concedido.",
-    "error": "Não foi possível conceder o bloco de horas.",
-    "reasonRequired": "É necessário um motivo."
     "title": "Conceder bloco de horas"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Obrigatório",
     "reasonRequired": "É necessário um motivo.",
     "submit": "Ajustar",
-    "adjusted": "Bloco de horas ajustado.",
-    "error": "Não foi possível ajustar o bloco de horas.",
-    "deltaRequired": "Insira uma alteração de horas diferente de zero.",
-    "reasonRequired": "É necessário um motivo."
     "title": "Ajustar horas restantes"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Expiração atualizada.",
     "error": "Não foi possível atualizar a expiração."
   },
-  "expire": {
-    "title": "Expirar bloco de horas",
-    "remaining": "{{hours}} horas não utilizadas serão perdidas.",
-    "reasonLabel": "Motivo",
-    "reasonPlaceholder": "Obrigatório",
-    "reasonRequired": "É necessário um motivo.",
-    "submit": "Expirar bloco",
-    "expired": "Bloco de horas expirado.",
-    "error": "Não foi possível expirar o bloco de horas."
-  },
   "void": {
     "confirm": "Anular este bloco? Esta ação não pode ser desfeita.",
     "error": "Não foi possível anular o bloco de horas.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Obrigatório",
     "reasonRequired": "É necessário um motivo.",
     "submit": "Anular bloco",
-    "voided": "Bloco de horas anulado.",
-    "error": "Não foi possível anular o bloco de horas.",
-    "reasonRequired": "É necessário um motivo."
     "title": "Anular bloco de horas",
     "voided": "Bloco de horas anulado."
   },

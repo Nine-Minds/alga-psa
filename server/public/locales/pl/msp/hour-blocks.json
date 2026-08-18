@@ -57,11 +57,6 @@
     "serviceRequired": "Wybierz usługę.",
     "submit": "Utwórz wersję roboczą faktury",
     "submitted": "Utworzono wersję roboczą faktury {{invoiceNumber}}. Sfinalizuj ją, aby aktywować pakiet.",
-    "invoiceError": "Nie udało się utworzyć faktury zakupu pakietu.",
-    "serviceRequired": "Wybierz usługę.",
-    "hoursRequired": "Wprowadź liczbę godzin.",
-    "rateRequired": "Wprowadź prawidłową stawkę.",
-    "noServices": "Brak dostępnych usług"
     "title": "Sprzedaj pakiet godzin",
     "totalLabel": "Suma"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Dlaczego te godziny są przyznawane?",
     "reasonRequired": "Powód jest wymagany.",
     "submit": "Przyznaj pakiet",
-    "granted": "Pakiet godzin został przyznany.",
-    "error": "Nie udało się przyznać pakietu godzin.",
-    "reasonRequired": "Powód jest wymagany."
     "title": "Przyznaj pakiet godzin"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Wymagane",
     "reasonRequired": "Powód jest wymagany.",
     "submit": "Skoryguj",
-    "adjusted": "Pakiet godzin został skorygowany.",
-    "error": "Nie udało się skorygować pakietu godzin.",
-    "deltaRequired": "Wprowadź niezerową zmianę liczby godzin.",
-    "reasonRequired": "Powód jest wymagany."
     "title": "Skoryguj pozostałe godziny"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Termin wygaśnięcia został zaktualizowany.",
     "error": "Nie udało się zaktualizować terminu wygaśnięcia."
   },
-  "expire": {
-    "title": "Wygaś pakiet godzin",
-    "remaining": "{{hours}} niewykorzystanych godzin zostanie utraconych.",
-    "reasonLabel": "Powód",
-    "reasonPlaceholder": "Wymagane",
-    "reasonRequired": "Powód jest wymagany.",
-    "submit": "Wygaś pakiet",
-    "expired": "Pakiet godzin wygasł.",
-    "error": "Nie udało się wygasić pakietu godzin."
-  },
   "void": {
     "confirm": "Unieważnić ten pakiet? Tej operacji nie można cofnąć.",
     "error": "Nie udało się unieważnić pakietu godzin.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Wymagane",
     "reasonRequired": "Powód jest wymagany.",
     "submit": "Unieważnij pakiet",
-    "voided": "Pakiet godzin został unieważniony.",
-    "error": "Nie udało się unieważnić pakietu godzin.",
-    "reasonRequired": "Powód jest wymagany."
     "title": "Unieważnij pakiet godzin",
     "voided": "Pakiet godzin został unieważniony."
   },

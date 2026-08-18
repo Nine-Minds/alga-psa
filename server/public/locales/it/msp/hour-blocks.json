@@ -57,11 +57,6 @@
     "serviceRequired": "Seleziona un servizio.",
     "submit": "Crea bozza di fattura",
     "submitted": "Bozza di fattura {{invoiceNumber}} creata. Finalizzala per attivare il blocco.",
-    "invoiceError": "Impossibile creare la fattura di acquisto del blocco.",
-    "serviceRequired": "Seleziona un servizio.",
-    "hoursRequired": "Inserisci il numero di ore.",
-    "rateRequired": "Inserisci una tariffa valida.",
-    "noServices": "Nessun servizio disponibile"
     "title": "Vendi blocco ore",
     "totalLabel": "Totale"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Perché vengono concesse queste ore?",
     "reasonRequired": "È necessario un motivo.",
     "submit": "Concedi blocco",
-    "granted": "Blocco ore concesso.",
-    "error": "Impossibile concedere il blocco ore.",
-    "reasonRequired": "È necessario un motivo."
     "title": "Concedi blocco ore"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Obbligatorio",
     "reasonRequired": "È necessario un motivo.",
     "submit": "Rettifica",
-    "adjusted": "Blocco ore rettificato.",
-    "error": "Impossibile rettificare il blocco ore.",
-    "deltaRequired": "Inserisci una variazione di ore diversa da zero.",
-    "reasonRequired": "È necessario un motivo."
     "title": "Rettifica ore rimanenti"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Scadenza aggiornata.",
     "error": "Impossibile aggiornare la scadenza."
   },
-  "expire": {
-    "title": "Fai scadere il blocco ore",
-    "remaining": "{{hours}} ore non utilizzate andranno perse.",
-    "reasonLabel": "Motivo",
-    "reasonPlaceholder": "Obbligatorio",
-    "reasonRequired": "È necessario un motivo.",
-    "submit": "Fai scadere il blocco",
-    "expired": "Blocco ore scaduto.",
-    "error": "Impossibile far scadere il blocco ore."
-  },
   "void": {
     "confirm": "Annullare questo blocco? L'azione è irreversibile.",
     "error": "Impossibile annullare il blocco ore.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Obbligatorio",
     "reasonRequired": "È necessario un motivo.",
     "submit": "Annulla blocco",
-    "voided": "Blocco ore annullato.",
-    "error": "Impossibile annullare il blocco ore.",
-    "reasonRequired": "È necessario un motivo."
     "title": "Annulla blocco ore",
     "voided": "Blocco ore annullato."
   },

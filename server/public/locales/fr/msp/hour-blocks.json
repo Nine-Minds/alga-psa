@@ -57,11 +57,6 @@
     "serviceRequired": "Sélectionnez un service.",
     "submit": "Créer un brouillon de facture",
     "submitted": "Brouillon de facture {{invoiceNumber}} créé. Finalisez-le pour activer le bloc.",
-    "invoiceError": "Impossible de créer la facture d'achat du bloc.",
-    "serviceRequired": "Sélectionnez un service.",
-    "hoursRequired": "Saisissez le nombre d'heures.",
-    "rateRequired": "Saisissez un taux valide.",
-    "noServices": "Aucun service disponible"
     "title": "Vendre un bloc d'heures",
     "totalLabel": "Total"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Pourquoi ces heures sont-elles accordées ?",
     "reasonRequired": "Un motif est obligatoire.",
     "submit": "Accorder le bloc",
-    "granted": "Bloc d'heures accordé.",
-    "error": "Impossible d'accorder le bloc d'heures.",
-    "reasonRequired": "Un motif est requis."
     "title": "Accorder un bloc d'heures"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Obligatoire",
     "reasonRequired": "Un motif est obligatoire.",
     "submit": "Ajuster",
-    "adjusted": "Bloc d'heures ajusté.",
-    "error": "Impossible d'ajuster le bloc d'heures.",
-    "deltaRequired": "Saisissez une variation d'heures non nulle.",
-    "reasonRequired": "Un motif est requis."
     "title": "Ajuster les heures restantes"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Expiration mise à jour.",
     "error": "Impossible de mettre à jour l'expiration."
   },
-  "expire": {
-    "title": "Faire expirer le bloc d'heures",
-    "remaining": "{{hours}} heures non utilisées seront perdues.",
-    "reasonLabel": "Motif",
-    "reasonPlaceholder": "Obligatoire",
-    "reasonRequired": "Un motif est requis.",
-    "submit": "Faire expirer le bloc",
-    "expired": "Bloc d'heures expiré.",
-    "error": "Impossible de faire expirer le bloc d'heures."
-  },
   "void": {
     "confirm": "Annuler ce bloc ? Cette action est irréversible.",
     "error": "Impossible d'annuler le bloc d'heures.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Obligatoire",
     "reasonRequired": "Un motif est obligatoire.",
     "submit": "Annuler le bloc",
-    "voided": "Bloc d'heures annulé.",
-    "error": "Impossible d'annuler le bloc d'heures.",
-    "reasonRequired": "Un motif est requis."
     "title": "Annuler le bloc d'heures",
     "voided": "Bloc d'heures annulé."
   },

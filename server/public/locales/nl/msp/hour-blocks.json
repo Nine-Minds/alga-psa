@@ -57,11 +57,6 @@
     "serviceRequired": "Selecteer een service.",
     "submit": "Conceptfactuur maken",
     "submitted": "Conceptfactuur {{invoiceNumber}} gemaakt. Finaliseer deze om het blok te activeren.",
-    "invoiceError": "Kan de factuur voor de aankoop van het blok niet maken.",
-    "serviceRequired": "Selecteer een service.",
-    "hoursRequired": "Voer het aantal uren in.",
-    "rateRequired": "Voer een geldig tarief in.",
-    "noServices": "Geen services beschikbaar"
     "title": "Urenblok verkopen",
     "totalLabel": "Totaal"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Waarom worden deze uren toegekend?",
     "reasonRequired": "Een reden is verplicht.",
     "submit": "Blok toekennen",
-    "granted": "Urenblok toegekend.",
-    "error": "Kan het urenblok niet toekennen.",
-    "reasonRequired": "Een reden is verplicht."
     "title": "Urenblok toekennen"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Verplicht",
     "reasonRequired": "Een reden is verplicht.",
     "submit": "Aanpassen",
-    "adjusted": "Urenblok aangepast.",
-    "error": "Kan het urenblok niet aanpassen.",
-    "deltaRequired": "Voer een urenwijziging in die niet nul is.",
-    "reasonRequired": "Een reden is verplicht."
     "title": "Resterende uren aanpassen"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Vervaldatum bijgewerkt.",
     "error": "Kan de vervaldatum niet bijwerken."
   },
-  "expire": {
-    "title": "Urenblok laten vervallen",
-    "remaining": "{{hours}} ongebruikte uren gaan verloren.",
-    "reasonLabel": "Reden",
-    "reasonPlaceholder": "Verplicht",
-    "reasonRequired": "Een reden is verplicht.",
-    "submit": "Blok laten vervallen",
-    "expired": "Urenblok vervallen.",
-    "error": "Kan het urenblok niet laten vervallen."
-  },
   "void": {
     "confirm": "Dit blok ongeldig maken? Dit kan niet ongedaan worden gemaakt.",
     "error": "Kan het urenblok niet ongeldig maken.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Verplicht",
     "reasonRequired": "Een reden is verplicht.",
     "submit": "Blok ongeldig maken",
-    "voided": "Urenblok ongeldig gemaakt.",
-    "error": "Kan het urenblok niet ongeldig maken.",
-    "reasonRequired": "Een reden is verplicht."
     "title": "Urenblok ongeldig maken",
     "voided": "Urenblok ongeldig gemaakt."
   },

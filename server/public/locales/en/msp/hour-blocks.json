@@ -57,11 +57,6 @@
     "serviceRequired": "Select a service.",
     "submit": "Create draft invoice",
     "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
-    "invoiceError": "Could not create the block purchase invoice.",
-    "serviceRequired": "Select a service.",
-    "hoursRequired": "Enter the number of hours.",
-    "rateRequired": "Enter a valid rate.",
-    "noServices": "No services available"
     "title": "Sell hour block",
     "totalLabel": "Total"
   },
@@ -72,9 +67,6 @@
     "reasonPlaceholder": "Why are these hours being granted?",
     "reasonRequired": "A reason is required.",
     "submit": "Grant block",
-    "granted": "Hour block granted.",
-    "error": "Could not grant the hour block.",
-    "reasonRequired": "A reason is required."
     "title": "Grant hour block"
   },
   "adjust": {
@@ -88,10 +80,6 @@
     "reasonPlaceholder": "Required",
     "reasonRequired": "A reason is required.",
     "submit": "Adjust",
-    "adjusted": "Hour block adjusted.",
-    "error": "Could not adjust the hour block.",
-    "deltaRequired": "Enter a non-zero change in hours.",
-    "reasonRequired": "A reason is required."
     "title": "Adjust remaining hours"
   },
   "expiration": {
@@ -102,16 +90,6 @@
     "saved": "Expiration updated.",
     "error": "Could not update the expiration."
   },
-  "expire": {
-    "title": "Expire hour block",
-    "remaining": "{{hours}} hrs unused will be lost.",
-    "reasonLabel": "Reason",
-    "reasonPlaceholder": "Required",
-    "reasonRequired": "A reason is required.",
-    "submit": "Expire block",
-    "expired": "Hour block expired.",
-    "error": "Could not expire the hour block."
-  },
   "void": {
     "confirm": "Void this block? It cannot be undone.",
     "error": "Could not void the hour block.",
@@ -119,9 +97,6 @@
     "reasonPlaceholder": "Required",
     "reasonRequired": "A reason is required.",
     "submit": "Void block",
-    "voided": "Hour block voided.",
-    "error": "Could not void the hour block.",
-    "reasonRequired": "A reason is required."
     "title": "Void hour block",
     "voided": "Hour block voided."
   },
