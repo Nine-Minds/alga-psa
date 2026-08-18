@@ -159,10 +159,14 @@ exports.up = async function up(knex) {
     // every shard placement via the documented run_command_on_shards
     // workaround. run_command_on_shards calls format(command, shardname), so
     // the command must contain exactly one %s placeholder — used here to bind
-    // the shard name into the idempotent DO block.
+    // the shard name into the idempotent DO block. Every text argument must be
+    // a SQL single-quoted string literal: JSON.stringify produces double
+    // quotes, which PostgreSQL parses as identifiers ("column ... does not
+    // exist"). TABLE/TRIGGER_NAME are trusted in-file constants (no quote
+    // characters), so inline literal quoting is safe here.
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
-        ${JSON.stringify(TABLE)},
+        '${TABLE}',
         $guard$
           DO $dyn$
           DECLARE
@@ -170,7 +174,7 @@ exports.up = async function up(knex) {
           BEGIN
             IF NOT EXISTS (
               SELECT 1 FROM pg_trigger
-              WHERE tgname = ${JSON.stringify(TRIGGER_NAME)}
+              WHERE tgname = '${TRIGGER_NAME}'
                 AND tgrelid = shard_tbl::regclass
             ) THEN
               EXECUTE 'CREATE CONSTRAINT TRIGGER ${TRIGGER_NAME} AFTER INSERT OR UPDATE OR DELETE ON ' || quote_ident(shard_tbl) || ' DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION ${FUNCTION_NAME}()';
@@ -191,9 +195,10 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   const distributed = await isCitusDistributedTable(knex);
   if (distributed) {
+    // Single-quoted literals, not JSON.stringify — see the up() note.
     await knex.raw(`
       SELECT * FROM run_command_on_shards(
-        ${JSON.stringify(TABLE)},
+        '${TABLE}',
         $guard$
           DROP TRIGGER IF EXISTS ${TRIGGER_NAME} ON %s
         $guard$

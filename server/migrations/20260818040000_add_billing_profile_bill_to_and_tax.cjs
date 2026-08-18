@@ -78,6 +78,21 @@ const hasConstraint = async (knex, tableName, constraintName) => {
   return Boolean(result.rows?.[0]?.present);
 };
 
+// Returns true/false for "in pg_dist_partition" and null when Citus is absent
+// (plain Postgres). Same probe shape as 20260816010000.
+async function distributionState(knex, tableName) {
+  try {
+    const result = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass
+      ) AS distributed
+    `, [tableName]);
+    return Boolean(result.rows?.[0]?.distributed);
+  } catch {
+    return null;
+  }
+}
+
 exports.up = async function up(knex) {
   for (const column of PROFILE_COLUMNS) {
     if (await hasColumn(knex, PROFILES, column.name)) continue;
@@ -107,17 +122,52 @@ exports.up = async function up(knex) {
   // Rows whose client somehow has no default profile would block the NOT NULL.
   // Provision one rather than dropping the setting — F002 says every client has
   // exactly one, and a missing one is a defect to repair, not data to discard.
-  await knex.raw(`
-    INSERT INTO ${PROFILES} (tenant, billing_profile_id, client_id, name, is_default, is_system_managed_default, is_active)
-    SELECT DISTINCT cts.tenant, gen_random_uuid(), cts.client_id, c.client_name, true, true, true
-    FROM ${TAX_SETTINGS} cts
-    JOIN clients c ON c.tenant = cts.tenant AND c.client_id = cts.client_id
-    WHERE cts.billing_profile_id IS NULL
-      AND NOT EXISTS (
-        SELECT 1 FROM ${PROFILES} p
-        WHERE p.tenant = cts.tenant AND p.client_id = cts.client_id
-      )
-  `);
+  const taxSettingsDistributed = await distributionState(knex, TAX_SETTINGS);
+  const profilesDistributed = await distributionState(knex, PROFILES);
+  if (taxSettingsDistributed === profilesDistributed) {
+    // Same distribution shape (always the case on plain Postgres): one
+    // set-based statement.
+    await knex.raw(`
+      INSERT INTO ${PROFILES} (tenant, billing_profile_id, client_id, name, is_default, is_system_managed_default, is_active)
+      SELECT DISTINCT cts.tenant, gen_random_uuid(), cts.client_id, c.client_name, true, true, true
+      FROM ${TAX_SETTINGS} cts
+      JOIN clients c ON c.tenant = cts.tenant AND c.client_id = cts.client_id
+      WHERE cts.billing_profile_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM ${PROFILES} p
+          WHERE p.tenant = cts.tenant AND p.client_id = cts.client_id
+        )
+    `);
+  } else {
+    // Citus with mixed shapes (client_tax_settings is a coordinator-local
+    // table there): INSERT...SELECT joining a local table with distributed
+    // tables is rejected at plan time ("complex joins are only supported
+    // when all distributed tables are co-located"). Row-by-row from the
+    // migration process instead — identical semantics, Citus-compatible.
+    const pending = await knex.raw(`
+      SELECT DISTINCT cts.tenant, cts.client_id
+      FROM ${TAX_SETTINGS} cts
+      WHERE cts.billing_profile_id IS NULL
+    `);
+    for (const row of pending.rows ?? []) {
+      const existing = await knex(PROFILES)
+        .where({ tenant: row.tenant, client_id: row.client_id })
+        .first();
+      if (existing) continue;
+      const client = await knex('clients')
+        .where({ tenant: row.tenant, client_id: row.client_id })
+        .first('client_name');
+      await knex(PROFILES).insert({
+        tenant: row.tenant,
+        billing_profile_id: knex.raw('gen_random_uuid()'),
+        client_id: row.client_id,
+        name: client?.client_name ?? row.client_id,
+        is_default: true,
+        is_system_managed_default: true,
+        is_active: true,
+      });
+    }
+  }
   await knex.raw(`
     UPDATE ${TAX_SETTINGS} cts
     SET billing_profile_id = p.billing_profile_id
