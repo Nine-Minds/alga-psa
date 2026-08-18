@@ -2522,6 +2522,29 @@
           "updateContact": "Impossibile aggiornare il contatto predefinito",
           "updateAutoSync": "Impossibile aggiornare l'impostazione di sincronizzazione automatica"
         }
+      },
+      "deviceSync": {
+        "title": "Sincronizzazione pianificata dei dispositivi",
+        "description": "Aggiorna questo inventario dei dispositivi in base a una pianificazione anziché attendere che qualcuno esegua una sincronizzazione completa. Ogni esecuzione richiama l'API del provider e, per alcuni provider, anche un'esecuzione incrementale legge l'intero elenco dei dispositivi: un intervallo più breve comporta quindi proporzionalmente più chiamate all'API.",
+        "enabledLabel": "Sincronizza i dispositivi in base a una pianificazione",
+        "intervalLabel": "Esegui ogni (minuti)",
+        "intervalHelp": "Scegli tra {{min}} e {{max}} minuti. Un intervallo più breve mantiene i dati dei dispositivi più aggiornati e richiama l'API del provider più spesso.",
+        "intervalInvalid": "Inserisci un numero intero di minuti compreso tra {{min}} e {{max}}.",
+        "lastScheduledRun": "Ultima esecuzione pianificata: {{time}}",
+        "lastScheduledRunNever": "La sincronizzazione pianificata non è ancora stata eseguita.",
+        "lastAnySync": "Ultima sincronizzazione di qualsiasi tipo, comprese quelle complete manuali: {{time}}",
+        "lastAnySyncNever": "Non è ancora stata eseguita alcuna sincronizzazione dei dispositivi di alcun tipo.",
+        "lastSyncError": "Ultima sincronizzazione non riuscita: {{error}}",
+        "actions": {
+          "save": "Salva pianificazione",
+          "saving": "Salvataggio..."
+        },
+        "success": {
+          "saved": "Pianificazione della sincronizzazione dei dispositivi salvata. Lo scheduler la applica entro pochi minuti."
+        },
+        "errors": {
+          "saveFailed": "Impossibile salvare la pianificazione della sincronizzazione dei dispositivi."
+        }
       }
     },
     "sso": {

@@ -42,16 +42,19 @@
     "expiringSoon": "Vence en {{count}} días"
   },
   "sell": {
-    "title": "Vender bloque de horas",
-    "serviceLabel": "Servicio",
-    "servicePlaceholder": "Seleccione un servicio",
-    "rateLabel": "Tarifa por hora ({{currency}})",
+    "expirationLabel": "Vencimiento (opcional)",
     "hoursLabel": "Horas",
     "hoursPlaceholder": "p. ej., 10",
-    "expirationLabel": "Vencimiento (opcional)",
-    "scopeLabel": "Cobertura: servicios que cubre este bloque (vacío = toda la mano de obra)",
+    "hoursRequired": "Introduce el número de horas.",
+    "invoiceError": "No se pudo crear la factura de compra del bloque.",
+    "noServices": "No hay servicios disponibles",
     "notesLabel": "Notas (opcional)",
-    "totalLabel": "Total",
+    "rateLabel": "Tarifa por hora ({{currency}})",
+    "rateRequired": "Introduce una tarifa válida.",
+    "scopeLabel": "Cobertura: servicios que cubre este bloque (vacío = toda la mano de obra)",
+    "serviceLabel": "Servicio",
+    "servicePlaceholder": "Seleccione un servicio",
+    "serviceRequired": "Selecciona un servicio.",
     "submit": "Crear borrador de factura",
     "submitted": "Se creó el borrador de factura {{invoiceNumber}}. Finalícelo para activar el bloque.",
     "invoiceError": "No se pudo crear la factura de compra del bloque.",
@@ -59,28 +62,37 @@
     "hoursRequired": "Ingrese el número de horas.",
     "rateRequired": "Ingrese una tarifa válida.",
     "noServices": "No hay servicios disponibles"
+    "title": "Vender bloque de horas",
+    "totalLabel": "Total"
   },
   "grant": {
-    "title": "Otorgar bloque de horas",
+    "error": "No se pudo otorgar el bloque de horas.",
+    "granted": "Bloque de horas otorgado.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "¿Por qué se otorgan estas horas?",
+    "reasonRequired": "Se requiere un motivo.",
     "submit": "Otorgar bloque",
     "granted": "Bloque de horas otorgado.",
     "error": "No se pudo otorgar el bloque de horas.",
     "reasonRequired": "Se requiere un motivo."
+    "title": "Otorgar bloque de horas"
   },
   "adjust": {
-    "title": "Ajustar horas restantes",
+    "adjusted": "Bloque de horas ajustado.",
     "blockLabel": "Bloque",
     "currentRemaining": "Actualmente quedan {{hours}} h",
     "deltaLabel": "Cambio en horas (un valor positivo agrega, uno negativo quita)",
+    "deltaRequired": "Introduce un cambio de horas distinto de cero.",
+    "error": "No se pudo ajustar el bloque de horas.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obligatorio",
+    "reasonRequired": "Se requiere un motivo.",
     "submit": "Ajustar",
     "adjusted": "Bloque de horas ajustado.",
     "error": "No se pudo ajustar el bloque de horas.",
     "deltaRequired": "Ingrese un cambio de horas distinto de cero.",
     "reasonRequired": "Se requiere un motivo."
+    "title": "Ajustar horas restantes"
   },
   "expiration": {
     "title": "Editar vencimiento",
@@ -101,14 +113,17 @@
     "error": "No se pudo marcar el bloque de horas como vencido."
   },
   "void": {
-    "title": "Anular bloque de horas",
     "confirm": "¿Anular este bloque? Esta acción no se puede deshacer.",
+    "error": "No se pudo anular el bloque de horas.",
     "reasonLabel": "Motivo",
     "reasonPlaceholder": "Obligatorio",
+    "reasonRequired": "Se requiere un motivo.",
     "submit": "Anular bloque",
     "voided": "Bloque de horas anulado.",
     "error": "No se pudo anular el bloque de horas.",
     "reasonRequired": "Se requiere un motivo."
+    "title": "Anular bloque de horas",
+    "voided": "Bloque de horas anulado."
   },
   "detail": {
     "title": "Detalles del bloque de horas",
@@ -137,5 +152,15 @@
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (factura desfinalizada)",
     "unknownUser": "Sistema"
+  },
+  "expire": {
+    "error": "No se pudo caducar el bloque de horas.",
+    "expired": "Bloque de horas caducado.",
+    "reasonLabel": "Motivo",
+    "reasonPlaceholder": "Obligatorio",
+    "reasonRequired": "Se requiere un motivo.",
+    "remaining": "Se perderán {{hours}} h sin usar.",
+    "submit": "Caducar bloque",
+    "title": "Caducar bloque de horas"
   }
 }

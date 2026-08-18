@@ -211,8 +211,10 @@ describe('CreditsSummaryCard credit history (release-v1.5-feature)', () => {
       <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
     );
 
-    expect(await screen.findByText('Available Credit')).toBeInTheDocument();
-    expect(screen.getByText('Prepayment credit')).toBeInTheDocument();
+    // 'Available Credit' renders even in the loading state, so wait on the
+    // summary-driven line instead — it only appears once the credits load.
+    expect(await screen.findByText('Prepayment credit')).toBeInTheDocument();
+    expect(screen.getByText('Available Credit')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /view history/i }));
 

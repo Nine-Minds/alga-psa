@@ -2522,6 +2522,29 @@
           "updateContact": "Nie udało się zaktualizować kontaktu domyślnego",
           "updateAutoSync": "Nie udało się zaktualizować ustawienia autosynchronizacji"
         }
+      },
+      "deviceSync": {
+        "title": "Zaplanowana synchronizacja urządzeń",
+        "description": "Odświeżaj ten spis urządzeń według harmonogramu, zamiast czekać, aż ktoś uruchomi pełną synchronizację. Każde uruchomienie wywołuje API dostawcy, a u niektórych dostawców nawet uruchomienie przyrostowe odczytuje pełną listę urządzeń, więc krótszy interwał kosztuje proporcjonalnie więcej wywołań API.",
+        "enabledLabel": "Synchronizuj urządzenia według harmonogramu",
+        "intervalLabel": "Uruchamiaj co (minuty)",
+        "intervalHelp": "Wybierz od {{min}} do {{max}} minut. Krótszy interwał utrzymuje dane urządzeń w większej aktualności i częściej wywołuje API dostawcy.",
+        "intervalInvalid": "Podaj całkowitą liczbę minut z zakresu od {{min}} do {{max}}.",
+        "lastScheduledRun": "Ostatnie zaplanowane uruchomienie: {{time}}",
+        "lastScheduledRunNever": "Zaplanowana synchronizacja nie została jeszcze uruchomiona.",
+        "lastAnySync": "Ostatnia synchronizacja dowolnego rodzaju, w tym ręczne synchronizacje pełne: {{time}}",
+        "lastAnySyncNever": "Nie uruchomiono jeszcze żadnej synchronizacji urządzeń.",
+        "lastSyncError": "Ostatnia synchronizacja nie powiodła się: {{error}}",
+        "actions": {
+          "save": "Zapisz harmonogram synchronizacji",
+          "saving": "Zapisywanie..."
+        },
+        "success": {
+          "saved": "Harmonogram synchronizacji urządzeń został zapisany. Harmonogramator zastosuje go w ciągu kilku minut."
+        },
+        "errors": {
+          "saveFailed": "Nie udało się zapisać harmonogramu synchronizacji urządzeń."
+        }
       }
     },
     "sso": {

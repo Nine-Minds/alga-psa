@@ -65,13 +65,27 @@ exports.up = async function(knex) {
     EXCEPTION WHEN undefined_object THEN NULL;
     END $$;
   `);
-  await knex.raw(`
-    ALTER TABLE hour_blocks
-      ADD CONSTRAINT hour_blocks_source_charge_fkey
-      FOREIGN KEY (tenant, source_invoice_charge_id)
-      REFERENCES invoice_charges(tenant, item_id)
-      ON DELETE SET NULL (source_invoice_charge_id)
-  `);
+  // Column-targeted SET NULL requires PG 15+ and is refused outright by Citus
+  // when the distribution key is part of the FK. The draft-editing flow
+  // depends on the SET NULL semantics (removing a purchase line detaches the
+  // pending block, which is then voided at finalization), so a NO ACTION
+  // fallback would break line removal — where SET NULL (column) is not
+  // available, skip the FK instead: resolvePurchaseLineForBlock already
+  // treats a dangling source_invoice_charge_id exactly like a detached one.
+  const citusRow = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1",
+  );
+  const versionRow = await knex.raw("SELECT current_setting('server_version_num')::int AS v");
+  const columnTargeted = versionRow.rows[0].v >= 150000 && citusRow.rows.length === 0;
+  if (columnTargeted) {
+    await knex.raw(`
+      ALTER TABLE hour_blocks
+        ADD CONSTRAINT hour_blocks_source_charge_fkey
+        FOREIGN KEY (tenant, source_invoice_charge_id)
+        REFERENCES invoice_charges(tenant, item_id)
+        ON DELETE SET NULL (source_invoice_charge_id)
+    `);
+  }
 
   // Widen the audit type check with purchase_reversal (unfinalize).
   await knex.raw(`

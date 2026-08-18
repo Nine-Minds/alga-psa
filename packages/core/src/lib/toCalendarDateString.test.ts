@@ -1,5 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { toCalendarDateString } from './dateTimeUtils';
+
+// TZ is process-global and vitest isolation is module-level only: without a
+// restore, the last zone set here (Europe/Berlin) leaks into every later file
+// in the shared fork and shifts their dates (seen as CI-only recurrence and
+// invoice-preview failures).
+const originalTz = process.env.TZ;
+afterAll(() => {
+  if (originalTz === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = originalTz;
+  }
+});
 
 // Regression tests for the hour-block expiration date persistence bug: a
 // DatePicker selection of calendar date 2026-08-31 (a local-midnight Date in

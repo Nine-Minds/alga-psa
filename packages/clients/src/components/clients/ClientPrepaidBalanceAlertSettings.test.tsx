@@ -173,8 +173,13 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     getSettingsMock.mockResolvedValueOnce(null);
     rerender(<ClientPrepaidBalanceAlertSettings clientId="c2" />);
 
-    await waitFor(() => expect(getSettingsMock).toHaveBeenCalledWith('c2'));
-    expect(screen.getByRole('alert')).toHaveTextContent(/failed to load prepaid balance alert settings/i);
+    // Waiting on the call alone only proves the read started; the null result
+    // still has to resolve and re-render before the alert exists. Wait on the
+    // alert itself, which is the actual post-condition.
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/failed to load prepaid balance alert settings/i)
+    );
+    expect(getSettingsMock).toHaveBeenCalledWith('c2');
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
     expect(updateSettingsMock).not.toHaveBeenCalled();
   });

@@ -97,6 +97,10 @@ async function cleanup() {
 }
 
 describe.runIf(enabled)('hour-block expiration date persists the selected calendar day (timezone)', () => {
+  // TZ is process-global; restore it so the zones set by assertTz don't leak
+  // into later files in the shared fork.
+  const originalTz = process.env.TZ;
+
   beforeAll(async () => {
     db = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 2 } });
     tenant = uuidv4();
@@ -104,6 +108,11 @@ describe.runIf(enabled)('hour-block expiration date persists the selected calend
   });
 
   afterAll(async () => {
+    if (originalTz === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = originalTz;
+    }
     await db.destroy();
   });
 

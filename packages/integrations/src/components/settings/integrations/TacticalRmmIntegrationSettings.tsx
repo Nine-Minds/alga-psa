@@ -32,6 +32,7 @@ import {
 import { getRmmIntegrationIdByProvider } from '../../../actions/integrations/rmmAlertRuleActions';
 import type { TacticalRmmAuthMode } from '../../../lib/rmm/tacticalrmm/shared';
 import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
+import { RmmDeviceSyncSettings } from './RmmDeviceSyncSettings';
 import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -930,6 +931,10 @@ export function TacticalRmmIntegrationSettings() {
 
     {connectionSummary?.isActive && integrationId && (
       <RmmAlertAutomationSettings integrationId={integrationId} provider="tacticalrmm" />
+    )}
+
+    {connectionSummary?.isActive && (
+      <RmmDeviceSyncSettings provider="tacticalrmm" onSaved={() => void load()} />
     )}
 
     {renderQuickAddContact({
