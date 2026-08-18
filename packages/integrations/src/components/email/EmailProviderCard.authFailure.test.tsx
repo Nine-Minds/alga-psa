@@ -71,10 +71,19 @@ async function openMenu() {
 
 describe('EmailProviderCard auth_failure pause (UI)', () => {
   beforeAll(() => {
-    // Radix dropdown interaction helpers missing in jsdom.
-    HTMLElement.prototype.hasPointerCapture = vi.fn(() => false) as any;
-    HTMLElement.prototype.releasePointerCapture = vi.fn() as any;
-    HTMLElement.prototype.scrollIntoView = vi.fn() as any;
+    // Radix dropdown interaction helpers missing in jsdom. defineProperty, not
+    // assignment: another suite may have stubbed these non-writable already.
+    for (const [name, impl] of [
+      ['hasPointerCapture', vi.fn(() => false)],
+      ['releasePointerCapture', vi.fn()],
+      ['scrollIntoView', vi.fn()],
+    ] as const) {
+      Object.defineProperty(HTMLElement.prototype, name, {
+        value: impl,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 
   afterEach(() => {

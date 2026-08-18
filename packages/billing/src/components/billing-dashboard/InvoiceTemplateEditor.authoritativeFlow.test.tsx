@@ -105,6 +105,20 @@ const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot =>
   };
 };
 
+// The preview panel now holds two comboboxes — the existing-invoice picker and
+// the preview-language select — so target the picker by component rather than
+// by role. `combobox` takes no name from content, so it has no accessible name.
+const openExistingInvoiceSelect = async () => {
+  const trigger = await waitFor(() => {
+    const element = document.querySelector(
+      '[data-automation-type="async-searchable-select"] button[role="combobox"]'
+    );
+    if (!element) throw new Error('Existing-invoice select is not rendered');
+    return element as HTMLElement;
+  });
+  fireEvent.click(trigger);
+};
+
 describe('InvoiceTemplateEditor authoritative preview flow', () => {
   beforeEach(() => {
     installLocalStorageMock();
@@ -230,7 +244,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    fireEvent.click(await screen.findByRole('combobox'));
+    await openExistingInvoiceSelect();
     fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.'));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-existing-1'));

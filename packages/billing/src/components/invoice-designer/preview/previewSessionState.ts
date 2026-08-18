@@ -1,4 +1,5 @@
 import type { InvoiceViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
+import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { DEFAULT_PREVIEW_SAMPLE_ID } from './sampleScenarios';
 
 export type PreviewSourceKind = 'sample' | 'existing';
@@ -7,6 +8,8 @@ export type PreviewPipelinePhaseStatus = 'idle' | 'running' | 'success' | 'error
 
 export type PreviewSessionState = {
   sourceKind: PreviewSourceKind;
+  /** Language the preview renders in — what a client in that locale receives. */
+  selectedLocale: SupportedLocale;
   selectedSampleId: string | null;
   selectedInvoiceId: string | null;
   invoiceList: InvoiceViewModel[];
@@ -31,6 +34,7 @@ export type PreviewSessionState = {
 type PreviewSessionAction =
   | { type: 'set-source'; source: PreviewSourceKind }
   | { type: 'set-sample'; sampleId: string }
+  | { type: 'set-locale'; locale: SupportedLocale }
   | { type: 'set-search-term'; value: string }
   | { type: 'set-list-page'; page: number }
   | { type: 'list-load-start' }
@@ -81,8 +85,11 @@ const setPhaseStatus = (
   };
 };
 
-export const createInitialPreviewSessionState = (): PreviewSessionState => ({
+export const createInitialPreviewSessionState = (
+  locale: SupportedLocale = LOCALE_CONFIG.defaultLocale as SupportedLocale
+): PreviewSessionState => ({
   sourceKind: 'sample',
+  selectedLocale: locale,
   selectedSampleId: DEFAULT_PREVIEW_SAMPLE_ID,
   selectedInvoiceId: null,
   invoiceList: [],
@@ -118,6 +125,11 @@ export const previewSessionReducer = (
       return {
         ...state,
         selectedSampleId: action.sampleId,
+      };
+    case 'set-locale':
+      return {
+        ...state,
+        selectedLocale: action.locale,
       };
     case 'set-search-term':
       return {

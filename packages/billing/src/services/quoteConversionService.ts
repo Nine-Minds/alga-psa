@@ -371,8 +371,27 @@ export async function buildQuoteConversionPreview(
     item.location_id ? (locationNameMap.get(item.location_id) ?? null) : null
   );
 
+  // Mirror the conversions themselves: which product lines a sales order takes
+  // (or has taken), and which one-time items an invoice conversion would still
+  // bill after that. Without this the preview promises invoice charges the
+  // conversion then refuses.
+  const salesOrder = knexOrTrx && resolvedTenant
+    ? await getSalesOrderByQuoteId(knexOrTrx, resolvedTenant, quote.quote_id)
+    : null;
+  const productServiceIds = knexOrTrx && resolvedTenant
+    ? await resolveProductServiceIds(knexOrTrx, resolvedTenant, quoteItems)
+    : new Set<string>();
+  const invoiceableOneTimeIds = new Set(
+    (salesOrder ? excludeSalesOrderProductItems(oneTimeItems, productServiceIds) : oneTimeItems)
+      .map((item) => item.quote_item_id)
+  );
+  const newSalesOrderItemIds = new Set(
+    getSelectedProductOneTimeItems(quoteItems, productServiceIds).map((item) => item.quote_item_id)
+  );
+
   const contractItems: QuoteConversionPreviewItem[] = [];
   const invoiceItems: QuoteConversionPreviewItem[] = [];
+  const salesOrderItems: QuoteConversionPreviewItem[] = [];
   const excludedItems: QuoteConversionPreviewItem[] = [];
 
   for (const item of quoteItems) {
@@ -382,6 +401,18 @@ export async function buildQuoteConversionPreview(
     }
 
     if (oneTimeIds.has(item.quote_item_id)) {
+      if (salesOrder && !invoiceableOneTimeIds.has(item.quote_item_id)) {
+        // Claimed by the existing sales order (product line or a discount tied
+        // to one) — billed from the sales order on fulfillment, never twice.
+        salesOrderItems.push(toPreviewItem(item, 'sales_order', null, lookupName(item)));
+        continue;
+      }
+      if (!salesOrder && newSalesOrderItemIds.has(item.quote_item_id)) {
+        // No sales order yet: this line invoices directly today, but is also
+        // exactly what a sales-order conversion would take. Listed in both
+        // buckets so either dialog mode shows the truth for its action.
+        salesOrderItems.push(toPreviewItem(item, 'sales_order', null, lookupName(item)));
+      }
       invoiceItems.push(toPreviewItem(item, 'invoice', null, lookupName(item)));
       continue;
     }
@@ -416,7 +447,11 @@ export async function buildQuoteConversionPreview(
     available_actions: availableActions,
     contract_items: contractItems,
     invoice_items: invoiceItems,
+    sales_order_items: salesOrderItems,
     excluded_items: excludedItems,
+    existing_sales_order: salesOrder
+      ? { so_id: salesOrder.so_id, so_number: salesOrder.so_number ?? null }
+      : null,
   };
 }
 

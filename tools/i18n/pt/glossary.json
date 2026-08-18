@@ -162,6 +162,12 @@
       "notes": "Use as noun for UI filters; use filtrar for the action."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "pt-br-term": "atendimento",
+      "notes": "Use atendimento for the sales-order fulfillment column and the matching customer-document label; entrega is the physical delivery."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "pt-br-term": "ramo de atividade",
@@ -270,6 +276,12 @@
       "notes": "Use cotação (feminine: a cotação, cotações) for sales/service quotes — native-reviewer confirmed 2026-07. Never citação/citar (textual citation) and never orçamento, which is reserved for budgets (see budget)."
     },
     {
+      "id": "rate",
+      "en-term": "rate",
+      "pt-br-term": "tarifa",
+      "notes": "Use tarifa for a priced rate column on customer documents and keep preço unitário for unit price, so a document that shows both columns keeps them distinguishable."
+    },
+    {
       "id": "report",
       "en-term": "report",
       "pt-br-term": "relatório",
@@ -348,6 +360,12 @@
       "notes": "Use for project tasks, workflow tasks, and task inbox items."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "pt-br-term": "imposto",
+      "notes": "Use the neutral imposto for tax labels on customer documents; name a specific Brazilian tax (ICMS, ISS) only where that tax is actually meant."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "pt-br-term": "técnico",
@@ -376,6 +394,12 @@
       "en-term": "timesheet",
       "pt-br-term": "planilha de horas",
       "notes": "Use planilha de horas for grouped/submitted time entries and approval flows. Do not use folha de ponto, planilha de ponto, or quadro de horários — ponto implies attendance/clock-in, but this tracks billable hours."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "pt-br-term": "preço unitário",
+      "notes": "Use preço unitário for the per-unit price column and tarifa for rate; never swap the two."
     },
     {
       "id": "user",

@@ -640,8 +640,18 @@ export const fetchInvoicesByClient = withAuth(async (
 
     console.log(`Got ${invoices.length} invoices for client ${clientId}`);
 
+    // Deduplicate by invoice_id: the location join matches billing OR default
+    // address, which are two rows for some clients. The ORDER BY ranks the
+    // billing address first, so the first row per invoice is the right one.
+    const seenIds = new Set<string>();
+    const uniqueInvoices = invoices.filter(invoice => {
+      if (seenIds.has(invoice.invoice_id)) return false;
+      seenIds.add(invoice.invoice_id);
+      return true;
+    });
+
     // Map to view models without line items
-    return Promise.all(invoices.map(invoice => {
+    return Promise.all(uniqueInvoices.map(invoice => {
       const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address

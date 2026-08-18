@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Limite du modèle"
+      "templateBoundary": "Limite du modèle",
+      "translatableHint": "Traduit automatiquement dans la langue du destinataire. Modifiez le texte pour utiliser votre propre texte fixe."
     },
     "dragOverlay": {
       "component": "Composant"

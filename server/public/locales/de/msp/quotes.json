@@ -153,7 +153,8 @@
       "previewPdf": "PDF-Vorschau",
       "backToQuotes": "Zurück zu den Angeboten",
       "backToTemplates": "Zurück zu den Angebotsvorlagen",
-      "convertToSalesOrder": "In Kundenauftrag umwandeln"
+      "convertToSalesOrder": "In Kundenauftrag umwandeln",
+      "convert": "Umwandeln in…"
     },
     "headings": {
       "editQuote": "Angebot bearbeiten",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Vertragsgegenstände",
       "conversionMode": "Konvertierungsmodus",
-      "excludedItems": "Ausgeschlossene Artikel",
       "excludedFromConversion": "Von der Konvertierung ausgeschlossen",
+      "excludedItems": "Ausgeschlossene Artikel",
       "invoiceItems": "Rechnungspositionen",
       "itemMappingPreview": "Vorschau der Elementzuordnung",
+      "onSalesOrder": "Im Kundenauftrag {{soNumber}}",
       "quoteTotal": "Angebot insgesamt",
+      "salesOrderItems": "Kundenauftragspositionen",
       "statusAfterConversion": "Status nach der Konvertierung",
       "willBecomeContractLines": "Werden zu Vertragslinien",
-      "willBecomeInvoiceCharges": "Werden zu Rechnungsgebühren"
+      "willBecomeInvoiceCharges": "Werden zu Rechnungsgebühren",
+      "willBecomeSalesOrderLines": "Wird zu Kundenauftragspositionen"
     },
     "empty": {
       "contractItems": "Es werden keine wiederkehrenden Artikel in einen Vertrag umgewandelt.",
-      "invoiceItems": "Es werden keine einmaligen Posten in eine Rechnung umgewandelt."
+      "invoiceItems": "Es werden keine einmaligen Posten in eine Rechnung umgewandelt.",
+      "invoiceItemsOnSalesOrder": "Alle einmaligen Positionen befinden sich im Kundenauftrag {{soNumber}} und werden von dort bei Erfüllung abgerechnet.",
+      "salesOrderItems": "Keine Produktpositionen werden in einen Kundenauftrag übernommen."
     },
     "summary": {
+      "billedViaSalesOrder": "Wird bei Erfüllung über Kundenauftrag {{soNumber}} abgerechnet",
       "converted": "Konvertiert",
       "discount": "Rabatt",
       "fixed": "behoben",
@@ -628,10 +635,11 @@
       "title": "Fehler"
     },
     "salesOrder": {
-      "successTitle": "Kundenauftrag {{number}} erstellt",
-      "successBody": "Produktpositionen werden bei Erfüllung abgerechnet.",
+      "existingNote": "Dieses Angebot wurde bereits in den Kundenauftrag {{soNumber}} umgewandelt.",
+      "note": "Produktpositionen können auf zwei Arten abgerechnet werden: über einen Kundenauftrag (Abrechnung bei Erfüllung) oder direkt per Rechnung. Wird der Kundenauftrag erstellt, sind sie von der Rechnungskonvertierung ausgeschlossen, sodass nichts doppelt berechnet wird.",
       "openSalesOrders": "Kundenaufträge öffnen",
-      "note": "Einmalige Produktpositionen werden in einen Kundenauftragsentwurf verschoben (Abrechnung bei Erfüllung) und von jeder Rechnungsentwurf-Konvertierung ausgeschlossen, sodass nichts doppelt berechnet wird."
+      "successBody": "Produktpositionen werden bei Erfüllung abgerechnet.",
+      "successTitle": "Kundenauftrag {{number}} erstellt"
     }
   },
   "quoteApproval": {

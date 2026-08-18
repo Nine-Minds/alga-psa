@@ -71,7 +71,10 @@ describe('Quotes i18n wiring contract', () => {
       'quoteForm.headings.newTemplate',
       'common.actions.submitForApproval',
       'quoteForm.actions.cancelQuote',
-      'quoteForm.actions.convertToBoth',
+      // Conversion collapsed to one entry button; the dialog footer offers the
+      // per-target actions from quoteConversion.actions.*.
+      'quoteForm.actions.convert',
+      'quoteConversion.actions.salesOrder',
       'quoteForm.fields.createFromTemplate',
       'quoteForm.fields.recipients',
       'quoteForm.dialogs.send.title',
@@ -277,7 +280,7 @@ describe('Quotes i18n wiring contract', () => {
     );
 
     expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useTranslation']);
-    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
+    expect(source).toMatch(/const \{ t(?:, \w+)* \} = useTranslation\('msp\/quotes'\);/);
 
     const keyChecks = [
       'templateEditor.title',

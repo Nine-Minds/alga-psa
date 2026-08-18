@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Vorlagenbegrenzung"
+      "templateBoundary": "Vorlagenbegrenzung",
+      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text."
     },
     "dragOverlay": {
       "component": "Komponente"

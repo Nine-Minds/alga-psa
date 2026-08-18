@@ -11,6 +11,8 @@ const mockRouter = {
 };
 
 const getQuoteMock = vi.fn();
+const getQuoteConversionPreviewMock = vi.fn();
+const convertQuoteToSalesOrderMock = vi.fn();
 const listQuoteVersionsMock = vi.fn();
 const getQuoteApprovalSettingsMock = vi.fn();
 const getAllClientsForBillingMock = vi.fn();
@@ -61,7 +63,9 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Dialog: ({ children, footer, isOpen }: { children: React.ReactNode; footer?: React.ReactNode; isOpen?: boolean }) => (
+    <div>{children}{isOpen ? footer : null}</div>
+  ),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -115,16 +119,16 @@ vi.mock('../../src/actions/quoteDocumentTemplates', () => ({
 
 vi.mock('../../src/actions/quoteActions', () => ({
   approveQuote: vi.fn(),
-  convertQuoteToBoth: vi.fn(),
   convertQuoteToContract: vi.fn(),
   convertQuoteToInvoice: vi.fn(),
+  convertQuoteToSalesOrder: (...args: any[]) => convertQuoteToSalesOrderMock(...args),
   createQuoteRevision: vi.fn(),
   deleteQuote: vi.fn(),
   downloadQuotePdf: vi.fn(),
   duplicateQuote: vi.fn(),
   getQuote: (...args: any[]) => getQuoteMock(...args),
   getQuoteApprovalSettings: (...args: any[]) => getQuoteApprovalSettingsMock(...args),
-  getQuoteConversionPreview: vi.fn(),
+  getQuoteConversionPreview: (...args: any[]) => getQuoteConversionPreviewMock(...args),
   listQuoteVersions: (...args: any[]) => listQuoteVersionsMock(...args),
   renderQuotePreview: vi.fn(),
   requestQuoteApprovalChanges: vi.fn(),
@@ -293,5 +297,57 @@ describe('QuoteDetail accepted optional item review state', () => {
 
     expect(await screen.findByText('Open Converted Contract')).toBeTruthy();
     expect(screen.getByText('Open Converted Invoice')).toBeTruthy();
+  });
+
+  it('conversion dialog offers only the actions the preview allows, with sales order as the default path', async () => {
+    getQuoteConversionPreviewMock.mockResolvedValue({
+      quote_id: 'quote-accepted-1',
+      available_actions: ['contract', 'invoice'],
+      contract_items: [{ quote_item_id: 'item-required', description: 'Core managed services', quantity: 1, unit_price: 7000, total_price: 7000, is_optional: false, is_selected: true, is_recurring: true, target: 'contract' }],
+      invoice_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'invoice' }],
+      sales_order_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'sales_order' }],
+      excluded_items: [],
+      existing_sales_order: null,
+    });
+
+    const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+    render(<QuoteDetail quoteId="quote-accepted-1" onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+    await waitFor(() => expect(getQuoteMock).toHaveBeenCalledWith('quote-accepted-1'));
+
+    (await screen.findByText('Convert to…')).click();
+    await waitFor(() => expect(getQuoteConversionPreviewMock).toHaveBeenCalled());
+
+    expect(await screen.findByText('Create Sales Order')).toBeTruthy();
+    expect(screen.getByText('Create Draft Contract')).toBeTruthy();
+    // Invoice competes with the sales-order path for the same product lines,
+    // so it renders as the secondary (outline) action.
+    const invoiceButton = screen.getByText('Create Draft Invoice').closest('button');
+    expect(invoiceButton?.getAttribute('variant')).toBe('outline');
+    // "Create Both Records" is gone: it created two records without saying which.
+    expect(screen.queryByText('Create Both Records')).toBeNull();
+  });
+
+  it('conversion dialog hides Create Sales Order once a sales order exists', async () => {
+    getQuoteConversionPreviewMock.mockResolvedValue({
+      quote_id: 'quote-accepted-1',
+      available_actions: ['contract'],
+      contract_items: [{ quote_item_id: 'item-required', description: 'Core managed services', quantity: 1, unit_price: 7000, total_price: 7000, is_optional: false, is_selected: true, is_recurring: true, target: 'contract' }],
+      invoice_items: [],
+      sales_order_items: [{ quote_item_id: 'item-selected', description: 'Optional security bundle', quantity: 1, unit_price: 5000, total_price: 5000, is_optional: true, is_selected: true, is_recurring: false, target: 'sales_order' }],
+      excluded_items: [],
+      existing_sales_order: { so_id: 'so-1', so_number: 'SO00001' },
+    });
+
+    const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+    render(<QuoteDetail quoteId="quote-accepted-1" onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+    await waitFor(() => expect(getQuoteMock).toHaveBeenCalledWith('quote-accepted-1'));
+
+    (await screen.findByText('Convert to…')).click();
+    await waitFor(() => expect(getQuoteConversionPreviewMock).toHaveBeenCalled());
+
+    expect(await screen.findByText('On Sales Order SO00001')).toBeTruthy();
+    expect(screen.queryByText('Create Sales Order')).toBeNull();
+    expect(screen.queryByText('Create Draft Invoice')).toBeNull();
+    expect(screen.getByText('Create Draft Contract')).toBeTruthy();
   });
 });

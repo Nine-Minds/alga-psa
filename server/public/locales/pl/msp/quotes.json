@@ -153,7 +153,8 @@
       "previewPdf": "Podgląd PDF",
       "backToQuotes": "Powrót do wycen",
       "backToTemplates": "Powrót do szablonów wycen",
-      "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży"
+      "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży",
+      "convert": "Przekształć w…"
     },
     "headings": {
       "editQuote": "Edytuj wycenę",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Przedmioty umowy",
       "conversionMode": "Tryb konwersji",
-      "excludedItems": "Elementy wykluczone",
       "excludedFromConversion": "Wykluczone z konwersji",
+      "excludedItems": "Elementy wykluczone",
       "invoiceItems": "Pozycje faktury",
       "itemMappingPreview": "Podgląd mapowania przedmiotów",
+      "onSalesOrder": "W zamówieniu sprzedaży {{soNumber}}",
       "quoteTotal": "Łączna wartość wyceny",
+      "salesOrderItems": "Pozycje zamówienia sprzedaży",
       "statusAfterConversion": "Stan po konwersji",
       "willBecomeContractLines": "Staną się liniami kontraktowymi",
-      "willBecomeInvoiceCharges": "Staną się opłatami na fakturze"
+      "willBecomeInvoiceCharges": "Staną się opłatami na fakturze",
+      "willBecomeSalesOrderLines": "Staną się pozycjami zamówienia sprzedaży"
     },
     "empty": {
       "contractItems": "Żadne elementy powtarzające się nie zostaną przekształcone w umowę.",
-      "invoiceItems": "Żadne jednorazowe pozycje nie zostaną zamienione na fakturę."
+      "invoiceItems": "Żadne jednorazowe pozycje nie zostaną zamienione na fakturę.",
+      "invoiceItemsOnSalesOrder": "Wszystkie pozycje jednorazowe znajdują się w zamówieniu sprzedaży {{soNumber}} i zostaną z niego zafakturowane po realizacji.",
+      "salesOrderItems": "Żadne pozycje produktowe nie przejdą do zamówienia sprzedaży."
     },
     "summary": {
+      "billedViaSalesOrder": "Fakturowane z zamówienia sprzedaży {{soNumber}} po realizacji",
       "converted": "Przekształcony",
       "discount": "Rabat",
       "fixed": "naprawił",
@@ -628,10 +635,11 @@
       "title": "Błąd"
     },
     "salesOrder": {
-      "successTitle": "Utworzono zamówienie sprzedaży {{number}}",
-      "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "existingNote": "Ta oferta została już przekształcona w zamówienie sprzedaży {{soNumber}}.",
+      "note": "Pozycje produktowe można rozliczyć na dwa sposoby: tworząc zamówienie sprzedaży (fakturowanie po realizacji) lub fakturując je bezpośrednio. Utworzenie zamówienia sprzedaży wyklucza je z konwersji na fakturę, więc nic nie jest rozliczane podwójnie.",
       "openSalesOrders": "Otwórz zamówienia sprzedaży",
-      "note": "Jednorazowe pozycje produktowe przechodzą do wersji roboczej zamówienia sprzedaży (rozliczane przy realizacji) i są wykluczone z konwersji na wersję roboczą faktury, więc nic nie jest rozliczane podwójnie."
+      "successBody": "Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "successTitle": "Utworzono zamówienie sprzedaży {{number}}"
     }
   },
   "quoteApproval": {

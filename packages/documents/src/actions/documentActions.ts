@@ -413,6 +413,9 @@ async function resolveDocumentAuthorizationRecords(
   const ticketIds = new Set<string>();
   const projectTaskIds = new Set<string>();
   const contractIds = new Set<string>();
+  const quoteIds = new Set<string>();
+  const invoiceIds = new Set<string>();
+  const salesOrderIds = new Set<string>();
 
   const scopedDb = tenantDb(trx, tenant);
   for (const association of associations) {
@@ -428,9 +431,26 @@ async function resolveDocumentAuthorizationRecords(
     if (association.entity_type === 'contract') {
       contractIds.add(association.entity_id);
     }
+    if (association.entity_type === 'quote') {
+      quoteIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'invoice') {
+      invoiceIds.add(association.entity_id);
+    }
+    if (association.entity_type === 'sales_order') {
+      salesOrderIds.add(association.entity_id);
+    }
   }
 
-  const [contactClientRows, ticketClientRows, projectTaskClientRows, contractClientRows] = await Promise.all([
+  const [
+    contactClientRows,
+    ticketClientRows,
+    projectTaskClientRows,
+    contractClientRows,
+    quoteClientRows,
+    invoiceClientRows,
+    salesOrderClientRows,
+  ] = await Promise.all([
     contactIds.size > 0
       ? tenantScopedTable(trx, 'contacts', tenant)
           .whereIn('contact_name_id', Array.from(contactIds))
@@ -454,6 +474,21 @@ async function resolveDocumentAuthorizationRecords(
       ? tenantScopedTable(trx, 'client_contracts', tenant)
           .whereIn('contract_id', Array.from(contractIds))
           .select<{ contract_id: string; client_id: string | null }[]>('contract_id', 'client_id')
+      : Promise.resolve([]),
+    quoteIds.size > 0
+      ? tenantScopedTable(trx, 'quotes', tenant)
+          .whereIn('quote_id', Array.from(quoteIds))
+          .select<{ quote_id: string; client_id: string | null }[]>('quote_id', 'client_id')
+      : Promise.resolve([]),
+    invoiceIds.size > 0
+      ? tenantScopedTable(trx, 'invoices', tenant)
+          .whereIn('invoice_id', Array.from(invoiceIds))
+          .select<{ invoice_id: string; client_id: string | null }[]>('invoice_id', 'client_id')
+      : Promise.resolve([]),
+    salesOrderIds.size > 0
+      ? tenantScopedTable(trx, 'sales_orders', tenant)
+          .whereIn('so_id', Array.from(salesOrderIds))
+          .select<{ so_id: string; client_id: string | null }[]>('so_id', 'client_id')
       : Promise.resolve([]),
   ]);
 
@@ -479,6 +514,18 @@ async function resolveDocumentAuthorizationRecords(
     }
     clientIds.add(row.client_id);
   }
+  const quoteClientById = new Map<string, string | null>();
+  for (const row of quoteClientRows) {
+    quoteClientById.set(row.quote_id, row.client_id ?? null);
+  }
+  const invoiceClientById = new Map<string, string | null>();
+  for (const row of invoiceClientRows) {
+    invoiceClientById.set(row.invoice_id, row.client_id ?? null);
+  }
+  const salesOrderClientById = new Map<string, string | null>();
+  for (const row of salesOrderClientRows) {
+    salesOrderClientById.set(row.so_id, row.client_id ?? null);
+  }
 
   for (const document of documents) {
     const documentAssociations = associationByDocument.get(document.document_id) ?? [];
@@ -489,6 +536,9 @@ async function resolveDocumentAuthorizationRecords(
     const ticketAssociations = documentAssociations.filter((association) => association.entity_type === 'ticket');
     const projectTaskAssociations = documentAssociations.filter((association) => association.entity_type === 'project_task');
     const contractAssociations = documentAssociations.filter((association) => association.entity_type === 'contract');
+    const quoteAssociations = documentAssociations.filter((association) => association.entity_type === 'quote');
+    const invoiceAssociations = documentAssociations.filter((association) => association.entity_type === 'invoice');
+    const salesOrderAssociations = documentAssociations.filter((association) => association.entity_type === 'sales_order');
 
     const ownerFromUserAssociation = userAssociations[0]?.entity_id ?? null;
     const ownerViaContactMatch =
@@ -497,9 +547,10 @@ async function resolveDocumentAuthorizationRecords(
         : null;
 
     // A document can be linked to multiple clients via any combination of direct
-    // client, contact, ticket, project_task, and contract associations. Gather every
-    // candidate client_id, then prefer the viewer's own clientId when it matches so
-    // the kernel's `same_client` rule authorizes the viewer.
+    // client, contact, ticket, project_task, contract, quote, invoice, and
+    // sales_order associations. Gather every candidate client_id, then prefer the
+    // viewer's own clientId when it matches so the kernel's `same_client` rule
+    // authorizes the viewer.
     const candidateClientIds = new Set<string>();
     for (const association of directClientAssociations) {
       candidateClientIds.add(association.entity_id);
@@ -522,6 +573,18 @@ async function resolveDocumentAuthorizationRecords(
       for (const clientId of contractClientIds) {
         candidateClientIds.add(clientId);
       }
+    }
+    for (const association of quoteAssociations) {
+      const clientId = quoteClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
+    }
+    for (const association of invoiceAssociations) {
+      const clientId = invoiceClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
+    }
+    for (const association of salesOrderAssociations) {
+      const clientId = salesOrderClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
     }
 
     const clientId = user.clientId && candidateClientIds.has(user.clientId)
