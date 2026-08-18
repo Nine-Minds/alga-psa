@@ -29,7 +29,11 @@
  * the composite tenant PKs and the tenantDb query layer instead.
  */
 
-// Helper: distribute a table by tenant if Citus is available
+// Helper: distribute a table by tenant if Citus is available.
+// Colocation with invoices is required so the composite FKs to invoices /
+// clients / service_catalog / time_entries / each other are valid on Citus
+// (FKs between distributed tables demand the same colocation group; see
+// 20260722120000_create_invoice_payments_table.cjs).
 async function distributeIfCitus(knex, tableName) {
   const citusFn = await knex.raw(`
     SELECT EXISTS (
@@ -44,7 +48,10 @@ async function distributeIfCitus(knex, tableName) {
       ) AS is_distributed;
     `);
     if (!alreadyDistributed.rows?.[0]?.is_distributed) {
-      await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant')`);
+      await knex.raw(
+        `SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'invoices')`,
+        [tableName],
+      );
     }
   }
 }
