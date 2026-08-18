@@ -686,7 +686,12 @@ async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Pro
     return await work();
   } catch (error) {
     const expected = invoiceGenerationActionErrorFrom(error);
-    if (expected) return expected;
+    if (expected) {
+      // Expected errors are returned (not thrown) to the client; log the original
+      // server-side so the real cause is never silently discarded.
+      console.error('[withInvoiceGenerationActionErrors] Returning expected action error:', error);
+      return expected;
+    }
     throw error;
   }
 }

@@ -224,6 +224,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
   'shared/billingClients/recurringDueWork.ts',
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',
+  // PO overage dialog suite (feature/po-overage-dialog-nan-amount-and-100x-overstatem)
+  // landed after the pass-0 snapshot and seeds invoice candidates with persisted
+  // service-period columns in its fixtures.
+  'packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx',
 ]);
 
 // Files whose persisted service-period field references were removed after the

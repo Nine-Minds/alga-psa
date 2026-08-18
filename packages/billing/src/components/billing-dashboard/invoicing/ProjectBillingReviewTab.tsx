@@ -352,6 +352,10 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     {
       title: t('projectBilling.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
+      // Explicit render (same value DataTable would derive): the ee/server
+      // typecheck runs with strictNullChecks off, where the render-less
+      // element matches neither ColumnDefinition variant (`render?: never`).
+      render: (_, record) => record.client_name,
     },
     {
       title: t('projectBilling.columns.description', { defaultValue: 'Description' }),
