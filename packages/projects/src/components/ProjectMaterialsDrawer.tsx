@@ -759,7 +759,7 @@ export default function ProjectMaterialsDrawer({
                       </td>
                       <td className="py-2 text-right">
                         {!material.is_billed && (
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-1">
                             <Button
                               {...withDataAutomationId({ id: `${id}-edit-${material.project_material_id}` })}
                               variant="ghost"

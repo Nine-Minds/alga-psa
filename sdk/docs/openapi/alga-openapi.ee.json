@@ -143,6 +143,9 @@
       "name": "Quotes & Contracts v1"
     },
     {
+      "name": "RMM Integrations"
+    },
+    {
       "name": "Search"
     },
     {
@@ -4616,6 +4619,161 @@
             "type": "number"
           }
         }
+      },
+      "RmmProviderParam": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+          }
+        },
+        "required": [
+          "provider"
+        ]
+      },
+      "RmmIntegrationStatus": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "RMM provider slug."
+          },
+          "integrationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the integration is connected and enabled."
+          },
+          "syncStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+          },
+          "syncError": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Failure detail from the last run, when it failed."
+          },
+          "connectedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSyncAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Any sync, scheduled or manual. A manual full sync advances this too."
+          },
+          "lastIncrementalSyncAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Only the recurring device sync writes this. Use it, not lastSyncAt, to answer whether the schedule is actually running: an integration can show a recent lastSyncAt from one manual sync while nothing recurring has ever run."
+          },
+          "deviceCount": {
+            "type": "integer",
+            "description": "Assets currently attributed to this provider."
+          },
+          "deviceSyncEnabled": {
+            "type": "boolean",
+            "description": "Whether a recurring device sync is scheduled."
+          },
+          "deviceSyncIntervalMinutes": {
+            "type": "integer",
+            "description": "Cadence in minutes, 15 to 1440. Meaningful only when deviceSyncEnabled is true."
+          }
+        },
+        "required": [
+          "provider",
+          "integrationId",
+          "isActive",
+          "syncStatus",
+          "syncError",
+          "connectedAt",
+          "lastSyncAt",
+          "lastIncrementalSyncAt",
+          "deviceCount",
+          "deviceSyncEnabled",
+          "deviceSyncIntervalMinutes"
+        ]
+      },
+      "RmmDeviceSyncUpdateBody": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Turn the recurring device sync on or off."
+          },
+          "intervalMinutes": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 1440,
+            "description": "Cadence in minutes. Defaults to 60. Values outside 15 to 1440 are rejected rather than clamped, so the stored cadence is always the one requested. Every run spends provider API quota, and on some providers an incremental run still reads the whole device list."
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "RmmSyncTriggerBody": {
+        "type": "object",
+        "properties": {
+          "syncType": {
+            "type": "string",
+            "enum": [
+              "full",
+              "incremental"
+            ],
+            "description": "Defaults to incremental, which resumes from the same cursor the schedule uses. 'full' re-reads every device regardless of when it was last seen."
+          }
+        }
+      },
+      "RmmSyncTriggerResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "syncType": {
+            "type": "string",
+            "enum": [
+              "full",
+              "incremental"
+            ]
+          },
+          "devicesProcessed": {
+            "type": "integer"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "provider",
+          "syncType",
+          "devicesProcessed",
+          "startedAt",
+          "finishedAt"
+        ]
       },
       "AutomationExecutionParams": {
         "type": "object",
@@ -36972,6 +37130,241 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/rmm": {
+      "get": {
+        "summary": "List RMM integrations",
+        "description": "Status of every configured RMM integration, including whether a recurring device sync is scheduled, its cadence, and when it last ran.",
+        "tags": [
+          "RMM Integrations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-permission": "system_settings:read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Configured RMM integrations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RmmIntegrationStatus"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, provider without a device sync, or an inactive integration."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "API key lacks the system_settings permission."
+          },
+          "404": {
+            "description": "No integration configured for this provider."
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/rmm/{provider}": {
+      "get": {
+        "summary": "Get an RMM integration",
+        "description": "Status of a single RMM integration.",
+        "tags": [
+          "RMM Integrations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-permission": "system_settings:read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+            },
+            "required": true,
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "name": "provider",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmmIntegrationStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, provider without a device sync, or an inactive integration."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "API key lacks the system_settings permission."
+          },
+          "404": {
+            "description": "No integration configured for this provider."
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/rmm/{provider}/device-sync": {
+      "put": {
+        "summary": "Configure the scheduled device sync",
+        "description": "Turns the recurring device sync on or off and sets its cadence. Writes desired state only — the scheduler reconciles the actual schedule within a few minutes, so a change is not instantaneous. Returns the integration status after the write.",
+        "tags": [
+          "RMM Integrations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-permission": "system_settings:update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+            },
+            "required": true,
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "name": "provider",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RmmDeviceSyncUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated integration status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmmIntegrationStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, provider without a device sync, or an inactive integration."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "API key lacks the system_settings permission."
+          },
+          "404": {
+            "description": "No integration configured for this provider."
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/rmm/{provider}/sync": {
+      "post": {
+        "summary": "Run a device sync now",
+        "description": "Runs a device sync immediately, through the same code path as the scheduled job. Synchronous: the response is sent when the sync finishes, which on a large estate can take minutes. A provider failure returns an error and leaves the sync cursor untouched, so the unread window is retried rather than skipped.",
+        "tags": [
+          "RMM Integrations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-permission": "system_settings:update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+            },
+            "required": true,
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "name": "provider",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RmmSyncTriggerBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sync completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RmmSyncTriggerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, provider without a device sync, or an inactive integration."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "API key lacks the system_settings permission."
+          },
+          "404": {
+            "description": "No integration configured for this provider."
           }
         }
       }

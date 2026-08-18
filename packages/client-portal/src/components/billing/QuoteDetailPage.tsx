@@ -303,11 +303,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         link.click();
         document.body.removeChild(link);
       } else {
-        setDecisionError(result.error || 'Failed to download PDF.');
+        setDecisionError(result.error || t('quotes.detail.downloadFailed', { defaultValue: 'Failed to download PDF.' }));
       }
     } catch (err) {
       console.error('Error downloading quote PDF:', err);
-      setDecisionError('Failed to download PDF. Please try again.');
+      setDecisionError(t('quotes.detail.downloadFailedRetry', { defaultValue: 'Failed to download PDF. Please try again.' }));
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -320,7 +320,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
           className="text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
-          text="Loading quote..."
+          text={t('quotes.detail.loading', { defaultValue: 'Loading quote...' })}
           textClassName="text-muted-foreground"
         />
       </div>
@@ -332,10 +332,10 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
       <div className="space-y-4 py-4">
         <Button id="quote-detail-back" variant="outline" onClick={() => router.push('/client-portal/billing?tab=quotes')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Quotes
+          {t('quotes.detail.backToQuotes', { defaultValue: 'Back to Quotes' })}
         </Button>
         <Card className="p-6">
-          <p className="text-destructive">{error || 'Quote not found'}</p>
+          <p className="text-destructive">{error || t('quotes.detail.notFound', { defaultValue: 'Quote not found' })}</p>
         </Card>
       </div>
     );
@@ -346,7 +346,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button id="quote-detail-back" variant="outline" onClick={() => router.push('/client-portal/billing?tab=quotes')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Quotes
+          {t('quotes.detail.backToQuotes', { defaultValue: 'Back to Quotes' })}
         </Button>
         <Button
           id="quote-detail-download-pdf"
@@ -355,7 +355,9 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
           disabled={isDownloadingPdf}
         >
           <Download className="mr-2 h-4 w-4" />
-          {isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
+          {isDownloadingPdf
+            ? t('quotes.detail.downloading', { defaultValue: 'Downloading...' })
+            : t('quotes.detail.downloadPdf', { defaultValue: 'Download PDF' })}
         </Button>
       </div>
 
@@ -364,7 +366,8 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold">
-                {quote.quote_number || `Quote ${quote.quote_id.slice(0, 8)}`}
+                {quote.quote_number ||
+                  t('quotes.detail.fallbackTitle', { defaultValue: 'Quote {{id}}', id: quote.quote_id.slice(0, 8) })}
               </h1>
               <p className="text-sm text-muted-foreground">{quote.title}</p>
             </div>
@@ -388,19 +391,19 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">Quote Date</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.quoteDate', { defaultValue: 'Quote Date' })}</p>
               <p className="mt-1 text-sm">{formatDate(quote.quote_date)}</p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">Valid Until</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.validUntil', { defaultValue: 'Valid Until' })}</p>
               <p className="mt-1 text-sm">{formatDate(quote.valid_until)}</p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">PO Number</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.poNumber', { defaultValue: 'PO Number' })}</p>
               <p className="mt-1 text-sm">{quote.po_number || '—'}</p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">Total</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.total', { defaultValue: 'Total' })}</p>
               <p className="mt-1 text-lg font-semibold">
                 {formatCurrency(quote.total_amount || 0, quote.currency_code)}
               </p>
@@ -409,26 +412,26 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
           {quote.description && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Scope of Work</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.scopeOfWork', { defaultValue: 'Scope of Work' })}</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.description}</p>
             </div>
           )}
 
           {quote.client_notes && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Notes</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.notes', { defaultValue: 'Notes' })}</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.client_notes}</p>
             </div>
           )}
 
           {/* Line Items */}
           <div>
-            <h3 className="mb-2 text-sm font-semibold">Line Items</h3>
+            <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.lineItems', { defaultValue: 'Line Items' })}</h3>
             {hasOptionalItems && (
               <p className="mb-3 text-sm text-muted-foreground">
                 {canEditSelections
-                  ? 'Toggle optional items to preview your preferred quote total before responding.'
-                  : 'Optional item selections are locked once the quote is no longer awaiting your response.'}
+                  ? t('quotes.detail.optionalToggleHint', { defaultValue: 'Toggle optional items to preview your preferred quote total before responding.' })
+                  : t('quotes.detail.optionalLockedHint', { defaultValue: 'Optional item selections are locked once the quote is no longer awaiting your response.' })}
               </p>
             )}
             {(() => {
@@ -438,10 +441,10 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                   <table className="min-w-full divide-y text-sm">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Qty</th>
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Rate</th>
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Amount</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('quotes.detail.columns.description', { defaultValue: 'Description' })}</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('quotes.detail.columns.qty', { defaultValue: 'Qty' })}</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('quotes.detail.columns.rate', { defaultValue: 'Rate' })}</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('quotes.detail.columns.amount', { defaultValue: 'Amount' })}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -454,8 +457,12 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                 <span>{item.description}</span>
                                 {item.is_optional && (
                                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <Badge variant="outline" className="text-[10px]">Optional</Badge>
-                                    <span>{item.is_selected !== false ? 'Included' : 'Excluded'}</span>
+                                    <Badge variant="outline" className="text-[10px]">{t('quotes.detail.optional', { defaultValue: 'Optional' })}</Badge>
+                                    <span>
+                                      {item.is_selected !== false
+                                        ? t('quotes.detail.included', { defaultValue: 'Included' })
+                                        : t('quotes.detail.excluded', { defaultValue: 'Excluded' })}
+                                    </span>
                                   </div>
                                 )}
                                 {item.is_optional && (
@@ -466,7 +473,9 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                       disabled={!canEditSelections || isUpdatingSelections}
                                       onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
                                       className="data-[state=checked]:bg-primary-500"
-                                      label={item.is_selected !== false ? 'Include' : 'Exclude'}
+                                      label={item.is_selected !== false
+                                        ? t('quotes.detail.include', { defaultValue: 'Include' })
+                                        : t('quotes.detail.exclude', { defaultValue: 'Exclude' })}
                                       size="sm"
                                     />
                                   </div>
@@ -538,30 +547,30 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
               return renderItemsTable(items);
             })()}
             {isUpdatingSelections && (
-              <p className="mt-2 text-sm text-muted-foreground">Saving optional item selections...</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t('quotes.detail.savingSelections', { defaultValue: 'Saving optional item selections...' })}</p>
             )}
           </div>
 
           {/* Totals */}
           <div className="grid gap-2 md:max-w-sm md:ml-auto">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">{t('quotes.detail.subtotal', { defaultValue: 'Subtotal' })}</span>
               <span>{formatCurrency(quote.subtotal || 0, quote.currency_code)}</span>
             </div>
             {(quote.discount_total ?? 0) !== 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Discounts</span>
+                <span className="text-muted-foreground">{t('quotes.detail.discounts', { defaultValue: 'Discounts' })}</span>
                 <span>-{formatCurrency(Math.abs(quote.discount_total || 0), quote.currency_code)}</span>
               </div>
             )}
             {(quote.tax ?? 0) !== 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Tax</span>
+                <span className="text-muted-foreground">{t('quotes.detail.tax', { defaultValue: 'Tax' })}</span>
                 <span>{formatCurrency(quote.tax || 0, quote.currency_code)}</span>
               </div>
             )}
             <div className="flex items-center justify-between border-t pt-2 text-sm font-semibold">
-              <span>Total</span>
+              <span>{t('quotes.detail.total', { defaultValue: 'Total' })}</span>
               <span>{formatCurrency(quote.total_amount || 0, quote.currency_code)}</span>
             </div>
           </div>
@@ -571,11 +580,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-4">
               <div className="sm:flex sm:items-center sm:justify-between sm:gap-4">
                 <div>
-                  <p className="text-sm font-medium">Ready to respond?</p>
+                  <p className="text-sm font-medium">{t('quotes.detail.readyToRespond', { defaultValue: 'Ready to respond?' })}</p>
                   <p className="text-sm text-muted-foreground">
                     {hasOptionalItems
-                      ? 'Accepting sends your optional-item selections to the MSP for review.'
-                      : 'Accepting confirms this quote. The MSP will proceed accordingly.'}
+                      ? t('quotes.detail.acceptHintOptional', { defaultValue: 'Accepting sends your optional-item selections to the MSP for review.' })
+                      : t('quotes.detail.acceptHint', { defaultValue: 'Accepting confirms this quote. The MSP will proceed accordingly.' })}
                   </p>
                 </div>
                 <Button
@@ -584,19 +593,19 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                   disabled={isUpdatingSelections || isSubmittingDecision}
                   className="mt-2 sm:mt-0"
                 >
-                  Accept Quote
+                  {t('quotes.detail.acceptQuote', { defaultValue: 'Accept Quote' })}
                 </Button>
               </div>
 
               <div className="space-y-2 rounded-md border bg-background/70 p-3">
                 <p className="text-sm text-muted-foreground">
-                  If this quote doesn't work for you, leave a comment so the MSP can revise it.
+                  {t('quotes.detail.rejectPrompt', { defaultValue: "If this quote doesn't work for you, leave a comment so the MSP can revise it." })}
                 </p>
                 <TextArea
                   id="reject-quote-comment"
                   value={rejectionReason}
                   onChange={(event) => setRejectionReason(event.target.value)}
-                  placeholder="Tell the MSP what needs to change"
+                  placeholder={t('quotes.detail.rejectPlaceholder', { defaultValue: 'Tell the MSP what needs to change' })}
                   disabled={isUpdatingSelections || isSubmittingDecision}
                   className="min-h-24"
                 />
@@ -606,14 +615,14 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                     variant="outline"
                     onClick={() => {
                       if (!rejectionReason.trim()) {
-                        setDecisionError('Please add a short comment before rejecting this quote.');
+                        setDecisionError(t('quotes.detail.rejectCommentRequired', { defaultValue: 'Please add a short comment before rejecting this quote.' }));
                         return;
                       }
                       setConfirmAction('reject');
                     }}
                     disabled={isUpdatingSelections || isSubmittingDecision}
                   >
-                    Reject Quote
+                    {t('quotes.detail.rejectQuote', { defaultValue: 'Reject Quote' })}
                   </Button>
                 </div>
               </div>
@@ -622,19 +631,23 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
 
           {quote.status === 'accepted' && (
             <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm">
-              Quote accepted{hasOptionalItems ? '. Your selected optional items have been shared with the MSP.' : '.'}
+              {hasOptionalItems
+                ? t('quotes.detail.acceptedBannerOptional', { defaultValue: 'Quote accepted. Your selected optional items have been shared with the MSP.' })
+                : t('quotes.detail.acceptedBanner', { defaultValue: 'Quote accepted.' })}
             </div>
           )}
 
           {quote.status === 'rejected' && (
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm">
-              Quote rejected{quote.rejection_reason ? `: ${quote.rejection_reason}` : '.'}
+              {quote.rejection_reason
+                ? t('quotes.detail.rejectedBannerWithReason', { defaultValue: 'Quote rejected: {{reason}}', reason: quote.rejection_reason })
+                : t('quotes.detail.rejectedBanner', { defaultValue: 'Quote rejected.' })}
             </div>
           )}
 
           {quote.terms_and_conditions && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Terms & Conditions</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.terms_and_conditions}</p>
             </div>
           )}
@@ -646,7 +659,9 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
         id="quote-confirm-dialog"
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction === 'accept' ? 'Accept Quote' : 'Reject Quote'}
+        title={confirmAction === 'accept'
+          ? t('quotes.detail.acceptQuote', { defaultValue: 'Accept Quote' })
+          : t('quotes.detail.rejectQuote', { defaultValue: 'Reject Quote' })}
         footer={
           <div className="flex justify-end space-x-2">
             <Button
@@ -655,14 +670,18 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
               onClick={() => setConfirmAction(null)}
               disabled={isSubmittingDecision}
             >
-              Cancel
+              {t('quotes.detail.cancel', { defaultValue: 'Cancel' })}
             </Button>
             <Button
               id="quote-confirm-submit"
               onClick={() => void (confirmAction === 'accept' ? handleAcceptQuote() : handleRejectQuote())}
               disabled={isSubmittingDecision}
             >
-              {isSubmittingDecision ? 'Submitting...' : confirmAction === 'accept' ? 'Accept' : 'Reject'}
+              {isSubmittingDecision
+                ? t('quotes.detail.submitting', { defaultValue: 'Submitting...' })
+                : confirmAction === 'accept'
+                  ? t('quotes.detail.accept', { defaultValue: 'Accept' })
+                  : t('quotes.detail.reject', { defaultValue: 'Reject' })}
             </Button>
           </div>
         }
@@ -671,9 +690,9 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
           <DialogDescription>
             {confirmAction === 'accept'
               ? hasOptionalItems
-                ? 'Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.'
-                : 'Accept this quote? The MSP will be notified.'
-              : 'Reject this quote and send your comment to the MSP? They may revise and resend the quote.'}
+                ? t('quotes.detail.confirmAcceptOptional', { defaultValue: 'Accept this quote with your current optional item selections? Your choices will be sent to the MSP for review.' })
+                : t('quotes.detail.confirmAccept', { defaultValue: 'Accept this quote? The MSP will be notified.' })
+              : t('quotes.detail.confirmReject', { defaultValue: 'Reject this quote and send your comment to the MSP? They may revise and resend the quote.' })}
           </DialogDescription>
         </DialogContent>
       </Dialog>

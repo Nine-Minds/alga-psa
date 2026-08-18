@@ -75,7 +75,7 @@ These images link directly to screenshots from the [AlgaPSA feature tour](https:
   </thead>
   <tbody>
     <tr>
-      <td width="50%"><img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="AlgaPSA ticketing screen" width="420"></td>
+      <td width="50%"><img src="https://www.nineminds.com/imported-media/create-and-view-ticket.webm" alt="AlgaPSA ticketing screen" width="420"></td>
       <td width="50%"><img src="https://www.nineminds.com/imported-media/Billing%20Cycles.png" alt="AlgaPSA billing dashboard" width="420"></td>
     </tr>
     <tr>

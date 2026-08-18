@@ -83,6 +83,21 @@ registry. Sales-order HTML pins call the service's private
 `getSalesOrderHtml` (the exact method `generatePDF` uses) because no public
 preview seam exists for that family.
 
+### `documentLanguageResolution`
+Three clients seeded one per tier of the recipient-language hierarchy —
+billing contact's portal user prefers `fr`; client default `pt_BR` (stored
+region-tagged, as imports write it); nothing set (tenant default `de`) — then
+`resolveRenderLocale` walked against the real rows, the migration-seeded
+standard quote template rendered through the real engine with the shipped
+locale packs (DEVIS / COTAÇÃO / ANGEBOT, no translation mocks), and the
+client-portal download leg: `downloadClientQuotePdf` under a real
+role_permissions billing/read grant → real Chromium PDF → the filed document
+records `rendered_locale`, is client-visible, and the document authorizer
+admits the owning client's portal user through the quote association while
+returning null for a sibling client's user. The shared tenant's
+`settings.defaultLocale` is restored in afterAll so sibling journeys keep
+rendering in their expected English default.
+
 ### `portalServiceRequestToTicket`
 Client-portal user submits a published service-request form → the ticket-only
 execution provider creates the ticket at submit time (`created_ticket_id`

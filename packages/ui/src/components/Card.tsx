@@ -98,7 +98,7 @@ export function CardFooter({
   return (
     <div
       ref={ref}
-      className={`flex items-center p-6 pt-0 ${className ?? ''}`}
+      className={`flex items-center gap-2 p-6 pt-0 ${className ?? ''}`}
       {...props}
     />
   );

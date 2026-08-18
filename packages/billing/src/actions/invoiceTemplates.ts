@@ -28,6 +28,8 @@ import {
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { createPDFGenerationService } from '../services/pdfGenerationService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
@@ -393,6 +395,13 @@ export const getInvoiceAnnotations = withAuth(async (
  */
 type RenderTemplateOnServerOptions = {
     templateAst?: TemplateAst | null;
+    /**
+     * The invoice this render is addressed to. When supplied the preview is
+     * localized for its recipient, exactly as the generated PDF is — an MSP
+     * checking an invoice before sending must see the client's language, not
+     * their own. Sample-data previews omit it and stay in the authored labels.
+     */
+    invoiceId?: string | null;
 };
 
 export const renderTemplateOnServer = withAuth(async (
@@ -435,7 +444,15 @@ export const renderTemplateOnServer = withAuth(async (
           invoiceData as unknown as Record<string, unknown>,
           { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
         );
-        const { html, css } = await renderEvaluatedTemplateAst(templateAst, evaluation);
+        // Same seam the PDF path uses, so the on-screen preview is authoritative.
+        const invoiceId = options?.invoiceId ?? null;
+        const recipientLocale = invoiceId
+          ? await createPDFGenerationService(tenant).resolveRenderLocale({ invoiceId })
+          : null;
+        const localized = await localizeTemplateAstForLocale(templateAst, recipientLocale);
+        const { html, css } = await renderEvaluatedTemplateAst(localized.ast, evaluation, {
+          locale: localized.locale,
+        });
 
         console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);
         return { html, css };

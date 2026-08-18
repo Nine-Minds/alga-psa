@@ -3,6 +3,7 @@ import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
+  TemplateI18nText,
   TemplateNode,
   TemplateNodeStyleRef,
   TemplateStyleDeclaration,
@@ -10,6 +11,7 @@ import type {
   TemplateValueFormat,
 } from '@alga-psa/types';
 import { formatTemplateFieldValue } from './fieldFormatting';
+import { templateI18nTextToString } from './i18nLabels';
 
 // Last-resort currency when template metadata carries an invalid code.
 const FALLBACK_CURRENCY = 'USD';
@@ -42,6 +44,14 @@ type RenderContext = {
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * A display string as it should appear. Key references are normally resolved
+ * upstream by `resolveTemplateAstI18n`; anything that reaches the renderer
+ * unresolved renders as its authored English rather than leaking a raw key.
+ */
+const displayText = (value: TemplateI18nText | undefined): string | undefined =>
+  value === undefined ? undefined : templateI18nTextToString(value);
 
 const parsePxLength = (value: unknown): number | undefined => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -342,6 +352,8 @@ const resolveExpressionValue = (
 
       return resolvedValue;
     }
+    case 'i18n':
+      return expression.defaultValue;
     case 'template': {
       const args = expression.args ?? {};
       return expression.template.replace(/\{\{([a-zA-Z0-9_.-]+)\}\}/g, (_match, name: string) => {
@@ -430,7 +442,7 @@ const renderNode = (
     case 'section':
       return (
         <section key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
-          {node.title ? <h2>{node.title}</h2> : null}
+          {displayText(node.title) ? <h2>{displayText(node.title)}</h2> : null}
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </section>
       );
@@ -503,9 +515,9 @@ const renderNode = (
       const { className: labelClassName, style: labelStyle } = resolveStyleRef(node.labelStyle);
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={fieldStyle}>
-          {node.label ? (
+          {displayText(node.label) ? (
             <span className={labelClassName || undefined} style={labelStyle}>
-              {node.label}:{' '}
+              {displayText(node.label)}:{' '}
             </span>
           ) : null}
           <span style={formattedValue.multiline ? { whiteSpace: 'pre-line' } : undefined}>
@@ -549,7 +561,7 @@ const renderNode = (
                     className={colClassName || undefined}
                     style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                   >
-                    {column.header ?? column.id}
+                    {displayText(column.header) ?? column.id}
                   </th>
                 );
               })}
@@ -558,7 +570,7 @@ const renderNode = (
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={node.columns.length}>{node.emptyStateText ?? ''}</td>
+                <td colSpan={node.columns.length}>{displayText(node.emptyStateText) ?? ''}</td>
               </tr>
             ) : (
               rows.map((row, index) => (
@@ -600,7 +612,7 @@ const renderNode = (
                     className={colClassName || undefined}
                     style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
                   >
-                    {column.header ?? column.id}
+                    {displayText(column.header) ?? column.id}
                   </th>
                 );
               })}
@@ -609,7 +621,7 @@ const renderNode = (
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={node.columns.length}>{node.emptyStateText ?? ''}</td>
+                <td colSpan={node.columns.length}>{displayText(node.emptyStateText) ?? ''}</td>
               </tr>
             ) : (
               rows.map((row, index) => (
@@ -651,7 +663,7 @@ const renderNode = (
             return (
               <div key={row.id} className="ast-totals-row" style={mergedRowStyle}>
                 <span className={joinClassNames('ast-totals-label', labelClassName) || undefined} style={labelStyle}>
-                  {row.label}
+                  {displayText(row.label)}
                 </span>
                 <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
               </div>
@@ -668,15 +680,20 @@ const renderNode = (
 export interface TemplateReactRendererProps {
   ast: TemplateAst;
   evaluation: TemplateEvaluationResult;
+  /**
+   * The recipient's locale. Wins over `metadata.locale` for numbers, dates and
+   * currency so formatting never diverges from the language of the labels.
+   */
+  locale?: string;
 }
 
-export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation }) => {
+export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation, locale: localeOverride }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
     invoiceRecordUntyped.currencyCode ?? invoiceRecordUntyped.currency_code ?? ast.metadata?.currencyCode ?? 'USD'
   );
-  const locale = String(ast.metadata?.locale ?? 'en-US');
+  const locale = String(localeOverride ?? ast.metadata?.locale ?? 'en-US');
   const rootDocumentStyleOverride = resolveSyntheticRootDocumentStyle(ast);
 
   return (
@@ -691,16 +708,24 @@ export interface TemplateRenderOutput {
   css: string;
 }
 
+export interface TemplateRenderOptions {
+  /** The recipient's locale; falls back to `metadata.locale`, then `en-US`. */
+  locale?: string;
+}
+
 export const renderEvaluatedTemplateAst = async (
   ast: TemplateAst,
-  evaluation: TemplateEvaluationResult
+  evaluation: TemplateEvaluationResult,
+  options: TemplateRenderOptions = {}
 ): Promise<TemplateRenderOutput> => {
   // Next.js app router disallows static imports from react-dom/server in shared modules.
   // Use a dynamic import so this renderer remains server-only at call sites.
   const { renderToStaticMarkup } = await import('react-dom/server');
   const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
-    html: renderToStaticMarkup(<TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} />),
+    html: renderToStaticMarkup(
+      <TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} locale={options.locale} />
+    ),
     css: buildAstCss(normalizedAst),
   };
 };

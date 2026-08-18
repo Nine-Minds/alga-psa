@@ -1716,7 +1716,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Granica szablonu"
+      "templateBoundary": "Granica szablonu",
+      "translatableHint": "Tłumaczone automatycznie na język odbiorcy. Po edycji tekstu zostanie użyty Twój własny stały tekst."
     },
     "dragOverlay": {
       "component": "Komponent"

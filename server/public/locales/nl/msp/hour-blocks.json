@@ -42,38 +42,45 @@
     "expiringSoon": "Vervalt over {{count}} dagen"
   },
   "sell": {
-    "title": "Urenblok verkopen",
-    "serviceLabel": "Service",
-    "servicePlaceholder": "Selecteer een service",
-    "rateLabel": "Tarief per uur ({{currency}})",
+    "expirationLabel": "Vervaldatum (optioneel)",
     "hoursLabel": "Uren",
     "hoursPlaceholder": "bijv. 10",
-    "expirationLabel": "Vervaldatum (optioneel)",
-    "scopeLabel": "Dekking — services die dit blok dekt (leeg = alle werkzaamheden)",
+    "hoursRequired": "Voer het aantal uren in.",
+    "invoiceError": "Kan de factuur voor de aankoop van het blok niet maken.",
+    "noServices": "Geen services beschikbaar",
     "notesLabel": "Notities (optioneel)",
-    "totalLabel": "Totaal",
+    "rateLabel": "Tarief per uur ({{currency}})",
+    "rateRequired": "Voer een geldig tarief in.",
+    "scopeLabel": "Dekking — services die dit blok dekt (leeg = alle werkzaamheden)",
+    "serviceLabel": "Service",
+    "servicePlaceholder": "Selecteer een service",
+    "serviceRequired": "Selecteer een service.",
     "submit": "Conceptfactuur maken",
     "submitted": "Conceptfactuur {{invoiceNumber}} gemaakt. Finaliseer deze om het blok te activeren.",
-    "invoiceError": "Kan de factuur voor de aankoop van het blok niet maken."
+    "title": "Urenblok verkopen",
+    "totalLabel": "Totaal"
   },
   "grant": {
-    "title": "Urenblok toekennen",
+    "error": "Kan het urenblok niet toekennen.",
+    "granted": "Urenblok toegekend.",
     "reasonLabel": "Reden",
     "reasonPlaceholder": "Waarom worden deze uren toegekend?",
+    "reasonRequired": "Een reden is verplicht.",
     "submit": "Blok toekennen",
-    "granted": "Urenblok toegekend.",
-    "error": "Kan het urenblok niet toekennen."
+    "title": "Urenblok toekennen"
   },
   "adjust": {
-    "title": "Resterende uren aanpassen",
+    "adjusted": "Urenblok aangepast.",
     "blockLabel": "Blok",
     "currentRemaining": "Momenteel {{hours}} uur resterend",
     "deltaLabel": "Wijziging in uren (positief voegt toe, negatief haalt af)",
+    "deltaRequired": "Voer een urenwijziging in die niet nul is.",
+    "error": "Kan het urenblok niet aanpassen.",
     "reasonLabel": "Reden",
     "reasonPlaceholder": "Verplicht",
+    "reasonRequired": "Een reden is verplicht.",
     "submit": "Aanpassen",
-    "adjusted": "Urenblok aangepast.",
-    "error": "Kan het urenblok niet aanpassen."
+    "title": "Resterende uren aanpassen"
   },
   "expiration": {
     "title": "Vervaldatum bewerken",
@@ -84,13 +91,14 @@
     "error": "Kan de vervaldatum niet bijwerken."
   },
   "void": {
-    "title": "Urenblok ongeldig maken",
     "confirm": "Dit blok ongeldig maken? Dit kan niet ongedaan worden gemaakt.",
+    "error": "Kan het urenblok niet ongeldig maken.",
     "reasonLabel": "Reden",
     "reasonPlaceholder": "Verplicht",
+    "reasonRequired": "Een reden is verplicht.",
     "submit": "Blok ongeldig maken",
-    "voided": "Urenblok ongeldig gemaakt.",
-    "error": "Kan het urenblok niet ongeldig maken."
+    "title": "Urenblok ongeldig maken",
+    "voided": "Urenblok ongeldig gemaakt."
   },
   "detail": {
     "title": "Details van het urenblok",
@@ -119,5 +127,15 @@
     "voidedLabel": "Ongeldig gemaakt",
     "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
     "unknownUser": "Systeem"
+  },
+  "expire": {
+    "error": "Kan het urenblok niet laten vervallen.",
+    "expired": "Urenblok vervallen.",
+    "reasonLabel": "Reden",
+    "reasonPlaceholder": "Verplicht",
+    "reasonRequired": "Een reden is verplicht.",
+    "remaining": "{{hours}} uur ongebruikt gaat verloren.",
+    "submit": "Blok laten vervallen",
+    "title": "Urenblok laten vervallen"
   }
 }

@@ -39,6 +39,8 @@ import {
   QUOTE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../../invoice-designer/preview/quoteSampleScenarios';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
 
 interface QuoteDocumentTemplateEditorProps {
   templateId: string | null;
@@ -59,7 +61,7 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
 };
 
 const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = ({ templateId, standardCode, onBack }) => {
-  const { t } = useTranslation('msp/quotes');
+  const { t, i18n } = useTranslation('msp/quotes');
   const { formatDate } = useFormatters();
   const router = useRouter();
   const handleBack = () => onBack ? onBack() : router.push('/msp/billing?tab=quote-templates');
@@ -93,6 +95,10 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     Awaited<ReturnType<typeof runAuthoritativeQuoteTemplatePreview>> | null
   >(null);
   const [manualRunNonce, setManualRunNonce] = useState(0);
+  // Preview the quote in the language a client would receive it in.
+  const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
+    () => normalizeLocale(i18n.language) ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale),
+  );
   const debouncedNodes = useDebouncedValue(designerNodes, 140);
   const previewRunSequence = useRef(0);
 
@@ -301,6 +307,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     runAuthoritativeQuoteTemplatePreview({
       workspace: previewWorkspace as any,
       quoteData: previewData,
+      locale: previewLocale,
     })
       .then((result) => {
         if (requestId !== previewRunSequence.current) return;
@@ -315,7 +322,7 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         setAuthoritativePreview(null);
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
-  }, [editorTab, manualRunNonce, previewData, previewWorkspace, t, visualWorkspaceTab]);
+  }, [editorTab, manualRunNonce, previewData, previewLocale, previewWorkspace, t, visualWorkspaceTab]);
 
   const handleSave = async () => {
     if (!template) return;
@@ -522,15 +529,23 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                         {displayStatuses.renderStatus}
                       </span>
                     </div>
-                    <Button
-                      id="quote-designer-preview-rerun-button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!previewData || isPreviewRunning}
-                      onClick={() => setManualRunNonce((value) => value + 1)}
-                    >
-                      {t('templateEditor.actions.rerun', { defaultValue: 'Re-run' })}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <PreviewLocaleSelect
+                        id="quote-designer-preview-locale-select"
+                        value={previewLocale}
+                        onChange={setPreviewLocale}
+                        disabled={!previewData || isPreviewRunning}
+                      />
+                      <Button
+                        id="quote-designer-preview-rerun-button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!previewData || isPreviewRunning}
+                        onClick={() => setManualRunNonce((value) => value + 1)}
+                      >
+                        {t('templateEditor.actions.rerun', { defaultValue: 'Re-run' })}
+                      </Button>
+                    </div>
                   </div>
 
                   {authoritativePreview?.compile.status === 'error' && (

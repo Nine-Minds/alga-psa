@@ -7,6 +7,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { TemplateAst } from '@alga-psa/types';
+import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import {
   actionError,
   permissionError,
@@ -186,7 +187,13 @@ export const deleteDocumentTemplate = withAuth(
  * the editor shows (same evaluate + render path as the live document).
  */
 export const runAuthoritativeTemplatePreview = withAuth(
-  async (user, { tenant: _tenant }, documentType: string, templateAst: TemplateAst): Promise<PreviewDocumentTemplateResult> => {
+  async (
+    user,
+    { tenant: _tenant },
+    documentType: string,
+    templateAst: TemplateAst,
+    locale?: string,
+  ): Promise<PreviewDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
       return permissionError('Permission denied: cannot preview document templates');
     }
@@ -199,7 +206,11 @@ export const runAuthoritativeTemplatePreview = withAuth(
     const evaluation = evaluateTemplateAst(templateAst, sample, {
       bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
     });
-    const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, { title: 'Preview', knex });
+    const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
+      title: 'Preview',
+      knex,
+      locale: normalizeLocale(locale) ?? undefined,
+    });
     return { html };
   },
 );

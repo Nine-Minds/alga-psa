@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server

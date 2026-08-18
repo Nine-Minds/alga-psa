@@ -162,6 +162,12 @@
       "notes": "Usa filtro come sostantivo e filtra/filtrare per l'azione. Rimuovi filtri è la formulazione usata per azzerarli."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "evasione",
+      "notes": "Usa evasione per la colonna fulfillment degli ordini di vendita e per la relativa etichetta sui documenti cliente; consegna indica il recapito fisico."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "settore",
@@ -270,6 +276,12 @@
       "notes": "Usa preventivo (maschile) per offerte commerciali. Citazione è un falso amico presente soprattutto in msp/opportunities e in alcuni errori msp/quotes; non va usato per sales quote."
     },
     {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "tariffa",
+      "notes": "Usa tariffa per la colonna della tariffa nei documenti cliente e riserva prezzo unitario a unit price: le due etichette devono restare distinte quando un documento mostra entrambe le colonne."
+    },
+    {
       "id": "report",
       "en-term": "report",
       "term": "report",
@@ -348,6 +360,12 @@
       "notes": "Usa attività, invariabile, per task di progetto, workflow, inbox e checklist. Task compare nel namespace dispatch e in alcune notifiche, ma non è il termine generale preferito."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "imposta",
+      "notes": "Usa il termine neutro imposta nei documenti cliente; nomina l’IVA solo quando si intende specificamente quell’imposta."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "tecnico",
@@ -376,6 +394,12 @@
       "en-term": "timesheet",
       "term": "foglio ore",
       "notes": "Usa foglio ore per il gruppo di voci fatturabili inviato o approvato. Foglio presenze indica il registro presenze/timbrature e va riservato ai flussi di presenza. Revisione avversaria 2026-08."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "prezzo unitario",
+      "notes": "Usa prezzo unitario per la colonna del prezzo per unità e tariffa per rate; non scambiare i due termini."
     },
     {
       "id": "user",

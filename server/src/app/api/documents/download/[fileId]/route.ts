@@ -230,8 +230,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
           return NextResponse.json({ error: 'Document has no associated file.' }, { status: 404 });
         }
 
-        // Use the file_id from the document, not the document_id
-        return await downloadDocument(document.file_id);
+        // Use the file_id from the document, not the document_id.
+        // downloadDocument returns a typed error object (not a Response) on
+        // expected failures; passing that through crashes the route handler.
+        const download = await downloadDocument(document.file_id);
+        if (download instanceof Response) {
+          return download;
+        }
+        logger.warn(`Document download denied or failed. Document ID: ${lookupId}`, download);
+        const isPermissionError =
+          typeof download === 'object' && download !== null && 'permissionError' in download;
+        return NextResponse.json(
+          { error: isPermissionError ? 'Forbidden' : 'Failed to download document.' },
+          { status: isPermissionError ? 403 : 500 }
+        );
       } catch (error) {
         logger.error(`Error in standard download route for document ${lookupId}:`, error);
         return new Response(JSON.stringify({ error: 'Failed to download document.' }), {

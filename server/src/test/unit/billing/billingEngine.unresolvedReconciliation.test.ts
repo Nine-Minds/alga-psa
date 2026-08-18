@@ -102,9 +102,10 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
-    // The loader selects COALESCE(tickets, projects).billing_profile_id, which
-    // is how step 4 of the chain becomes reachable for unresolved work.
-    (billingEngine as any).knex.raw = vi.fn((sql: string) => sql);
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     // Candidates rather than bare ids: the reconcile path narrows a
     // multi-candidate field by the work item's billing profile (F135), so the
@@ -152,9 +153,10 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
-    // The loader selects COALESCE(tickets, projects).billing_profile_id, which
-    // is how step 4 of the chain becomes reachable for unresolved work.
-    (billingEngine as any).knex.raw = vi.fn((sql: string) => sql);
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     vi.spyOn(billingEngine as any, 'getEligibleContractLinesForServiceAtDate')
       .mockResolvedValue([eligibleLine('line-2')]);
@@ -237,9 +239,10 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
-    // The loader selects COALESCE(tickets, projects).billing_profile_id, which
-    // is how step 4 of the chain becomes reachable for unresolved work.
-    (billingEngine as any).knex.raw = vi.fn((sql: string) => sql);
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
     const eligibleSpy = vi.spyOn(billingEngine as any, 'getEligibleContractLinesForServiceAtDate');
     eligibleSpy.mockImplementation(async ({ serviceId }: { serviceId: string }) => {

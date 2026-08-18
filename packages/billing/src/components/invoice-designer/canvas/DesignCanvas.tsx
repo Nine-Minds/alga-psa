@@ -7,6 +7,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
+import { Languages } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { parseTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import { AlignmentGuide } from '../utils/layout';
@@ -16,6 +18,11 @@ import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './prev
 import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
+import {
+  isColumnHeaderTranslatable,
+  isNodeLabelTranslatable,
+  isNodeTextTranslatable,
+} from '../utils/translatableText';
 import { inferHeightMode } from '../utils/sizeModes';
 import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
@@ -27,6 +34,29 @@ import {
 } from '../preview/previewBindings';
 
 type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
+
+const translatableHint = (t?: DesignerTranslator): string =>
+  t?.('designer.canvas.translatableHint', {
+    defaultValue: "Translated automatically into the recipient's language. Edit it to use your own fixed text instead.",
+  }) ?? "Translated automatically into the recipient's language. Edit it to use your own fixed text instead.";
+
+/**
+ * Marks canvas text that renders in the recipient's language, so authored
+ * literals and auto-translated labels stop looking identical. Rendered only
+ * while the value still round-trips as a translation key — editing the text
+ * freezes it to a literal and the mark disappears.
+ */
+const TranslatableMark: React.FC<{ t?: DesignerTranslator }> = ({ t }) => (
+  <Tooltip content={translatableHint(t)} delayDuration={200} className="max-w-[240px]">
+    <span
+      aria-label={translatableHint(t)}
+      className="mr-1 inline-flex shrink-0 translate-y-[1px] cursor-help items-center rounded-sm border border-sky-200 bg-sky-50 p-px text-sky-600 dark:border-sky-800 dark:bg-sky-900/40 dark:text-sky-300"
+      data-automation-id="designer-translatable-mark"
+    >
+      <Languages aria-hidden className="h-[9px] w-[9px]" />
+    </span>
+  </Tooltip>
+);
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -605,6 +635,7 @@ const renderTablePreview = (
                 index < visibleColumns.length - 1 && ['border-r', INVOICE_BORDER_SUBTLE_COLOR_CLASS]
             )}
           >
+            {isColumnHeaderTranslatable(column) && <TranslatableMark t={options.t} />}
             {String(column.header ?? column.key ?? 'Column')}
           </span>
         ))}
@@ -747,6 +778,16 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
             isPlaceholder: true,
           };
         }
+        if (isNodeTextTranslatable(node)) {
+          return {
+            content: (
+              <span>
+                <TranslatableMark t={t} />
+                {content}
+              </span>
+            ),
+          };
+        }
         return { content };
       }
 
@@ -802,6 +843,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
                 style={labelInlineStyle}
                 title={totalsRow.label}
               >
+                {isNodeLabelTranslatable(node) && <TranslatableMark t={t} />}
                 {totalsRow.label}
               </span>
               <span
@@ -1004,6 +1046,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
   const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
+  const isFieldLabelTranslatable = isFieldNode && isNodeLabelTranslatable(node);
   const labelInlineStyle = isFieldNode ? resolveLabelInlineStyle(metadata) : undefined;
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
@@ -1254,6 +1297,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                   style={labelInlineStyle}
                   title={fieldDisplayLabel}
                 >
+                  {isFieldLabelTranslatable && <TranslatableMark t={t} />}
                   {fieldDisplayLabel}:
                 </span>
               )}

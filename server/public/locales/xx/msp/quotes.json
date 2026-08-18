@@ -153,7 +153,8 @@
       "previewPdf": "11111",
       "backToQuotes": "11111",
       "backToTemplates": "11111",
-      "convertToSalesOrder": "11111"
+      "convertToSalesOrder": "11111",
+      "convert": "11111"
     },
     "headings": {
       "editQuote": "11111",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "11111",
       "conversionMode": "11111",
-      "excludedItems": "11111",
       "excludedFromConversion": "11111",
+      "excludedItems": "11111",
       "invoiceItems": "11111",
       "itemMappingPreview": "11111",
+      "onSalesOrder": "11111 {{soNumber}} 11111",
       "quoteTotal": "11111",
+      "salesOrderItems": "11111",
       "statusAfterConversion": "11111",
       "willBecomeContractLines": "11111",
-      "willBecomeInvoiceCharges": "11111"
+      "willBecomeInvoiceCharges": "11111",
+      "willBecomeSalesOrderLines": "11111"
     },
     "empty": {
       "contractItems": "11111",
-      "invoiceItems": "11111"
+      "invoiceItems": "11111",
+      "invoiceItemsOnSalesOrder": "11111 {{soNumber}} 11111",
+      "salesOrderItems": "11111"
     },
     "summary": {
+      "billedViaSalesOrder": "11111 {{soNumber}} 11111",
       "converted": "11111",
       "discount": "11111",
       "fixed": "11111",
@@ -628,10 +635,11 @@
       "title": "11111"
     },
     "salesOrder": {
-      "successTitle": "11111 {{number}} 11111",
-      "successBody": "11111",
+      "existingNote": "11111 {{soNumber}} 11111",
+      "note": "11111",
       "openSalesOrders": "11111",
-      "note": "11111"
+      "successBody": "11111",
+      "successTitle": "11111 {{number}} 11111"
     }
   },
   "quoteApproval": {

@@ -2545,6 +2545,29 @@
           "updateContact": "11111",
           "updateAutoSync": "11111"
         }
+      },
+      "deviceSync": {
+        "title": "11111",
+        "description": "11111",
+        "enabledLabel": "11111",
+        "intervalLabel": "11111",
+        "intervalHelp": "11111 {{min}} 11111 {{max}} 11111",
+        "intervalInvalid": "11111 {{min}} 11111 {{max}} 11111",
+        "lastScheduledRun": "11111 {{time}} 11111",
+        "lastScheduledRunNever": "11111",
+        "lastAnySync": "11111 {{time}} 11111",
+        "lastAnySyncNever": "11111",
+        "lastSyncError": "11111 {{error}} 11111",
+        "actions": {
+          "save": "11111",
+          "saving": "11111"
+        },
+        "success": {
+          "saved": "11111"
+        },
+        "errors": {
+          "saveFailed": "11111"
+        }
       }
     },
     "sso": {

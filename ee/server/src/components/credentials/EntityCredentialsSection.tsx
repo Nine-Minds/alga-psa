@@ -117,7 +117,7 @@ function CredentialTileRow({
             aria-label={t('credentials.table.restrictedOn')}
           />
         )}
-        <span className="ml-auto flex items-center flex-shrink-0">
+        <span className="ml-auto flex items-center gap-1 flex-shrink-0">
           {item.externalUrl && (
             <a
               id={`${rowId}-open`}

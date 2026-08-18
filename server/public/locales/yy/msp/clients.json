@@ -933,7 +933,7 @@
         "restricted": "55555",
         "placeholder": "55555"
       },
-      "inheritedRestricted": "55555",
+      "inheritedRestricted": "55555 {{types}} 55555",
       "restricted": "55555"
     },
     "order": {

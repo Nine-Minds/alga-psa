@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, HourBlocksSectionRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ClientBillingProfileSpendRenderProps, ClientUnresolvedChargeReviewRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
@@ -11,6 +11,7 @@ import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
+import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
 import { SpendByBillingProfileReport } from '@alga-psa/billing/components/billing-dashboard/reports/SpendByBillingProfileReport';
@@ -51,6 +52,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
   const renderClientAssets = useCallback(
     (props: ClientAssetsRenderProps) => (
       <ClientAssets clientId={props.clientId} />
+    ),
+    []
+  );
+
+  const renderHourBlocksSection = useCallback(
+    (props: HourBlocksSectionRenderProps) => (
+      <HourBlocksSection clientId={props.clientId} currencyCode={props.currencyCode} />
     ),
     []
   );
@@ -163,6 +171,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderHourBlocksSection,
       renderClientOpportunities,
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,
@@ -181,6 +190,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderHourBlocksSection,
       renderClientOpportunities,
       renderClientBillingProfileSpend,
       renderClientUnresolvedChargeReview,

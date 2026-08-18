@@ -322,7 +322,9 @@ export default function BillingOverview() {
     let isMounted = true;
     
     const loadHoursByService = async () => {
-      if (currentTab === 'Hours by Service') {
+      // Compare against the tab id: currentTab carries ids, and the display
+      // label is translated so it can never be a stable comparison key.
+      if (currentTab === 'hours-by-service') {
         setIsHoursLoading(true);
         try {
           const data = await getClientHoursByService({
@@ -356,7 +358,7 @@ export default function BillingOverview() {
     let isMounted = true;
     
     const loadUsageMetrics = async () => {
-      if (currentTab === 'Usage Metrics') {
+      if (currentTab === 'usage-metrics') {
         setIsUsageMetricsLoading(true);
         try {
           const data = await getClientUsageMetrics({
@@ -533,7 +535,7 @@ export default function BillingOverview() {
       // Add Hours by Service tab
       tabsArray.push({
         id: 'hours-by-service',
-        label: 'Hours by Service',
+        label: t('tabs.hoursByService', 'Hours by Service'),
         content: (
           <div id="hours-service-tab">
             <HoursByServiceTab
@@ -549,7 +551,7 @@ export default function BillingOverview() {
       // Add Usage Metrics tab
       tabsArray.push({
         id: 'usage-metrics',
-        label: 'Usage Metrics',
+        label: t('tabs.usageMetrics', 'Usage Metrics'),
         content: (
           <div id="usage-metrics-tab">
             <UsageMetricsTab
