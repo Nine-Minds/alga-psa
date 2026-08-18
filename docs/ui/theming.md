@@ -51,7 +51,11 @@ In dark mode, 50-900 scales are **inverted** (low=dark, high=light), so `bg-prim
 
 **Third-party name collisions**: Radix Themes declares its own `--color-background` on `.radix-themes` and Mantine paints `body` with `--mantine-color-body`. `globals.css` hands our triple back with `html .radix-themes { --color-background: var(--alga-color-background) }` and out-specifies Mantine with `html body`. Keep both — without them every `rgb(var(--color-background))` inside the app resolves to an invalid color and the page ground falls back to a vendor gray.
 
-**Elevation in dark pairs**: `--color-background` < `--color-border-50` < `--color-border-100` (the shell ground, since the MSP shell uses `bg-gray-100`) < `--color-card` < `--color-border-200`. Cards have to sit above the ground or they read as holes. Slate (verbatim legacy palette) and High contrast (flat, border-separated) are the documented exceptions.
+**Elevation in dark pairs**: `--color-background` < `--color-border-50` < `--color-border-100` < `--color-card` < `--color-border-200`. Cards have to sit above the ground or they read as holes. Slate (verbatim legacy palette) and High contrast (flat, border-separated) are the documented exceptions.
+
+**Shell ground**: `--color-app-ground` and the `.app-shell-ground` class paint the MSP shell, the scrolling body and `<main>` (and the portal shell). Light resolves it to `--color-border-100`, dark to `--color-background`. Use the class rather than `bg-gray-100` on shell-level elements — when the three disagreed, the `pt-2 px-3` gutter between the side menu and the content showed as a stripe.
+
+**Skeletons**: `.skeleton-fill` / `.skeleton-fill-strong` (backed by `--color-skeleton` / `--color-skeleton-strong`) instead of palette grays. `bg-gray-300` has no dark shim, so a placeholder written that way glares on dark cards; High contrast overrides the tokens with achromatic grays because its neutral ramp jumps straight to the emphasized border color.
 
 ## Provider Chain
 
@@ -79,6 +83,8 @@ Used in: MSP layout (`server/src/app/layout.tsx`), client portal (`server/src/ap
 ## Branding + Dark Mode
 
 Tenant colors override primary/secondary CSS vars. Dark mode inverts shade scales (`packages/tenancy/src/lib/generateBrandingStyles.ts`): `invertShades()` flips 50<->900, 100<->800, etc. (400/500 stay). FOUC prevention: server-side `<style id="server-tenant-branding-styles">` injection for client-portal routes.
+
+**Previewing a pair**: Settings → Appearance drives a draft, not the tenant. Selecting a pair sets `data-theme-pair` on `<html>` (and, for the custom pair, appends `<style id="preview-tenant-theme-styles">` after the server-rendered block) so the whole app repaints, but nothing is persisted until Apply. The tab registers with `UnsavedChangesProvider`, and unmounting restores the saved pair.
 
 **Portal theme opt-in**: `branding.portalFollowsTheme` (Settings → Client Portal) makes `generateBrandingStyles` return `''`, so the portal wears the tenant's theme pair instead of the brand accents — the cached `computedStyles`, the SSR injection and the `BrandingProvider` fallback all go through that one generator. The Enterprise MSP shell asks for `{ surface: 'msp' }`, which ignores the opt-in because it has its own white-label switch. Absent/false is the default and reproduces the pre-existing CSS byte for byte.
 
