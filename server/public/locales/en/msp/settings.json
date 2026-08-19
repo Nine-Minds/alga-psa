@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Permission denied: Client portal admin access is required.",
         "otherClientUsers": "Permission denied: Cannot manage users for another client."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Client portal users cannot manage custom domains.",
+      "noPermission": "You do not have permission to manage client portal settings.",
+      "required": "Domain is required.",
+      "length": "Domain must be between 3 and 253 characters.",
+      "charset": "Domain may only include letters, numbers, hyphens, and dots.",
+      "needsDot": "Domain must include at least one dot.",
+      "notCanonicalHost": "Please choose a domain other than the canonical host.",
+      "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
+      "notApplianceHost": "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
+      "nothingToRetry": "No failed custom domain registration to retry.",
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }
   }
 }

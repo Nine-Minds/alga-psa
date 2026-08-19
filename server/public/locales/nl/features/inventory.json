@@ -449,6 +449,7 @@
       "useDropShipFlow": "Gebruik de dropship-ontvangstprocedure om deze regel uit te voeren."
     },
     "ghostUsage": {
+      "aiRequiresEe": "AI-triage vereist Enterprise Edition en de add-on AI-assistent.",
       "reviewNotFound": "Beoordeling niet gevonden. Deze is mogelijk al bijgewerkt. Vernieuw de pagina en probeer het opnieuw."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Toestemming geweigerd: leesrechten voor voorraad vereist",
       "inventoryUpdate": "Toestemming geweigerd: bijwerkrechten voor voorraad vereist",
+      "settingsUpdate": "Toestemming geweigerd: bijwerkrechten voor instellingen vereist",
       "vendorCreate": "Toestemming geweigerd: aanmaakrechten voor leveranciers vereist",
       "vendorUpdate": "Toestemming geweigerd: bijwerkrechten voor leveranciers vereist"
     },

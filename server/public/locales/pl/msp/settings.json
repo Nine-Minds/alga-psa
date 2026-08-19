@@ -3145,6 +3145,19 @@
         "portalAdminRequired": "Odmowa uprawnień: wymagany jest dostęp administratora portalu klienta.",
         "otherClientUsers": "Odmowa uprawnień: nie można zarządzać użytkownikami innego klienta."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Użytkownicy portalu klienta nie mogą zarządzać domenami niestandardowymi.",
+      "noPermission": "Nie masz uprawnień do zarządzania ustawieniami portalu klienta.",
+      "required": "Domena jest wymagana.",
+      "length": "Domena musi mieć od 3 do 253 znaków.",
+      "charset": "Domena może zawierać wyłącznie litery, cyfry, myślniki i kropki.",
+      "needsDot": "Domena musi zawierać co najmniej jedną kropkę.",
+      "notCanonicalHost": "Wybierz domenę inną niż host kanoniczny.",
+      "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
+      "notApplianceHost": "Wybierz domenę inną niż główny host tego urządzenia. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
+      "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
     }
   }
 }

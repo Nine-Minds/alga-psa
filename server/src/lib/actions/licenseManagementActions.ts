@@ -52,9 +52,9 @@ async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermiss
   // Localized here rather than at withAuth: these actions run their own guard, so
   // the payload never passes through the wrapper that would otherwise translate it.
   const user = await getCurrentUser();
-  if (!user) return localizeActionError(permissionError('Unauthorized. Sign in to manage licensing.'));
+  if (!user) return localizeActionError(permissionError('Unauthorized. Sign in to manage licensing.', 'msp/licensing:errors.notSignedIn'));
   const allowed = await hasPermission(user, 'account_management', 'read');
-  if (!allowed) return localizeActionError(permissionError('Permission denied: account_management read required'));
+  if (!allowed) return localizeActionError(permissionError('Permission denied: account_management read required', 'msp/licensing:errors.accountManagementRead'));
   // Returned so callers can bind license checks to this install's tenant.
   return user;
 }

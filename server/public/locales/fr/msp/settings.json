@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Autorisation refusée : un accès administrateur au portail client est requis.",
         "otherClientUsers": "Autorisation refusée : impossible de gérer les utilisateurs d’un autre client."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Les utilisateurs du portail client ne peuvent pas gérer de domaines personnalisés.",
+      "noPermission": "Vous n'avez pas l'autorisation de gérer les paramètres du portail client.",
+      "required": "Le domaine est obligatoire.",
+      "length": "Le domaine doit comporter entre 3 et 253 caractères.",
+      "charset": "Le domaine ne peut contenir que des lettres, des chiffres, des tirets et des points.",
+      "needsDot": "Le domaine doit contenir au moins un point.",
+      "notCanonicalHost": "Veuillez choisir un domaine différent de l'hôte canonique.",
+      "noLeadingTrailingDot": "Le domaine ne peut pas commencer ni se terminer par un point.",
+      "notApplianceHost": "Choisissez un domaine différent de l'hôte principal de cet appareil. Le domaine personnalisé du portail doit être un autre nom d'hôte que votre proxy inverse redirige ici.",
+      "nothingToRetry": "Aucun enregistrement de domaine personnalisé en échec à relancer.",
+      "retryOnlyAfterFailure": "La relance n'est possible qu'après un enregistrement en échec."
     }
   }
 }

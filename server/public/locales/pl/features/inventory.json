@@ -449,6 +449,7 @@
       "useDropShipFlow": "Użyj procesu przyjęcia dostawy bezpośredniej, aby zrealizować tę linię."
     },
     "ghostUsage": {
+      "aiRequiresEe": "Segregacja z użyciem AI wymaga Enterprise Edition oraz dodatku Asystent AI.",
       "reviewNotFound": "Nie znaleziono przeglądu. Mógł już zostać zaktualizowany. Odśwież stronę i spróbuj ponownie."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Odmowa uprawnień: wymagane uprawnienie odczytu magazynu",
       "inventoryUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji magazynu",
+      "settingsUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji ustawień",
       "vendorCreate": "Odmowa uprawnień: wymagane uprawnienie tworzenia dostawców",
       "vendorUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji dostawców"
     },

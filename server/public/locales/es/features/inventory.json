@@ -449,6 +449,7 @@
       "useDropShipFlow": "Use el flujo de recepción de envío directo para cumplir esta línea."
     },
     "ghostUsage": {
+      "aiRequiresEe": "La clasificación con IA requiere Enterprise Edition y el complemento Asistente de IA.",
       "reviewNotFound": "Revisión no encontrada. Puede que ya se haya actualizado. Actualice la página e inténtelo de nuevo."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Permiso denegado: se requiere permiso de lectura de inventario",
       "inventoryUpdate": "Permiso denegado: se requiere permiso de actualización de inventario",
+      "settingsUpdate": "Permiso denegado: se requiere permiso de actualización de la configuración",
       "vendorCreate": "Permiso denegado: se requiere permiso de creación de proveedores",
       "vendorUpdate": "Permiso denegado: se requiere permiso de actualización de proveedores"
     },

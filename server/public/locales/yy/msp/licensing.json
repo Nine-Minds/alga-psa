@@ -353,5 +353,9 @@
       "startTrial": "55555",
       "refreshLicense": "55555"
     }
+  },
+  "errors": {
+    "notSignedIn": "55555",
+    "accountManagementRead": "55555"
   }
 }

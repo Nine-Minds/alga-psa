@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Autorizzazione negata: è richiesto l’accesso come amministratore del portale clienti.",
         "otherClientUsers": "Autorizzazione negata: impossibile gestire gli utenti di un altro cliente."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Gli utenti del portale clienti non possono gestire domini personalizzati.",
+      "noPermission": "Non hai l'autorizzazione per gestire le impostazioni del portale clienti.",
+      "required": "Il dominio è obbligatorio.",
+      "length": "Il dominio deve avere una lunghezza compresa tra 3 e 253 caratteri.",
+      "charset": "Il dominio può contenere solo lettere, numeri, trattini e punti.",
+      "needsDot": "Il dominio deve contenere almeno un punto.",
+      "notCanonicalHost": "Scegli un dominio diverso dall'host canonico.",
+      "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
+      "notApplianceHost": "Scegli un dominio diverso dall'host principale di questa appliance. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
+      "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
+      "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
     }
   }
 }

@@ -449,6 +449,7 @@
       "useDropShipFlow": "Usa il flusso di ricezione drop-ship per evadere questa riga."
     },
     "ghostUsage": {
+      "aiRequiresEe": "La selezione tramite IA richiede la Enterprise Edition e il componente aggiuntivo Assistente IA.",
       "reviewNotFound": "Verifica non trovata. Potrebbe essere già stata aggiornata. Aggiorna la pagina e riprova."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la giacenza",
       "inventoryUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per la giacenza",
+      "settingsUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per le impostazioni",
       "vendorCreate": "Autorizzazione negata: è richiesta l'autorizzazione di creazione per i fornitori",
       "vendorUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per i fornitori"
     },

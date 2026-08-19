@@ -449,6 +449,7 @@
       "useDropShipFlow": "Use the drop-ship receipt flow to fulfill this line."
     },
     "ghostUsage": {
+      "aiRequiresEe": "AI triage requires Enterprise Edition and the AI Assistant add-on.",
       "reviewNotFound": "Review not found. It may have already been updated. Refresh and try again."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Permission denied: inventory read required",
       "inventoryUpdate": "Permission denied: inventory update required",
+      "settingsUpdate": "Permission denied: settings update required",
       "vendorCreate": "Permission denied: vendor create required",
       "vendorUpdate": "Permission denied: vendor update required"
     },

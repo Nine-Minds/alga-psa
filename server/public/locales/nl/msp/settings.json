@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Toestemming geweigerd: beheerderstoegang tot het klantenportaal is vereist.",
         "otherClientUsers": "Toestemming geweigerd: gebruikers van een andere klant kunnen niet worden beheerd."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Gebruikers van het klantportaal kunnen geen aangepaste domeinen beheren.",
+      "noPermission": "U hebt geen rechten om de instellingen van het klantportaal te beheren.",
+      "required": "Het domein is verplicht.",
+      "length": "Het domein moet tussen 3 en 253 tekens lang zijn.",
+      "charset": "Het domein mag alleen letters, cijfers, koppeltekens en punten bevatten.",
+      "needsDot": "Het domein moet minstens één punt bevatten.",
+      "notCanonicalHost": "Kies een ander domein dan de canonieke host.",
+      "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
+      "notApplianceHost": "Kies een ander domein dan de primaire host van dit apparaat. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
+      "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
     }
   }
 }

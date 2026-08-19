@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "55555",
         "otherClientUsers": "55555"
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "55555",
+      "noPermission": "55555",
+      "required": "55555",
+      "length": "55555",
+      "charset": "55555",
+      "needsDot": "55555",
+      "notCanonicalHost": "55555",
+      "noLeadingTrailingDot": "55555",
+      "notApplianceHost": "55555",
+      "nothingToRetry": "55555",
+      "retryOnlyAfterFailure": "55555"
     }
   }
 }

@@ -449,6 +449,7 @@
       "useDropShipFlow": "Use o fluxo de recebimento de entrega direta para atender esta linha."
     },
     "ghostUsage": {
+      "aiRequiresEe": "A triagem por IA requer o Enterprise Edition e o complemento Assistente de IA.",
       "reviewNotFound": "Revisão não encontrada. Pode já ter sido atualizada. Atualize a página e tente novamente."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Permissão negada: é necessária permissão de leitura de estoque",
       "inventoryUpdate": "Permissão negada: é necessária permissão de atualização de estoque",
+      "settingsUpdate": "Permissão negada: é necessária permissão de atualização das configurações",
       "vendorCreate": "Permissão negada: é necessária permissão de criação de fornecedores",
       "vendorUpdate": "Permissão negada: é necessária permissão de atualização de fornecedores"
     },

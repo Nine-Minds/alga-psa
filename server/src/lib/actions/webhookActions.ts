@@ -210,7 +210,7 @@ async function getWebhookPermissionError(user: IUserWithRoles, _action: string):
     return null;
   }
 
-  return permissionError('Permission denied: Admin access required');
+  return permissionError('Permission denied: Admin access required', 'msp/profile:errors.permissions.adminRequired');
 }
 
 function normalizeCustomHeaders(headers: Record<string, string>): Record<string, string> {
@@ -250,7 +250,10 @@ export const upsertWebhook = withAuth(async (
   const parsedInput = webhookInputSchema.safeParse(input);
   if (!parsedInput.success) {
     const firstIssue = parsedInput.error.issues[0];
-    return actionError(firstIssue?.message ?? 'Check the webhook settings and try again.');
+    // The Zod message has no catalogue entry yet (category 2), so it stays keyless.
+    return firstIssue?.message
+      ? actionError(firstIssue.message)
+      : actionError('Check the webhook settings and try again.', 'msp/profile:errors.webhooks.invalidInput');
   }
 
   const parsed = parsedInput.data;
@@ -281,7 +284,7 @@ export const upsertWebhook = withAuth(async (
     });
 
     if (!updated) {
-      return actionError('Webhook not found.');
+      return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
     }
 
     return {
@@ -325,7 +328,7 @@ export const setWebhookActiveState = withAuth(async (
   }
   const updated = await webhookModel.update(webhookId, user.tenant, { isActive });
   if (!updated) {
-    return actionError('Webhook not found.');
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
   }
 
   return mapWebhookView(updated);
@@ -342,7 +345,7 @@ export const deleteWebhook = withAuth(async (
   }
   const deleted = await webhookModel.delete(webhookId, user.tenant);
   if (!deleted) {
-    return actionError('Webhook not found.');
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
   }
 
   return { deleted: true, webhookId };
@@ -363,7 +366,7 @@ export const rotateWebhookSecret = withAuth(async (
   });
 
   if (!updated) {
-    return actionError('Webhook not found.');
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
   }
 
   return {
@@ -391,12 +394,12 @@ export const sendWebhookTest = withAuth(async (
   }
   const webhook = await webhookModel.getById(webhookId, user.tenant);
   if (!webhook) {
-    return actionError('Webhook not found.');
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
   }
 
   const signingSecret = await webhookModel.getSigningSecret(webhookId, user.tenant);
   if (!signingSecret) {
-    return actionError('Webhook signing secret is missing. Rotate the signing secret and try again.');
+    return actionError('Webhook signing secret is missing. Rotate the signing secret and try again.', 'msp/profile:errors.webhooks.signingSecretMissing');
   }
 
   const eventId = crypto.randomUUID();
@@ -502,16 +505,16 @@ export const retryWebhookDelivery = withAuth(async (
 
   const delivery = await webhookModel.getDeliveryById(user.tenant, webhookId, deliveryId);
   if (!delivery) {
-    return actionError('Delivery not found.');
+    return actionError('Delivery not found.', 'msp/profile:errors.webhooks.deliveryNotFound');
   }
 
   if (delivery.isTest) {
-    return actionError('Test deliveries cannot be retried.');
+    return actionError('Test deliveries cannot be retried.', 'msp/profile:errors.webhooks.testNotRetryable');
   }
 
   const parsedEnvelope = deliveryEnvelopeSchema.safeParse(delivery.requestBody);
   if (!parsedEnvelope.success) {
-    return actionError('This delivery cannot be retried because the stored payload is invalid.');
+    return actionError('This delivery cannot be retried because the stored payload is invalid.', 'msp/profile:errors.webhooks.payloadInvalid');
   }
 
   const queue = WebhookDeliveryQueue.getInstance();
@@ -545,7 +548,7 @@ export const getWebhookSummary = withAuth(async (
   }
   const webhook = await webhookModel.getById(webhookId, user.tenant);
   if (!webhook) {
-    return actionError('Webhook not found.');
+    return actionError('Webhook not found.', 'msp/profile:errors.webhooks.notFound');
   }
 
   return mapWebhookView(webhook);

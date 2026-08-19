@@ -449,6 +449,7 @@
       "useDropShipFlow": "Utilisez le flux de réception en livraison directe pour livrer cette ligne."
     },
     "ghostUsage": {
+      "aiRequiresEe": "Le tri par IA nécessite l'édition Enterprise et le module complémentaire Assistant IA.",
       "reviewNotFound": "Vérification introuvable. Elle a peut-être déjà été mise à jour. Actualisez la page et réessayez."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Autorisation refusée : autorisation de lecture sur les stocks requise",
       "inventoryUpdate": "Autorisation refusée : autorisation de mise à jour sur les stocks requise",
+      "settingsUpdate": "Autorisation refusée : autorisation de mise à jour sur les paramètres requise",
       "vendorCreate": "Autorisation refusée : autorisation de création sur les fournisseurs requise",
       "vendorUpdate": "Autorisation refusée : autorisation de mise à jour sur les fournisseurs requise"
     },

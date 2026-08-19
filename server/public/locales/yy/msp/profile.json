@@ -764,6 +764,42 @@
   "errors": {
     "sessions": {
       "viewAllPermission": "55555"
+    },
+    "permissions": {
+      "adminRequired": "55555"
+    },
+    "apiKeys": {
+      "internalOnly": "55555",
+      "configInternalOnly": "55555",
+      "invalidExpiration": "55555",
+      "notFound": "55555",
+      "rateLimitsPositive": "55555"
+    },
+    "webhooks": {
+      "invalidInput": "55555",
+      "notFound": "55555",
+      "signingSecretMissing": "55555",
+      "deliveryNotFound": "55555",
+      "testNotRetryable": "55555",
+      "payloadInvalid": "55555"
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "55555",
+        "read": "55555",
+        "update": "55555",
+        "delete": "55555",
+        "replay": "55555"
+      },
+      "invalidInput": "55555",
+      "workflowRequiresEe": "55555",
+      "notFound": "55555",
+      "duplicateSlug": "55555 {{slug}} 55555",
+      "noSecretToRotate": "55555",
+      "unsupportedAuthType": "55555 {{authType}} 55555",
+      "deliveryNotFound": "55555",
+      "replayMissingConfig": "55555",
+      "notFoundOrInactive": "55555"
     }
   }
 }

@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Berechtigung verweigert: Administratorzugriff für das Kundenportal ist erforderlich.",
         "otherClientUsers": "Berechtigung verweigert: Benutzer eines anderen Kunden können nicht verwaltet werden."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Benutzer des Kundenportals können keine eigenen Domains verwalten.",
+      "noPermission": "Sie haben keine Berechtigung, die Einstellungen des Kundenportals zu verwalten.",
+      "required": "Die Domain ist erforderlich.",
+      "length": "Die Domain muss zwischen 3 und 253 Zeichen lang sein.",
+      "charset": "Die Domain darf nur Buchstaben, Ziffern, Bindestriche und Punkte enthalten.",
+      "needsDot": "Die Domain muss mindestens einen Punkt enthalten.",
+      "notCanonicalHost": "Bitte wählen Sie eine andere Domain als den kanonischen Host.",
+      "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
+      "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieser Appliance. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
+      "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
+      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
   }
 }

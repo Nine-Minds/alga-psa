@@ -764,6 +764,42 @@
   "errors": {
     "sessions": {
       "viewAllPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, alle Sitzungen anzuzeigen."
+    },
+    "permissions": {
+      "adminRequired": "Berechtigung verweigert: Administratorzugriff erforderlich"
+    },
+    "apiKeys": {
+      "internalOnly": "Berechtigung verweigert: Die Verwaltung von API-Schlüsseln ist internen Benutzern vorbehalten",
+      "configInternalOnly": "Berechtigung verweigert: Die Konfiguration von API-Schlüsseln ist internen Benutzern vorbehalten",
+      "invalidExpiration": "Wählen Sie ein gültiges Ablaufdatum für diesen API-Schlüssel.",
+      "notFound": "API-Schlüssel nicht gefunden.",
+      "rateLimitsPositive": "API-Ratenbegrenzungen müssen positive ganze Zahlen sein."
+    },
+    "webhooks": {
+      "invalidInput": "Überprüfen Sie die Webhook-Einstellungen und versuchen Sie es erneut.",
+      "notFound": "Webhook nicht gefunden.",
+      "signingSecretMissing": "Das Signaturgeheimnis des Webhooks fehlt. Erneuern Sie das Signaturgeheimnis und versuchen Sie es erneut.",
+      "deliveryNotFound": "Zustellung nicht gefunden.",
+      "testNotRetryable": "Testzustellungen können nicht wiederholt werden.",
+      "payloadInvalid": "Diese Zustellung kann nicht wiederholt werden, da die gespeicherte Nutzlast ungültig ist."
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Berechtigung verweigert: Erstellungsberechtigung für eingehende Webhooks erforderlich",
+        "read": "Berechtigung verweigert: Leseberechtigung für eingehende Webhooks erforderlich",
+        "update": "Berechtigung verweigert: Aktualisierungsberechtigung für eingehende Webhooks erforderlich",
+        "delete": "Berechtigung verweigert: Löschberechtigung für eingehende Webhooks erforderlich",
+        "replay": "Berechtigung verweigert: Wiederholungsberechtigung für eingehende Webhooks erforderlich"
+      },
+      "invalidInput": "Überprüfen Sie die Einstellungen des eingehenden Webhooks und versuchen Sie es erneut.",
+      "workflowRequiresEe": "Workflow-Handler für eingehende Webhooks erfordern die Enterprise-Edition.",
+      "notFound": "Eingehender Webhook nicht gefunden.",
+      "duplicateSlug": "Der Slug „{{slug}}“ für eingehende Webhooks existiert bereits.",
+      "noSecretToRotate": "Eingehende Webhooks mit IP-Zulassungsliste haben kein Geheimnis, das erneuert werden könnte.",
+      "unsupportedAuthType": "Nicht unterstützter Authentifizierungstyp für eingehende Webhooks: {{authType}}.",
+      "deliveryNotFound": "Eingehende Zustellung nicht gefunden.",
+      "replayMissingConfig": "Eine eingehende Zustellung kann ohne Webhook-Konfiguration nicht wiederholt werden.",
+      "notFoundOrInactive": "Eingehender Webhook nicht gefunden oder inaktiv."
     }
   }
 }

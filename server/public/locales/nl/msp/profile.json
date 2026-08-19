@@ -764,6 +764,42 @@
   "errors": {
     "sessions": {
       "viewAllPermission": "Toestemming geweigerd: u hebt geen rechten om alle sessies te bekijken."
+    },
+    "permissions": {
+      "adminRequired": "Toestemming geweigerd: beheerderstoegang vereist"
+    },
+    "apiKeys": {
+      "internalOnly": "Toestemming geweigerd: het beheer van API-sleutels is voorbehouden aan interne gebruikers",
+      "configInternalOnly": "Toestemming geweigerd: de configuratie van API-sleutels is voorbehouden aan interne gebruikers",
+      "invalidExpiration": "Kies een geldige vervaldatum voor deze API-sleutel.",
+      "notFound": "API-sleutel niet gevonden.",
+      "rateLimitsPositive": "API-limieten moeten positieve gehele getallen zijn."
+    },
+    "webhooks": {
+      "invalidInput": "Controleer de webhook-instellingen en probeer het opnieuw.",
+      "notFound": "Webhook niet gevonden.",
+      "signingSecretMissing": "Het ondertekeningsgeheim van de webhook ontbreekt. Roteer het ondertekeningsgeheim en probeer het opnieuw.",
+      "deliveryNotFound": "Aflevering niet gevonden.",
+      "testNotRetryable": "Testafleveringen kunnen niet opnieuw worden geprobeerd.",
+      "payloadInvalid": "Deze aflevering kan niet opnieuw worden geprobeerd omdat de opgeslagen payload ongeldig is."
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Toestemming geweigerd: aanmaakrechten voor inkomende webhooks vereist",
+        "read": "Toestemming geweigerd: leesrechten voor inkomende webhooks vereist",
+        "update": "Toestemming geweigerd: bijwerkrechten voor inkomende webhooks vereist",
+        "delete": "Toestemming geweigerd: verwijderrechten voor inkomende webhooks vereist",
+        "replay": "Toestemming geweigerd: rechten om inkomende webhooks opnieuw af te spelen vereist"
+      },
+      "invalidInput": "Controleer de instellingen van de inkomende webhook en probeer het opnieuw.",
+      "workflowRequiresEe": "Workflow-handlers voor inkomende webhooks vereisen de Enterprise-editie.",
+      "notFound": "Inkomende webhook niet gevonden.",
+      "duplicateSlug": "De slug '{{slug}}' voor inkomende webhooks bestaat al.",
+      "noSecretToRotate": "Inkomende webhooks met een IP-toelatingslijst hebben geen geheim om te roteren.",
+      "unsupportedAuthType": "Niet-ondersteund authenticatietype voor inkomende webhook: {{authType}}.",
+      "deliveryNotFound": "Inkomende aflevering niet gevonden.",
+      "replayMissingConfig": "Een inkomende aflevering kan niet opnieuw worden afgespeeld zonder webhook-configuratie.",
+      "notFoundOrInactive": "Inkomende webhook niet gevonden of inactief."
     }
   }
 }

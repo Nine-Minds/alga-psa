@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Permiso denegado: se requiere acceso de administrador del portal del cliente.",
         "otherClientUsers": "Permiso denegado: no se pueden gestionar usuarios de otro cliente."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Los usuarios del portal de clientes no pueden gestionar dominios personalizados.",
+      "noPermission": "No tiene permiso para gestionar la configuración del portal de clientes.",
+      "required": "El dominio es obligatorio.",
+      "length": "El dominio debe tener entre 3 y 253 caracteres.",
+      "charset": "El dominio solo puede incluir letras, números, guiones y puntos.",
+      "needsDot": "El dominio debe incluir al menos un punto.",
+      "notCanonicalHost": "Elija un dominio distinto del host canónico.",
+      "noLeadingTrailingDot": "El dominio no puede empezar ni terminar con un punto.",
+      "notApplianceHost": "Elija un dominio distinto del host principal de este dispositivo. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
+      "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
+      "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
     }
   }
 }

@@ -449,6 +449,7 @@
       "useDropShipFlow": "11111"
     },
     "ghostUsage": {
+      "aiRequiresEe": "11111",
       "reviewNotFound": "11111"
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "11111",
       "inventoryUpdate": "11111",
+      "settingsUpdate": "11111",
       "vendorCreate": "11111",
       "vendorUpdate": "11111"
     },

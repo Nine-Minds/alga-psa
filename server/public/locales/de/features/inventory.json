@@ -449,6 +449,7 @@
       "useDropShipFlow": "Verwenden Sie den Direktversand-Wareneingang, um diese Position auszuliefern."
     },
     "ghostUsage": {
+      "aiRequiresEe": "Die KI-Triage erfordert die Enterprise Edition und das Add-on KI-Assistent.",
       "reviewNotFound": "Prüfung nicht gefunden. Sie wurde möglicherweise bereits aktualisiert. Aktualisieren Sie die Seite und versuchen Sie es erneut."
     },
     "kits": {
@@ -517,6 +518,7 @@
     "permissions": {
       "inventoryRead": "Berechtigung verweigert: Leseberechtigung für den Bestand erforderlich",
       "inventoryUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für den Bestand erforderlich",
+      "settingsUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für die Einstellungen erforderlich",
       "vendorCreate": "Berechtigung verweigert: Erstellungsberechtigung für Lieferanten erforderlich",
       "vendorUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Lieferanten erforderlich"
     },

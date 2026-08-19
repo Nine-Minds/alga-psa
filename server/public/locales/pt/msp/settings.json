@@ -3117,6 +3117,19 @@
         "portalAdminRequired": "Permissão negada: é necessário acesso de administrador do portal do cliente.",
         "otherClientUsers": "Permissão negada: não é possível gerenciar usuários de outro cliente."
       }
+    },
+    "clientPortalDomain": {
+      "portalUsersNotAllowed": "Usuários do portal do cliente não podem gerenciar domínios personalizados.",
+      "noPermission": "Você não tem permissão para gerenciar as configurações do portal do cliente.",
+      "required": "O domínio é obrigatório.",
+      "length": "O domínio deve ter entre 3 e 253 caracteres.",
+      "charset": "O domínio pode conter apenas letras, números, hifens e pontos.",
+      "needsDot": "O domínio deve incluir pelo menos um ponto.",
+      "notCanonicalHost": "Escolha um domínio diferente do host canônico.",
+      "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
+      "notApplianceHost": "Escolha um domínio diferente do host principal deste appliance. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
+      "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
+      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
   }
 }
