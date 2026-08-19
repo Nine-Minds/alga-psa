@@ -39,6 +39,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
+import { clientCoreFieldsSchema, parseSubmittedFields } from '@alga-psa/validation';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -47,6 +48,22 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'annual_revenue',
 ]);
 type ClientUpdateActionError = ActionMessageError | ActionPermissionError;
+
+/**
+ * Structural validation, applied on write only. Existing rows are grandfathered:
+ * the schema sees the submitted payload, so a partial update to an already-invalid
+ * record still succeeds on the fields the caller did not touch.
+ */
+function applyClientStructuralSchema<T extends Record<string, any>>(
+  payload: T,
+  options: { partial: boolean }
+): { ok: true; data: T } | { ok: false; error: string } {
+  const result = parseSubmittedFields(clientCoreFieldsSchema, payload, { partial: options.partial });
+  if (!result.success) {
+    return { ok: false, error: result.error ?? 'Invalid client data' };
+  }
+  return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -248,9 +265,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
   }
 
   const isClientPortalUpdate = isClientPortalUser(user);
-  const permittedUpdateData = isClientPortalUpdate
+  const sanitizedUpdateData = isClientPortalUpdate
     ? sanitizeClientPortalClientUpdate(updateData)
     : updateData;
+
+  const structural = applyClientStructuralSchema(sanitizedUpdateData, { partial: true });
+  if (!structural.ok) {
+    return actionError(structural.error);
+  }
+  const permittedUpdateData = structural.data;
 
   const { knex: db } = await createTenantKnex();
 
@@ -483,10 +506,15 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
   try {
     await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
 
+    const structural = applyClientStructuralSchema(client, { partial: false });
+    if (!structural.ok) {
+      return { success: false, error: structural.error };
+    }
+
     const { knex } = await createTenantKnex();
 
     // Ensure website field is synchronized between properties.website and url
-    const clientData = { ...client };
+    const clientData = { ...structural.data };
 
     // If properties.website exists but url doesn't, sync url from properties.website
     if (clientData.properties?.website && !clientData.url) {
@@ -1592,6 +1620,18 @@ export const importClientsFromCSV = withAuth(async (
     try {
       if (!clientData.client_name) {
         throw new Error('Client name is required');
+      }
+
+      // Same structural authority as the server actions and the REST API, applied
+      // per row so one bad row cannot take the import down with it.
+      const rowStructural = parseSubmittedFields(clientCoreFieldsSchema, {
+        client_name: clientData.client_name,
+        url: clientData.website || clientData.url,
+        email: clientData.email,
+        phone_no: clientData.phone_number
+      });
+      if (!rowStructural.success) {
+        throw new Error(rowStructural.error ?? 'Invalid client data');
       }
 
       let savedClient: IClient | undefined;

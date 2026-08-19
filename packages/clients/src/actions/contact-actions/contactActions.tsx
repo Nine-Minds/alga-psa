@@ -44,6 +44,49 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { contactCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
+
+/**
+ * Structural validation, applied on write only. Only submitted keys are checked, so
+ * a partial update to a contact that predates the schema still succeeds on the
+ * fields the caller did not touch.
+ */
+function applyContactStructuralSchema<T extends Record<string, any>>(
+  payload: T,
+  options: { partial: boolean }
+): { ok: true; data: T } | { ok: false; error: string } {
+  const result = parseSubmittedFields(contactCoreFieldsSchema, payload, { partial: options.partial });
+  if (!result.success) {
+    return { ok: false, error: `VALIDATION_ERROR: ${result.error ?? 'Invalid contact data'}` };
+  }
+  return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
+}
+
+/** Structural check for the phone rows a contact carries, each in its own column pair. */
+function validateContactPhoneRows(
+  rows: Array<{ phone_number?: string | null; extension?: string | null }> | undefined
+): string | null {
+  if (!rows?.length) {
+    return null;
+  }
+
+  for (const [index, row] of rows.entries()) {
+    const normalized = normalizePhone(row.phone_number, { extension: row.extension });
+    if (normalized.error) {
+      return `VALIDATION_ERROR: Phone ${index + 1}: ${
+        normalized.error === 'extensionInvalid'
+          ? 'Please enter a valid phone extension'
+          : 'Please enter a valid phone number'
+      }`;
+    }
+    row.phone_number = normalized.value;
+    if (normalized.extension) {
+      row.extension = normalized.extension;
+    }
+  }
+
+  return null;
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -578,9 +621,22 @@ export const addContact = withAuth(async (
   try {
     await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
 
+    const structural = applyContactStructuralSchema(
+      { full_name: contactData.full_name || '', email: contactData.email ?? undefined },
+      { partial: false }
+    );
+    if (!structural.ok) {
+      throw new Error(structural.error);
+    }
+
+    const phoneRowError = validateContactPhoneRows(contactData.phone_numbers);
+    if (phoneRowError) {
+      throw new Error(phoneRowError);
+    }
+
     const createInput: CreateContactInput = {
-      full_name: contactData.full_name || '',
-      email: contactData.email ?? undefined,
+      full_name: structural.data.full_name,
+      email: structural.data.email ?? undefined,
       primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
       primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
       additional_email_addresses: contactData.additional_email_addresses ?? [],
@@ -728,12 +784,20 @@ export const updateContact = withAuth(async (
 
     await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
 
-    if (contactData.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(contactData.email.trim())) {
-        throw new Error('VALIDATION_ERROR: Please enter a valid email address');
-      }
+    // Structural rules come from the shared schema; only submitted keys are checked
+    // so a partial update to a legacy contact does not fail on untouched fields.
+    const structural = applyContactStructuralSchema(contactData, { partial: true });
+    if (!structural.ok) {
+      throw new Error(structural.error);
+    }
+    Object.assign(contactData, structural.data);
 
+    const phoneRowError = validateContactPhoneRows(contactData.phone_numbers);
+    if (phoneRowError) {
+      throw new Error(phoneRowError);
+    }
+
+    if (contactData.email) {
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, 'contacts', tenant)
           .where({ email: contactData.email!.trim().toLowerCase() })
@@ -1505,9 +1569,24 @@ export const createClientContact = withAuth(async (
     const { knex } = await createTenantKnex();
     await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', knex);
 
+    const structural = applyContactStructuralSchema(
+      { full_name: fullName, email },
+      { partial: false }
+    );
+    if (!structural.ok) {
+      throw new Error(structural.error);
+    }
+    const normalizedEmail = structural.data.email ?? '';
+
+    const resolvedPhoneNumbers = phoneNumbers ?? buildDefaultPhoneNumbers(phone);
+    const phoneRowError = validateContactPhoneRows(resolvedPhoneNumbers);
+    if (phoneRowError) {
+      throw new Error(phoneRowError);
+    }
+
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await tenantScopedTable(trx, 'contacts', tenant)
-        .where({ email: email.trim().toLowerCase() })
+        .where({ email: normalizedEmail })
         .first();
     });
 
@@ -1517,12 +1596,12 @@ export const createClientContact = withAuth(async (
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return ContactModel.createContact({
-        full_name: fullName,
-        email: email.trim().toLowerCase(),
+        full_name: structural.data.full_name,
+        email: normalizedEmail,
         primary_email_canonical_type: primaryEmailCanonicalType,
         primary_email_custom_type: primaryEmailCustomType,
         additional_email_addresses: additionalEmailAddresses ?? [],
-        phone_numbers: phoneNumbers ?? buildDefaultPhoneNumbers(phone),
+        phone_numbers: resolvedPhoneNumbers,
         client_id: clientId,
         role: jobTitle,
       }, tenant, trx);
