@@ -155,6 +155,58 @@ describe('PhoneInput', () => {
     expect(onChange).toHaveBeenLastCalledWith('+44 20794609589');
   });
 
+  it('homes a number typed before the country list arrived', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    // QuickAddContact fetches countries when the dialog opens, so the first row can
+    // render before any dial code is known while the picker already reads "+1".
+    const { rerender } = render(
+      <PhoneInput id="racing-phone" label="Phone Number" value="" onChange={onChange} countryCode="US" countries={[]} />
+    );
+
+    await user.type(screen.getByRole('textbox'), '2125550147');
+    expect(onChange).toHaveBeenLastCalledWith('2125550147');
+
+    rerender(
+      <PhoneInput
+        id="racing-phone"
+        label="Phone Number"
+        value="2125550147"
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith('+1 2125550147');
+  });
+
+  it('leaves a stored dial-code-less number alone', () => {
+    const onChange = vi.fn();
+
+    // Legacy rows are grandfathered: re-homing one here would mark it changed and
+    // block an edit to some unrelated field on the same record.
+    const { rerender } = render(
+      <PhoneInput id="legacy-phone" label="Phone Number" value="555-123-4567" onChange={onChange} countryCode="US" countries={[]} />
+    );
+
+    rerender(
+      <PhoneInput
+        id="legacy-phone"
+        label="Phone Number"
+        value="555-123-4567"
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('clears to empty rather than to a bare dial code', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

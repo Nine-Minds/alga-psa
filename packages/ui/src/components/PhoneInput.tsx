@@ -134,6 +134,8 @@ export const PhoneInput = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isExternalUpdate, setIsExternalUpdate] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  /** A number typed while the dial code was still unknown, awaiting one. */
+  const awaitingDialCodeRef = useRef<string | null>(null);
   const resolvedCountryCode = countryCode || getDefaultCountryFromLocale();
   const currentCountry = countries?.find(c => c.code === resolvedCountryCode);
   const resolvedPhoneCode = normalizePhoneCode(phoneCode || currentCountry?.phone_code);
@@ -184,18 +186,36 @@ export const PhoneInput = ({
     if (!phoneNumber.trim()) {
       // Cleared means cleared — not "a bare dial code" — so the next number typed
       // is homed to the picker rather than to whatever used to be here.
+      awaitingDialCodeRef.current = null;
       onChange('');
       return;
     }
     // A number typed or pasted with its own dial code already carries one; adding
     // the picker's on top produces "+1 +44 20 …", which parses as nothing.
     const carriesOwnDialCode = phoneNumber.trim().startsWith('+');
-    onChange(
-      effectiveDialCode && !carriesOwnDialCode
-        ? `${effectiveDialCode} ${phoneNumber}`.trim()
-        : phoneNumber
-    );
+    if (effectiveDialCode && !carriesOwnDialCode) {
+      awaitingDialCodeRef.current = null;
+      onChange(`${effectiveDialCode} ${phoneNumber}`.trim());
+      return;
+    }
+    // The country list is fetched when the dialog opens, so a fast typist can get
+    // ahead of it. The picker already shows "+1"; storing the bare national number
+    // would make that chip a lie and skip E.164 normalization on save.
+    awaitingDialCodeRef.current = carriesOwnDialCode ? null : phoneNumber;
+    onChange(phoneNumber);
   };
+
+  // Finish homing a number typed before the dial code arrived. Only values this
+  // session typed are re-homed — a stored legacy number is left exactly as it is,
+  // so an unrelated edit to its record is still grandfathered.
+  useEffect(() => {
+    const pending = awaitingDialCodeRef.current;
+    if (!pending || !effectiveDialCode || value !== pending) {
+      return;
+    }
+    awaitingDialCodeRef.current = null;
+    onChange(`${effectiveDialCode} ${pending}`.trim());
+  }, [effectiveDialCode, onChange, value]);
 
   const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only digits for extension
