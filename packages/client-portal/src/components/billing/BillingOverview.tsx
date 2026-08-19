@@ -106,6 +106,20 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = true;
 const DEFAULT_BILLING_TAB = 'overview';
+// Single source of truth for every billing tab id the URL `?tab=` param may
+// select. Keep this in sync with the tabs assembled in the `tabs` memo below —
+// a tab that renders but is missing here is unreachable, because the URL-sync
+// effect resets any unrecognised value back to DEFAULT_BILLING_TAB. (A tab that
+// is conditionally hidden, e.g. `segments` at segmentCount <= 1, is still safe
+// to list: CustomTabs falls back gracefully when the selected id isn't present.)
+const BILLING_TAB_IDS = [
+  'overview',
+  'invoices',
+  'quotes',
+  'segments',
+  'hours-by-service',
+  'usage-metrics',
+] as const;
 const isBillingActionError = (
   value: unknown
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
@@ -119,7 +133,7 @@ export default function BillingOverview() {
 
   // Determine initial tab from URL parameter
   const initialTab = useMemo(() => {
-    if (tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)) {
+    if (tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)) {
       return tabParam;
     }
     return DEFAULT_BILLING_TAB;
@@ -176,7 +190,7 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)
+    const targetTab = tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)
       ? tabParam
       : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
