@@ -34,10 +34,10 @@ import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
   validateClientForm, 
-  validateClientNameField, 
-  validateWebsiteUrlField, 
-  validateEmailAddressField, 
-  validatePhoneNumberField, 
+  validateClientNameField,
+  validateWebsiteUrlField,
+  validateEmailAddressField,
+  validatePhoneNumberField,
   validateContactNameField,
   validatePostalCode, 
   validateCityName, 
