@@ -18,7 +18,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { clientLocationCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
+import {
+  clientLocationCoreFieldsSchema,
+  isUnchangedFromStored,
+  normalizePhone,
+  parseSubmittedFields
+} from '@alga-psa/validation';
 
 type ClientLocationActionError = ActionMessageError | ActionPermissionError;
 
@@ -30,19 +35,24 @@ class StructuralLocationError extends Error {
 }
 
 /**
- * Structural validation, applied on write only. Only submitted keys are checked, so
- * a partial update to a location that predates the schema still succeeds.
+ * Structural validation, applied on write only. Pass `existing` on an update so a
+ * value that arrives unchanged is left exactly as stored — neither re-validated nor
+ * re-normalized — and a location that predates the schema stays editable.
  *
  * A location knows its country, so a national number is normalized against it
  * before the schema sees it rather than being kept verbatim.
  */
 function applyLocationStructuralSchema<T extends Record<string, any>>(
   payload: T,
-  countryCode?: string | null
+  countryCode?: string | null,
+  existing?: Record<string, unknown> | null
 ): { ok: true; data: T } | { ok: false; error: ClientLocationActionError } {
   const candidate: Record<string, unknown> = { ...payload };
   for (const field of ['phone', 'fax'] as const) {
     const value = candidate[field];
+    if (existing && isUnchangedFromStored(value, existing[field])) {
+      continue;
+    }
     if (typeof value === 'string' && value.trim()) {
       const normalized = normalizePhone(value, { defaultCountry: countryCode });
       if (!normalized.error) {
@@ -55,7 +65,7 @@ function applyLocationStructuralSchema<T extends Record<string, any>>(
     }
   }
 
-  const result = parseSubmittedFields(clientLocationCoreFieldsSchema, candidate);
+  const result = parseSubmittedFields(clientLocationCoreFieldsSchema, candidate, { existing });
   if (!result.success) {
     return { ok: false, error: actionError(result.error ?? 'Invalid location data') };
   }
@@ -237,7 +247,7 @@ export const updateClientLocation = withAuth(async (
       const db = tenantDb(trx, tenant);
 
       const existingLocation = await db.table<IClientLocation>('client_locations')
-        .select('client_id', 'country_code')
+        .select('client_id', 'country_code', 'email', 'phone', 'phone_extension', 'fax', 'fax_extension')
         .where({
           location_id: locationId,
           is_active: true
@@ -260,7 +270,8 @@ export const updateClientLocation = withAuth(async (
 
       const structural = applyLocationStructuralSchema(
         locationData,
-        locationData.country_code ?? existingLocation.country_code
+        locationData.country_code ?? existingLocation.country_code,
+        existingLocation as unknown as Record<string, unknown>
       );
       if (!structural.ok) {
         throw new StructuralLocationError(structural.error);

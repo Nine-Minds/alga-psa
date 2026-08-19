@@ -176,21 +176,42 @@ export interface StructuralParseResult<T> {
   fieldErrors?: Record<string, string>;
 }
 
+/** True when a submitted value is the stored one coming back unchanged. */
+export function isUnchangedFromStored(submitted: unknown, stored: unknown): boolean {
+  if (isBlank(submitted) && isBlank(stored)) {
+    return true;
+  }
+  if (isBlank(submitted) || isBlank(stored)) {
+    return false;
+  }
+  return String(submitted).trim() === String(stored).trim();
+}
+
 /**
  * Parse only the keys present on the payload, leaving unrelated keys untouched.
  * This is the grandfathering rule: untouched legacy fields are never re-validated.
+ *
+ * Pass `existing` when the stored row is available. Forms round-trip the whole
+ * record, so "submitted" is not the same as "changed" — a field that comes back
+ * byte-identical to what is already stored is skipped, and a legacy row stays
+ * editable on the fields the user did touch.
  */
 export function parseSubmittedFields<T extends z.ZodRawShape>(
   schema: z.ZodObject<T>,
   payload: Record<string, unknown>,
-  options: { partial?: boolean } = {}
+  options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
 ): StructuralParseResult<Record<string, unknown>> {
   const partial = options.partial !== false;
+  const existing = options.existing;
   const submitted: Record<string, unknown> = {};
   for (const key of Object.keys(schema.shape)) {
-    if (Object.prototype.hasOwnProperty.call(payload, key)) {
-      submitted[key] = payload[key];
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+      continue;
     }
+    if (existing && isUnchangedFromStored(payload[key], existing[key])) {
+      continue;
+    }
+    submitted[key] = payload[key];
   }
 
   const result = (partial ? schema.partial() : schema).safeParse(submitted);

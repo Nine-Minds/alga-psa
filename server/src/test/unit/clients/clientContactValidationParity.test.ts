@@ -127,6 +127,39 @@ describe('partial updates to pre-existing invalid records', () => {
       expect(result.fieldErrors?.[key]).toBeUndefined();
     }
   });
+
+  // The detail form round-trips the whole record, so "absent from the payload" is
+  // not the case that actually reaches the action. The stored row is what decides
+  // whether a field was touched.
+  it('succeeds when the whole legacy record is resubmitted with one field changed', () => {
+    const result = parseSubmittedFields(
+      clientCoreFieldsSchema,
+      { ...legacyRow, client_name: 'Renamed Ltd' },
+      { existing: legacyRow }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ client_name: 'Renamed Ltd' });
+  });
+
+  it('leaves the untouched legacy values exactly as stored', () => {
+    const result = parseSubmittedFields(clientCoreFieldsSchema, legacyRow, { existing: legacyRow });
+    expect(result.success).toBe(true);
+    // Nothing was changed, so nothing is normalized either.
+    expect(result.data).toEqual({});
+  });
+
+  it('still rejects a legacy field the caller actually edits', () => {
+    const result = parseSubmittedFields(
+      clientCoreFieldsSchema,
+      { ...legacyRow, email: 'still-not-an-email' },
+      { existing: legacyRow }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.fieldErrors?.email).toBeDefined();
+    expect(result.fieldErrors?.url).toBeUndefined();
+  });
 });
 
 describe('contact field validation parity: REST API vs server actions', () => {

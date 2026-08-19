@@ -68,6 +68,7 @@ export {
   contactCoreFieldsUpdateSchema,
   contactNameSchema,
   emailFieldSchema,
+  isUnchangedFromStored,
   parseSubmittedFields,
   parseUrl,
   phoneExtensionSchema,

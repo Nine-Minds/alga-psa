@@ -44,33 +44,56 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { contactCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
+import {
+  contactCoreFieldsSchema,
+  isUnchangedFromStored,
+  normalizePhone,
+  parseSubmittedFields
+} from '@alga-psa/validation';
 
 /**
- * Structural validation, applied on write only. Only submitted keys are checked, so
- * a partial update to a contact that predates the schema still succeeds on the
- * fields the caller did not touch.
+ * Structural validation, applied on write only. Pass `existing` on an update so a
+ * value that arrives unchanged is skipped rather than re-validated: the contact
+ * drawer round-trips the whole record, and a contact that predates the schema has
+ * to stay editable on the fields the caller did touch.
  */
 function applyContactStructuralSchema<T extends Record<string, any>>(
   payload: T,
-  options: { partial: boolean }
+  options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
 ): { ok: true; data: T } | { ok: false; error: string } {
-  const result = parseSubmittedFields(contactCoreFieldsSchema, payload, { partial: options.partial });
+  const result = parseSubmittedFields(contactCoreFieldsSchema, payload, options);
   if (!result.success) {
     return { ok: false, error: `VALIDATION_ERROR: ${result.error ?? 'Invalid contact data'}` };
   }
   return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
 }
 
-/** Structural check for the phone rows a contact carries, each in its own column pair. */
+type ContactPhoneRow = { contact_phone_number_id?: string; phone_number?: string | null; extension?: string | null };
+
+/**
+ * Structural check for the phone rows a contact carries, each in its own column pair.
+ * A stored row resubmitted unchanged is grandfathered, same rule as the scalar fields.
+ */
 function validateContactPhoneRows(
-  rows: Array<{ phone_number?: string | null; extension?: string | null }> | undefined
+  rows: ContactPhoneRow[] | undefined,
+  existingRows?: ContactPhoneRow[]
 ): string | null {
   if (!rows?.length) {
     return null;
   }
 
   for (const [index, row] of rows.entries()) {
+    const stored = row.contact_phone_number_id
+      ? existingRows?.find((candidate) => candidate.contact_phone_number_id === row.contact_phone_number_id)
+      : undefined;
+    if (
+      stored &&
+      isUnchangedFromStored(row.phone_number, stored.phone_number) &&
+      isUnchangedFromStored(row.extension, stored.extension)
+    ) {
+      continue;
+    }
+
     const normalized = normalizePhone(row.phone_number, { extension: row.extension });
     if (normalized.error) {
       return `VALIDATION_ERROR: Phone ${index + 1}: ${
@@ -784,19 +807,6 @@ export const updateContact = withAuth(async (
 
     await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts', db);
 
-    // Structural rules come from the shared schema; only submitted keys are checked
-    // so a partial update to a legacy contact does not fail on untouched fields.
-    const structural = applyContactStructuralSchema(contactData, { partial: true });
-    if (!structural.ok) {
-      throw new Error(structural.error);
-    }
-    Object.assign(contactData, structural.data);
-
-    const phoneRowError = validateContactPhoneRows(contactData.phone_numbers);
-    if (phoneRowError) {
-      throw new Error(phoneRowError);
-    }
-
     if (contactData.email) {
       const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, 'contacts', tenant)
@@ -847,6 +857,20 @@ export const updateContact = withAuth(async (
 
       if (!existingContact) {
         throw new Error('VALIDATION_ERROR: The contact you are trying to update no longer exists');
+      }
+
+      // Structural rules come from the shared schema, measured against the stored
+      // row: a contact that predates the schema keeps its legacy values until
+      // somebody actually edits them.
+      const structural = applyContactStructuralSchema(contactData, { existing: existingContact as Record<string, unknown> });
+      if (!structural.ok) {
+        throw new Error(structural.error);
+      }
+      Object.assign(contactData, structural.data);
+
+      const phoneRowError = validateContactPhoneRows(contactData.phone_numbers, existingContact.phone_numbers);
+      if (phoneRowError) {
+        throw new Error(phoneRowError);
       }
 
       const updated = await ContactModel.updateContact(contactData.contact_name_id!, {

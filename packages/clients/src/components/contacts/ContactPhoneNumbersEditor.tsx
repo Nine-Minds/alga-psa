@@ -17,7 +17,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
+import { isUnchangedFromStored, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -101,11 +101,19 @@ export function compactContactPhoneNumbers(
   return normalizeDraftContactPhoneNumbers(filteredRows);
 }
 
+/**
+ * Pass `existingRows` on an edit form: a stored number that comes back unchanged is
+ * grandfathered, so a contact recorded before the schema existed ("front desk",
+ * "call the tea table") stays editable on everything else. The default-selection and
+ * type rules still apply to every row — those are about the form, not the data.
+ */
 export function validateContactPhoneNumbers(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
+  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
+  options: { existingRows?: Array<ContactPhoneNumberInput | IContactPhoneNumber> } = {}
 ): string[] {
   const errors: string[] = [];
   const normalizedRows = normalizeDraftContactPhoneNumbers(rows);
+  const storedRows = options.existingRows ? normalizeDraftContactPhoneNumbers(options.existingRows) : [];
 
   if (normalizedRows.length === 0) {
     return [];
@@ -121,12 +129,21 @@ export function validateContactPhoneNumbers(
   normalizedRows.forEach((row, index) => {
     const rowLabel = `Phone ${index + 1}`;
 
-    if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
-      errors.push(`${rowLabel}: Enter a complete phone number.`);
-    } else {
-      const phoneError = validatePhoneNumber(row.phone_number);
-      if (phoneError) {
-        errors.push(`${rowLabel}: ${phoneError}`);
+    const stored = row.contact_phone_number_id
+      ? storedRows.find((candidate) => candidate.contact_phone_number_id === row.contact_phone_number_id)
+      : undefined;
+    const grandfathered = Boolean(
+      stored?.phone_number && isUnchangedFromStored(row.phone_number, stored.phone_number)
+    );
+
+    if (!grandfathered) {
+      if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
+        errors.push(`${rowLabel}: Enter a complete phone number.`);
+      } else {
+        const phoneError = validatePhoneNumber(row.phone_number);
+        if (phoneError) {
+          errors.push(`${rowLabel}: ${phoneError}`);
+        }
       }
     }
 

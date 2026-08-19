@@ -49,16 +49,20 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
 ]);
 type ClientUpdateActionError = ActionMessageError | ActionPermissionError;
 
+/** Carries a structural failure out of the transaction without rolling into a 500. */
+class ClientStructuralError extends Error {}
+
 /**
  * Structural validation, applied on write only. Existing rows are grandfathered:
- * the schema sees the submitted payload, so a partial update to an already-invalid
- * record still succeeds on the fields the caller did not touch.
+ * pass `existing` on an update so a field that arrives unchanged is skipped rather
+ * than re-validated, and a legacy record stays editable on the fields the user did
+ * touch. Forms round-trip the whole record, so "submitted" alone is not enough.
  */
 function applyClientStructuralSchema<T extends Record<string, any>>(
   payload: T,
-  options: { partial: boolean }
+  options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
 ): { ok: true; data: T } | { ok: false; error: string } {
-  const result = parseSubmittedFields(clientCoreFieldsSchema, payload, { partial: options.partial });
+  const result = parseSubmittedFields(clientCoreFieldsSchema, payload, options);
   if (!result.success) {
     return { ok: false, error: result.error ?? 'Invalid client data' };
   }
@@ -269,16 +273,12 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     ? sanitizeClientPortalClientUpdate(updateData)
     : updateData;
 
-  const structural = applyClientStructuralSchema(sanitizedUpdateData, { partial: true });
-  if (!structural.ok) {
-    return actionError(structural.error);
-  }
-  const permittedUpdateData = structural.data;
+  let permittedUpdateData = sanitizedUpdateData;
 
   const { knex: db } = await createTenantKnex();
 
   try {
-    console.log('Updating client in database:', clientId, permittedUpdateData);
+    console.log('Updating client in database:', clientId, sanitizedUpdateData);
 
     const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
@@ -294,6 +294,14 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       if (!currentClient) {
         throw new Error('Client not found');
       }
+
+      // Structural rules apply to what the caller is actually changing. Anything
+      // that comes back identical to the stored value is grandfathered.
+      const structural = applyClientStructuralSchema(sanitizedUpdateData, { existing: currentClient });
+      if (!structural.ok) {
+        throw new ClientStructuralError(structural.error);
+      }
+      permittedUpdateData = structural.data;
 
       // Handle properties separately
       if (permittedUpdateData.properties) {
@@ -496,6 +504,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);
+    if (error instanceof ClientStructuralError) {
+      return actionError(error.message);
+    }
     const expected = updateClientExpectedErrorFrom(error, permittedUpdateData.client_name);
     if (expected) return expected;
     throw error;

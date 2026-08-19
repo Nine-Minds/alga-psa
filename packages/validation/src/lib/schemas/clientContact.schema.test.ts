@@ -4,6 +4,7 @@ import {
   clientCoreFieldsSchema,
   clientLocationCoreFieldsSchema,
   contactCoreFieldsSchema,
+  isUnchangedFromStored,
   parseSubmittedFields
 } from './clientContact.schema';
 
@@ -114,5 +115,44 @@ describe('parseSubmittedFields', () => {
   it('can require the full shape for creates', () => {
     expect(parseSubmittedFields(clientCoreFieldsSchema, { email: 'a@b.com' }, { partial: false }).success).toBe(false);
     expect(parseSubmittedFields(clientCoreFieldsSchema, { client_name: 'Acme' }, { partial: false }).success).toBe(true);
+  });
+
+  it('grandfathers a stored value that comes back unchanged', () => {
+    const stored = { client_name: 'Acme', email: 'not-an-email', url: 'not a url' };
+    const result = parseSubmittedFields(
+      clientCoreFieldsSchema,
+      { ...stored, client_name: 'Acme Holdings' },
+      { existing: stored }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ client_name: 'Acme Holdings' });
+  });
+
+  it('does not re-normalize an untouched field', () => {
+    const stored = { client_name: 'Acme', email: 'Info@ACME.com' };
+    const result = parseSubmittedFields(clientCoreFieldsSchema, stored, { existing: stored });
+    expect(result.data?.email).toBeUndefined();
+  });
+});
+
+describe('isUnchangedFromStored', () => {
+  it('treats every flavour of blank as the same absence', () => {
+    for (const submitted of [null, undefined, '', '   ']) {
+      for (const stored of [null, undefined, '', '   ']) {
+        expect(isUnchangedFromStored(submitted, stored)).toBe(true);
+      }
+    }
+  });
+
+  it('ignores surrounding whitespace but nothing else', () => {
+    expect(isUnchangedFromStored('  +15551234567 ', '+15551234567')).toBe(true);
+    expect(isUnchangedFromStored('+15551234568', '+15551234567')).toBe(false);
+    expect(isUnchangedFromStored('ACME.com', 'acme.com')).toBe(false);
+  });
+
+  it('counts clearing a stored value as a change', () => {
+    expect(isUnchangedFromStored('', 'acme.com')).toBe(false);
+    expect(isUnchangedFromStored('acme.com', null)).toBe(false);
   });
 });

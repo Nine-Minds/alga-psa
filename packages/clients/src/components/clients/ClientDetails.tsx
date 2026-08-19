@@ -970,7 +970,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         const result = validateClientNameField(value);
         // Warnings are informational only and must never gate the save.
         setFieldWarnings(prev => ({ ...prev, client_name: result.warnings }));
-        if (result.error) {
+        // A name the user never touched is grandfathered: a legacy record that
+        // predates the schema stays editable on the fields they did change.
+        const nameChanged = value !== (client.client_name?.trim() || '');
+        if (result.error && nameChanged) {
           newErrors[field] = result.error;
           hasValidationErrors = true;
         }
@@ -1017,7 +1020,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [client.client_id]);
+  }, [client.client_id, client.client_name]);
 
   usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
 

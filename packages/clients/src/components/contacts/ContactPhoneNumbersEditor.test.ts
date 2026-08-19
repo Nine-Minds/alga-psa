@@ -109,6 +109,40 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     ).toContain('Phone 2: Enter a custom phone type.');
   });
 
+  it('grandfathers a stored number that comes back unchanged', () => {
+    // Annotated numbers like this predate the schema and pass the contact model's
+    // own rules, so they must not block an edit to some other field.
+    const stored = [
+      {
+        contact_phone_number_id: '11111111-1111-1111-1111-111111111111',
+        phone_number: '555-123-4567 (cell)',
+        canonical_type: 'work' as const,
+        custom_type: null,
+        is_default: true,
+      },
+    ];
+
+    expect(validateContactPhoneNumbers(stored)).toContain('Phone 1: Please enter a valid phone number');
+    expect(validateContactPhoneNumbers(stored, { existingRows: stored })).toEqual([]);
+  });
+
+  it('still rejects a stored number once the user edits it', () => {
+    const stored = [
+      {
+        contact_phone_number_id: '11111111-1111-1111-1111-111111111111',
+        phone_number: '555-123-4567 (cell)',
+        canonical_type: 'work' as const,
+        custom_type: null,
+        is_default: true,
+      },
+    ];
+    const edited = [{ ...stored[0], phone_number: '555-123-4567 (mobile)' }];
+
+    expect(validateContactPhoneNumbers(edited, { existingRows: stored })).toContain(
+      'Phone 1: Please enter a valid phone number'
+    );
+  });
+
   it('preserves moved row data when reordering draft rows', () => {
     const movedRows = moveContactPhoneRows(
       [
