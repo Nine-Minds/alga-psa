@@ -1,5 +1,6 @@
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -33,7 +34,7 @@ export function slaActionErrorFrom(error: unknown): SlaActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
     if (message.startsWith('SLA policy target')) {

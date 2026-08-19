@@ -22,6 +22,7 @@ import {
 } from '../types';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -43,9 +44,8 @@ function escalationManagerActionErrorFrom(error: unknown): EscalationManagerActi
   if (error instanceof Error) {
     const message = error.message;
     if (
-      message.includes('Permission denied') ||
-      message.startsWith('Unauthorized') ||
-      message === 'user is not logged in'
+      isAuthorizationThrow(error) ||
+      message.startsWith('Unauthorized')
     ) {
       return permissionError(message);
     }

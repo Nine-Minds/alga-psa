@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -29,9 +30,8 @@ export function reportingActionErrorFrom(error: unknown): ReportingActionError |
   if (error instanceof Error) {
     const message = error.message;
     if (
-      message.includes('Permission denied') ||
-      message.startsWith('Unauthorized') ||
-      message === 'user is not logged in'
+      isAuthorizationThrow(error) ||
+      message.startsWith('Unauthorized')
     ) {
       return permissionError(message);
     }

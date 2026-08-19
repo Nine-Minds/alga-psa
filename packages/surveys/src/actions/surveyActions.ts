@@ -13,6 +13,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActio
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -46,7 +47,7 @@ function surveyActionErrorFrom(error: unknown): SurveyActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || /unauthorized|not authenticated|must sign in/i.test(message)) {
+    if (isAuthorizationThrow(error) || /unauthorized|not authenticated|must sign in/i.test(message)) {
       return permissionError(message);
     }
     if (message === 'Survey template not found') {

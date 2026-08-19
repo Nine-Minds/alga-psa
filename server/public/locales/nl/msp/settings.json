@@ -267,7 +267,9 @@
         "licenseLimitReached": "U heeft uw MSP-gebruikerslicentielimiet bereikt.",
         "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen.",
         "revokeInvitation": "Uitnodiging intrekken mislukt",
-        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt"
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt",
+        "createContact": "Contactpersoon kon niet worden aangemaakt: {{reason}}",
+        "unknown": "Onbekende fout"
       }
     },
     "invitations": {

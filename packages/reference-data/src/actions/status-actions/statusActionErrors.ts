@@ -1,5 +1,6 @@
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -29,7 +30,7 @@ export function statusActionErrorFrom(error: unknown): StatusActionError | null 
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
     if (message === 'Status not found') {

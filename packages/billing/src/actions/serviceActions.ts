@@ -9,7 +9,7 @@ import { Knex } from 'knex';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError, isAuthorizationThrow } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { normalizeGtin } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -43,7 +43,7 @@ function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
     if (message === 'Service type name is required') {

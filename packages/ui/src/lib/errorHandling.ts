@@ -5,6 +5,55 @@ import React from 'react';
 // --- Permission error return type for server actions ---
 
 /**
+ * Marker prefix on *thrown* permission errors. Internal, never shown translated —
+ * returned payloads are classified by shape instead (see `isPermissionError`).
+ */
+export const PERMISSION_DENIED_PREFIX = 'Permission denied';
+
+/** Message thrown by actions that ran without a session. Internal, not user copy. */
+export const NOT_AUTHENTICATED_MESSAGE = 'user is not logged in';
+
+/**
+ * A thrown error that says *why* it failed without making the sentence load-bearing.
+ * Prefer this over `throw new Error('Permission denied: …')` at new throw sites: the
+ * mappers that turn a caught error into an `actionError` can then branch on `code`.
+ */
+export class CodedError extends Error {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly messageKey?: string,
+    readonly messageParams?: Record<string, string | number>,
+  ) {
+    super(message);
+    this.name = 'CodedError';
+  }
+}
+
+/** The `code` of a thrown {@link CodedError}, if the error carries one. */
+export function errorCodeOf(error: unknown): string | undefined {
+  return error instanceof CodedError ? error.code : undefined;
+}
+
+/**
+ * Whether a *thrown* error denotes a permission or authentication failure.
+ *
+ * Checks the code first; the English prefixes remain as the fallback for the throw
+ * sites that have not been converted yet. They are safe there because a thrown
+ * message never crosses the localization boundary — only returned payloads do.
+ */
+export function isAuthorizationThrow(error: unknown): boolean {
+  const code = errorCodeOf(error);
+  if (code === 'PERMISSION_DENIED' || code === 'NOT_AUTHENTICATED') {
+    return true;
+  }
+  if (error instanceof Error) {
+    return error.message.includes(PERMISSION_DENIED_PREFIX) || error.message === NOT_AUTHENTICATED_MESSAGE;
+  }
+  return false;
+}
+
+/**
  * Represents a permission error returned from a server action.
  * Next.js strips thrown error messages during serialization, so permission
  * errors must be returned as plain objects to reach the client intact.
@@ -70,17 +119,25 @@ export function actionError(message: string): ActionMessageError {
 
 /**
  * Check if an error is a permission-related error.
- * Handles Error instances, strings, and ActionPermissionError objects.
+ *
+ * A returned payload is classified by its *shape*: anything carrying
+ * `permissionError` is one, whatever the string says. Matching the prose here was
+ * a latent break — the message is localized before it reaches the client, so
+ * `.includes('Permission denied')` stopped being true the moment a user switched
+ * to German, and it failed silently.
+ *
+ * Thrown `Error`s and bare strings have no shape to read, so the English prefix
+ * stays as their only signal. Those messages are internal and are not translated.
  */
 export function isPermissionError(error: unknown): boolean {
   if (isActionPermissionError(error)) {
-    return error.permissionError.includes('Permission denied');
+    return true;
   }
   if (typeof error === 'string') {
-    return error.includes('Permission denied');
+    return error.includes(PERMISSION_DENIED_PREFIX);
   }
   if (error instanceof Error) {
-    return error.message.includes('Permission denied');
+    return error.message.includes(PERMISSION_DENIED_PREFIX);
   }
   return false;
 }

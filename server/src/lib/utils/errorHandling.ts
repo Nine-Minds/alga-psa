@@ -5,6 +5,12 @@ import React from 'react';
 // --- Permission error return type for server actions ---
 
 /**
+ * Marker prefix on *thrown* permission errors. Internal, never shown translated —
+ * returned payloads are classified by shape instead (see `isPermissionError`).
+ */
+export const PERMISSION_DENIED_PREFIX = 'Permission denied';
+
+/**
  * Represents a permission error returned from a server action.
  * Next.js strips thrown error messages during serialization, so permission
  * errors must be returned as plain objects to reach the client intact.
@@ -37,17 +43,21 @@ export function permissionError(message: string): ActionPermissionError {
 
 /**
  * Check if an error is a permission-related error.
- * Handles Error instances, strings, and ActionPermissionError objects.
+ *
+ * Returned payloads are classified by shape — their message is localized before it
+ * reaches the client, so matching the English prose would quietly stop recognizing
+ * them. Thrown `Error`s and bare strings keep the prefix check; those messages are
+ * internal and untranslated.
  */
 export function isPermissionError(error: unknown): boolean {
   if (isActionPermissionError(error)) {
-    return error.permissionError.includes('Permission denied');
+    return true;
   }
   if (typeof error === 'string') {
-    return error.includes('Permission denied');
+    return error.includes(PERMISSION_DENIED_PREFIX);
   }
   if (error instanceof Error) {
-    return error.message.includes('Permission denied');
+    return error.message.includes(PERMISSION_DENIED_PREFIX);
   }
   return false;
 }

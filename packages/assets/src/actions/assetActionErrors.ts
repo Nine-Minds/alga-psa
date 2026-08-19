@@ -1,5 +1,6 @@
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -37,7 +38,7 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
     if (message === 'Asset not found') {

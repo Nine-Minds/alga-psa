@@ -267,7 +267,9 @@
         "licenseLimitReached": "Vous avez atteint la limite de licences utilisateur MSP.",
         "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs.",
         "revokeInvitation": "Échec de la révocation de l'invitation",
-        "invitationNotFound": "Invitation introuvable ou déjà utilisée"
+        "invitationNotFound": "Invitation introuvable ou déjà utilisée",
+        "createContact": "Impossible de créer le contact : {{reason}}",
+        "unknown": "Erreur inconnue"
       }
     },
     "invitations": {

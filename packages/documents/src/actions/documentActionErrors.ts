@@ -1,5 +1,6 @@
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -26,7 +27,7 @@ export function documentActionErrorFrom(error: unknown): DocumentActionError | n
   if (error instanceof Error) {
     const message = error.message;
 
-    if (message.includes('Permission denied') || message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(message);
     }
 

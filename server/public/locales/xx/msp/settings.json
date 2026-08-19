@@ -267,7 +267,9 @@
         "licenseLimitReached": "11111",
         "soloPlanLimit": "11111",
         "revokeInvitation": "11111",
-        "invitationNotFound": "11111"
+        "invitationNotFound": "11111",
+        "createContact": "11111 {{reason}} 11111",
+        "unknown": "11111"
       }
     },
     "invitations": {

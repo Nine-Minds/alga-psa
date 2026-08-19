@@ -1,5 +1,6 @@
 import {
   actionError,
+  isAuthorizationThrow,
   isActionMessageError,
   isActionPermissionError,
   permissionError,
@@ -49,7 +50,7 @@ export function projectBillingActionErrorFrom(error: unknown): ProjectBillingAct
 
   if (!(error instanceof Error)) return null;
   if (
-    error.message.includes('Permission denied') ||
+    isAuthorizationThrow(error) ||
     error.message.includes('Access denied') ||
     error.message.includes('not authenticated')
   ) {

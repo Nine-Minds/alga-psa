@@ -267,7 +267,9 @@
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
         "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
         "revokeInvitation": "Einladung konnte nicht widerrufen werden",
-        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet",
+        "createContact": "Kontakt konnte nicht erstellt werden: {{reason}}",
+        "unknown": "Unbekannter Fehler"
       }
     },
     "invitations": {

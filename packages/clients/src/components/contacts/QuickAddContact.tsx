@@ -29,6 +29,7 @@ import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseContactActionError } from '../../lib/contactActionErrorCodes';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
   validateContactPhoneNumbers,
@@ -339,24 +340,25 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           defaultValue: 'An unexpected error occurred. Please try again.'
         });
 
-        if (submitError.message.includes('VALIDATION_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
-          errorDescription = submitError.message.replace('VALIDATION_ERROR:', '').trim();
-        } else if (submitError.message.includes('EMAIL_EXISTS:')) {
-          errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
-          errorDescription = submitError.message.replace('EMAIL_EXISTS:', '').trim();
-        } else if (submitError.message.includes('FOREIGN_KEY_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
-          errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
-        } else if (submitError.message.includes('SYSTEM_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
-        } else {
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
+        const { code, detail } = parseContactActionError(submitError.message);
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
+            errorDescription = detail;
+            break;
+          case 'EMAIL_EXISTS':
+            errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
+            errorDescription = detail;
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
+            errorDescription = detail;
+            break;
+          case 'SYSTEM_ERROR':
+            errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
+            break;
+          default:
+            break;
         }
 
         toast({
@@ -412,24 +414,25 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           defaultValue: 'An unexpected error occurred. Please try again.'
         });
 
-        if (submitError.message.includes('VALIDATION_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
-          errorDescription = submitError.message.replace('VALIDATION_ERROR:', '').trim();
-        } else if (submitError.message.includes('EMAIL_EXISTS:')) {
-          errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
-          errorDescription = submitError.message.replace('EMAIL_EXISTS:', '').trim();
-        } else if (submitError.message.includes('FOREIGN_KEY_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
-          errorDescription = submitError.message.replace('FOREIGN_KEY_ERROR:', '').trim();
-        } else if (submitError.message.includes('SYSTEM_ERROR:')) {
-          errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
-        } else {
-          errorDescription = t('quickAddContact.errors.unexpected', {
-            defaultValue: 'An unexpected error occurred. Please try again.'
-          });
+        const { code, detail } = parseContactActionError(submitError.message);
+        switch (code) {
+          case 'VALIDATION_ERROR':
+            errorTitle = t('quickAddContact.errors.validationTitle', { defaultValue: 'Validation Error' });
+            errorDescription = detail;
+            break;
+          case 'EMAIL_EXISTS':
+            errorTitle = t('quickAddContact.errors.emailExistsTitle', { defaultValue: 'Email Already Exists' });
+            errorDescription = detail;
+            break;
+          case 'FOREIGN_KEY_ERROR':
+            errorTitle = t('quickAddContact.errors.invalidReferenceTitle', { defaultValue: 'Invalid Reference' });
+            errorDescription = detail;
+            break;
+          case 'SYSTEM_ERROR':
+            errorTitle = t('quickAddContact.errors.systemTitle', { defaultValue: 'System Error' });
+            break;
+          default:
+            break;
         }
 
         toast({
@@ -519,29 +522,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               </h4>
               <div className="text-sm">
                 {error.split('\n').map((line, index) => {
-                  let displayMessage = line;
-                  if (line.includes('VALIDATION_ERROR:')) {
-                    displayMessage = line.replace(
-                      'VALIDATION_ERROR:',
-                      `${t('quickAddContact.errors.validationPrefix', { defaultValue: 'Please fix the following:' })} `
-                    );
-                  } else if (line.includes('EMAIL_EXISTS:')) {
-                    displayMessage = line.replace(
-                      'EMAIL_EXISTS:',
-                      `${t('quickAddContact.errors.emailExistsPrefix', { defaultValue: 'Email already exists:' })} `
-                    );
-                  } else if (line.includes('FOREIGN_KEY_ERROR:')) {
-                    displayMessage = line.replace(
-                      'FOREIGN_KEY_ERROR:',
-                      `${t('quickAddContact.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })} `
-                    );
-                  } else if (line.includes('SYSTEM_ERROR:')) {
-                    displayMessage = line.replace(
-                      'SYSTEM_ERROR:',
-                      `${t('quickAddContact.errors.systemPrefix', { defaultValue: 'System error:' })} `
-                    );
-                  }
-                  return <p key={index} className="mb-1">{displayMessage}</p>;
+                  const { code, detail } = parseContactActionError(line);
+                  const prefix = code === 'VALIDATION_ERROR'
+                    ? t('quickAddContact.errors.validationPrefix', { defaultValue: 'Please fix the following:' })
+                    : code === 'EMAIL_EXISTS'
+                      ? t('quickAddContact.errors.emailExistsPrefix', { defaultValue: 'Email already exists:' })
+                      : code === 'FOREIGN_KEY_ERROR'
+                        ? t('quickAddContact.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
+                        : code === 'SYSTEM_ERROR'
+                          ? t('quickAddContact.errors.systemPrefix', { defaultValue: 'System error:' })
+                          : null;
+                  return <p key={index} className="mb-1">{prefix ? `${prefix} ${detail}` : detail}</p>;
                 })}
               </div>
             </AlertDescription>

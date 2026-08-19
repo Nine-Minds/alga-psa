@@ -1,5 +1,7 @@
 import {
   actionError,
+  errorCodeOf,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -7,6 +9,38 @@ import {
 
 export type TicketActionError = ActionMessageError | ActionPermissionError;
 
+/**
+ * Codes a ticket action can throw with (`new CodedError(msg, 'TICKET_NOT_FOUND')`).
+ * Classification reads these first; the English prefix list below is the fallback for
+ * the throw sites that still say what went wrong only in a sentence.
+ */
+export type TicketErrorCode =
+  | 'TICKET_NOT_FOUND'
+  | 'TICKET_RESOURCE_NOT_FOUND'
+  | 'RESOURCE_ALREADY_EXISTS'
+  | 'TEAM_NOT_FOUND'
+  | 'TEAM_LEAD_NOT_FOUND'
+  | 'COMMENT_NOT_FOUND';
+
+const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
+  TICKET_NOT_FOUND: 'Ticket not found. It may have been deleted or moved. Please refresh and try again.',
+  TICKET_RESOURCE_NOT_FOUND: 'Ticket resource not found. Please refresh and try again.',
+  RESOURCE_ALREADY_EXISTS: 'This user is already assigned as an additional agent.',
+  TEAM_NOT_FOUND: 'Team not found. It may have been deleted. Please refresh and try again.',
+  TEAM_LEAD_NOT_FOUND: 'The selected team does not have a team lead. Choose another team or assign a lead first.',
+  COMMENT_NOT_FOUND: 'Comment not found. It may have been deleted. Please refresh and try again.',
+};
+
+/**
+ * DEPRECATED fallback channel. Every entry is the message of an internal
+ * `throw new Error(...)` that is safe to show a user, matched by prefix.
+ *
+ * The prose is only safe because it is *thrown*, and thrown messages never cross the
+ * localization boundary — `localizeActionError` rewrites returned payloads. Do not
+ * translate a message at any of these throw sites: put the key on the returned
+ * `actionError` instead. New throw sites should carry a `TicketErrorCode` so this list
+ * can shrink rather than grow.
+ */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Client user cannot access this ticket',
   'Client user is not associated with a client',
@@ -78,31 +112,41 @@ function formatValidationIssues(error: unknown): string | null {
     .join('; ');
 }
 
-export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
+// Longest prefix first, so 'Team lead not found' is not swallowed by 'Team not found'.
+const TICKET_MESSAGE_PREFIX_CODES: ReadonlyArray<readonly [string, TicketErrorCode]> = [
+  ['Ticket resource not found', 'TICKET_RESOURCE_NOT_FOUND'],
+  ['Resource already exists', 'RESOURCE_ALREADY_EXISTS'],
+  ['Team lead not found', 'TEAM_LEAD_NOT_FOUND'],
+  ['Comment with id', 'COMMENT_NOT_FOUND'],
+  ['Ticket not found', 'TICKET_NOT_FOUND'],
+  ['Team not found', 'TEAM_NOT_FOUND'],
+];
+
+function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
+  const code = errorCodeOf(error);
+  if (code && code in TICKET_CODE_MESSAGES) {
+    return code as TicketErrorCode;
+  }
+
+  // Fallback for throw sites that only say what happened in English.
   if (error instanceof Error) {
-    if (error.message.includes('Permission denied') || error.message === 'user is not logged in') {
-      return permissionError(error.message);
-    }
+    return TICKET_MESSAGE_PREFIX_CODES.find(([prefix]) => error.message.startsWith(prefix))?.[1];
+  }
 
-    if (error.message.startsWith('Ticket not found')) {
-      return actionError('Ticket not found. It may have been deleted or moved. Please refresh and try again.');
-    }
-    if (error.message.startsWith('Ticket resource not found')) {
-      return actionError('Ticket resource not found. Please refresh and try again.');
-    }
-    if (error.message.startsWith('Resource already exists')) {
-      return actionError('This user is already assigned as an additional agent.');
-    }
-    if (error.message.startsWith('Team not found')) {
-      return actionError('Team not found. It may have been deleted. Please refresh and try again.');
-    }
-    if (error.message.startsWith('Team lead not found')) {
-      return actionError('The selected team does not have a team lead. Choose another team or assign a lead first.');
-    }
-    if (error.message.startsWith('Comment with id')) {
-      return actionError('Comment not found. It may have been deleted. Please refresh and try again.');
-    }
+  return undefined;
+}
 
+export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
+  if (isAuthorizationThrow(error)) {
+    return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  const ticketCode = ticketErrorCodeOf(error);
+  if (ticketCode) {
+    return actionError(TICKET_CODE_MESSAGES[ticketCode]);
+  }
+
+  if (error instanceof Error) {
     if (EXPECTED_TICKET_MESSAGE_PREFIXES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);
     }

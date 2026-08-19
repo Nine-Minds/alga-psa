@@ -18,6 +18,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { isTagActionError, type TagActionError } from './tagActionErrors';
@@ -42,7 +43,7 @@ function tagActionErrorFrom(error: unknown): TagActionError | null {
 
   if (error instanceof Error) {
     const message = error.message;
-    if (message.includes('Permission denied') || message === 'user is not logged in' || /unauthorized|not authenticated|must sign in/i.test(message)) {
+    if (isAuthorizationThrow(error) || /unauthorized|not authenticated|must sign in/i.test(message)) {
       return permissionError(message);
     }
     if (

@@ -267,7 +267,9 @@
         "licenseLimitReached": "You've reached your MSP user license limit.",
         "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users.",
         "revokeInvitation": "Failed to revoke invitation",
-        "invitationNotFound": "Invitation not found or already used"
+        "invitationNotFound": "Invitation not found or already used",
+        "createContact": "Failed to create contact: {{reason}}",
+        "unknown": "Unknown error"
       }
     },
     "invitations": {

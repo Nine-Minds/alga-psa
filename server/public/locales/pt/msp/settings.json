@@ -267,7 +267,9 @@
         "licenseLimitReached": "Você atingiu o limite de licença de usuário MSP.",
         "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários.",
         "revokeInvitation": "Falha ao revogar o convite",
-        "invitationNotFound": "Convite não encontrado ou já utilizado"
+        "invitationNotFound": "Convite não encontrado ou já utilizado",
+        "createContact": "Não foi possível criar o contato: {{reason}}",
+        "unknown": "Erro desconhecido"
       }
     },
     "invitations": {

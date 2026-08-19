@@ -8,6 +8,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   actionError,
+  isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -28,7 +29,7 @@ const EXPECTED_CATEGORY_MESSAGES = [
 
 function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
   if (error instanceof Error) {
-    if (error.message.includes('Permission denied') || error.message === 'user is not logged in') {
+    if (isAuthorizationThrow(error)) {
       return permissionError(error.message);
     }
     if (EXPECTED_CATEGORY_MESSAGES.some((message) => error.message.startsWith(message))) {
