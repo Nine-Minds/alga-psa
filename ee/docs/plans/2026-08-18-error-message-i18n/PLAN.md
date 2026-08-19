@@ -259,6 +259,11 @@ Do not attempt this in one pass. One package per PR, each independently shippabl
 
 ## Category 2 — Zod schema messages (~320)
 
+**Status: not started.** Its one prerequisite is done — `appointmentSchemas` is deduped into
+`@alga-psa/scheduling` — but no schema attaches a key yet, so an action that joins `error.issues[].message`
+still returns English inside an otherwise-translated payload. `projects` shows the shape this leaves behind:
+`errors.task.validationFailed` translates the frame and interpolates the Zod detail verbatim.
+
 These do reach users: several actions join `error.issues[].message` into the returned error string
 (e.g. `packages/integrations/src/actions/integrations/rmmAlertRuleActions.ts:56`,
 `packages/surveys/src/actions/surveyActions.ts:43`).
