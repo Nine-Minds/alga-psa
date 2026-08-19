@@ -3407,5 +3407,99 @@
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Permissão negada: você não tem permissão para visualizar os mapeamentos contábeis.",
+      "managePermission": "Permissão negada: você não tem permissão para gerenciar os mapeamentos contábeis.",
+      "loadFailed": "Não é possível carregar os dados de mapeamento. Tente novamente.",
+      "duplicate": "Já existe um mapeamento para esta entidade. Edite o mapeamento existente.",
+      "saveFailed": "Não é possível salvar o mapeamento. Tente novamente.",
+      "idRequiredForUpdate": "O ID do mapeamento é obrigatório para a atualização.",
+      "noUpdateData": "Nenhum dado de atualização informado.",
+      "updateFailed": "Não é possível atualizar o mapeamento. Tente novamente.",
+      "idRequiredForDelete": "O ID do mapeamento é obrigatório para a exclusão.",
+      "notFound": "Mapeamento não encontrado. Atualize os mapeamentos e tente novamente.",
+      "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente."
+    },
+    "qbo": {
+      "enterpriseOnly": "A integração com o QuickBooks Online está disponível apenas na Enterprise Edition.",
+      "viewPermission": "Proibido: você não tem permissão para visualizar as configurações da integração com o QuickBooks.",
+      "accounts": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as contas do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as contas do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as contas do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "classes": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as classes do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as classes do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as classes do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "departments": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os departamentos do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os departamentos do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os departamentos do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "items": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os itens do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os itens do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os itens do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "taxCodes": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os códigos de imposto do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os códigos de imposto do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os códigos de imposto do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "customers": {
+        "notConnected": "Conecte o QuickBooks antes de carregar os clientes do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar os clientes do QuickBooks.",
+        "loadFailed": "Não foi possível carregar os clientes do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      },
+      "paymentTerms": {
+        "notConnected": "Conecte o QuickBooks antes de carregar as condições de pagamento do QuickBooks.",
+        "reconnect": "Reconecte o QuickBooks antes de carregar as condições de pagamento do QuickBooks.",
+        "loadFailed": "Não foi possível carregar as condições de pagamento do QuickBooks. Tente novamente ou reconecte o QuickBooks se o problema persistir."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "A integração com o Xero está disponível apenas na Enterprise Edition.",
+      "viewPermission": "Proibido: você não tem permissão para visualizar as configurações da integração com o Xero.",
+      "organisationDisconnected": "A organização do Xero selecionada não está mais conectada. Reconecte o Xero e tente novamente.",
+      "accounts": {
+        "notConnected": "Conecte o Xero antes de carregar as contas do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as contas do Xero.",
+        "loadFailed": "Não foi possível carregar as contas do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as contas do Xero. Tente novamente."
+      },
+      "items": {
+        "notConnected": "Conecte o Xero antes de carregar os itens do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar os itens do Xero.",
+        "loadFailed": "Não foi possível carregar os itens do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar os itens do Xero. Tente novamente."
+      },
+      "taxRates": {
+        "notConnected": "Conecte o Xero antes de carregar as alíquotas de imposto do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as alíquotas de imposto do Xero.",
+        "loadFailed": "Não foi possível carregar as alíquotas de imposto do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as alíquotas de imposto do Xero. Tente novamente."
+      },
+      "trackingCategories": {
+        "notConnected": "Conecte o Xero antes de carregar as categorias de rastreamento do Xero.",
+        "reconnect": "Reconecte o Xero antes de carregar as categorias de rastreamento do Xero.",
+        "loadFailed": "Não foi possível carregar as categorias de rastreamento do Xero. Tente novamente ou reconecte o Xero se o problema persistir.",
+        "verifyFailed": "Não foi possível verificar a conexão com o Xero antes de carregar as categorias de rastreamento do Xero. Tente novamente."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "O usuário não tem permissão para gerenciar as configurações de integração",
+      "manageBillingPermission": "O usuário não tem permissão para gerenciar o faturamento",
+      "viewBillingPermission": "O usuário não tem permissão para visualizar as configurações de faturamento",
+      "contentRequired": "O conteúdo CSV é obrigatório"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Já existe no sistema um contato com este endereço de email sem atribuição de cliente",
+      "emailOnAnotherClient": "Este email já está associado a outro cliente",
+      "emailOnAnotherClientNamed": "Este email já está associado a {{clientName}}"
+    }
   }
 }

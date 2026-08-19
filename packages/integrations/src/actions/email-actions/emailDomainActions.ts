@@ -51,7 +51,7 @@ export const getEmailDomains = withAuth(async (
     return domainStatuses;
   } catch (error: any) {
     console.error('Error fetching domains:', error);
-    return actionError('Failed to fetch domains');
+    return actionError('Failed to fetch domains', 'msp/email-providers:errors.domain.fetchFailed');
   }
 });
 
@@ -63,7 +63,7 @@ export const addEmailDomain = withAuth(async (
   // Validate domain format
   const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
   if (!domainRegex.test(domainName)) {
-    return actionError('Invalid domain format');
+    return actionError('Invalid domain format', 'msp/email-providers:errors.domain.invalidFormat');
   }
 
   const { knex } = await createTenantKnex();
@@ -77,7 +77,7 @@ export const addEmailDomain = withAuth(async (
       .first();
 
     if (existing) {
-      return actionError('Domain already exists');
+      return actionError('Domain already exists', 'msp/email-providers:errors.domain.duplicate');
     }
 
     // Insert domain record
@@ -98,12 +98,12 @@ export const addEmailDomain = withAuth(async (
   } catch (error: any) {
     console.error('Error adding domain:', error);
     if (error?.code === '23505') {
-      return actionError('Domain already exists');
+      return actionError('Domain already exists', 'msp/email-providers:errors.domain.duplicate');
     }
     if (error?.code === '23514') {
-      return actionError('Invalid domain format');
+      return actionError('Invalid domain format', 'msp/email-providers:errors.domain.invalidFormat');
     }
-    return actionError('Failed to add domain. Please try again.');
+    return actionError('Failed to add domain. Please try again.', 'msp/email-providers:errors.domain.addFailed');
   }
 });
 
@@ -121,7 +121,7 @@ export const verifyEmailDomain = withAuth(async (
       .first();
 
     if (!domain) {
-      return actionError('Domain not found');
+      return actionError('Domain not found', 'msp/email-providers:errors.domain.notFound');
     }
 
     return {
@@ -130,7 +130,7 @@ export const verifyEmailDomain = withAuth(async (
     };
   } catch (error: any) {
     console.error('Error verifying domain:', error);
-    return actionError('Failed to verify domain. Please try again.');
+    return actionError('Failed to verify domain. Please try again.', 'msp/email-providers:errors.domain.verifyFailed');
   }
 });
 
@@ -150,7 +150,7 @@ export const deleteEmailDomain = withAuth(async (
       .first();
 
     if (!domain) {
-      return actionError('Domain not found');
+      return actionError('Domain not found', 'msp/email-providers:errors.domain.notFound');
     }
 
     // Delete from provider if it was successfully created
@@ -177,8 +177,8 @@ export const deleteEmailDomain = withAuth(async (
   } catch (error: any) {
     console.error('Error deleting domain:', error);
     if (error?.code === '23503') {
-      return actionError('Domain is still referenced and cannot be deleted.');
+      return actionError('Domain is still referenced and cannot be deleted.', 'msp/email-providers:errors.domain.stillReferenced');
     }
-    return actionError('Failed to delete domain. Please try again.');
+    return actionError('Failed to delete domain. Please try again.', 'msp/email-providers:errors.domain.deleteFailed');
   }
 });

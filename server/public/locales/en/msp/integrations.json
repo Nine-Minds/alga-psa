@@ -3407,5 +3407,99 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Permission denied: You do not have permission to view accounting mappings.",
+      "managePermission": "Permission denied: You do not have permission to manage accounting mappings.",
+      "loadFailed": "Unable to load mapping data. Please try again.",
+      "duplicate": "A mapping already exists for this entity. Edit the existing mapping instead.",
+      "saveFailed": "Unable to save mapping. Please try again.",
+      "idRequiredForUpdate": "Mapping ID is required for update.",
+      "noUpdateData": "No update data provided.",
+      "updateFailed": "Unable to update mapping. Please try again.",
+      "idRequiredForDelete": "Mapping ID is required for deletion.",
+      "notFound": "Mapping not found. Refresh mappings and try again.",
+      "deleteFailed": "Unable to delete mapping. Please try again."
+    },
+    "qbo": {
+      "enterpriseOnly": "QuickBooks Online integration is only available in Enterprise Edition.",
+      "viewPermission": "Forbidden: You do not have permission to view QuickBooks integration settings.",
+      "accounts": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks accounts.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks accounts.",
+        "loadFailed": "Could not load QuickBooks accounts. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "classes": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks classes.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks classes.",
+        "loadFailed": "Could not load QuickBooks classes. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "departments": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks departments.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks departments.",
+        "loadFailed": "Could not load QuickBooks departments. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "items": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks items.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks items.",
+        "loadFailed": "Could not load QuickBooks items. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "taxCodes": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks tax codes.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks tax codes.",
+        "loadFailed": "Could not load QuickBooks tax codes. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "customers": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks customers.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks customers.",
+        "loadFailed": "Could not load QuickBooks customers. Try again, or reconnect QuickBooks if the problem persists."
+      },
+      "paymentTerms": {
+        "notConnected": "Connect QuickBooks before loading QuickBooks payment terms.",
+        "reconnect": "Reconnect QuickBooks before loading QuickBooks payment terms.",
+        "loadFailed": "Could not load QuickBooks payment terms. Try again, or reconnect QuickBooks if the problem persists."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Xero integration is only available in Enterprise Edition.",
+      "viewPermission": "Forbidden: You do not have permission to view Xero integration settings.",
+      "organisationDisconnected": "The selected Xero organisation is no longer connected. Reconnect Xero and try again.",
+      "accounts": {
+        "notConnected": "Connect Xero before loading Xero accounts.",
+        "reconnect": "Reconnect Xero before loading Xero accounts.",
+        "loadFailed": "Could not load Xero accounts. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero accounts. Try again."
+      },
+      "items": {
+        "notConnected": "Connect Xero before loading Xero items.",
+        "reconnect": "Reconnect Xero before loading Xero items.",
+        "loadFailed": "Could not load Xero items. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero items. Try again."
+      },
+      "taxRates": {
+        "notConnected": "Connect Xero before loading Xero tax rates.",
+        "reconnect": "Reconnect Xero before loading Xero tax rates.",
+        "loadFailed": "Could not load Xero tax rates. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero tax rates. Try again."
+      },
+      "trackingCategories": {
+        "notConnected": "Connect Xero before loading Xero tracking categories.",
+        "reconnect": "Reconnect Xero before loading Xero tracking categories.",
+        "loadFailed": "Could not load Xero tracking categories. Try again, or reconnect Xero if the problem persists.",
+        "verifyFailed": "Could not verify the Xero connection before loading Xero tracking categories. Try again."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "User does not have permission to manage integration settings",
+      "manageBillingPermission": "User does not have permission to manage billing",
+      "viewBillingPermission": "User does not have permission to view billing settings",
+      "contentRequired": "CSV content is required"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "A contact with this email address already exists in the system without a client assignment",
+      "emailOnAnotherClient": "This email is already associated with another client",
+      "emailOnAnotherClientNamed": "This email is already associated with {{clientName}}"
+    }
   }
 }

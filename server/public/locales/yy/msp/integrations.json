@@ -3407,5 +3407,99 @@
         "publishableKeyFormat": "55555"
       }
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "55555",
+      "managePermission": "55555",
+      "loadFailed": "55555",
+      "duplicate": "55555",
+      "saveFailed": "55555",
+      "idRequiredForUpdate": "55555",
+      "noUpdateData": "55555",
+      "updateFailed": "55555",
+      "idRequiredForDelete": "55555",
+      "notFound": "55555",
+      "deleteFailed": "55555"
+    },
+    "qbo": {
+      "enterpriseOnly": "55555",
+      "viewPermission": "55555",
+      "accounts": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "classes": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "departments": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "items": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "taxCodes": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "customers": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      },
+      "paymentTerms": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555"
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "55555",
+      "viewPermission": "55555",
+      "organisationDisconnected": "55555",
+      "accounts": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555",
+        "verifyFailed": "55555"
+      },
+      "items": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555",
+        "verifyFailed": "55555"
+      },
+      "taxRates": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555",
+        "verifyFailed": "55555"
+      },
+      "trackingCategories": {
+        "notConnected": "55555",
+        "reconnect": "55555",
+        "loadFailed": "55555",
+        "verifyFailed": "55555"
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "55555",
+      "manageBillingPermission": "55555",
+      "viewBillingPermission": "55555",
+      "contentRequired": "55555"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "55555",
+      "emailOnAnotherClient": "55555",
+      "emailOnAnotherClientNamed": "55555 {{clientName}} 55555"
+    }
   }
 }

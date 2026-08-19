@@ -1092,5 +1092,64 @@
       "title": "Teste esta regra",
       "to": "Para"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Falha ao obter os domínios",
+      "invalidFormat": "Formato de domínio inválido",
+      "duplicate": "O domínio já existe",
+      "addFailed": "Falha ao adicionar o domínio. Tente novamente.",
+      "notFound": "Domínio não encontrado",
+      "verifyFailed": "Falha ao verificar o domínio. Tente novamente.",
+      "stillReferenced": "O domínio ainda está referenciado e não pode ser excluído.",
+      "deleteFailed": "Falha ao excluir o domínio. Tente novamente."
+    },
+    "provider": {
+      "saveFailed": "Falha ao salvar o provedor de email. Revise as configurações e tente novamente.",
+      "updateFailed": "Falha ao atualizar o provedor de email. Revise as configurações e tente novamente.",
+      "notFound": "Provedor de email não encontrado",
+      "deleteFailed": "Falha ao excluir o provedor de email"
+    },
+    "settings": {
+      "fetchFailed": "Falha ao obter as configurações de email",
+      "mailboxRequired": "Escolha uma caixa de correio do Microsoft 365 para o email de saída",
+      "mailboxInactive": "A caixa de correio do Microsoft 365 selecionada não está ativa ou não existe mais",
+      "mailboxReconnect": "Reconecte a caixa de correio do Microsoft 365 selecionada antes de usá-la para o email de saída",
+      "ticketIdentityMustMatchMailbox": "A identidade de email dos tickets deve usar a caixa de correio do Microsoft 365 selecionada ({{mailbox}}). Atualize o endereço de email dos tickets antes de salvar.",
+      "providerFromAddressInvalid": "O endereço de remetente de {{provider}} deve ser um endereço de email válido",
+      "ticketingFromInvalid": "O endereço de remetente dos tickets deve ser um endereço de email válido",
+      "outboundDomainInvalid": "O domínio de envio de saída deve ser um domínio válido (ex.: example.com)",
+      "outboundDomainRequired": "Configure um domínio de saída antes de escolher um endereço de remetente dos tickets",
+      "ticketingFromDomainMismatch": "O endereço de remetente dos tickets deve usar o domínio de saída configurado",
+      "refreshFailed": "Falha ao obter as configurações atualizadas",
+      "updateFailed": "Falha ao atualizar as configurações de email",
+      "mailboxesLoadFailed": "Falha ao carregar as caixas de correio do Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Regra de email de entrada não encontrada",
+      "invalidOrdering": "Dados de ordenação de regras inválidos",
+      "aliasRequired": "O alias é obrigatório",
+      "aliasTooLong": "O alias é muito longo",
+      "clientRequired": "O cliente é obrigatório",
+      "invalidSampleEmail": "Email de exemplo inválido"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Já existe uma configuração com este nome curto",
+      "createFailed": "Falha ao criar os padrões de tickets de entrada. Tente novamente.",
+      "notFound": "Configuração de padrões não encontrada",
+      "updateFailed": "Falha ao atualizar os padrões de tickets de entrada. Tente novamente."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Permissão negada: não é possível ler as opções de campo do ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "Falha ao carregar as opções de campo do ticket. Tente novamente.",
+        "boards": "Falha ao carregar os quadros. Tente novamente.",
+        "statuses": "Falha ao carregar os status. Tente novamente.",
+        "priorities": "Falha ao carregar as prioridades. Tente novamente.",
+        "categories": "Falha ao carregar as categorias. Tente novamente.",
+        "clients": "Falha ao carregar os clientes. Tente novamente.",
+        "users": "Falha ao carregar os usuários. Tente novamente."
+      }
+    }
   }
 }

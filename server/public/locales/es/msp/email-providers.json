@@ -1092,5 +1092,64 @@
       "title": "Probar esta regla",
       "to": "Para"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "No se pudieron obtener los dominios",
+      "invalidFormat": "Formato de dominio no válido",
+      "duplicate": "El dominio ya existe",
+      "addFailed": "No se pudo añadir el dominio. Inténtelo de nuevo.",
+      "notFound": "No se encontró el dominio",
+      "verifyFailed": "No se pudo verificar el dominio. Inténtelo de nuevo.",
+      "stillReferenced": "El dominio todavía está referenciado y no se puede eliminar.",
+      "deleteFailed": "No se pudo eliminar el dominio. Inténtelo de nuevo."
+    },
+    "provider": {
+      "saveFailed": "No se pudo guardar el proveedor de correo electrónico. Revise la configuración e inténtelo de nuevo.",
+      "updateFailed": "No se pudo actualizar el proveedor de correo electrónico. Revise la configuración e inténtelo de nuevo.",
+      "notFound": "No se encontró el proveedor de correo electrónico",
+      "deleteFailed": "No se pudo eliminar el proveedor de correo electrónico"
+    },
+    "settings": {
+      "fetchFailed": "No se pudieron obtener los ajustes de correo electrónico",
+      "mailboxRequired": "Elija un buzón de Microsoft 365 para el correo electrónico saliente",
+      "mailboxInactive": "El buzón de Microsoft 365 seleccionado no está activo o ya no existe",
+      "mailboxReconnect": "Vuelva a conectar el buzón de Microsoft 365 seleccionado antes de usarlo para el correo electrónico saliente",
+      "ticketIdentityMustMatchMailbox": "La identidad de correo electrónico de los tickets debe usar el buzón de Microsoft 365 seleccionado ({{mailbox}}). Actualice la dirección de correo de tickets antes de guardar.",
+      "providerFromAddressInvalid": "La dirección de remitente de {{provider}} debe ser una dirección de correo electrónico válida",
+      "ticketingFromInvalid": "La dirección de remitente de tickets debe ser una dirección de correo electrónico válida",
+      "outboundDomainInvalid": "El dominio de envío saliente debe ser un dominio válido (p. ej., example.com)",
+      "outboundDomainRequired": "Configure un dominio de envío antes de elegir una dirección de remitente de tickets",
+      "ticketingFromDomainMismatch": "La dirección de remitente de tickets debe usar el dominio de envío configurado",
+      "refreshFailed": "No se pudieron recuperar los ajustes actualizados",
+      "updateFailed": "No se pudieron actualizar los ajustes de correo electrónico",
+      "mailboxesLoadFailed": "No se pudieron cargar los buzones de Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "No se encontró la regla de correo electrónico entrante",
+      "invalidOrdering": "Datos de ordenación de reglas no válidos",
+      "aliasRequired": "El alias es obligatorio",
+      "aliasTooLong": "El alias es demasiado largo",
+      "clientRequired": "El cliente es obligatorio",
+      "invalidSampleEmail": "Correo electrónico de ejemplo no válido"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Ya existe una configuración con este nombre corto",
+      "createFailed": "No se pudieron crear los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
+      "notFound": "No se encontró la configuración de valores predeterminados",
+      "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Permiso denegado: no se pueden leer las opciones de campo de ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "No se pudieron cargar las opciones de campo de ticket. Inténtelo de nuevo.",
+        "boards": "No se pudieron cargar los tableros. Inténtelo de nuevo.",
+        "statuses": "No se pudieron cargar los estados. Inténtelo de nuevo.",
+        "priorities": "No se pudieron cargar las prioridades. Inténtelo de nuevo.",
+        "categories": "No se pudieron cargar las categorías. Inténtelo de nuevo.",
+        "clients": "No se pudieron cargar los clientes. Inténtelo de nuevo.",
+        "users": "No se pudieron cargar los usuarios. Inténtelo de nuevo."
+      }
+    }
   }
 }

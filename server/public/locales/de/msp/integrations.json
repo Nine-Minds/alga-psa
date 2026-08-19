@@ -3407,5 +3407,99 @@
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen anzuzeigen.",
+      "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
+      "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
+      "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",
+      "updateFailed": "Die Zuordnung kann nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
+      "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
+      "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    },
+    "qbo": {
+      "enterpriseOnly": "Die QuickBooks-Online-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der QuickBooks-Integration anzuzeigen.",
+      "accounts": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Konten laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Konten laden.",
+        "loadFailed": "QuickBooks-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "classes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Klassen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Klassen laden.",
+        "loadFailed": "QuickBooks-Klassen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "departments": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Abteilungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Abteilungen laden.",
+        "loadFailed": "QuickBooks-Abteilungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Artikel laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Artikel laden.",
+        "loadFailed": "QuickBooks-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "taxCodes": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Steuercodes laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Steuercodes laden.",
+        "loadFailed": "QuickBooks-Steuercodes konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "customers": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Kunden laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Kunden laden.",
+        "loadFailed": "QuickBooks-Kunden konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbinden Sie QuickBooks, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "reconnect": "Verbinden Sie QuickBooks neu, bevor Sie QuickBooks-Zahlungsbedingungen laden.",
+        "loadFailed": "QuickBooks-Zahlungsbedingungen konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie QuickBooks neu, wenn das Problem weiterhin besteht."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Die Xero-Integration ist nur in der Enterprise Edition verfügbar.",
+      "viewPermission": "Verboten: Sie haben keine Berechtigung, die Einstellungen der Xero-Integration anzuzeigen.",
+      "organisationDisconnected": "Die ausgewählte Xero-Organisation ist nicht mehr verbunden. Verbinden Sie Xero neu und versuchen Sie es erneut.",
+      "accounts": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Konten laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Konten laden.",
+        "loadFailed": "Xero-Konten konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Konten geladen wurden. Versuchen Sie es erneut."
+      },
+      "items": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Artikel laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Artikel laden.",
+        "loadFailed": "Xero-Artikel konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Artikel geladen wurden. Versuchen Sie es erneut."
+      },
+      "taxRates": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Steuersätze laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Steuersätze laden.",
+        "loadFailed": "Xero-Steuersätze konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Steuersätze geladen wurden. Versuchen Sie es erneut."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbinden Sie Xero, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "reconnect": "Verbinden Sie Xero neu, bevor Sie Xero-Nachverfolgungskategorien laden.",
+        "loadFailed": "Xero-Nachverfolgungskategorien konnten nicht geladen werden. Versuchen Sie es erneut oder verbinden Sie Xero neu, wenn das Problem weiterhin besteht.",
+        "verifyFailed": "Die Xero-Verbindung konnte nicht überprüft werden, bevor Xero-Nachverfolgungskategorien geladen wurden. Versuchen Sie es erneut."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "Der Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten",
+      "manageBillingPermission": "Der Benutzer hat keine Berechtigung, die Abrechnung zu verwalten",
+      "viewBillingPermission": "Der Benutzer hat keine Berechtigung, Abrechnungseinstellungen anzuzeigen",
+      "contentRequired": "CSV-Inhalt ist erforderlich"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
+      "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
+      "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
+    }
   }
 }

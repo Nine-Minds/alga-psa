@@ -1092,5 +1092,64 @@
       "title": "Test this rule",
       "to": "To"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Failed to fetch domains",
+      "invalidFormat": "Invalid domain format",
+      "duplicate": "Domain already exists",
+      "addFailed": "Failed to add domain. Please try again.",
+      "notFound": "Domain not found",
+      "verifyFailed": "Failed to verify domain. Please try again.",
+      "stillReferenced": "Domain is still referenced and cannot be deleted.",
+      "deleteFailed": "Failed to delete domain. Please try again."
+    },
+    "provider": {
+      "saveFailed": "Failed to save email provider. Please review the settings and try again.",
+      "updateFailed": "Failed to update email provider. Please review the settings and try again.",
+      "notFound": "Email provider not found",
+      "deleteFailed": "Failed to delete email provider"
+    },
+    "settings": {
+      "fetchFailed": "Failed to fetch email settings",
+      "mailboxRequired": "Choose a Microsoft 365 mailbox for outbound email",
+      "mailboxInactive": "The selected Microsoft 365 mailbox is not active or no longer exists",
+      "mailboxReconnect": "Reconnect the selected Microsoft 365 mailbox before using it for outbound email",
+      "ticketIdentityMustMatchMailbox": "Ticket email identity must use the selected Microsoft 365 mailbox ({{mailbox}}). Update the Ticket emails address before saving.",
+      "providerFromAddressInvalid": "The {{provider}} From address must be a valid email address",
+      "ticketingFromInvalid": "Ticketing From address must be a valid email address",
+      "outboundDomainInvalid": "Outbound sending domain must be a valid domain (e.g. example.com)",
+      "outboundDomainRequired": "Configure an outbound domain before choosing a ticketing From address",
+      "ticketingFromDomainMismatch": "Ticketing From address must use the configured outbound domain",
+      "refreshFailed": "Failed to retrieve updated settings",
+      "updateFailed": "Failed to update email settings",
+      "mailboxesLoadFailed": "Failed to load Microsoft 365 mailboxes"
+    },
+    "inboundRules": {
+      "notFound": "Inbound email rule not found",
+      "invalidOrdering": "Invalid rule ordering payload",
+      "aliasRequired": "Alias is required",
+      "aliasTooLong": "Alias is too long",
+      "clientRequired": "Client is required",
+      "invalidSampleEmail": "Invalid sample email"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "A configuration with this short name already exists",
+      "createFailed": "Failed to create inbound ticket defaults. Please try again.",
+      "notFound": "Defaults configuration not found",
+      "updateFailed": "Failed to update inbound ticket defaults. Please try again."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Permission denied: Cannot read ticket field options",
+      "loadFailed": {
+        "ticketFieldOptions": "Failed to load ticket field options. Please try again.",
+        "boards": "Failed to load boards. Please try again.",
+        "statuses": "Failed to load statuses. Please try again.",
+        "priorities": "Failed to load priorities. Please try again.",
+        "categories": "Failed to load categories. Please try again.",
+        "clients": "Failed to load clients. Please try again.",
+        "users": "Failed to load users. Please try again."
+      }
+    }
   }
 }

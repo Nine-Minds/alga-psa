@@ -256,7 +256,7 @@ export const setInboundEmailRuleActive = withAuth(async (
       .returning([...RULE_COLUMNS]);
 
     if (!rule) {
-      return actionError('Inbound email rule not found');
+      return actionError('Inbound email rule not found', 'msp/email-providers:errors.inboundRules.notFound');
     }
     return { rule };
   } catch (error) {
@@ -277,7 +277,7 @@ export const deleteInboundEmailRule = withAuth(async (
 
     const deleted = await tenantDb(knex, tenant).table('inbound_email_rules').where({ id }).delete();
     if (!deleted) {
-      return actionError('Inbound email rule not found');
+      return actionError('Inbound email rule not found', 'msp/email-providers:errors.inboundRules.notFound');
     }
     return { success: true };
   } catch (error) {
@@ -295,7 +295,7 @@ export const reorderInboundEmailRules = withAuth(async (
   try {
     await assertEmailSettingsPermission(user, 'update');
     if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== 'string')) {
-      return actionError('Invalid rule ordering payload');
+      return actionError('Invalid rule ordering payload', 'msp/email-providers:errors.inboundRules.invalidOrdering');
     }
     const { knex } = await createTenantKnex();
 
@@ -382,13 +382,13 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
 
     const alias = String(rawAlias ?? '').replace(/\s+/g, ' ').trim();
     if (!alias) {
-      return actionError('Alias is required');
+      return actionError('Alias is required', 'msp/email-providers:errors.inboundRules.aliasRequired');
     }
     if (alias.length > 255) {
-      return actionError('Alias is too long');
+      return actionError('Alias is too long', 'msp/email-providers:errors.inboundRules.aliasTooLong');
     }
     if (typeof clientId !== 'string' || !clientId) {
-      return actionError('Client is required');
+      return actionError('Client is required', 'msp/email-providers:errors.inboundRules.clientRequired');
     }
 
     const { knex } = await createTenantKnex();
@@ -441,7 +441,7 @@ export const testInboundEmailRule = withAuth(async (
 
     const sampleResult = inboundEmailRuleTestSampleSchema.safeParse(data.sample ?? {});
     if (!sampleResult.success) {
-      return actionError('Invalid sample email');
+      return actionError('Invalid sample email', 'msp/email-providers:errors.inboundRules.invalidSampleEmail');
     }
     const sample: InboundEmailRuleTestSample = sampleResult.data;
 

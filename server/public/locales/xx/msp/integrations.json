@@ -3407,5 +3407,99 @@
         "publishableKeyFormat": "11111"
       }
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "11111",
+      "managePermission": "11111",
+      "loadFailed": "11111",
+      "duplicate": "11111",
+      "saveFailed": "11111",
+      "idRequiredForUpdate": "11111",
+      "noUpdateData": "11111",
+      "updateFailed": "11111",
+      "idRequiredForDelete": "11111",
+      "notFound": "11111",
+      "deleteFailed": "11111"
+    },
+    "qbo": {
+      "enterpriseOnly": "11111",
+      "viewPermission": "11111",
+      "accounts": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "classes": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "departments": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "items": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "taxCodes": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "customers": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      },
+      "paymentTerms": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111"
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "11111",
+      "viewPermission": "11111",
+      "organisationDisconnected": "11111",
+      "accounts": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111",
+        "verifyFailed": "11111"
+      },
+      "items": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111",
+        "verifyFailed": "11111"
+      },
+      "taxRates": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111",
+        "verifyFailed": "11111"
+      },
+      "trackingCategories": {
+        "notConnected": "11111",
+        "reconnect": "11111",
+        "loadFailed": "11111",
+        "verifyFailed": "11111"
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "11111",
+      "manageBillingPermission": "11111",
+      "viewBillingPermission": "11111",
+      "contentRequired": "11111"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "11111",
+      "emailOnAnotherClient": "11111",
+      "emailOnAnotherClientNamed": "11111 {{clientName}} 11111"
+    }
   }
 }

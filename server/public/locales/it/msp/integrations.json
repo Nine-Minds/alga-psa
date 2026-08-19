@@ -3407,5 +3407,99 @@
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Autorizzazione negata: non si dispone dell’autorizzazione per visualizzare le mappature contabili.",
+      "managePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per gestire le mappature contabili.",
+      "loadFailed": "Impossibile caricare i dati di mappatura. Riprovare.",
+      "duplicate": "Esiste già una mappatura per questa entità. Modificare invece la mappatura esistente.",
+      "saveFailed": "Impossibile salvare la mappatura. Riprovare.",
+      "idRequiredForUpdate": "Per l’aggiornamento è necessario l’ID della mappatura.",
+      "noUpdateData": "Nessun dato di aggiornamento fornito.",
+      "updateFailed": "Impossibile aggiornare la mappatura. Riprovare.",
+      "idRequiredForDelete": "Per l’eliminazione è necessario l’ID della mappatura.",
+      "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
+      "deleteFailed": "Impossibile eliminare la mappatura. Riprovare."
+    },
+    "qbo": {
+      "enterpriseOnly": "L’integrazione con QuickBooks Online è disponibile solo nella Enterprise Edition.",
+      "viewPermission": "Vietato: non si dispone dell’autorizzazione per visualizzare le impostazioni dell’integrazione con QuickBooks.",
+      "accounts": {
+        "notConnected": "Collegare QuickBooks prima di caricare i conti QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare i conti QuickBooks.",
+        "loadFailed": "Impossibile caricare i conti QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "classes": {
+        "notConnected": "Collegare QuickBooks prima di caricare le classi QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare le classi QuickBooks.",
+        "loadFailed": "Impossibile caricare le classi QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "departments": {
+        "notConnected": "Collegare QuickBooks prima di caricare i reparti QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare i reparti QuickBooks.",
+        "loadFailed": "Impossibile caricare i reparti QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "items": {
+        "notConnected": "Collegare QuickBooks prima di caricare gli articoli QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare gli articoli QuickBooks.",
+        "loadFailed": "Impossibile caricare gli articoli QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "taxCodes": {
+        "notConnected": "Collegare QuickBooks prima di caricare i codici d’imposta QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare i codici d’imposta QuickBooks.",
+        "loadFailed": "Impossibile caricare i codici d’imposta QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "customers": {
+        "notConnected": "Collegare QuickBooks prima di caricare i clienti QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare i clienti QuickBooks.",
+        "loadFailed": "Impossibile caricare i clienti QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      },
+      "paymentTerms": {
+        "notConnected": "Collegare QuickBooks prima di caricare i termini di pagamento QuickBooks.",
+        "reconnect": "Ricollegare QuickBooks prima di caricare i termini di pagamento QuickBooks.",
+        "loadFailed": "Impossibile caricare i termini di pagamento QuickBooks. Riprovare o ricollegare QuickBooks se il problema persiste."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "L’integrazione con Xero è disponibile solo nella Enterprise Edition.",
+      "viewPermission": "Vietato: non si dispone dell’autorizzazione per visualizzare le impostazioni dell’integrazione con Xero.",
+      "organisationDisconnected": "L’organizzazione Xero selezionata non è più collegata. Ricollegare Xero e riprovare.",
+      "accounts": {
+        "notConnected": "Collegare Xero prima di caricare i conti Xero.",
+        "reconnect": "Ricollegare Xero prima di caricare i conti Xero.",
+        "loadFailed": "Impossibile caricare i conti Xero. Riprovare o ricollegare Xero se il problema persiste.",
+        "verifyFailed": "Non è stato possibile verificare la connessione a Xero prima di caricare i conti Xero. Riprovare."
+      },
+      "items": {
+        "notConnected": "Collegare Xero prima di caricare gli articoli Xero.",
+        "reconnect": "Ricollegare Xero prima di caricare gli articoli Xero.",
+        "loadFailed": "Impossibile caricare gli articoli Xero. Riprovare o ricollegare Xero se il problema persiste.",
+        "verifyFailed": "Non è stato possibile verificare la connessione a Xero prima di caricare gli articoli Xero. Riprovare."
+      },
+      "taxRates": {
+        "notConnected": "Collegare Xero prima di caricare le aliquote d’imposta Xero.",
+        "reconnect": "Ricollegare Xero prima di caricare le aliquote d’imposta Xero.",
+        "loadFailed": "Impossibile caricare le aliquote d’imposta Xero. Riprovare o ricollegare Xero se il problema persiste.",
+        "verifyFailed": "Non è stato possibile verificare la connessione a Xero prima di caricare le aliquote d’imposta Xero. Riprovare."
+      },
+      "trackingCategories": {
+        "notConnected": "Collegare Xero prima di caricare le categorie di tracciamento Xero.",
+        "reconnect": "Ricollegare Xero prima di caricare le categorie di tracciamento Xero.",
+        "loadFailed": "Impossibile caricare le categorie di tracciamento Xero. Riprovare o ricollegare Xero se il problema persiste.",
+        "verifyFailed": "Non è stato possibile verificare la connessione a Xero prima di caricare le categorie di tracciamento Xero. Riprovare."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "L’utente non dispone dell’autorizzazione per gestire le impostazioni di integrazione",
+      "manageBillingPermission": "L’utente non dispone dell’autorizzazione per gestire la fatturazione",
+      "viewBillingPermission": "L’utente non dispone dell’autorizzazione per visualizzare le impostazioni di fatturazione",
+      "contentRequired": "Il contenuto CSV è obbligatorio"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Nel sistema esiste già un contatto con questo indirizzo email senza assegnazione a un cliente",
+      "emailOnAnotherClient": "Questa email è già associata a un altro cliente",
+      "emailOnAnotherClientNamed": "Questa email è già associata a {{clientName}}"
+    }
   }
 }

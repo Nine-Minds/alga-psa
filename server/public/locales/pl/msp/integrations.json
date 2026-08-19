@@ -3407,5 +3407,99 @@
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Odmowa uprawnień: brak uprawnień do wyświetlania powiązań księgowych.",
+      "managePermission": "Odmowa uprawnień: brak uprawnień do zarządzania powiązaniami księgowymi.",
+      "loadFailed": "Nie można wczytać danych powiązań. Spróbuj ponownie.",
+      "duplicate": "Powiązanie dla tego obiektu już istnieje. Zamiast tego edytuj istniejące powiązanie.",
+      "saveFailed": "Nie można zapisać powiązania. Spróbuj ponownie.",
+      "idRequiredForUpdate": "Do aktualizacji wymagany jest identyfikator powiązania.",
+      "noUpdateData": "Nie podano danych do aktualizacji.",
+      "updateFailed": "Nie można zaktualizować powiązania. Spróbuj ponownie.",
+      "idRequiredForDelete": "Do usunięcia wymagany jest identyfikator powiązania.",
+      "notFound": "Nie znaleziono powiązania. Odśwież powiązania i spróbuj ponownie.",
+      "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie."
+    },
+    "qbo": {
+      "enterpriseOnly": "Integracja z QuickBooks Online jest dostępna tylko w wersji Enterprise Edition.",
+      "viewPermission": "Zabronione: brak uprawnień do wyświetlania ustawień integracji z QuickBooks.",
+      "accounts": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem kont QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem kont QuickBooks.",
+        "loadFailed": "Nie udało się wczytać kont QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "classes": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem klas QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem klas QuickBooks.",
+        "loadFailed": "Nie udało się wczytać klas QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "departments": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem działów QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem działów QuickBooks.",
+        "loadFailed": "Nie udało się wczytać działów QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "items": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem pozycji QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem pozycji QuickBooks.",
+        "loadFailed": "Nie udało się wczytać pozycji QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "taxCodes": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem kodów podatkowych QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem kodów podatkowych QuickBooks.",
+        "loadFailed": "Nie udało się wczytać kodów podatkowych QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "customers": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem klientów QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem klientów QuickBooks.",
+        "loadFailed": "Nie udało się wczytać klientów QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      },
+      "paymentTerms": {
+        "notConnected": "Połącz QuickBooks przed wczytaniem warunków płatności QuickBooks.",
+        "reconnect": "Połącz ponownie QuickBooks przed wczytaniem warunków płatności QuickBooks.",
+        "loadFailed": "Nie udało się wczytać warunków płatności QuickBooks. Spróbuj ponownie lub połącz ponownie QuickBooks, jeśli problem będzie się powtarzał."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "Integracja z Xero jest dostępna tylko w wersji Enterprise Edition.",
+      "viewPermission": "Zabronione: brak uprawnień do wyświetlania ustawień integracji z Xero.",
+      "organisationDisconnected": "Wybrana organizacja Xero nie jest już połączona. Połącz ponownie Xero i spróbuj ponownie.",
+      "accounts": {
+        "notConnected": "Połącz Xero przed wczytaniem kont Xero.",
+        "reconnect": "Połącz ponownie Xero przed wczytaniem kont Xero.",
+        "loadFailed": "Nie udało się wczytać kont Xero. Spróbuj ponownie lub połącz ponownie Xero, jeśli problem będzie się powtarzał.",
+        "verifyFailed": "Nie udało się zweryfikować połączenia z Xero przed wczytaniem kont Xero. Spróbuj ponownie."
+      },
+      "items": {
+        "notConnected": "Połącz Xero przed wczytaniem pozycji Xero.",
+        "reconnect": "Połącz ponownie Xero przed wczytaniem pozycji Xero.",
+        "loadFailed": "Nie udało się wczytać pozycji Xero. Spróbuj ponownie lub połącz ponownie Xero, jeśli problem będzie się powtarzał.",
+        "verifyFailed": "Nie udało się zweryfikować połączenia z Xero przed wczytaniem pozycji Xero. Spróbuj ponownie."
+      },
+      "taxRates": {
+        "notConnected": "Połącz Xero przed wczytaniem stawek podatku Xero.",
+        "reconnect": "Połącz ponownie Xero przed wczytaniem stawek podatku Xero.",
+        "loadFailed": "Nie udało się wczytać stawek podatku Xero. Spróbuj ponownie lub połącz ponownie Xero, jeśli problem będzie się powtarzał.",
+        "verifyFailed": "Nie udało się zweryfikować połączenia z Xero przed wczytaniem stawek podatku Xero. Spróbuj ponownie."
+      },
+      "trackingCategories": {
+        "notConnected": "Połącz Xero przed wczytaniem kategorii śledzenia Xero.",
+        "reconnect": "Połącz ponownie Xero przed wczytaniem kategorii śledzenia Xero.",
+        "loadFailed": "Nie udało się wczytać kategorii śledzenia Xero. Spróbuj ponownie lub połącz ponownie Xero, jeśli problem będzie się powtarzał.",
+        "verifyFailed": "Nie udało się zweryfikować połączenia z Xero przed wczytaniem kategorii śledzenia Xero. Spróbuj ponownie."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "Użytkownik nie ma uprawnień do zarządzania ustawieniami integracji",
+      "manageBillingPermission": "Użytkownik nie ma uprawnień do zarządzania rozliczeniami",
+      "viewBillingPermission": "Użytkownik nie ma uprawnień do wyświetlania ustawień rozliczeń",
+      "contentRequired": "Zawartość CSV jest wymagana"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "W systemie istnieje już kontakt z tym adresem e-mail bez przypisania do klienta",
+      "emailOnAnotherClient": "Ten adres e-mail jest już powiązany z innym klientem",
+      "emailOnAnotherClientNamed": "Ten adres e-mail jest już powiązany z: {{clientName}}"
+    }
   }
 }

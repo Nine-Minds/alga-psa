@@ -1092,5 +1092,64 @@
       "title": "Deze regel testen",
       "to": "Aan"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Kan domeinen niet ophalen",
+      "invalidFormat": "Ongeldige domeinnotatie",
+      "duplicate": "Het domein bestaat al",
+      "addFailed": "Kan het domein niet toevoegen. Probeer het opnieuw.",
+      "notFound": "Domein niet gevonden",
+      "verifyFailed": "Kan het domein niet verifiëren. Probeer het opnieuw.",
+      "stillReferenced": "Er wordt nog naar het domein verwezen; het kan niet worden verwijderd.",
+      "deleteFailed": "Kan het domein niet verwijderen. Probeer het opnieuw."
+    },
+    "provider": {
+      "saveFailed": "Kan de e-mailprovider niet opslaan. Controleer de instellingen en probeer het opnieuw.",
+      "updateFailed": "Kan de e-mailprovider niet bijwerken. Controleer de instellingen en probeer het opnieuw.",
+      "notFound": "E-mailprovider niet gevonden",
+      "deleteFailed": "Kan de e-mailprovider niet verwijderen"
+    },
+    "settings": {
+      "fetchFailed": "Kan de e-mailinstellingen niet ophalen",
+      "mailboxRequired": "Kies een Microsoft 365-postvak voor uitgaande e-mail",
+      "mailboxInactive": "Het geselecteerde Microsoft 365-postvak is niet actief of bestaat niet meer",
+      "mailboxReconnect": "Verbind het geselecteerde Microsoft 365-postvak opnieuw voordat u het voor uitgaande e-mail gebruikt",
+      "ticketIdentityMustMatchMailbox": "De e-mailidentiteit voor tickets moet het geselecteerde Microsoft 365-postvak ({{mailbox}}) gebruiken. Werk het adres voor ticket-e-mails bij voordat u opslaat.",
+      "providerFromAddressInvalid": "Het afzenderadres van {{provider}} moet een geldig e-mailadres zijn",
+      "ticketingFromInvalid": "Het afzenderadres voor tickets moet een geldig e-mailadres zijn",
+      "outboundDomainInvalid": "Het uitgaande verzenddomein moet een geldig domein zijn (bijv. example.com)",
+      "outboundDomainRequired": "Configureer een uitgaand domein voordat u een afzenderadres voor tickets kiest",
+      "ticketingFromDomainMismatch": "Het afzenderadres voor tickets moet het geconfigureerde uitgaande domein gebruiken",
+      "refreshFailed": "Kan de bijgewerkte instellingen niet ophalen",
+      "updateFailed": "Kan de e-mailinstellingen niet bijwerken",
+      "mailboxesLoadFailed": "Kan de Microsoft 365-postvakken niet laden"
+    },
+    "inboundRules": {
+      "notFound": "Regel voor inkomende e-mail niet gevonden",
+      "invalidOrdering": "Ongeldige gegevens voor de regelvolgorde",
+      "aliasRequired": "Alias is verplicht",
+      "aliasTooLong": "De alias is te lang",
+      "clientRequired": "Klant is verplicht",
+      "invalidSampleEmail": "Ongeldige voorbeeld-e-mail"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Er bestaat al een configuratie met deze korte naam",
+      "createFailed": "Kan de standaardwaarden voor inkomende tickets niet aanmaken. Probeer het opnieuw.",
+      "notFound": "Standaardconfiguratie niet gevonden",
+      "updateFailed": "Kan de standaardwaarden voor inkomende tickets niet bijwerken. Probeer het opnieuw."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Toestemming geweigerd: ticketveldopties kunnen niet worden gelezen",
+      "loadFailed": {
+        "ticketFieldOptions": "Kan de ticketveldopties niet laden. Probeer het opnieuw.",
+        "boards": "Kan de borden niet laden. Probeer het opnieuw.",
+        "statuses": "Kan de statussen niet laden. Probeer het opnieuw.",
+        "priorities": "Kan de prioriteiten niet laden. Probeer het opnieuw.",
+        "categories": "Kan de categorieën niet laden. Probeer het opnieuw.",
+        "clients": "Kan de klanten niet laden. Probeer het opnieuw.",
+        "users": "Kan de gebruikers niet laden. Probeer het opnieuw."
+      }
+    }
   }
 }

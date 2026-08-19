@@ -3407,5 +3407,99 @@
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
+  },
+  "errors": {
+    "mappings": {
+      "viewPermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te bekijken.",
+      "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",
+      "loadFailed": "Kan de koppelingsgegevens niet laden. Probeer het opnieuw.",
+      "duplicate": "Er bestaat al een koppeling voor deze entiteit. Bewerk in plaats daarvan de bestaande koppeling.",
+      "saveFailed": "Kan de koppeling niet opslaan. Probeer het opnieuw.",
+      "idRequiredForUpdate": "Voor het bijwerken is de koppelings-ID verplicht.",
+      "noUpdateData": "Er zijn geen bij te werken gegevens opgegeven.",
+      "updateFailed": "Kan de koppeling niet bijwerken. Probeer het opnieuw.",
+      "idRequiredForDelete": "Voor het verwijderen is de koppelings-ID verplicht.",
+      "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
+      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw."
+    },
+    "qbo": {
+      "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de QuickBooks-integratie te bekijken.",
+      "accounts": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-grootboekrekeningen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-grootboekrekeningen laadt.",
+        "loadFailed": "Kan QuickBooks-grootboekrekeningen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "classes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klassen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klassen laadt.",
+        "loadFailed": "Kan QuickBooks-klassen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "departments": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-afdelingen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-afdelingen laadt.",
+        "loadFailed": "Kan QuickBooks-afdelingen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "items": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-artikelen laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-artikelen laadt.",
+        "loadFailed": "Kan QuickBooks-artikelen niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "taxCodes": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-belastingcodes laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-belastingcodes laadt.",
+        "loadFailed": "Kan QuickBooks-belastingcodes niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "customers": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-klanten laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-klanten laadt.",
+        "loadFailed": "Kan QuickBooks-klanten niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      },
+      "paymentTerms": {
+        "notConnected": "Verbind QuickBooks voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "reconnect": "Verbind QuickBooks opnieuw voordat u QuickBooks-betalingsvoorwaarden laadt.",
+        "loadFailed": "Kan QuickBooks-betalingsvoorwaarden niet laden. Probeer het opnieuw of verbind QuickBooks opnieuw als het probleem aanhoudt."
+      }
+    },
+    "xero": {
+      "enterpriseOnly": "De Xero-integratie is alleen beschikbaar in de Enterprise Edition.",
+      "viewPermission": "Verboden: u hebt geen rechten om de instellingen van de Xero-integratie te bekijken.",
+      "organisationDisconnected": "De geselecteerde Xero-organisatie is niet meer verbonden. Verbind Xero opnieuw en probeer het nogmaals.",
+      "accounts": {
+        "notConnected": "Verbind Xero voordat u Xero-grootboekrekeningen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-grootboekrekeningen laadt.",
+        "loadFailed": "Kan Xero-grootboekrekeningen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-grootboekrekeningen worden geladen. Probeer het opnieuw."
+      },
+      "items": {
+        "notConnected": "Verbind Xero voordat u Xero-artikelen laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-artikelen laadt.",
+        "loadFailed": "Kan Xero-artikelen niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-artikelen worden geladen. Probeer het opnieuw."
+      },
+      "taxRates": {
+        "notConnected": "Verbind Xero voordat u Xero-belastingtarieven laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-belastingtarieven laadt.",
+        "loadFailed": "Kan Xero-belastingtarieven niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-belastingtarieven worden geladen. Probeer het opnieuw."
+      },
+      "trackingCategories": {
+        "notConnected": "Verbind Xero voordat u Xero-trackingcategorieën laadt.",
+        "reconnect": "Verbind Xero opnieuw voordat u Xero-trackingcategorieën laadt.",
+        "loadFailed": "Kan Xero-trackingcategorieën niet laden. Probeer het opnieuw of verbind Xero opnieuw als het probleem aanhoudt.",
+        "verifyFailed": "Kan de Xero-verbinding niet controleren voordat Xero-trackingcategorieën worden geladen. Probeer het opnieuw."
+      }
+    },
+    "xeroCsv": {
+      "manageIntegrationsPermission": "De gebruiker heeft geen rechten om integratie-instellingen te beheren",
+      "manageBillingPermission": "De gebruiker heeft geen rechten om facturatie te beheren",
+      "viewBillingPermission": "De gebruiker heeft geen rechten om facturatie-instellingen te bekijken",
+      "contentRequired": "CSV-inhoud is verplicht"
+    },
+    "clientLookup": {
+      "contactWithoutClient": "Er bestaat al een contact met dit e-mailadres in het systeem zonder klanttoewijzing",
+      "emailOnAnotherClient": "Dit e-mailadres is al gekoppeld aan een andere klant",
+      "emailOnAnotherClientNamed": "Dit e-mailadres is al gekoppeld aan {{clientName}}"
+    }
   }
 }

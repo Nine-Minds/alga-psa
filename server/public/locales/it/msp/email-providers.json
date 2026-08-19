@@ -1092,5 +1092,64 @@
       "title": "Testa questa regola",
       "to": "A"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "Impossibile recuperare i domini",
+      "invalidFormat": "Formato del dominio non valido",
+      "duplicate": "Il dominio esiste già",
+      "addFailed": "Impossibile aggiungere il dominio. Riprovare.",
+      "notFound": "Dominio non trovato",
+      "verifyFailed": "Impossibile verificare il dominio. Riprovare.",
+      "stillReferenced": "Il dominio è ancora referenziato e non può essere eliminato.",
+      "deleteFailed": "Impossibile eliminare il dominio. Riprovare."
+    },
+    "provider": {
+      "saveFailed": "Impossibile salvare il provider email. Controllare le impostazioni e riprovare.",
+      "updateFailed": "Impossibile aggiornare il provider email. Controllare le impostazioni e riprovare.",
+      "notFound": "Provider email non trovato",
+      "deleteFailed": "Impossibile eliminare il provider email"
+    },
+    "settings": {
+      "fetchFailed": "Impossibile recuperare le impostazioni email",
+      "mailboxRequired": "Scegliere una cassetta postale Microsoft 365 per le email in uscita",
+      "mailboxInactive": "La cassetta postale Microsoft 365 selezionata non è attiva o non esiste più",
+      "mailboxReconnect": "Ricollegare la cassetta postale Microsoft 365 selezionata prima di utilizzarla per le email in uscita",
+      "ticketIdentityMustMatchMailbox": "L’identità email dei ticket deve utilizzare la cassetta postale Microsoft 365 selezionata ({{mailbox}}). Aggiornare l’indirizzo delle email dei ticket prima di salvare.",
+      "providerFromAddressInvalid": "L’indirizzo mittente di {{provider}} deve essere un indirizzo email valido",
+      "ticketingFromInvalid": "L’indirizzo mittente dei ticket deve essere un indirizzo email valido",
+      "outboundDomainInvalid": "Il dominio di invio in uscita deve essere un dominio valido (ad es. example.com)",
+      "outboundDomainRequired": "Configurare un dominio in uscita prima di scegliere un indirizzo mittente dei ticket",
+      "ticketingFromDomainMismatch": "L’indirizzo mittente dei ticket deve utilizzare il dominio in uscita configurato",
+      "refreshFailed": "Impossibile recuperare le impostazioni aggiornate",
+      "updateFailed": "Impossibile aggiornare le impostazioni email",
+      "mailboxesLoadFailed": "Impossibile caricare le cassette postali Microsoft 365"
+    },
+    "inboundRules": {
+      "notFound": "Regola per le email in entrata non trovata",
+      "invalidOrdering": "Dati di ordinamento delle regole non validi",
+      "aliasRequired": "L’alias è obbligatorio",
+      "aliasTooLong": "L’alias è troppo lungo",
+      "clientRequired": "Il cliente è obbligatorio",
+      "invalidSampleEmail": "Email di esempio non valida"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "Esiste già una configurazione con questo nome breve",
+      "createFailed": "Impossibile creare i valori predefiniti dei ticket in entrata. Riprovare.",
+      "notFound": "Configurazione dei valori predefiniti non trovata",
+      "updateFailed": "Impossibile aggiornare i valori predefiniti dei ticket in entrata. Riprovare."
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "Autorizzazione negata: impossibile leggere le opzioni dei campi del ticket",
+      "loadFailed": {
+        "ticketFieldOptions": "Impossibile caricare le opzioni dei campi del ticket. Riprovare.",
+        "boards": "Impossibile caricare le bacheche. Riprovare.",
+        "statuses": "Impossibile caricare gli stati. Riprovare.",
+        "priorities": "Impossibile caricare le priorità. Riprovare.",
+        "categories": "Impossibile caricare le categorie. Riprovare.",
+        "clients": "Impossibile caricare i clienti. Riprovare.",
+        "users": "Impossibile caricare gli utenti. Riprovare."
+      }
+    }
   }
 }

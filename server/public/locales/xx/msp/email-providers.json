@@ -1092,5 +1092,64 @@
       "title": "11111",
       "to": "11111"
     }
+  },
+  "errors": {
+    "domain": {
+      "fetchFailed": "11111",
+      "invalidFormat": "11111",
+      "duplicate": "11111",
+      "addFailed": "11111",
+      "notFound": "11111",
+      "verifyFailed": "11111",
+      "stillReferenced": "11111",
+      "deleteFailed": "11111"
+    },
+    "provider": {
+      "saveFailed": "11111",
+      "updateFailed": "11111",
+      "notFound": "11111",
+      "deleteFailed": "11111"
+    },
+    "settings": {
+      "fetchFailed": "11111",
+      "mailboxRequired": "11111",
+      "mailboxInactive": "11111",
+      "mailboxReconnect": "11111",
+      "ticketIdentityMustMatchMailbox": "11111 {{mailbox}} 11111",
+      "providerFromAddressInvalid": "11111 {{provider}} 11111",
+      "ticketingFromInvalid": "11111",
+      "outboundDomainInvalid": "11111",
+      "outboundDomainRequired": "11111",
+      "ticketingFromDomainMismatch": "11111",
+      "refreshFailed": "11111",
+      "updateFailed": "11111",
+      "mailboxesLoadFailed": "11111"
+    },
+    "inboundRules": {
+      "notFound": "11111",
+      "invalidOrdering": "11111",
+      "aliasRequired": "11111",
+      "aliasTooLong": "11111",
+      "clientRequired": "11111",
+      "invalidSampleEmail": "11111"
+    },
+    "inboundDefaults": {
+      "duplicateShortName": "11111",
+      "createFailed": "11111",
+      "notFound": "11111",
+      "updateFailed": "11111"
+    },
+    "ticketFieldOptions": {
+      "permissionDenied": "11111",
+      "loadFailed": {
+        "ticketFieldOptions": "11111",
+        "boards": "11111",
+        "statuses": "11111",
+        "priorities": "11111",
+        "categories": "11111",
+        "clients": "11111",
+        "users": "11111"
+      }
+    }
   }
 }
