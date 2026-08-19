@@ -41,6 +41,27 @@ describe('Client Form Validation', () => {
       expect(validateClientName('Mail@Home')).toBeNull();
     });
 
+    it('accepts real companies whose name is a domain', () => {
+      // Previously rejected outright, which made these clients uncreatable.
+      expect(validateClientName('Hotels.com')).toBeNull();
+      expect(validateClientName('Booking.com')).toBeNull();
+      expect(validateClientName('Care.com')).toBeNull();
+      expect(validateClientName('Bath & Body Works.net')).toBeNull();
+    });
+
+    it('still rejects a pasted web address', () => {
+      expect(validateClientName('https://acme.com')).toBe('Client name cannot be a web address');
+      expect(validateClientName('http://acme.com')).toBe('Client name cannot be a web address');
+      expect(validateClientName('www.acme.com')).toBe('Client name cannot be a web address');
+    });
+
+    it('accepts a name that is only a short word (CO is a real name, not just an abbreviation)', () => {
+      expect(validateClientName('Co')).toBeNull();
+      // The unambiguous suffixes are still rejected on their own.
+      expect(validateClientName('LLC')).toBe('Client name cannot be just a business abbreviation');
+      expect(validateClientName('Corporation')).toBe('Client name cannot be just a business abbreviation');
+    });
+
     it('still rejects genuinely unsupported characters', () => {
       expect(validateClientName('Bad$Name')).toBe('Client name contains invalid characters');
       expect(validateClientName('Name~With^Tilde')).toBe('Client name contains invalid characters');
@@ -71,6 +92,33 @@ describe('Client Form Validation', () => {
       // Well-known fake/test domains are blocked
       expect(validateWebsiteUrl('https://example.com')).toBe('Please enter a real business website URL');
     });
+
+    it('accepts real domains that begin with a private-IP prefix', () => {
+      // These were rejected as "internal" because the host was matched by string
+      // prefix (10. / 172. / 192.168.) rather than as an IP literal.
+      expect(validateWebsiteUrl('https://10.com')).toBeNull();
+      expect(validateWebsiteUrl('https://172.com')).toBeNull();
+      expect(validateWebsiteUrl('https://10minutes.io')).toBeNull();
+    });
+
+    it('accepts registered domains that merely look like placeholders', () => {
+      // sample.com, demo.com, fake.com and invalid.com all belong to real businesses.
+      for (const host of ['sample.com', 'demo.com', 'fake.com', 'invalid.com']) {
+        expect(validateWebsiteUrl(`https://${host}`)).toBeNull();
+      }
+    });
+
+    it('blocks RFC-reserved documentation domains and TLDs', () => {
+      for (const host of ['example.com', 'example.net', 'example.org', 'anything.test', 'foo.invalid']) {
+        expect(validateWebsiteUrl(`https://${host}`)).toBe('Please enter a real business website URL');
+      }
+    });
+
+    it('blocks internal-only hostnames', () => {
+      for (const host of ['printer.local', 'wiki.internal', 'nas.lan']) {
+        expect(validateWebsiteUrl(`https://${host}`)).toBe('Please enter a public business website URL');
+      }
+    });
   });
 
   describe('validateEmailAddress', () => {
@@ -86,10 +134,21 @@ describe('Client Form Validation', () => {
       expect(validateEmailAddress('1@1.1')).toBe('Please enter a valid email address');
       // Fake/test domains are blocked for business emails
       expect(validateEmailAddress('user@example.com')).toBe('Please enter a valid business email address');
+      // ...but registered domains that merely look like placeholders are fine
+      expect(validateEmailAddress('ops@sample.com')).toBeNull();
+      expect(validateEmailAddress('ops@demo.com')).toBeNull();
     });
   });
 
   describe('validatePhoneNumber', () => {
+    it('accepts ordinary numbers that the old test-number list rejected', () => {
+      expect(validatePhoneNumber('+1 555 234 5678')).toBeNull();
+    });
+
+    it('blocks the NANP range actually reserved for fiction (555-01xx)', () => {
+      expect(validatePhoneNumber('+1 212 555 0123')).toBe('Please enter a valid phone number');
+    });
+
     it('should accept valid phone numbers', () => {
       expect(validatePhoneNumber('+1-555-123-4567')).toBeNull();
       expect(validatePhoneNumber('(555) 123-4567')).toBeNull();
