@@ -197,6 +197,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       return result.error;
     };
 
+    // An opinion about a value the field no longer holds is just noise.
+    const clearWarnings = () => setFieldWarnings(prev => ({ ...prev, [fieldName]: [] }));
+
+    if (!trimmedValue) {
+      clearWarnings();
+    }
+
     switch (fieldName) {
       case 'contact_name':
         if (!trimmedValue) {

@@ -257,8 +257,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       return result.error;
     };
 
+    // An opinion about a value the field no longer holds is just noise.
+    const clearWarnings = () => setFieldWarnings(prev => ({ ...prev, [fieldName]: [] }));
+
     // Handle spaces-only input for all fields
     if (/^\s+$/.test(value)) {
+      clearWarnings();
       const fieldDisplayNames: Record<string, string> = {
         'company_name': 'Company name',
         'url': 'Website URL',
@@ -285,6 +289,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
     // If field is empty, only validate required fields
     if (!trimmedValue) {
+      clearWarnings();
       // Only client name is required, all other fields are optional
       if (fieldName === 'client_name' && isSubmitting) {
         error = 'Client name is required';
@@ -314,11 +319,15 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         // A bare dial prefix means the user has not started typing yet.
         if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
           error = applyField(validatePhoneNumberField(trimmedValue));
+        } else {
+          clearWarnings();
         }
         break;
       case 'contact_phone':
         if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
           error = applyField(validatePhoneNumberField(trimmedValue));
+        } else {
+          clearWarnings();
         }
         break;
       case 'postal_code':

@@ -229,6 +229,34 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
     });
   });
 
+  it('drops a plausibility warning once the field no longer holds the value it described', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <QuickAddContact
+        isOpen={true}
+        onClose={vi.fn()}
+        onContactAdded={vi.fn()}
+        clients={[]}
+      />
+    );
+
+    const nameInput = document.getElementById('quick-add-contact-name') as HTMLInputElement;
+    await user.type(nameInput, 'placeholder');
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('field-warnings')).toBeTruthy();
+    });
+
+    await user.clear(nameInput);
+    await user.tab();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('field-warnings')).toBeNull();
+    });
+  });
+
   it('shows a validation toast when addContact returns a handled duplicate-email error', async () => {
     const user = userEvent.setup();
     addContactMock.mockResolvedValueOnce({
