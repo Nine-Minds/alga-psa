@@ -166,7 +166,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setLastName(currentUser.last_name || '');
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
-        setPhoneExtension((currentUser as { phone_extension?: string | null }).phone_extension || '');
+        setPhoneExtension(currentUser.phone_extension || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
 
         // Load countries for phone input
