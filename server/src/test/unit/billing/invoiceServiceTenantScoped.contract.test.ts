@@ -77,7 +77,10 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(preManualChargeSection).toContain(
       "db.tenantJoin(clientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {"
     );
-    expect(preManualChargeSection).toContain("tenantScopedTable(knex, tenant, 'client_locations')");
+    // The billing-recipient read is not scoped here: getClientBillingEmail
+    // delegates to resolveInvoiceBillingRecipient, which does its own tenantDb
+    // scoping across clients, contacts, and client_locations.
+    expect(preManualChargeSection).toContain('resolveInvoiceBillingRecipient({');
     expect(preManualChargeSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
 
     expect(preManualChargeSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);

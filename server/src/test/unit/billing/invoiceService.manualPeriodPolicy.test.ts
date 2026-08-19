@@ -65,7 +65,7 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
 }
 
 describe('manual invoice service-period policy', () => {
-  it('returns NO_BILLING_EMAIL with the client name when no billing location email exists', async () => {
+  it('returns NO_BILLING_EMAIL with the client name when the client resolves to no billing recipient', async () => {
     const { tx } = createMockTx();
 
     await expect(validateClientBillingEmail(
