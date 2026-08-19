@@ -969,7 +969,8 @@
       "emailSendFailed": "Impossible de lancer l’envoi de l’e-mail"
     },
     "tickets": {
-      "notFoundOrDenied": "Ticket introuvable ou accès refusé"
+      "notFoundOrDenied": "Ticket introuvable ou accès refusé",
+      "invalidData": "Données du ticket non valides"
     },
     "visibilityGroups": {
       "checkDetails": "Veuillez vérifier les informations du groupe de visibilité et réessayer.",

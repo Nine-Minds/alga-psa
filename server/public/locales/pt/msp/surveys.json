@@ -476,7 +476,8 @@
       "duplicate": "Já existe um registro de pesquisa com estes dados.",
       "notAllowed": "Um dos valores da pesquisa não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório da pesquisa.",
-      "missingFieldNamed": "Falta um campo obrigatório da pesquisa: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da pesquisa: {{field}}.",
+      "invalidData": "Os dados da pesquisa são inválidos. Revise o formulário e tente novamente."
     },
     "options": {
       "boardsFailed": "Não é possível carregar os quadros.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Este link de feedback não está mais vinculado a um ticket ativo. Entre em contato com seu técnico.",
       "alreadyCompleted": "Esta pesquisa já foi concluída.",
       "missingField": "Falta um campo obrigatório do feedback.",
-      "missingFieldNamed": "Falta um campo obrigatório do feedback: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório do feedback: {{field}}.",
+      "invalidData": "Os dados da resposta da pesquisa são inválidos. Revise seu feedback e tente novamente."
     }
   }
 }

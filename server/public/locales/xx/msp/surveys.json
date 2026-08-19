@@ -476,7 +476,8 @@
       "duplicate": "11111",
       "notAllowed": "11111",
       "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111"
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "invalidData": "11111"
     },
     "options": {
       "boardsFailed": "11111",
@@ -491,7 +492,8 @@
       "ticketInactive": "11111",
       "alreadyCompleted": "11111",
       "missingField": "11111",
-      "missingFieldNamed": "11111 {{field}} 11111"
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "invalidData": "11111"
     }
   }
 }

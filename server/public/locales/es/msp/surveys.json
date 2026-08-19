@@ -476,7 +476,8 @@
       "duplicate": "Ya existe un registro de encuesta con estos datos.",
       "notAllowed": "Uno de los valores de la encuesta no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la encuesta.",
-      "missingFieldNamed": "Falta un campo obligatorio de la encuesta: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la encuesta: {{field}}.",
+      "invalidData": "Los datos de la encuesta no son válidos. Revise el formulario e inténtelo de nuevo."
     },
     "options": {
       "boardsFailed": "No se pueden cargar los tableros.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Este enlace de comentarios ya no está conectado a un ticket activo. Póngase en contacto con su técnico.",
       "alreadyCompleted": "Esta encuesta ya se ha completado.",
       "missingField": "Falta un campo obligatorio de los comentarios.",
-      "missingFieldNamed": "Falta un campo obligatorio de los comentarios: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de los comentarios: {{field}}.",
+      "invalidData": "Los datos de la respuesta de la encuesta no son válidos. Revise sus comentarios e inténtelo de nuevo."
     }
   }
 }

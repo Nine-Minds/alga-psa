@@ -68,14 +68,18 @@ function expectedClientTicketActionError(
   return new ExpectedClientTicketActionError(message, 'action', messageKey);
 }
 
-function zodErrorMessage(error: z.ZodError): string {
+/**
+ * The Zod message has no catalogue entry yet (category 2), so it stays keyless; the
+ * no-issue fallback is our own sentence, so it carries a key.
+ */
+function zodErrorMessage(error: z.ZodError): { message: string; messageKey?: string } {
   const firstIssue = error.issues[0];
   if (!firstIssue) {
-    return 'Invalid ticket data';
+    return { message: 'Invalid ticket data', messageKey: 'client-portal:errors.tickets.invalidData' };
   }
 
   const path = firstIssue.path.join('.');
-  return path ? `${path}: ${firstIssue.message}` : firstIssue.message;
+  return { message: path ? `${path}: ${firstIssue.message}` : firstIssue.message };
 }
 
 function toClientTicketActionError(error: unknown): ClientTicketActionError | null {
@@ -1153,7 +1157,8 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           });
         } catch (error) {
           if (error instanceof z.ZodError) {
-            throw expectedClientTicketActionError(zodErrorMessage(error));
+            const zodFailure = zodErrorMessage(error);
+            throw expectedClientTicketActionError(zodFailure.message, zodFailure.messageKey);
           }
           throw error;
         }

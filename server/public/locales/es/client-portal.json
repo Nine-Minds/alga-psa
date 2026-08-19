@@ -969,7 +969,8 @@
       "emailSendFailed": "No se pudo iniciar el envío del correo electrónico"
     },
     "tickets": {
-      "notFoundOrDenied": "Ticket no encontrado o acceso denegado"
+      "notFoundOrDenied": "Ticket no encontrado o acceso denegado",
+      "invalidData": "Datos del ticket no válidos"
     },
     "visibilityGroups": {
       "checkDetails": "Revise los datos del grupo de visibilidad e inténtelo de nuevo.",

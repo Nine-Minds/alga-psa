@@ -476,7 +476,8 @@
       "duplicate": "Ein Umfragedatensatz mit diesen Angaben existiert bereits.",
       "notAllowed": "Einer der Umfragewerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Umfragefeld fehlt.",
-      "missingFieldNamed": "Erforderliches Umfragefeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Umfragefeld fehlt: {{field}}.",
+      "invalidData": "Die Umfragedaten sind ungültig. Bitte überprüfen Sie das Formular und versuchen Sie es erneut."
     },
     "options": {
       "boardsFailed": "Die Boards können nicht geladen werden.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Dieser Feedback-Link ist mit keinem aktiven Ticket mehr verknüpft. Bitte wenden Sie sich an Ihren Techniker.",
       "alreadyCompleted": "Diese Umfrage wurde bereits abgeschlossen.",
       "missingField": "Erforderliches Feedback-Feld fehlt.",
-      "missingFieldNamed": "Erforderliches Feedback-Feld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feedback-Feld fehlt: {{field}}.",
+      "invalidData": "Die Antwortdaten der Umfrage sind ungültig. Bitte überprüfen Sie Ihr Feedback und versuchen Sie es erneut."
     }
   }
 }

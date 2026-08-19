@@ -476,7 +476,8 @@
       "duplicate": "Esiste già un record del sondaggio con questi dati.",
       "notAllowed": "Uno dei valori del sondaggio non è consentito. Controllare il modulo e riprovare.",
       "missingField": "Manca un campo obbligatorio del sondaggio.",
-      "missingFieldNamed": "Manca un campo obbligatorio del sondaggio: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del sondaggio: {{field}}.",
+      "invalidData": "I dati del sondaggio non sono validi. Controlla il modulo e riprova."
     },
     "options": {
       "boardsFailed": "Impossibile caricare le bacheche.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Questo link per il feedback non è più collegato a un ticket attivo. Contattare il proprio tecnico.",
       "alreadyCompleted": "Questo sondaggio è già stato completato.",
       "missingField": "Manca un campo obbligatorio del feedback.",
-      "missingFieldNamed": "Manca un campo obbligatorio del feedback: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del feedback: {{field}}.",
+      "invalidData": "I dati della risposta al sondaggio non sono validi. Controlla il tuo feedback e riprova."
     }
   }
 }

@@ -476,7 +476,8 @@
       "duplicate": "Er bestaat al een enquêterecord met deze gegevens.",
       "notAllowed": "Een van de enquêtewaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht enquêteveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht enquêteveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht enquêteveld: {{field}}.",
+      "invalidData": "De enquêtegegevens zijn ongeldig. Controleer het formulier en probeer het opnieuw."
     },
     "options": {
       "boardsFailed": "Kan de borden niet laden.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Deze feedbacklink is niet meer gekoppeld aan een actief ticket. Neem contact op met uw technicus.",
       "alreadyCompleted": "Deze enquête is al ingevuld.",
       "missingField": "Er ontbreekt een verplicht feedbackveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht feedbackveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht feedbackveld: {{field}}.",
+      "invalidData": "De antwoordgegevens van de enquête zijn ongeldig. Controleer uw feedback en probeer het opnieuw."
     }
   }
 }

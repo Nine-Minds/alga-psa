@@ -476,7 +476,8 @@
       "duplicate": "A survey record with these details already exists.",
       "notAllowed": "One of the survey values is not allowed. Please review the form and try again.",
       "missingField": "Missing required survey field.",
-      "missingFieldNamed": "Missing required survey field: {{field}}."
+      "missingFieldNamed": "Missing required survey field: {{field}}.",
+      "invalidData": "Survey data is invalid. Please review the form and try again."
     },
     "options": {
       "boardsFailed": "Unable to load boards.",
@@ -491,7 +492,8 @@
       "ticketInactive": "This feedback link is no longer connected to an active ticket. Please contact your technician.",
       "alreadyCompleted": "This survey has already been completed.",
       "missingField": "Missing required feedback field.",
-      "missingFieldNamed": "Missing required feedback field: {{field}}."
+      "missingFieldNamed": "Missing required feedback field: {{field}}.",
+      "invalidData": "Survey response data is invalid. Please review your feedback and try again."
     }
   }
 }

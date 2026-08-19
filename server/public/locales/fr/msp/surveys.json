@@ -476,7 +476,8 @@
       "duplicate": "Un enregistrement d’enquête avec ces informations existe déjà.",
       "notAllowed": "L’une des valeurs de l’enquête n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire de l’enquête est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de l’enquête est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de l’enquête est manquant : {{field}}.",
+      "invalidData": "Les données du sondage ne sont pas valides. Veuillez vérifier le formulaire et réessayer."
     },
     "options": {
       "boardsFailed": "Impossible de charger les tableaux.",
@@ -491,7 +492,8 @@
       "ticketInactive": "Ce lien d’avis n’est plus rattaché à un ticket actif. Veuillez contacter votre technicien.",
       "alreadyCompleted": "Cette enquête a déjà été complétée.",
       "missingField": "Un champ obligatoire de l’avis est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de l’avis est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de l’avis est manquant : {{field}}.",
+      "invalidData": "Les données de la réponse au sondage ne sont pas valides. Veuillez vérifier votre retour et réessayer."
     }
   }
 }

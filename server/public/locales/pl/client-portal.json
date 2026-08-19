@@ -971,7 +971,8 @@
       "emailSendFailed": "Nie udało się rozpocząć wysyłania wiadomości e-mail"
     },
     "tickets": {
-      "notFoundOrDenied": "Nie znaleziono zgłoszenia lub odmowa dostępu"
+      "notFoundOrDenied": "Nie znaleziono zgłoszenia lub odmowa dostępu",
+      "invalidData": "Nieprawidłowe dane zgłoszenia"
     },
     "visibilityGroups": {
       "checkDetails": "Sprawdź dane grupy widoczności i spróbuj ponownie.",

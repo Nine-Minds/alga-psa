@@ -969,7 +969,8 @@
       "emailSendFailed": "Het verzenden van de e-mail kon niet worden gestart"
     },
     "tickets": {
-      "notFoundOrDenied": "Ticket niet gevonden of toegang geweigerd"
+      "notFoundOrDenied": "Ticket niet gevonden of toegang geweigerd",
+      "invalidData": "Ongeldige ticketgegevens"
     },
     "visibilityGroups": {
       "checkDetails": "Controleer de gegevens van de zichtbaarheidsgroep en probeer het opnieuw.",
