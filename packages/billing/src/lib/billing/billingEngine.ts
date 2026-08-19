@@ -48,6 +48,7 @@ import {
   toPlainDate,
   toISODate,
   toISOTimestamp,
+  toCalendarDateString,
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
@@ -85,6 +86,7 @@ import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import {
   computeFixedCharges,
+  resolveFixedPlanLevelBaseRate,
   computeTimeBasedCharges,
   computeUsageBasedCharges,
   computeBucketCharges,
@@ -279,6 +281,88 @@ export class UnresolvedCatalogPricingError extends Error {
     this.items = items;
   }
 }
+
+/**
+ * Window-independent load inputs for one fixed contract line: the same rows are
+ * valid for every invoice window the line is priced in.
+ */
+type FixedChargeLineStaticInputs = {
+  contractLineDetails: any;
+  planServices: any[];
+  fallbackService: any | null;
+  /**
+   * True when no base rate resolves from any source, which makes the line
+   * price to nothing in EVERY window (see computeFixedCharges' base-rate
+   * resolution). Such lines are skipped instead of recomputed per window.
+   */
+  unpriceable: boolean;
+};
+
+/**
+ * Per-request cache of fixed-line static inputs, keyed by contract line id.
+ * Callers pricing several invoice windows in one request share one session so
+ * each line is loaded — and rejected as unpriceable — at most once.
+ */
+export type FixedChargePreviewSession = Map<string, FixedChargeLineStaticInputs>;
+
+export const createFixedChargePreviewSession = (): FixedChargePreviewSession =>
+  new Map();
+
+/** Everything calculateFixedPriceCharges would otherwise query per line. */
+type PreloadedFixedChargeInputs = FixedChargeLineStaticInputs & {
+  client: IClient;
+  /** Schedules for the line's contract, ordered by effective_date desc. */
+  pricingSchedules: any[];
+  taxContext: ChargeComputeTaxContext;
+};
+
+const normalizeScheduleDate = (value: unknown): string | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  try {
+    return toCalendarDateString(value as Date | string) as string | null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * In-memory equivalent of the per-line active-pricing-schedule query:
+ * [start, end) overlap against the service period, newest effective_date first.
+ */
+const selectActivePricingSchedule = (
+  schedules: any[],
+  servicePeriodStartExclusive: ISO8601String,
+  servicePeriodEndExclusive: ISO8601String,
+): any | undefined =>
+  schedules.find((schedule) => {
+    const effectiveDate = normalizeScheduleDate(schedule.effective_date);
+    if (effectiveDate === null || effectiveDate >= servicePeriodEndExclusive) {
+      return false;
+    }
+    const endDate = normalizeScheduleDate(schedule.end_date);
+    return endDate === null || endDate > servicePeriodStartExclusive;
+  });
+
+/** Pricing-schedule overrides cannot rescue a missing plan-level base rate. */
+const isFixedLineUnpriceable = (
+  clientContractLine: IClientContractLine,
+  contractLineDetails: any,
+  planServices: any[],
+): boolean => {
+  if (contractLineDetails?.contract_line_type !== "Fixed") {
+    return false;
+  }
+
+  return (
+    resolveFixedPlanLevelBaseRate({
+      clientContractLine,
+      contractLineDetails,
+      planServices,
+    }) === null
+  );
+};
 
 export class BillingEngine {
   private knex: Knex;
@@ -706,34 +790,6 @@ export class BillingEngine {
     );
   }
 
-  private async getLocationTaxRegionCode(
-    locationId: string | null | undefined,
-  ): Promise<string | null> {
-    if (!locationId) {
-      return null;
-    }
-    await this.initKnex();
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
-    }
-
-    const cacheKey = `${this.tenant}:${locationId}`;
-    if (this.locationTaxRegionCodeCache.has(cacheKey)) {
-      return this.locationTaxRegionCodeCache.get(cacheKey) ?? null;
-    }
-
-    const db = tenantDb(this.knex, this.tenant);
-    const row = await db
-      .table("client_locations")
-      .where({ location_id: locationId })
-      .select("region_code")
-      .first();
-
-    const regionCode = (row?.region_code as string | null | undefined) ?? null;
-    this.locationTaxRegionCodeCache.set(cacheKey, regionCode);
-    return regionCode;
-  }
-
   /**
    * Determines the tax region and taxability based on a service's tax_rate_id.
    * @param service - The service object, expected to have service_id and tax_rate_id.
@@ -787,6 +843,52 @@ export class BillingEngine {
     }
   }
 
+  /** Resolve tax region codes for many locations in one query (cached). */
+  private async loadLocationTaxRegionCodes(
+    locationIds: Array<string | null | undefined>,
+  ): Promise<Map<string, string | null>> {
+    const regions = new Map<string, string | null>();
+    const missing: string[] = [];
+    for (const locationId of locationIds) {
+      if (!locationId || regions.has(locationId)) {
+        continue;
+      }
+      const cacheKey = `${this.tenant}:${locationId}`;
+      if (this.locationTaxRegionCodeCache.has(cacheKey)) {
+        regions.set(
+          locationId,
+          this.locationTaxRegionCodeCache.get(cacheKey) ?? null,
+        );
+        continue;
+      }
+      missing.push(locationId);
+    }
+
+    if (missing.length > 0) {
+      const db = tenantDb(this.knex, this.tenant!);
+      const rows = await db
+        .table("client_locations")
+        .whereIn("location_id", missing)
+        .select("location_id", "region_code");
+      const regionByLocationId = new Map(
+        rows.map((row: any) => [
+          row.location_id,
+          (row.region_code as string | null | undefined) ?? null,
+        ]),
+      );
+      for (const locationId of missing) {
+        const regionCode = regionByLocationId.get(locationId) ?? null;
+        this.locationTaxRegionCodeCache.set(
+          `${this.tenant}:${locationId}`,
+          regionCode,
+        );
+        regions.set(locationId, regionCode);
+      }
+    }
+
+    return regions;
+  }
+
   /** Load every tax row needed by deterministic charge arithmetic. */
   /**
    * Load every tax row deterministic charge arithmetic consumes.
@@ -805,6 +907,8 @@ export class BillingEngine {
   private async loadChargeComputeTaxContext(input: {
     client: ChargeComputeClient;
     locationId: string | null | undefined;
+    /** Preload several locations at once; defaults to just `locationId`. */
+    locationIds?: Array<string | null | undefined>;
     services: Array<{ tax_rate_id?: string | null }>;
     /** Profiles whose charges this context will price; defaults to all of the client's. */
     billingProfileIds?: Array<string | null | undefined>;
@@ -903,12 +1007,10 @@ export class BillingEngine {
       ]),
     );
 
-    const [locationRegion, clientDefaultRegion] = await Promise.all([
-      this.getLocationTaxRegionCode(input.locationId),
+    const [locationRegions, clientDefaultRegion] = await Promise.all([
+      this.loadLocationTaxRegionCodes(input.locationIds ?? [input.locationId]),
       this.getClientDefaultTaxRegionCode(input.client.client_id),
     ]);
-    const locationRegions = new Map<string, string | null>();
-    if (input.locationId) locationRegions.set(input.locationId, locationRegion);
 
     return buildChargeComputeTaxContext({
       clientId: input.client.client_id,
@@ -3203,14 +3305,36 @@ export class BillingEngine {
    * Returns a map keyed by BOTH contract_line_id and client_contract_line_id so
    * callers can match on either id. Best-effort: anything not materialized or not
    * priceable is omitted (caller falls back to "calculated at generation").
+   *
+   * The load phase is batched across the whole window (line details, plan
+   * services, pricing schedules, client, tax context) instead of running per
+   * line, and `session` carries the window-independent parts across windows in
+   * the same request.
    */
   public async previewFixedChargeAmountsForInvoiceWindow(
     clientId: string,
     invoiceWindowStart: ISO8601String,
     invoiceWindowEnd: ISO8601String,
+    session?: FixedChargePreviewSession,
   ): Promise<Map<string, number>> {
     const result = new Map<string, number>();
-    await this.initKnex();
+    const warnPreviewFailure = (
+      stage: string,
+      error: unknown,
+      contractLineId?: string,
+    ) => {
+      console.warn(
+        `[BillingEngine] Fixed-charge preview ${stage} failed for client ${clientId}, window ${invoiceWindowStart} to ${invoiceWindowEnd}${contractLineId ? `, contract line ${contractLineId}` : ""}.`,
+        error,
+      );
+    };
+
+    try {
+      await this.initKnex();
+    } catch (error) {
+      warnPreviewFailure("initialization", error);
+      return result;
+    }
     if (!this.tenant) {
       return result;
     }
@@ -3225,7 +3349,8 @@ export class BillingEngine {
         clientId,
         billingPeriod,
       );
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("contract-line load", error);
       return result;
     }
     let persistedSelections: RecurringChargeTimingSelections | null;
@@ -3234,21 +3359,84 @@ export class BillingEngine {
         billingPeriod,
         lines,
       );
-    } catch {
+    } catch (error) {
+      warnPreviewFailure("persisted-timing load", error);
       return result;
     }
     if (!persistedSelections) {
       // Service periods are not materialized for this window; defer to generation.
       return result;
     }
-    for (const line of lines) {
-      if (String(line.contract_line_type ?? "").toLowerCase() !== "fixed") {
-        continue;
+
+    const dueFixedLines = lines.filter(
+      (line) =>
+        String(line.contract_line_type ?? "").toLowerCase() === "fixed" &&
+        Boolean(persistedSelections![line.client_contract_line_id]),
+    );
+    if (dueFixedLines.length === 0) {
+      return result;
+    }
+
+    let priceableLines: IClientContractLine[];
+    let staticInputsByLineId: Map<string, FixedChargeLineStaticInputs>;
+    try {
+      staticInputsByLineId = await this.loadFixedChargeLineStaticInputs(
+        dueFixedLines,
+        session,
+      );
+      priceableLines = dueFixedLines.filter(
+        (line) =>
+          staticInputsByLineId.get(line.client_contract_line_id)?.unpriceable ===
+          false,
+      );
+    } catch (error) {
+      warnPreviewFailure("static-input batch load", error);
+      return result;
+    }
+    if (priceableLines.length === 0) {
+      return result;
+    }
+
+    let client: IClient;
+    let pricingSchedulesByContractId: Map<string, any[]>;
+    let taxContext: ChargeComputeTaxContext;
+    try {
+      const db = tenantDb(this.knex, this.tenant);
+      client = (await db
+        .table("clients")
+        .where({ client_id: clientId, tenant: this.tenant })
+        .first()) as IClient;
+      if (!client) {
+        warnPreviewFailure(
+          "client load",
+          new Error(`Client ${clientId} was not found in tenant ${this.tenant}`),
+        );
+        return result;
       }
+      pricingSchedulesByContractId =
+        await this.loadFixedChargePricingSchedules(priceableLines);
+      // One tax context for the whole window: the compute layer reads only its
+      // own line's location. The provisioning probe intentionally sees the
+      // union of all priceable lines' services, which preserves the resulting
+      // default settings while avoiding one settings read per line.
+      taxContext = await this.loadChargeComputeTaxContext({
+        client,
+        locationId: null,
+        locationIds: priceableLines.map((line) => line.location_id),
+        services: priceableLines.flatMap((line) => {
+          const inputs = staticInputsByLineId.get(line.client_contract_line_id)!;
+          return inputs.fallbackService
+            ? [...inputs.planServices, inputs.fallbackService]
+            : inputs.planServices;
+        }),
+      });
+    } catch (error) {
+      warnPreviewFailure("shared client/tax-context load", error);
+      return result;
+    }
+
+    for (const line of priceableLines) {
       const selection = persistedSelections[line.client_contract_line_id];
-      if (!selection) {
-        continue;
-      }
       let charges: IFixedPriceCharge[] = [];
       try {
         charges = await this.calculateFixedPriceCharges(
@@ -3258,8 +3446,21 @@ export class BillingEngine {
           undefined,
           selection,
           "persisted",
+          {
+            ...staticInputsByLineId.get(line.client_contract_line_id)!,
+            client,
+            pricingSchedules:
+              pricingSchedulesByContractId.get(String(line.contract_id ?? "")) ??
+              [],
+            taxContext,
+          },
         );
-      } catch {
+      } catch (error) {
+        warnPreviewFailure(
+          "line computation",
+          error,
+          String(line.contract_line_id ?? line.client_contract_line_id),
+        );
         continue;
       }
       if (charges.length === 0) {
@@ -3283,122 +3484,194 @@ export class BillingEngine {
     return result;
   }
 
-  private async calculateFixedPriceCharges(
-    clientId: string,
-    billingPeriod: IBillingPeriod,
-    clientContractLine: IClientContractLine,
-    billingCycle?: string,
-    recurringTimingSelection?: ResolvedRecurringChargeTiming,
-    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
-  ): Promise<IFixedPriceCharge[]> {
-    // Note: Fixed plan rates are stored as dollars (decimal) in the database,
-    // but need to be converted to cents (integer) for consistency with other monetary values in the system.
-    // Custom contract-level rates are assumed to be in cents already.
-    // Load phase only: gather the rows the pure compute layer needs, then
-    // delegate the charge math to computeFixedCharges (lib/billing/compute/).
-    await this.initKnex();
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
+  /**
+   * Batched twin of calculateFixedPriceCharges' per-line load phase: contract
+   * line details and plan services (plus the product-only fallback service) for
+   * every line in one invoice window, in three queries instead of three per
+   * line. Lines already resolved in `session` are reused as-is.
+   */
+  private async loadFixedChargeLineStaticInputs(
+    clientContractLines: IClientContractLine[],
+    session?: FixedChargePreviewSession,
+  ): Promise<Map<string, FixedChargeLineStaticInputs>> {
+    const staticInputsByLineId = new Map<string, FixedChargeLineStaticInputs>();
+    const pendingLines: IClientContractLine[] = [];
+    for (const line of clientContractLines) {
+      const cached = session?.get(line.client_contract_line_id);
+      if (cached) {
+        staticInputsByLineId.set(line.client_contract_line_id, cached);
+        continue;
+      }
+      pendingLines.push(line);
     }
-    const db = tenantDb(this.knex, this.tenant);
+    if (pendingLines.length === 0) {
+      return staticInputsByLineId;
+    }
 
-    const resolvedBillingCycle =
-      billingCycle ??
-      (!recurringTimingSelection &&
-      recurringTimingSelectionSource !== "persisted"
-        ? await this.getBillingCycle(clientId, billingPeriod.startDate)
-        : undefined);
+    const db = tenantDb(this.knex, this.tenant!);
+    const detailIds = [
+      ...new Set(
+        pendingLines
+          .map((line) => line.contract_line_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const serviceLineIds = [
+      ...new Set(pendingLines.map((line) => line.client_contract_line_id)),
+    ];
 
-    const timingResolution = this.resolveFixedRecurringChargeTiming(
-      billingPeriod,
-      clientContractLine,
-      resolvedBillingCycle,
-      recurringTimingSelection,
-      recurringTimingSelectionSource,
+    const detailRows =
+      detailIds.length > 0
+        ? await db
+            .table("contract_lines")
+            .where({ tenant: this.tenant })
+            .whereIn("contract_line_id", detailIds)
+        : [];
+    const detailsByLineId = new Map(
+      detailRows.map((row: any) => [row.contract_line_id, row]),
     );
-    if (!timingResolution) {
-      return [];
+
+    const planServicesQuery = db.table<any>("contract_line_services as cls");
+    db.tenantJoin(
+      planServicesQuery,
+      "contract_line_service_configuration as clsc",
+      "clsc.contract_line_id",
+      "cls.contract_line_id",
+      {
+        on(join) {
+          join.andOn("clsc.service_id", "=", "cls.service_id");
+        },
+      },
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "contract_line_service_fixed_config as clsfc",
+      "clsfc.config_id",
+      "clsc.config_id",
+      { type: "left" },
+    );
+    db.tenantJoin(
+      planServicesQuery,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cls.service_id",
+    );
+
+    const planServiceRows = await planServicesQuery
+      .whereIn("cls.contract_line_id", serviceLineIds)
+      .where({
+        "cls.tenant": this.tenant,
+        "clsc.configuration_type": "Fixed",
+      })
+      .whereNot("sc.item_kind", "product")
+      .select(
+        "cls.contract_line_id as batched_contract_line_id",
+        "sc.service_id",
+        "sc.service_name",
+        "sc.default_rate",
+        "sc.tax_rate_id",
+        "cls.quantity as service_quantity",
+        "cls.custom_rate as service_line_custom_rate",
+        "clsc.quantity as configuration_quantity",
+        "clsc.custom_rate as configuration_custom_rate",
+        "clsc.config_id",
+        "clsfc.base_rate as service_base_rate",
+      );
+
+    const planServicesByLineId = new Map<string, any[]>();
+    for (const row of planServiceRows) {
+      const { batched_contract_line_id: lineId, ...planService } = row as any;
+      const planServices = planServicesByLineId.get(lineId) ?? [];
+      planServices.push(planService);
+      planServicesByLineId.set(lineId, planServices);
     }
 
-    const {
-      servicePeriodStart,
-      servicePeriodEnd,
-      servicePeriodStartExclusive,
-      servicePeriodEndExclusive,
-    } = timingResolution;
+    const fallbackLineIds = serviceLineIds.filter(
+      (lineId) => (planServicesByLineId.get(lineId) ?? []).length === 0,
+    );
+    const fallbackServiceByLineId = new Map<string, any>();
+    if (fallbackLineIds.length > 0) {
+      const fallbackServiceQuery = db.table<any>(
+        "contract_line_services as cls_fallback",
+      );
+      db.tenantJoin(
+        fallbackServiceQuery,
+        "contract_line_service_configuration as clsc_fallback",
+        "clsc_fallback.contract_line_id",
+        "cls_fallback.contract_line_id",
+        {
+          on(join) {
+            join.andOn(
+              "clsc_fallback.service_id",
+              "=",
+              "cls_fallback.service_id",
+            );
+          },
+        },
+      );
+      db.tenantJoin(
+        fallbackServiceQuery,
+        "service_catalog as sc",
+        "sc.service_id",
+        "cls_fallback.service_id",
+      );
 
-    // --- Custom Rate Check (Contracts & Pricing Schedules) ---
-    // Check if a custom rate is defined for this plan assignment (provided via contract association)
-    // or if an active pricing schedule overrides the rate for this billing period.
-    // Pricing schedules take precedence over contract-level custom rates.
-    // Ensure custom_rate is not null and not undefined before using it.
-
-    let effectiveCustomRate = clientContractLine.custom_rate;
-    let customRateSource: "pricing_schedule" | "assignment" | null =
-      effectiveCustomRate !== null && effectiveCustomRate !== undefined
-        ? "assignment"
-        : null;
-
-    // Check for an active pricing schedule that overlaps the due service period.
-    if (clientContractLine.contract_id) {
-      try {
-        const activePricingSchedule = await db
-          .table("contract_pricing_schedules")
-          .where({
-            tenant: this.tenant,
-            contract_id: clientContractLine.contract_id,
-          })
-          // [start, end) semantics: schedule starting exactly on service-period end does not apply.
-          .where("effective_date", "<", servicePeriodEndExclusive)
-          .where(function (builder) {
-            builder
-              .whereNull("end_date")
-              .orWhere("end_date", ">", servicePeriodStartExclusive);
-          })
-          .orderBy("effective_date", "desc")
-          .first();
-
-        if (
-          activePricingSchedule &&
-          activePricingSchedule.custom_rate !== null &&
-          activePricingSchedule.custom_rate !== undefined
-        ) {
-          effectiveCustomRate = activePricingSchedule.custom_rate;
-          customRateSource = "pricing_schedule";
-          console.log(
-            `[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during service period ${servicePeriodStart} to ${servicePeriodEnd}. Schedule ID: ${activePricingSchedule.schedule_id}`,
-          );
-        }
-      } catch (error) {
-        console.warn(
-          `[PRICING_SCHEDULE] Error checking for active pricing schedule for contract ${clientContractLine.contract_id}:`,
-          error,
+      const fallbackRows = await fallbackServiceQuery
+        .whereIn("cls_fallback.contract_line_id", fallbackLineIds)
+        .where({ "cls_fallback.tenant": this.tenant })
+        .whereNot("sc.item_kind", "product")
+        .orderBy("sc.service_id", "asc")
+        .select(
+          "cls_fallback.contract_line_id as batched_contract_line_id",
+          "sc.service_id",
+          "sc.service_name",
+          "sc.tax_rate_id",
+          "clsc_fallback.config_id",
         );
+
+      for (const row of fallbackRows) {
+        const { batched_contract_line_id: lineId, ...fallbackService } =
+          row as any;
+        // Rows arrive ordered by service_id, so the first per line matches the
+        // per-line query's `.orderBy(service_id).first()`.
+        if (!fallbackServiceByLineId.has(lineId)) {
+          fallbackServiceByLineId.set(lineId, fallbackService);
+        }
       }
     }
 
-    const client = (await db
-      .table("clients")
-      .where({
-        client_id: clientId,
-        tenant: this.tenant,
-      })
-      .first()) as IClient;
-
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
+    for (const line of pendingLines) {
+      const contractLineDetails = line.contract_line_id
+        ? detailsByLineId.get(line.contract_line_id)
+        : undefined;
+      const planServices =
+        planServicesByLineId.get(line.client_contract_line_id) ?? [];
+      const staticInputs: FixedChargeLineStaticInputs = {
+        contractLineDetails,
+        planServices,
+        fallbackService:
+          planServices.length === 0
+            ? (fallbackServiceByLineId.get(line.client_contract_line_id) ?? null)
+            : null,
+        unpriceable: isFixedLineUnpriceable(
+          line,
+          contractLineDetails,
+          planServices,
+        ),
+      };
+      staticInputsByLineId.set(line.client_contract_line_id, staticInputs);
+      session?.set(line.client_contract_line_id, staticInputs);
     }
 
-    const tenant = this.tenant; // Capture tenant value for joins
+    return staticInputsByLineId;
+  }
 
-    // Get the contract line details to determine if this is a fixed fee plan
-    const contractLineDetails = await db
-      .table("contract_lines")
-      .where({
-        contract_line_id: clientContractLine.contract_line_id,
-        tenant: client.tenant,
-      })
-      .first();
+  /** Per-line plan services (and product-only fallback) for the generation path. */
+  private async queryFixedChargeLineServices(
+    clientContractLine: IClientContractLine,
+  ): Promise<{ planServices: any[]; fallbackService: any | null }> {
+    const db = tenantDb(this.knex, this.tenant!);
+    const tenant = this.tenant;
 
     // Query services from contract_line_services (the contract definition)
     // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
@@ -3497,6 +3770,177 @@ export class BillingEngine {
           )) ?? null;
     }
 
+    return { planServices, fallbackService };
+  }
+
+  /** Load every pricing schedule for the window's contracts in one query. */
+  private async loadFixedChargePricingSchedules(
+    clientContractLines: IClientContractLine[],
+  ): Promise<Map<string, any[]>> {
+    const schedulesByContractId = new Map<string, any[]>();
+    const contractIds = [
+      ...new Set(
+        clientContractLines
+          .map((line) => line.contract_id)
+          .filter((contractId): contractId is string => Boolean(contractId)),
+      ),
+    ];
+    if (contractIds.length === 0) {
+      return schedulesByContractId;
+    }
+
+    try {
+      const db = tenantDb(this.knex, this.tenant!);
+      const scheduleRows = await db
+        .table("contract_pricing_schedules")
+        .where({ tenant: this.tenant })
+        .whereIn("contract_id", contractIds)
+        .orderBy("effective_date", "desc");
+      for (const row of scheduleRows as any[]) {
+        const schedules = schedulesByContractId.get(row.contract_id) ?? [];
+        schedules.push(row);
+        schedulesByContractId.set(row.contract_id, schedules);
+      }
+    } catch (error) {
+      console.warn(
+        `[PRICING_SCHEDULE] Error loading pricing schedules for contracts ${contractIds.join(", ")}:`,
+        error,
+      );
+    }
+
+    return schedulesByContractId;
+  }
+
+  private async calculateFixedPriceCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    clientContractLine: IClientContractLine,
+    billingCycle?: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+    /** Batched load-phase rows; when absent every row is queried per line. */
+    preloaded?: PreloadedFixedChargeInputs,
+  ): Promise<IFixedPriceCharge[]> {
+    // Note: Fixed plan rates are stored as dollars (decimal) in the database,
+    // but need to be converted to cents (integer) for consistency with other monetary values in the system.
+    // Custom contract-level rates are assumed to be in cents already.
+    // Load phase only: gather the rows the pure compute layer needs, then
+    // delegate the charge math to computeFixedCharges (lib/billing/compute/).
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const db = tenantDb(this.knex, this.tenant);
+
+    const resolvedBillingCycle =
+      billingCycle ??
+      (!recurringTimingSelection &&
+      recurringTimingSelectionSource !== "persisted"
+        ? await this.getBillingCycle(clientId, billingPeriod.startDate)
+        : undefined);
+
+    const timingResolution = this.resolveFixedRecurringChargeTiming(
+      billingPeriod,
+      clientContractLine,
+      resolvedBillingCycle,
+      recurringTimingSelection,
+      recurringTimingSelectionSource,
+    );
+    if (!timingResolution) {
+      return [];
+    }
+
+    const {
+      servicePeriodStart,
+      servicePeriodEnd,
+      servicePeriodStartExclusive,
+      servicePeriodEndExclusive,
+    } = timingResolution;
+
+    // --- Custom Rate Check (Contracts & Pricing Schedules) ---
+    // Check if a custom rate is defined for this plan assignment (provided via contract association)
+    // or if an active pricing schedule overrides the rate for this billing period.
+    // Pricing schedules take precedence over contract-level custom rates.
+    // Ensure custom_rate is not null and not undefined before using it.
+
+    let effectiveCustomRate = clientContractLine.custom_rate;
+    let customRateSource: "pricing_schedule" | "assignment" | null =
+      effectiveCustomRate !== null && effectiveCustomRate !== undefined
+        ? "assignment"
+        : null;
+
+    // Check for an active pricing schedule that overlaps the due service period.
+    if (clientContractLine.contract_id) {
+      try {
+        const activePricingSchedule = preloaded
+          ? selectActivePricingSchedule(
+              preloaded.pricingSchedules,
+              servicePeriodStartExclusive,
+              servicePeriodEndExclusive,
+            )
+          : await db
+              .table("contract_pricing_schedules")
+              .where({
+                tenant: this.tenant,
+                contract_id: clientContractLine.contract_id,
+              })
+              // [start, end) semantics: schedule starting exactly on service-period end does not apply.
+              .where("effective_date", "<", servicePeriodEndExclusive)
+              .where(function (builder) {
+                builder
+                  .whereNull("end_date")
+                  .orWhere("end_date", ">", servicePeriodStartExclusive);
+              })
+              .orderBy("effective_date", "desc")
+              .first();
+
+        if (
+          activePricingSchedule &&
+          activePricingSchedule.custom_rate !== null &&
+          activePricingSchedule.custom_rate !== undefined
+        ) {
+          effectiveCustomRate = activePricingSchedule.custom_rate;
+          customRateSource = "pricing_schedule";
+          console.log(
+            `[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during service period ${servicePeriodStart} to ${servicePeriodEnd}. Schedule ID: ${activePricingSchedule.schedule_id}`,
+          );
+        }
+      } catch (error) {
+        console.warn(
+          `[PRICING_SCHEDULE] Error checking for active pricing schedule for contract ${clientContractLine.contract_id}:`,
+          error,
+        );
+      }
+    }
+
+    const client =
+      preloaded?.client ??
+      ((await db
+        .table("clients")
+        .where({
+          client_id: clientId,
+          tenant: this.tenant,
+        })
+        .first()) as IClient);
+
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
+    }
+
+    // Get the contract line details to determine if this is a fixed fee plan
+    const contractLineDetails = preloaded
+      ? preloaded.contractLineDetails
+      : await db
+          .table("contract_lines")
+          .where({
+            contract_line_id: clientContractLine.contract_line_id,
+            tenant: client.tenant,
+          })
+          .first();
+
+    const { planServices, fallbackService } =
+      preloaded ?? (await this.queryFixedChargeLineServices(clientContractLine));
+
     const { charges, advanceGuard } = await computeFixedCharges(
       {
         clientId,
@@ -3514,17 +3958,18 @@ export class BillingEngine {
           clientContractLine,
         ),
       },
-      await this.loadChargeComputeTaxContext({
-        client,
-        locationId: clientContractLine.location_id,
-        services: fallbackService
-          ? [...planServices, fallbackService]
-          : planServices,
-        billingProfileIds: [
-          clientContractLine.billing_profile_id,
-          clientContractLine.contract_billing_profile_id,
-        ],
-      }),
+      preloaded?.taxContext ??
+        (await this.loadChargeComputeTaxContext({
+          client,
+          locationId: clientContractLine.location_id,
+          services: fallbackService
+            ? [...planServices, fallbackService]
+            : planServices,
+          billingProfileIds: [
+            clientContractLine.billing_profile_id,
+            clientContractLine.contract_billing_profile_id,
+          ],
+        })),
     );
 
     if (advanceGuard) {

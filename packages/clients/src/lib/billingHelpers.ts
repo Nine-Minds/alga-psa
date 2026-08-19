@@ -518,7 +518,7 @@ export const getEffectiveTaxSourceForClientAsync = withAuth(async (
 
 // ---------------------------------------------------------------------------
 // Prepaid balance alert policy (task 29.8.20). Clients UI path: independently
-// gated on release-v1.5-feature with a false default and billing_settings
+// gated on release-v1-5-feature with a false default and billing_settings
 // read/update permissions, delegating persistence to the shared module.
 // ---------------------------------------------------------------------------
 

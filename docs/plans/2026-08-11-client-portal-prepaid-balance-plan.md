@@ -32,13 +32,13 @@ already has:
 
 The portal dashboard (`ClientDashboard.tsx`) has no billing/prepaid presence.
 
-The feature flag `release-v1.5-feature` appears nowhere in the repo yet; this card
+The feature flag `release-v1-5-feature` appears nowhere in the repo yet; this card
 introduces the first portal-side flag check.
 
 ## Feature flag gating (standing release requirement)
 
-Every UI change below is gated behind `release-v1.5-feature` via
-`useFeatureFlag('release-v1.5-feature', { defaultValue: false })`
+Every UI change below is gated behind `release-v1-5-feature` via
+`useFeatureFlag('release-v1-5-feature', { defaultValue: false })`
 (`packages/ui/src/hooks/useFeatureFlag.tsx`; PostHog provider is mounted in the root
 layout so portal routes are covered). Flag off ⇒ the rendered UI is exactly today's:
 no history affordance, unchanged bucket meter, no dashboard widget. While the flag

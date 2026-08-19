@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft heeft u aangemeld maar toegang tot uw lijst met beheerde tenants geweigerd. Een globale beheerder moet beheerderstoestemming verlenen voor de gevraagde machtigingen. Er is niets opgeslagen — probeer het opnieuw zodra de toestemming is verleend.",
             "expired": "De verbindingspoging is verlopen voordat deze was voltooid. Er is niets opgeslagen — start de verbinding opnieuw.",
             "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
-            "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
+            "validationFailed": "Microsoft heeft u aangemeld, maar de lijst met beheerde tenants kon niet worden gelezen; er is niets opgeslagen. Uw machtigingen zijn geaccepteerd — meestal is de partnertenant niet aangesloten op Microsoft 365 Lighthouse of zijn er geen actieve GDAP-relaties.",
+            "tokenRejected": "Microsoft heeft het toegangstoken van de verbinding geweigerd; er is niets opgeslagen. Start de verbinding opnieuw."
           },
           "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
-              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
+              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
+              "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
             }
           },
           "directReassurance": "U ziet de toestemmingsvraag voordat er iets wordt verleend.",

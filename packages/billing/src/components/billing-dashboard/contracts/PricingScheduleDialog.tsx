@@ -43,7 +43,7 @@ export function PricingScheduleDialog({
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const { symbol, fractionDigits } = useCurrencyFormat();
-  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   // Flag off preserves the legacy ambient-currency behavior: two decimals, /100, ambient symbol.

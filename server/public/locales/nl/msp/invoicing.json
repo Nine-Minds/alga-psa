@@ -343,7 +343,7 @@
       "refresh": "Er is een fout opgetreden bij het vernieuwen van de factuurgegevens.",
       "updateFailed": "Fout bij bijwerken factuur",
       "generateFailed": "Fout bij genereren factuur",
-      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie van de klant en probeer het opnieuw.",
+      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in en probeer het opnieuw.",
       "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",
@@ -357,7 +357,7 @@
       "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering."
     },
     "warnings": {
-      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie voordat u de factuur genereert."
+      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",

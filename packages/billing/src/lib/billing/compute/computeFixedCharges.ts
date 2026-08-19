@@ -92,6 +92,102 @@ export interface FixedChargeComputeResult {
   } | null;
 }
 
+export interface FixedPlanBaseRateInputs {
+  clientContractLine: Pick<IClientContractLine, "custom_rate">;
+  contractLineDetails: FixedChargeComputeInputs["contractLineDetails"];
+  planServices: FixedPlanServiceRow[];
+}
+
+/**
+ * Resolve the fixed plan's base rate in major units using the production
+ * precedence order. Preview priceability checks call this same helper so they
+ * cannot drift from the charge computation when a rate source changes.
+ */
+export function resolveFixedPlanLevelBaseRate({
+  clientContractLine,
+  contractLineDetails,
+  planServices,
+}: FixedPlanBaseRateInputs): number | null {
+  if (contractLineDetails?.contract_line_type !== "Fixed") {
+    return null;
+  }
+
+  let planLevelBaseRate: number | null = null;
+
+  if (
+    contractLineDetails.custom_rate !== undefined &&
+    contractLineDetails.custom_rate !== null
+  ) {
+    const parsedContractRate =
+      typeof contractLineDetails.custom_rate === "string"
+        ? parseFloat(contractLineDetails.custom_rate)
+        : Number(contractLineDetails.custom_rate);
+    if (!Number.isNaN(parsedContractRate)) {
+      // custom_rate is stored in cents; compute operates in major units here.
+      planLevelBaseRate = parsedContractRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
+    const parsedAssignmentRate =
+      typeof clientContractLine.custom_rate === "string"
+        ? parseFloat(clientContractLine.custom_rate)
+        : Number(clientContractLine.custom_rate);
+    if (!Number.isNaN(parsedAssignmentRate)) {
+      planLevelBaseRate = parsedAssignmentRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) {
+    let derivedBaseRate = 0;
+    let hasServiceBaseRate = false;
+
+    for (const service of planServices) {
+      const rawServiceBaseRate = service.service_base_rate;
+      if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
+        const parsedServiceBaseRate =
+          typeof rawServiceBaseRate === "string"
+            ? parseFloat(rawServiceBaseRate)
+            : Number(rawServiceBaseRate);
+        if (!Number.isNaN(parsedServiceBaseRate)) {
+          const quantity =
+            Number(
+              service.configuration_quantity ?? service.service_quantity ?? 1,
+            ) || 1;
+          derivedBaseRate += parsedServiceBaseRate * quantity;
+          hasServiceBaseRate = true;
+        }
+      }
+    }
+
+    if (hasServiceBaseRate) {
+      // service_base_rate is stored in cents.
+      planLevelBaseRate = derivedBaseRate / 100;
+    }
+  }
+
+  if (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) {
+    const totalDefaultRateCents = planServices.reduce(
+      (sum: number, service) => {
+        const rate = Number(service.default_rate ?? 0);
+        const quantity =
+          Number(
+            service.configuration_quantity ?? service.service_quantity ?? 1,
+          ) || 1;
+        return sum + rate * quantity;
+      },
+      0,
+    );
+    if (totalDefaultRateCents !== 0) {
+      planLevelBaseRate = totalDefaultRateCents / 100;
+    }
+  }
+
+  return planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
+    ? planLevelBaseRate
+    : null;
+}
+
 export function shouldApplyAdvanceTerminationCoverageSettlement(
   clientContractLine: IClientContractLine,
   billingPeriod: IBillingPeriod,
@@ -230,24 +326,14 @@ export function computeFixedCharges(
   const isFixedFeePlan = contractLineDetails?.contract_line_type === "Fixed";
 
   // --- Plan-level fixed config (base rate and proration) ---
-  let planLevelBaseRate: number | null = null; // dollars
+  const planLevelBaseRate = resolveFixedPlanLevelBaseRate({
+    clientContractLine,
+    contractLineDetails,
+    planServices,
+  });
   let planLevelEnableProration = false;
 
   if (isFixedFeePlan && contractLineDetails) {
-    if (
-      contractLineDetails.custom_rate !== undefined &&
-      contractLineDetails.custom_rate !== null
-    ) {
-      const parsedContractRate =
-        typeof contractLineDetails.custom_rate === "string"
-          ? parseFloat(contractLineDetails.custom_rate)
-          : Number(contractLineDetails.custom_rate);
-      if (!Number.isNaN(parsedContractRate)) {
-        // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
-        planLevelBaseRate = parsedContractRate / 100;
-      }
-    }
-
     if (
       contractLineDetails.enable_proration !== undefined &&
       contractLineDetails.enable_proration !== null
@@ -255,18 +341,6 @@ export function computeFixedCharges(
       planLevelEnableProration = Boolean(contractLineDetails.enable_proration);
     }
     fixedProrationEnabled = planLevelEnableProration;
-  }
-
-  if (isFixedFeePlan) {
-    if (planLevelBaseRate === null && clientContractLine.custom_rate != null) {
-      const parsedAssignmentRate =
-        typeof clientContractLine.custom_rate === "string"
-          ? parseFloat(clientContractLine.custom_rate)
-          : Number(clientContractLine.custom_rate);
-      if (!Number.isNaN(parsedAssignmentRate)) {
-        planLevelBaseRate = parsedAssignmentRate / 100;
-      }
-    }
   }
 
   const normalizedPlanServices = planServices.map((service) => {
@@ -290,57 +364,6 @@ export function computeFixedCharges(
     }
   }
   fixedProrationEnabled = planLevelEnableProration;
-
-  if (
-    isFixedFeePlan &&
-    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-  ) {
-    let derivedBaseRate = 0;
-    let hasServiceBaseRate = false;
-
-    for (const service of planServices) {
-      const rawServiceBaseRate = service.service_base_rate;
-      if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
-        const parsedServiceBaseRate =
-          typeof rawServiceBaseRate === "string"
-            ? parseFloat(rawServiceBaseRate)
-            : Number(rawServiceBaseRate);
-        if (!Number.isNaN(parsedServiceBaseRate)) {
-          const quantity =
-            Number(
-              service.configuration_quantity ?? service.service_quantity ?? 1,
-            ) || 1;
-          derivedBaseRate += parsedServiceBaseRate * quantity;
-          hasServiceBaseRate = true;
-        }
-      }
-    }
-
-    if (hasServiceBaseRate) {
-      // service_base_rate is stored in cents, convert to dollars
-      planLevelBaseRate = derivedBaseRate / 100;
-    }
-  }
-
-  if (
-    isFixedFeePlan &&
-    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-  ) {
-    const totalDefaultRateCents = planServices.reduce(
-      (sum: number, service) => {
-        const rate = Number(service.default_rate ?? 0);
-        const quantity =
-          Number(
-            service.configuration_quantity ?? service.service_quantity ?? 1,
-          ) || 1;
-        return sum + rate * quantity;
-      },
-      0,
-    );
-    if (totalDefaultRateCents !== 0) {
-      planLevelBaseRate = totalDefaultRateCents / 100;
-    }
-  }
 
   if (
     isFixedFeePlan &&

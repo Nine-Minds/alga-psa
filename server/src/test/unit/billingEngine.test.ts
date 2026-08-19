@@ -1996,7 +1996,11 @@ describe('BillingEngine', () => {
     });
 
     it('should still continue fixed-charge calculation when no pricing schedule row exists', () => {
-      expect(billingEngineSource).toContain('const activePricingSchedule = await db');
+      // Generation queries the schedule per line; the batched preview path
+      // resolves the same row from schedules preloaded for the whole window.
+      expect(billingEngineSource).toContain('const activePricingSchedule = preloaded');
+      expect(billingEngineSource).toContain('selectActivePricingSchedule(');
+      expect(billingEngineSource).toContain(': await db');
       expect(billingEngineSource).toContain('.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('.first();');
       expect(billingEngineSource).toContain('if (');

@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 
 import Quote from '../../models/quote';
 import { fetchTenantParty } from './tenantPartyAdapter';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 
 type QuoteItemGroupSummary = {
   items: QuoteViewModelLineItem[];
@@ -47,17 +48,16 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   }
 
   const parts = [
-    record.address_line1,
-    record.address_line2,
-    record.address_line3,
-    record.city,
-    record.state_province,
-    record.postal_code,
-    record.country_name,
-    record.location_address,
-    record.address,
+    displayAddressField(record.address_line1),
+    displayAddressField(record.address_line2),
+    displayAddressField(record.address_line3),
+    displayAddressField(record.city),
+    displayAddressField(record.state_province),
+    displayAddressField(record.postal_code),
+    displayCountry(record.country_name),
+    displayAddressField(record.location_address),
+    displayAddressField(record.address),
   ]
-    .map(asTrimmedString)
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
 
   return parts.length > 0 ? parts.join(', ') : null;
@@ -104,15 +104,15 @@ const buildLocationAddress = (location: QuoteViewModelLocation | null): string |
   if (!location) return null;
   const lines: string[] = [];
   for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    const trimmed = asTrimmedString(field);
+    const trimmed = displayAddressField(field);
     if (trimmed) lines.push(trimmed);
   }
   const cityLine = [location.city, location.state_province, location.postal_code]
-    .map(asTrimmedString)
+    .map(displayAddressField)
     .filter((v) => v.length > 0)
     .join(', ');
   if (cityLine) lines.push(cityLine);
-  const country = asTrimmedString(location.country_name) || asTrimmedString(location.country_code);
+  const country = displayCountry(location.country_name, location.country_code);
   if (country) lines.push(country);
   return lines.length > 0 ? lines.join('\n') : null;
 };

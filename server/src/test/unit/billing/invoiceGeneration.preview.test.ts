@@ -942,7 +942,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'An error occurred while previewing the invoice',
+      error: 'Billing email is required before generating recurring invoices.',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(previewResult).not.toHaveProperty('billingCycleId');

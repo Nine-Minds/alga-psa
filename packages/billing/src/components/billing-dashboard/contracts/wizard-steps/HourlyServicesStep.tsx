@@ -25,7 +25,7 @@ interface HourlyServicesStepProps {
 
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [bucketSchedules, setBucketSchedules] = React.useState<Array<{

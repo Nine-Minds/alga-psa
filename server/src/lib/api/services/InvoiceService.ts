@@ -344,13 +344,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           .select(
             'cl.client_id',
             'cl.tenant',
-            trx.raw(`CONCAT_WS(', ', 
-              cl.address_line1, 
-              cl.address_line2, 
-              cl.city, 
-              cl.state_province, 
-              cl.postal_code, 
-              cl.country_name
+            trx.raw(`CONCAT_WS(', ',
+              NULLIF(cl.address_line1, 'N/A'),
+              cl.address_line2,
+              NULLIF(cl.city, 'N/A'),
+              cl.state_province,
+              cl.postal_code,
+              NULLIF(cl.country_name, 'Unknown')
             ) as formatted_address`)
           )
           .where(function() {
@@ -2346,7 +2346,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         'c.client_id',
         'c.client_name',
         'c.billing_email as email',
-        trx.raw(`CONCAT_WS(', ', cl.address_line1, cl.address_line2, cl.city, cl.state_province, cl.postal_code, cl.country_name) as billing_address`),
+        trx.raw(`CONCAT_WS(', ', NULLIF(cl.address_line1, 'N/A'), cl.address_line2, NULLIF(cl.city, 'N/A'), cl.state_province, cl.postal_code, NULLIF(cl.country_name, 'Unknown')) as billing_address`),
         'cl.phone as phone_no'
       )
       .orderByRaw('cl.is_billing_address DESC, cl.is_default DESC')

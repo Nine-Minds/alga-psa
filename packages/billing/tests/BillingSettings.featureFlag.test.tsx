@@ -112,7 +112,7 @@ describe("BillingSettings credit draw-down feature flag", () => {
 
     expect(await screen.findByText("General")).toBeInTheDocument();
     expect(screen.queryByTestId("credit-drawdown-settings")).not.toBeInTheDocument();
-    expect(useFeatureFlagMock).toHaveBeenCalledWith("release-v1.5-feature", {
+    expect(useFeatureFlagMock).toHaveBeenCalledWith("release-v1-5-feature", {
       defaultValue: false,
     });
   });

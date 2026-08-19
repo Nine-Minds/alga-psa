@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import type { IClientLocation } from '@alga-psa/types';
 import { 
   getClientLocations, 
@@ -706,18 +707,19 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     
     // Combine address lines (address_line1, address_line2, address_line3)
     const addressLines = [
-      location.address_line1,
+      displayAddressField(location.address_line1),
       location.address_line2,
       location.address_line3
     ].filter(Boolean);
-    
+
     if (addressLines.length > 0) {
       addressParts.push(addressLines.join(', '));
     }
-    
+
     // Add city if present
-    if (location.city) {
-      addressParts.push(location.city);
+    const cityDisplay = displayAddressField(location.city);
+    if (cityDisplay) {
+      addressParts.push(cityDisplay);
     }
     
     // Add state/province and postal code together (space-separated, not comma-separated)
@@ -732,9 +734,10 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       addressParts.push(statePostalParts.join(' '));
     }
     
-    // Add country if present
-    if (location.country_name) {
-      addressParts.push(location.country_name);
+    // Add country if present (placeholder 'Unknown'/'XX' is omitted)
+    const countryDisplay = displayCountry(location.country_name, location.country_code);
+    if (countryDisplay) {
+      addressParts.push(countryDisplay);
     }
     
     // Join all major address components with comma-space

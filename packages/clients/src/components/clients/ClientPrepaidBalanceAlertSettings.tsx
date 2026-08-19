@@ -23,7 +23,7 @@ import {
   type PrepaidBalanceAlertSettingsInput,
 } from '../../lib/billingHelpers';
 
-const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
+const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 interface ClientPrepaidBalanceAlertSettingsProps {
   clientId: string;
@@ -70,7 +70,7 @@ const isUsableSettingsResult = (value: unknown): value is {
 
 /**
  * Per-client prepaid balance alert policy. Fully gated behind
- * `release-v1.5-feature`: while the flag is loading, unavailable, or disabled
+ * `release-v1-5-feature`: while the flag is loading, unavailable, or disabled
  * the card renders nothing (no skeleton, spacer, or altered tab markup).
  * Saving only persists the policy; the daily 09:00 UTC scan evaluates it.
  */

@@ -79,7 +79,7 @@ function activeCreditRow() {
   };
 }
 
-describe('CreditsSummaryCard credit history (release-v1.5-feature)', () => {
+describe('CreditsSummaryCard credit history (release-v1-5-feature)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagState.enabled = false;

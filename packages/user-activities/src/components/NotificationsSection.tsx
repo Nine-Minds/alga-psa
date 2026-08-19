@@ -27,7 +27,7 @@ interface NotificationsSectionProps {
   /**
    * Full-view mode (task 29.8.46, flag-gated): render the numbered server-side
    * pager and priority filter chips instead of the fixed 5-item preview. Only
-   * takes effect when the `release-v1.5-feature` flag is enabled; with the flag
+   * takes effect when the `release-v1-5-feature` flag is enabled; with the flag
    * off the component behaves exactly as before regardless of this prop.
    */
   fullMode?: boolean;
@@ -55,7 +55,7 @@ function priorityKeyToActivityPriority(key: PriorityFilterKey): ActivityPriority
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false, fullMode = false }: NotificationsSectionProps) {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled } = useFeatureFlag('release-v1-5-feature');
   // Full-view behaviour (pager + priority chips) is only active with the flag on.
   const isFullView = enabled && fullMode;
   const { data: session } = useSession();

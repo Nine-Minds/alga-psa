@@ -12,6 +12,7 @@ import {
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
@@ -1073,9 +1074,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -1390,9 +1391,9 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -1792,9 +1793,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -2131,9 +2132,9 @@ async function sendTicketAssignedNotifications(
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -2573,9 +2574,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);
@@ -3030,9 +3031,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     if (locationName) {
       locationSegments.push(locationName);
     }
-    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
     const locationDetailsParts = [...addressLines];
     if (cityState) {
       locationDetailsParts.push(cityState);

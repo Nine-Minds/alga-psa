@@ -19,7 +19,7 @@ export const SchedulingProviderWithCallbacks: React.FC<SchedulingProviderWithCal
   // The v1.5 flag is resolved here (the launcher is a plain async function, not
   // a hook host) and threaded into every launch so flag-off callers keep the
   // exact legacy toast behavior.
-  const { enabled: v15Enabled } = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const { enabled: v15Enabled } = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const callbacks = useMemo<SchedulingCallbacks>(() => ({
     renderAgentSchedule: (agentId: string) => <AgentScheduleView agentId={agentId} />,
     launchTimeEntry: (params) => launchTimeEntryForWorkItem({ ...params, enhancedLaunchFeedback: v15Enabled }),

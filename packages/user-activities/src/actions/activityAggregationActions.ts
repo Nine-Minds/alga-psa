@@ -1553,7 +1553,7 @@ export async function fetchNotificationActivities(
 
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) throw new Error('Tenant is required');
-    const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+    const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1-5-feature', {
       tenantId: tenant,
       userId,
     });
@@ -1602,7 +1602,7 @@ export async function fetchNotificationActivitiesPagedInternal(
 
   const { knex: db, tenant } = await createTenantKnex(tenantId);
   if (!tenant) throw new Error('Tenant is required');
-  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1-5-feature', {
     tenantId: tenant,
     userId,
   });

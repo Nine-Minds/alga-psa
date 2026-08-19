@@ -1,3 +1,5 @@
+import { displayAddressField, displayCountry } from '@alga-psa/core';
+
 export interface ClientLocationLike {
     location_name?: string | null;
     address_line1?: string | null;
@@ -11,11 +13,11 @@ export interface ClientLocationLike {
 export function formatClientLocation(location: ClientLocationLike): string {
     return [
         location.location_name,
-        location.address_line1,
-        location.address_line2,
-        location.city,
-        location.state_province,
-        location.postal_code,
-        location.country_name,
+        displayAddressField(location.address_line1),
+        displayAddressField(location.address_line2),
+        displayAddressField(location.city),
+        displayAddressField(location.state_province),
+        displayAddressField(location.postal_code),
+        displayCountry(location.country_name),
     ].filter(Boolean).join(', ');
 }

@@ -21,6 +21,10 @@ interface ConnectionMethodChooserProps {
 
 const DIRECT_PREREQUISITE_KEYS = [
   'integrations.entra.setup.chooser.direct.prerequisites.partnerRelationship',
+  // GDAP alone is not enough: the managedTenants API answers only for partner
+  // tenants onboarded to Lighthouse, and a missing onboarding fails the
+  // connect after consent — the worst place to learn about it.
+  'integrations.entra.setup.chooser.direct.prerequisites.lighthouse',
   'integrations.entra.setup.chooser.direct.prerequisites.globalAdmin',
   'integrations.entra.setup.chooser.direct.prerequisites.appRegistration',
 ];

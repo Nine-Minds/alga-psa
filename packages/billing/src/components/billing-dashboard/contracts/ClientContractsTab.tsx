@@ -128,12 +128,14 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const fetchClientContracts = async () => {
     try {
       setIsLoading(true);
-      const fetchedAssignments = await getContractsWithClients();
+      const [fetchedAssignments, renewalRows] = await Promise.all([
+        getContractsWithClients(),
+        listRenewalQueueRows(),
+      ]);
       if (isActionMessageError(fetchedAssignments) || isActionPermissionError(fetchedAssignments)) {
         setError(getErrorMessage(fetchedAssignments));
         return;
       }
-      const renewalRows = await listRenewalQueueRows();
       if (isActionPermissionError(renewalRows)) {
         handleError(renewalRows.permissionError);
         return;

@@ -722,7 +722,8 @@
             "consentMissing": "11111",
             "expired": "11111",
             "generic": "11111",
-            "validationFailed": "11111"
+            "validationFailed": "11111",
+            "tokenRejected": "11111"
           },
           "cippServerLabel": "11111",
           "connectingSuffix": "11111",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "11111",
               "globalAdmin": "11111",
-              "partnerRelationship": "11111"
+              "partnerRelationship": "11111",
+              "lighthouse": "11111"
             }
           },
           "directReassurance": "11111",

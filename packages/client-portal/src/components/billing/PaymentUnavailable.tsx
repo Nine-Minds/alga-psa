@@ -44,14 +44,14 @@ function reasonKey(code: ClientPaymentErrorCode): string {
  * Failure state shown on the portal Pay page when a payment link cannot be
  * created or online payment is not configured.
  *
- * While `release-v1.5-feature` resolves it renders the existing loading
+ * While `release-v1-5-feature` resolves it renders the existing loading
  * treatment; when disabled it preserves the legacy Billing redirect; when
  * enabled it explains the failure, offers a retry for creation failures, and
  * links back to the invoices tab.
  */
 export function PaymentUnavailable({ code, invoiceId, retryable }: PaymentUnavailableProps) {
   const { t } = useTranslation('features/billing');
-  const { enabled, loading } = useFeatureFlag('release-v1.5-feature');
+  const { enabled, loading } = useFeatureFlag('release-v1-5-feature');
   const [retrying, setRetrying] = useState(false);
   const [retryMessage, setRetryMessage] = useState('');
 

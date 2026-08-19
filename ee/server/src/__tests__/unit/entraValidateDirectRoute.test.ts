@@ -85,7 +85,7 @@ describe('validate-direct route', () => {
     });
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants?$top=1',
+      'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=1',
       expect.objectContaining({
         headers: { Authorization: 'Bearer access-token-38' },
       })
@@ -95,6 +95,61 @@ describe('validate-direct route', () => {
       connectionType: 'direct',
       status: 'connected',
       snapshot: null,
+    });
+    expect(refreshEntraDirectTokenMock).not.toHaveBeenCalled();
+  });
+
+  it('persists validation_failed with the Graph detail and answers 502 when the probe fails', async () => {
+    requireEntraAccessMock.mockResolvedValue({
+      tenantId: 'tenant-39',
+      userId: 'user-39',
+    });
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id-39',
+      clientSecret: 'client-secret-39',
+      tenantId: null,
+      source: 'tenant-secret',
+    });
+
+    const getTenantSecretMock = vi
+      .fn()
+      .mockResolvedValueOnce('access-token-39')
+      .mockResolvedValueOnce(new Date(Date.now() + 3600_000).toISOString());
+    getSecretProviderInstanceMock.mockResolvedValue({
+      getTenantSecret: getTenantSecretMock,
+    });
+
+    // The exact production failure: a non-401/403 Graph refusal of the
+    // managed-tenant list. It must be recorded on the connection and surfaced
+    // as 502 — not swallowed, and not misfiled as a consent problem.
+    axiosGetMock.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: {
+          error: {
+            code: 'BadRequest',
+            message: "Resource not found for the segment 'managedTenants'.",
+          },
+        },
+      },
+    });
+
+    const { POST } = await import('@ee/app/api/integrations/entra/validate-direct/route');
+    const response = await POST();
+    const payload = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(payload.success).toBe(false);
+
+    expect(updateEntraConnectionValidationMock).toHaveBeenCalledWith({
+      tenant: 'tenant-39',
+      connectionType: 'direct',
+      status: 'validation_failed',
+      snapshot: expect.objectContaining({
+        code: 'upstream_error',
+        details: { graph: "BadRequest: Resource not found for the segment 'managedTenants'." },
+      }),
     });
     expect(refreshEntraDirectTokenMock).not.toHaveBeenCalled();
   });

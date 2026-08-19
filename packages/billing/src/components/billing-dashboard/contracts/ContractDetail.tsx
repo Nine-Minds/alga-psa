@@ -186,7 +186,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   } = useFeatureFlag('contract-simulator', {
     defaultValue: false,
   });
-  const { enabled: creditDrawdownControlsEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: creditDrawdownControlsEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;

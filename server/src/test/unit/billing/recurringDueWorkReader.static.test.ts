@@ -17,8 +17,9 @@ describe('recurring due-work reader source', () => {
     expect(billingAndTaxSource).not.toContain('mergeRecurringDueWorkRows');
     expect(billingAndTaxSource).not.toContain('buildClientScheduleDueWorkRow');
     expect(billingAndTaxSource).toContain(
-      'invoiceCandidates: warnedInvoiceCandidates.slice(offset, offset + pageSize)',
+      'const visibleInvoiceCandidates = warnedInvoiceCandidates.slice(offset, offset + pageSize)',
     );
+    expect(billingAndTaxSource).toContain('invoiceCandidates: visibleInvoiceCandidates,');
     // The paginated list must still derive from the approval-blocked set (the
     // stale-ready warning pass wraps it without changing membership).
     expect(billingAndTaxSource).toContain(

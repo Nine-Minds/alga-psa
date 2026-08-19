@@ -343,7 +343,7 @@
       "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
       "generateFailed": "Fehler beim Generieren der Rechnung",
-      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege eine E-Mail-Adresse am Rechnungsstandort des Kunden fest und versuche es erneut.",
+      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest und versuche es erneut.",
       "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "INVALID_QUANTITY": "Die Menge muss größer als null sein.",
@@ -357,7 +357,7 @@
       "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden."
     },
     "warnings": {
-      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung eine E-Mail-Adresse am Rechnungsstandort fest."
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",

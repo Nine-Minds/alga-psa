@@ -115,7 +115,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     // Shared wrapper: flag-gated. Flag off => the legacy placeholder card
     // renders in both EE and CE builds; flag on => the vault section loads via
     // @enterprise (EE renders the card, CE renders nothing).
-    expect(wrapper).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(wrapper).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(wrapper).toContain('if (!flagEnabled) {');
     expect(wrapper).toContain("t('documentsPasswordsTab.passwords.title'");
     expect(wrapper).toContain("t('documentsPasswordsTab.passwords.comingSoon'");
@@ -135,7 +135,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     // null, never an empty title-only card) and derives the asset ids.
     expect(eeSection).toContain('EntityCredentialsSection');
     expect(eeSection).toContain('entityType="asset"');
-    expect(eeGenericSection).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(eeGenericSection).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(eeGenericSection).toContain('if (!flagEnabled) {');
     expect(eeGenericSection).toContain('return null;');
     expect(eeGenericSection).toContain('id={cardId}');
@@ -145,7 +145,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
   it('the client gate requires the release flag, EE, and the tier probe (useCredentialsVaultTab)', () => {
     const hook = readRepoFile('packages/clients/src/components/clients/useCredentialsVaultTab.ts');
     expect(hook).toContain("isEnterprise");
-    expect(hook).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(hook).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(hook).toContain("getCredentialsContext");
     expect(hook).toContain('visible: enabled && flagEnabled && tierOk');
   });
@@ -154,7 +154,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     const screen = readRepoFile(
       'ee/server/src/components/credentials/CredentialsScreen.tsx'
     );
-    expect(screen).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(screen).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(screen).toContain('if (!flagEnabled) {');
     expect(screen).toContain('return null;');
   });
@@ -163,7 +163,7 @@ describe('credentials vault — flag-off legacy Hudu tab preservation', () => {
     const sidebar = readRepoFile('server/src/components/layout/SidebarWithFeatureFlags.tsx');
     const menuConfig = readRepoFile('server/src/config/menuConfig.ts');
 
-    expect(sidebar).toContain("useFeatureFlag('release-v1.5-feature'");
+    expect(sidebar).toContain("useFeatureFlag('release-v1-5-feature'");
     expect(sidebar).toContain("item.name !== 'Passwords' || credentialsVaultEnabled");
     // The nav item itself is tier+edition gated (hidden on CE and below pro).
     expect(menuConfig).toContain("name: 'Passwords'");

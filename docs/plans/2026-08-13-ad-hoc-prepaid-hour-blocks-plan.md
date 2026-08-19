@@ -40,7 +40,7 @@ most-requested prepaid shape for clients without recurring contracts.
    (reason required), void before any burn. Auto-expiration job + expiring-soon
    notification. OUT: client-to-client transfer, first-class refunds (expire + credit
    note covers it).
-6. **UI (all behind `release-v1.5-feature`):** MSP client detail gets an Hour Blocks
+6. **UI (all behind `release-v1-5-feature`):** MSP client detail gets an Hour Blocks
    section (credits-page UX); no tenant-wide roll-up in v1; time-entry dialog
    untouched; client portal extends `PrepaidHoursCard` and the billing overview.
 
@@ -74,7 +74,7 @@ most-requested prepaid shape for clients without recurring contracts.
   non-recurring invoice-linked record is `project_billing_schedule_entries`.
 - **Flag plumbing exists**: `useFeatureFlag` (`packages/ui/src/hooks/useFeatureFlag.tsx`)
   client-side, `isFeatureFlagEnabled` (`packages/core/src/lib/features.ts`)
-  server-side; `release-v1.5-feature` call sites already exist in the client portal
+  server-side; `release-v1-5-feature` call sites already exist in the client portal
   (`PrepaidHoursCard.tsx:30`, `BucketUsageChart.tsx:24`, `CreditsSummaryCard.tsx:78`).
 
 ## Data model (new tables, all tenant-scoped with RLS, composite PK with `tenant`)
@@ -258,7 +258,7 @@ New `packages/billing/src/components/hour-blocks/`:
 - Mounted in the client detail billing area
   (`packages/clients/src/components/clients/` — alongside
   `BillingConfiguration.tsx` / `ClientContractLineDashboard.tsx`), gated with
-  `useFeatureFlag('release-v1.5-feature', { defaultValue: false })`; flag off or
+  `useFeatureFlag('release-v1-5-feature', { defaultValue: false })`; flag off or
   loading ⇒ render nothing, page byte-identical to today.
 - All strings in `server/public/locales/<locale>/…` for **all** locales (CI-enforced).
 

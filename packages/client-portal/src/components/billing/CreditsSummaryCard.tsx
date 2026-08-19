@@ -70,12 +70,12 @@ function getCreditHistoryLabel(t: TranslateFn, entry: ClientPortalCreditHistoryE
 /**
  * Available-credit card for the portal billing overview: headline derived
  * balance plus the client's recent credit history with provenance. When the
- * release-v1.5-feature flag is on, a "View history" link opens a ledger dialog
+ * release-v1-5-feature flag is on, a "View history" link opens a ledger dialog
  * of recent credit transactions.
  */
 export default function CreditsSummaryCard({ formatCurrency, formatDate }: CreditsSummaryCardProps) {
   const { t } = useTranslation('features/billing');
-  const { enabled: historyEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: historyEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [summary, setSummary] = useState<ClientPortalCreditSummary | null>(null);

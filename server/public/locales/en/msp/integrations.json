@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft signed you in but refused access to your managed tenant list. A Global Administrator must grant admin consent for the requested permissions. Nothing was saved — try again once consent is granted.",
             "expired": "The connection attempt expired before it finished. Nothing was saved — start the connection again.",
             "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
-            "validationFailed": "Microsoft signed you in, but we could not read your managed tenant list, so nothing was saved. Check the connection's permissions and try again."
+            "validationFailed": "Microsoft signed you in, but the managed tenant list could not be read, so nothing was saved. Your permissions were accepted — this usually means the partner tenant is not onboarded to Microsoft 365 Lighthouse or has no active GDAP relationships.",
+            "tokenRejected": "Microsoft rejected the connection's access token, so nothing was saved. Start the connection again."
           },
           "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
               "globalAdmin": "A Global Administrator who can approve the permissions.",
-              "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage."
+              "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage.",
+              "lighthouse": "Microsoft 365 Lighthouse onboarded in your partner tenant."
             }
           },
           "directReassurance": "You will review the permission prompt before anything is granted.",
