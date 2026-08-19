@@ -46,23 +46,29 @@ Landed on `i18n/error_messages`:
   no-key, missing-namespace, idempotent and no-request-scope paths. surveys / recurring billing / license
   management localize at their own return.
 - **Category 1 step 3 — client-portal, clients and tickets done.** client-portal: 47 keys × 8 locales, all 9
-  files; `appointmentSchemas` deduped from three identical copies into `@alga-psa/scheduling`. clients: 69
-  call sites across 15 action files plus `billingHelpers`, 68 keys in `msp/clients` and one in
+  files; `appointmentSchemas` deduped from three identical copies into `@alga-psa/scheduling`. clients: 91
+  call sites across 16 action files plus `billingHelpers`, 68 keys in `msp/clients` and 18 in
   `msp/contacts`. tickets: 53 call sites across 10 action files, 58 keys extending the `features/tickets`
   `errors.*` block the category-3 work started. **Next: billing (731) → integrations (436) → rest.**
 
-  Three conventions worth not re-deriving:
+  Four conventions worth not re-deriving:
 
   1. Messages that forward a thrown error's own text stay keyless. A thrown string has no catalogue entry to
      point at, and `find-untranslated-ui.cjs` excludes throws by design.
   2. **An action that reports failure as a bare string has to localize it itself.** `withAuth` can only
      rewrite a payload it can still see; the moment the code does `String(candidate.actionError)` the key is
-     gone. Six such sites so far — `createClient` and `clientActionMessageFrom` in clients,
-     `ticketBulkFailureMessage`, `ticketImportRowErrorMessage` and two inline returns in tickets. Grep each
-     new package for `candidate.actionError` before calling it done. The browser walk is what found the
-     first one: every test passed while the German run came back in English.
-  3. Concatenated messages have to become whole sentences, one per branch. Four missing-field strings and the
+     gone. Grep `String(candidate\.\(actionError\|permissionError\)` before calling a package done — that is
+     the whole inventory, and it is short. Seven are fixed (clients `createClient`, `clientActionMessageFrom`,
+     `contactActionResultErrorFrom`; tickets `ticketBulkFailureMessage`, `ticketImportRowErrorMessage` and
+     two inline returns). Eight remain, one each in **assets ×2, documents, projects, reference-data,
+     scheduling, sla, teams** — harmless while those packages carry no keys, and a silent failure the moment
+     they do. The browser walk is what found the first: every test passed while the German run came back in
+     English, because the English fallback is still correct English.
+  3. Concatenated messages have to become whole sentences, one per branch. Five missing-field strings and the
      singular/plural bundle-master prefix went that way; a prefix and a tail do not agree across languages.
+  4. **Inventory with `--include="*.ts" --include="*.tsx"`.** `contactActions.tsx` is an action module with a
+     `.tsx` extension, and a `.ts`-only grep reported the clients package complete while 22 of its call sites
+     were untouched.
 - **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
   Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
 
