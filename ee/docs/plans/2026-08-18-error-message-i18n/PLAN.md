@@ -1,6 +1,7 @@
 # Error-message i18n — remediation plan
 
 Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19.
+Categories 1, 3, 4 and 6 are done. Category 2 has not started; category 5 is a 151-file ratchet.
 
 ## Context
 
@@ -45,7 +46,7 @@ Landed on `i18n/error_messages`:
   `localizeActionError` in `packages/auth`, wired into `withAuth` and `withOptionalAuth`, with tests for the
   no-key, missing-namespace, idempotent and no-request-scope paths. surveys / recurring billing / license
   management localize at their own return.
-- **Category 1 step 3 — client-portal, clients, tickets, billing and integrations done.** client-portal: 47
+- **Category 1 step 3 — DONE, every package.** client-portal: 47
   keys × 8 locales, all 9 files; `appointmentSchemas` deduped from three identical copies into
   `@alga-psa/scheduling`. clients: 91 call sites across 16 action files plus `billingHelpers`, 68 keys in
   `msp/clients` and 18 in `msp/contacts`. tickets: 53 call sites across 10 action files, 58 keys extending
@@ -61,12 +62,25 @@ Landed on `i18n/error_messages`:
   `'Permission denied'` was twenty-two of them). surveys / users / tenancy / notifications / reporting: 72
   sites, 68 keys. tags / auth policy + sessions / user-composition / jobs: 44 sites, 36 keys.
 
-  **What is left: `packages/inventory` (205 sites), `server/src` (39) and `ee/server/src` (11).** That is the
-  whole remaining inventory of literal `actionError` / `permissionError` call sites; every other package is
-  through. Re-measure with `node /tmp`-style scan or simply
-  `grep -rn "actionError('\|permissionError('" <package>/src`.
+  inventory: 208 sites across 23 action files and `kitActionErrors`, 209 keys in `features/inventory`.
+  server/src: 39 sites — API keys, webhooks and inbound webhooks into `msp/profile` (the namespace their
+  security screens already read), the ghost-usage AI guards reusing the inventory permission keys, licensing
+  into a new `msp/licensing` `errors` block. ee/server/src: 11 sites, the portal-domain validator, into
+  `msp/settings` beside the client-portal settings it serves.
 
-  Six conventions worth not re-deriving:
+  **Nothing is left.** The only plain-string-literal `actionError` / `permissionError` call site remaining
+  anywhere in the repo is a fixture inside `localizeActionError.test.ts`, which exists to test the *keyless*
+  path. Re-measure the whole repo at once — per-package greps are what let `contactActions.tsx` slip:
+
+  ```bash
+  # every call site, split into keyed / unkeyed, per package
+  grep -rn "actionError(\|permissionError(" packages server ee/server --include="*.ts" --include="*.tsx"
+  ```
+
+  A call whose second argument is not a plain literal (`QBO_CATALOG_KEYS[catalog].notConnected`,
+  `statusMessageKey(...)`, a template) still counts as keyed — check before assuming a hit is real.
+
+  Eight conventions worth not re-deriving:
 
   1. Messages that forward a thrown error's own text stay keyless. A thrown string has no catalogue entry to
      point at, and `find-untranslated-ui.cjs` excludes throws by design.
@@ -102,17 +116,51 @@ Landed on `i18n/error_messages`:
      `categoryActions` map a thrown payload back into a fresh one; both now pass `getActionErrorMessageKey` /
      `getActionErrorMessageParams` through. This is the same failure as convention 2 with a different shape,
      and it is equally silent — the English fallback is still correct English.
-- **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
-  Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
+  7. **A value-per-branch table beats a param when the value is an enum.** `localizeActionError` translates the
+     message, never the params, so an interpolated English noun survives translation untouched. inventory's
+     three unit-status guards each got eight whole sentences (`errors.loaners.cannotLoanOutStatus.<status>`),
+     generated from one frame plus a per-locale status-noun table. The helper that picks the key
+     (`statusMessageKey`) returns `undefined` for a status outside the label table, so an unrecognised value
+     degrades to the English sentence rather than naming a key that does not resolve — there is a unit test
+     for exactly that.
+  8. **A `??` fallback hides a keyable branch.** `actionError(firstIssue?.message ?? 'Check the …')` cannot
+     take a key: the keyed sentence and the un-keyable Zod message share one expression. Split the ternary so
+     the fallback carries its key and the Zod message stays keyless until category 2 lands
+     (`inboundWebhookActions`, `webhookActions`).
+- **Category 5 — 4 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
+  `ConflictResolutionDialog`), plus 3 stale baseline entries dropped. Ratchet is at **151**.
+  `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last. Both files wired this
+  pass take their keys from `common`, because neither belongs to one route's namespace — and both hid a
+  concatenation: `Conflict:` + a clause, and an English `"s"` appended to a raw `tagged_type`. The second is
+  the client-side twin of convention 7, and it has an easier answer: a client component *has* a translator, so
+  the noun can be translated before it is interpolated
+  (`t('tags.entityTypes.' + tag.tagged_type)` into `{{entityType}}`). Import `useTranslation` from
+  `@alga-psa/ui/lib/i18n/client`, not `react-i18next` — that is the repo's seam, and it saves declaring
+  `react-i18next` in a package that does not have it. Leave letterform samples like `"Aa"` alone: a key whose
+  value is identical in every locale fails `audit.cjs`.
 
-Ratchet at time of writing: high-severity files **153** (from 155), unchanged by any of the category-1
-passes, which touch actions rather than unwired components. Note the error-literal number moves slowly by design —
+Ratchet at time of writing: high-severity files **151** (from 155). Error-shaped literals **3,081 across 505
+files** (from 3,365 across 533). Note the literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
-`find-untranslated-ui.cjs --json` currently emits invalid JSON: a JSX prop spanning two lines puts a raw
-newline in `detail` (`RoleManagement.tsx` around line 270), which breaks the string. Pre-existing and
-unrelated to this plan, but it means the `--json` ratchet has to be read from the human output for now.
+`find-untranslated-ui.cjs --json` emits valid JSON again (the two-line JSX prop that used to break the
+`detail` string is gone), so the ratchet can be read machine-readably:
+`node -e` over `high[]` for the 151, and over `high[].findings[] ∪ partial[].findings[]` filtered on
+error-shaped prose for the 3,081.
+
+Two checks worth keeping, because neither the gate nor `tsc` covers them:
+
+- **Every `<namespace>:errors.<key>` named in source resolves in all eight real locales.** A typo falls back
+  to English and nothing complains. Collect the refs with a regex over `packages server ee/server`, then walk
+  each `server/public/locales/<locale>/<namespace>.json`. As of this pass: **1,145 distinct keys referenced, 0
+  unresolved** — the only misses are doc examples in `errorHandling.ts` / `localizeActionError.ts` and test
+  fixtures (`msp/clients:errors.x`, `msp/tickets:errors.notFound`), which name namespaces that do not exist on
+  purpose.
+- **Two spellings of one message should share one key.** inventory had
+  `Permission denied: inventory:read required` beside `Permission denied: inventory read required`; both now
+  point at `errors.permissions.inventoryRead`, so the raw permission code stops leaking and the two screens
+  read the same sentence in every locale.
 
 Walked in a browser against a running app (2026-08-19), driving the real sign-in form and the real
 language picker rather than a cookie:
@@ -148,13 +196,32 @@ connected tenant) and the managed-email domain form, which is an EE component ta
 `{ success, error }` rather than an action payload — a category-4 site, not the boundary. Its keys are covered
 by unit assertions and the lang-pack gate instead.
 
+- **inventory, after its pass.** Inventory → Vendors → Add Vendor with a name that collides:
+  `A vendor named "target" already exists` / `Ein Lieferant mit dem Namen „target“ existiert bereits`
+  (byte-identical to `de/features/inventory.json`) / `11111 target 11111`. That is the hand-written template
+  branch — the `{{name}}` param survives the pseudo-locale, so it was not folded into the translated string.
+- **ee/server, after its pass.** Settings → Client Portal → custom domain `nodothere` renders
+  "Die Domain muss mindestens einen Punkt enthalten." at `de`, byte-identical to `de/msp/settings.json`. An EE
+  action, an EE component, and a namespace that had no client-portal-domain errors before.
+
+`msp/profile` and `msp/licensing` have no browser walk: the API-key and webhook failures need a non-admin
+session or a missing record, and the licensing guard needs the permission removed. They are covered by the
+key-resolution check above and the lang-pack gate, the same way integrations is.
+
+Signing in locally: the seeded MSP users are `glinda@emeraldcity.oz` and friends on the Oz tenant. A QA
+password is one `UPDATE users SET hashed_password` away — the format is `salt:hash` where
+`hash = pbkdf2(password, NEXTAUTH_SECRET + salt, 10000, 64, sha512)` and the secret is the **file**
+`secrets/nextauth_secret`, not the `NEXTAUTH_SECRET=dummy` in `server/.env` (`getSecret` prefers the file).
+Switch locale through `#language-preference` on `/msp/profile` and press Save Changes; under `xx` every label
+is `11111`, so drive the page by element id, not by text.
+
 After the whole pass, a signed-in walk of `/msp/dashboard`, `/msp/tickets`, `/msp/clients`,
 `/msp/billing?tab=service-types`, `/msp/projects`, `/msp/schedule`, `/msp/assets`, `/msp/documents` and
 `/msp/settings` renders every screen with no 500 and no locale-file 404. The only failing requests are the
 local SSO discovery probe and document previews for seeded rows whose files are not in local storage.
 
-What a browser still cannot reach is the packages that have no keys yet: everything below `integrations` in
-the migration order.
+What a browser still cannot reach is category 2: a Zod message is still English inside an otherwise
+translated payload, and no screen shows that until a schema attaches a key.
 
 ## Existing infrastructure to build on (do not rebuild)
 
@@ -245,9 +312,10 @@ Steps:
      `permissionError`; route it through the shared helpers so the boundary can see the payload.
    - `server/src/lib/actions/licenseManagementActions.ts` — same shape, hand-rolled permission guard.
    - `withOptionalAuth` needs `localizeActionError` too (the anonymous branch returns without `runWithTenant`).
-3. Migrate by package, most user-visible first: **client-portal (266) → clients (266) → tickets (205) →
-   billing (731) → integrations (436) → the rest.** Per package: add an `errors.*` block to that package's
-   namespace under `server/public/locales/en/`, then pass keys at each `actionError` call. No client changes.
+3. ~~Migrate by package, most user-visible first: **client-portal (266) → clients (266) → tickets (205) →
+   billing (731) → integrations (436) → the rest.**~~ — done, every package. Per package: add an `errors.*`
+   block to that package's namespace under `server/public/locales/en/`, then pass keys at each `actionError`
+   call. No client changes.
 4. Keys go in the namespace that already serves the feature (`msp/clients.json`, `client-portal.json`, …);
    only genuinely app-wide errors go in `common.json`. Follow the shape in `docs/architecture/i18n.md`
    ("How to Add Translation Keys"). Namespace choice is now a server-side disk read, so it is not constrained
@@ -259,10 +327,13 @@ Do not attempt this in one pass. One package per PR, each independently shippabl
 
 ## Category 2 — Zod schema messages (~320)
 
-**Status: not started.** Its one prerequisite is done — `appointmentSchemas` is deduped into
-`@alga-psa/scheduling` — but no schema attaches a key yet, so an action that joins `error.issues[].message`
-still returns English inside an otherwise-translated payload. `projects` shows the shape this leaves behind:
-`errors.task.validationFailed` translates the frame and interpolates the Zod detail verbatim.
+**Status: not started — and now the only category with nothing landed, so it is what comes next.** Its one
+prerequisite is done — `appointmentSchemas` is deduped into `@alga-psa/scheduling` — but no schema attaches a
+key yet, so an action that joins `error.issues[].message` still returns English inside an otherwise-translated
+payload. `projects` shows the shape this leaves behind: `errors.task.validationFailed` translates the frame
+and interpolates the Zod detail verbatim. The webhook and inbound-webhook upserts show the other shape: the
+keyed fallback and the raw Zod message are now separate branches (convention 8), so attaching a key in the
+schema is the only piece missing there.
 
 These do reach users: several actions join `error.issues[].message` into the returned error string
 (e.g. `packages/integrations/src/actions/integrations/rmmAlertRuleActions.ts:56`,
@@ -343,14 +414,17 @@ Closes the gaps left by the current diff. Half a day.
 
 ## Sequencing
 
-1. Category 6 — finish what is in flight (small, unblocks nothing but stops the bleeding).
-2. Category 3 — remove every prose match. **Hard blocker: nothing in category 1 can be switched on until
-   this is complete, and its failure mode is silent.**
-3. Category 1 steps 1–2 — `localizeActionError`, the extended type, and the 19 unwrapped files. No behaviour
-   change while payloads carry no keys.
-4. Category 1 step 3 — migrate package by package, client-portal first. Category 2 rides along per package;
-   category 4 largely resolves itself.
-5. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired.
+1. ~~Category 6 — finish what is in flight.~~ Done.
+2. ~~Category 3 — remove every prose match.~~ Done for every payload-level match; the thrown-prose fallbacks
+   are deliberate and documented above.
+3. ~~Category 1 steps 1–2 — `localizeActionError`, the extended type, and the 19 unwrapped files.~~ Done.
+4. ~~Category 1 step 3 — migrate package by package.~~ Done, every package. Category 4 largely resolved
+   itself, as predicted: the `actionError`-origin toasts translate at the boundary with no edit.
+5. **Category 2 — next.** It did not ride along per package, so it is a pass of its own: attach a key in the
+   issue `params` and map `issue → messageKey` where each action joins `error.issues`. Start where an action
+   already has a keyed frame around the raw Zod detail (`projects`, `webhookActions`,
+   `inboundWebhookActions`, `rmmAlertRuleActions`, `surveyActions`).
+6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 151 to go.
 
 `I18N_ENFORCE=true` is already set, so there is no flip to schedule — instead, every step above must leave
 `npm run test:i18n` green, all 7 locales included, before it merges.
@@ -429,3 +503,12 @@ all the interesting decisions are.
   Vitest config does not alias ui to source will fail to resolve `serverOnly` even so.
 - A package may also need `@alga-psa/auth` *declared*: scheduling, projects, assets and documents were all
   importing it already. Add it to `dependencies` and regenerate the lockfile in the same commit.
+- A mapper's test may **mock away the key**. `loanerRestockErrors.test.ts` stubbed
+  `actionError: (message) => ({ actionError: message })`, so 22 `toEqual` assertions stayed green while the
+  second argument was silently dropped. Mirror the real signature in the mock and name the key in every
+  expectation — otherwise the suite proves nothing about the migration it is supposed to cover.
+- The audit is the only thing that reads the glossary, and it catches real drift late: Polish rejected
+  `przepływu pracy` for *workflow* (loanword required) and, in an earlier pass, `dzierżawca` for *tenant*.
+  Note the glossaries disagree with each other on purpose — Spanish wants `flujo de trabajo` where Polish
+  wants `workflow`, Dutch calls a tag a `label`, French an `étiquette`. Run
+  `node tools/i18n/audit.cjs --locale <l>` per locale before committing, not just `validate-translations`.
