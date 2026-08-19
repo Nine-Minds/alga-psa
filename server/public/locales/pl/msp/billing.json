@@ -642,6 +642,13 @@
       "missingFieldNamed": "Brakuje wymaganego pola zużycia: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "Data wyzwolenia musi być prawidłową datą kalendarzową.",
+        "thresholdsAscending": "Progi powiadomień muszą być ułożone w ściśle rosnącej kolejności.",
+        "amountOrPercentage": "Wymagana jest dokładnie jedna z wartości: kwota lub wartość procentowa.",
+        "increaseTotalAmountOnly": "Zwiększenie sumy jest prawidłowe tylko dla pozycji opartych na kwocie.",
+        "amountAndPercentageTogether": "Kwota i wartość procentowa muszą być aktualizowane razem, a dokładnie jedna z nich musi mieć wartość null."
+      },
       "invalidValue": "Jedna z wybranych wartości rozliczeń projektu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
       "referenceMissing": "Wybrany projekt, faktura, faza, usługa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Istnieje już sprzeczny zapis rozliczeń projektu. Odśwież stronę i spróbuj ponownie.",

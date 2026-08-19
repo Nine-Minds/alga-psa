@@ -10,6 +10,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -608,9 +609,8 @@ export const upsertInboundWebhook = withAuth(
     const parsedInput = inboundWebhookUpsertInputSchema.safeParse(input);
     if (!parsedInput.success) {
       const firstIssue = parsedInput.error.issues[0];
-      // The Zod message has no catalogue entry yet (category 2), so it stays keyless.
       return firstIssue?.message
-        ? actionError(firstIssue.message)
+        ? actionErrorFromValidationIssue(firstIssue)
         : actionError('Check the inbound webhook settings and try again.', 'msp/profile:errors.inboundWebhooks.invalidInput');
     }
 

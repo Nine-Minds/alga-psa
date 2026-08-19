@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Vérifiez les paramètres d’automatisation des alertes RMM et réessayez.",
+      "permissions": {
+        "read": "Autorisations insuffisantes pour consulter les paramètres d’automatisation des alertes RMM.",
+        "update": "Autorisations insuffisantes pour gérer les paramètres d’automatisation des alertes RMM."
+      },
+      "integrationNotFound": "Intégration RMM introuvable.",
+      "nothingToUpdate": "Aucune modification à enregistrer.",
+      "ruleNotFound": "Règle d’alerte introuvable.",
+      "windowNotFound": "Fenêtre de maintenance introuvable.",
+      "pollIntervalRange": "L’intervalle d’interrogation doit être compris entre 5 et 60 minutes.",
+      "validation": {
+        "scheduleRequired": "Une fenêtre nécessite une heure de début et de fin ou une récurrence hebdomadaire.",
+        "startBeforeEnd": "L’heure de début doit précéder l’heure de fin.",
+        "timesMustDiffer": "Les heures de début et de fin doivent être différentes. Utilisez plusieurs jours pour une fenêtre couvrant une journée entière.",
+        "unknownTimezone": "Fuseau horaire inconnu : {{timezone}}.",
+        "messagePatternInvalid": "Le modèle de message n’est pas une expression régulière valide."
+      }
+    },
     "mappings": {
       "viewPermission": "Autorisation refusée : vous n’avez pas l’autorisation de consulter les correspondances comptables.",
       "managePermission": "Autorisation refusée : vous n’avez pas l’autorisation de gérer les correspondances comptables.",

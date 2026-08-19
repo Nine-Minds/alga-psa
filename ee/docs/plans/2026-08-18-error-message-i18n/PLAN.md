@@ -1,7 +1,7 @@
 # Error-message i18n — remediation plan
 
 Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19.
-Categories 1, 3, 4 and 6 are done. Category 2 has not started; category 5 is a 150-file ratchet.
+Categories 1, 2, 3, 4 and 6 are done; category 5 is a 149-file ratchet.
 
 ## Context
 
@@ -127,8 +127,9 @@ Landed on `i18n/error_messages`:
      take a key: the keyed sentence and the un-keyable Zod message share one expression. Split the ternary so
      the fallback carries its key and the Zod message stays keyless until category 2 lands
      (`inboundWebhookActions`, `webhookActions`).
-- **Category 5 — 5 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
-  `ConflictResolutionDialog`, `StatusDialog`), plus 3 stale baseline entries dropped. Ratchet is at **150**.
+- **Category 5 — 6 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
+  `ConflictResolutionDialog`, `StatusDialog`, `ColorPicker`), plus 3 stale baseline entries dropped. Ratchet is
+  at **149**.
   `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last. All three files wired
   this pass take their keys from `common`, because none belongs to one route's namespace — check
   `ROUTE_NAMESPACES` before reaching for a feature namespace, since `/msp/projects` does not load
@@ -141,14 +142,14 @@ Landed on `i18n/error_messages`:
   `react-i18next` in a package that does not have it. Leave letterform samples like `"Aa"` alone: a key whose
   value is identical in every locale fails `audit.cjs`.
 
-Ratchet at time of writing: high-severity files **150** (from 155). Error-shaped literals **3,081 across 505
+Ratchet at time of writing: high-severity files **149** (from 155). Error-shaped literals **3,081 across 505
 files** (from 3,365 across 533). Note the literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
 `find-untranslated-ui.cjs --json` emits valid JSON again (the two-line JSX prop that used to break the
 `detail` string is gone), so the ratchet can be read machine-readably:
-`node -e` over `high[]` for the 150, and over `high[].findings[] ∪ partial[].findings[]` filtered on
+`node -e` over `high[]` for the 149, and over `high[].findings[] ∪ partial[].findings[]` filtered on
 error-shaped prose for the 3,081.
 
 Two checks worth keeping, because neither the gate nor `tsc` covers them:
@@ -329,11 +330,9 @@ Do not attempt this in one pass. One package per PR, each independently shippabl
 
 ## Category 2 — Zod schema messages (~320)
 
-**Status: not started — and now the only category with nothing landed, so it is what comes next.** Its one
-prerequisite is done — `appointmentSchemas` is deduped into `@alga-psa/scheduling` — but no schema attaches a
-key yet, so an action that joins `error.issues[].message` still returns English inside an otherwise-translated
-payload. `projects` shows the shape this leaves behind: `errors.task.validationFailed` translates the frame
-and interpolates the Zod detail verbatim.
+**Status: done for every user-visible server-action issue path.** `appointmentSchemas` remains deduped into
+`@alga-psa/scheduling`, but is deliberately unkeyed because its action consumers collapse failures to generic
+translated sentences and its only raw-message reader is the out-of-scope public API route.
 
 **Convention 8 has been applied everywhere it applies**, so every site is now one edit away from done: the
 keyed fallback and the raw Zod message are separate branches at `webhookActions`, `inboundWebhookActions`,
@@ -366,10 +365,19 @@ scope. Keying them would translate nothing. The dedupe was still worth doing; th
 | `server/lib/actions/{webhook,inboundWebhook}Actions.ts` | first issue |
 | `projects/{projectActions,projectTaskActions,projectTemplateActions}.ts`, `tickets/{ticketActionErrors,optimizedTicketActions}.ts`, `assets/assetActionErrors.ts`, `billing/projectBillingActionErrors.ts` | issue list interpolated into a keyed frame |
 
-The **fallbacks** at all of those sites are keyed already — the sentence the code supplies when there is no
-issue to show. What is left is the issue text itself, which needs the schema to carry the key. Note
-`rmmAlertRuleActions` returns `{ success, error }` rather than a payload, so it is a category-4 site too: the
-boundary cannot see it, and it needs converting before a key helps.
+The implementation is structural rather than prose-based:
+
+- `actionErrorFromValidationIssue` in `packages/ui/src/lib/errorHandling.ts` maps Zod 3 built-in issues by
+  stable `issue.code` into `common:errors.validation.*`; it never branches on `issue.message`.
+- Custom `.refine` / `.superRefine` issues carry `params.messageKey` and optional
+  `params.messageParams`. The webhook, inbound-webhook, RMM and project-billing schemas now attach them.
+- The action mappers use the first actionable issue instead of joining translated and untranslated fragments.
+  This covers client-portal ticket creation, surveys, outbound and inbound webhooks, project tasks, tickets,
+  assets, project billing and RMM alert automation. Project and template mappers already returned a generic
+  keyed sentence and needed no change.
+- `rmmAlertRuleActions` no longer flattens failures into `{ success, error }`; it returns keyed
+  `actionError` / `permissionError` payloads, and its component reads those shapes. This lets `withAuth`
+  perform the same boundary translation as every other migrated action.
 
 One design constraint to check first: Zod only carries `params` on `ZodIssueCode.custom`, so a
 `.refine`/`.superRefine` message can hold a key but a built-in `too_small` / `invalid_type` cannot. Built-ins
@@ -447,11 +455,8 @@ Closes the gaps left by the current diff. Half a day.
 3. ~~Category 1 steps 1–2 — `localizeActionError`, the extended type, and the 19 unwrapped files.~~ Done.
 4. ~~Category 1 step 3 — migrate package by package.~~ Done, every package. Category 4 largely resolved
    itself, as predicted: the `actionError`-origin toasts translate at the boundary with no edit.
-5. **Category 2 — next.** It did not ride along per package, so it is a pass of its own: attach a key in the
-   issue `params` and map `issue → messageKey` where each action joins `error.issues`. Start where an action
-   already has a keyed frame around the raw Zod detail (`projects`, `webhookActions`,
-   `inboundWebhookActions`, `rmmAlertRuleActions`, `surveyActions`).
-6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 150 to go.
+5. ~~Category 2 — attach keys to user-visible Zod issues and map them structurally.~~ Done.
+6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 149 to go.
 
 `I18N_ENFORCE=true` is already set, so there is no flip to schedule — instead, every step above must leave
 `npm run test:i18n` green, all 7 locales included, before it merges.

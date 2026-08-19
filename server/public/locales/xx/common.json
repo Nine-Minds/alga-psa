@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "11111",
+    "invalidHexText": "11111",
+    "customizeTagColors": "11111",
+    "chooseColor": "11111",
+    "quickSelect": "11111",
+    "presetAriaLabel": "11111 {{number}} 11111",
+    "backgroundColor": "11111",
+    "textColor": "11111",
+    "preview": "11111",
+    "sampleTag": "11111",
+    "resetToDefault": "11111"
+  },
   "clientNameCell": {
     "noClient": "11111"
   },
@@ -148,6 +161,15 @@
     "passwordMismatch": "11111"
   },
   "errors": {
+    "validation": {
+      "required": "11111 {{field}} 11111",
+      "invalidType": "11111 {{field}} 11111",
+      "invalidFormat": "11111 {{field}} 11111",
+      "tooSmall": "11111 {{field}} 11111",
+      "tooLarge": "11111 {{field}} 11111",
+      "unsupportedValue": "11111 {{field}} 11111",
+      "invalidValue": "11111 {{field}} 11111"
+    },
     "auth": {
       "notAuthenticated": "11111",
       "accessDenied": "11111",

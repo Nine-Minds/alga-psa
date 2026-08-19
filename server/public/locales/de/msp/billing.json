@@ -642,6 +642,13 @@
       "missingFieldNamed": "Erforderliches Verbrauchsfeld fehlt: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "Das Auslösedatum muss ein gültiges Kalenderdatum sein.",
+        "thresholdsAscending": "Benachrichtigungsschwellenwerte müssen streng aufsteigend sortiert sein.",
+        "amountOrPercentage": "Genau einer der Werte Betrag oder Prozentsatz ist erforderlich.",
+        "increaseTotalAmountOnly": "Die Erhöhung des Gesamtbetrags ist nur für betragsbasierte Einträge zulässig.",
+        "amountAndPercentageTogether": "Betrag und Prozentsatz müssen gemeinsam aktualisiert werden, wobei genau einer auf null gesetzt sein muss."
+      },
       "invalidValue": "Einer der ausgewählten Werte der Projektabrechnung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "referenceMissing": "Das ausgewählte Projekt, die Rechnung, Phase, der Dienst oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Es existiert bereits ein widersprüchlicher Datensatz der Projektabrechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

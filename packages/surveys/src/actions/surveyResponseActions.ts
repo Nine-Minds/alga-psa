@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { localizeActionError } from '@alga-psa/auth';
@@ -107,11 +108,9 @@ function surveyResponseActionErrorFrom(error: unknown): SurveyResponseActionErro
   }
 
   if (error instanceof z.ZodError) {
-    // The Zod message has no catalogue entry yet (category 2), so it stays keyless;
-    // the fallback is ours, so it carries a key.
     const firstIssue = error.issues[0];
     return firstIssue?.message
-      ? actionError(firstIssue.message)
+      ? actionErrorFromValidationIssue(firstIssue)
       : actionError(
           'Survey response data is invalid. Please review your feedback and try again.',
           'msp/surveys:errors.response.invalidData',

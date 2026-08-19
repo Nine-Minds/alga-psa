@@ -10,6 +10,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getUserRoles } from '@alga-psa/auth/actions';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -250,9 +251,8 @@ export const upsertWebhook = withAuth(async (
   const parsedInput = webhookInputSchema.safeParse(input);
   if (!parsedInput.success) {
     const firstIssue = parsedInput.error.issues[0];
-    // The Zod message has no catalogue entry yet (category 2), so it stays keyless.
     return firstIssue?.message
-      ? actionError(firstIssue.message)
+      ? actionErrorFromValidationIssue(firstIssue)
       : actionError('Check the webhook settings and try again.', 'msp/profile:errors.webhooks.invalidInput');
   }
 

@@ -781,7 +781,8 @@
       "signingSecretMissing": "Le secret de signature du webhook est manquant. Renouvelez le secret de signature et réessayez.",
       "deliveryNotFound": "Livraison introuvable.",
       "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
-      "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide."
+      "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
+      "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Type d'authentification de webhook entrant non pris en charge : {{authType}}.",
       "deliveryNotFound": "Livraison entrante introuvable.",
       "replayMissingConfig": "Impossible de rejouer une livraison entrante sans configuration de webhook.",
-      "notFoundOrInactive": "Webhook entrant introuvable ou inactif."
+      "notFoundOrInactive": "Webhook entrant introuvable ou inactif.",
+      "validation": { "slugReserved": "Cet identifiant est réservé à une intégration incluse.", "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.", "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné." }
     }
   }
 }

@@ -15,8 +15,8 @@ import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, actionErrorFromValidationIssue, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionMessageParams, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -54,7 +54,8 @@ class ExpectedClientTicketActionError extends Error {
     message: string,
     readonly kind: 'action' | 'permission' = 'action',
     /** Carried through to the returned payload so the boundary can localize it. */
-    readonly messageKey?: string
+    readonly messageKey?: string,
+    readonly messageParams?: ActionMessageParams,
   ) {
     super(message);
     this.name = 'ExpectedClientTicketActionError';
@@ -63,30 +64,39 @@ class ExpectedClientTicketActionError extends Error {
 
 function expectedClientTicketActionError(
   message: string,
-  messageKey?: string
+  messageKey?: string,
+  messageParams?: ActionMessageParams,
 ): ExpectedClientTicketActionError {
-  return new ExpectedClientTicketActionError(message, 'action', messageKey);
+  return new ExpectedClientTicketActionError(message, 'action', messageKey, messageParams);
 }
 
-/**
- * The Zod message has no catalogue entry yet (category 2), so it stays keyless; the
- * no-issue fallback is our own sentence, so it carries a key.
- */
-function zodErrorMessage(error: z.ZodError): { message: string; messageKey?: string } {
+function zodErrorMessage(error: z.ZodError): {
+  message: string;
+  messageKey?: string;
+  messageParams?: ActionMessageParams;
+} {
   const firstIssue = error.issues[0];
   if (!firstIssue) {
     return { message: 'Invalid ticket data', messageKey: 'client-portal:errors.tickets.invalidData' };
   }
 
-  const path = firstIssue.path.join('.');
-  return { message: path ? `${path}: ${firstIssue.message}` : firstIssue.message };
+  const localized = actionErrorFromValidationIssue(firstIssue) as unknown as {
+    actionError: string;
+    messageKey?: string;
+    messageParams?: ActionMessageParams;
+  };
+  return {
+    message: localized.actionError,
+    messageKey: localized.messageKey,
+    messageParams: localized.messageParams,
+  };
 }
 
 function toClientTicketActionError(error: unknown): ClientTicketActionError | null {
   if (error instanceof ExpectedClientTicketActionError) {
     return error.kind === 'permission'
-      ? permissionError(error.message, error.messageKey)
-      : actionError(error.message, error.messageKey);
+      ? permissionError(error.message, error.messageKey, error.messageParams)
+      : actionError(error.message, error.messageKey, error.messageParams);
   }
 
   return null;
@@ -1158,7 +1168,11 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         } catch (error) {
           if (error instanceof z.ZodError) {
             const zodFailure = zodErrorMessage(error);
-            throw expectedClientTicketActionError(zodFailure.message, zodFailure.messageKey);
+            throw expectedClientTicketActionError(
+              zodFailure.message,
+              zodFailure.messageKey,
+              zodFailure.messageParams,
+            );
           }
           throw error;
         }

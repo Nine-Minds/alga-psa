@@ -164,6 +164,87 @@ export function actionError(
   return { actionError: message, ...(key ? { messageKey: key } : {}), ...(params ? { messageParams: params } : {}) } as ActionMessageError;
 }
 
+/**
+ * The structural subset of a Zod issue needed at an action boundary.
+ *
+ * Keeping this structural avoids making the UI package depend on Zod. Custom
+ * schema issues carry their catalogue entry in `params`; built-in issues are
+ * classified by their stable issue code instead of their English prose.
+ */
+export type ActionValidationIssue = {
+  readonly code?: unknown;
+  readonly path?: ReadonlyArray<string | number>;
+  readonly message?: unknown;
+  readonly received?: unknown;
+  readonly params?: {
+    readonly messageKey?: unknown;
+    readonly messageParams?: unknown;
+  };
+};
+
+function validationIssueField(issue: ActionValidationIssue): string {
+  const path = issue.path?.map(String).filter(Boolean).join('.');
+  return path || 'input';
+}
+
+/**
+ * Converts one validation issue into a localizable action error.
+ *
+ * Custom Zod issues should attach `params.messageKey` and optional
+ * `params.messageParams`. Built-in issues cannot carry params in Zod 3, so this
+ * maps their stable code to app-wide validation copy. Unknown/custom keyless
+ * issues deliberately degrade to a generic localized message rather than
+ * sending their English `message` through the boundary.
+ */
+export function actionErrorFromValidationIssue(issue: ActionValidationIssue): ActionMessageError {
+  const field = validationIssueField(issue);
+  const customKey = issue.params?.messageKey;
+  const customParams = issue.params?.messageParams;
+
+  if (typeof customKey === 'string') {
+    return actionError(
+      typeof issue.message === 'string' ? issue.message : `${field} has an invalid value.`,
+      customKey,
+      customParams && typeof customParams === 'object'
+        ? customParams as ActionMessageParams
+        : undefined,
+    );
+  }
+
+  if (issue.code === 'invalid_type' && issue.received === 'undefined') {
+    return actionError(`${field} is required.`, 'common:errors.validation.required', { field });
+  }
+  if (issue.code === 'invalid_type') {
+    return actionError(`${field} has the wrong type.`, 'common:errors.validation.invalidType', { field });
+  }
+  if (issue.code === 'invalid_string') {
+    return actionError(`${field} has an invalid format.`, 'common:errors.validation.invalidFormat', { field });
+  }
+  if (issue.code === 'too_small') {
+    return actionError(
+      `${field} is below the minimum allowed value or length.`,
+      'common:errors.validation.tooSmall',
+      { field },
+    );
+  }
+  if (issue.code === 'too_big') {
+    return actionError(
+      `${field} exceeds the maximum allowed value or length.`,
+      'common:errors.validation.tooLarge',
+      { field },
+    );
+  }
+  if (issue.code === 'invalid_enum_value' || issue.code === 'invalid_literal') {
+    return actionError(
+      `${field} has an unsupported value.`,
+      'common:errors.validation.unsupportedValue',
+      { field },
+    );
+  }
+
+  return actionError(`${field} has an invalid value.`, 'common:errors.validation.invalidValue', { field });
+}
+
 // --- Error detection utilities ---
 
 /**

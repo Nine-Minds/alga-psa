@@ -1,5 +1,6 @@
 import {
   actionError,
+  actionErrorFromValidationIssue,
   isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
@@ -79,7 +80,13 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
         const parsed = JSON.parse(message) as {
           kind?: string;
           asset_type?: string;
-          issues?: Array<{ path?: Array<string | number>; message?: string }>;
+          issues?: Array<{
+            code?: unknown;
+            path?: Array<string | number>;
+            message?: string;
+            received?: unknown;
+            params?: { messageKey?: unknown; messageParams?: unknown };
+          }>;
         };
         if (parsed.kind === 'invalid_asset_type') {
           const namedType = typeof parsed.asset_type === 'string' && parsed.asset_type.trim()
@@ -98,12 +105,8 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
           );
         }
         if (parsed.kind === 'validation' && Array.isArray(parsed.issues)) {
-          return actionError(parsed.issues
-            .map((issue) => {
-              const field = issue.path?.join('.');
-              return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
-            })
-            .join('; '));
+          const firstIssue = parsed.issues[0];
+          return firstIssue ? actionErrorFromValidationIssue(firstIssue) : null;
         }
       } catch {
         // Not a structured validation message.
@@ -114,14 +117,12 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     }
   }
 
-  const validationIssues = (error as { issues?: Array<{ path?: Array<string | number>; message?: string }> })?.issues;
+  const validationIssues = (error as { issues?: unknown[] })?.issues;
   if (Array.isArray(validationIssues) && validationIssues.length > 0) {
-    return actionError(validationIssues
-      .map((issue) => {
-        const field = issue.path?.join('.');
-        return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
-      })
-      .join('; '));
+    const firstIssue = validationIssues[0];
+    return firstIssue && typeof firstIssue === 'object'
+      ? actionErrorFromValidationIssue(firstIssue)
+      : null;
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };

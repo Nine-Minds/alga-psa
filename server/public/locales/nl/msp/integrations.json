@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Controleer de instellingen voor automatisering van RMM-waarschuwingen en probeer het opnieuw.",
+      "permissions": {
+        "read": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te bekijken.",
+        "update": "Onvoldoende rechten om de instellingen voor automatisering van RMM-waarschuwingen te beheren."
+      },
+      "integrationNotFound": "RMM-integratie niet gevonden.",
+      "nothingToUpdate": "Er zijn geen wijzigingen om op te slaan.",
+      "ruleNotFound": "Waarschuwingsregel niet gevonden.",
+      "windowNotFound": "Onderhoudsvenster niet gevonden.",
+      "pollIntervalRange": "Het pollinginterval moet tussen 5 en 60 minuten liggen.",
+      "validation": {
+        "scheduleRequired": "Een venster heeft een begin- en eindtijd of een wekelijkse herhaling nodig.",
+        "startBeforeEnd": "De begintijd moet vóór de eindtijd liggen.",
+        "timesMustDiffer": "De begin- en eindtijd moeten verschillen. Gebruik meerdere dagen voor een venster dat een volledige dag beslaat.",
+        "unknownTimezone": "Onbekende tijdzone: {{timezone}}.",
+        "messagePatternInvalid": "Het berichtpatroon is geen geldige reguliere expressie."
+      }
+    },
     "mappings": {
       "viewPermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te bekijken.",
       "managePermission": "Toestemming geweigerd: u hebt geen rechten om boekhoudkoppelingen te beheren.",

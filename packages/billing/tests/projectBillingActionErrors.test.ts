@@ -27,6 +27,22 @@ describe('project billing structured action errors', () => {
     });
   });
 
+  it('keeps the key attached to custom schema issues', () => {
+    expect(projectBillingActionErrorFrom({
+      issues: [{
+        code: 'custom',
+        path: ['increase_total'],
+        message: 'increase_total is only valid for amount-based entries',
+        params: {
+          messageKey: 'msp/billing:errors.projectBilling.validation.increaseTotalAmountOnly',
+        },
+      }],
+    })).toEqual({
+      actionError: 'increase_total is only valid for amount-based entries',
+      messageKey: 'msp/billing:errors.projectBilling.validation.increaseTotalAmountOnly',
+    });
+  });
+
   it('logs unexpected failures and returns a stable safe message', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const wrapped = withProjectBillingActionErrors(async () => {

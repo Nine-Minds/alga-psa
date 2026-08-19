@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Überprüfen Sie die Einstellungen der RMM-Warnungsautomatisierung und versuchen Sie es erneut.",
+      "permissions": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen der Einstellungen für die RMM-Warnungsautomatisierung.",
+        "update": "Unzureichende Berechtigungen zum Verwalten der Einstellungen für die RMM-Warnungsautomatisierung."
+      },
+      "integrationNotFound": "RMM-Integration nicht gefunden.",
+      "nothingToUpdate": "Es sind keine Änderungen zu speichern.",
+      "ruleNotFound": "Warnungsregel nicht gefunden.",
+      "windowNotFound": "Wartungsfenster nicht gefunden.",
+      "pollIntervalRange": "Das Abfrageintervall muss zwischen 5 und 60 Minuten liegen.",
+      "validation": {
+        "scheduleRequired": "Ein Zeitfenster benötigt entweder eine Start- und Endzeit oder eine wöchentliche Wiederholung.",
+        "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen.",
+        "timesMustDiffer": "Start- und Endzeit müssen unterschiedlich sein. Verwenden Sie mehrere Tage für ein Zeitfenster, das einen ganzen Tag umfasst.",
+        "unknownTimezone": "Unbekannte Zeitzone: {{timezone}}.",
+        "messagePatternInvalid": "Das Nachrichtenmuster ist kein gültiger regulärer Ausdruck."
+      }
+    },
     "mappings": {
       "viewPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen anzuzeigen.",
       "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",

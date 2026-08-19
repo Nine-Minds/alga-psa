@@ -642,6 +642,13 @@
       "missingFieldNamed": "Manca un campo obbligatorio dell’utilizzo: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "La data di attivazione deve essere una data di calendario valida.",
+        "thresholdsAscending": "Le soglie di notifica devono essere in ordine strettamente crescente.",
+        "amountOrPercentage": "È obbligatorio specificare esattamente uno tra importo e percentuale.",
+        "increaseTotalAmountOnly": "L’aumento del totale è valido solo per le voci basate sull’importo.",
+        "amountAndPercentageTogether": "Importo e percentuale devono essere aggiornati insieme, impostandone esattamente uno su null."
+      },
       "invalidValue": "Uno dei valori selezionati della fatturazione del progetto non è valido. Aggiornare la pagina e riprovare.",
       "referenceMissing": "Il progetto, la fattura, la fase, il servizio o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un record di fatturazione del progetto in conflitto. Aggiornare la pagina e riprovare.",

@@ -642,6 +642,13 @@
       "missingFieldNamed": "Falta un campo obligatorio del registro de uso: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "La fecha de activación debe ser una fecha de calendario válida.",
+        "thresholdsAscending": "Los umbrales de notificación deben estar en orden estrictamente ascendente.",
+        "amountOrPercentage": "Se requiere exactamente uno de los valores: importe o porcentaje.",
+        "increaseTotalAmountOnly": "El aumento del total solo es válido para las entradas basadas en importes.",
+        "amountAndPercentageTogether": "El importe y el porcentaje deben actualizarse juntos, con exactamente uno establecido en nulo."
+      },
       "invalidValue": "Uno de los valores seleccionados de la facturación del proyecto no es válido. Actualice la página e inténtelo de nuevo.",
       "referenceMissing": "El proyecto, factura, fase, servicio o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un registro de facturación del proyecto en conflicto. Actualice la página e inténtelo de nuevo.",

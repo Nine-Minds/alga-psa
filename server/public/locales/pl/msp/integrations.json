@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Sprawdź ustawienia automatyzacji alertów RMM i spróbuj ponownie.",
+      "permissions": {
+        "read": "Niewystarczające uprawnienia do wyświetlania ustawień automatyzacji alertów RMM.",
+        "update": "Niewystarczające uprawnienia do zarządzania ustawieniami automatyzacji alertów RMM."
+      },
+      "integrationNotFound": "Nie znaleziono integracji RMM.",
+      "nothingToUpdate": "Brak zmian do zapisania.",
+      "ruleNotFound": "Nie znaleziono reguły alertu.",
+      "windowNotFound": "Nie znaleziono okna konserwacji.",
+      "pollIntervalRange": "Interwał odpytywania musi wynosić od 5 do 60 minut.",
+      "validation": {
+        "scheduleRequired": "Okno wymaga czasu rozpoczęcia i zakończenia albo powtarzania co tydzień.",
+        "startBeforeEnd": "Czas rozpoczęcia musi być wcześniejszy niż czas zakończenia.",
+        "timesMustDiffer": "Czas rozpoczęcia i zakończenia muszą się różnić. Dla okna obejmującego pełną dobę użyj wielu dni.",
+        "unknownTimezone": "Nieznana strefa czasowa: {{timezone}}.",
+        "messagePatternInvalid": "Wzorzec wiadomości nie jest prawidłowym wyrażeniem regularnym."
+      }
+    },
     "mappings": {
       "viewPermission": "Odmowa uprawnień: brak uprawnień do wyświetlania powiązań księgowych.",
       "managePermission": "Odmowa uprawnień: brak uprawnień do zarządzania powiązaniami księgowymi.",

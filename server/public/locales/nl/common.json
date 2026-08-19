@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Ongeldige hexadecimale kleur (bijv. #FF0000)",
+    "invalidHexText": "Ongeldige hexadecimale kleur (bijv. #FFFFFF)",
+    "customizeTagColors": "Labelkleuren aanpassen",
+    "chooseColor": "Kleur kiezen",
+    "quickSelect": "Snelle selectie",
+    "presetAriaLabel": "Vooraf ingestelde kleur {{number}} selecteren",
+    "backgroundColor": "Achtergrondkleur",
+    "textColor": "Tekstkleur",
+    "preview": "Voorbeeld",
+    "sampleTag": "Voorbeeldlabel",
+    "resetToDefault": "Standaardwaarden herstellen"
+  },
   "clientNameCell": {
     "noClient": "Geen klant"
   },
@@ -117,6 +130,15 @@
     "confirmDeletion": "Verwijderen bevestigen"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} is verplicht.",
+      "invalidType": "{{field}} heeft het verkeerde type.",
+      "invalidFormat": "{{field}} heeft een ongeldige indeling.",
+      "tooSmall": "{{field}} ligt onder de minimaal toegestane waarde of lengte.",
+      "tooLarge": "{{field}} overschrijdt de maximaal toegestane waarde of lengte.",
+      "unsupportedValue": "{{field}} heeft een niet-ondersteunde waarde.",
+      "invalidValue": "{{field}} heeft een ongeldige waarde."
+    },
     "auth": {
       "notAuthenticated": "Niet geauthenticeerd",
       "accessDenied": "Toegang geweigerd",

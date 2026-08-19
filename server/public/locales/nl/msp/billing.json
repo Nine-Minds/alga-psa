@@ -642,6 +642,13 @@
       "missingFieldNamed": "Er ontbreekt een verplicht verbruiksveld: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "De activeringsdatum moet een geldige kalenderdatum zijn.",
+        "thresholdsAscending": "Meldingsdrempels moeten strikt oplopend zijn.",
+        "amountOrPercentage": "Precies één van bedrag of percentage is verplicht.",
+        "increaseTotalAmountOnly": "Het totaal verhogen is alleen geldig voor posten op basis van een bedrag.",
+        "amountAndPercentageTogether": "Bedrag en percentage moeten samen worden bijgewerkt, waarbij precies één op null wordt ingesteld."
+      },
       "invalidValue": "Een van de geselecteerde waarden van de projectfacturatie is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
       "referenceMissing": "Het geselecteerde project, de factuur, de fase, de service of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende projectfacturatieregistratie. Vernieuw de pagina en probeer het opnieuw.",

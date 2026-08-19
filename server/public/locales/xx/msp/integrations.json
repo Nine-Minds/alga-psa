@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "11111",
+      "permissions": {
+        "read": "11111",
+        "update": "11111"
+      },
+      "integrationNotFound": "11111",
+      "nothingToUpdate": "11111",
+      "ruleNotFound": "11111",
+      "windowNotFound": "11111",
+      "pollIntervalRange": "11111",
+      "validation": {
+        "scheduleRequired": "11111",
+        "startBeforeEnd": "11111",
+        "timesMustDiffer": "11111",
+        "unknownTimezone": "11111 {{timezone}} 11111",
+        "messagePatternInvalid": "11111"
+      }
+    },
     "mappings": {
       "viewPermission": "11111",
       "managePermission": "11111",

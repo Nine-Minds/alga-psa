@@ -783,6 +783,7 @@
       "signingSecretMissing": "Brak sekretu podpisu webhooka. Wymień sekret podpisu i spróbuj ponownie.",
       "deliveryNotFound": "Nie znaleziono dostarczenia.",
       "testNotRetryable": "Dostarczeń testowych nie można ponowić.",
+      "validation": { "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.", "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”." },
       "payloadInvalid": "Tego dostarczenia nie można ponowić, ponieważ zapisany ładunek jest nieprawidłowy."
     },
     "inboundWebhooks": {
@@ -801,6 +802,7 @@
       "unsupportedAuthType": "Nieobsługiwany typ uwierzytelniania przychodzącego webhooka: {{authType}}.",
       "deliveryNotFound": "Nie znaleziono przychodzącego dostarczenia.",
       "replayMissingConfig": "Nie można ponownie odtworzyć przychodzącego dostarczenia bez konfiguracji webhooka.",
+      "validation": { "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.", "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.", "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi." },
       "notFoundOrInactive": "Nie znaleziono przychodzącego webhooka lub jest nieaktywny."
     }
   }

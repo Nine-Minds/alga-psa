@@ -781,7 +781,8 @@
       "signingSecretMissing": "Falta el secreto de firma del webhook. Rote el secreto de firma e inténtelo de nuevo.",
       "deliveryNotFound": "Entrega no encontrada.",
       "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
-      "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida."
+      "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
+      "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Tipo de autenticación de webhook entrante no admitido: {{authType}}.",
       "deliveryNotFound": "Entrega entrante no encontrada.",
       "replayMissingConfig": "No se puede reenviar una entrega entrante sin una configuración de webhook.",
-      "notFoundOrInactive": "Webhook entrante no encontrado o inactivo."
+      "notFoundOrInactive": "Webhook entrante no encontrado o inactivo.",
+      "validation": { "slugReserved": "Este identificador está reservado para una integración incluida.", "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.", "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado." }
     }
   }
 }

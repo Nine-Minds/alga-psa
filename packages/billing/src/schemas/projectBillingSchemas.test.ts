@@ -32,13 +32,21 @@ describe('project billing schedule date-only schema', () => {
       trigger_date: '2026-11-01',
       increase_total: true,
     }).success).toBe(true);
-    expect(createProjectBillingScheduleEntrySchema.safeParse({
+    const invalid = createProjectBillingScheduleEntrySchema.safeParse({
       ...validEntry,
       amount: null,
       percentage: 25,
       trigger_date: '2026-11-01',
       increase_total: true,
-    }).success).toBe(false);
+    });
+    expect(invalid.success).toBe(false);
+    expect(invalid.error?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        params: {
+          messageKey: 'msp/billing:errors.projectBilling.validation.increaseTotalAmountOnly',
+        },
+      }),
+    ]));
   });
 
   it('keeps a valid calendar date as a YYYY-MM-DD string', () => {

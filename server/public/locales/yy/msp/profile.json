@@ -781,7 +781,11 @@
       "signingSecretMissing": "55555",
       "deliveryNotFound": "55555",
       "testNotRetryable": "55555",
-      "payloadInvalid": "55555"
+      "payloadInvalid": "55555",
+      "validation": {
+        "unknownEntity": "55555 {{entity}} 55555",
+        "unknownField": "55555 {{field}} 55555 {{entity}} 55555"
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +803,12 @@
       "unsupportedAuthType": "55555 {{authType}} 55555",
       "deliveryNotFound": "55555",
       "replayMissingConfig": "55555",
-      "notFoundOrInactive": "55555"
+      "notFoundOrInactive": "55555",
+      "validation": {
+        "slugReserved": "55555",
+        "authTypeMismatch": "55555",
+        "handlerTypeMismatch": "55555"
+      }
     }
   }
 }

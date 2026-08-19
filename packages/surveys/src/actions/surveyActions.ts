@@ -13,6 +13,7 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActio
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   isAuthorizationThrow,
   permissionError,
   type ActionMessageError,
@@ -41,11 +42,9 @@ function surveyActionErrorFrom(error: unknown): SurveyActionError | null {
   }
 
   if (error instanceof z.ZodError) {
-    // The Zod message has no catalogue entry yet (category 2), so it stays keyless;
-    // the fallback is ours, so it carries a key.
     const firstIssue = error.issues[0];
     return firstIssue?.message
-      ? actionError(firstIssue.message)
+      ? actionErrorFromValidationIssue(firstIssue)
       : actionError('Survey data is invalid. Please review the form and try again.', 'msp/surveys:errors.survey.invalidData');
   }
 

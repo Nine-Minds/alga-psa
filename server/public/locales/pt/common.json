@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Cor hexadecimal inválida (por exemplo, #FF0000)",
+    "invalidHexText": "Cor hexadecimal inválida (por exemplo, #FFFFFF)",
+    "customizeTagColors": "Personalizar cores da tag",
+    "chooseColor": "Escolher cor",
+    "quickSelect": "Seleção rápida",
+    "presetAriaLabel": "Selecionar cor predefinida {{number}}",
+    "backgroundColor": "Cor de fundo",
+    "textColor": "Cor do texto",
+    "preview": "Prévia",
+    "sampleTag": "Tag de exemplo",
+    "resetToDefault": "Restaurar padrão"
+  },
   "clientNameCell": {
     "noClient": "Nenhum cliente"
   },
@@ -148,6 +161,15 @@
     "passwordMismatch": "As senhas não coincidem"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} é obrigatório.",
+      "invalidType": "{{field}} tem o tipo incorreto.",
+      "invalidFormat": "{{field}} tem um formato inválido.",
+      "tooSmall": "{{field}} está abaixo do valor ou comprimento mínimo permitido.",
+      "tooLarge": "{{field}} excede o valor ou comprimento máximo permitido.",
+      "unsupportedValue": "{{field}} tem um valor não suportado.",
+      "invalidValue": "{{field}} tem um valor inválido."
+    },
     "auth": {
       "notAuthenticated": "Não autenticado",
       "accessDenied": "Acesso negado",

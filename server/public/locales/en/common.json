@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Invalid hex color (e.g., #FF0000)",
+    "invalidHexText": "Invalid hex color (e.g., #FFFFFF)",
+    "customizeTagColors": "Customize Tag Colors",
+    "chooseColor": "Choose Color",
+    "quickSelect": "Quick Select",
+    "presetAriaLabel": "Select preset color {{number}}",
+    "backgroundColor": "Background Color",
+    "textColor": "Text Color",
+    "preview": "Preview",
+    "sampleTag": "Sample Tag",
+    "resetToDefault": "Reset to default"
+  },
   "clientNameCell": {
     "noClient": "No Client"
   },
@@ -148,6 +161,15 @@
     "passwordMismatch": "Passwords do not match"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} is required.",
+      "invalidType": "{{field}} has the wrong type.",
+      "invalidFormat": "{{field}} has an invalid format.",
+      "tooSmall": "{{field}} is below the minimum allowed value or length.",
+      "tooLarge": "{{field}} exceeds the maximum allowed value or length.",
+      "unsupportedValue": "{{field}} has an unsupported value.",
+      "invalidValue": "{{field}} has an invalid value."
+    },
     "auth": {
       "notAuthenticated": "Not authenticated",
       "accessDenied": "Access denied",

@@ -1,5 +1,6 @@
 import {
   actionError,
+  actionErrorFromValidationIssue,
   errorCodeOf,
   isAuthorizationThrow,
   permissionError,
@@ -110,20 +111,6 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'ticketId required',
 ];
 
-function formatValidationIssues(error: unknown): string | null {
-  const issues = (error as { issues?: Array<{ path?: Array<string | number>; message?: string }> })?.issues;
-  if (!Array.isArray(issues) || issues.length === 0) {
-    return null;
-  }
-
-  return issues
-    .map((issue) => {
-      const field = issue.path?.join('.');
-      return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
-    })
-    .join('; ');
-}
-
 // Longest prefix first, so 'Team lead not found' is not swallowed by 'Team not found'.
 const TICKET_MESSAGE_PREFIX_CODES: ReadonlyArray<readonly [string, TicketErrorCode]> = [
   ['Ticket resource not found', 'TICKET_RESOURCE_NOT_FOUND'],
@@ -164,9 +151,9 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
     }
   }
 
-  const validationMessage = formatValidationIssues(error);
-  if (validationMessage) {
-    return actionError(`Please fix the ticket details: ${validationMessage}`, 'features/tickets:errors.ticket.validationDetails', { details: validationMessage });
+  const firstIssue = (error as { issues?: unknown[] })?.issues?.[0];
+  if (firstIssue && typeof firstIssue === 'object') {
+    return actionErrorFromValidationIssue(firstIssue);
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };

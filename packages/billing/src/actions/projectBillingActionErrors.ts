@@ -1,5 +1,6 @@
 import {
   actionError,
+  actionErrorFromValidationIssue,
   isAuthorizationThrow,
   isActionMessageError,
   isActionPermissionError,
@@ -14,15 +15,6 @@ export type ProjectBillingActionResult<T> = T | ProjectBillingActionError;
 
 export function isProjectBillingActionError(value: unknown): value is ProjectBillingActionError {
   return isActionMessageError(value) || isActionPermissionError(value);
-}
-
-function validationMessage(error: unknown): string | null {
-  const issues = (error as { issues?: Array<{ message?: unknown }> })?.issues;
-  if (!Array.isArray(issues) || issues.length === 0) return null;
-  const messages = issues
-    .map((issue) => issue.message)
-    .filter((message): message is string => typeof message === 'string' && message.length > 0);
-  return messages.length > 0 ? messages.join('; ') : null;
 }
 
 export function projectBillingActionErrorFrom(error: unknown): ProjectBillingActionError | null {
@@ -51,8 +43,10 @@ export function projectBillingActionErrorFrom(error: unknown): ProjectBillingAct
     return actionError('The project billing values violate a data rule. Review the form and try again.', 'msp/billing:errors.projectBilling.ruleViolation');
   }
 
-  const invalid = validationMessage(error);
-  if (invalid) return actionError(invalid);
+  const firstIssue = (error as { issues?: unknown[] })?.issues?.[0];
+  if (firstIssue && typeof firstIssue === 'object') {
+    return actionErrorFromValidationIssue(firstIssue);
+  }
 
   if (!(error instanceof Error)) return null;
   if (

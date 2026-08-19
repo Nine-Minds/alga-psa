@@ -781,7 +781,8 @@
       "signingSecretMissing": "Manca il segreto di firma del webhook. Ruota il segreto di firma e riprova.",
       "deliveryNotFound": "Consegna non trovata.",
       "testNotRetryable": "Le consegne di prova non possono essere ritentate.",
-      "payloadInvalid": "Questa consegna non può essere ritentata perché il payload memorizzato non è valido."
+      "payloadInvalid": "Questa consegna non può essere ritentata perché il payload memorizzato non è valido.",
+      "validation": { "unknownEntity": "Entità webhook sconosciuta «{{entity}}».", "unknownField": "Campo sconosciuto «{{field}}» per l’entità webhook «{{entity}}»." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Tipo di autenticazione del webhook in ingresso non supportato: {{authType}}.",
       "deliveryNotFound": "Consegna in ingresso non trovata.",
       "replayMissingConfig": "Non è possibile rieseguire una consegna in ingresso senza una configurazione del webhook.",
-      "notFoundOrInactive": "Webhook in ingresso non trovato o inattivo."
+      "notFoundOrInactive": "Webhook in ingresso non trovato o inattivo.",
+      "validation": { "slugReserved": "Questo identificatore è riservato a un’integrazione inclusa.", "authTypeMismatch": "Il tipo di configurazione dell’autenticazione deve corrispondere al tipo di autenticazione selezionato.", "handlerTypeMismatch": "Il tipo di configurazione del gestore deve corrispondere al tipo di gestore selezionato." }
     }
   }
 }

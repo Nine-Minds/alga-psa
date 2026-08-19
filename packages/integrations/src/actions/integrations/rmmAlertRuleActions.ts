@@ -5,6 +5,13 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { z } from 'zod';
 import {
+  actionError,
+  actionErrorFromValidationIssue,
+  permissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   rmmAlertRuleConditionsSchema,
   rmmAlertRuleActionsSchema,
   rmmMaintenanceWindowRecurrenceSchema,
@@ -12,10 +19,32 @@ import {
   type RmmMaintenanceWindowRow,
 } from '@alga-psa/shared/rmm/alerts';
 
-interface ActionResult<T> {
-  success: boolean;
-  error?: string;
-  data?: T;
+type ActionFailure = { success: false } & (ActionMessageErrorShape | ActionPermissionErrorShape);
+type ActionResult<T> = { success: true; data: T } | ActionFailure;
+
+function actionFailure(message: string, key: string): ActionFailure {
+  return {
+    success: false,
+    ...(actionError(message, key) as unknown as ActionMessageErrorShape),
+  };
+}
+
+function permissionFailure(message: string, key: string): ActionFailure {
+  return {
+    success: false,
+    ...(permissionError(message, key) as unknown as ActionPermissionErrorShape),
+  };
+}
+
+function validationFailure(error: z.ZodError): ActionFailure {
+  const firstIssue = error.issues[0];
+  const payload = firstIssue
+    ? actionErrorFromValidationIssue(firstIssue)
+    : actionError(
+        'Check the RMM alert automation settings and try again.',
+        'msp/integrations:errors.rmm.invalidInput',
+      );
+  return { success: false, ...(payload as unknown as ActionMessageErrorShape) };
 }
 
 const ruleInputSchema = z.object({
@@ -45,16 +74,21 @@ const windowInputSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'A window needs either a start/end pair or a weekly recurrence',
+        params: {
+          messageKey: 'msp/integrations:errors.rmm.validation.scheduleRequired',
+        },
       });
     }
     if (value.startsAt && value.endsAt && new Date(value.startsAt) >= new Date(value.endsAt)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'startsAt must be before endsAt' });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'startsAt must be before endsAt',
+        params: {
+          messageKey: 'msp/integrations:errors.rmm.validation.startBeforeEnd',
+        },
+      });
     }
   });
-
-function zodErrorMessage(error: z.ZodError): string {
-  return error.issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`).join('; ');
-}
 
 // ---------------------------------------------------------------------------
 // Alert rules
@@ -63,7 +97,7 @@ function zodErrorMessage(error: z.ZodError): string {
 export const listRmmAlertRules = withAuth(
   async (user, { tenant }, input: { integrationId: string }): Promise<ActionResult<RmmAlertRuleRow[]>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
     const { knex } = await createTenantKnex();
     const rules = await tenantDb(knex, tenant).table('rmm_alert_rules')
@@ -76,11 +110,11 @@ export const listRmmAlertRules = withAuth(
 export const createRmmAlertRule = withAuth(
   async (user, { tenant }, input: z.input<typeof ruleInputSchema>): Promise<ActionResult<RmmAlertRuleRow>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const parsed = ruleInputSchema.safeParse(input);
     if (!parsed.success) {
-      return { success: false, error: zodErrorMessage(parsed.error) };
+      return validationFailure(parsed.error);
     }
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
@@ -89,7 +123,7 @@ export const createRmmAlertRule = withAuth(
       .where({ integration_id: parsed.data.integrationId })
       .first('integration_id');
     if (!integration) {
-      return { success: false, error: 'Integration not found' };
+      return actionFailure('Integration not found', 'msp/integrations:errors.rmm.integrationNotFound');
     }
 
     const maxOrder = await db.table('rmm_alert_rules')
@@ -120,11 +154,11 @@ export const updateRmmAlertRule = withAuth(
     input: { ruleId: string } & Partial<z.input<typeof ruleInputSchema>>
   ): Promise<ActionResult<RmmAlertRuleRow>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const parsed = ruleInputSchema.omit({ integrationId: true }).partial().safeParse(input);
     if (!parsed.success) {
-      return { success: false, error: zodErrorMessage(parsed.error) };
+      return validationFailure(parsed.error);
     }
 
     const update: Record<string, unknown> = {};
@@ -134,7 +168,7 @@ export const updateRmmAlertRule = withAuth(
     if (parsed.data.conditions !== undefined) update.conditions = JSON.stringify(parsed.data.conditions);
     if (parsed.data.actions !== undefined) update.actions = JSON.stringify(parsed.data.actions);
     if (Object.keys(update).length === 0) {
-      return { success: false, error: 'Nothing to update' };
+      return actionFailure('Nothing to update', 'msp/integrations:errors.rmm.nothingToUpdate');
     }
 
     const { knex } = await createTenantKnex();
@@ -143,7 +177,7 @@ export const updateRmmAlertRule = withAuth(
       .update(update)
       .returning('*');
     if (!rule) {
-      return { success: false, error: 'Rule not found' };
+      return actionFailure('Rule not found', 'msp/integrations:errors.rmm.ruleNotFound');
     }
     return { success: true, data: rule as RmmAlertRuleRow };
   }
@@ -152,14 +186,14 @@ export const updateRmmAlertRule = withAuth(
 export const deleteRmmAlertRule = withAuth(
   async (user, { tenant }, input: { ruleId: string }): Promise<ActionResult<null>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const { knex } = await createTenantKnex();
     const deleted = await tenantDb(knex, tenant).table('rmm_alert_rules')
       .where({ rule_id: input.ruleId })
       .delete();
     if (!deleted) {
-      return { success: false, error: 'Rule not found' };
+      return actionFailure('Rule not found', 'msp/integrations:errors.rmm.ruleNotFound');
     }
     return { success: true, data: null };
   }
@@ -172,7 +206,7 @@ export const reorderRmmAlertRules = withAuth(
     input: { integrationId: string; orderedRuleIds: string[] }
   ): Promise<ActionResult<null>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const { knex } = await createTenantKnex();
     await knex.transaction(async (trx) => {
@@ -199,7 +233,7 @@ export const listRmmMaintenanceWindows = withAuth(
     input?: { integrationId?: string }
   ): Promise<ActionResult<RmmMaintenanceWindowRow[]>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
     const { knex } = await createTenantKnex();
     let query = tenantDb(knex, tenant).table('rmm_maintenance_windows').orderBy('created_at', 'desc');
@@ -222,11 +256,11 @@ export const createRmmMaintenanceWindow = withAuth(
     input: z.input<typeof windowInputSchema>
   ): Promise<ActionResult<RmmMaintenanceWindowRow>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const parsed = windowInputSchema.safeParse(input);
     if (!parsed.success) {
-      return { success: false, error: zodErrorMessage(parsed.error) };
+      return validationFailure(parsed.error);
     }
     const { knex } = await createTenantKnex();
     const [window] = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
@@ -253,11 +287,11 @@ export const updateRmmMaintenanceWindow = withAuth(
     input: { windowId: string } & z.input<typeof windowInputSchema>
   ): Promise<ActionResult<RmmMaintenanceWindowRow>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const parsed = windowInputSchema.safeParse(input);
     if (!parsed.success) {
-      return { success: false, error: zodErrorMessage(parsed.error) };
+      return validationFailure(parsed.error);
     }
     const { knex } = await createTenantKnex();
     const [window] = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
@@ -274,7 +308,7 @@ export const updateRmmMaintenanceWindow = withAuth(
       })
       .returning('*');
     if (!window) {
-      return { success: false, error: 'Window not found' };
+      return actionFailure('Window not found', 'msp/integrations:errors.rmm.windowNotFound');
     }
     return { success: true, data: window as RmmMaintenanceWindowRow };
   }
@@ -295,7 +329,7 @@ export interface RmmAlertRuleFormOptions {
 export const getRmmAlertRuleFormOptions = withAuth(
   async (user, { tenant }, input: { integrationId: string }): Promise<ActionResult<RmmAlertRuleFormOptions>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
@@ -329,14 +363,14 @@ export interface RmmAlertPollingSettingsView {
 export const getRmmAlertPollingSettings = withAuth(
   async (user, { tenant }, input: { integrationId: string }): Promise<ActionResult<RmmAlertPollingSettingsView>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
     const { knex } = await createTenantKnex();
     const integration = await tenantDb(knex, tenant).table('rmm_integrations')
       .where({ integration_id: input.integrationId })
       .first('settings');
     if (!integration) {
-      return { success: false, error: 'Integration not found' };
+      return actionFailure('Integration not found', 'msp/integrations:errors.rmm.integrationNotFound');
     }
     const settings = typeof integration.settings === 'string' ? safeJson(integration.settings) : integration.settings;
     const polling = (settings?.alertPolling ?? {}) as Record<string, unknown>;
@@ -359,11 +393,14 @@ export const updateRmmAlertPollingSettings = withAuth(
     input: { integrationId: string; enabled: boolean; intervalMinutes: number }
   ): Promise<ActionResult<null>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const intervalMinutes = Math.round(Number(input.intervalMinutes));
     if (!Number.isFinite(intervalMinutes) || intervalMinutes < 5 || intervalMinutes > 60) {
-      return { success: false, error: 'Poll interval must be between 5 and 60 minutes' };
+      return actionFailure(
+        'Poll interval must be between 5 and 60 minutes',
+        'msp/integrations:errors.rmm.pollIntervalRange',
+      );
     }
     const { knex } = await createTenantKnex();
     const updated = await tenantDb(knex, tenant).table('rmm_integrations')
@@ -383,7 +420,7 @@ export const updateRmmAlertPollingSettings = withAuth(
         ),
       });
     if (!updated) {
-      return { success: false, error: 'Integration not found' };
+      return actionFailure('Integration not found', 'msp/integrations:errors.rmm.integrationNotFound');
     }
     return { success: true, data: null };
   }
@@ -400,14 +437,14 @@ function safeJson(value: string): Record<string, unknown> | null {
 export const deleteRmmMaintenanceWindow = withAuth(
   async (user, { tenant }, input: { windowId: string }): Promise<ActionResult<null>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'update'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.update');
     }
     const { knex } = await createTenantKnex();
     const deleted = await tenantDb(knex, tenant).table('rmm_maintenance_windows')
       .where({ window_id: input.windowId })
       .delete();
     if (!deleted) {
-      return { success: false, error: 'Window not found' };
+      return actionFailure('Window not found', 'msp/integrations:errors.rmm.windowNotFound');
     }
     return { success: true, data: null };
   }
@@ -421,7 +458,7 @@ export const deleteRmmMaintenanceWindow = withAuth(
 export const getRmmIntegrationIdByProvider = withAuth(
   async (user, { tenant }, input: { provider: string }): Promise<ActionResult<{ integrationId: string | null }>> => {
     if (!(await hasPermission(user as any, 'system_settings', 'read'))) {
-      return { success: false, error: 'Permission denied' };
+      return permissionFailure('Permission denied', 'msp/integrations:errors.rmm.permissions.read');
     }
     const { knex } = await createTenantKnex();
     const row = await tenantDb(knex, tenant).table('rmm_integrations')

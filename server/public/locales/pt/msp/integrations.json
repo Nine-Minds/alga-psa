@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Verifique as configurações de automação de alertas RMM e tente novamente.",
+      "permissions": {
+        "read": "Permissões insuficientes para visualizar as configurações de automação de alertas RMM.",
+        "update": "Permissões insuficientes para gerenciar as configurações de automação de alertas RMM."
+      },
+      "integrationNotFound": "Integração RMM não encontrada.",
+      "nothingToUpdate": "Não há alterações para salvar.",
+      "ruleNotFound": "Regra de alerta não encontrada.",
+      "windowNotFound": "Janela de manutenção não encontrada.",
+      "pollIntervalRange": "O intervalo de consulta deve estar entre 5 e 60 minutos.",
+      "validation": {
+        "scheduleRequired": "Uma janela precisa de um horário de início e término ou de uma recorrência semanal.",
+        "startBeforeEnd": "O horário de início deve ser anterior ao horário de término.",
+        "timesMustDiffer": "Os horários de início e término devem ser diferentes. Use vários dias para uma janela que abranja um dia inteiro.",
+        "unknownTimezone": "Fuso horário desconhecido: {{timezone}}.",
+        "messagePatternInvalid": "O padrão da mensagem não é uma expressão regular válida."
+      }
+    },
     "mappings": {
       "viewPermission": "Permissão negada: você não tem permissão para visualizar os mapeamentos contábeis.",
       "managePermission": "Permissão negada: você não tem permissão para gerenciar os mapeamentos contábeis.",

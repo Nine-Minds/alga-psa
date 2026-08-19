@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Couleur hexadécimale non valide (par ex. #FF0000)",
+    "invalidHexText": "Couleur hexadécimale non valide (par ex. #FFFFFF)",
+    "customizeTagColors": "Personnaliser les couleurs des étiquettes",
+    "chooseColor": "Choisir une couleur",
+    "quickSelect": "Sélection rapide",
+    "presetAriaLabel": "Sélectionner la couleur prédéfinie {{number}}",
+    "backgroundColor": "Couleur d’arrière-plan",
+    "textColor": "Couleur du texte",
+    "preview": "Aperçu",
+    "sampleTag": "Exemple d’étiquette",
+    "resetToDefault": "Rétablir les valeurs par défaut"
+  },
   "clientNameCell": {
     "noClient": "Aucun client"
   },
@@ -117,6 +130,15 @@
     "confirmDeletion": "Confirmer la suppression"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} est obligatoire.",
+      "invalidType": "{{field}} n’est pas du bon type.",
+      "invalidFormat": "{{field}} a un format non valide.",
+      "tooSmall": "{{field}} est inférieur à la valeur ou à la longueur minimale autorisée.",
+      "tooLarge": "{{field}} dépasse la valeur ou la longueur maximale autorisée.",
+      "unsupportedValue": "{{field}} a une valeur non prise en charge.",
+      "invalidValue": "{{field}} a une valeur non valide."
+    },
     "auth": {
       "notAuthenticated": "Non authentifié",
       "accessDenied": "Accès refusé",

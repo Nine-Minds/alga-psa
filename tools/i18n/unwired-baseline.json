@@ -82,7 +82,6 @@
     "packages/ui/src/components/Button.tsx",
     "packages/ui/src/components/Card.tsx",
     "packages/ui/src/components/CollapseToggleButton.tsx",
-    "packages/ui/src/components/ColorPicker.tsx",
     "packages/ui/src/components/CommentThreadDrawer.tsx",
     "packages/ui/src/components/ConfirmationDialog.tsx",
     "packages/ui/src/components/ContactAvatar.tsx",

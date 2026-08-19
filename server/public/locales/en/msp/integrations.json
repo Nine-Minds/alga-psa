@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Check the RMM alert automation settings and try again.",
+      "permissions": {
+        "read": "Insufficient permissions to view RMM alert automation settings.",
+        "update": "Insufficient permissions to manage RMM alert automation settings."
+      },
+      "integrationNotFound": "RMM integration not found.",
+      "nothingToUpdate": "There are no changes to save.",
+      "ruleNotFound": "Alert rule not found.",
+      "windowNotFound": "Maintenance window not found.",
+      "pollIntervalRange": "The polling interval must be between 5 and 60 minutes.",
+      "validation": {
+        "scheduleRequired": "A window needs either a start and end time or a weekly recurrence.",
+        "startBeforeEnd": "The start time must be before the end time.",
+        "timesMustDiffer": "The start and end times must differ. Use multiple days for a window that spans a full day.",
+        "unknownTimezone": "Unknown time zone: {{timezone}}.",
+        "messagePatternInvalid": "The message pattern is not a valid regular expression."
+      }
+    },
     "mappings": {
       "viewPermission": "Permission denied: You do not have permission to view accounting mappings.",
       "managePermission": "Permission denied: You do not have permission to manage accounting mappings.",

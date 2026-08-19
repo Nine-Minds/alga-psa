@@ -781,7 +781,8 @@
       "signingSecretMissing": "O segredo de assinatura do webhook está ausente. Faça a rotação do segredo de assinatura e tente novamente.",
       "deliveryNotFound": "Entrega não encontrada.",
       "testNotRetryable": "Entregas de teste não podem ser repetidas.",
-      "payloadInvalid": "Esta entrega não pode ser repetida porque o payload armazenado é inválido."
+      "payloadInvalid": "Esta entrega não pode ser repetida porque o payload armazenado é inválido.",
+      "validation": { "unknownEntity": "Entidade de webhook desconhecida \"{{entity}}\".", "unknownField": "Campo desconhecido \"{{field}}\" para a entidade de webhook \"{{entity}}\"." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Tipo de autenticação de webhook de entrada não suportado: {{authType}}.",
       "deliveryNotFound": "Entrega de entrada não encontrada.",
       "replayMissingConfig": "Não é possível reenviar uma entrega de entrada sem uma configuração de webhook.",
-      "notFoundOrInactive": "Webhook de entrada não encontrado ou inativo."
+      "notFoundOrInactive": "Webhook de entrada não encontrado ou inativo.",
+      "validation": { "slugReserved": "Este identificador é reservado para uma integração incluída.", "authTypeMismatch": "O tipo de configuração de autenticação deve corresponder ao tipo de autenticação selecionado.", "handlerTypeMismatch": "O tipo de configuração do manipulador deve corresponder ao tipo de manipulador selecionado." }
     }
   }
 }

@@ -642,6 +642,13 @@
       "missingFieldNamed": "11111 {{field}} 11111"
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "11111",
+        "thresholdsAscending": "11111",
+        "amountOrPercentage": "11111",
+        "increaseTotalAmountOnly": "11111",
+        "amountAndPercentageTogether": "11111"
+      },
       "invalidValue": "11111",
       "referenceMissing": "11111",
       "duplicate": "11111",

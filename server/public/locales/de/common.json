@@ -1,4 +1,17 @@
 {
+  "colorPicker": {
+    "invalidHexBackground": "Ungültige Hex-Farbe (z. B. #FF0000)",
+    "invalidHexText": "Ungültige Hex-Farbe (z. B. #FFFFFF)",
+    "customizeTagColors": "Tag-Farben anpassen",
+    "chooseColor": "Farbe auswählen",
+    "quickSelect": "Schnellauswahl",
+    "presetAriaLabel": "Voreingestellte Farbe {{number}} auswählen",
+    "backgroundColor": "Hintergrundfarbe",
+    "textColor": "Textfarbe",
+    "preview": "Vorschau",
+    "sampleTag": "Beispiel-Tag",
+    "resetToDefault": "Auf Standard zurücksetzen"
+  },
   "clientNameCell": {
     "noClient": "Kein Kunde"
   },
@@ -117,6 +130,15 @@
     "confirmDeletion": "Löschung bestätigen"
   },
   "errors": {
+    "validation": {
+      "required": "{{field}} ist erforderlich.",
+      "invalidType": "{{field}} hat den falschen Typ.",
+      "invalidFormat": "{{field}} hat ein ungültiges Format.",
+      "tooSmall": "{{field}} liegt unter dem zulässigen Mindestwert oder der zulässigen Mindestlänge.",
+      "tooLarge": "{{field}} überschreitet den zulässigen Höchstwert oder die zulässige Höchstlänge.",
+      "unsupportedValue": "{{field}} hat einen nicht unterstützten Wert.",
+      "invalidValue": "{{field}} hat einen ungültigen Wert."
+    },
     "auth": {
       "notAuthenticated": "Nicht authentifiziert",
       "accessDenied": "Zugriff verweigert",

@@ -642,6 +642,13 @@
       "missingFieldNamed": "Missing required usage field: {{field}}."
     },
     "projectBilling": {
+      "validation": {
+        "triggerDateInvalid": "trigger_date must be a valid calendar date.",
+        "thresholdsAscending": "Notification thresholds must be in strictly ascending order.",
+        "amountOrPercentage": "Exactly one of amount or percentage is required.",
+        "increaseTotalAmountOnly": "Increasing the total is only valid for amount-based entries.",
+        "amountAndPercentageTogether": "Amount and percentage must be updated together, with exactly one set to null."
+      },
       "invalidValue": "One of the selected project billing values is invalid. Please refresh and try again.",
       "referenceMissing": "The selected project, invoice, phase, service, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "A conflicting project billing record already exists. Please refresh and try again.",

@@ -159,6 +159,10 @@ function isValidRegex(pattern: string): boolean {
   }
 }
 
+function actionResultError(result: { actionError?: string; permissionError?: string }): string | undefined {
+  return result.actionError ?? result.permissionError;
+}
+
 function formatWindowSchedule(w: RmmMaintenanceWindowRow): string {
   if (w.recurrence?.type === 'weekly') {
     const days = w.recurrence.days.map((d) => DAY_LABELS[d] ?? d).join(', ');
@@ -1126,7 +1130,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
       const optionsRes = results[2] as Awaited<ReturnType<typeof getRmmAlertRuleFormOptions>>;
 
       if (rulesRes.success) setRules((rulesRes.data ?? []) as RmmAlertRuleRow[]);
-      else setError(rulesRes.error ?? 'Failed to load alert rules');
+      else setError(actionResultError(rulesRes) ?? 'Failed to load alert rules');
 
       if (windowsRes.success) setWindows((windowsRes.data ?? []) as RmmMaintenanceWindowRow[]);
 
@@ -1206,7 +1210,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
         });
       }
       if (!res.success) {
-        toast({ title: 'Save failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+        toast({ title: 'Save failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
         return;
       }
       toast({ title: editingRule ? 'Rule updated' : 'Rule created', description: `"${ruleForm.name}" saved.` });
@@ -1220,7 +1224,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
   const handleToggleRuleActive = async (rule: RmmAlertRuleRow, isActive: boolean) => {
     const res = await updateRmmAlertRule({ ruleId: rule.rule_id, isActive });
     if (!res.success) {
-      toast({ title: 'Update failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Update failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
       return;
     }
     setRules((prev) => prev.map((r) => (r.rule_id === rule.rule_id ? { ...r, is_active: isActive } : r)));
@@ -1231,7 +1235,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
     try {
       const res = await deleteRmmAlertRule({ ruleId });
       if (!res.success) {
-        toast({ title: 'Delete failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+        toast({ title: 'Delete failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
         return;
       }
       toast({ title: 'Rule deleted' });
@@ -1255,7 +1259,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
       orderedRuleIds: newRules.map((r) => r.rule_id),
     });
     if (!res.success) {
-      toast({ title: 'Reorder failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Reorder failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
       await load();
     }
   };
@@ -1284,7 +1288,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
         res = await createRmmMaintenanceWindow(input);
       }
       if (!res.success) {
-        toast({ title: 'Save failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+        toast({ title: 'Save failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
         return;
       }
       toast({ title: editingWindow ? 'Window updated' : 'Window created', description: `"${windowForm.name}" saved.` });
@@ -1299,7 +1303,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
     const input = formToWindowInput(windowToForm(w, integrationId), integrationId);
     const res = await updateRmmMaintenanceWindow({ windowId: w.window_id, ...input, isActive });
     if (!res.success) {
-      toast({ title: 'Update failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Update failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
       return;
     }
     setWindows((prev) => prev.map((x) => (x.window_id === w.window_id ? { ...x, is_active: isActive } : x)));
@@ -1310,7 +1314,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
     try {
       const res = await deleteRmmMaintenanceWindow({ windowId });
       if (!res.success) {
-        toast({ title: 'Delete failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+        toast({ title: 'Delete failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
         return;
       }
       toast({ title: 'Window deleted' });
@@ -1335,7 +1339,7 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
         intervalMinutes: pollingInterval,
       });
       if (!res.success) {
-        toast({ title: 'Save failed', description: res.error ?? 'Unknown error', variant: 'destructive' });
+        toast({ title: 'Save failed', description: actionResultError(res) ?? 'Unknown error', variant: 'destructive' });
         return;
       }
       toast({ title: 'Polling settings saved' });

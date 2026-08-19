@@ -65,6 +65,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   isActionMessageError,
   isActionPermissionError,
   permissionError,
@@ -99,20 +100,6 @@ const EXPECTED_PROJECT_TASK_ERROR_PREFIXES = [
     'Team not found',
 ];
 
-function formatProjectTaskValidationIssues(error: unknown): string | null {
-    const issues = (error as { issues?: Array<{ path?: Array<string | number>; message?: string }> })?.issues;
-    if (!Array.isArray(issues) || issues.length === 0) {
-        return null;
-    }
-
-    return issues
-        .map((issue) => {
-            const field = issue.path?.join('.');
-            return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
-        })
-        .join('; ');
-}
-
 function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | null {
     if (isActionMessageError(error) || isActionPermissionError(error)) {
         return error as ProjectTaskActionError;
@@ -127,13 +114,9 @@ function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | nu
         }
     }
 
-    const validationMessage = formatProjectTaskValidationIssues(error);
-    if (validationMessage) {
-        return actionError(
-            `Please fix the task details: ${validationMessage}`,
-            'projects:errors.task.validationFailed',
-            { details: validationMessage },
-        );
+    const firstIssue = (error as { issues?: unknown[] })?.issues?.[0];
+    if (firstIssue && typeof firstIssue === 'object') {
+        return actionErrorFromValidationIssue(firstIssue);
     }
 
     const dbError = error as { code?: string; column?: string };

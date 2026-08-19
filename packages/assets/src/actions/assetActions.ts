@@ -198,6 +198,19 @@ function expectedAssetActionError(error: unknown): AssetActionError | null {
     return assetActionErrorFrom(error);
 }
 
+function serializedAssetValidationError(error: z.ZodError): Error {
+    return new Error(JSON.stringify({
+        kind: 'validation',
+        issues: error.issues.map((issue) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code,
+            ...('received' in issue ? { received: issue.received } : {}),
+            ...('params' in issue ? { params: issue.params } : {}),
+        })),
+    }));
+}
+
 function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAssetActionResponse {
     const succeeded = results.filter((result) => result.success).length;
     return {
@@ -864,6 +877,9 @@ export async function createAssetRecord(
             validateData(createAssetSchema, data);
         } catch (error) {
             console.error('Input validation error:', error);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
+            }
             throw new Error('Invalid asset input data. Review required fields and try again.');
         }
 
@@ -998,12 +1014,8 @@ export async function createAssetRecord(
         } catch (error) {
             console.error('Output validation error:', error);
             // Extract Zod validation details if available
-            if (error && typeof error === 'object' && 'issues' in error) {
-                const zodError = error as { issues: Array<{ path: (string | number)[]; message: string }> };
-                const details = zodError.issues
-                    .map(issue => `${issue.path.join('.')}: ${issue.message}`)
-                    .join('; ');
-                throw new Error(`Asset validation failed: ${details}`);
+            if (error instanceof z.ZodError) {
+                throw serializedAssetValidationError(error);
             }
             throw new Error('Server error: Invalid output data format');
         }
@@ -1296,14 +1308,7 @@ export async function updateAssetRecord(
         if (error instanceof z.ZodError) {
             // Serialize field-level issues so the client can render them inline + in a toast
             // without losing the user's in-progress form data.
-            throw new Error(JSON.stringify({
-                kind: 'validation',
-                issues: error.issues.map((issue) => ({
-                    path: issue.path,
-                    message: issue.message,
-                    code: issue.code,
-                })),
-            }));
+            throw serializedAssetValidationError(error);
         }
         if (isTypedAssetWriteError(error)) {
             // invalid_asset_type / attribute-schema issues already carry a

@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Controlla le impostazioni di automazione degli avvisi RMM e riprova.",
+      "permissions": {
+        "read": "Autorizzazioni insufficienti per visualizzare le impostazioni di automazione degli avvisi RMM.",
+        "update": "Autorizzazioni insufficienti per gestire le impostazioni di automazione degli avvisi RMM."
+      },
+      "integrationNotFound": "Integrazione RMM non trovata.",
+      "nothingToUpdate": "Non ci sono modifiche da salvare.",
+      "ruleNotFound": "Regola di avviso non trovata.",
+      "windowNotFound": "Finestra di manutenzione non trovata.",
+      "pollIntervalRange": "L’intervallo di polling deve essere compreso tra 5 e 60 minuti.",
+      "validation": {
+        "scheduleRequired": "Una finestra richiede un’ora di inizio e di fine oppure una ricorrenza settimanale.",
+        "startBeforeEnd": "L’ora di inizio deve precedere l’ora di fine.",
+        "timesMustDiffer": "Le ore di inizio e fine devono essere diverse. Usa più giorni per una finestra che copre un’intera giornata.",
+        "unknownTimezone": "Fuso orario sconosciuto: {{timezone}}.",
+        "messagePatternInvalid": "Il modello del messaggio non è un’espressione regolare valida."
+      }
+    },
     "mappings": {
       "viewPermission": "Autorizzazione negata: non si dispone dell’autorizzazione per visualizzare le mappature contabili.",
       "managePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per gestire le mappature contabili.",

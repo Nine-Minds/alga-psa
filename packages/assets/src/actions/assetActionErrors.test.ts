@@ -42,4 +42,19 @@ describe('assetActionErrorFrom', () => {
       'Asset not found. It may have been deleted. Please refresh and try again.'
     );
   });
+
+  it('maps serialized Zod issues through their stable code', () => {
+    expect(assetActionErrorFrom(new Error(JSON.stringify({
+      kind: 'validation',
+      issues: [{
+        code: 'invalid_string',
+        path: ['client_id'],
+        message: 'Invalid uuid',
+      }],
+    })))).toEqual({
+      actionError: 'client_id has an invalid format.',
+      messageKey: 'common:errors.validation.invalidFormat',
+      messageParams: { field: 'client_id' },
+    });
+  });
 });

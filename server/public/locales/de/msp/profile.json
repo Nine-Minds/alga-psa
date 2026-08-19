@@ -781,7 +781,8 @@
       "signingSecretMissing": "Das Signaturgeheimnis des Webhooks fehlt. Erneuern Sie das Signaturgeheimnis und versuchen Sie es erneut.",
       "deliveryNotFound": "Zustellung nicht gefunden.",
       "testNotRetryable": "Testzustellungen können nicht wiederholt werden.",
-      "payloadInvalid": "Diese Zustellung kann nicht wiederholt werden, da die gespeicherte Nutzlast ungültig ist."
+      "payloadInvalid": "Diese Zustellung kann nicht wiederholt werden, da die gespeicherte Nutzlast ungültig ist.",
+      "validation": { "unknownEntity": "Unbekannte Webhook-Entität „{{entity}}“.", "unknownField": "Unbekanntes Feld „{{field}}“ für die Webhook-Entität „{{entity}}“." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Nicht unterstützter Authentifizierungstyp für eingehende Webhooks: {{authType}}.",
       "deliveryNotFound": "Eingehende Zustellung nicht gefunden.",
       "replayMissingConfig": "Eine eingehende Zustellung kann ohne Webhook-Konfiguration nicht wiederholt werden.",
-      "notFoundOrInactive": "Eingehender Webhook nicht gefunden oder inaktiv."
+      "notFoundOrInactive": "Eingehender Webhook nicht gefunden oder inaktiv.",
+      "validation": { "slugReserved": "Dieser Slug ist für eine gebündelte Integration reserviert.", "authTypeMismatch": "Der Typ der Authentifizierungskonfiguration muss dem ausgewählten Authentifizierungstyp entsprechen.", "handlerTypeMismatch": "Der Typ der Handler-Konfiguration muss dem ausgewählten Handler-Typ entsprechen." }
     }
   }
 }

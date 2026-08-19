@@ -3409,6 +3409,25 @@
     }
   },
   "errors": {
+    "rmm": {
+      "invalidInput": "Revise la configuración de automatización de alertas de RMM e inténtelo de nuevo.",
+      "permissions": {
+        "read": "Permisos insuficientes para ver la configuración de automatización de alertas de RMM.",
+        "update": "Permisos insuficientes para administrar la configuración de automatización de alertas de RMM."
+      },
+      "integrationNotFound": "No se encontró la integración de RMM.",
+      "nothingToUpdate": "No hay cambios que guardar.",
+      "ruleNotFound": "No se encontró la regla de alerta.",
+      "windowNotFound": "No se encontró la ventana de mantenimiento.",
+      "pollIntervalRange": "El intervalo de sondeo debe estar entre 5 y 60 minutos.",
+      "validation": {
+        "scheduleRequired": "Una ventana necesita una hora de inicio y de finalización o una repetición semanal.",
+        "startBeforeEnd": "La hora de inicio debe ser anterior a la hora de finalización.",
+        "timesMustDiffer": "Las horas de inicio y finalización deben ser diferentes. Use varios días para una ventana que abarque un día completo.",
+        "unknownTimezone": "Zona horaria desconocida: {{timezone}}.",
+        "messagePatternInvalid": "El patrón del mensaje no es una expresión regular válida."
+      }
+    },
     "mappings": {
       "viewPermission": "Permiso denegado: no tiene permiso para ver las asignaciones contables.",
       "managePermission": "Permiso denegado: no tiene permiso para gestionar las asignaciones contables.",

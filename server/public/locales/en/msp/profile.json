@@ -781,7 +781,8 @@
       "signingSecretMissing": "Webhook signing secret is missing. Rotate the signing secret and try again.",
       "deliveryNotFound": "Delivery not found.",
       "testNotRetryable": "Test deliveries cannot be retried.",
-      "payloadInvalid": "This delivery cannot be retried because the stored payload is invalid."
+      "payloadInvalid": "This delivery cannot be retried because the stored payload is invalid.",
+      "validation": { "unknownEntity": "Unknown webhook entity \"{{entity}}\".", "unknownField": "Unknown field \"{{field}}\" for webhook entity \"{{entity}}\"." }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -799,7 +800,8 @@
       "unsupportedAuthType": "Unsupported inbound webhook auth type: {{authType}}.",
       "deliveryNotFound": "Inbound delivery not found.",
       "replayMissingConfig": "Cannot replay an inbound delivery without a webhook config.",
-      "notFoundOrInactive": "Inbound webhook not found or inactive."
+      "notFoundOrInactive": "Inbound webhook not found or inactive.",
+      "validation": { "slugReserved": "This slug is reserved for a bundled integration.", "authTypeMismatch": "The authentication configuration type must match the selected authentication type.", "handlerTypeMismatch": "The handler configuration type must match the selected handler type." }
     }
   }
 }
