@@ -174,6 +174,7 @@ describe('Portal domain permissions', () => {
 
     expect(result).toEqual({
       permissionError: 'Client portal users cannot manage custom domains.',
+      messageKey: 'msp/settings:errors.clientPortalDomain.portalUsersNotAllowed',
     });
 
     const existing = await tenantTable<PortalDomainRecord>(db, tenantId, 'portal_domains')
