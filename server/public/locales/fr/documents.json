@@ -72,5 +72,45 @@
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande."
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Autorisation refusée",
+      "create": "Autorisation refusée : impossible de créer des documents",
+      "read": "Autorisation refusée : impossible de lire des documents",
+      "update": "Autorisation refusée : impossible de mettre à jour des documents",
+      "delete": "Autorisation refusée : impossible de supprimer des documents",
+      "associate": "Autorisation refusée : impossible d’associer des documents",
+      "modifyClientDocuments": "Autorisation refusée : impossible de modifier les documents du client",
+      "accessContractDocuments": "Autorisation refusée : impossible d’accéder aux documents du contrat",
+      "modifyContractDocuments": "Autorisation refusée : impossible de modifier les documents du contrat",
+      "removeAssociations": "Autorisation refusée : impossible de supprimer les associations de documents",
+      "updateAssociations": "Autorisation refusée : impossible de mettre à jour les associations de documents",
+      "readAssociations": "Autorisation refusée : impossible de lire les associations de documents",
+      "readTypes": "Autorisation refusée : impossible de lire les types de document"
+    },
+    "document": {
+      "notFound": "Document introuvable. Il a peut-être été supprimé ou déplacé. Veuillez actualiser la page et réessayer.",
+      "fileUnavailable": "Le fichier du document n’est plus disponible. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de document sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "invalidDate": "L’une des dates de document sélectionnées n’est pas valide. Veuillez vérifier le formulaire et réessayer.",
+      "referenceMissing": "Le document, le dossier ou l’enregistrement associé sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicateAssociation": "Ce document est déjà associé à cet enregistrement.",
+      "conflict": "Cette modification du document entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs du document n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du document est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du document est manquant : {{field}}."
+    },
+    "folder": {
+      "notFound": "Dossier introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "emptyDocumentsFirst": "Déplacez ou supprimez les documents de ce dossier avant de le supprimer.",
+      "emptySubfoldersFirst": "Supprimez les sous-dossiers de ce dossier avant de le supprimer.",
+      "duplicatePath": "Un dossier avec ce chemin existe déjà."
+    },
+    "upload": {
+      "fileRequired": "Choisissez un fichier avant de le téléverser.",
+      "typeNotAllowed": "Ce type de fichier n’est pas autorisé.",
+      "sessionRequired": "Votre session est requise pour téléverser des documents. Veuillez vous reconnecter."
+    }
   }
 }

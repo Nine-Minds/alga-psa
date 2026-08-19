@@ -72,5 +72,45 @@
       "preTaxTotals": "55555",
       "thankYouForOrder": "55555"
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "55555",
+      "create": "55555",
+      "read": "55555",
+      "update": "55555",
+      "delete": "55555",
+      "associate": "55555",
+      "modifyClientDocuments": "55555",
+      "accessContractDocuments": "55555",
+      "modifyContractDocuments": "55555",
+      "removeAssociations": "55555",
+      "updateAssociations": "55555",
+      "readAssociations": "55555",
+      "readTypes": "55555"
+    },
+    "document": {
+      "notFound": "55555",
+      "fileUnavailable": "55555",
+      "invalidValue": "55555",
+      "invalidDate": "55555",
+      "referenceMissing": "55555",
+      "duplicateAssociation": "55555",
+      "conflict": "55555",
+      "notAllowed": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "folder": {
+      "notFound": "55555",
+      "emptyDocumentsFirst": "55555",
+      "emptySubfoldersFirst": "55555",
+      "duplicatePath": "55555"
+    },
+    "upload": {
+      "fileRequired": "55555",
+      "typeNotAllowed": "55555",
+      "sessionRequired": "55555"
+    }
   }
 }

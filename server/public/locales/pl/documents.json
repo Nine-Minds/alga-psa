@@ -72,5 +72,45 @@
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Odmowa uprawnień",
+      "create": "Odmowa uprawnień: nie można tworzyć dokumentów",
+      "read": "Odmowa uprawnień: nie można odczytywać dokumentów",
+      "update": "Odmowa uprawnień: nie można aktualizować dokumentów",
+      "delete": "Odmowa uprawnień: nie można usuwać dokumentów",
+      "associate": "Odmowa uprawnień: nie można powiązywać dokumentów",
+      "modifyClientDocuments": "Odmowa uprawnień: nie można modyfikować dokumentów klienta",
+      "accessContractDocuments": "Odmowa uprawnień: brak dostępu do dokumentów umowy",
+      "modifyContractDocuments": "Odmowa uprawnień: nie można modyfikować dokumentów umowy",
+      "removeAssociations": "Odmowa uprawnień: nie można usuwać powiązań dokumentów",
+      "updateAssociations": "Odmowa uprawnień: nie można aktualizować powiązań dokumentów",
+      "readAssociations": "Odmowa uprawnień: nie można odczytywać powiązań dokumentów",
+      "readTypes": "Odmowa uprawnień: nie można odczytywać typów dokumentów"
+    },
+    "document": {
+      "notFound": "Nie znaleziono dokumentu. Mógł zostać usunięty lub przeniesiony. Odśwież stronę i spróbuj ponownie.",
+      "fileUnavailable": "Plik dokumentu nie jest już dostępny. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości dokumentu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "invalidDate": "Jedna z wybranych dat dokumentu jest nieprawidłowa. Sprawdź formularz i spróbuj ponownie.",
+      "referenceMissing": "Wybrany dokument, folder lub powiązany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicateAssociation": "Ten dokument jest już powiązany z tym rekordem.",
+      "conflict": "Ta zmiana dokumentu jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości dokumentu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola dokumentu.",
+      "missingFieldNamed": "Brakuje wymaganego pola dokumentu: {{field}}."
+    },
+    "folder": {
+      "notFound": "Nie znaleziono folderu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "emptyDocumentsFirst": "Przenieś lub usuń dokumenty z tego folderu przed jego usunięciem.",
+      "emptySubfoldersFirst": "Usuń podfoldery z tego folderu przed jego usunięciem.",
+      "duplicatePath": "Folder o tej ścieżce już istnieje."
+    },
+    "upload": {
+      "fileRequired": "Wybierz plik przed przesłaniem.",
+      "typeNotAllowed": "Ten typ pliku jest niedozwolony.",
+      "sessionRequired": "Przesyłanie dokumentów wymaga aktywnej sesji. Zaloguj się ponownie."
+    }
   }
 }

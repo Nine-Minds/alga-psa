@@ -72,5 +72,45 @@
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
       "thankYouForOrder": "Bedankt voor uw order."
     }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Toestemming geweigerd",
+      "create": "Toestemming geweigerd: documenten kunnen niet worden aangemaakt",
+      "read": "Toestemming geweigerd: documenten kunnen niet worden gelezen",
+      "update": "Toestemming geweigerd: documenten kunnen niet worden bijgewerkt",
+      "delete": "Toestemming geweigerd: documenten kunnen niet worden verwijderd",
+      "associate": "Toestemming geweigerd: documenten kunnen niet worden gekoppeld",
+      "modifyClientDocuments": "Toestemming geweigerd: klantdocumenten kunnen niet worden gewijzigd",
+      "accessContractDocuments": "Toestemming geweigerd: contractdocumenten zijn niet toegankelijk",
+      "modifyContractDocuments": "Toestemming geweigerd: contractdocumenten kunnen niet worden gewijzigd",
+      "removeAssociations": "Toestemming geweigerd: documentkoppelingen kunnen niet worden verwijderd",
+      "updateAssociations": "Toestemming geweigerd: documentkoppelingen kunnen niet worden bijgewerkt",
+      "readAssociations": "Toestemming geweigerd: documentkoppelingen kunnen niet worden gelezen",
+      "readTypes": "Toestemming geweigerd: documenttypen kunnen niet worden gelezen"
+    },
+    "document": {
+      "notFound": "Document niet gevonden. Mogelijk is het verwijderd of verplaatst. Vernieuw de pagina en probeer het opnieuw.",
+      "fileUnavailable": "Het documentbestand is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde documentwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDate": "Een van de geselecteerde documentdatums is ongeldig. Controleer het formulier en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde document, de map of het gerelateerde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateAssociation": "Dit document is al aan dat record gekoppeld.",
+      "conflict": "Deze documentwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de documentwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht documentveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht documentveld: {{field}}."
+    },
+    "folder": {
+      "notFound": "Map niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "emptyDocumentsFirst": "Verplaats of verwijder de documenten in deze map voordat u de map verwijdert.",
+      "emptySubfoldersFirst": "Verwijder de submappen in deze map voordat u de map verwijdert.",
+      "duplicatePath": "Er bestaat al een map met dat pad."
+    },
+    "upload": {
+      "fileRequired": "Kies een bestand voordat u uploadt.",
+      "typeNotAllowed": "Dit bestandstype is niet toegestaan.",
+      "sessionRequired": "Uw sessie is vereist om documenten te uploaden. Meld u opnieuw aan."
+    }
   }
 }
