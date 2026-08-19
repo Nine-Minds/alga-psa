@@ -1348,6 +1348,84 @@
       "teamNotFound": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
       "teamLeadNotFound": "Il team selezionato non ha un responsabile. Scegliere un altro team o assegnare prima un responsabile.",
       "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Il ticket {{tickets}} è già un ticket principale di raggruppamento e non può essere aggiunto come ticket figlio. Sciogliere prima il raggruppamento oppure usarlo come ticket principale.",
+      "masterAlreadyBundleMasters": "I ticket {{tickets}} sono già ticket principali di raggruppamento e non possono essere aggiunti come ticket figlio. Sciogliere prima i raggruppamenti oppure usarne uno come ticket principale.",
+      "selectChild": "Selezionare almeno un ticket figlio diverso dal ticket principale.",
+      "masterNotFound": "Ticket principale non trovato.",
+      "childNotFound": "Ticket figlio non trovato: {{ticket}}",
+      "childAsMaster": "Non è possibile selezionare un ticket figlio come ticket principale.",
+      "alreadyBundled": "Il ticket è già raggruppato: {{ticket}}",
+      "masterAsChild": "Il ticket principale non può essere anche un ticket figlio.",
+      "noChildren": "Nessun ticket figlio fornito.",
+      "childrenOnBundledChild": "Non è possibile aggiungere ticket figlio a un ticket figlio già raggruppato."
+    },
+    "ticket": {
+      "validationDetails": "Correggere i dati del ticket: {{details}}",
+      "invalidValue": "Uno dei valori del ticket selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del ticket.",
+      "missingFieldNamed": "Manca un campo obbligatorio del ticket: {{field}}.",
+      "referenceMissing": "Uno dei record del ticket selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del ticket è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "valueNotAllowed": "Uno dei valori del ticket non è consentito. Controllare il modulo e riprovare."
+    },
+    "board": {
+      "invalidReference": "La bacheca, lo stato o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della bacheca.",
+      "missingFieldNamed": "Manca un campo obbligatorio della bacheca: {{field}}.",
+      "referenceInvalid": "La bacheca, lo stato, la priorità, l’incaricato, il team o il criterio SLA selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "duplicateName": "Esiste già una bacheca con questo nome.",
+      "duplicate": "Esiste già una bacheca o uno stato con le stesse impostazioni.",
+      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare."
+    },
+    "material": {
+      "invalidValue": "Uno dei valori del materiale selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del materiale.",
+      "missingFieldNamed": "Manca un campo obbligatorio del materiale: {{field}}.",
+      "referenceInvalid": "Il ticket, il cliente, il prodotto o l’unità di magazzino selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "conflict": "Questo materiale è in conflitto con un materiale del ticket o un’assegnazione di magazzino esistenti. Aggiornare la pagina e riprovare.",
+      "valueNotAllowed": "Uno dei valori del materiale non è consentito. Controllare il modulo e riprovare."
+    },
+    "settings": {
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket"
+    },
+    "list": {
+      "filtersInvalid": "I filtri dell’elenco ticket non sono più validi. Aggiornare la pagina e riprovare."
+    },
+    "layoutPreference": {
+      "contextMissing": "Alla sessione manca il contesto necessario per le preferenze dei ticket. Aggiornare la pagina e riprovare.",
+      "userNotFound": "Utente corrente non trovato. Aggiornare la pagina ed effettuare nuovamente l’accesso.",
+      "invalidLayout": "Layout dei dettagli del ticket non valido. Aggiornare la pagina e riprovare.",
+      "invalidTimelineOrder": "Ordine della cronologia del ticket non valido. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori delle preferenze di layout dei ticket non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio delle preferenze dei ticket.",
+      "missingFieldNamed": "Manca un campo obbligatorio delle preferenze dei ticket: {{field}}.",
+      "userMissing": "L’utente corrente di queste preferenze dei ticket non esiste più. Aggiornare la pagina ed effettuare nuovamente l’accesso.",
+      "concurrentUpdate": "Le preferenze di layout dei ticket sono state aggiornate contemporaneamente. Aggiornare la pagina e riprovare."
+    },
+    "category": {
+      "invalidReference": "La categoria o la bacheca selezionate non sono valide. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della categoria.",
+      "missingFieldNamed": "Manca un campo obbligatorio della categoria: {{field}}.",
+      "referenceInvalid": "La bacheca o la categoria principale selezionate non sono più valide. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già una categoria con queste impostazioni.",
+      "invalidValue": "Uno dei valori della categoria non è valido. Aggiornare la pagina e riprovare."
+    },
+    "import": {
+      "invalidValue": "Uno dei valori del ticket importati non è valido. Aggiornare i dati di riferimento e riprovare.",
+      "conflict": "Un record di importazione ticket è in conflitto con un record esistente. Controllare clienti, contatti, stati, priorità, categorie o tag duplicati.",
+      "referenceMissing": "Un cliente, contatto, bacheca, stato, priorità, categoria, team o utente di riferimento non è stato trovato. Aggiornare i dati di riferimento e riprovare.",
+      "missingValue": "Manca un valore di importazione obbligatorio.",
+      "missingValueNamed": "Manca un valore di importazione obbligatorio: {{field}}.",
+      "invalidForField": "Uno dei valori importati non è valido per questo campo."
+    },
+    "checklist": {
+      "invalidReference": "L’elemento della lista di controllo, il modello o la regola selezionati non sono validi. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della lista di controllo.",
+      "missingFieldNamed": "Manca un campo obbligatorio della lista di controllo: {{field}}.",
+      "referenceInvalid": "Il ticket, il modello di lista di controllo o il filtro della regola selezionati non sono più validi. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori della lista di controllo non è valido. Aggiornare la pagina e riprovare."
     }
   },
   "ticketSection": {

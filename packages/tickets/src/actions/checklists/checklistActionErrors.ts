@@ -30,16 +30,22 @@ export function checklistActionErrorFrom(error: unknown): ChecklistActionError |
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected checklist item, template, or rule is invalid. Please refresh and try again.');
+    return actionError('The selected checklist item, template, or rule is invalid. Please refresh and try again.', 'features/tickets:errors.checklist.invalidReference');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required checklist field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required checklist field: ${dbError.column}.`,
+          'features/tickets:errors.checklist.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required checklist field.', 'features/tickets:errors.checklist.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.');
+    return actionError('The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.', 'features/tickets:errors.checklist.referenceInvalid');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the checklist values is invalid. Please refresh and try again.');
+    return actionError('One of the checklist values is invalid. Please refresh and try again.', 'features/tickets:errors.checklist.invalidValue');
   }
 
   return null;

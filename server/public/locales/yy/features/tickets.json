@@ -1356,6 +1356,84 @@
       "teamNotFound": "55555",
       "teamLeadNotFound": "55555",
       "commentNotFound": "55555"
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "55555 {{tickets}} 55555",
+      "masterAlreadyBundleMasters": "55555 {{tickets}} 55555",
+      "selectChild": "55555",
+      "masterNotFound": "55555",
+      "childNotFound": "55555 {{ticket}} 55555",
+      "childAsMaster": "55555",
+      "alreadyBundled": "55555 {{ticket}} 55555",
+      "masterAsChild": "55555",
+      "noChildren": "55555",
+      "childrenOnBundledChild": "55555"
+    },
+    "ticket": {
+      "validationDetails": "55555 {{details}} 55555",
+      "invalidValue": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceMissing": "55555",
+      "conflict": "55555",
+      "valueNotAllowed": "55555"
+    },
+    "board": {
+      "invalidReference": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "duplicateName": "55555",
+      "duplicate": "55555",
+      "invalidValue": "55555"
+    },
+    "material": {
+      "invalidValue": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "conflict": "55555",
+      "valueNotAllowed": "55555"
+    },
+    "settings": {
+      "updateDenied": "55555"
+    },
+    "list": {
+      "filtersInvalid": "55555"
+    },
+    "layoutPreference": {
+      "contextMissing": "55555",
+      "userNotFound": "55555",
+      "invalidLayout": "55555",
+      "invalidTimelineOrder": "55555",
+      "invalidValue": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "userMissing": "55555",
+      "concurrentUpdate": "55555"
+    },
+    "category": {
+      "invalidReference": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "duplicate": "55555",
+      "invalidValue": "55555"
+    },
+    "import": {
+      "invalidValue": "55555",
+      "conflict": "55555",
+      "referenceMissing": "55555",
+      "missingValue": "55555",
+      "missingValueNamed": "55555 {{field}} 55555",
+      "invalidForField": "55555"
+    },
+    "checklist": {
+      "invalidReference": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "invalidValue": "55555"
     }
   },
   "ticketSection": {

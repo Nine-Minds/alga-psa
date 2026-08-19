@@ -101,7 +101,7 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   const issues = (error as { issues?: unknown })?.issues;
   if (Array.isArray(issues) && issues.length > 0) {
-    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.');
+    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.', 'features/tickets:errors.list.filtersInvalid');
   }
 
   return ticketActionErrorFrom(error);

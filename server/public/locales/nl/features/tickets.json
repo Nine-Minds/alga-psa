@@ -1348,6 +1348,84 @@
       "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
       "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
       "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "bundle": {
+      "masterAlreadyBundleMaster": "Ticket {{tickets}} is al een hoofdticket van een bundel en kan niet als onderliggend ticket worden toegevoegd. Hef de bundel eerst op of gebruik het als hoofdticket.",
+      "masterAlreadyBundleMasters": "Tickets {{tickets}} zijn al hoofdtickets van een bundel en kunnen niet als onderliggende tickets worden toegevoegd. Hef de bundels eerst op of gebruik er een als hoofdticket.",
+      "selectChild": "Selecteer ten minste één onderliggend ticket dat verschilt van het hoofdticket.",
+      "masterNotFound": "Hoofdticket niet gevonden.",
+      "childNotFound": "Onderliggend ticket niet gevonden: {{ticket}}",
+      "childAsMaster": "Een onderliggend ticket kan niet als hoofdticket worden geselecteerd.",
+      "alreadyBundled": "Ticket is al gebundeld: {{ticket}}",
+      "masterAsChild": "Het hoofdticket kan niet ook een onderliggend ticket zijn.",
+      "noChildren": "Geen onderliggende tickets opgegeven.",
+      "childrenOnBundledChild": "Er kunnen geen onderliggende tickets worden toegevoegd aan een gebundeld onderliggend ticket."
+    },
+    "ticket": {
+      "validationDetails": "Corrigeer de ticketgegevens: {{details}}",
+      "invalidValue": "Een van de geselecteerde ticketwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht ticketveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht ticketveld: {{field}}.",
+      "referenceMissing": "Een van de geselecteerde ticketrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze ticketwijziging is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "valueNotAllowed": "Een van de ticketwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+    },
+    "board": {
+      "invalidReference": "Het geselecteerde bord, de status of de regel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht bordveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht bordveld: {{field}}.",
+      "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateName": "Er bestaat al een bord met deze naam.",
+      "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "material": {
+      "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht materiaalveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht materiaalveld: {{field}}.",
+      "referenceInvalid": "Het geselecteerde ticket, de klant, het product of de voorraadeenheid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Dit materiaal is in conflict met een bestaand ticketmateriaal of een bestaande voorraadtoewijzing. Vernieuw de pagina en probeer het opnieuw.",
+      "valueNotAllowed": "Een van de materiaalwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+    },
+    "settings": {
+      "updateDenied": "Toestemming geweigerd: ticketinstellingen kunnen niet worden bijgewerkt"
+    },
+    "list": {
+      "filtersInvalid": "De filters van de ticketlijst zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "layoutPreference": {
+      "contextMissing": "In uw sessie ontbreekt de vereiste context voor ticketvoorkeuren. Vernieuw de pagina en probeer het opnieuw.",
+      "userNotFound": "Huidige gebruiker niet gevonden. Vernieuw de pagina en meld u opnieuw aan.",
+      "invalidLayout": "Ongeldige indeling van ticketdetails. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidTimelineOrder": "Ongeldige volgorde van de tickettijdlijn. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de waarden voor ticketindelingsvoorkeuren is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de ticketvoorkeuren.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de ticketvoorkeuren: {{field}}.",
+      "userMissing": "De huidige gebruiker van deze ticketvoorkeuren bestaat niet meer. Vernieuw de pagina en meld u opnieuw aan.",
+      "concurrentUpdate": "De ticketindelingsvoorkeuren zijn gelijktijdig bijgewerkt. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "category": {
+      "invalidReference": "De geselecteerde categorie of het bord is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht categorieveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht categorieveld: {{field}}.",
+      "referenceInvalid": "Het geselecteerde bord of de bovenliggende categorie is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een categorie met deze instellingen.",
+      "invalidValue": "Een van de categoriewaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "import": {
+      "invalidValue": "Een van de geïmporteerde ticketwaarden is ongeldig. Vernieuw de referentiegegevens en probeer het opnieuw.",
+      "conflict": "Een ticketimportrecord is in conflict met een bestaand record. Controleer dubbele klanten, contactpersonen, statussen, prioriteiten, categorieën of labels.",
+      "referenceMissing": "Een gerefereerde klant, contactpersoon, bord, status, prioriteit, categorie, team of gebruiker is niet gevonden. Vernieuw de referentiegegevens en probeer het opnieuw.",
+      "missingValue": "Er ontbreekt een verplichte importwaarde.",
+      "missingValueNamed": "Er ontbreekt een verplichte importwaarde: {{field}}.",
+      "invalidForField": "Een van de geïmporteerde waarden is ongeldig voor dit veld."
+    },
+    "checklist": {
+      "invalidReference": "Het geselecteerde checklistitem, de sjabloon of de regel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht checklistveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht checklistveld: {{field}}.",
+      "referenceInvalid": "Het geselecteerde ticket, de checklistsjabloon of het regelfilter is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de checklistwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
     }
   },
   "ticketSection": {

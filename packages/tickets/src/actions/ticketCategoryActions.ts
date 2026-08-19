@@ -39,19 +39,25 @@ function categoryActionErrorFrom(error: unknown): CategoryActionError | null {
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected category or board is invalid. Please refresh and try again.');
+    return actionError('The selected category or board is invalid. Please refresh and try again.', 'features/tickets:errors.category.invalidReference');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required category field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required category field: ${dbError.column}.`,
+          'features/tickets:errors.category.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required category field.', 'features/tickets:errors.category.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected board or parent category is no longer valid. Please refresh and try again.');
+    return actionError('The selected board or parent category is no longer valid. Please refresh and try again.', 'features/tickets:errors.category.referenceInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A category with these settings already exists.');
+    return actionError('A category with these settings already exists.', 'features/tickets:errors.category.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the category values is invalid. Please refresh and try again.');
+    return actionError('One of the category values is invalid. Please refresh and try again.', 'features/tickets:errors.category.invalidValue');
   }
 
   return null;

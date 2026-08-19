@@ -166,24 +166,30 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
 
   const validationMessage = formatValidationIssues(error);
   if (validationMessage) {
-    return actionError(`Please fix the ticket details: ${validationMessage}`);
+    return actionError(`Please fix the ticket details: ${validationMessage}`, 'features/tickets:errors.ticket.validationDetails', { details: validationMessage });
   }
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected ticket values is invalid. Please refresh and try again.');
+    return actionError('One of the selected ticket values is invalid. Please refresh and try again.', 'features/tickets:errors.ticket.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required ticket field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required ticket field: ${dbError.column}.`,
+          'features/tickets:errors.ticket.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required ticket field.', 'features/tickets:errors.ticket.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected ticket records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected ticket records no longer exists. Please refresh and try again.', 'features/tickets:errors.ticket.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This ticket change conflicts with an existing record. Please refresh and try again.');
+    return actionError('This ticket change conflicts with an existing record. Please refresh and try again.', 'features/tickets:errors.ticket.conflict');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the ticket values is not allowed. Please review the form and try again.');
+    return actionError('One of the ticket values is not allowed. Please review the form and try again.', 'features/tickets:errors.ticket.valueNotAllowed');
   }
 
   return null;
