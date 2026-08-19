@@ -1,9 +1,40 @@
-import { isValidEmail } from './utils';
+/**
+ * Client/contact form field validation.
+ *
+ *   input → normalize → validate (structural, blocking) → advise (plausibility, never blocks)
+ *
+ * The structural layer delegates to the shared Zod schema in
+ * ./schemas/clientContact.schema so the form, the server actions and the REST API
+ * cannot disagree. Everything that used to guess at whether input was *sincere* —
+ * disposable mailboxes, reserved documentation domains, fictional phone ranges,
+ * placeholder names — now produces a warning instead of blocking a save.
+ */
+
+import {
+  buildFieldValidation,
+  message,
+  type FieldValidation,
+  type ValidationMessage,
+} from './fieldValidation';
+import { normalizePhone } from './phone';
+import {
+  clientNameSchema,
+  contactNameSchema,
+  emailFieldSchema,
+  parseUrl,
+  phoneFieldSchema,
+  urlFieldSchema,
+} from './schemas/clientContact.schema';
 
 // Enhanced validation utilities for client forms
 export interface ValidationResult {
   isValid: boolean;
   errors: Record<string, string>;
+  warnings?: Record<string, string[]>;
+}
+
+function firstIssue(result: { success: boolean; error?: { issues: Array<{ message: string }> } }): string | null {
+  return result.success ? null : result.error?.issues[0]?.message ?? 'Invalid input';
 }
 
 // Common emoji regex pattern used across validation functions
@@ -62,282 +93,273 @@ function isReservedDomain(hostname: string): boolean {
   return RESERVED_TLDS.includes(hostname.split('.').pop() ?? '');
 }
 
-// Client name validation - enterprise-level rules
-export function validateClientName(name: string): string | null {
-  if (!name || !name.trim()) {
-    return 'Client name is required';
+// =====================================
+// Advise layer — plausibility opinions.
+// These never block a save. If nobody acts on one, delete it.
+// =====================================
+
+const K = 'clients.validation';
+
+export function adviseClientName(name: string): ValidationMessage[] {
+  const trimmedName = (name ?? '').trim();
+  if (!trimmedName) {
+    return [];
   }
-  
-  const trimmedName = name.trim();
-  
-  // Enterprise rule: 2-256 characters
-  if (trimmedName.length < 2) {
-    return 'Client name must be at least 2 characters long';
-  }
-  
-  if (trimmedName.length > 256) {
-    return 'Client name must be 256 characters or less';
-  }
-  
-  // Allow emojis if followed by actual meaningful name content
+
+  const warnings: ValidationMessage[] = [];
   const nameWithoutEmojis = trimmedName.replace(EMOJI_REGEX, '').trim();
-  
-  // Cannot be made up of only special characters, spaces, or tabs
+
   if (nameWithoutEmojis.length === 0) {
-    return 'Client name must contain meaningful characters';
+    warnings.push(message(`${K}.clientName.emojiOnly`, 'This name is made up entirely of emoji.'));
+    return warnings;
   }
-  
-  // Single-character names are disallowed
+
   if (nameWithoutEmojis.length === 1) {
-    return 'Client name must be at least 2 meaningful characters';
+    warnings.push(message(`${K}.clientName.tooShort`, 'This name is a single character — is that right?'));
   }
-  
-  // Block standalone abbreviations
+
   const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'COMPANY', 'CORPORATION'];
   if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
-    return 'Client name cannot be just a business abbreviation';
+    warnings.push(message(`${K}.clientName.abbreviationOnly`, 'This is only a business abbreviation, not a name.'));
   }
-  
-  // No repeats of the same character 5+ times (allows names like "AAA Auto")
+
   if (/(.)\1{4,}/.test(nameWithoutEmojis)) {
-    return 'Client name cannot contain excessively repeated characters';
+    warnings.push(message(`${K}.clientName.repeatedCharacters`, 'This name repeats the same character several times.'));
   }
-  
+
   // A bare domain suffix is legitimate in a company name (Booking.com, Hotels.com,
-  // Care.com), so only reject input that is unambiguously a pasted web address.
+  // Care.com), so only flag input that is unambiguously a pasted web address.
   if (/^(https?:\/\/|www\.)/i.test(nameWithoutEmojis)) {
-    return 'Client name cannot be a web address';
+    warnings.push(message(`${K}.clientName.looksLikeUrl`, 'This looks like a web address rather than a name.'));
   }
-  
-  // Must contain at least one letter or number (Unicode supported)
+
   if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
-    return 'Client name must contain at least one letter or number';
+    warnings.push(message(`${K}.clientName.noLettersOrNumbers`, 'This name has no letters or numbers in it.'));
   }
-  
-  // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
-  // (e.g. "C++ Solutions", "AT&T + Co", "Yahoo!", "#1 Plumbing", "Owner/Operator")
-  if (!/^[\p{L}\p{N}\s\-,\.&'()+#@!\/]+$/u.test(nameWithoutEmojis)) {
-    return 'Client name contains invalid characters';
-  }
-  
-  return null;
+
+  return warnings;
 }
 
-// Website URL validation - enterprise-level rules
-export function validateWebsiteUrl(url: string): string | null {
-  if (!url || !url.trim()) {
-    return null; // URL is optional
+export function adviseEmailAddress(email: string): ValidationMessage[] {
+  const trimmedEmail = (email ?? '').trim().toLowerCase();
+  const domain = trimmedEmail.split('@')[1];
+  if (!domain) {
+    return [];
   }
-  
-  const trimmedUrl = url.trim();
-  
-  // Enterprise rule: Max length 256 characters
-  if (trimmedUrl.length > 256) {
-    return 'Website URL must be 256 characters or less';
-  }
-  
-  // Add protocol if missing
-  let fullUrl = trimmedUrl;
-  if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
-    fullUrl = 'https://' + trimmedUrl;
-  }
-  
-  try {
-    const urlObj = new URL(fullUrl);
-    const hostname = urlObj.hostname.toLowerCase();
-    
-    // Block IP addresses (professional platforms don't allow these)
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-      return 'Please enter a domain name, not an IP address';
-    }
-    
-    // Block localhost and internal hostnames. Private IPv4 ranges are already
-    // covered by the literal check above; matching them as name prefixes here
-    // rejected real domains such as 10.com and 172.com.
-    if (isInternalHostname(hostname)) {
-      return 'Please enter a public business website URL';
-    }
-    
-    // Block reserved documentation/testing domains
-    if (isReservedDomain(hostname)) {
-      return 'Please enter a real business website URL';
-    }
-    
-    // Basic domain validation
-    if (!hostname || hostname.length < 4) {
-      return 'Please enter a valid website URL';
-    }
-    
-    // Must have a domain extension
-    if (!hostname.includes('.')) {
-      return 'Please enter a valid website URL with a domain extension';
-    }
 
-    // Note: We don't validate TLDs because ICANN has 1,500+ valid TLDs
-    // and blocking legitimate customers is worse than accepting edge cases.
-    // The URL constructor already validates syntactic correctness.
+  const warnings: ValidationMessage[] = [];
 
-    return null;
-  } catch {
-    return 'Please enter a valid website URL (e.g., apple.com)';
-  }
-}
-
-// Email validation - professional SaaS/CRM grade with disposable domain blocking
-export function validateEmailAddress(email: string): string | null {
-  if (!email || !email.trim()) {
-    return 'Email address is required';
-  }
-  
-  // Check for spaces-only input
-  if (email && email.trim() === '') {
-    return 'Email address cannot contain only spaces';
-  }
-  
-  const trimmedEmail = email.trim().toLowerCase();
-  
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedEmail)) {
-    return 'Email address cannot contain emojis';
-  }
-  
-  // Basic format validation
-  if (!isValidEmail(trimmedEmail)) {
-    return 'Please enter a valid email address';
-  }
-  
-  // Extract domain part
-  const parts = trimmedEmail.split('@');
-  if (parts.length !== 2) {
-    return 'Please enter a valid email address';
-  }
-  
-  const [localPart, domain] = parts;
-  
-  // Allow single-letter usernames (j@doe.com is fine)
-  if (localPart.length < 1) {
-    return 'Please enter a valid email address';
-  }
-  
-  // Block disposable/temporary email domains (like professional platforms do)
   if (DISPOSABLE_EMAIL_DOMAINS.includes(domain)) {
-    return 'Please use a permanent business email address';
-  }
-  
-  // Block reserved documentation/testing domains and internal-only hostnames
-  if (isReservedDomain(domain) || isInternalHostname(domain)) {
-    return 'Please enter a valid business email address';
-  }
-  
-  // Block obviously fake patterns
-  if (/^[0-9\.]+$/.test(domain) || // All numbers like 1.1
-      domain === '1.com' ||
-      domain === '1.1' ||
-      domain.length < 4) {
-    return 'Please enter a valid business email address';
-  }
-  
-  // Domain must have proper structure
-  if (!domain.includes('.') || domain.split('.').length < 2) {
-    return 'Please enter a valid email domain';
+    warnings.push(
+      message(`${K}.email.disposableDomain`, '{{domain}} is a disposable mailbox provider.', { domain })
+    );
   }
 
-  // Check for obviously invalid TLDs (single char or all numbers)
-  const domainParts = domain.split('.');
-  const tld = domainParts[domainParts.length - 1];
-  if (tld.length === 1 || /^[0-9]+$/.test(tld)) {
-    return 'Please enter a valid email domain';
+  if (isReservedDomain(domain)) {
+    warnings.push(
+      message(`${K}.email.reservedDomain`, '{{domain}} is reserved for documentation and testing.', { domain })
+    );
   }
 
-  return null;
+  if (isInternalHostname(domain)) {
+    warnings.push(
+      message(`${K}.email.internalDomain`, '{{domain}} only resolves inside a private network.', { domain })
+    );
+  }
+
+  return warnings;
 }
 
-// Phone validation - professional SaaS/CRM grade with sequential detection
+export function adviseWebsiteUrl(url: string): ValidationMessage[] {
+  const parsed = parseUrl((url ?? '').trim());
+  if (!parsed) {
+    return [];
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const warnings: ValidationMessage[] = [];
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    warnings.push(message(`${K}.url.ipAddress`, 'This is an IP address rather than a domain name.'));
+  }
+
+  // Private IPv4 ranges are already covered by the literal check above; matching them
+  // as name prefixes rejected real domains such as 10.com and 172.com.
+  if (isInternalHostname(hostname)) {
+    warnings.push(message(`${K}.url.internalHost`, '{{host}} only resolves inside a private network.', { host: hostname }));
+  }
+
+  if (isReservedDomain(hostname)) {
+    warnings.push(
+      message(`${K}.url.reservedDomain`, '{{host}} is reserved for documentation and testing.', { host: hostname })
+    );
+  }
+
+  return warnings;
+}
+
+export function advisePhoneNumber(phone: string): ValidationMessage[] {
+  const normalized = normalizePhone(phone);
+  const digits = (normalized.value || (phone ?? '')).replace(/\D/g, '');
+  if (digits.length < 7) {
+    return [];
+  }
+
+  const warnings: ValidationMessage[] = [];
+
+  if (/^(.)\1+$/.test(digits)) {
+    warnings.push(message(`${K}.phone.repeatedDigits`, 'This number is the same digit repeated.'));
+    return warnings;
+  }
+
+  if (isEntirelySequential(digits)) {
+    warnings.push(message(`${K}.phone.sequentialDigits`, 'This number runs straight up or down the keypad.'));
+  }
+
+  // The NANP range actually reserved for fiction, 555-0100..555-0199 — what demo
+  // data really uses.
+  if (/55501\d{2}$/.test(digits)) {
+    warnings.push(message(`${K}.phone.fictionalRange`, 'This is in the 555-0100 range reserved for fiction.'));
+  }
+
+  return warnings;
+}
+
+/** True only when 80%+ of the digits step by one, e.g. 1234567890 / 9876543210. */
+function isEntirelySequential(str: string): boolean {
+  if (str.length < 7) return false;
+
+  let ascendingCount = 0;
+  let descendingCount = 0;
+
+  for (let i = 0; i < str.length - 1; i++) {
+    const current = parseInt(str[i], 10);
+    const next = parseInt(str[i + 1], 10);
+
+    if (!isNaN(current) && !isNaN(next)) {
+      if (next === current + 1) ascendingCount++;
+      else if (next === current - 1) descendingCount++;
+    }
+  }
+
+  return Math.max(ascendingCount, descendingCount) / (str.length - 1) >= 0.8;
+}
+
+export function adviseContactName(name: string): ValidationMessage[] {
+  const nameWithoutEmojis = (name ?? '').trim().replace(EMOJI_REGEX, '').trim();
+  if (!nameWithoutEmojis) {
+    return [];
+  }
+
+  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary',
+                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null', 'n/a'];
+  if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
+    return [message(`${K}.contactName.placeholder`, 'This looks like a placeholder rather than a person.')];
+  }
+
+  return [];
+}
+
+// =====================================
+// Validate layer — structural, blocking.
+// =====================================
+
+export function validateClientNameField(name: string): FieldValidation {
+  const parsed = clientNameSchema.safeParse(name ?? '');
+  const error = firstIssue(parsed);
+  const value = parsed.success ? parsed.data : (name ?? '').trim();
+  return buildFieldValidation(
+    value,
+    error ? message(`${K}.clientName.structural`, error) : null,
+    adviseClientName(name)
+  );
+}
+
+export function validateWebsiteUrlField(url: string): FieldValidation {
+  const trimmed = (url ?? '').trim();
+  if (!trimmed) {
+    return buildFieldValidation('', null);
+  }
+
+  const parsed = urlFieldSchema.safeParse(trimmed);
+  const error = firstIssue(parsed);
+  return buildFieldValidation(
+    parsed.success ? parsed.data : trimmed,
+    error ? message(`${K}.url.structural`, error) : null,
+    adviseWebsiteUrl(trimmed)
+  );
+}
+
+export function validateEmailAddressField(email: string, options: { required?: boolean } = {}): FieldValidation {
+  const trimmed = (email ?? '').trim();
+  if (!trimmed) {
+    return buildFieldValidation(
+      '',
+      options.required === false
+        ? null
+        : message(`${K}.email.required`, 'Email address is required')
+    );
+  }
+
+  const parsed = emailFieldSchema.safeParse(trimmed);
+  const error = firstIssue(parsed);
+  return buildFieldValidation(
+    parsed.success ? parsed.data : trimmed.toLowerCase(),
+    error ? message(`${K}.email.structural`, error) : null,
+    adviseEmailAddress(trimmed)
+  );
+}
+
+export function validatePhoneNumberField(phone: string): FieldValidation {
+  const trimmed = (phone ?? '').trim();
+  if (!trimmed) {
+    return buildFieldValidation('', null);
+  }
+
+  const parsed = phoneFieldSchema.safeParse(trimmed);
+  const error = firstIssue(parsed);
+  return buildFieldValidation(
+    parsed.success ? parsed.data : trimmed,
+    error ? message(`${K}.phone.structural`, error) : null,
+    advisePhoneNumber(trimmed)
+  );
+}
+
+export function validateContactNameField(name: string): FieldValidation {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) {
+    return buildFieldValidation('', null);
+  }
+
+  const parsed = contactNameSchema.safeParse(trimmed);
+  const error = firstIssue(parsed);
+  return buildFieldValidation(
+    parsed.success ? parsed.data : trimmed,
+    error ? message(`${K}.contactName.structural`, error) : null,
+    adviseContactName(trimmed)
+  );
+}
+
+// =====================================
+// string | null wrappers.
+// Kept so the 21 importers can migrate to FieldValidation incrementally.
+// They return the blocking error only — plausibility never reaches them.
+// =====================================
+
+export function validateClientName(name: string): string | null {
+  return validateClientNameField(name).error;
+}
+
+export function validateWebsiteUrl(url: string): string | null {
+  return validateWebsiteUrlField(url).error;
+}
+
+export function validateEmailAddress(email: string): string | null {
+  return validateEmailAddressField(email).error;
+}
+
 export function validatePhoneNumber(phone: string): string | null {
-  if (!phone || !phone.trim()) {
-    return null; // Phone is optional
-  }
-  
-  const trimmedPhone = phone.trim();
-  
-  // Don't validate if it's just a country code or very short (avoid premature errors)
-  if (trimmedPhone.length < 4) {
-    return null; // Don't show error until user types more
-  }
-  
-  // Extract Unicode digits (supports international number systems)
-  const unicodeDigits = trimmedPhone.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
-  const digitCount = unicodeDigits.length;
-
-  // If only 1-3 digits (like just country code), don't show error yet
-  if (digitCount < 4) {
-    return null; // Wait for more input
-  }
-
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedPhone)) {
-    return 'Phone number cannot contain emojis';
-  }
-
-  // Allow Unicode digits with international formatting (including extensions with letters)
-  if (!/^[\+\p{N}0-9\s\-\(\)\.,#*a-zA-Z]+$/u.test(trimmedPhone)) {
-    return 'Phone number can only contain numbers and formatting characters';
-  }
-
-  // Must be 7-15 digits (ITU-T E.164 international standard)
-  if (digitCount >= 4 && digitCount < 7) {
-    return 'Please enter a complete phone number';
-  }
-
-  if (digitCount > 15) {
-    return 'Phone number is too long';
-  }
-
-  // Only validate patterns if we have a reasonable length
-  if (digitCount >= 7) {
-    const unicodeDigitString = unicodeDigits.join('');
-
-    // Reject obvious fakes - same digits repeated
-    if (/^(.)\1+$/u.test(unicodeDigitString)) {
-      return 'Please enter a valid phone number';
-    }
-
-    // Reject only if ENTIRE number is sequential (like 1234567890 or 9876543210)
-    const isEntirelySequential = (str: string): boolean => {
-      if (str.length < 7) return false;
-
-      let ascendingCount = 0;
-      let descendingCount = 0;
-
-      for (let i = 0; i < str.length - 1; i++) {
-        const current = parseInt(str[i]);
-        const next = parseInt(str[i + 1]);
-
-        if (!isNaN(current) && !isNaN(next)) {
-          if (next === current + 1) ascendingCount++;
-          else if (next === current - 1) descendingCount++;
-        }
-      }
-
-      // Only reject if 80%+ of the number is sequential
-      const sequentialRatio = Math.max(ascendingCount, descendingCount) / (str.length - 1);
-      return sequentialRatio >= 0.8;
-    };
-
-    if (isEntirelySequential(unicodeDigitString)) {
-      return 'Please enter a valid phone number';
-    }
-
-    // The old literal list was redundant: 1111111111 / 0000000000 / 5555555555 are
-    // already rejected by the repeated-digit rule above, and 1234567890 / 0123456789
-    // by isEntirelySequential. What it missed is the NANP range actually reserved for
-    // fiction, 555-0100..555-0199, which is what demo data really uses.
-    if (/55501\d{2}$/.test(unicodeDigitString)) {
-      return 'Please enter a valid phone number';
-    }
-  }
-  
-  return null;
+  return validatePhoneNumberField(phone).error;
 }
 
 // Postal code validation - professional SaaS/CRM grade with comprehensive country formats
@@ -637,44 +659,8 @@ export function validateRole(role: string): string | null {
   return null;
 }
 
-// Contact name validation - enterprise-level rules
 export function validateContactName(name: string): string | null {
-  if (!name || !name.trim()) {
-    return null; // Contact name is optional
-  }
-  
-  const trimmedName = name.trim();
-  
-  // Enterprise rule: Max length 40 characters
-  if (trimmedName.length > 40) {
-    return 'Contact name must be 40 characters or less';
-  }
-  
-  // Allow emojis if followed by actual meaningful name content
-  const nameWithoutEmojis = trimmedName.replace(EMOJI_REGEX, '').trim();
-  
-  if (nameWithoutEmojis.length === 0) {
-    return 'Contact name must contain meaningful characters';
-  }
-  
-  // Block placeholder or testing names
-  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary', 
-                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null', 'n/a'];
-  if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
-    return 'Please enter a real contact name';
-  }
-  
-  // Must contain at least one letter (Unicode supported)
-  if (!/[\p{L}]/u.test(nameWithoutEmojis)) {
-    return 'Contact name must contain letters';
-  }
-  
-  // Allow Unicode letters, numbers, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\p{N}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
-    return 'Contact name contains invalid characters';
-  }
-  
-  return null;
+  return validateContactNameField(name).error;
 }
 
 // Notes validation - enterprise-level rules
@@ -829,21 +815,25 @@ export function validateClientForm(formData: {
   annualRevenue?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
-  
+  const warnings: Record<string, string[]> = {};
+
+  const collect = (field: string, result: FieldValidation) => {
+    if (result.error) {
+      errors[field] = result.error;
+    }
+    if (result.warnings.length > 0) {
+      warnings[field] = result.warnings;
+    }
+  };
+
   // Required field validation
-  const clientNameError = validateClientName(formData.clientName);
-  if (clientNameError) {
-    errors.client_name = clientNameError;
-  }
-  
+  collect('client_name', validateClientNameField(formData.clientName));
+
   // Optional field validation
   if (formData.websiteUrl) {
-    const websiteError = validateWebsiteUrl(formData.websiteUrl);
-    if (websiteError) {
-      errors.url = websiteError;
-    }
+    collect('url', validateWebsiteUrlField(formData.websiteUrl));
   }
-  
+
   if (formData.industry) {
     const industryError = validateIndustry(formData.industry);
     if (industryError) {
@@ -852,19 +842,13 @@ export function validateClientForm(formData: {
   }
   
   if (formData.email) {
-    const emailError = validateEmailAddress(formData.email);
-    if (emailError) {
-      errors.location_email = emailError;
-    }
+    collect('location_email', validateEmailAddressField(formData.email));
   }
-  
+
   if (formData.phone) {
-    const phoneError = validatePhoneNumber(formData.phone);
-    if (phoneError) {
-      errors.location_phone = phoneError;
-    }
+    collect('location_phone', validatePhoneNumberField(formData.phone));
   }
-  
+
   if (formData.address) {
     const addressError = validateAddress(formData.address);
     if (addressError) {
@@ -894,26 +878,17 @@ export function validateClientForm(formData: {
   }
   
   if (formData.contactName) {
-    const contactNameError = validateContactName(formData.contactName);
-    if (contactNameError) {
-      errors.contact_name = contactNameError;
-    }
+    collect('contact_name', validateContactNameField(formData.contactName));
   }
-  
+
   if (formData.contactEmail) {
-    const contactEmailError = validateEmailAddress(formData.contactEmail);
-    if (contactEmailError) {
-      errors.contact_email = contactEmailError;
-    }
+    collect('contact_email', validateEmailAddressField(formData.contactEmail));
   }
-  
+
   if (formData.contactPhone) {
-    const contactPhoneError = validatePhoneNumber(formData.contactPhone);
-    if (contactPhoneError) {
-      errors.contact_phone = contactPhoneError;
-    }
+    collect('contact_phone', validatePhoneNumberField(formData.contactPhone));
   }
-  
+
   if (formData.notes) {
     const notesError = validateNotes(formData.notes);
     if (notesError) {
@@ -937,6 +912,7 @@ export function validateClientForm(formData: {
 
   return {
     isValid: Object.keys(errors).length === 0,
-    errors
+    errors,
+    warnings
   };
 }

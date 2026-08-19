@@ -34,6 +34,5 @@ export const passwordSchema = z.string().superRefine((value, ctx) => {
   }
 });
 
-// Entity-specific schemas will be added here as they are migrated
-// e.g., export * from './client.schema';
-// e.g., export * from './ticket.schema';
+// Single structural authority for client + contact fields
+export * from './clientContact.schema';
