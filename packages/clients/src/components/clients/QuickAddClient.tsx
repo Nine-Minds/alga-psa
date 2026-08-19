@@ -947,6 +947,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     }}
                     extension={locationData.phone_extension || ''}
                     onExtensionChange={(value) => handleLocationChange('phone_extension', value)}
+                    extensionLabel={t('quickAddClient.extension', { defaultValue: 'Extension' })}
                     warnings={fieldWarnings.location_phone}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}

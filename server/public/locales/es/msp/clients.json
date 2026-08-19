@@ -479,6 +479,7 @@
     "email": "Correo electrónico",
     "emailPlaceholder": "Dirección de correo electrónico",
     "phone": "Teléfono",
+    "extension": "Extensión",
     "phonePlaceholder": "Número de teléfono",
     "name": "Nombre",
     "creating": "Creando...",
@@ -1349,6 +1350,7 @@
         "notes": "Notas",
         "notesHelper": "Notas adicionales sobre esta ubicación",
         "phone": "Teléfono",
+        "extension": "Extensión",
         "phoneHelper": "Número de teléfono de esta ubicación",
         "placeholder": {
           "addressLine1": "Introduzca la dirección *",

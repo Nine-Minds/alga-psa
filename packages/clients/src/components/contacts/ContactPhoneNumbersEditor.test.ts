@@ -109,6 +109,22 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     ).toContain('Phone 2: Enter a custom phone type.');
   });
 
+  it('requires an explicit international prefix for a new contact phone', () => {
+    expect(validateContactPhoneNumbers([{
+      phone_number: '1 212 555 0100',
+      canonical_type: 'mobile',
+      custom_type: null,
+      is_default: true,
+    }])).toContain('Phone 1: Include the country calling code, starting with +.');
+
+    expect(validateContactPhoneNumbers([{
+      phone_number: '+1 212 555 0100',
+      canonical_type: 'mobile',
+      custom_type: null,
+      is_default: true,
+    }])).toEqual([]);
+  });
+
   it('grandfathers a stored number that comes back unchanged', () => {
     // Annotated numbers like this predate the schema and pass the contact model's
     // own rules, so they must not block an edit to some other field.

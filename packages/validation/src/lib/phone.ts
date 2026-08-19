@@ -24,7 +24,7 @@ export interface NormalizedPhone {
 
 /** Extension suffixes historically packed into the number column by PhoneInput. */
 const PACKED_EXTENSION_PATTERNS = [
-  /[\s,;]*\bext(?:ension)?\.?\s*[:#]?\s*(\d{1,10})\s*$/i,
+  /[\s,;]+ext(?:ension)?\.?\s*[:#]?\s*(\d{1,10})\s*$/i,
   /[\s,;]+x\.?\s*[:#]?\s*(\d{1,10})\s*$/i,
   /[\s,;]+e\.?\s*[:#]?\s*(\d{1,10})\s*$/i,
 ];
@@ -93,9 +93,9 @@ export function normalizePhone(
 
   const packed = splitPackedExtension(raw);
   const extensionSource = explicitExtension || packed.extension;
-  const extensionDigits = extensionSource.replace(/\D/g, '');
+  const extensionDigits = extensionSource;
 
-  if (extensionSource && (!extensionDigits || extensionDigits.length > PHONE_EXTENSION_MAX_LENGTH)) {
+  if (extensionSource && !new RegExp(`^\\d{1,${PHONE_EXTENSION_MAX_LENGTH}}$`).test(extensionSource)) {
     return { ...EMPTY, error: 'extensionInvalid' };
   }
 

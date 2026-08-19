@@ -185,16 +185,16 @@ describe('QuickAddClient hybrid inline-contact payloads', () => {
     await user.selectOptions(screen.getByLabelText('client-contact-email-additional-type-0'), 'billing');
 
     await waitFor(() => {
-      expect(screen.getAllByLabelText('Phone Number')).toHaveLength(1);
+      expect(screen.getAllByLabelText('Phone')).toHaveLength(1);
     });
 
     await user.click(document.getElementById('client-contact-phone-add-phone') as HTMLButtonElement);
 
     await waitFor(() => {
-      expect(screen.getAllByLabelText('Phone Number')).toHaveLength(2);
+      expect(screen.getAllByLabelText('Phone')).toHaveLength(2);
     });
 
-    const phoneInputs = screen.getAllByLabelText('Phone Number');
+    const phoneInputs = screen.getAllByLabelText('Phone');
     await user.type(phoneInputs[0]!, '+1 555 111 2222');
     await user.type(phoneInputs[1]!, '+1 555 333 4444');
     // Both the email and phone editors render "Default" radios, so scope the

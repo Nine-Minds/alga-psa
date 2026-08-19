@@ -103,6 +103,9 @@ function validateContactPhoneRows(
           : 'Please enter a valid phone number'
       }`;
     }
+    if (normalized.value && !row.phone_number?.trim().startsWith('+')) {
+      return `VALIDATION_ERROR: Phone ${index + 1}: Include the country calling code, starting with +`;
+    }
     row.phone_number = normalized.value;
     if (normalized.extension) {
       row.extension = normalized.extension;
@@ -1125,7 +1128,7 @@ export async function generateContactCSVTemplate(): Promise<string> {
       email: 'alice@wonderland.com',
       primary_email_type: 'work',
       additional_email_addresses: 'personal:alice.home@wonderland.com | billing:accounts@wonderland.com',
-      phone_number: '+1-555-CURIOUS',
+      phone_number: '+1 212-555-0107',
       client: 'Mad Hatter Tea Client',
       role: 'Chief Explorer',
       notes: 'Fell down a rabbit hole and discovered a whole new world',
@@ -1136,7 +1139,7 @@ export async function generateContactCSVTemplate(): Promise<string> {
       email: 'hatter@teaparty.wonderland',
       primary_email_type: 'other',
       additional_email_addresses: 'billing:tea-bills@teaparty.wonderland | personal:hatter.afterhours@teaparty.wonderland',
-      phone_number: '+1-555-TEA-TIME',
+      phone_number: '+1 212-555-0108',
       client: 'Mad Hatter Tea Client',
       role: 'Chief Tea Ceremony Expert',
       notes: 'Knows why a raven is like a writing desk',
@@ -1290,6 +1293,20 @@ export const importContactsFromCSV = withAuth(async (
               originalData: contactData
             });
             continue;
+          }
+
+          const importedPhoneRows = contactData.phone_numbers
+            ?? (contactData.phone_number !== undefined
+              ? buildDefaultPhoneNumbers(contactData.phone_number)
+              : existingContact
+                ? undefined
+                : []);
+          if (importedPhoneRows) {
+            const phoneRowError = validateContactPhoneRows(importedPhoneRows, existingContact?.phone_numbers);
+            if (phoneRowError) {
+              throw new Error(phoneRowError);
+            }
+            contactData.phone_numbers = importedPhoneRows;
           }
 
           let savedContact: IContact;

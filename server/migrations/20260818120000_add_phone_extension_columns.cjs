@@ -25,9 +25,10 @@ const TARGETS = [
 ];
 
 // Anchored at end of string; group 3 is the digit run that becomes the extension.
-// The bare x/e forms require a separator so a number is never mistaken for one.
+// Every marker requires a separator so a vanity number such as +1-800-NEXT.3 is
+// never mistaken for a number ending in "ext. 3".
 const PACKED_EXTENSION_REGEX =
-  '([[:space:],;]*ext(ension)?\\.?|[[:space:],;]+x\\.?|[[:space:],;]+e\\.?)[[:space:]:#]*([0-9]{1,10})[[:space:]]*$';
+  '([[:space:],;]+ext(ension)?\\.?|[[:space:],;]+x\\.?|[[:space:],;]+e\\.?)[[:space:]:#]*([0-9]{1,10})[[:space:]]*$';
 
 async function columnExists(knex, table, column) {
   if (!(await knex.schema.hasTable(table))) {

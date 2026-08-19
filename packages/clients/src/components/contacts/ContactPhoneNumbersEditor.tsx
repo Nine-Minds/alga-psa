@@ -143,6 +143,8 @@ export function validateContactPhoneNumbers(
         const phoneError = validatePhoneNumber(row.phone_number);
         if (phoneError) {
           errors.push(`${rowLabel}: ${phoneError}`);
+        } else if (!row.phone_number.trim().startsWith('+')) {
+          errors.push(`${rowLabel}: Include the country calling code, starting with +.`);
         }
       }
     }
@@ -192,6 +194,12 @@ export function translateContactPhoneValidationErrors(
     if (detail === 'Enter a complete phone number.') {
       return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCompletePhoneNumber', {
         defaultValue: 'Enter a complete phone number.'
+      })}`;
+    }
+
+    if (detail === 'Include the country calling code, starting with +.') {
+      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.includeCountryCallingCode', {
+        defaultValue: 'Include the country calling code, starting with +.'
       })}`;
     }
 
@@ -263,27 +271,6 @@ export function moveContactPhoneRows(
   }));
 }
 
-function inferCountryCode(phoneNumber: string, countries: ICountry[]): string {
-  const trimmedPhoneNumber = phoneNumber.trim();
-  if (!trimmedPhoneNumber.startsWith('+')) {
-    return 'US';
-  }
-
-  const matches = countries
-    .map((country) => ({
-      ...country,
-      normalized_phone_code: country.phone_code?.startsWith('+')
-        ? country.phone_code
-        : country.phone_code
-          ? `+${country.phone_code}`
-          : undefined,
-    }))
-    .filter((country) => country.normalized_phone_code && trimmedPhoneNumber.startsWith(country.normalized_phone_code))
-    .sort((a, b) => (b.normalized_phone_code?.length ?? 0) - (a.normalized_phone_code?.length ?? 0));
-
-  return matches[0]?.code ?? 'US';
-}
-
 function getRowKey(row: EditablePhoneRow, index: number): string {
   return row.contact_phone_number_id ?? row._localId ?? `${index}`;
 }
@@ -316,7 +303,6 @@ interface ContactPhoneRowProps {
   id: string;
   index: number;
   row: EditablePhoneRow;
-  countries: ICountry[];
   customTypeSuggestions: string[];
   disabled?: boolean;
   canMoveUp: boolean;
@@ -335,7 +321,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   id,
   index,
   row,
-  countries,
   customTypeSuggestions,
   disabled = false,
   canMoveUp,
@@ -358,8 +343,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
     () => translateFieldValidation(validatePhoneNumberField(row.phone_number ?? ''), tValidation).warnings,
     [row.phone_number, tValidation]
   );
-  const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
-  const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
   const phoneTypeOptions = useMemo(
     () => [
@@ -390,16 +373,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
     })),
     [customTypeSuggestions]
   );
-
-  useEffect(() => {
-    setCountryCode((current) => {
-      if (!row.phone_number?.trim()) {
-        return current;
-      }
-      const inferred = inferCountryCode(row.phone_number, countries);
-      return current === inferred ? current : inferred;
-    });
-  }, [countries, row.phone_number, rowKey]);
 
   return (
     <Card
@@ -495,18 +468,17 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
         <PhoneInput
           id={`${id}-phone-${index}`}
           label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
-            defaultValue: 'Phone Number',
+            defaultValue: 'Phone',
           })}
           value={row.phone_number ?? ''}
           onChange={(value) => onChange({ phone_number: value })}
           extension={row.extension ?? ''}
           onExtensionChange={(value) => onChange({ extension: value })}
+          extensionLabel={t('contactPhoneNumbersEditor.fields.extension', {
+            defaultValue: 'Extension',
+          })}
           warnings={phoneWarnings}
           onBlur={onBlur}
-          countryCode={countryCode}
-          phoneCode={phoneCode}
-          countries={countries}
-          onCountryChange={setCountryCode}
           allowExtensions={true}
           disabled={disabled}
           className="w-full"
@@ -600,7 +572,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   id,
   value,
   onChange,
-  countries,
   customTypeSuggestions = [],
   disabled = false,
   errorMessages,
@@ -835,7 +806,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               id={id}
               index={index}
               row={row}
-              countries={countries}
               customTypeSuggestions={customTypeSuggestions}
               disabled={disabled}
               canMoveUp={index > 0}

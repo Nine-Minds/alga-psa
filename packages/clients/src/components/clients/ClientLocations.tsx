@@ -960,6 +960,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
                   extension={formData.phone_extension || ''}
                   onExtensionChange={(value) => setFormData(prev => ({ ...prev, phone_extension: value }))}
+                  extensionLabel={t('clients.locations.form.extension', 'Extension')}
                   countryCode={formData.country_code}
                   phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
                   countries={countries}

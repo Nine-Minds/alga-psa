@@ -335,6 +335,7 @@
     },
     "fields": {
       "phoneNumber": "Numer telefonu",
+      "extension": "Numer wewnętrzny",
       "phoneType": "Typ telefonu",
       "customPhoneType": "Niestandardowy typ telefonu",
       "customTypePlaceholder": "Wybierz lub wpisz niestandardowy typ telefonu",
@@ -346,6 +347,7 @@
       "selectExactlyOneDefault": "Wybierz dokładnie jeden domyślny numer telefonu.",
       "phoneRow": "Telefon {{number}}",
       "enterCompletePhoneNumber": "Wpisz pełny numer telefonu.",
+      "includeCountryCallingCode": "Podaj numer kierunkowy kraju, zaczynając od +.",
       "enterCustomPhoneType": "Wpisz niestandardowy typ telefonu.",
       "customTypesUnique": "Etykiety niestandardowych typów telefonu muszą być unikalne."
     },

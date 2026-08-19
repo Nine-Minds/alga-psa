@@ -1,102 +1,14 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useId } from 'react';
 import { FieldWarnings, Input } from './Input';
 import { Label } from './Label';
-import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 
 interface Country {
   code: string;
   name: string;
   phone_code?: string;
 }
-
-// Common countries pinned at top (enterprise standard)
-const COMMON_COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR', 'JP', 'CN'];
-
-// Dial codes for the pinned countries, used only until the fetched list arrives.
-// The picker renders a dial code from the first paint; without this, a number typed
-// and saved inside the fetch window is stored bare, and a bare national number has
-// no region for normalizePhone to work from, so it never reaches E.164.
-const FALLBACK_PHONE_CODES: Record<string, string> = {
-  US: '+1',
-  CA: '+1',
-  GB: '+44',
-  AU: '+61',
-  IN: '+91',
-  DE: '+49',
-  FR: '+33',
-  BR: '+55',
-  JP: '+81',
-  CN: '+86',
-};
-
-// Country code to flag emoji mapping
-const getCountryFlag = (countryCode: string): string => {
-  const codePoints = countryCode
-    .toUpperCase()
-    .split('')
-    .map(char => 127397 + char.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-};
-
-// Enterprise locale detection for default country
-const getDefaultCountryFromLocale = (): string => {
-  try {
-    // Try to get country from browser locale
-    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-    const parts = locale.split('-');
-    const countryCode = parts[parts.length - 1]?.toUpperCase();
-
-    // Validate it's a reasonable country code (2 letters)
-    if (countryCode && countryCode.length === 2 && /^[A-Z]{2}$/.test(countryCode)) {
-      return countryCode;
-    }
-  } catch (e) {
-    // Fallback to US if detection fails
-  }
-
-  return 'US'; // Enterprise default
-};
-
-const normalizePhoneCode = (value?: string): string | undefined => {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  return trimmed.startsWith('+') ? trimmed : `+${trimmed}`;
-};
-
-const stripLeadingPhoneCode = (phone: string, phoneCode?: string): string => {
-  const normalizedCode = normalizePhoneCode(phoneCode);
-  if (!normalizedCode) {
-    return phone.trim();
-  }
-
-  const trimmedPhone = phone.trim();
-  if (!trimmedPhone.startsWith(normalizedCode)) {
-    return trimmedPhone;
-  }
-
-  return trimmedPhone.slice(normalizedCode.length).trimStart();
-};
-
-const detectPhoneCodeFromValue = (phone: string, countries?: Country[]): string | undefined => {
-  const trimmedPhone = phone.trim();
-  if (!trimmedPhone.startsWith('+') || !countries?.length) {
-    return undefined;
-  }
-
-  return countries
-    .map((country) => normalizePhoneCode(country.phone_code))
-    .filter((phoneCode): phoneCode is string => {
-      if (!phoneCode) {
-        return false;
-      }
-
-      return trimmedPhone.startsWith(phoneCode);
-    })
-    .sort((left, right) => right.length - left.length)[0];
-};
 
 interface PhoneInputProps {
   id?: string;
@@ -107,355 +19,101 @@ interface PhoneInputProps {
   extension?: string;
   onExtensionChange?: (extension: string) => void;
   onBlur?: () => void;
-  countryCode?: string; // ISO country code (e.g., 'US', 'GB')
-  phoneCode?: string; // Phone code (e.g., '+1', '+44')
-  countries?: Country[]; // List of countries for dropdown
-  onCountryChange?: (countryCode: string) => void; // Callback when country changes
+  /** Retained for caller compatibility and server-side country-aware validation. */
+  countryCode?: string;
+  /** Retained for caller compatibility; the dial prefix is entered in the phone field. */
+  phoneCode?: string;
+  countries?: Country[];
+  onCountryChange?: (countryCode: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
   required?: boolean;
-  allowExtensions?: boolean; // Allow phone extensions (ext. 1234)
-  extensionPlaceholder?: string; // Placeholder for extension field
-  error?: boolean; // Whether to show error styling
-  /** Plausibility warnings; rendered beneath the field and never gating a save. */
+  allowExtensions?: boolean;
+  extensionPlaceholder?: string;
+  extensionLabel?: string;
+  error?: boolean;
+  /** Plausibility warnings; rendered beneath the phone field and never gate a save. */
   warnings?: string[];
   'data-automation-id'?: string;
-  externalCountryCode?: string; // For one-way sync from address country
+  externalCountryCode?: string;
 }
 
+/**
+ * A phone number and extension are two independent storage fields, so they are
+ * presented as two ordinary inputs. The wrapping layout gives the number all
+ * available width and moves the narrow extension below it when space is tight.
+ *
+ * The phone value is intentionally passed through unchanged. Users may enter an
+ * international prefix directly (the placeholder demonstrates that format), and
+ * write boundaries remain responsible for normalization.
+ */
 export const PhoneInput = ({
   id,
-  label,
+  label = 'Phone',
   value,
   onChange,
-  extension,
+  extension = '',
   onExtensionChange,
   onBlur,
-  countryCode,
-  phoneCode,
-  countries,
-  onCountryChange,
-  placeholder,
+  placeholder = '+1 (555) 123-4567',
   disabled = false,
   className = '',
   required = false,
   allowExtensions = false,
-  extensionPlaceholder = "ext. 1234",
+  extensionPlaceholder = '1234',
+  extensionLabel = 'Extension',
   warnings,
   'data-automation-id': dataAutomationId,
-  externalCountryCode
 }: PhoneInputProps) => {
-  const [displayValue, setDisplayValue] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isExternalUpdate, setIsExternalUpdate] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  /** A number typed while the dial code was still unknown, awaiting one. */
-  const awaitingDialCodeRef = useRef<string | null>(null);
-  const resolvedCountryCode = countryCode || getDefaultCountryFromLocale();
-  const currentCountry = countries?.find(c => c.code === resolvedCountryCode);
-  const resolvedPhoneCode =
-    normalizePhoneCode(phoneCode || currentCountry?.phone_code)
-    ?? FALLBACK_PHONE_CODES[resolvedCountryCode];
-
-  // The extension lives in its own value/column, so the number is never re-parsed
-  // to pull one back out of it.
-  const extensionValue = extension ?? '';
-
-  // A stored number that already carries its own dial code keeps it. The picker is
-  // often bound to the address country, and letting that win would quietly re-home
-  // a +44 number to +1 the moment somebody corrects a single digit.
-  const valueDialCode = useMemo(
-    () => detectPhoneCodeFromValue(value ?? '', countries),
-    [value, countries]
-  );
-  const effectiveDialCode = valueDialCode ?? resolvedPhoneCode;
-
-  // Clean phone number display - strip the country code from the input
-  useEffect(() => {
-    const phone = value ?? '';
-    const detectedPhoneCode = detectPhoneCodeFromValue(phone, countries);
-    const cleanedPhone = stripLeadingPhoneCode(
-      phone,
-      resolvedPhoneCode && phone.startsWith(resolvedPhoneCode)
-        ? resolvedPhoneCode
-        : detectedPhoneCode
-    );
-
-    setDisplayValue(cleanedPhone);
-  }, [countries, resolvedPhoneCode, value]);
-
-  // Handle external country code sync (one-way from address country to phone)
-  useEffect(() => {
-    if (externalCountryCode && countries && countries.length > 0) {
-      const matchingCountry = countries.find(country => country.code === externalCountryCode);
-      if (matchingCountry && onCountryChange) {
-        setIsExternalUpdate(true);
-        onCountryChange(matchingCountry.code);
-        // Reset flag after a brief delay to allow the change to propagate
-        setTimeout(() => setIsExternalUpdate(false), 100);
-      }
-    }
-  }, [externalCountryCode, countries, onCountryChange]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const phoneNumber = e.target.value;
-    setDisplayValue(phoneNumber);
-    if (!phoneNumber.trim()) {
-      // Cleared means cleared — not "a bare dial code" — so the next number typed
-      // is homed to the picker rather than to whatever used to be here.
-      awaitingDialCodeRef.current = null;
-      onChange('');
-      return;
-    }
-    // A number typed or pasted with its own dial code already carries one; adding
-    // the picker's on top produces "+1 +44 20 …", which parses as nothing.
-    const carriesOwnDialCode = phoneNumber.trim().startsWith('+');
-    if (effectiveDialCode && !carriesOwnDialCode) {
-      awaitingDialCodeRef.current = null;
-      onChange(`${effectiveDialCode} ${phoneNumber}`.trim());
-      return;
-    }
-    // The country list is fetched when the dialog opens, so a fast typist can get
-    // ahead of it. The picker already shows "+1"; storing the bare national number
-    // would make that chip a lie and skip E.164 normalization on save.
-    awaitingDialCodeRef.current = carriesOwnDialCode ? null : phoneNumber;
-    onChange(phoneNumber);
-  };
-
-  // Finish homing a number typed before the dial code arrived. Only values this
-  // session typed are re-homed — a stored legacy number is left exactly as it is,
-  // so an unrelated edit to its record is still grandfathered.
-  useEffect(() => {
-    const pending = awaitingDialCodeRef.current;
-    if (!pending || !effectiveDialCode || value !== pending) {
-      return;
-    }
-    awaitingDialCodeRef.current = null;
-    onChange(`${effectiveDialCode} ${pending}`.trim());
-  }, [effectiveDialCode, onChange, value]);
-
-  const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only digits for extension
-    onExtensionChange?.(e.target.value.replace(/[^0-9]/g, ''));
-  };
-
-  const getPlaceholderText = (): string => {
-    if (placeholder) return placeholder;
-    if (resolvedPhoneCode) {
-      // Provide country-specific format examples WITHOUT phone code
-      const formatExamples: Record<string, string> = {
-        '+1': `(555) 123-4567`,
-        '+44': `20 7123 4567`,
-        '+49': `30 12345678`,
-        '+33': `1 23 45 67 89`,
-        '+61': `2 1234 5678`,
-        '+81': `3-1234-5678`,
-        '+86': `138 0013 8000`,
-        '+91': `98765 43210`,
-      };
-      return formatExamples[resolvedPhoneCode] || `123456789`;
-    }
-    return 'Phone number';
-  };
-
-  const handleCountrySelect = (selectedCountry: Country) => {
-    setIsDropdownOpen(false);
-    setSearchQuery('');
-
-    const selectedPhoneCode = normalizePhoneCode(selectedCountry.phone_code);
-    const phone = value ?? '';
-    const strippedPhone = stripLeadingPhoneCode(
-      phone,
-      resolvedPhoneCode && phone.startsWith(resolvedPhoneCode)
-        ? resolvedPhoneCode
-        : detectPhoneCodeFromValue(phone, countries)
-    );
-
-    if (onChange) {
-      onChange(
-        strippedPhone
-          ? (selectedPhoneCode ? `${selectedPhoneCode} ${strippedPhone}`.trim() : strippedPhone)
-          : ''
-      );
-    }
-
-    // Always trigger onCountryChange to update the phone code display
-    // This is needed for the phone input to show the correct country code
-    if (onCountryChange) {
-      onCountryChange(selectedCountry.code);
-    }
-  };
-
-  // Enterprise-grade country sorting: Common countries first, then alphabetical
-  const getSortedCountries = (countries: Country[]): Country[] => {
-    if (!countries) return [];
-
-    const commonCountries = countries.filter(c => COMMON_COUNTRIES.includes(c.code));
-    const otherCountries = countries.filter(c => !COMMON_COUNTRIES.includes(c.code));
-
-    // Sort common countries by the order defined in COMMON_COUNTRIES
-    const sortedCommon = commonCountries.sort((a, b) => {
-      const aIndex = COMMON_COUNTRIES.indexOf(a.code);
-      const bIndex = COMMON_COUNTRIES.indexOf(b.code);
-      return aIndex - bIndex;
-    });
-
-    // Sort other countries alphabetically
-    const sortedOthers = otherCountries.sort((a, b) => a.name.localeCompare(b.name));
-
-    return [...sortedCommon, ...sortedOthers];
-  };
-
-  // Enterprise-grade search: by country name or dial code
-  const getFilteredCountries = (countries: Country[], query: string): Country[] => {
-    if (!query.trim()) return getSortedCountries(countries);
-
-    const lowerQuery = query.toLowerCase();
-    const filtered = countries.filter(country =>
-      country.name.toLowerCase().includes(lowerQuery) ||
-      country.code.toLowerCase().includes(lowerQuery) ||
-      country.phone_code?.includes(lowerQuery)
-    );
-
-    return getSortedCountries(filtered);
-  };
-  const filteredCountries = useMemo(
-    () => getFilteredCountries(countries || [], searchQuery),
-    [countries, searchQuery]
-  );
-
-  useEffect(() => {
-    if (!isDropdownOpen) {
-      setSearchQuery('');
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 10);
-
-    return () => window.clearTimeout(timer);
-  }, [isDropdownOpen]);
-
-  const displayPhoneCode = effectiveDialCode || '+1';
+  const generatedId = useId();
+  const phoneId = id || dataAutomationId || `phone-${generatedId}`;
+  const extensionId = `${phoneId}-ext`;
 
   return (
-    <div className={`w-full ${className}`.trim()}>
-      {label && (
-        <Label
-          htmlFor={id || dataAutomationId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
+    <div className={`flex w-full flex-wrap items-start gap-3 ${className}`.trim()}>
+      <div className="min-w-[min(100%,16rem)] flex-[1_1_16rem]">
+        <Label htmlFor={phoneId} className="mb-1 block text-sm font-medium text-gray-700">
           {label}
-          {required && <span className="text-[rgb(var(--color-text-500))] ml-1" aria-hidden="true">*</span>}
-        </Label>
-      )}
-      <div className="relative">
-        <div className="flex w-full items-stretch overflow-hidden rounded-md border border-[rgb(var(--color-border-400))] bg-white shadow-sm focus-within:border-transparent focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
-          {/* Country Code Dropdown - integrated within phone field */}
-          <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="flex h-[42px] w-[84px] items-center justify-between border-r border-gray-300 bg-white px-2 py-2 text-sm hover:bg-gray-50 focus:outline-none"
-                disabled={disabled}
-                aria-haspopup="listbox"
-                aria-expanded={isDropdownOpen}
-              >
-                <span className="truncate text-xs font-medium text-gray-700">
-                  {displayPhoneCode}
-                </span>
-                <ChevronDown className="ml-1 h-3 w-3 text-gray-400 flex-shrink-0" />
-              </button>
-            </PopoverTrigger>
-            {countries && countries.length > 0 && (
-              <PopoverContent
-                side="bottom"
-                align="start"
-                sideOffset={6}
-                className="w-64 p-0"
-              >
-                <div className="border-b border-gray-200 p-2">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
-                    placeholder="Search countries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto p-1">
-                  {filteredCountries.map((country, index) => {
-                    const isCommon = COMMON_COUNTRIES.includes(country.code);
-                    const previousCountry = filteredCountries[index - 1];
-                    const isFirstOther = !isCommon && index > 0 && previousCountry && COMMON_COUNTRIES.includes(previousCountry.code);
-
-                    return (
-                      <div key={country.code}>
-                        {isFirstOther && (
-                          <div className="border-t border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500">
-                            Other Countries
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                          onClick={() => handleCountrySelect(country)}
-                        >
-                          <span className="flex-1 truncate text-gray-800">{country.name}</span>
-                          <span className="ml-2 font-mono text-sm text-gray-600">{country.phone_code}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {filteredCountries.length === 0 && (
-                    <div className="px-3 py-4 text-center text-sm text-gray-500">
-                      No countries found
-                    </div>
-                  )}
-                </div>
-              </PopoverContent>
-            )}
-          </Popover>
-
-          {/* Phone Number Input */}
-          <Input
-            id={id || dataAutomationId}
-            data-automation-id={dataAutomationId}
-            type="tel"
-            value={displayValue}
-            onChange={handleInputChange}
-            onBlur={onBlur}
-            placeholder={getPlaceholderText()}
-            disabled={disabled}
-            required={required}
-            className={`min-w-0 flex-1 border-0 bg-white px-3 h-[42px] focus:border-0 focus:ring-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'}`}
-          />
-
-          {/* Extension Input */}
-          {allowExtensions && (
-            <>
-              <div className="w-px bg-gray-300 h-6 self-center"></div>
-              <Input
-                id={`${id || dataAutomationId}-ext`}
-                data-automation-id={`${dataAutomationId}-ext`}
-                type="text"
-                value={extensionValue}
-                onChange={handleExtensionChange}
-                placeholder={extensionPlaceholder || "optional ext."}
-                disabled={disabled}
-                className="h-[42px] w-24 shrink-0 rounded-r-md border-none bg-white px-2 text-center text-xs focus:outline-none focus:ring-0"
-              />
-            </>
+          {required && (
+            <span className="ml-1 text-[rgb(var(--color-text-500))]" aria-hidden="true">*</span>
           )}
-        </div>
-
+        </Label>
+        <Input
+          id={phoneId}
+          data-automation-id={dataAutomationId}
+          type="tel"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          className="w-full"
+        />
         <FieldWarnings warnings={warnings ?? []} />
       </div>
+
+      {allowExtensions && (
+        <div className="w-full sm:w-28 sm:flex-[0_0_7rem]">
+          <Label htmlFor={extensionId} className="mb-1 block text-sm font-medium text-gray-700">
+            {extensionLabel}
+          </Label>
+          <Input
+            id={extensionId}
+            data-automation-id={dataAutomationId ? `${dataAutomationId}-ext` : undefined}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={10}
+            value={extension}
+            onChange={(event) => onExtensionChange?.(event.target.value.replace(/[^0-9]/g, ''))}
+            placeholder={extensionPlaceholder}
+            disabled={disabled}
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 };

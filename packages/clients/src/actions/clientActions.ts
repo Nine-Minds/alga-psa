@@ -39,7 +39,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
-import { clientCoreFieldsSchema, parseSubmittedFields } from '@alga-psa/validation';
+import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
@@ -1431,13 +1431,14 @@ export async function generateClientCSVTemplate(): Promise<string> {
       tags: 'Tea, Party Planning, Whimsical',
       location_name: 'The Tea Party Table',
       email: 'hatter@teaparty.wonderland',
-      phone_number: '+1-555-TEA-TIME',
+      phone_number: '+1 212-555-0106',
+      phone_extension: '300',
       address_line1: '6 Impossible Things Lane',
       address_line2: 'Before Breakfast Suite',
       city: 'Wonderland',
       state_province: 'Fantasy',
       postal_code: 'WL001',
-      country: 'Wonderland'
+      country: 'United States'
     }
   ];
 
@@ -1451,6 +1452,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     'location_name',
     'email',
     'phone_number',
+    'phone_extension',
     'address_line1',
     'address_line2',
     'city',
@@ -1612,22 +1614,51 @@ export const importClientsFromCSV = withAuth(async (
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
 
+  type ImportCountry = { code: string; name: string };
+  const countries = await tenantScopedTable(db, 'countries', tenant)
+    .where({ is_active: true })
+    .select('code', 'name') as ImportCountry[];
+  const countriesByCode = new Map<string, ImportCountry>(
+    countries.map((country) => [country.code.toUpperCase(), country]),
+  );
+  const countriesByName = new Map<string, ImportCountry>(
+    countries.map((country) => [country.name.trim().toLowerCase(), country]),
+  );
+
+  const resolveRowCountry = (row: Record<string, any>): ImportCountry => {
+    const rawCode = String(row.country_code ?? '').trim();
+    const rawName = String(row.country ?? '').trim();
+    const country = (rawCode ? countriesByCode.get(rawCode.toUpperCase()) : undefined)
+      ?? (rawName ? countriesByName.get(rawName.toLowerCase()) : undefined)
+      ?? (!rawCode && !rawName ? countriesByCode.get('US') : undefined);
+
+    if (!country) {
+      throw new Error(`Unknown country: ${rawCode || rawName}`);
+    }
+
+    return country;
+  };
+
   const parseCsvBoolean = (value: unknown): boolean =>
     value === true || value === 'true' || value === 'Yes';
 
   const hasLocationData = (row: Record<string, any>): boolean =>
     Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
 
-  const locationFieldsFromRow = (row: Record<string, any>) => ({
+  const locationFieldsFromRow = (
+    row: Record<string, any>,
+    country: { code: string; name: string },
+  ) => ({
     location_name: row.location_name || 'Main Office',
     address_line1: row.address_line1 || '',
     address_line2: row.address_line2 || '',
     city: row.city || '',
     state_province: row.state_province || '',
     postal_code: row.postal_code || '',
-    country_code: 'US',
-    country_name: row.country || 'United States',
+    country_code: country.code,
+    country_name: country.name,
     phone: row.phone_number || '',
+    phone_extension: row.phone_extension || '',
     email: row.email || ''
   });
 
@@ -1639,6 +1670,21 @@ export const importClientsFromCSV = withAuth(async (
       if (!clientData.client_name) {
         throw new Error('Client name is required');
       }
+
+      const rowCountry = resolveRowCountry(clientData);
+      const normalizedPhone = normalizePhone(clientData.phone_number, {
+        defaultCountry: rowCountry.code,
+        extension: clientData.phone_extension,
+      });
+      if (normalizedPhone.error) {
+        throw new Error(
+          normalizedPhone.error === 'extensionInvalid'
+            ? 'Please enter a valid phone extension'
+            : 'Please enter a valid phone number',
+        );
+      }
+      clientData.phone_number = normalizedPhone.value;
+      clientData.phone_extension = normalizedPhone.extension;
 
       // Same structural authority as the server actions and the REST API, applied
       // per row so one bad row cannot take the import down with it.
@@ -1725,7 +1771,7 @@ export const importClientsFromCSV = withAuth(async (
               await tenantScopedTable(trx, 'client_locations', tenant)
                 .where({ location_id: defaultLocation.location_id })
                 .update({
-                  ...locationFieldsFromRow(clientData),
+                  ...locationFieldsFromRow(clientData, rowCountry),
                   updated_at: new Date().toISOString()
                 });
             } else {
@@ -1733,7 +1779,7 @@ export const importClientsFromCSV = withAuth(async (
                 location_id: trx.raw('gen_random_uuid()'),
                 client_id: existingClient.client_id,
                 tenant: tenant,
-                ...locationFieldsFromRow(clientData),
+                ...locationFieldsFromRow(clientData, rowCountry),
                 is_default: true,
                 is_billing_address: true,
                 is_shipping_address: true,
@@ -1792,7 +1838,7 @@ export const importClientsFromCSV = withAuth(async (
               location_id: trx.raw('gen_random_uuid()'),
               client_id: savedClient!.client_id,
               tenant: tenant,
-              ...locationFieldsFromRow(clientData),
+              ...locationFieldsFromRow(clientData, rowCountry),
               is_default: true,
               is_billing_address: true,
               is_shipping_address: true,

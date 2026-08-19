@@ -17,6 +17,24 @@ describe('splitPackedExtension', () => {
     });
   });
 
+  it.each(['300', '400', '500', '600'])('accepts %s as an extension', (extension) => {
+    expect(splitPackedExtension(`+1 212 555 0100 ext. ${extension}`)).toEqual({
+      number: '+1 212 555 0100',
+      extension,
+    });
+  });
+
+  it('does not extract an extension marker embedded in a number', () => {
+    expect(splitPackedExtension('+1-800-NEXT.3')).toEqual({
+      number: '+1-800-NEXT.3',
+      extension: '',
+    });
+    expect(splitPackedExtension('5551234ext123')).toEqual({
+      number: '5551234ext123',
+      extension: '',
+    });
+  });
+
   it('leaves numbers without an extension untouched', () => {
     expect(splitPackedExtension('+1 555 234 5678')).toEqual({
       number: '+1 555 234 5678',
@@ -88,7 +106,15 @@ describe('normalizePhone', () => {
 
   it('rejects an unparseable extension', () => {
     expect(normalizePhone('+1 555 234 5678', { extension: 'abc' }).error).toBe('extensionInvalid');
+    expect(normalizePhone('+1 555 234 5678', { extension: 'desk 300' }).error).toBe('extensionInvalid');
     expect(normalizePhone('+1 555 234 5678', { extension: '12345678901' }).error).toBe('extensionInvalid');
+  });
+
+  it.each(['300', '400', '500', '600'])('accepts the digit-only extension %s', (extension) => {
+    expect(normalizePhone('+1 212 555 0100', { extension })).toMatchObject({
+      extension,
+      error: null,
+    });
   });
 
   it('accepts possible-but-unassigned ranges (isPossible, not isValid)', () => {

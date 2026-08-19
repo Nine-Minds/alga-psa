@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "E-mailadres",
     "phone": "Telefoon",
+    "extension": "Toestelnummer",
     "phonePlaceholder": "Telefoonnummer",
     "name": "Naam",
     "creating": "Aanmaken...",
@@ -1349,6 +1350,7 @@
         "notes": "Opmerkingen",
         "notesHelper": "Aanvullende opmerkingen over deze locatie",
         "phone": "Telefoon",
+        "extension": "Toestelnummer",
         "phoneHelper": "Telefoonnummer voor deze locatie",
         "placeholder": {
           "addressLine1": "Voer adres in *",

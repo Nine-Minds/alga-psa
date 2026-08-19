@@ -24,7 +24,10 @@
         "label": "Email *"
       },
       "phoneNumber": {
-        "label": "Phone Number"
+        "label": "Phone"
+      },
+      "phoneExtension": {
+        "label": "Extension"
       },
       "timeZone": {
         "label": "Time Zone"

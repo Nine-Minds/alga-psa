@@ -529,6 +529,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Adres e-mail",
     "phone": "Telefon",
+    "extension": "Numer wewnętrzny",
     "phonePlaceholder": "Numer telefonu",
     "name": "Nazwa",
     "creating": "Tworzenie...",
@@ -1399,6 +1400,7 @@
         "notes": "Notatki",
         "notesHelper": "Dodatkowe uwagi na temat tej lokalizacji",
         "phone": "Telefon",
+        "extension": "Numer wewnętrzny",
         "phoneHelper": "Numer telefonu do tej lokalizacji",
         "placeholder": {
           "addressLine1": "Wpisz adres *",

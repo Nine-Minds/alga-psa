@@ -471,6 +471,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 value={phone}
                 extension={phoneExtension}
                 onExtensionChange={setPhoneExtension}
+                extensionLabel={t('profile.fields.phoneExtension.label')}
                 warnings={fieldWarnings.phone}
                 onChange={(value) => {
                   setPhone(value);

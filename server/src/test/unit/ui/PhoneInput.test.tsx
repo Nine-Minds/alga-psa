@@ -2,8 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 
@@ -13,87 +12,32 @@ const countries = [
 ];
 
 describe('PhoneInput', () => {
-  // RTL auto-cleanup only registers for the first test file in the shared fork,
-  // so clean up explicitly to avoid duplicate renders leaking between tests.
-  afterEach(() => {
-    cleanup();
-  });
+  afterEach(cleanup);
 
-  it('keeps the local number clean when country metadata catches up after reload', () => {
-    const onChange = vi.fn();
-    const { container, rerender } = render(
-      <PhoneInput
-        id="phone"
-        label="Phone Number"
-        value="+44 20 7123 4567"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
-      />
-    );
-
-    rerender(
-      <PhoneInput
-        id="phone"
-        label="Phone Number"
-        value="+44 20 7123 4567"
-        onChange={onChange}
-        countryCode="GB"
-        phoneCode="+44"
-        countries={countries}
-      />
-    );
-
-    expect((container.querySelector('input[type="tel"]') as HTMLInputElement).value).toBe('20 7123 4567');
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('shows a visible country code on a blank create form row', () => {
+  it('renders one ordinary full-number input without a country-prefix control', () => {
     render(
       <PhoneInput
-        id="blank-phone"
-        label="Phone Number"
-        value=""
+        id="phone"
+        label="Phone"
+        value="+44 20 7123 4567"
         onChange={vi.fn()}
         countryCode="US"
-        countries={countries}
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /\+1/i })).toBeTruthy();
-  });
-
-  it('rewrites the stored full number only when the user picks a different country', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    render(
-      <PhoneInput
-        id="editable-phone"
-        label="Phone Number"
-        value="+1 555 123 4567"
-        onChange={onChange}
-        countryCode="US"
         phoneCode="+1"
         countries={countries}
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /\+1/i }));
-    await user.click(screen.getByRole('button', { name: /United Kingdom/i }));
-
-    expect(onChange).toHaveBeenLastCalledWith('+44 555 123 4567');
+    expect(screen.getByLabelText('Phone')).toHaveValue('+44 20 7123 4567');
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('does not stack the picker dial code on a number that brought its own', async () => {
-    const user = userEvent.setup();
+  it('passes the entered number through directly without adding a country prefix', () => {
     const onChange = vi.fn();
 
     render(
       <PhoneInput
-        id="pasted-phone"
-        label="Phone Number"
+        id="direct-phone"
+        label="Phone"
         value=""
         onChange={onChange}
         countryCode="US"
@@ -102,160 +46,52 @@ describe('PhoneInput', () => {
       />
     );
 
-    // "+1 +44 …" parses as nothing, which used to be stored silently and now
-    // blocks the save — so the prefix must not be added twice.
-    await user.type(screen.getByRole('textbox'), '+442079460958');
+    fireEvent.change(screen.getByLabelText('Phone'), { target: { value: '4155550123' } });
 
-    expect(onChange).toHaveBeenLastCalledWith('+442079460958');
+    expect(onChange).toHaveBeenLastCalledWith('4155550123');
+    expect(onChange).not.toHaveBeenCalledWith(expect.stringContaining('+1'));
   });
 
-  it('still adds the picker dial code to a bare national number', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
+  it('renders extension as a separate digit-only input', () => {
+    const onExtensionChange = vi.fn();
 
     render(
       <PhoneInput
-        id="national-phone"
-        label="Phone Number"
+        id="phone-with-extension"
+        label="Phone"
+        value="+1 212 555 0100"
+        onChange={vi.fn()}
+        extension=""
+        onExtensionChange={onExtensionChange}
+        allowExtensions
+      />
+    );
+
+    const phone = screen.getByLabelText('Phone');
+    const extension = screen.getByLabelText('Extension');
+    expect(phone).not.toBe(extension);
+    expect(extension).toHaveAttribute('inputmode', 'numeric');
+    expect(extension).toHaveAttribute('maxlength', '10');
+
+    fireEvent.change(extension, { target: { value: 'desk 600' } });
+    expect(onExtensionChange).toHaveBeenLastCalledWith('600');
+  });
+
+  it('uses a wrapping layout with a growing phone field and narrow extension field', () => {
+    const { container } = render(
+      <PhoneInput
+        id="responsive-phone"
+        label="Phone"
         value=""
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
+        onChange={vi.fn()}
+        extension="300"
+        onExtensionChange={vi.fn()}
+        allowExtensions
       />
     );
 
-    await user.type(screen.getByRole('textbox'), '4155550123');
-
-    expect(onChange).toHaveBeenLastCalledWith('+1 4155550123');
-  });
-
-  it('keeps a stored number on its own dial code when the picker disagrees', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    // The location editor binds the picker to the *address* country, so a UK
-    // number sits under a +1 picker. Correcting a digit must not re-home it.
-    render(
-      <PhoneInput
-        id="foreign-phone"
-        label="Phone Number"
-        value="+442079460958"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /\+44/i })).toBeTruthy();
-
-    await user.type(screen.getByRole('textbox'), '9');
-
-    expect(onChange).toHaveBeenLastCalledWith('+44 20794609589');
-  });
-
-  it('homes a number typed before the country list arrived', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    // QuickAddContact fetches countries when the dialog opens, so the first row can
-    // render before any dial code is known while the picker already reads "+1".
-    const { rerender } = render(
-      <PhoneInput id="racing-phone" label="Phone Number" value="" onChange={onChange} countryCode="US" countries={[]} />
-    );
-
-    await user.type(screen.getByRole('textbox'), '2125550147');
-    expect(onChange).toHaveBeenLastCalledWith('+1 2125550147');
-
-    rerender(
-      <PhoneInput
-        id="racing-phone"
-        label="Phone Number"
-        value="2125550147"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
-      />
-    );
-
-    expect(onChange).toHaveBeenLastCalledWith('+1 2125550147');
-  });
-
-  it('leaves a stored dial-code-less number alone', () => {
-    const onChange = vi.fn();
-
-    // Legacy rows are grandfathered: re-homing one here would mark it changed and
-    // block an edit to some unrelated field on the same record.
-    const { rerender } = render(
-      <PhoneInput id="legacy-phone" label="Phone Number" value="555-123-4567" onChange={onChange} countryCode="US" countries={[]} />
-    );
-
-    rerender(
-      <PhoneInput
-        id="legacy-phone"
-        label="Phone Number"
-        value="555-123-4567"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
-      />
-    );
-
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('homes a number saved inside the country-fetch window', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    // The editors save from local state, so a row typed and saved before the fetch
-    // resolves never gets a second chance to be re-homed — and a bare national
-    // number carries no region, so the server stores it verbatim instead of E.164.
-    render(
-      <PhoneInput id="fast-save-phone" label="Phone Number" value="" onChange={onChange} countryCode="US" countries={[]} />
-    );
-
-    await user.type(screen.getByRole('textbox'), '3125550189');
-
-    expect(onChange).toHaveBeenLastCalledWith('+1 3125550189');
-  });
-
-  it('falls back to the picker country dial code, not always +1', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    render(
-      <PhoneInput id="gb-fast-phone" label="Phone Number" value="" onChange={onChange} countryCode="GB" countries={[]} />
-    );
-
-    expect(screen.getByRole('button', { name: /\+44/i })).toBeTruthy();
-
-    await user.type(screen.getByRole('textbox'), '2079460958');
-
-    expect(onChange).toHaveBeenLastCalledWith('+44 2079460958');
-  });
-
-  it('clears to empty rather than to a bare dial code', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-
-    render(
-      <PhoneInput
-        id="cleared-phone"
-        label="Phone Number"
-        value="+442079460958"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
-      />
-    );
-
-    await user.clear(screen.getByRole('textbox'));
-
-    expect(onChange).toHaveBeenLastCalledWith('');
+    expect(container.firstElementChild).toHaveClass('flex-wrap');
+    expect(screen.getByLabelText('Phone').parentElement?.parentElement).toHaveClass('min-w-[min(100%,16rem)]');
+    expect(screen.getByLabelText('Extension').parentElement?.parentElement).toHaveClass('sm:w-28');
   });
 });
