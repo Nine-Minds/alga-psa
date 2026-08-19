@@ -411,6 +411,271 @@
       "valuationReport": "Waarderingsrapport"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "Een goedgekeurde telsessie kan niet worden geannuleerd.",
+      "conflict": "Deze telupdate is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "countNonNegative": "Het getelde aantal moet een niet-negatief geheel getal zijn.",
+      "locationRequired": "Kies een locatie om te tellen.",
+      "productNotInSession": "Dit product maakt geen deel uit van de telsessie. Vernieuw de sessie en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde telrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "separateApproverRequired": "Een andere goedkeurder moet aftekenen, omdat u in deze sessie hebt geteld.",
+      "sessionAlreadyOpen": "Deze locatie heeft al een open telsessie.",
+      "sessionNotFound": "Telsessie niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "stockLocationNotFound": "Voorraadlocatie niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "dropShip": {
+      "conflict": "Deze dropship-zending is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "lineNotDropShip": "Deze verkooporderregel is niet ingesteld voor dropship-uitvoering.",
+      "lineRequired": "Selecteer een dropship-regel voordat u de leveranciersverzending bevestigt.",
+      "poLineNotLinked": "Deze inkooporderregel is niet gekoppeld aan een verkooporderregel.",
+      "purchaseOrderNotDropShip": "Deze inkooporder is niet ingesteld voor dropship-uitvoering.",
+      "purchaseOrderNotFound": "Inkooporder niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "purchaseOrderRequired": "Maak de dropship-inkooporder aan voordat u de leveranciersverzending bevestigt.",
+      "recordInvalid": "Een van de geselecteerde dropship-records bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "salesOrderLineNotFound": "Verkooporderregel niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "salesOrderNotFound": "Verkooporder niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "serialsRequired": "Voer minstens één serienummer in voor deze dropship-zending met serienummers.",
+      "vendorRequired": "Selecteer een leverancier voordat u de dropship-inkooporder aanmaakt."
+    },
+    "fulfillment": {
+      "conflict": "Deze uitvoering is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "exceedsOrdered": "De uitvoering zou het bestelde aantal overschrijden. Vernieuw de order en probeer het opnieuw.",
+      "noSerializedUnits": "Er zijn geen eenheden met serienummer beschikbaar om deze regel uit te voeren.",
+      "quantityRequired": "Voer een aantal in om deze regel zonder serienummer uit te voeren.",
+      "recordInvalid": "Een van de geselecteerde uitvoeringsrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "sourceLocationRequired": "Kies een bronlocatie voordat u deze regel uitvoert.",
+      "trackingDisabled": "Voorraadregistratie is niet ingeschakeld voor dit product.",
+      "useDropShipFlow": "Gebruik de dropship-ontvangstprocedure om deze regel uit te voeren."
+    },
+    "ghostUsage": {
+      "reviewNotFound": "Beoordeling niet gevonden. Deze is mogelijk al bijgewerkt. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "kits": {
+      "componentNotFound": "Componentproduct niet gevonden. Dit is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "componentQuantityPositive": "Het aantal componenten moet een positief geheel getal zijn.",
+      "componentsRequired": "Voeg minstens één component aan deze kit toe voordat u de kit aan een verkooporder toevoegt.",
+      "currencyCodeInvalid": "De valuta moet een code van drie letters zijn, zoals USD.",
+      "duplicateComponent": "Deze kitcomponent bestaat al. Werk in plaats daarvan het aantal bij.",
+      "duplicateSku": "Er bestaat al een product met deze SKU. Gebruik een andere SKU of bewerk het bestaande product.",
+      "enableInventoryAndKitFirst": "Schakel voorraadregistratie in en markeer dit product als kit voordat u componenten beheert.",
+      "fixedPriceRequired": "Stel een vaste kitprijs groter dan 0 in of schakel deze kit over op prijsbepaling als som van de componenten.",
+      "markAsKitFirst": "Markeer dit product als kit voordat u kitcomponenten beheert of prijst.",
+      "nameRequired": "Voer een naam in voor deze kit.",
+      "nestedKit": "Een kit kan geen andere kit bevatten. Kies een product dat geen kit is als component.",
+      "notFound": "Kit niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "pricingModeInvalid": "De prijsmethode van de kit moet de som van de componenten of een vaste prijs zijn.",
+      "productTypeNotFound": "Het geselecteerde producttype bestaat niet meer. Vernieuw de pagina en kies een ander type.",
+      "productTypeRequired": "Kies een producttype voor deze kit.",
+      "recordInvalid": "Een van de geselecteerde kitrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "savedButNotReloaded": "De kit is opgeslagen, maar kon niet opnieuw worden geladen. Vernieuw de pagina om de nieuwste status te zien.",
+      "selfComponent": "Een kit kan zichzelf niet als component bevatten.",
+      "updateParentLine": "Werk de bovenliggende kitregel bij in plaats van een afzonderlijke componentregel."
+    },
+    "landedCost": {
+      "amountPositive": "Het bedrag van de aankomstkosten moet groter zijn dan nul.",
+      "appliedCannotRemove": "Toegepaste aankomstkostenposten kunnen niet worden verwijderd.",
+      "conflict": "Deze aankomstkostenupdate is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "orderCancelled": "Aankomstkosten kunnen niet worden toegevoegd aan een geannuleerde inkooporder.",
+      "receiveLineFirst": "Ontvang minstens één inkooporderregel voordat u aankomstkosten toepast.",
+      "recordInvalid": "Een van de geselecteerde aankomstkostenrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "loaners": {
+      "cannotLoanOut": "Deze eenheid kan niet worden uitgeleend.",
+      "cannotLoanOutStatus": {
+        "allocated": "Deze eenheid kan niet worden uitgeleend — deze is momenteel gereserveerd.",
+        "delivered": "Deze eenheid kan niet worden uitgeleend — deze is momenteel geleverd.",
+        "in_rma": "Deze eenheid kan niet worden uitgeleend — deze is momenteel in RMA.",
+        "in_stock": "Deze eenheid kan niet worden uitgeleend — deze is momenteel op voorraad.",
+        "in_transit": "Deze eenheid kan niet worden uitgeleend — deze is momenteel onderweg.",
+        "on_loan": "Deze eenheid kan niet worden uitgeleend — deze is momenteel uitgeleend.",
+        "retired": "Deze eenheid kan niet worden uitgeleend — deze is momenteel buiten gebruik.",
+        "returned": "Deze eenheid kan niet worden uitgeleend — deze is momenteel geretourneerd."
+      },
+      "clientRequired": "Kies een klant voordat u de eenheid uitleent.",
+      "conflict": "Deze leenupdate is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "dueDateInvalid": "Kies een geldige vervaldatum.",
+      "invalidReferenceUnitClient": "Dit lijkt geen geldige recordverwijzing. Kies de eenheid en de klant uit de lijsten.",
+      "notOnLoan": "Deze eenheid is niet uitgeleend.",
+      "notOnLoanStatus": {
+        "allocated": "Deze eenheid is niet uitgeleend — deze is momenteel gereserveerd.",
+        "delivered": "Deze eenheid is niet uitgeleend — deze is momenteel geleverd.",
+        "in_rma": "Deze eenheid is niet uitgeleend — deze is momenteel in RMA.",
+        "in_stock": "Deze eenheid is niet uitgeleend — deze is momenteel op voorraad.",
+        "in_transit": "Deze eenheid is niet uitgeleend — deze is momenteel onderweg.",
+        "on_loan": "Deze eenheid is niet uitgeleend — deze is momenteel uitgeleend.",
+        "retired": "Deze eenheid is niet uitgeleend — deze is momenteel buiten gebruik.",
+        "returned": "Deze eenheid is niet uitgeleend — deze is momenteel geretourneerd."
+      },
+      "recordInvalid": "Een van de geselecteerde leenrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "returnLocationRequired": "Kies een retourlocatie."
+    },
+    "openingBalance": {
+      "conflict": "De import is in conflict met bestaande voorraadrecords. Valideer het bestand opnieuw en probeer het nogmaals.",
+      "recordInvalid": "Een van de geselecteerde beginvoorraadrecords is niet meer geldig. Valideer het bestand opnieuw en probeer het nogmaals."
+    },
+    "permissions": {
+      "inventoryRead": "Toestemming geweigerd: leesrechten voor voorraad vereist",
+      "inventoryUpdate": "Toestemming geweigerd: bijwerkrechten voor voorraad vereist",
+      "vendorCreate": "Toestemming geweigerd: aanmaakrechten voor leveranciers vereist",
+      "vendorUpdate": "Toestemming geweigerd: bijwerkrechten voor leveranciers vereist"
+    },
+    "productSettings": {
+      "alreadyExists": "Er bestaan al voorraadinstellingen voor dit product. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidKitPricingMode": "Kies een geldige prijsmethode voor de kit.",
+      "productNotFound": "Product niet gevonden. Dit is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "productsOnly": "Voorraadbeheer kan alleen voor producten worden ingeschakeld.",
+      "removeComponentsFirst": "Verwijder alle kitcomponenten voordat u de kitmarkering opheft.",
+      "serializedUnitsExist": "Dit product heeft eenheden met serienummer. Verplaats, buiten gebruik stel of verwijder die eenheden voordat u serienummers uitschakelt."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "Deze inkooporder is geannuleerd en kan niet worden bewerkt.",
+      "cancelledCannotReceive": "Deze inkooporder is geannuleerd en kan geen voorraad ontvangen.",
+      "currencyRequired": "Selecteer een valuta voordat u de inkooporder aanmaakt.",
+      "fullyReceivedCannotCancel": "Deze inkooporder is al volledig ontvangen en kan niet worden geannuleerd.",
+      "lineNotFound": "Inkooporderregel niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "lineReceivedCannotRemove": "Deze regel heeft al voorraad ontvangen en kan niet worden verwijderd.",
+      "lineRequired": "Voeg minstens één regel toe voordat u deze inkooporder indient.",
+      "onlyDraftDeletable": "Alleen concept-inkooporders kunnen worden verwijderd. Annuleer ingediende orders in plaats daarvan.",
+      "quantityPositive": "Het aantal moet groter zijn dan 0.",
+      "receivedStockCannotCancel": "Deze inkooporder heeft al voorraad ontvangen en kan niet worden geannuleerd.",
+      "recordInvalid": "Een van de geselecteerde inkooporderrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "stockLocationNotFound": "Voorraadlocatie niet gevonden. Deze is mogelijk verwijderd. Kies een andere locatie.",
+      "submitBeforeReceiving": "Dien deze inkooporder in voordat u er voorraad op ontvangt.",
+      "trackingDisabled": "Voorraadregistratie is uitgeschakeld voor dit product.",
+      "vendorRequired": "Selecteer een leverancier voordat u de inkooporder aanmaakt."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Kies zowel een laadbestemming als een bronschap.",
+      "recordInvalid": "Een van de geselecteerde laadlijstrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "reporting": {
+      "invalidDateRange": "Kies een geldig datumbereik voor het rapport."
+    },
+    "restock": {
+      "cannotRestock": "Deze eenheid kan niet worden aangevuld. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+      "cannotRestockStatus": {
+        "allocated": "Deze eenheid kan niet worden aangevuld — deze is momenteel gereserveerd. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "delivered": "Deze eenheid kan niet worden aangevuld — deze is momenteel geleverd. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "in_rma": "Deze eenheid kan niet worden aangevuld — deze is momenteel in RMA. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "in_stock": "Deze eenheid kan niet worden aangevuld — deze is momenteel op voorraad. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "in_transit": "Deze eenheid kan niet worden aangevuld — deze is momenteel onderweg. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "on_loan": "Deze eenheid kan niet worden aangevuld — deze is momenteel uitgeleend. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "retired": "Deze eenheid kan niet worden aangevuld — deze is momenteel buiten gebruik. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld.",
+        "returned": "Deze eenheid kan niet worden aangevuld — deze is momenteel geretourneerd. Alleen geleverde of geretourneerde eenheden kunnen worden aangevuld."
+      },
+      "conflict": "Deze aanvulling is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "feeNonNegative": "De aanvulkosten mogen niet negatief zijn.",
+      "invalidReferenceUnitLocation": "Dit lijkt geen geldige recordverwijzing. Kies de eenheid en de locatie uit de lijsten.",
+      "locationRequired": "Kies een locatie om deze eenheid aan te vullen.",
+      "productAndLocationRequired": "Kies een product en een locatie voordat u voorraad zonder serienummer aanvult.",
+      "quantityPositive": "Het aan te vullen aantal moet groter zijn dan nul.",
+      "recordInvalid": "Een van de geselecteerde records is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "serializedUnitRequired": "Dit product heeft serienummers. Kies de specifieke eenheid om aan te vullen."
+    },
+    "rma": {
+      "caseNotFound": "RMA-zaak niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "deadUnitDueDateRequired": "Kies een vervaldatum voor de geretourneerde defecte eenheid.",
+      "duplicateStockUnit": "Er bestaat al een voorraadeenheid met dat serienummer of MAC-adres.",
+      "missingProductDetails": "Voor deze RMA ontbreken productgegevens. Vernieuw de pagina en probeer het opnieuw.",
+      "noReplacementUnit": "Voor deze RMA is geen vervangende eenheid vastgelegd. Vernieuw de pagina en probeer het opnieuw.",
+      "noReturnedUnit": "Voor deze RMA is geen geretourneerde eenheid vastgelegd. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde RMA-records is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "replacementLocationRequired": "Selecteer de ontvangstlocatie voor de vervangende eenheid.",
+      "replacementSerialRequired": "Voer het serienummer van de vervangende eenheid in.",
+      "returnLocationRequired": "Selecteer een locatie voordat u de retour ontvangt.",
+      "returnedUnitNotFound": "Geretourneerde voorraadeenheid niet gevonden. Vernieuw de pagina en kies een andere eenheid.",
+      "returnedUnitRequired": "Het ID van de geretourneerde eenheid is verplicht.",
+      "vendorRequired": "Selecteer een leverancier voordat u de RMA verstuurt."
+    },
+    "salesOrders": {
+      "clientRequired": "Selecteer een klant voordat u de verkooporder aanmaakt.",
+      "conflict": "Deze verkooporderupdate is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "currencyRequired": "Selecteer een valuta voordat u de verkooporder aanmaakt.",
+      "fulfilledCannotCancel": "Deze verkooporder heeft uitgevoerde regels en kan niet worden geannuleerd.",
+      "fulfilledCannotReopen": "Deze verkooporder heeft uitgevoerde regels en kan niet worden heropend.",
+      "invalidDate": "Kies een geldige verkooporderdatum.",
+      "invalidValue": "Een van de geselecteerde verkooporderwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invoicedCannotCancel": "Deze verkooporder heeft gefactureerde regels en kan niet worden geannuleerd.",
+      "invoicedCannotReopen": "Deze verkooporder heeft gefactureerde regels en kan niet worden heropend.",
+      "missingData": "Vereiste verkooporderdata ontbreken. Controleer het formulier en probeer het opnieuw.",
+      "onlyDraftDeletable": "Alleen concept-verkooporders kunnen worden verwijderd. Annuleer bevestigde orders in plaats daarvan.",
+      "recordInvalid": "Een van de geselecteerde verkooporderrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "valueNotAllowed": "Een van de verkooporderwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
+    },
+    "shared": {
+      "duplicateStockUnit": "Er bestaat al een voorraadeenheid met hetzelfde serienummer of MAC-adres.",
+      "inventoryNotEnabledForProduct": "Voorraadbeheer is niet ingeschakeld voor dit product.",
+      "inventoryRecordInvalid": "Een van de geselecteerde voorraadrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "inventorySettingsDisabled": "Voorraadinstellingen zijn niet ingeschakeld voor dit product. Schakel eerst voorraadregistratie in.",
+      "lineQuantityPositive": "Het aantal per regel moet groter zijn dan 0.",
+      "locationRequiredForReceipt": "Selecteer een locatie voordat u voorraad ontvangt.",
+      "purchaseOrderNotFound": "Inkooporder niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "salesOrderLineAlreadyFulfilled": "Deze verkooporderregel is al volledig uitgevoerd.",
+      "salesOrderLineNotFound": "Verkooporderregel niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "salesOrderNotFound": "Verkooporder niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "sameSourceAndDestination": "Kies verschillende bron- en bestemmingslocaties.",
+      "serialNumberRequired": "Elke eenheid met serienummer heeft een serienummer nodig.",
+      "stockUnitNotFound": "Voorraadeenheid niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "vendorNotFoundChooseAnother": "Leverancier niet gevonden. Deze is mogelijk verwijderd. Kies een andere leverancier."
+    },
+    "stockLedger": {
+      "productRequired": "Selecteer een product voordat u voorraad ontvangt.",
+      "quantityPositiveInteger": "Het aantal moet een positief geheel getal zijn.",
+      "recordInvalid": "Het geselecteerde product of de geselecteerde locatie is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "trackingDisabled": "Voorraadregistratie is uitgeschakeld voor dit product.",
+      "unitCostNonNegative": "De kostprijs per stuk mag niet negatief zijn."
+    },
+    "stockLocations": {
+      "duplicate": "Er bestaat al een locatie met deze gegevens.",
+      "invalidType": "Kies een geldig locatietype.",
+      "moveStockBeforeDeactivate": "Verplaats alle voorraad uit deze locatie voordat u deze deactiveert.",
+      "moveUnitsBeforeDeactivate": "Verplaats alle eenheden van deze locatie of stel ze buiten gebruik voordat u deze deactiveert.",
+      "nameRequired": "De locatienaam is verplicht.",
+      "notFound": "Locatie niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde locatierecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "stockUnits": {
+      "conflict": "Deze zoekopdracht naar voorraadeenheden is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDateRange": "Kies een geldig datumbereik voor voorraadmutaties.",
+      "invalidValue": "Een van de geselecteerde waarden van de voorraadeenheid is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "recordInvalid": "Een van de geselecteerde voorraadeenheidrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "transfers": {
+      "conflict": "Deze overboeking is in conflict met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "lineRequired": "Voeg minstens één overboekingsregel toe.",
+      "locationsRequired": "Kies zowel een bronlocatie als een bestemmingslocatie.",
+      "notFound": "Overboeking niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "productRequired": "Elke overboekingsregel heeft een product of service nodig.",
+      "quantityPositive": "Het aantal op de overboekingsregel moet groter zijn dan nul.",
+      "recordInvalid": "Een van de geselecteerde overboekingsrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "unitNotAtSource": "De geselecteerde voorraadeenheid bevindt zich niet op de bronlocatie.",
+      "unitNotInStock": "Alleen eenheden die momenteel op voorraad zijn, kunnen worden overgeboekt.",
+      "unitProductMismatch": "De geselecteerde voorraadeenheid komt niet overeen met het product op de overboekingsregel."
+    },
+    "vendorBills": {
+      "duplicateNumber": "Er bestaat al een factuur met dit nummer voor de geselecteerde leverancier.",
+      "lineQuantityPositive": "Het aantal op de regel moet een positief geheel getal zijn.",
+      "lineUnitCostNonNegative": "De kostprijs per stuk op de regel mag niet negatief zijn.",
+      "notFound": "Leveranciersfactuur niet gevonden. Deze is mogelijk bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "numberRequired": "Voer het factuurnummer van de leverancier in.",
+      "receiveStockFirst": "Ontvang voorraad op deze inkooporder voordat u er een leveranciersfactuur van maakt.",
+      "recordInvalid": "Een van de geselecteerde leveranciersfactuurrecords is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "vendorRequired": "Selecteer een leverancier voordat u de factuur aanmaakt."
+    },
+    "vendorProducts": {
+      "costNonNegative": "De leverancierskosten mogen niet negatief zijn.",
+      "duplicate": "Deze leveranciersaanbieding bestaat al. Vernieuw de pagina en bewerk de bestaande aanbieding.",
+      "recordInvalid": "De geselecteerde leverancier of het geselecteerde product is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "vendorAndProductRequired": "Kies zowel een leverancier als een product voordat u de aanbieding opslaat."
+    },
+    "vendors": {
+      "duplicateName": "Er bestaat al een leverancier met de naam '{{name}}'",
+      "hasOpenPurchaseOrders": "Een leverancier met openstaande inkooporders kan niet worden gedeactiveerd",
+      "nameRequired": "Leveranciersnaam is verplicht",
+      "notFound": "Leverancier niet gevonden"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "Negeren",

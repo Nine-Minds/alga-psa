@@ -411,6 +411,271 @@
       "valuationReport": "Rapport de valorisation"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "Une session d'inventaire approuvée ne peut pas être annulée.",
+      "conflict": "Cette mise à jour d'inventaire est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "countNonNegative": "Le comptage doit être un nombre entier positif ou nul.",
+      "locationRequired": "Choisissez un emplacement à inventorier.",
+      "productNotInSession": "Ce produit ne fait pas partie de la session d'inventaire. Actualisez la session et réessayez.",
+      "recordInvalid": "L'un des enregistrements d'inventaire sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "separateApproverRequired": "Une autre personne doit approuver, car vous avez compté dans cette session.",
+      "sessionAlreadyOpen": "Cet emplacement a déjà une session d'inventaire ouverte.",
+      "sessionNotFound": "Session d'inventaire introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "stockLocationNotFound": "Emplacement de stock introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer."
+    },
+    "dropShip": {
+      "conflict": "Cette expédition en livraison directe est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "lineNotDropShip": "Cette ligne de commande client n'est pas configurée pour la livraison directe.",
+      "lineRequired": "Sélectionnez une ligne en livraison directe avant de confirmer l'expédition du fournisseur.",
+      "poLineNotLinked": "Cette ligne de bon de commande n'est liée à aucune ligne de commande client.",
+      "purchaseOrderNotDropShip": "Ce bon de commande n'est pas configuré pour la livraison directe.",
+      "purchaseOrderNotFound": "Bon de commande introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "purchaseOrderRequired": "Créez le bon de commande en livraison directe avant de confirmer l'expédition du fournisseur.",
+      "recordInvalid": "L'un des enregistrements de livraison directe sélectionnés n'existe plus. Veuillez actualiser la page et réessayer.",
+      "salesOrderLineNotFound": "Ligne de commande client introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "salesOrderNotFound": "Commande client introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "serialsRequired": "Saisissez au moins un numéro de série pour cette expédition sérialisée en livraison directe.",
+      "vendorRequired": "Sélectionnez un fournisseur avant de créer le bon de commande en livraison directe."
+    },
+    "fulfillment": {
+      "conflict": "Cette livraison est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "exceedsOrdered": "La livraison dépasserait la quantité commandée. Actualisez la commande et réessayez.",
+      "noSerializedUnits": "Aucune unité sérialisée n'est disponible pour livrer cette ligne.",
+      "quantityRequired": "Saisissez une quantité pour livrer cette ligne non sérialisée.",
+      "recordInvalid": "L'un des enregistrements de livraison sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "sourceLocationRequired": "Choisissez un emplacement source avant de livrer cette ligne.",
+      "trackingDisabled": "Le suivi des stocks n'est pas activé pour ce produit.",
+      "useDropShipFlow": "Utilisez le flux de réception en livraison directe pour livrer cette ligne."
+    },
+    "ghostUsage": {
+      "reviewNotFound": "Vérification introuvable. Elle a peut-être déjà été mise à jour. Actualisez la page et réessayez."
+    },
+    "kits": {
+      "componentNotFound": "Produit composant introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "componentQuantityPositive": "La quantité du composant doit être un nombre entier positif.",
+      "componentsRequired": "Ajoutez au moins un composant à ce kit avant de l'ajouter à une commande client.",
+      "currencyCodeInvalid": "La devise doit être un code à trois lettres, tel que USD.",
+      "duplicateComponent": "Ce composant de kit existe déjà. Modifiez plutôt sa quantité.",
+      "duplicateSku": "Un produit avec ce SKU existe déjà. Utilisez un autre SKU ou modifiez le produit existant.",
+      "enableInventoryAndKitFirst": "Activez le suivi des stocks et marquez ce produit comme kit avant de gérer les composants.",
+      "fixedPriceRequired": "Définissez un prix de kit fixe supérieur à 0 ou basculez ce kit sur la tarification par somme des composants.",
+      "markAsKitFirst": "Marquez ce produit comme kit avant de gérer ou de tarifer les composants du kit.",
+      "nameRequired": "Saisissez un nom pour ce kit.",
+      "nestedKit": "Un kit ne peut pas contenir un autre kit. Choisissez comme composant un produit qui n'est pas un kit.",
+      "notFound": "Kit introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "pricingModeInvalid": "Le mode de tarification du kit doit être la somme des composants ou un prix fixe.",
+      "productTypeNotFound": "Le type de produit sélectionné n'existe plus. Veuillez actualiser la page et en choisir un autre.",
+      "productTypeRequired": "Choisissez un type de produit pour ce kit.",
+      "recordInvalid": "L'un des enregistrements de kit sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "savedButNotReloaded": "Le kit a été enregistré mais n'a pas pu être rechargé. Veuillez actualiser la page pour voir son état le plus récent.",
+      "selfComponent": "Un kit ne peut pas se contenir lui-même comme composant.",
+      "updateParentLine": "Modifiez la ligne de kit parente plutôt qu'une ligne de composant individuelle."
+    },
+    "landedCost": {
+      "amountPositive": "Le montant du coût de revient doit être supérieur à zéro.",
+      "appliedCannotRemove": "Les écritures de coût de revient appliquées ne peuvent pas être supprimées.",
+      "conflict": "Cette mise à jour du coût de revient est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "orderCancelled": "Le coût de revient ne peut pas être ajouté à un bon de commande annulé.",
+      "receiveLineFirst": "Réceptionnez au moins une ligne du bon de commande avant d'appliquer le coût de revient.",
+      "recordInvalid": "L'un des enregistrements de coût de revient sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer."
+    },
+    "loaners": {
+      "cannotLoanOut": "Cette unité ne peut pas être prêtée.",
+      "cannotLoanOutStatus": {
+        "allocated": "Cette unité ne peut pas être prêtée : elle est actuellement affectée.",
+        "delivered": "Cette unité ne peut pas être prêtée : elle est actuellement livrée.",
+        "in_rma": "Cette unité ne peut pas être prêtée : elle est actuellement en RMA.",
+        "in_stock": "Cette unité ne peut pas être prêtée : elle est actuellement en stock.",
+        "in_transit": "Cette unité ne peut pas être prêtée : elle est actuellement en transit.",
+        "on_loan": "Cette unité ne peut pas être prêtée : elle est actuellement en prêt.",
+        "retired": "Cette unité ne peut pas être prêtée : elle est actuellement mise au rebut.",
+        "returned": "Cette unité ne peut pas être prêtée : elle est actuellement retournée."
+      },
+      "clientRequired": "Choisissez un client avant de prêter l'unité.",
+      "conflict": "Cette mise à jour du prêt est en conflit avec un enregistrement existant. Actualisez la page et réessayez.",
+      "dueDateInvalid": "Choisissez une date d'échéance valide.",
+      "invalidReferenceUnitClient": "Cela ne ressemble pas à une référence d'enregistrement valide. Choisissez l'unité et le client dans les listes.",
+      "notOnLoan": "Cette unité n'est pas en prêt.",
+      "notOnLoanStatus": {
+        "allocated": "Cette unité n'est pas en prêt : elle est actuellement affectée.",
+        "delivered": "Cette unité n'est pas en prêt : elle est actuellement livrée.",
+        "in_rma": "Cette unité n'est pas en prêt : elle est actuellement en RMA.",
+        "in_stock": "Cette unité n'est pas en prêt : elle est actuellement en stock.",
+        "in_transit": "Cette unité n'est pas en prêt : elle est actuellement en transit.",
+        "on_loan": "Cette unité n'est pas en prêt : elle est actuellement en prêt.",
+        "retired": "Cette unité n'est pas en prêt : elle est actuellement mise au rebut.",
+        "returned": "Cette unité n'est pas en prêt : elle est actuellement retournée."
+      },
+      "recordInvalid": "L'un des enregistrements de prêt sélectionnés n'est plus valide. Actualisez la page et réessayez.",
+      "returnLocationRequired": "Choisissez un emplacement de retour."
+    },
+    "openingBalance": {
+      "conflict": "L'import est en conflit avec des enregistrements de stock existants. Validez à nouveau le fichier et réessayez.",
+      "recordInvalid": "L'un des enregistrements de stock initial sélectionnés n'est plus valide. Validez à nouveau le fichier et réessayez."
+    },
+    "permissions": {
+      "inventoryRead": "Autorisation refusée : autorisation de lecture sur les stocks requise",
+      "inventoryUpdate": "Autorisation refusée : autorisation de mise à jour sur les stocks requise",
+      "vendorCreate": "Autorisation refusée : autorisation de création sur les fournisseurs requise",
+      "vendorUpdate": "Autorisation refusée : autorisation de mise à jour sur les fournisseurs requise"
+    },
+    "productSettings": {
+      "alreadyExists": "Des paramètres de stock existent déjà pour ce produit. Veuillez actualiser la page et réessayer.",
+      "invalidKitPricingMode": "Choisissez un mode de tarification de kit valide.",
+      "productNotFound": "Produit introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "productsOnly": "La gestion des stocks ne peut être activée que sur des produits.",
+      "removeComponentsFirst": "Supprimez tous les composants du kit avant de retirer l'indicateur de kit.",
+      "serializedUnitsExist": "Ce produit comporte des unités sérialisées. Déplacez, mettez au rebut ou supprimez ces unités avant de désactiver la sérialisation."
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "Ce bon de commande est annulé et ne peut pas être modifié.",
+      "cancelledCannotReceive": "Ce bon de commande est annulé et ne peut pas recevoir de stock.",
+      "currencyRequired": "Sélectionnez une devise avant de créer le bon de commande.",
+      "fullyReceivedCannotCancel": "Ce bon de commande est déjà entièrement réceptionné et ne peut pas être annulé.",
+      "lineNotFound": "Ligne de bon de commande introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "lineReceivedCannotRemove": "Cette ligne a déjà donné lieu à une réception de stock et ne peut pas être supprimée.",
+      "lineRequired": "Ajoutez au moins une ligne avant de soumettre ce bon de commande.",
+      "onlyDraftDeletable": "Seuls les bons de commande en brouillon peuvent être supprimés. Annulez plutôt les bons soumis.",
+      "quantityPositive": "La quantité doit être supérieure à 0.",
+      "receivedStockCannotCancel": "Ce bon de commande a déjà donné lieu à une réception de stock et ne peut pas être annulé.",
+      "recordInvalid": "L'un des enregistrements de bon de commande sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "stockLocationNotFound": "Emplacement de stock introuvable. Il a peut-être été supprimé. Veuillez choisir un autre emplacement.",
+      "submitBeforeReceiving": "Soumettez ce bon de commande avant d'y réceptionner du stock.",
+      "trackingDisabled": "Le suivi des stocks est désactivé pour ce produit.",
+      "vendorRequired": "Sélectionnez un fournisseur avant de créer le bon de commande."
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "Choisissez à la fois une destination de chargement et une étagère source.",
+      "recordInvalid": "L'un des enregistrements de liste de chargement sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer."
+    },
+    "reporting": {
+      "invalidDateRange": "Choisissez une plage de dates de rapport valide."
+    },
+    "restock": {
+      "cannotRestock": "Cette unité ne peut pas être réapprovisionnée. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+      "cannotRestockStatus": {
+        "allocated": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement affectée. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "delivered": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement livrée. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "in_rma": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement en RMA. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "in_stock": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement en stock. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "in_transit": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement en transit. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "on_loan": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement en prêt. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "retired": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement mise au rebut. Seules les unités livrées ou retournées peuvent être réapprovisionnées.",
+        "returned": "Cette unité ne peut pas être réapprovisionnée : elle est actuellement retournée. Seules les unités livrées ou retournées peuvent être réapprovisionnées."
+      },
+      "conflict": "Ce réapprovisionnement est en conflit avec un enregistrement existant. Actualisez la page et réessayez.",
+      "feeNonNegative": "Les frais de réapprovisionnement ne peuvent pas être négatifs.",
+      "invalidReferenceUnitLocation": "Cela ne ressemble pas à une référence d'enregistrement valide. Choisissez l'unité et l'emplacement dans les listes.",
+      "locationRequired": "Choisissez un emplacement pour réapprovisionner cette unité.",
+      "productAndLocationRequired": "Choisissez un produit et un emplacement avant de réapprovisionner du stock non sérialisé.",
+      "quantityPositive": "La quantité de réapprovisionnement doit être supérieure à zéro.",
+      "recordInvalid": "L'un des enregistrements sélectionnés n'est plus valide. Actualisez la page et réessayez.",
+      "serializedUnitRequired": "Ce produit est sérialisé. Choisissez l'unité précise à réapprovisionner."
+    },
+    "rma": {
+      "caseNotFound": "Dossier RMA introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "deadUnitDueDateRequired": "Choisissez une date d'échéance pour l'unité défectueuse retournée.",
+      "duplicateStockUnit": "Une unité en stock avec ce numéro de série ou cette adresse MAC existe déjà.",
+      "missingProductDetails": "Les informations produit manquent pour ce RMA. Veuillez actualiser la page et réessayer.",
+      "noReplacementUnit": "Aucune unité de remplacement n'est enregistrée pour ce RMA. Veuillez actualiser la page et réessayer.",
+      "noReturnedUnit": "Aucune unité retournée n'est enregistrée pour ce RMA. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L'un des enregistrements RMA sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "replacementLocationRequired": "Sélectionnez l'emplacement de réception de l'unité de remplacement.",
+      "replacementSerialRequired": "Saisissez le numéro de série de l'unité de remplacement.",
+      "returnLocationRequired": "Sélectionnez un emplacement avant de réceptionner le retour.",
+      "returnedUnitNotFound": "Unité en stock retournée introuvable. Veuillez actualiser la page et choisir une autre unité.",
+      "returnedUnitRequired": "L'identifiant de l'unité retournée est obligatoire.",
+      "vendorRequired": "Sélectionnez un fournisseur avant d'envoyer le RMA."
+    },
+    "salesOrders": {
+      "clientRequired": "Sélectionnez un client avant de créer la commande client.",
+      "conflict": "Cette mise à jour de la commande client est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "currencyRequired": "Sélectionnez une devise avant de créer la commande client.",
+      "fulfilledCannotCancel": "Cette commande client comporte des lignes livrées et ne peut pas être annulée.",
+      "fulfilledCannotReopen": "Cette commande client comporte des lignes livrées et ne peut pas être rouverte.",
+      "invalidDate": "Choisissez une date de commande client valide.",
+      "invalidValue": "L'une des valeurs sélectionnées de la commande client n'est pas valide. Veuillez actualiser la page et réessayer.",
+      "invoicedCannotCancel": "Cette commande client comporte des lignes facturées et ne peut pas être annulée.",
+      "invoicedCannotReopen": "Cette commande client comporte des lignes facturées et ne peut pas être rouverte.",
+      "missingData": "Des données obligatoires de la commande client sont manquantes. Veuillez vérifier le formulaire et réessayer.",
+      "onlyDraftDeletable": "Seules les commandes client en brouillon peuvent être supprimées. Annulez plutôt les commandes confirmées.",
+      "recordInvalid": "L'un des enregistrements de commande client sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "valueNotAllowed": "L'une des valeurs de la commande client n'est pas autorisée. Veuillez vérifier le formulaire et réessayer."
+    },
+    "shared": {
+      "duplicateStockUnit": "Une unité en stock avec le même numéro de série ou la même adresse MAC existe déjà.",
+      "inventoryNotEnabledForProduct": "La gestion des stocks n'est pas activée pour ce produit.",
+      "inventoryRecordInvalid": "L'un des enregistrements de stock sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "inventorySettingsDisabled": "Les paramètres de stock ne sont pas activés pour ce produit. Activez d'abord le suivi des stocks.",
+      "lineQuantityPositive": "La quantité de chaque ligne doit être supérieure à 0.",
+      "locationRequiredForReceipt": "Sélectionnez un emplacement avant de réceptionner du stock.",
+      "purchaseOrderNotFound": "Bon de commande introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "salesOrderLineAlreadyFulfilled": "Cette ligne de commande client est déjà entièrement livrée.",
+      "salesOrderLineNotFound": "Ligne de commande client introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "salesOrderNotFound": "Commande client introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "sameSourceAndDestination": "Choisissez des emplacements source et destination différents.",
+      "serialNumberRequired": "Chaque unité sérialisée doit avoir un numéro de série.",
+      "stockUnitNotFound": "Unité en stock introuvable. Elle a peut-être été mise à jour ou supprimée. Actualisez la page et réessayez.",
+      "vendorNotFoundChooseAnother": "Fournisseur introuvable. Il a peut-être été supprimé. Veuillez choisir un autre fournisseur."
+    },
+    "stockLedger": {
+      "productRequired": "Sélectionnez un produit avant de réceptionner du stock.",
+      "quantityPositiveInteger": "La quantité doit être un nombre entier positif.",
+      "recordInvalid": "Le produit ou l'emplacement sélectionné n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "trackingDisabled": "Le suivi du stock est désactivé pour ce produit.",
+      "unitCostNonNegative": "Le coût unitaire ne peut pas être négatif."
+    },
+    "stockLocations": {
+      "duplicate": "Un emplacement avec ces informations existe déjà.",
+      "invalidType": "Choisissez un type d'emplacement valide.",
+      "moveStockBeforeDeactivate": "Sortez tout le stock de cet emplacement avant de le désactiver.",
+      "moveUnitsBeforeDeactivate": "Déplacez ou mettez au rebut toutes les unités de cet emplacement avant de le désactiver.",
+      "nameRequired": "Le nom de l'emplacement est obligatoire.",
+      "notFound": "Emplacement introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L'un des enregistrements d'emplacement sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer."
+    },
+    "stockUnits": {
+      "conflict": "Cette recherche d'unité en stock est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "invalidDateRange": "Choisissez une plage de dates de mouvements de stock valide.",
+      "invalidValue": "L'une des valeurs sélectionnées de l'unité en stock n'est pas valide. Veuillez actualiser la page et réessayer.",
+      "recordInvalid": "L'un des enregistrements d'unité en stock sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer."
+    },
+    "transfers": {
+      "conflict": "Ce transfert est en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "lineRequired": "Ajoutez au moins une ligne de transfert.",
+      "locationsRequired": "Choisissez à la fois un emplacement source et un emplacement de destination.",
+      "notFound": "Transfert introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "productRequired": "Chaque ligne de transfert doit comporter un produit ou un service.",
+      "quantityPositive": "La quantité de la ligne de transfert doit être supérieure à zéro.",
+      "recordInvalid": "L'un des enregistrements de transfert sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "unitNotAtSource": "L'unité en stock sélectionnée ne se trouve pas à l'emplacement source.",
+      "unitNotInStock": "Seules les unités actuellement en stock peuvent être transférées.",
+      "unitProductMismatch": "L'unité en stock sélectionnée ne correspond pas au produit de la ligne de transfert."
+    },
+    "vendorBills": {
+      "duplicateNumber": "Une facture portant ce numéro existe déjà pour le fournisseur sélectionné.",
+      "lineQuantityPositive": "La quantité de la ligne doit être un nombre entier positif.",
+      "lineUnitCostNonNegative": "Le coût unitaire de la ligne ne peut pas être négatif.",
+      "notFound": "Facture fournisseur introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "numberRequired": "Saisissez le numéro de facture du fournisseur.",
+      "receiveStockFirst": "Réceptionnez du stock sur ce bon de commande avant d'en créer une facture fournisseur.",
+      "recordInvalid": "L'un des enregistrements de facture fournisseur sélectionnés n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "vendorRequired": "Sélectionnez un fournisseur avant de créer la facture."
+    },
+    "vendorProducts": {
+      "costNonNegative": "Le coût fournisseur ne peut pas être négatif.",
+      "duplicate": "Cette offre fournisseur existe déjà. Actualisez la page et modifiez l'offre existante.",
+      "recordInvalid": "Le fournisseur ou le produit sélectionné n'est plus valide. Veuillez actualiser la page et réessayer.",
+      "vendorAndProductRequired": "Choisissez à la fois un fournisseur et un produit avant d'enregistrer l'offre."
+    },
+    "vendors": {
+      "duplicateName": "Un fournisseur nommé « {{name}} » existe déjà",
+      "hasOpenPurchaseOrders": "Impossible de désactiver un fournisseur ayant des bons de commande ouverts",
+      "nameRequired": "Le nom du fournisseur est obligatoire",
+      "notFound": "Fournisseur introuvable"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "Ignorer",

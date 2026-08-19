@@ -411,6 +411,271 @@
       "valuationReport": "11111"
     }
   },
+  "errors": {
+    "cycleCounts": {
+      "approvedCannotCancel": "11111",
+      "conflict": "11111",
+      "countNonNegative": "11111",
+      "locationRequired": "11111",
+      "productNotInSession": "11111",
+      "recordInvalid": "11111",
+      "separateApproverRequired": "11111",
+      "sessionAlreadyOpen": "11111",
+      "sessionNotFound": "11111",
+      "stockLocationNotFound": "11111"
+    },
+    "dropShip": {
+      "conflict": "11111",
+      "lineNotDropShip": "11111",
+      "lineRequired": "11111",
+      "poLineNotLinked": "11111",
+      "purchaseOrderNotDropShip": "11111",
+      "purchaseOrderNotFound": "11111",
+      "purchaseOrderRequired": "11111",
+      "recordInvalid": "11111",
+      "salesOrderLineNotFound": "11111",
+      "salesOrderNotFound": "11111",
+      "serialsRequired": "11111",
+      "vendorRequired": "11111"
+    },
+    "fulfillment": {
+      "conflict": "11111",
+      "exceedsOrdered": "11111",
+      "noSerializedUnits": "11111",
+      "quantityRequired": "11111",
+      "recordInvalid": "11111",
+      "sourceLocationRequired": "11111",
+      "trackingDisabled": "11111",
+      "useDropShipFlow": "11111"
+    },
+    "ghostUsage": {
+      "reviewNotFound": "11111"
+    },
+    "kits": {
+      "componentNotFound": "11111",
+      "componentQuantityPositive": "11111",
+      "componentsRequired": "11111",
+      "currencyCodeInvalid": "11111",
+      "duplicateComponent": "11111",
+      "duplicateSku": "11111",
+      "enableInventoryAndKitFirst": "11111",
+      "fixedPriceRequired": "11111",
+      "markAsKitFirst": "11111",
+      "nameRequired": "11111",
+      "nestedKit": "11111",
+      "notFound": "11111",
+      "pricingModeInvalid": "11111",
+      "productTypeNotFound": "11111",
+      "productTypeRequired": "11111",
+      "recordInvalid": "11111",
+      "savedButNotReloaded": "11111",
+      "selfComponent": "11111",
+      "updateParentLine": "11111"
+    },
+    "landedCost": {
+      "amountPositive": "11111",
+      "appliedCannotRemove": "11111",
+      "conflict": "11111",
+      "orderCancelled": "11111",
+      "receiveLineFirst": "11111",
+      "recordInvalid": "11111"
+    },
+    "loaners": {
+      "cannotLoanOut": "11111",
+      "cannotLoanOutStatus": {
+        "allocated": "11111",
+        "delivered": "11111",
+        "in_rma": "11111",
+        "in_stock": "11111",
+        "in_transit": "11111",
+        "on_loan": "11111",
+        "retired": "11111",
+        "returned": "11111"
+      },
+      "clientRequired": "11111",
+      "conflict": "11111",
+      "dueDateInvalid": "11111",
+      "invalidReferenceUnitClient": "11111",
+      "notOnLoan": "11111",
+      "notOnLoanStatus": {
+        "allocated": "11111",
+        "delivered": "11111",
+        "in_rma": "11111",
+        "in_stock": "11111",
+        "in_transit": "11111",
+        "on_loan": "11111",
+        "retired": "11111",
+        "returned": "11111"
+      },
+      "recordInvalid": "11111",
+      "returnLocationRequired": "11111"
+    },
+    "openingBalance": {
+      "conflict": "11111",
+      "recordInvalid": "11111"
+    },
+    "permissions": {
+      "inventoryRead": "11111",
+      "inventoryUpdate": "11111",
+      "vendorCreate": "11111",
+      "vendorUpdate": "11111"
+    },
+    "productSettings": {
+      "alreadyExists": "11111",
+      "invalidKitPricingMode": "11111",
+      "productNotFound": "11111",
+      "productsOnly": "11111",
+      "removeComponentsFirst": "11111",
+      "serializedUnitsExist": "11111"
+    },
+    "purchaseOrders": {
+      "cancelledCannotEdit": "11111",
+      "cancelledCannotReceive": "11111",
+      "currencyRequired": "11111",
+      "fullyReceivedCannotCancel": "11111",
+      "lineNotFound": "11111",
+      "lineReceivedCannotRemove": "11111",
+      "lineRequired": "11111",
+      "onlyDraftDeletable": "11111",
+      "quantityPositive": "11111",
+      "receivedStockCannotCancel": "11111",
+      "recordInvalid": "11111",
+      "stockLocationNotFound": "11111",
+      "submitBeforeReceiving": "11111",
+      "trackingDisabled": "11111",
+      "vendorRequired": "11111"
+    },
+    "reorder": {
+      "destinationAndSourceRequired": "11111",
+      "recordInvalid": "11111"
+    },
+    "reporting": {
+      "invalidDateRange": "11111"
+    },
+    "restock": {
+      "cannotRestock": "11111",
+      "cannotRestockStatus": {
+        "allocated": "11111",
+        "delivered": "11111",
+        "in_rma": "11111",
+        "in_stock": "11111",
+        "in_transit": "11111",
+        "on_loan": "11111",
+        "retired": "11111",
+        "returned": "11111"
+      },
+      "conflict": "11111",
+      "feeNonNegative": "11111",
+      "invalidReferenceUnitLocation": "11111",
+      "locationRequired": "11111",
+      "productAndLocationRequired": "11111",
+      "quantityPositive": "11111",
+      "recordInvalid": "11111",
+      "serializedUnitRequired": "11111"
+    },
+    "rma": {
+      "caseNotFound": "11111",
+      "deadUnitDueDateRequired": "11111",
+      "duplicateStockUnit": "11111",
+      "missingProductDetails": "11111",
+      "noReplacementUnit": "11111",
+      "noReturnedUnit": "11111",
+      "recordInvalid": "11111",
+      "replacementLocationRequired": "11111",
+      "replacementSerialRequired": "11111",
+      "returnLocationRequired": "11111",
+      "returnedUnitNotFound": "11111",
+      "returnedUnitRequired": "11111",
+      "vendorRequired": "11111"
+    },
+    "salesOrders": {
+      "clientRequired": "11111",
+      "conflict": "11111",
+      "currencyRequired": "11111",
+      "fulfilledCannotCancel": "11111",
+      "fulfilledCannotReopen": "11111",
+      "invalidDate": "11111",
+      "invalidValue": "11111",
+      "invoicedCannotCancel": "11111",
+      "invoicedCannotReopen": "11111",
+      "missingData": "11111",
+      "onlyDraftDeletable": "11111",
+      "recordInvalid": "11111",
+      "valueNotAllowed": "11111"
+    },
+    "shared": {
+      "duplicateStockUnit": "11111",
+      "inventoryNotEnabledForProduct": "11111",
+      "inventoryRecordInvalid": "11111",
+      "inventorySettingsDisabled": "11111",
+      "lineQuantityPositive": "11111",
+      "locationRequiredForReceipt": "11111",
+      "purchaseOrderNotFound": "11111",
+      "salesOrderLineAlreadyFulfilled": "11111",
+      "salesOrderLineNotFound": "11111",
+      "salesOrderNotFound": "11111",
+      "sameSourceAndDestination": "11111",
+      "serialNumberRequired": "11111",
+      "stockUnitNotFound": "11111",
+      "vendorNotFoundChooseAnother": "11111"
+    },
+    "stockLedger": {
+      "productRequired": "11111",
+      "quantityPositiveInteger": "11111",
+      "recordInvalid": "11111",
+      "trackingDisabled": "11111",
+      "unitCostNonNegative": "11111"
+    },
+    "stockLocations": {
+      "duplicate": "11111",
+      "invalidType": "11111",
+      "moveStockBeforeDeactivate": "11111",
+      "moveUnitsBeforeDeactivate": "11111",
+      "nameRequired": "11111",
+      "notFound": "11111",
+      "recordInvalid": "11111"
+    },
+    "stockUnits": {
+      "conflict": "11111",
+      "invalidDateRange": "11111",
+      "invalidValue": "11111",
+      "recordInvalid": "11111"
+    },
+    "transfers": {
+      "conflict": "11111",
+      "lineRequired": "11111",
+      "locationsRequired": "11111",
+      "notFound": "11111",
+      "productRequired": "11111",
+      "quantityPositive": "11111",
+      "recordInvalid": "11111",
+      "unitNotAtSource": "11111",
+      "unitNotInStock": "11111",
+      "unitProductMismatch": "11111"
+    },
+    "vendorBills": {
+      "duplicateNumber": "11111",
+      "lineQuantityPositive": "11111",
+      "lineUnitCostNonNegative": "11111",
+      "notFound": "11111",
+      "numberRequired": "11111",
+      "receiveStockFirst": "11111",
+      "recordInvalid": "11111",
+      "vendorRequired": "11111"
+    },
+    "vendorProducts": {
+      "costNonNegative": "11111",
+      "duplicate": "11111",
+      "recordInvalid": "11111",
+      "vendorAndProductRequired": "11111"
+    },
+    "vendors": {
+      "duplicateName": "11111 {{name}} 11111",
+      "hasOpenPurchaseOrders": "11111",
+      "nameRequired": "11111",
+      "notFound": "11111"
+    }
+  },
   "ghostUsage": {
     "actions": {
       "dismiss": "11111",

@@ -32,16 +32,16 @@ function inventoryReportingActionErrorFrom(error: unknown): InventoryReportingAc
       return permissionError(error.message);
     }
     if (error.message === 'Invalid time value') {
-      return actionError('Choose a valid report date range.');
+      return actionError('Choose a valid report date range.', 'features/inventory:errors.reporting.invalidDateRange');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22007' || dbError?.code === '22008' || dbError?.code === '22P02') {
-    return actionError('Choose a valid report date range.');
+    return actionError('Choose a valid report date range.', 'features/inventory:errors.reporting.invalidDateRange');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected inventory records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected inventory records is no longer valid. Please refresh and try again.', 'features/inventory:errors.shared.inventoryRecordInvalid');
   }
 
   return null;
