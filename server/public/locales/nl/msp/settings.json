@@ -779,6 +779,8 @@
         "sections": {
           "general": "Algemeen",
           "generalHelp": "Naam, beschrijving, zichtbaarheid en standaard",
+          "appearance": "Uiterlijk & standaardwaarden",
+          "appearanceHelp": "Tabblad vastzetten en de standaardlijstweergave van het bord",
           "assignment": "Toewijzing & SLA",
           "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
           "inbound": "E-mail & inkomende antwoorden",
@@ -799,6 +801,22 @@
         "allSaved": "Alle wijzigingen opgeslagen",
         "reopenBadge": "heropenen",
         "required": "Vereist"
+      },
+      "appearance": {
+        "pinLabel": "Vastzetten op het ticketscherm",
+        "pinHelp": "Vastgezette borden krijgen een vast tabblad op het ticketscherm. Niet-vastgezette borden blijven bereikbaar via \"Alle tickets\" en het bordfilter.",
+        "savedView": "Opgeslagen weergave",
+        "inheritsTenant": "Neemt de tenantstandaarden over",
+        "openBoard": "Dit bord openen",
+        "resetToTenant": "Terugzetten naar de tenantstandaard",
+        "arrangeNote": "Stel de weergave van dit bord op het bord zelf in en sla deze op via het menu \"Weergave\".",
+        "preview": "Voorbeeld",
+        "summary": {
+          "openOnly": "Alleen openstaand",
+          "columns": "{{count}} kolommen",
+          "density": "dichtheid {{level}}",
+          "sortedBy": "gesorteerd op {{field}}"
+        }
       },
       "empty": "Geen borden gevonden.",
       "searchPlaceholder": "Borden zoeken…"

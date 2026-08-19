@@ -100,9 +100,20 @@ export function buildBoardSelectionFilterUpdate(params: {
 }
 
 /**
- * Tabs to render: "All tickets" plus every active board. An inactive board is
- * included only while it is the selected one, so a deep link to an archived
- * board is still representable in the strip.
+ * Tabs to render: "All tickets" plus every pinned, active board.
+ *
+ * Two exclusions with one escape hatch. A board is excluded when it is inactive,
+ * or when it is not pinned — pinning is what stops the strip becoming a
+ * horizontally scrolling row at 25 boards, and it is the release valve for the
+ * vertical space the board header costs. The single "…or it is the active board"
+ * clause covers both cases with no extra branch: a deep link to an archived
+ * board and a deep link to a merely-unpinned board each render a transient tab
+ * that disappears when you leave. Unpinned boards therefore stay fully
+ * reachable — via All tickets and the board filter — without an overflow menu.
+ *
+ * Zero pinned boards is a legitimate state (an admin unpinned everything): the
+ * strip renders All tickets alone rather than hiding, so the screen never loses
+ * its navigation.
  */
 export function buildBoardTabs(params: {
   boards: readonly IBoard[];
@@ -115,7 +126,10 @@ export function buildBoardTabs(params: {
 
   const boardTabs = boards
     .filter(board => Boolean(board.board_id))
-    .filter(board => board.is_inactive !== true || board.board_id === activeBoardId)
+    .filter(board =>
+      (board.is_inactive !== true && board.is_pinned === true) ||
+      board.board_id === activeBoardId
+    )
     .slice()
     .sort((a, b) =>
       (a.display_order || 0) - (b.display_order || 0) ||
@@ -151,6 +165,44 @@ export function buildBoardTabs(params: {
 export function hasBoardFilterParam(search: string): boolean {
   const params = new URLSearchParams(search);
   return BOARD_FILTER_URL_PARAMS.some(param => (params.get(param) ?? '').trim().length > 0);
+}
+
+/**
+ * Non-board filter params. A shared link carrying any of these has an opinion
+ * about what the list should show, and that opinion outranks the board's stored
+ * default filters — you sent someone a link to *these tickets*, not to the
+ * board's usual view of them.
+ *
+ * Board scope is deliberately excluded: `?boardId=x` says which board, not what
+ * to show on it, so it selects the tab and then lets the board's own view apply.
+ * Pagination is excluded for the same reason.
+ */
+export const TICKET_VIEW_URL_FILTER_PARAMS = [
+  'clientId',
+  'statusId',
+  'priorityId',
+  'categoryId',
+  'categoryIds',
+  'excludeCategoryIds',
+  'searchQuery',
+  'tags',
+  'assignedToIds',
+  'assignedTeamIds',
+  'includeUnassigned',
+  'dueDateFilter',
+  'dueDateFrom',
+  'dueDateTo',
+  'responseState',
+  'slaStatusFilter',
+  'bundleView',
+  'sortBy',
+  'sortDirection',
+] as const;
+
+/** True when the URL expresses filter intent beyond which board to show. */
+export function hasTicketViewFilterParams(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return TICKET_VIEW_URL_FILTER_PARAMS.some(param => (params.get(param) ?? '').trim().length > 0);
 }
 
 export type InitialBoardTabDecision =

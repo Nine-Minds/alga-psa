@@ -779,6 +779,8 @@
         "sections": {
           "general": "Général",
           "generalHelp": "Nom, description, visibilité et valeur par défaut",
+          "appearance": "Apparence et valeurs par défaut",
+          "appearanceHelp": "Épinglage de l'onglet et vue de liste par défaut du tableau",
           "assignment": "Attribution et SLA",
           "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
           "inbound": "E-mail et réponses entrantes",
@@ -799,6 +801,22 @@
         "allSaved": "Toutes les modifications sont enregistrées",
         "reopenBadge": "rouvrir",
         "required": "Obligatoire"
+      },
+      "appearance": {
+        "pinLabel": "Épingler à l'écran des tickets",
+        "pinHelp": "Les tableaux épinglés disposent d'un onglet permanent sur l'écran des tickets. Les tableaux non épinglés restent accessibles depuis « Tous les tickets » et le filtre de tableaux.",
+        "savedView": "Vue enregistrée",
+        "inheritsTenant": "Hérite des valeurs par défaut du locataire",
+        "openBoard": "Ouvrir ce tableau",
+        "resetToTenant": "Réinitialiser à la valeur par défaut du locataire",
+        "arrangeNote": "Organisez la vue de ce tableau directement sur le tableau, puis enregistrez-la depuis le menu « Affichage ».",
+        "preview": "Aperçu",
+        "summary": {
+          "openOnly": "Ouverts uniquement",
+          "columns": "{{count}} colonnes",
+          "density": "densité {{level}}",
+          "sortedBy": "trié par {{field}}"
+        }
       },
       "empty": "Aucun tableau trouvé.",
       "searchPlaceholder": "Rechercher des tableaux…"

@@ -779,6 +779,8 @@
         "sections": {
           "general": "Generale",
           "generalHelp": "Nome, descrizione, visibilità e predefinito",
+          "appearance": "Aspetto e valori predefiniti",
+          "appearanceHelp": "Fissaggio della scheda e visualizzazione elenco predefinita della bacheca",
           "assignment": "Assegnazione e SLA",
           "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
           "inbound": "Email e risposte in arrivo",
@@ -799,6 +801,22 @@
         "allSaved": "Tutte le modifiche salvate",
         "reopenBadge": "riapri",
         "required": "Obbligatorio"
+      },
+      "appearance": {
+        "pinLabel": "Fissa nella schermata dei ticket",
+        "pinHelp": "Le bacheche fissate hanno una scheda permanente nella schermata dei ticket. Le bacheche non fissate restano raggiungibili da \"Tutti i ticket\" e dal filtro delle bacheche.",
+        "savedView": "Visualizzazione salvata",
+        "inheritsTenant": "Eredita i valori predefiniti del tenant",
+        "openBoard": "Apri questa bacheca",
+        "resetToTenant": "Reimposta al valore predefinito del tenant",
+        "arrangeNote": "Organizza la visualizzazione di questa bacheca direttamente nella bacheca, quindi salvala dal menu \"Visualizzazione\".",
+        "preview": "Anteprima",
+        "summary": {
+          "openOnly": "Solo aperti",
+          "columns": "{{count}} colonne",
+          "density": "densità {{level}}",
+          "sortedBy": "ordinato per {{field}}"
+        }
       },
       "empty": "Nessuna bacheca trovata.",
       "searchPlaceholder": "Cerca bacheche…"

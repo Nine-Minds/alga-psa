@@ -553,6 +553,27 @@
     "boardTabs": {
       "all": "Wszystkie zgłoszenia"
     },
+    "boardHeader": {
+      "open": "Otwarte",
+      "overdue": "Po terminie",
+      "slaBreach": "Przekroczenie SLA",
+      "unassigned": "Nieprzypisane",
+      "managedBy": "Zarządzana przez",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Widok",
+      "columns": "Kolumny",
+      "density": "Gęstość",
+      "saveBoardDefault": "Zapisz jako domyślny widok tej tablicy",
+      "saveTenantDefault": "Zapisz jako domyślny widok dla wszystkich",
+      "resetToTenant": "Przywróć domyślny widok organizacji",
+      "unsavedChanges": "Ten widok różni się od zapisanego widoku domyślnego",
+      "saved": "Zapisano domyślny widok",
+      "saveFailed": "Nie udało się zapisać domyślnego widoku",
+      "reset": "Przywróć domyślny widok organizacji",
+      "resetFailed": "Nie udało się zresetować widoku"
+    },
     "allMatchingSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia spełniające filtry.",
     "allMatchingSelected_many": "Zaznaczono wszystkie {{count}} zgłoszeń spełniających filtry.",
     "allPageSelected_few": "Zaznaczono wszystkie {{count}} zgłoszenia na tej stronie.",

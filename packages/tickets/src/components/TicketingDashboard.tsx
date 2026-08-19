@@ -52,6 +52,26 @@ import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings'
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns, TICKET_COLUMNS } from '@alga-psa/tickets/lib';
+import BoardHeader from './BoardHeader';
+import TicketViewMenu from './TicketViewMenu';
+import {
+  captureTicketViewSettings,
+  ticketViewDiffersFromSaved,
+  TICKET_VIEW_DENSITY_DEFAULT,
+  TICKET_VIEW_DENSITY_STEP,
+  type ResolvedTicketViewSettings,
+  type TicketViewSettings,
+} from '../lib/ticketViewSettings';
+import {
+  clearBoardDefaultView,
+  getBoardIdentities,
+  saveBoardDefaultView,
+  type BoardIdentity,
+} from '../actions/board-actions/boardActions';
+import {
+  canManageTicketViewDefaults,
+  updateTicketingDisplaySettings,
+} from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
@@ -59,7 +79,6 @@ import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -118,6 +137,18 @@ interface TicketingDashboardProps {
   canUpdateTickets?: boolean;
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
+  /**
+   * The resolved board→tenant→catalog view. Owned by the container so that
+   * applying a board's default view layers into the one merge path that already
+   * produces a single fetch per navigation, instead of becoming a second effect.
+   */
+  viewPresentation?: ResolvedTicketViewSettings;
+  onViewPresentationChange?: (update: Partial<ResolvedTicketViewSettings>) => void;
+  /** The resolved baseline for the active tab, for the "differs from saved" dot. */
+  savedViewSettings?: TicketViewSettings | null;
+  /** True when this tab has a stored document of its own (Reset has work to do). */
+  hasStoredDefaultView?: boolean;
+  onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -133,10 +164,11 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
-const TICKET_LIST_DENSITY_STEP = 10;
-const TICKET_LIST_DENSITY_DEFAULT = 50;
+// Density lives in the view-settings layer now (board -> tenant -> default), so
+// the step and default are read from there rather than re-declared here.
+const TICKET_LIST_DENSITY_STEP = TICKET_VIEW_DENSITY_STEP;
+const TICKET_LIST_DENSITY_DEFAULT = TICKET_VIEW_DENSITY_DEFAULT;
 const TICKET_PRINT_FALLBACK_PAGE_SIZE = 500;
 
 const normalizeTicketListDensityLevel = (value: number): number => {
@@ -249,6 +281,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   canUpdateTickets = true,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
+  viewPresentation,
+  onViewPresentationChange,
+  savedViewSettings,
+  hasStoredDefaultView = false,
+  onSavedViewChanged,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -366,7 +403,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(TICKET_LIST_DENSITY_DEFAULT);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -502,23 +538,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.localStorage.setItem(BUNDLE_VIEW_STORAGE_KEY, bundleView);
   }, [bundleView]);
 
-  // Persist ticket list density preference locally.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = Number(window.localStorage.getItem(TICKET_LIST_DENSITY_STORAGE_KEY));
-    if (Number.isFinite(stored) && stored >= 0 && stored <= 100) {
-      setTicketListDensityLevel(normalizeTicketListDensityLevel(stored));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(TICKET_LIST_DENSITY_STORAGE_KEY, String(ticketListDensityLevel));
-  }, [ticketListDensityLevel]);
+  // Density is board -> tenant -> 50, and localStorage is deliberately neither
+  // read nor written any more. Left in place, a value any user had ever nudged
+  // would silently outrank every board's configured density forever, for that
+  // user, on every board — a per-browser setting quietly beating tenant-wide
+  // configuration is not a precedence anyone can reason about.
+  const ticketListDensityLevel = viewPresentation?.densityLevel ?? TICKET_LIST_DENSITY_DEFAULT;
 
   const handleTicketListDensityChange = useCallback((value: number) => {
-    setTicketListDensityLevel(normalizeTicketListDensityLevel(value));
-  }, []);
+    onViewPresentationChange?.({ densityLevel: normalizeTicketListDensityLevel(value) });
+  }, [onViewPresentationChange]);
 
   const densityClasses = useMemo(() => {
     const index = Math.min(
@@ -554,6 +583,117 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       cancelled = true;
     };
   }, []);
+
+  // Board identity (manager, SLA policy) for the header. Loaded out of band
+  // alongside the stats, for the same reason: the header's identity is the part
+  // that must be instant, and its ownership line is decoration that can arrive a
+  // beat later without the header ever looking broken.
+  const [boardIdentities, setBoardIdentities] = useState<Record<string, BoardIdentity> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getBoardIdentities();
+        if (!cancelled) {
+          setBoardIdentities(Object.fromEntries(rows.map(row => [row.boardId, row])));
+        }
+      } catch (error) {
+        console.error('Failed to load board identities:', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Presentation-only gate on the save/reset items; the actions enforce it too.
+  const [canManageViewDefaults, setCanManageViewDefaults] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const allowed = await canManageTicketViewDefaults();
+        if (!cancelled) setCanManageViewDefaults(allowed === true);
+      } catch {
+        // Denied-by-default: a failed permission read must not reveal the control.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const [isSavingView, setIsSavingView] = useState(false);
+
+  const activeBoard = useMemo(
+    () => (selectedBoard ? boards.find(board => board.board_id === selectedBoard) ?? null : null),
+    [boards, selectedBoard]
+  );
+
+  // The live view, projected into the same shape as what is stored, so the
+  // "differs from saved" comparison is between like and like. Board scope and
+  // search are excluded by capture, so they can never make a view look dirty.
+  const liveViewSettings = useMemo<TicketViewSettings>(() => captureTicketViewSettings({
+    filters: { ...filterValues, sortBy, sortDirection },
+    columnVisibility: viewPresentation?.columnVisibility,
+    columnOrder: viewPresentation?.columnOrder,
+    tagsInlineUnderTitle: viewPresentation?.tagsInlineUnderTitle,
+    densityLevel: viewPresentation?.densityLevel,
+  }), [filterValues, sortBy, sortDirection, viewPresentation]);
+
+  const viewIsDirty = useMemo(
+    () => ticketViewDiffersFromSaved(liveViewSettings, savedViewSettings),
+    [liveViewSettings, savedViewSettings]
+  );
+
+  // Where a save goes depends on which tab is active: a board tab writes that
+  // board's document, the All-tickets tab writes the tenant layer that already
+  // backs the Display Settings screen. Same affordance, correct altitude, no new
+  // mechanism on either side.
+  const handleSaveDefaultView = useCallback(async () => {
+    setIsSavingView(true);
+    try {
+      if (selectedBoard) {
+        const result = await saveBoardDefaultView(selectedBoard, liveViewSettings);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          handleError(getErrorMessage(result), t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+          return;
+        }
+        onSavedViewChanged?.(selectedBoard, liveViewSettings);
+      } else {
+        const result = await updateTicketingDisplaySettings({ list: liveViewSettings });
+        if (isActionPermissionError(result)) {
+          handleError(getErrorMessage(result), t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+          return;
+        }
+        onSavedViewChanged?.(null, liveViewSettings);
+      }
+      toast.success(t('dashboard.viewMenu.saved', 'Default view saved'));
+    } catch (error) {
+      handleError(error, t('dashboard.viewMenu.saveFailed', 'Failed to save the default view'));
+    } finally {
+      setIsSavingView(false);
+    }
+  }, [selectedBoard, liveViewSettings, onSavedViewChanged, t]);
+
+  const handleResetDefaultView = useCallback(async () => {
+    if (!selectedBoard) {
+      // The All-tickets tab is the tenant layer itself; "reset to tenant
+      // default" there would mean resetting to the catalog, which is a
+      // different, larger action than this menu item promises.
+      return;
+    }
+    setIsSavingView(true);
+    try {
+      const result = await clearBoardDefaultView(selectedBoard);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result), t('dashboard.viewMenu.resetFailed', 'Failed to reset the view'));
+        return;
+      }
+      onSavedViewChanged?.(selectedBoard, null);
+      toast.success(t('dashboard.viewMenu.reset', 'Reset to tenant default'));
+    } catch (error) {
+      handleError(error, t('dashboard.viewMenu.resetFailed', 'Failed to reset the view'));
+    } finally {
+      setIsSavingView(false);
+    }
+  }, [selectedBoard, onSavedViewChanged, t]);
 
   const boardTabs = useMemo(
     () => buildBoardTabs({
@@ -1138,7 +1278,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const baseColumns = createTicketColumns({
       categories,
       boards,
-      displaySettings: displaySettings || undefined,
+      // The live view outranks the tenant document here: the View menu is
+      // interaction state layered over the resolved board->tenant->catalog
+      // result, so what the user just toggled must win over what was stored.
+      displaySettings: viewPresentation
+        ? {
+            ...(displaySettings || {}),
+            list: {
+              ...(displaySettings?.list || {}),
+              columnVisibility: viewPresentation.columnVisibility,
+              tagsInlineUnderTitle: viewPresentation.tagsInlineUnderTitle,
+            },
+          }
+        : displaySettings || undefined,
+      columnOrder: viewPresentation?.columnOrder,
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
@@ -1251,6 +1404,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     categories,
     boards,
     displaySettings,
+    viewPresentation,
     handleTicketClick,
     handleTagsChange,
     ticketTagsRef,
@@ -1980,6 +2134,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onChange={handleBoardTabSelect}
       />
       <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
+        {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
+            second board-selection derivation: the highlighted tab, the
+            board-scoped status options and this header must agree by
+            construction, not by two places happening to compute the same thing. */}
+        {activeBoard && (
+          <BoardHeader
+            id={`${id}-board-header`}
+            board={activeBoard}
+            stats={boardStats?.[activeBoard.board_id as string] ?? null}
+            identity={boardIdentities?.[activeBoard.board_id as string] ?? null}
+            t={t as (key: string, fallback: string) => string}
+          />
+        )}
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
@@ -2031,19 +2198,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   </div>
                   <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-                  <div className="shrink-0">
-                    <ViewDensityControl
-                      idPrefix={`${id}-list-density`}
-                      value={ticketListDensityLevel}
-                      onChange={handleTicketListDensityChange}
-                      step={TICKET_LIST_DENSITY_STEP}
-                      compactLabel={t('dashboard.spacing.compact', 'Compact')}
-                      spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
-                      decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
-                      increaseTitle={t('dashboard.spacing.increase', 'Increase ticket list spacing')}
-                      resetTitle={t('dashboard.spacing.reset', 'Reset ticket list spacing')}
+                  {viewPresentation && onViewPresentationChange && (
+                    <TicketViewMenu
+                      id={`${id}-view-menu`}
+                      view={viewPresentation}
+                      onChange={onViewPresentationChange}
+                      isDirty={viewIsDirty}
+                      canManageDefaults={canManageViewDefaults}
+                      scope={selectedBoard ? 'board' : 'tenant'}
+                      onSaveDefault={handleSaveDefaultView}
+                      onResetDefault={handleResetDefaultView}
+                      hasStoredDefault={hasStoredDefaultView}
+                      isSaving={isSavingView}
+                      t={t as (key: string, fallback: string) => string}
                     />
-                  </div>
+                  )}
                 </div>
               </div>
 

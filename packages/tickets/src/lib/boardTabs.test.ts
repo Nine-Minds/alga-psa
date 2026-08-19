@@ -29,6 +29,10 @@ function board(overrides: Partial<IBoard> & { board_id: string }): IBoard {
   return {
     tenant: 'tenant-1',
     is_inactive: false,
+    // Pinned by default: these fixtures predate pinning and exercise ordering,
+    // counts and labels, so they should keep exercising exactly that. Pinning
+    // has its own cases below.
+    is_pinned: true,
     ...overrides,
   } as IBoard;
 }
@@ -198,6 +202,65 @@ describe('buildBoardTabs', () => {
   it('never renders a count pill on All tickets', () => {
     const tabs = buildWith(null, { [BOARD_A]: { openTicketCount: 7 }, [BOARD_B]: { openTicketCount: 3 } });
     expect(tabs[0].openTicketCount).toBeNull();
+  });
+
+  it('excludes boards that are not pinned', () => {
+    const tabs = buildBoardTabs({
+      boards: [
+        board({ board_id: BOARD_A, board_name: 'Escalations', display_order: 1 }),
+        board({ board_id: BOARD_B, board_name: 'Support', display_order: 2, is_pinned: false }),
+      ],
+      activeBoardId: null,
+      stats: null,
+      allTabLabel: 'All tickets',
+      unnamedBoardLabel: 'Unnamed board',
+    });
+    expect(tabs.map(tab => tab.label)).toEqual(['All tickets', 'Escalations']);
+  });
+
+  it('renders a transient tab for an unpinned board that is deep-linked to', () => {
+    // The same escape-hatch clause that keeps a selected inactive board
+    // representable: no new branch, and the tab disappears when you leave.
+    const boardsWithUnpinned = [
+      board({ board_id: BOARD_A, board_name: 'Escalations', display_order: 1 }),
+      board({ board_id: BOARD_B, board_name: 'Support', display_order: 2, is_pinned: false }),
+    ];
+    const tabs = buildBoardTabs({
+      boards: boardsWithUnpinned,
+      activeBoardId: BOARD_B,
+      stats: null,
+      allTabLabel: 'All tickets',
+      unnamedBoardLabel: 'Unnamed board',
+    });
+    expect(tabs.map(tab => tab.boardId)).toEqual([null, BOARD_A, BOARD_B]);
+  });
+
+  it('treats a board with no pinning decision as unpinned', () => {
+    const tabs = buildBoardTabs({
+      boards: [{ tenant: 'tenant-1', is_inactive: false, board_id: BOARD_A, board_name: 'Escalations' } as IBoard],
+      activeBoardId: null,
+      stats: null,
+      allTabLabel: 'All tickets',
+      unnamedBoardLabel: 'Unnamed board',
+    });
+    expect(tabs.map(tab => tab.label)).toEqual(['All tickets']);
+  });
+
+  it('renders All tickets alone when nothing is pinned, rather than hiding', () => {
+    // A legitimate state: an admin unpinned everything. The screen must not lose
+    // its navigation as a result.
+    const tabs = buildBoardTabs({
+      boards: [
+        board({ board_id: BOARD_A, board_name: 'Escalations', is_pinned: false }),
+        board({ board_id: BOARD_B, board_name: 'Support', is_pinned: false }),
+      ],
+      activeBoardId: null,
+      stats: null,
+      allTabLabel: 'All tickets',
+      unnamedBoardLabel: 'Unnamed board',
+    });
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].id).toBe(ALL_BOARDS_TAB_ID);
   });
 
   it('falls back to a placeholder label for an unnamed board', () => {

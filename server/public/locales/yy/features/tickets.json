@@ -506,6 +506,27 @@
     "importAction": "55555",
     "boardTabs": {
       "all": "55555"
+    },
+    "boardHeader": {
+      "open": "55555",
+      "overdue": "55555",
+      "slaBreach": "55555",
+      "unassigned": "55555",
+      "managedBy": "55555",
+      "sla": "55555"
+    },
+    "viewMenu": {
+      "label": "55555",
+      "columns": "55555",
+      "density": "55555",
+      "saveBoardDefault": "55555",
+      "saveTenantDefault": "55555",
+      "resetToTenant": "55555",
+      "unsavedChanges": "55555",
+      "saved": "55555",
+      "saveFailed": "55555",
+      "reset": "55555",
+      "resetFailed": "55555"
     }
   },
   "bulk": {

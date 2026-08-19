@@ -4,12 +4,20 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
+import { resolveTicketColumnVisibility } from '../lib/ticketColumnCatalog';
+import type { TicketViewSettings } from '../lib/ticketViewSettings';
 
-export type TicketListSettings = {
-  columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
-  tagsInlineUnderTitle?: boolean;
-};
+/**
+ * The tenant layer of a ticket-list view is the *same document* a board stores.
+ *
+ * `list` widens from the two keys it used to hold (columnVisibility,
+ * tagsInlineUnderTitle) to the full TicketViewSettings — a pure type widening,
+ * because both keys already sat at exactly this path. No tenant JSON migration
+ * is needed: the type grows, stored data does not move. A board stores the same
+ * document *directly* in boards.list_view_settings rather than nested under
+ * `list`, because a board has no other display settings to nest beside it.
+ */
+export type TicketListSettings = TicketViewSettings;
 
 export type TicketingDisplaySettings = {
   dateTimeFormat?: string; // date-fns format string, e.g. 'MMM d, yyyy h:mm a'
@@ -39,6 +47,13 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
         // ticket-column catalog so this list can't drift from the renderer.
         columnVisibility: resolveTicketColumnVisibility(display?.list?.columnVisibility),
         tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? true,
+        // Carried through unresolved: resolveTicketViewSettings layers the board
+        // document over this one and only then applies catalog/step defaults, so
+        // "the tenant did not express a density" must stay distinguishable here
+        // from "the tenant chose 50".
+        columnOrder: display?.list?.columnOrder,
+        densityLevel: display?.list?.densityLevel,
+        filters: display?.list?.filters,
       },
     };
   } catch (e) {
@@ -52,6 +67,20 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       },
     };
   }
+});
+
+/**
+ * Whether the caller may author default views (`ticket_settings:update`).
+ *
+ * Purely for hiding the save/reset items in the `View ▾` menu — the actions
+ * themselves are gated server-side, so this is presentation, not enforcement.
+ * A separate read rather than an inference from the settings payload, because
+ * "can see the display settings" and "can change them for everyone" are
+ * genuinely different questions.
+ */
+export const canManageTicketViewDefaults = withAuth(async (user, _ctx): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
+  return hasPermission(user, 'ticket_settings', 'update', knex);
 });
 
 export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean } | ActionPermissionError> => {

@@ -498,6 +498,27 @@
     "importAction": "Importer CSV",
     "boardTabs": {
       "all": "Tous les tickets"
+    },
+    "boardHeader": {
+      "open": "Ouverts",
+      "overdue": "En retard",
+      "slaBreach": "Dépassement de SLA",
+      "unassigned": "Non attribué",
+      "managedBy": "Géré par",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Affichage",
+      "columns": "Colonnes",
+      "density": "Densité",
+      "saveBoardDefault": "Enregistrer comme vue par défaut de ce tableau",
+      "saveTenantDefault": "Enregistrer comme vue par défaut pour tout le monde",
+      "resetToTenant": "Réinitialiser à la valeur par défaut du locataire",
+      "unsavedChanges": "Cette vue diffère de la valeur par défaut enregistrée",
+      "saved": "Vue par défaut enregistrée",
+      "saveFailed": "Échec de l'enregistrement de la vue par défaut",
+      "reset": "Réinitialiser à la valeur par défaut du locataire",
+      "resetFailed": "Échec de la réinitialisation de la vue"
     }
   },
   "bulk": {

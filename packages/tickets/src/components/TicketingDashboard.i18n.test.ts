@@ -41,11 +41,35 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('filters.search', 'Search tickets and comments...')");
     expect(source).toContain("t('resetFilters', 'Reset')");
     expect(source).toContain("t('dashboard.bundledToggle', 'Bundled')");
+  });
+
+  it('T010b: wires the View menu chrome through features/tickets translations', () => {
+    // The density slider moved out of the toolbar and into the View menu, which
+    // also owns columns and the save/reset default-view items. The keys are
+    // unchanged; only the file that renders them moved.
+    const source = read('./TicketViewMenu.tsx');
+
+    expect(source).toContain("t('dashboard.viewMenu.label', 'View')");
+    expect(source).toContain("t('dashboard.viewMenu.columns', 'Columns')");
+    expect(source).toContain("t('dashboard.viewMenu.density', 'Density')");
+    expect(source).toContain("t('dashboard.viewMenu.saveBoardDefault', \"Save as this board's default view\")");
+    expect(source).toContain("t('dashboard.viewMenu.resetToTenant', 'Reset to tenant default')");
     expect(source).toContain("t('dashboard.spacing.compact', 'Compact')");
     expect(source).toContain("t('dashboard.spacing.spacious', 'Spacious')");
     expect(source).toContain("t('dashboard.spacing.decrease', 'Decrease ticket list spacing')");
     expect(source).toContain("t('dashboard.spacing.increase', 'Increase ticket list spacing')");
     expect(source).toContain("t('dashboard.spacing.reset', 'Reset ticket list spacing')");
+  });
+
+  it('T010c: wires the board header through features/tickets translations', () => {
+    const source = read('./BoardHeader.tsx');
+
+    expect(source).toContain("t('dashboard.boardHeader.open', 'Open')");
+    expect(source).toContain("t('dashboard.boardHeader.overdue', 'Overdue')");
+    expect(source).toContain("t('dashboard.boardHeader.slaBreach', 'SLA breach')");
+    expect(source).toContain("t('dashboard.boardHeader.unassigned', 'Unassigned')");
+    expect(source).toContain("t('dashboard.boardHeader.managedBy', 'Managed by')");
+    expect(source).toContain("t('dashboard.boardHeader.sla', 'SLA')");
   });
 
   it('T011: keeps the dashboard shell/bulk chrome backed by xx pseudo-locale strings instead of raw English', () => {
