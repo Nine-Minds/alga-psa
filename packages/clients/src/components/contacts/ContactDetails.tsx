@@ -25,7 +25,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { validateContactName, validateRole } from '@alga-psa/validation';
+import { validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -101,15 +101,21 @@ const TextDetailItem: React.FC<{
   onEdit: (value: string) => void;
   automationId?: string;
   validate?: (value: string) => string | null;
-}> = ({ label, value, onEdit, automationId, validate }) => {
+  /** Structural error blocks; the warnings it also returns never do. */
+  validateField?: (value: string) => FieldValidation;
+}> = ({ label, value, onEdit, automationId, validate, validateField }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const handleBlur = () => {
     // Professional SaaS validation pattern: validate on blur, not while typing
-    if (validate) {
-      const validationError = validate(localValue);
-      setError(validationError);
+    if (validateField) {
+      const result = validateField(localValue);
+      setError(result.error);
+      setWarnings(result.warnings);
+    } else if (validate) {
+      setError(validate(localValue));
     }
 
     if (localValue !== value) {
@@ -133,6 +139,7 @@ const TextDetailItem: React.FC<{
         value={localValue}
         onChange={handleChange}
         onBlur={handleBlur}
+        warnings={warnings}
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
           error ? 'border-red-500' : 'border-gray-200'
         }`}
@@ -659,7 +666,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
               automationId="full-name-field"
-              validate={validateContactName}
+              validateField={validateContactNameField}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.client', { defaultValue: 'Client' })}</Text>

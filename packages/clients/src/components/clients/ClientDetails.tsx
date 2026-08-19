@@ -10,7 +10,7 @@ import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpe
 import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { validateClientName } from '@alga-psa/validation';
+import { validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -281,6 +281,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Surfaced beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
   const [isLoadingSlaPolicies, setIsLoadingSlaPolicies] = useState(false);
@@ -965,9 +967,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'client_name') {
-        const error = validateClientName(value);
-        if (error) {
-          newErrors[field] = error;
+        const result = validateClientNameField(value);
+        // Warnings are informational only and must never gate the save.
+        setFieldWarnings(prev => ({ ...prev, client_name: result.warnings }));
+        if (result.error) {
+          newErrors[field] = result.error;
           hasValidationErrors = true;
         }
       }
@@ -1350,6 +1354,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           clientActiveContacts={clientActiveContacts}
           setDefaultContactOptions={setDefaultContactOptions}
           fieldErrors={fieldErrors}
+          fieldWarnings={fieldWarnings}
           hasAttemptedSubmit={hasAttemptedSubmit}
           slaPolicies={slaPolicies}
           isLoadingSlaPolicies={isLoadingSlaPolicies}
@@ -1703,6 +1708,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     surveySummary,
     hasAttemptedSubmit,
     fieldErrors,
+    fieldWarnings,
     handleSave,
     isSaving,
     setIsQuickAddTicketOpen,

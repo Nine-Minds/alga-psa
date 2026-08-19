@@ -1,6 +1,6 @@
 'use client';
 
-import React, { InputHTMLAttributes, useEffect, useRef, useCallback } from 'react';
+import React, { InputHTMLAttributes, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from '../ui-reflection/actionBuilders';
@@ -30,6 +30,13 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 
   errors?: string[];
   /** Whether the field has an error state */
   hasError?: boolean;
+  /**
+   * Plausibility warnings. Rendered beneath the field, visually distinct from an
+   * error, and dismissible. Never gates a save — if nobody acts on one, delete it.
+   */
+  warnings?: string[];
+  /** Called when the user dismisses the warnings for this field. */
+  onDismissWarnings?: () => void;
   /** Ref for the input element */
   ref?: React.Ref<HTMLInputElement>;
   /** Size variant */
@@ -49,6 +56,8 @@ export function Input({
   error,
   errors,
   hasError,
+  warnings,
+  onDismissWarnings,
   size = 'md',
   ref: forwardedRef,
   "data-automation-type": dataAutomationType = 'input',
@@ -141,6 +150,10 @@ export function Input({
 
   const displayErrors = errors || (error ? [error] : []);
   const hasErrorState = hasError || displayErrors.length > 0;
+  const warningSignature = useMemo(() => (warnings ?? []).join('|'), [warnings]);
+  const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
+  // A new set of warnings resurfaces even if the previous set was dismissed.
+  const displayWarnings = dismissedSignature === warningSignature ? [] : warnings ?? [];
 
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
@@ -174,6 +187,56 @@ export function Input({
             </p>
           ))}
         </div>
+      )}
+      <FieldWarnings
+        warnings={displayWarnings}
+        onDismiss={() => {
+          setDismissedSignature(warningSignature);
+          onDismissWarnings?.();
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Field-level plausibility warning. Deliberately not styled as an error: it is an
+ * opinion about the input, not a reason the save cannot proceed.
+ */
+export function FieldWarnings({
+  warnings,
+  onDismiss,
+  className = '',
+}: {
+  warnings: string[];
+  onDismiss?: () => void;
+  className?: string;
+}) {
+  if (!warnings.length) {
+    return null;
+  }
+
+  return (
+    <div
+      role="status"
+      data-automation-type="field-warning"
+      className={`mt-1 flex items-start gap-2 rounded-md border border-[rgb(var(--color-border-300))] bg-[rgba(var(--color-accent-50),0.35)] px-2 py-1.5 ${className}`.trim()}
+    >
+      <div className="flex-1 space-y-0.5">
+        {warnings.map((warning) => (
+          <p key={warning} className="text-xs text-[rgb(var(--color-text-600))]">
+            {warning}
+          </p>
+        ))}
+      </div>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 text-xs font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
+        >
+          Dismiss
+        </button>
       )}
     </div>
   );

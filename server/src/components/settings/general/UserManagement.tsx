@@ -79,7 +79,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
+import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -149,6 +149,7 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<{
     first_name: string[];
     last_name: string[];
@@ -271,10 +272,14 @@ const UserManagement = (): React.JSX.Element => {
         error = validateContactName(value);
         if (error) errors = [error];
         break;
-      case 'email':
-        error = validateEmailAddress(value);
+      case 'email': {
+        const result = validateEmailAddressField(value);
+        error = result.error;
         if (error) errors = [error];
+        // Plausibility only; never gates the invite.
+        setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
         break;
+      }
       default:
         errors = [];
     }
@@ -789,6 +794,7 @@ const fetchContacts = async (): Promise<void> => {
                   validateField('email', newUser.email);
                 }}
                 className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
+                warnings={fieldWarnings.email}
               />
               {fieldErrors.email.length > 0 && (
                 <div className="text-sm text-destructive mt-1">

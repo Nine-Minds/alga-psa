@@ -17,7 +17,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { validatePhoneNumber } from '@alga-psa/validation';
+import { validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -50,6 +50,7 @@ function normalizePhoneRowForDraft(
   return {
     contact_phone_number_id: row.contact_phone_number_id,
     phone_number: row.phone_number ?? '',
+    extension: row.extension ?? null,
     canonical_type: isCustomType ? null : row.canonical_type ?? 'work',
     custom_type: customType,
     is_default: Boolean(row.is_default),
@@ -77,6 +78,7 @@ export function normalizeDraftContactPhoneNumbers(
     return {
       contact_phone_number_id: row.contact_phone_number_id,
       phone_number,
+      extension: row.extension?.trim() || null,
       canonical_type,
       custom_type,
       is_default: index === normalizedDefaultIndex,
@@ -212,6 +214,7 @@ function buildEditablePhoneRows(
 function createEmptyPhoneRow(isDefault: boolean): EditablePhoneRow {
   return {
     phone_number: '',
+    extension: null,
     canonical_type: 'work',
     custom_type: null,
     is_default: isDefault,
@@ -331,6 +334,11 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
 }) => {
   const { t } = useTranslation('msp/contacts');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
+  // Plausibility only; the row still saves.
+  const phoneWarnings = useMemo(
+    () => validatePhoneNumberField(row.phone_number ?? '').warnings,
+    [row.phone_number]
+  );
   const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
   const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
@@ -472,6 +480,9 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
           })}
           value={row.phone_number ?? ''}
           onChange={(value) => onChange({ phone_number: value })}
+          extension={row.extension ?? ''}
+          onExtensionChange={(value) => onChange({ extension: value })}
+          warnings={phoneWarnings}
           onBlur={onBlur}
           countryCode={countryCode}
           phoneCode={phoneCode}

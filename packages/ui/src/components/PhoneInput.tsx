@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Input } from './Input';
+import { FieldWarnings, Input } from './Input';
 import { Label } from './Label';
 import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 
@@ -86,6 +86,9 @@ interface PhoneInputProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
+  /** Extension, kept as its own value. Never packed into the number. */
+  extension?: string;
+  onExtensionChange?: (extension: string) => void;
   onBlur?: () => void;
   countryCode?: string; // ISO country code (e.g., 'US', 'GB')
   phoneCode?: string; // Phone code (e.g., '+1', '+44')
@@ -98,6 +101,8 @@ interface PhoneInputProps {
   allowExtensions?: boolean; // Allow phone extensions (ext. 1234)
   extensionPlaceholder?: string; // Placeholder for extension field
   error?: boolean; // Whether to show error styling
+  /** Plausibility warnings; rendered beneath the field and never gating a save. */
+  warnings?: string[];
   'data-automation-id'?: string;
   externalCountryCode?: string; // For one-way sync from address country
 }
@@ -107,6 +112,8 @@ export const PhoneInput = ({
   label,
   value,
   onChange,
+  extension,
+  onExtensionChange,
   onBlur,
   countryCode,
   phoneCode,
@@ -118,11 +125,11 @@ export const PhoneInput = ({
   required = false,
   allowExtensions = false,
   extensionPlaceholder = "ext. 1234",
+  warnings,
   'data-automation-id': dataAutomationId,
   externalCountryCode
 }: PhoneInputProps) => {
   const [displayValue, setDisplayValue] = useState('');
-  const [extensionValue, setExtensionValue] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExternalUpdate, setIsExternalUpdate] = useState(false);
@@ -131,39 +138,13 @@ export const PhoneInput = ({
   const currentCountry = countries?.find(c => c.code === resolvedCountryCode);
   const resolvedPhoneCode = normalizePhoneCode(phoneCode || currentCountry?.phone_code);
 
-  // Parse phone number and extension from value
-  const parsePhoneAndExtension = (fullValue: string): { phone: string; extension: string } => {
-    if (!fullValue) return { phone: '', extension: '' };
+  // The extension lives in its own value/column, so the number is never re-parsed
+  // to pull one back out of it.
+  const extensionValue = extension ?? '';
 
-    // Look for extension patterns: "ext 123", "ext. 123", "x123", "extension 123"
-    const extPatterns = [
-      /\s+ext\.?\s*(\d+)$/i,
-      /\s+x\s*(\d+)$/i,
-      /\s+extension\s*(\d+)$/i,
-      /\s+e\s*(\d+)$/i
-    ];
-
-    for (const pattern of extPatterns) {
-      const match = fullValue.match(pattern);
-      if (match) {
-        const phone = fullValue.replace(pattern, '').trim();
-        const extension = match[1];
-        return { phone, extension };
-      }
-    }
-
-    return { phone: fullValue, extension: '' };
-  };
-
-  // Combine phone and extension into full value
-  const combinePhoneAndExtension = (phone: string, extension: string): string => {
-    if (!extension.trim()) return phone;
-    return `${phone} ext. ${extension.trim()}`;
-  };
-
-  // Clean phone number display - remove country code from input and parse extensions
+  // Clean phone number display - strip the country code from the input
   useEffect(() => {
-    const { phone, extension } = parsePhoneAndExtension(value);
+    const phone = value ?? '';
     const detectedPhoneCode = detectPhoneCodeFromValue(phone, countries);
     const cleanedPhone = stripLeadingPhoneCode(
       phone,
@@ -173,7 +154,6 @@ export const PhoneInput = ({
     );
 
     setDisplayValue(cleanedPhone);
-    setExtensionValue(extension);
   }, [countries, resolvedPhoneCode, value]);
 
   // Handle external country code sync (one-way from address country to phone)
@@ -192,23 +172,12 @@ export const PhoneInput = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
     setDisplayValue(phoneNumber);
-
-    // Combine phone code with the number for the full value
-    const basePhone = resolvedPhoneCode ? `${resolvedPhoneCode} ${phoneNumber}`.trim() : phoneNumber;
-    const fullValue = combinePhoneAndExtension(basePhone, extensionValue);
-    onChange(fullValue);
+    onChange(resolvedPhoneCode ? `${resolvedPhoneCode} ${phoneNumber}`.trim() : phoneNumber);
   };
 
   const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    // Only allow numbers for extension
-    const extension = inputValue.replace(/[^0-9]/g, '');
-    setExtensionValue(extension);
-
-    // Combine phone code with the number and extension for the full value
-    const basePhone = resolvedPhoneCode ? `${resolvedPhoneCode} ${displayValue}`.trim() : displayValue;
-    const fullValue = combinePhoneAndExtension(basePhone, extension);
-    onChange(fullValue);
+    // Only digits for extension
+    onExtensionChange?.(e.target.value.replace(/[^0-9]/g, ''));
   };
 
   const getPlaceholderText = (): string => {
@@ -235,7 +204,7 @@ export const PhoneInput = ({
     setSearchQuery('');
 
     const selectedPhoneCode = normalizePhoneCode(selectedCountry.phone_code);
-    const { phone, extension } = parsePhoneAndExtension(value);
+    const phone = value ?? '';
     const strippedPhone = stripLeadingPhoneCode(
       phone,
       resolvedPhoneCode && phone.startsWith(resolvedPhoneCode)
@@ -244,13 +213,11 @@ export const PhoneInput = ({
     );
 
     if (onChange) {
-      const updatedPhone = strippedPhone
-        ? combinePhoneAndExtension(
-            selectedPhoneCode ? `${selectedPhoneCode} ${strippedPhone}`.trim() : strippedPhone,
-            extension
-          )
-        : '';
-      onChange(updatedPhone);
+      onChange(
+        strippedPhone
+          ? (selectedPhoneCode ? `${selectedPhoneCode} ${strippedPhone}`.trim() : strippedPhone)
+          : ''
+      );
     }
 
     // Always trigger onCountryChange to update the phone code display
@@ -426,6 +393,7 @@ export const PhoneInput = ({
           )}
         </div>
 
+        <FieldWarnings warnings={warnings ?? []} />
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import type { IClient, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSumma
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { validateAnnualRevenue, validateClientName, validateCompanySize, validateIndustry, validateWebsiteUrl } from '@alga-psa/validation';
+import { validateAnnualRevenue, validateClientNameField, validateCompanySize, validateIndustry, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -63,9 +63,13 @@ const TextDetailItem: React.FC<{
   onEdit: (value: string) => void;
   automationId?: string;
   validate?: (value: string) => string | null;
-}> = ({ label, value, onEdit, automationId, validate }) => {
+  /** Structural error blocks; the warnings it also returns never do. */
+  validateField?: (value: string) => FieldValidation;
+  warnings?: string[];
+}> = ({ label, value, onEdit, automationId, validate, validateField, warnings: externalWarnings }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
@@ -88,9 +92,12 @@ const TextDetailItem: React.FC<{
   }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
-    if (validate) {
-      const validationError = validate(localValue);
-      setError(validationError);
+    if (validateField) {
+      const result = validateField(localValue);
+      setError(result.error);
+      setWarnings(result.warnings);
+    } else if (validate) {
+      setError(validate(localValue));
     }
 
     onEdit(localValue);
@@ -110,6 +117,7 @@ const TextDetailItem: React.FC<{
           }
         }}
         onBlur={handleBlur}
+        warnings={warnings.length > 0 ? warnings : externalWarnings}
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
           error
             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
@@ -155,6 +163,8 @@ export interface ClientDetailsTabContentProps {
   clientActiveContacts: IContact[];
   setDefaultContactOptions: React.Dispatch<React.SetStateAction<IContact[]>>;
   fieldErrors: Record<string, string>;
+  /** Plausibility warnings; rendered beneath fields and never gating the save. */
+  fieldWarnings?: Record<string, string[]>;
   hasAttemptedSubmit: boolean;
   slaPolicies: ISlaPolicy[];
   isLoadingSlaPolicies: boolean;
@@ -197,6 +207,7 @@ export function ClientDetailsTabContent({
   clientActiveContacts,
   setDefaultContactOptions,
   fieldErrors,
+  fieldWarnings,
   hasAttemptedSubmit,
   slaPolicies,
   isLoadingSlaPolicies,
@@ -240,7 +251,8 @@ export function ClientDetailsTabContent({
             value={editedClient.client_name}
             onEdit={(value) => onFieldChange('client_name', value)}
             automationId="client-name-field"
-            validate={validateClientName}
+            validateField={validateClientNameField}
+            warnings={fieldWarnings?.client_name}
           />
 
           <FieldContainer
@@ -529,7 +541,7 @@ export function ClientDetailsTabContent({
             value={editedClient.properties?.website || ''}
             onEdit={(value) => onFieldChange('properties.website', value)}
             automationId="website-field"
-            validate={validateWebsiteUrl}
+            validateField={validateWebsiteUrlField}
           />
 
           <TextDetailItem

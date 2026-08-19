@@ -34,7 +34,7 @@ import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShor
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
-import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
+import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -100,6 +100,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Rendered beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
 
   // Use SWR hook for avatar - automatically syncs with Header
   const { avatarUrl } = useUserAvatar(user?.user_id, user?.tenant);
@@ -147,6 +149,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneExtension, setPhoneExtension] = useState('');
   const [timezone, setTimezone] = useState('');
 
   useEffect(() => {
@@ -163,6 +166,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setLastName(currentUser.last_name || '');
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
+        setPhoneExtension((currentUser as { phone_extension?: string | null }).phone_extension || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
 
         // Load countries for phone input
@@ -285,6 +289,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         last_name: lastName,
         email: email,
         phone: phone,
+        phone_extension: phoneExtension,
         timezone: timezone
       });
 
@@ -443,10 +448,12 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   }
                 }}
                 onBlur={() => {
-                  const error = validateEmailAddress(email);
-                  setFieldErrors(prev => ({ ...prev, email: error || '' }));
+                  const result = validateEmailAddressField(email);
+                  setFieldErrors(prev => ({ ...prev, email: result.error || '' }));
+                  setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
                 }}
                 className={fieldErrors.email ? 'border-destructive' : ''}
+                warnings={fieldWarnings.email}
               />
               {fieldErrors.email && (
                 <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>
@@ -457,6 +464,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 id="phone"
                 label={t('profile.fields.phoneNumber.label')}
                 value={phone}
+                extension={phoneExtension}
+                onExtensionChange={setPhoneExtension}
+                warnings={fieldWarnings.phone}
                 onChange={(value) => {
                   setPhone(value);
                   // Clear error when user starts typing
@@ -466,8 +476,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 }}
                 onBlur={() => {
                   if (phone.trim()) {
-                    const error = validatePhoneNumber(phone);
-                    setFieldErrors(prev => ({ ...prev, phone: error || '' }));
+                    const result = validatePhoneNumberField(phone);
+                    setFieldErrors(prev => ({ ...prev, phone: result.error || '' }));
+                    setFieldWarnings(prev => ({ ...prev, phone: result.warnings }));
                   }
                 }}
                 countryCode={countryCode}

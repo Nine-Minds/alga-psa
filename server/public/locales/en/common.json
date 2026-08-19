@@ -404,6 +404,41 @@
         "title": "No locations added yet",
         "description": "Click \"Add Location\" to get started"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Please enter a valid client name",
+        "required": "Client name is required",
+        "emojiOnly": "This name is made up entirely of emoji.",
+        "tooShort": "This name is a single character — is that right?",
+        "abbreviationOnly": "This is only a business abbreviation, not a name.",
+        "repeatedCharacters": "This name repeats the same character several times.",
+        "looksLikeUrl": "This looks like a web address rather than a name.",
+        "noLettersOrNumbers": "This name has no letters or numbers in it."
+      },
+      "contactName": {
+        "structural": "Please enter a valid contact name",
+        "placeholder": "This looks like a placeholder rather than a person."
+      },
+      "email": {
+        "structural": "Please enter a valid email address",
+        "required": "Email address is required",
+        "disposableDomain": "{{domain}} is a disposable mailbox provider.",
+        "reservedDomain": "{{domain}} is reserved for documentation and testing.",
+        "internalDomain": "{{domain}} only resolves inside a private network."
+      },
+      "url": {
+        "structural": "Please enter a valid website URL (e.g., apple.com)",
+        "ipAddress": "This is an IP address rather than a domain name.",
+        "internalHost": "{{host}} only resolves inside a private network.",
+        "reservedDomain": "{{host}} is reserved for documentation and testing."
+      },
+      "phone": {
+        "structural": "Please enter a valid phone number",
+        "repeatedDigits": "This number is the same digit repeated.",
+        "sequentialDigits": "This number runs straight up or down the keypad.",
+        "fictionalRange": "This is in the 555-0100 range reserved for fiction."
+      }
     }
   },
   "commentThread": {

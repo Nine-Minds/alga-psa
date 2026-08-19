@@ -387,6 +387,41 @@
         "title": "Brak dodanych lokalizacji",
         "description": "Kliknij „Dodaj lokalizację”, aby rozpocząć"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Podaj prawidłową nazwę klienta",
+        "required": "Nazwa klienta jest wymagana",
+        "emojiOnly": "Ta nazwa składa się wyłącznie z emoji.",
+        "tooShort": "Ta nazwa ma tylko jeden znak — czy to na pewno poprawne?",
+        "abbreviationOnly": "To tylko skrót formy prawnej, a nie nazwa.",
+        "repeatedCharacters": "W tej nazwie ten sam znak powtarza się wielokrotnie.",
+        "looksLikeUrl": "To wygląda raczej na adres internetowy niż na nazwę.",
+        "noLettersOrNumbers": "Ta nazwa nie zawiera liter ani cyfr."
+      },
+      "contactName": {
+        "structural": "Podaj prawidłową nazwę kontaktu",
+        "placeholder": "To wygląda raczej na wypełniacz niż na osobę."
+      },
+      "email": {
+        "structural": "Podaj prawidłowy adres e-mail",
+        "required": "Adres e-mail jest wymagany",
+        "disposableDomain": "{{domain}} to dostawca jednorazowych skrzynek pocztowych.",
+        "reservedDomain": "{{domain}} jest zarezerwowana do dokumentacji i testów.",
+        "internalDomain": "{{domain}} rozwiązuje się tylko w sieci prywatnej."
+      },
+      "url": {
+        "structural": "Podaj prawidłowy adres strony internetowej (np. apple.com)",
+        "ipAddress": "To adres IP, a nie nazwa domeny.",
+        "internalHost": "{{host}} rozwiązuje się tylko w sieci prywatnej.",
+        "reservedDomain": "{{host}} jest zarezerwowana do dokumentacji i testów."
+      },
+      "phone": {
+        "structural": "Podaj prawidłowy numer telefonu",
+        "repeatedDigits": "Ten numer składa się z powtórzonej tej samej cyfry.",
+        "sequentialDigits": "Ten numer przebiega kolejno w górę lub w dół klawiatury.",
+        "fictionalRange": "Mieści się w zakresie 555-0100 zarezerwowanym dla fikcji."
+      }
     }
   },
   "commentThread": {

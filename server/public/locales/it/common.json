@@ -373,6 +373,41 @@
         "title": "Nessuna sede aggiunta",
         "description": "Fai clic su \"Aggiungi sede\" per iniziare"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Inserisci un nome cliente valido",
+        "required": "Il nome del cliente è obbligatorio",
+        "emojiOnly": "Questo nome è composto solo da emoji.",
+        "tooShort": "Questo nome ha un solo carattere: è corretto?",
+        "abbreviationOnly": "Questa è solo un’abbreviazione societaria, non un nome.",
+        "repeatedCharacters": "Questo nome ripete più volte lo stesso carattere.",
+        "looksLikeUrl": "Sembra un indirizzo web più che un nome.",
+        "noLettersOrNumbers": "Questo nome non contiene lettere né numeri."
+      },
+      "contactName": {
+        "structural": "Inserisci un nome contatto valido",
+        "placeholder": "Sembra un segnaposto più che una persona."
+      },
+      "email": {
+        "structural": "Inserisci un indirizzo email valido",
+        "required": "L’indirizzo email è obbligatorio",
+        "disposableDomain": "{{domain}} è un provider di caselle usa e getta.",
+        "reservedDomain": "{{domain}} è riservato a documentazione e test.",
+        "internalDomain": "{{domain}} si risolve solo all’interno di una rete privata."
+      },
+      "url": {
+        "structural": "Inserisci un URL di sito web valido (ad es. apple.com)",
+        "ipAddress": "Questo è un indirizzo IP, non un nome di dominio.",
+        "internalHost": "{{host}} si risolve solo all’interno di una rete privata.",
+        "reservedDomain": "{{host}} è riservato a documentazione e test."
+      },
+      "phone": {
+        "structural": "Inserisci un numero di telefono valido",
+        "repeatedDigits": "Questo numero ripete sempre la stessa cifra.",
+        "sequentialDigits": "Questo numero percorre la tastiera in sequenza.",
+        "fictionalRange": "Rientra nell’intervallo 555-0100 riservato alla finzione."
+      }
     }
   },
   "commentThread": {

@@ -314,6 +314,41 @@
         "title": "Nog geen locaties toegevoegd",
         "description": "Klik op \"Locatie toevoegen\" om te beginnen"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Voer een geldige klantnaam in",
+        "required": "Klantnaam is verplicht",
+        "emojiOnly": "Deze naam bestaat volledig uit emoji.",
+        "tooShort": "Deze naam bestaat uit één teken — klopt dat?",
+        "abbreviationOnly": "Dit is alleen een rechtsvormafkorting, geen naam.",
+        "repeatedCharacters": "In deze naam wordt hetzelfde teken meerdere keren herhaald.",
+        "looksLikeUrl": "Dit lijkt eerder een webadres dan een naam.",
+        "noLettersOrNumbers": "Deze naam bevat geen letters of cijfers."
+      },
+      "contactName": {
+        "structural": "Voer een geldige contactnaam in",
+        "placeholder": "Dit lijkt eerder een tijdelijke aanduiding dan een persoon."
+      },
+      "email": {
+        "structural": "Voer een geldig e-mailadres in",
+        "required": "E-mailadres is verplicht",
+        "disposableDomain": "{{domain}} is een aanbieder van wegwerpmailboxen.",
+        "reservedDomain": "{{domain}} is gereserveerd voor documentatie en tests.",
+        "internalDomain": "{{domain}} is alleen binnen een privénetwerk bereikbaar."
+      },
+      "url": {
+        "structural": "Voer een geldige website-URL in (bijv. apple.com)",
+        "ipAddress": "Dit is een IP-adres en geen domeinnaam.",
+        "internalHost": "{{host}} is alleen binnen een privénetwerk bereikbaar.",
+        "reservedDomain": "{{host}} is gereserveerd voor documentatie en tests."
+      },
+      "phone": {
+        "structural": "Voer een geldig telefoonnummer in",
+        "repeatedDigits": "Dit nummer bestaat uit hetzelfde cijfer.",
+        "sequentialDigits": "Dit nummer loopt recht op of af over het toetsenblok.",
+        "fictionalRange": "Dit valt in het bereik 555-0100 dat voor fictie is gereserveerd."
+      }
     }
   },
   "commentThread": {

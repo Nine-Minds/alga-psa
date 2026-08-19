@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
-import { validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
+import { validateEmailAddressField, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
 import { verifyContactEmail, initiateRegistration } from '../lib/registrationHelpers';
 
 export default function RegisterForm() {
@@ -18,6 +18,9 @@ export default function RegisterForm() {
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Plausibility warnings. Never gate registration — a locked-out user cannot
+  // work around a false rejection.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const posthog = usePostHog();
@@ -195,8 +198,9 @@ export default function RegisterForm() {
               }
             }}
             onBlur={() => {
-              const error = validateEmailAddress(email);
-              setFieldErrors(prev => ({ ...prev, email: error || '' }));
+              const result = validateEmailAddressField(email);
+              setFieldErrors(prev => ({ ...prev, email: result.error || '' }));
+              setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
             }}
             onFocus={() => {
               posthog?.capture('registration_field_focused', {
@@ -204,6 +208,7 @@ export default function RegisterForm() {
               });
             }}
             disabled={isLoading}
+            warnings={fieldWarnings.email}
             className={`mt-1 ${
               hasAttemptedSubmit && (!email.trim() || emailStatus === 'invalid') ? 'border-red-500' : ''
             }`}

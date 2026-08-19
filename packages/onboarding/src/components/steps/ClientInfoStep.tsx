@@ -10,7 +10,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress } from '@alga-psa/validation';
+import { validateEmailAddressField } from '@alga-psa/validation';
 import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -31,6 +31,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Never gate onboarding.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [isLocaleChanging, setIsLocaleChanging] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
 
@@ -440,8 +442,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             }
           }}
           onBlur={() => {
-            const error = validateEmailAddress(data.email || '');
-            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(error) }));
+            const result = validateEmailAddressField(data.email || '');
+            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(result.error) }));
+            setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
           }}
           placeholder={t('clientInfoStep.fields.email.placeholder', {
             defaultValue: 'john@acmeit.com'
@@ -449,6 +452,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           required
           disabled
           className={fieldErrors.email ? 'border-red-500' : ''}
+          warnings={fieldWarnings.email}
         />
         {fieldErrors.email && (
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>

@@ -27,6 +27,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     expect(rows).toEqual([
       {
         phone_number: '+1 555-246-8135',
+        extension: null,
         canonical_type: 'work',
         custom_type: null,
         is_default: true,
@@ -35,6 +36,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
       },
       {
         phone_number: '',
+        extension: null,
         canonical_type: null,
         custom_type: '',
         is_default: false,
@@ -69,6 +71,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     expect(rows).toEqual([
       {
         phone_number: '+1 555-246-8135',
+        extension: null,
         canonical_type: 'work',
         custom_type: null,
         is_default: true,
@@ -77,6 +80,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
       },
       {
         phone_number: '+1 646-555-1212 ext. 7',
+        extension: null,
         canonical_type: null,
         custom_type: 'After Hours',
         is_default: false,

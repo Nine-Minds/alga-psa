@@ -29,18 +29,19 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
+import { FieldWarnings } from '@alga-psa/ui/components/Input';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
   validateClientForm, 
-  validateClientName, 
-  validateWebsiteUrl, 
-  validateEmailAddress, 
-  validatePhoneNumber, 
+  validateClientNameField, 
+  validateWebsiteUrlField, 
+  validateEmailAddressField, 
+  validatePhoneNumberField, 
+  validateContactNameField,
   validatePostalCode, 
   validateCityName, 
   validateAddress, 
-  validateContactName,
   validateStateProvince,
   validateIndustry,
   validateNotes
@@ -149,6 +150,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Rendered beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     location: false,
@@ -243,6 +246,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     let error: string | null = null;
     const trimmedValue = value.trim();
 
+    // Structural error blocks; plausibility only warns.
+    const applyField = (result: { error: string | null; warnings: string[] }) => {
+      setFieldWarnings(prev => ({ ...prev, [fieldName]: result.warnings }));
+      return result.error;
+    };
+
     // Handle spaces-only input for all fields
     if (/^\s+$/.test(value)) {
       const fieldDisplayNames: Record<string, string> = {
@@ -285,78 +294,26 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     
     switch (fieldName) {
       case 'client_name':
-        error = validateClientName(value);
+        error = applyField(validateClientNameField(value));
         break;
       case 'url':
-        error = validateWebsiteUrl(value);
+        error = applyField(validateWebsiteUrlField(value));
         break;
       case 'industry':
         error = validateIndustry(value);
         break;
       case 'location_email':
-        error = validateEmailAddress(value);
+        error = applyField(validateEmailAddressField(value));
         break;
       case 'location_phone':
-        // Enterprise phone validation - Unicode international support
-        if (trimmedValue) {
-          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
-          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
-          if (countryCodeOnlyPattern.test(trimmedValue)) {
-            // Don't validate if it's just a country code - user hasn't started typing yet
-            break;
-          }
-
-          // Extract all Unicode digits (supports international number systems)
-          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
-          const digitCount = unicodeDigits.length;
-
-          // International phone number validation (ITU-T E.164)
-          if (digitCount > 0 && digitCount < 7) {
-            error = 'Please enter a complete phone number (at least 7 digits)';
-          } else if (digitCount > 15) {
-            error = 'Phone number cannot exceed 15 digits';
-          } else if (digitCount > 0) {
-            // Check for obviously fake patterns using Unicode digits
-            const unicodeDigitString = unicodeDigits.join('');
-            if (/^(.)\1+$/u.test(unicodeDigitString)) {
-              error = 'Please enter a valid phone number';
-            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
-              error = 'Please enter a valid phone number';
-            } else {
-              // Use the existing validator for more complex validation
-              error = validatePhoneNumber(trimmedValue);
-            }
-          }
+        // A bare dial prefix means the user has not started typing yet.
+        if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
+          error = applyField(validatePhoneNumberField(trimmedValue));
         }
         break;
       case 'contact_phone':
-        // Same enterprise phone validation for contact phone - Unicode support
-        if (trimmedValue) {
-          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
-          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
-          if (countryCodeOnlyPattern.test(trimmedValue)) {
-            // Don't validate if it's just a country code - user hasn't started typing yet
-            break;
-          }
-
-          // Extract all Unicode digits (supports international number systems)
-          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
-          const digitCount = unicodeDigits.length;
-
-          if (digitCount > 0 && digitCount < 7) {
-            error = 'Please enter a complete phone number (at least 7 digits)';
-          } else if (digitCount > 15) {
-            error = 'Phone number cannot exceed 15 digits';
-          } else if (digitCount > 0) {
-            const unicodeDigitString = unicodeDigits.join('');
-            if (/^(.)\1+$/u.test(unicodeDigitString)) {
-              error = 'Please enter a valid phone number';
-            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
-              error = 'Please enter a valid phone number';
-            } else {
-              error = validatePhoneNumber(trimmedValue);
-            }
-          }
+        if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
+          error = applyField(validatePhoneNumberField(trimmedValue));
         }
         break;
       case 'postal_code':
@@ -372,10 +329,10 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         error = validateAddress(value);
         break;
       case 'contact_name':
-        error = validateContactName(value);
+        error = applyField(validateContactNameField(value));
         break;
       case 'contact_email':
-        error = validateEmailAddress(value);
+        error = applyField(validateEmailAddressField(value));
         break;
       case 'notes':
         error = validateNotes(value);
@@ -772,6 +729,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 {fieldErrors.client_name && (
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.client_name}</p>
                 )}
+                <FieldWarnings warnings={fieldWarnings.client_name ?? []} />
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -973,6 +931,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     onBlur={() => {
                       validateField('location_phone', locationData.phone || '');
                     }}
+                    extension={locationData.phone_extension || ''}
+                    onExtensionChange={(value) => handleLocationChange('phone_extension', value)}
+                    warnings={fieldWarnings.location_phone}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     countries={countries}
@@ -1011,6 +972,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   {fieldErrors.location_email && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.location_email}</p>
                   )}
+                  <FieldWarnings warnings={fieldWarnings.location_email ?? []} />
                 </div>
               </div>
               </div>)}
@@ -1050,6 +1012,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 {fieldErrors.contact_name && (
                   <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
                 )}
+                <FieldWarnings warnings={fieldWarnings.contact_name ?? []} />
               </div>
 
               <div className="space-y-4">
@@ -1144,6 +1107,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   {fieldErrors.url && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
                   )}
+                  <FieldWarnings warnings={fieldWarnings.url ?? []} />
                 </div>
               </div>
 
