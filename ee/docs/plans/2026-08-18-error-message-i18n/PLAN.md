@@ -331,9 +331,12 @@ Do not attempt this in one pass. One package per PR, each independently shippabl
 prerequisite is done — `appointmentSchemas` is deduped into `@alga-psa/scheduling` — but no schema attaches a
 key yet, so an action that joins `error.issues[].message` still returns English inside an otherwise-translated
 payload. `projects` shows the shape this leaves behind: `errors.task.validationFailed` translates the frame
-and interpolates the Zod detail verbatim. The webhook and inbound-webhook upserts show the other shape: the
-keyed fallback and the raw Zod message are now separate branches (convention 8), so attaching a key in the
-schema is the only piece missing there.
+and interpolates the Zod detail verbatim.
+
+**Convention 8 has been applied everywhere it applies**, so every site is now one edit away from done: the
+keyed fallback and the raw Zod message are separate branches at `webhookActions`, `inboundWebhookActions`,
+`surveyActions`, `surveyResponseActions` and client-portal's ticket create. Attaching a key in the schema is
+the only piece missing.
 
 These do reach users: several actions join `error.issues[].message` into the returned error string
 (e.g. `packages/integrations/src/actions/integrations/rmmAlertRuleActions.ts:56`,
@@ -344,9 +347,31 @@ but attach a key so the action can translate it. Give schemas a small helper tha
 issue `params`, then map `issue` → `messageKey` where the action builds its `actionError`. Field-level
 messages resolve to `common:validation.*` where one already exists rather than minting per-schema keys.
 
-Start with the duplicated file: `packages/client-portal/src/schemas/appointmentSchemas.ts` and
-`packages/scheduling/src/schemas/appointmentSchemas.ts` are 62 literals each and near-identical — dedupe
-into one shared schema module before translating, or the work is done twice.
+~~Start with the duplicated file: `appointmentSchemas.ts` is 62 literals~~ — **do not.** Measured 2026-08-19:
+every action that consumes those schemas collapses the `ZodError` into one generic sentence of its own
+(`portalAppointmentRequestErrorMessage`, `appointmentRequestActionErrorMessage`,
+`availabilityActionErrorMessage`), so not one of the 62 messages reaches a user through a server action. Their
+only live reader is `server/src/app/api/public/appointment-request/route.ts`, which the plan puts out of
+scope. Keying them would translate nothing. The dedupe was still worth doing; the ordering advice was not.
+
+**Where a Zod message actually reaches a user** (the real category-2 worklist, all verified 2026-08-19):
+
+| Site | Shape |
+|---|---|
+| `integrations/rmmAlertRuleActions.ts:56` | joins every issue as `path: message` |
+| `client-portal/client-tickets.ts:71` | first issue, prefixed with its path |
+| `surveys/surveyActions.ts:44`, `surveyResponseActions.ts:110` | first issue |
+| `server/lib/actions/{webhook,inboundWebhook}Actions.ts` | first issue |
+| `projects/{projectActions,projectTaskActions,projectTemplateActions}.ts`, `tickets/{ticketActionErrors,optimizedTicketActions}.ts`, `assets/assetActionErrors.ts`, `billing/projectBillingActionErrors.ts` | issue list interpolated into a keyed frame |
+
+The **fallbacks** at all of those sites are keyed already — the sentence the code supplies when there is no
+issue to show. What is left is the issue text itself, which needs the schema to carry the key. Note
+`rmmAlertRuleActions` returns `{ success, error }` rather than a payload, so it is a category-4 site too: the
+boundary cannot see it, and it needs converting before a key helps.
+
+One design constraint to check first: Zod only carries `params` on `ZodIssueCode.custom`, so a
+`.refine`/`.superRefine` message can hold a key but a built-in `too_small` / `invalid_type` cannot. Built-ins
+have to be mapped from `issue.code` + `issue.path` to `common:validation.*` instead of carrying one.
 
 Out of scope: schemas used only by `server/src/app/api/**` route handlers for external API consumers.
 Those responses are not UI copy and the audit deliberately skips that directory.
