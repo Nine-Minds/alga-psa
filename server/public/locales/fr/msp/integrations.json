@@ -1860,6 +1860,7 @@
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
         "errors": {
+          "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
           "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
@@ -1881,9 +1882,21 @@
         "requiredScopes": "Scopes requis",
         "storedClientId": "Client ID enregistré : {{value}}",
         "storedClientSecret": "Client secret enregistré : {{value}}",
-        "tenantOauthDescription": "Collez les identifiants de l'application Intuit enregistrés pour ce tenant, ou laissez vide pour utiliser l'application QuickBooks au niveau de l'application si une est configurée. Les valeurs de secret ne sont jamais renvoyées au navigateur après l'enregistrement.",
-        "tenantOauthTitle": "Application OAuth propre au tenant",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "L’application Intuit par laquelle ce locataire se connecte. Les secrets ne sont jamais renvoyés au navigateur après enregistrement.",
+        "tenantOauthTitle": "Identifiants de l’application Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Le mode Automated Sales Tax est désactivé. Alga continue de calculer la taxe pour cette entreprise.",
+          "enabledMessage": "QuickBooks calculera désormais la taxe de vente sur les factures déléguées de cette entreprise.",
+          "hint": "Activez cette option lorsque cette entreprise QuickBooks utilise Automated Sales Tax : Intuit taxe alors les factures exportées d’après l’adresse du client et la taxe revient dans Alga.",
+          "label": "QuickBooks calcule la taxe de vente"
+        },
+        "credentialSource": {
+          "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez connecter QuickBooks sans en enregistrer une. Remplissez les champs ci-dessous uniquement si ce locataire doit utiliser sa propre application Intuit.",
+          "none": "Aucune application Intuit n’est encore disponible. Enregistrez-en une dans le portail Intuit Developer et collez ci-dessous son ID client et son secret — le guide d’installation détaille la marche à suivre.",
+          "tenant": "Ce locataire se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous."
+        },
+        "setupGuideLink": "Guide de configuration QuickBooks"
       },
       "sync": {
         "healthCardTitle": "État de la synchronisation",
@@ -1972,6 +1985,15 @@
         "errors": {
           "previewFailed": "Impossible de charger l’aperçu de l’importation.",
           "executeFailed": "L’importation a échoué."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identifiant {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non taxable",
+          "taxable": "TAX — taxable (Automated Sales Tax choisit le taux)"
         }
       }
     },

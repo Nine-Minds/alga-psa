@@ -3,13 +3,15 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
 const getQboConnectionStatusMock = vi.hoisted(() => vi.fn());
 const saveQboCredentialsMock = vi.hoisted(() => vi.fn());
 const disconnectQboMock = vi.hoisted(() => vi.fn());
+const getQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
+const setQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock
@@ -24,13 +26,17 @@ vi.mock('../../qbo/QboLiveMappingManager', () => ({
 vi.mock('@alga-psa/integrations/actions', () => ({
   getQboConnectionStatus: async (...args: unknown[]) => getQboConnectionStatusMock(...args),
   saveQboCredentials: async (...args: unknown[]) => saveQboCredentialsMock(...args),
-  disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args)
+  disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args),
+  getQboAutomatedSalesTaxMode: async (...args: unknown[]) => getQboAutomatedSalesTaxModeMock(...args),
+  setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args)
 }));
 
 vi.mock('../../../actions/qboActions', () => ({
   getQboConnectionStatus: async (...args: unknown[]) => getQboConnectionStatusMock(...args),
   saveQboCredentials: async (...args: unknown[]) => saveQboCredentialsMock(...args),
   disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args),
+  getQboAutomatedSalesTaxMode: async (...args: unknown[]) => getQboAutomatedSalesTaxModeMock(...args),
+  setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args),
 }));
 
 const disconnectedStatus = {
@@ -60,6 +66,8 @@ describe('QboIntegrationSettings contracts', () => {
     getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
     saveQboCredentialsMock.mockResolvedValue({ success: true });
     disconnectQboMock.mockResolvedValue({ success: true });
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    setQboAutomatedSalesTaxModeMock.mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
@@ -366,5 +374,194 @@ describe('QboIntegrationSettings contracts', () => {
     });
 
     expect(screen.queryByTestId('onboarding-slot')).not.toBeInTheDocument();
+  });
+  // --- Automated Sales Tax toggle ---
+
+  const connectedStatus = {
+    ...disconnectedStatus,
+    connected: true,
+    defaultRealmId: 'realm-ast-1',
+    defaultConnection: {
+      realmId: 'realm-ast-1',
+      displayName: 'Acme Books',
+      status: 'active' as const
+    },
+    credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
+  };
+
+  it('T067: the Automated Sales Tax toggle is absent until a company is connected', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByText('https://example.com/api/integrations/qbo/callback')).toBeInTheDocument();
+    });
+
+    expect(document.getElementById('qbo-automated-sales-tax-section')).toBeNull();
+    expect(getQboAutomatedSalesTaxModeMock).not.toHaveBeenCalled();
+  });
+
+  it('T068: a connected company renders the toggle and reads its state for that realm', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: true });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    expect(getQboAutomatedSalesTaxModeMock).toHaveBeenCalledWith({ realmId: 'realm-ast-1' });
+    const toggle = screen.getByRole('switch');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('T068b: the toggle label is rendered once, not doubled by the Switch', async () => {
+    // Switch renders its own label beside the thumb when given a `label` prop,
+    // which would repeat the Label in the description column.
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    const section = document.getElementById('qbo-automated-sales-tax-section') as HTMLElement;
+    expect(within(section).getAllByText('QuickBooks calculates sales tax')).toHaveLength(1);
+  });
+
+  it('T069: toggling writes the new mode for the connected realm', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    await waitFor(() => {
+      expect(setQboAutomatedSalesTaxModeMock).toHaveBeenCalledWith({
+        realmId: 'realm-ast-1',
+        enabled: true
+      });
+    });
+  });
+
+  it('T070: a failed write reverts the toggle and surfaces the error', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    setQboAutomatedSalesTaxModeMock.mockResolvedValue({
+      success: false,
+      error: 'Automated Sales Tax mode could not be saved.'
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Automated Sales Tax mode could not be saved.')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('T070b: a thrown action reverts the toggle and surfaces an error', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    setQboAutomatedSalesTaxModeMock.mockRejectedValue(new Error('network down'));
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    // An optimistic flip left standing would tell the user tax is delegated to
+    // Intuit when nothing was saved.
+    await waitFor(() => {
+      expect(screen.getByText('Failed to update Automated Sales Tax mode.')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  // --- Intuit app provenance ---
+
+  it('T071: an app-level Intuit app is disclosed as a supported path', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-credential-source-alert')).not.toBeNull();
+    });
+
+    expect(screen.getByText(/shared Intuit app/i)).toBeInTheDocument();
+    // Provenance only. The shared app's own credentials are never sent to the
+    // browser, so nothing renders a mask of them.
+    expect(screen.queryByText(/Stored client id:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Stored client secret:/i)).not.toBeInTheDocument();
+  });
+
+  it('T072: a tenant-owned Intuit app is named as the active path', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...connectedStatus,
+      credentials: { ...connectedStatus.credentials, source: 'tenant' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/its own Intuit app/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T073: with no Intuit app at all, the copy points at registering one', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      credentials: { ...disconnectedStatus.credentials, source: null }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No Intuit app is available yet/i)).toBeInTheDocument();
+    });
+  });
+
+  it('T074: the setup guide is linked from the overview card', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-setup-guide-link')).not.toBeNull();
+    });
+
+    expect(document.getElementById('qbo-setup-guide-link')).toHaveAttribute(
+      'href',
+      expect.stringContaining('docs/integrations/quickbooks.md')
+    );
   });
 });

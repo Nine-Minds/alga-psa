@@ -75,23 +75,54 @@ export function AccountingMappingModuleView({
   }, [loadData]);
 
   const handleCreateOrUpdate = useCallback(
-    async (input: {
+    async (rawInput: {
       algaEntityId: string;
       externalEntityId: string;
       metadata?: Record<string, unknown> | null;
       mappingId?: string;
     }) => {
+      // Metadata is tri-state from here down, and each state means something
+      // different to the server: an object sets it, null clears it, undefined
+      // leaves the stored value alone.
+      //
+      // Only the JSON editor can express metadata, and it is seeded from the
+      // stored row, so what it returns is the user's whole intent — including
+      // an emptied editor, which is a real request to clear. Without the editor
+      // the dialog always reports null, and that must NOT be read as "delete
+      // everything": module-owned keys (a service's classId, an invoice's
+      // chargeLineMappings) are written elsewhere and would be lost on any edit.
+      const existingMetadata = rawInput.mappingId
+        ? mappings.find((mapping) => mapping.id === rawInput.mappingId)?.metadata
+        : undefined;
+      const baseMetadata: Record<string, unknown> | null | undefined =
+        module.metadata?.enableJsonEditor
+          ? rawInput.metadata
+          : (rawInput.metadata ?? (existingMetadata as Record<string, unknown> | null | undefined));
+
+      // Persist the selected option's label so the mapping stays readable even
+      // when a later catalog load misses this id (pseudo codes, other realm,
+      // entity deactivated upstream).
+      const externalDisplayName = externalOptions.find(
+        (option) => option.id === rawInput.externalEntityId
+      )?.name;
+
+      const metadataForSave: Record<string, unknown> | null | undefined = externalDisplayName
+        ? { ...(baseMetadata ?? {}), externalDisplayName }
+        : baseMetadata;
+
+      const input = { ...rawInput, metadata: metadataForSave };
+
       if (input.mappingId) {
         if (overrides?.updateMapping) {
           await overrides.updateMapping(context, input.mappingId, {
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.update(context, input.mappingId, {
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       } else {
@@ -102,19 +133,19 @@ export function AccountingMappingModuleView({
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
             external_realm_id: context.realmId ?? null,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.create(context, {
             algaEntityId: input.algaEntityId,
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       }
       await loadData();
     },
-    [context, loadData, module, overrides]
+    [context, externalOptions, loadData, mappings, module, overrides]
   );
 
   const handleDelete = useCallback(async () => {
@@ -294,8 +325,20 @@ function enrichMappings(
   return mappings.map((mapping) => ({
     ...mapping,
     algaName: algaLookup.get(mapping.alga_entity_id),
-    externalName: externalLookup.get(mapping.external_entity_id)
+    // The live catalog wins — it is the current truth. The name captured when
+    // the mapping was saved is the fallback, and it is the only thing standing
+    // between the user and a bare QuickBooks id once the catalog stops carrying
+    // the entity: deactivated tax codes, a realm switch, the AST pseudo codes.
+    externalName:
+      externalLookup.get(mapping.external_entity_id) ??
+      readExternalDisplayName(mapping.metadata)
   }));
+}
+
+function readExternalDisplayName(metadata: unknown): string | undefined {
+  if (!metadata || typeof metadata !== 'object') return undefined;
+  const value = (metadata as Record<string, unknown>).externalDisplayName;
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 function useOverrides(

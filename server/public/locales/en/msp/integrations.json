@@ -1883,6 +1883,7 @@
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Failed to update Automated Sales Tax mode.",
           "disconnect": "Failed to disconnect QuickBooks.",
           "load": "Failed to load QuickBooks settings.",
           "saveCredentials": "Failed to save QuickBooks credentials."
@@ -1904,9 +1905,21 @@
         "requiredScopes": "Required Scopes",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
-        "tenantOauthDescription": "Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.",
-        "tenantOauthTitle": "Tenant-Owned OAuth App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.",
+        "tenantOauthTitle": "Intuit App Credentials",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Automated Sales Tax mode is off. Alga keeps calculating tax for this company.",
+          "enabledMessage": "QuickBooks will now calculate sales tax on delegated invoices for this company.",
+          "hint": "Turn this on when this QuickBooks company uses Automated Sales Tax, so exported invoices are taxed by Intuit from the customer address and the tax comes back to Alga.",
+          "label": "QuickBooks calculates sales tax"
+        },
+        "credentialSource": {
+          "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.",
+          "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
+          "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
+        },
+        "setupGuideLink": "QuickBooks setup guide"
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -1995,6 +2008,15 @@
         "errors": {
           "previewFailed": "Failed to load the import preview.",
           "executeFailed": "The import failed."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non-taxable",
+          "taxable": "TAX — taxable (Automated Sales Tax picks the rate)"
         }
       }
     },

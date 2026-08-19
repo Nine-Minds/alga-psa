@@ -31,7 +31,20 @@ import {
 } from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
 import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
+
+/**
+ * QuickBooks' US pseudo tax codes. Intuit ships exactly these two on every US
+ * company file and no others can be created: TAX hands the line to the
+ * Automated Sales Tax engine, NON opts it out.
+ *
+ * Since Intuit's 2018-08-10 AST change an *absent* line TaxCodeRef no longer
+ * means "not taxable" — AST treats it as TAX and falls back to the item's own
+ * taxability. Opting a line out therefore requires sending NON explicitly.
+ */
+const QBO_PSEUDO_TAX_CODE_TAXABLE = 'TAX';
+const QBO_PSEUDO_TAX_CODE_NON_TAXABLE = 'NON';
 
 type DbInvoice = {
   invoice_id: string;
@@ -235,6 +248,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
     const tenantDefaultDepartmentRef = syncSettings?.defaultDepartmentRef ?? null;
 
+    // Automated Sales Tax is a property of the QuickBooks company file, so it is
+    // resolved once per batch rather than per line. A batch with no target realm
+    // cannot be on AST, and the flag stays false — behavior identical to before.
+    const automatedSalesTaxEnabled = await isQboAutomatedSalesTaxEnabled(
+      knex,
+      tenantId,
+      context.batch.target_realm
+    );
+
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
@@ -425,28 +447,51 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Handle tax based on delegation mode
         const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
 
-        if (!shouldExcludeTax) {
+        // Delegating tax to an Automated Sales Tax company is the one case where
+        // the line still needs a TaxCodeRef: Alga is deliberately not sending a
+        // tax total, so the only thing that makes QuickBooks tax the line at all
+        // is the line's own tax code. Without it AST returns TotalTax 0 and the
+        // import-back path faithfully writes that zero onto the invoice.
+        const shouldSendAstTaxCode =
+          automatedSalesTaxEnabled && context.taxDelegationMode === 'delegate';
+
+        if (!shouldExcludeTax || shouldSendAstTaxCode) {
           const taxRegion = charge.tax_region;
+          let taxCodeRef: string | null = null;
           if (taxRegion) {
-            let taxCodeRef = taxCodeCache.get(taxRegion);
-            if (taxCodeRef === undefined) {
+            const cached = taxCodeCache.get(taxRegion);
+            if (cached === undefined) {
               const taxMapping = await resolver.resolveTaxCodeMapping({
                 tenantId: context.batch.tenant,
                 adapterType: this.type,
                 taxRegionId: taxRegion,
                 targetRealm: context.batch.target_realm
               });
-              const resolvedTaxCodeRef = taxMapping?.external_entity_id ?? null;
-              taxCodeRef = resolvedTaxCodeRef;
-              taxCodeCache.set(taxRegion, resolvedTaxCodeRef);
-            }
-            if (taxCodeRef) {
-              salesDetail.TaxCodeRef = { value: taxCodeRef };
+              taxCodeRef = taxMapping?.external_entity_id ?? null;
+              taxCodeCache.set(taxRegion, taxCodeRef);
+            } else {
+              taxCodeRef = cached;
             }
           }
+
+          if (shouldSendAstTaxCode) {
+            // A non-taxable charge must say NON out loud; an omitted code reads
+            // as taxable to AST. Everything else falls back to the TAX pseudo
+            // code so the AST engine picks the jurisdiction and rate itself.
+            salesDetail.TaxCodeRef = {
+              value:
+                charge.is_taxable === false
+                  ? QBO_PSEUDO_TAX_CODE_NON_TAXABLE
+                  : taxCodeRef ?? QBO_PSEUDO_TAX_CODE_TAXABLE
+            };
+          } else if (taxCodeRef) {
+            salesDetail.TaxCodeRef = { value: taxCodeRef };
+          }
         }
-        // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
-        // QBO will apply default tax behavior or NON depending on settings
+        // Note: When tax is excluded and the realm is not on AST, we don't set
+        // TaxCodeRef. QBO will apply default tax behavior or NON depending on
+        // settings. We never set GlobalTaxCalculation: Intuit documents it as
+        // non-US only, and sending it on a US-locale transaction faults.
 
         const rawNetAmountCents = coerceChargeCents(charge.net_amount);
         if (rawNetAmountCents === null) {
@@ -569,7 +614,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         invoices: documents.length,
         lines: context.lines.length,
         taxDelegationMode: context.taxDelegationMode ?? 'none',
-        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate'
+        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate',
+        automatedSalesTax: automatedSalesTaxEnabled
       }
     };
   }

@@ -1860,6 +1860,7 @@
         "environmentProduction": "Produzione",
         "environmentSandbox": "Ambiente sandbox",
         "errors": {
+          "automatedSalesTax": "Impossibile aggiornare la modalità Automated Sales Tax.",
           "disconnect": "Impossibile disconnettere QuickBooks.",
           "load": "Impossibile caricare le impostazioni QuickBooks.",
           "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
@@ -1881,9 +1882,21 @@
         "requiredScopes": "Scope richiesti",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
-        "tenantOauthDescription": "Incolla le credenziali dell'app Intuit registrate per questo tenant, o lascia vuoto per usare l'app QuickBooks a livello di applicazione se ne è configurata una. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
-        "tenantOauthTitle": "App OAuth di proprietà del tenant",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Tramite quale app Intuit si collega questo tenant. I secret non vengono mai restituiti al browser dopo il salvataggio.",
+        "tenantOauthTitle": "Credenziali dell’app Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "La modalità Automated Sales Tax è disattivata. Alga continua a calcolare l’imposta per questa azienda.",
+          "enabledMessage": "Da ora QuickBooks calcola l’imposta sulle vendite per le fatture delegate di questa azienda.",
+          "hint": "Attiva questa opzione quando questa azienda QuickBooks usa Automated Sales Tax: Intuit calcola l’imposta sulle fatture esportate in base all’indirizzo del cliente e l’importo torna in Alga.",
+          "label": "QuickBooks calcola l’imposta sulle vendite"
+        },
+        "credentialSource": {
+          "app": "Questa installazione fornisce un’app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Compila i campi seguenti solo se vuoi che questo tenant usi una propria app Intuit.",
+          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
+          "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
+        },
+        "setupGuideLink": "Guida alla configurazione di QuickBooks"
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -1972,6 +1985,15 @@
         "errors": {
           "previewFailed": "Impossibile caricare l’anteprima dell’importazione.",
           "executeFailed": "Importazione non riuscita."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identificativo {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non imponibile",
+          "taxable": "TAX — imponibile (Automated Sales Tax sceglie l’aliquota)"
         }
       }
     },

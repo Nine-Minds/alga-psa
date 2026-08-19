@@ -1860,6 +1860,7 @@
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Der Automated-Sales-Tax-Modus konnte nicht aktualisiert werden.",
           "disconnect": "QuickBooks konnte nicht getrennt werden.",
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
@@ -1881,9 +1882,21 @@
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Mandanteneigene OAuth-App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Über welche Intuit-App sich dieser Mandant verbindet. Secrets werden nach dem Speichern nie an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Intuit-App-Zugangsdaten",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Der Automated-Sales-Tax-Modus ist aus. Alga berechnet die Steuer für dieses Unternehmen weiterhin selbst.",
+          "enabledMessage": "QuickBooks berechnet die Umsatzsteuer für delegierte Rechnungen dieses Unternehmens ab sofort selbst.",
+          "hint": "Aktivieren Sie dies, wenn dieses QuickBooks-Unternehmen Automated Sales Tax verwendet. Intuit besteuert exportierte Rechnungen dann anhand der Kundenadresse und die Steuer fließt nach Alga zurück.",
+          "label": "QuickBooks berechnet die Umsatzsteuer"
+        },
+        "credentialSource": {
+          "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit — Sie können QuickBooks verbinden, ohne selbst eine zu registrieren. Füllen Sie die Felder unten nur aus, wenn dieser Mandant stattdessen eine eigene Intuit-App verwenden soll.",
+          "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
+          "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
+        },
+        "setupGuideLink": "QuickBooks-Einrichtungsanleitung"
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -1972,6 +1985,15 @@
         "errors": {
           "previewFailed": "Die Importvorschau konnte nicht geladen werden.",
           "executeFailed": "Der Import ist fehlgeschlagen."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · Kennung {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — nicht steuerpflichtig",
+          "taxable": "TAX — steuerpflichtig (Automated Sales Tax bestimmt den Satz)"
         }
       }
     },

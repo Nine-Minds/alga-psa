@@ -1883,6 +1883,7 @@
         "environmentProduction": "55555",
         "environmentSandbox": "55555",
         "errors": {
+          "automatedSalesTax": "55555",
           "disconnect": "55555",
           "load": "55555",
           "saveCredentials": "55555"
@@ -1906,7 +1907,19 @@
         "storedClientSecret": "55555 {{value}} 55555",
         "tenantOauthDescription": "55555",
         "tenantOauthTitle": "55555",
-        "title": "55555"
+        "title": "55555",
+        "automatedSalesTax": {
+          "disabledMessage": "55555",
+          "enabledMessage": "55555",
+          "hint": "55555",
+          "label": "55555"
+        },
+        "credentialSource": {
+          "app": "55555",
+          "none": "55555",
+          "tenant": "55555"
+        },
+        "setupGuideLink": "55555"
       },
       "sync": {
         "healthCardTitle": "55555",
@@ -1995,6 +2008,15 @@
         "errors": {
           "previewFailed": "55555",
           "executeFailed": "55555"
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "55555 {{name}} 55555 {{description}} 55555",
+        "labelWithId": "55555 {{label}} 55555 {{id}} 55555",
+        "labelWithRate": "55555 {{name}} 55555 {{rate}} 55555",
+        "pseudo": {
+          "nonTaxable": "55555",
+          "taxable": "55555"
         }
       }
     },

@@ -1860,6 +1860,7 @@
         "environmentProduction": "Produkcja",
         "environmentSandbox": "Środowisko testowe",
         "errors": {
+          "automatedSalesTax": "Nie udało się zaktualizować trybu Automated Sales Tax.",
           "disconnect": "Nie udało się rozłączyć QuickBooks.",
           "load": "Nie udało się załadować ustawień QuickBooks.",
           "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
@@ -1881,9 +1882,21 @@
         "requiredScopes": "Wymagane zakresy",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
-        "tenantOauthDescription": "Wklej poświadczenia aplikacji Intuit zarejestrowane dla tego tenanta lub pozostaw puste, aby użyć QuickBooks na poziomie aplikacji, jeśli jest skonfigurowane. Wartości secret nigdy nie są zwracane do przeglądarki po zapisaniu.",
-        "tenantOauthTitle": "Aplikacja OAuth należąca do tenanta",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Przez którą aplikację Intuit łączy się ta organizacja. Sekrety nigdy nie są zwracane do przeglądarki po zapisaniu.",
+        "tenantOauthTitle": "Poświadczenia aplikacji Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Tryb Automated Sales Tax jest wyłączony. Alga nadal nalicza podatek dla tej firmy.",
+          "enabledMessage": "QuickBooks będzie teraz naliczać podatek od sprzedaży dla delegowanych faktur tej firmy.",
+          "hint": "Włącz tę opcję, gdy ta firma QuickBooks korzysta z Automated Sales Tax: Intuit naliczy podatek dla eksportowanych faktur na podstawie adresu klienta, a kwota wróci do Algi.",
+          "label": "QuickBooks oblicza podatek od sprzedaży"
+        },
+        "credentialSource": {
+          "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Wypełnij poniższe pola tylko wtedy, gdy ta organizacja ma używać własnej aplikacji Intuit.",
+          "none": "Nie ma jeszcze dostępnej aplikacji Intuit. Zarejestruj ją w portalu Intuit Developer i wklej poniżej identyfikator klienta oraz sekret — przewodnik konfiguracji opisuje ten proces.",
+          "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej poświadczeń."
+        },
+        "setupGuideLink": "Przewodnik konfiguracji QuickBooks"
       },
       "sync": {
         "healthCardTitle": "Stan synchronizacji",
@@ -1972,6 +1985,15 @@
         "errors": {
           "previewFailed": "Nie udało się wczytać podglądu importu.",
           "executeFailed": "Import nie powiódł się."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identyfikator {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — nie podlega opodatkowaniu",
+          "taxable": "TAX — podlega opodatkowaniu (Automated Sales Tax wybiera stawkę)"
         }
       }
     },
