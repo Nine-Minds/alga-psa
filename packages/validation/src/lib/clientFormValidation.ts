@@ -10,18 +10,57 @@ export interface ValidationResult {
 const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{1F900}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
 
 // Disposable/temporary email domains - commonly blocked by professional platforms
+// Best-effort and deliberately non-exhaustive: new providers appear constantly and
+// this list will always lag. It is a nudge, not a security control. Dead entries
+// (20minutemail.com, fakemailgenerator.com, 10minemail.com, mytrashmail.com) have
+// been dropped; guerrillamail's alias domains are grouped with it.
 const DISPOSABLE_EMAIL_DOMAINS = [
-  '10minutemail.com', '20minutemail.com', 'mailinator.com', 'guerrillamail.com', 'tempmail.org',
-  'temp-mail.org', 'yopmail.com', 'throwaway.email', 'getnada.com', 'maildrop.cc',
-  'sharklasers.com', 'spam4.me', 'fakemailgenerator.com', 'dispostable.com', 'trashmail.com',
-  'mailcatch.com', 'mytrashmail.com', '10minemail.com', 'emailondeck.com', 'tempail.com'
+  // guerrillamail and its aliases
+  'guerrillamail.com', 'sharklasers.com', 'grr.la', 'spam4.me',
+  // long-running providers
+  'mailinator.com', 'yopmail.com', 'maildrop.cc', 'trashmail.com', 'mailcatch.com',
+  'dispostable.com', 'mailnesia.com', 'fakeinbox.com', 'spambog.com',
+  // 10-minute style
+  '10minutemail.com', 'temp-mail.org', 'temp-mail.io', 'tempail.com', 'minuteinbox.com',
+  'emailondeck.com', 'throwaway.email', 'moakt.com', 'mohmal.com',
+  // api-driven, common in automation
+  'mail.tm', 'inboxkitten.com', 'discard.email', 'tempr.email'
 ];
 
-// Test/fake domains commonly blocked
-const FAKE_DOMAINS = [
-  'test.com', 'example.com', 'sample.com', 'demo.com', 'fake.com', 'invalid.com',
-  'test.test', 'example.org', 'sample.org', 'localhost', 'test.local'
-];
+// Hostnames that only ever resolve inside a private network (RFC 6762 mDNS,
+// RFC 8375, and common router conventions).
+const INTERNAL_TLDS = ['localhost', 'local', 'internal', 'lan', 'home', 'arpa'];
+
+function isInternalHostname(hostname: string): boolean {
+  if (hostname === 'localhost') {
+    return true;
+  }
+  // Suffix match only on a dotted name; a bare label like "invalid" is an
+  // incomplete hostname, not a reserved-TLD usage.
+  if (!hostname.includes('.')) {
+    return false;
+  }
+  return INTERNAL_TLDS.includes(hostname.split('.').pop() ?? '');
+}
+
+// Reserved by RFC 2606 / RFC 6761 for documentation and testing, so they can never
+// belong to a real customer. Note that sample.com, demo.com, fake.com and
+// invalid.com are all registered to real businesses — they are deliberately absent.
+const RESERVED_DOMAINS = ['example.com', 'example.net', 'example.org'];
+
+// Matched as a suffix, so test.test, foo.example and anything.invalid are covered
+// without enumerating them.
+const RESERVED_TLDS = ['test', 'example', 'invalid'];
+
+function isReservedDomain(hostname: string): boolean {
+  if (RESERVED_DOMAINS.includes(hostname)) {
+    return true;
+  }
+  if (!hostname.includes('.')) {
+    return false;
+  }
+  return RESERVED_TLDS.includes(hostname.split('.').pop() ?? '');
+}
 
 // Client name validation - enterprise-level rules
 export function validateClientName(name: string): string | null {
@@ -54,7 +93,7 @@ export function validateClientName(name: string): string | null {
   }
   
   // Block standalone abbreviations
-  const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'CO', 'COMPANY', 'CORPORATION'];
+  const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'COMPANY', 'CORPORATION'];
   if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
     return 'Client name cannot be just a business abbreviation';
   }
@@ -64,9 +103,10 @@ export function validateClientName(name: string): string | null {
     return 'Client name cannot contain excessively repeated characters';
   }
   
-  // Block domain extensions
-  if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
-    return 'Client name cannot end with a domain extension';
+  // A bare domain suffix is legitimate in a company name (Booking.com, Hotels.com,
+  // Care.com), so only reject input that is unambiguously a pasted web address.
+  if (/^(https?:\/\/|www\.)/i.test(nameWithoutEmojis)) {
+    return 'Client name cannot be a web address';
   }
   
   // Must contain at least one letter or number (Unicode supported)
@@ -111,18 +151,15 @@ export function validateWebsiteUrl(url: string): string | null {
       return 'Please enter a domain name, not an IP address';
     }
     
-    // Block localhost and internal domains
-    if (hostname === 'localhost' || 
-        hostname.endsWith('.local') || 
-        hostname.endsWith('.internal') ||
-        hostname.startsWith('192.168.') ||
-        hostname.startsWith('10.') ||
-        hostname.startsWith('172.')) {
+    // Block localhost and internal hostnames. Private IPv4 ranges are already
+    // covered by the literal check above; matching them as name prefixes here
+    // rejected real domains such as 10.com and 172.com.
+    if (isInternalHostname(hostname)) {
       return 'Please enter a public business website URL';
     }
     
-    // Block common fake/test domains
-    if (FAKE_DOMAINS.includes(hostname)) {
+    // Block reserved documentation/testing domains
+    if (isReservedDomain(hostname)) {
       return 'Please enter a real business website URL';
     }
     
@@ -187,8 +224,8 @@ export function validateEmailAddress(email: string): string | null {
     return 'Please use a permanent business email address';
   }
   
-  // Block fake/test domains
-  if (FAKE_DOMAINS.includes(domain)) {
+  // Block reserved documentation/testing domains and internal-only hostnames
+  if (isReservedDomain(domain) || isInternalHostname(domain)) {
     return 'Please enter a valid business email address';
   }
   
@@ -291,9 +328,11 @@ export function validatePhoneNumber(phone: string): string | null {
       return 'Please enter a valid phone number';
     }
 
-    // Block common test numbers (convert to regular digits for comparison)
-    const testNumbers = ['1234567890', '0123456789', '1111111111', '0000000000', '5555555555'];
-    if (testNumbers.includes(unicodeDigitString)) {
+    // The old literal list was redundant: 1111111111 / 0000000000 / 5555555555 are
+    // already rejected by the repeated-digit rule above, and 1234567890 / 0123456789
+    // by isEntirelySequential. What it missed is the NANP range actually reserved for
+    // fiction, 555-0100..555-0199, which is what demo data really uses.
+    if (/55501\d{2}$/.test(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
   }
