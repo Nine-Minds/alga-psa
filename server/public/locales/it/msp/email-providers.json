@@ -159,7 +159,8 @@
       "resyncMailbox": "Risincronizza casella di posta",
       "pause": "Sospendi email in arrivo",
       "resume": "Riprendi email in arrivo",
-      "delete": "Elimina fornitore"
+      "delete": "Elimina fornitore",
+      "runGmailDiagnostics": "Esegui la diagnostica di recapito Gmail"
     },
     "feedback": {
       "paused": "Email in arrivo sospese.",
@@ -213,6 +214,14 @@
       "title": "Nessun provider di posta elettronica configurato",
       "description": "Aggiungi un provider di posta elettronica per iniziare a ricevere ed elaborare le email in entrata come ticket.",
       "action": "Aggiungi fornitore di posta elettronica"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail non invia più nuova posta qui",
+      "expiredDescription": "Il watch di Gmail per {{mailbox}} è scaduto, quindi Google ha smesso di pubblicare notifiche. I messaggi non vanno persi: restano nella casella. Usa Aggiorna Pub/Sub e guarda per riprendere il recapito.",
+      "missingTitle": "Il recapito push di Gmail non è registrato",
+      "missingDescription": "Nessun watch di Gmail è registrato per {{mailbox}}, quindi non arriverà posta in entrata. Usa Aggiorna Pub/Sub e guarda per registrarne uno.",
+      "expiringTitle": "Il recapito push di Gmail scade entro un giorno",
+      "expiringDescription": "I watch di Gmail durano sette giorni. Usa Aggiorna Pub/Sub e guarda prima che scada, altrimenti la posta in entrata si fermerà senza altro preavviso."
     }
   },
   "forms": {

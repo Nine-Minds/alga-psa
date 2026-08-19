@@ -159,7 +159,8 @@
       "resyncMailbox": "Postfach neu synchronisieren",
       "pause": "Eingehende E-Mails pausieren",
       "resume": "Eingehende E-Mails fortsetzen",
-      "delete": "Anbieter löschen"
+      "delete": "Anbieter löschen",
+      "runGmailDiagnostics": "Gmail-Zustelldiagnose ausführen"
     },
     "feedback": {
       "paused": "Eingehende E-Mails pausiert.",
@@ -213,6 +214,14 @@
       "title": "Keine E-Mail-Anbieter konfiguriert",
       "description": "Fügen Sie einen E-Mail-Anbieter hinzu, um eingehende E-Mails als Tickets zu empfangen und zu verarbeiten.",
       "action": "E-Mail-Anbieter hinzufügen"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail sendet keine neuen Nachrichten mehr hierher",
+      "expiredDescription": "Der Gmail-Watch für {{mailbox}} ist abgelaufen, daher veröffentlicht Google keine Benachrichtigungen mehr. Nachrichten gehen nicht verloren — sie verbleiben im Postfach. Aktualisieren Sie Pub/Sub-Watch, um die Zustellung fortzusetzen.",
+      "missingTitle": "Gmail-Push-Zustellung ist nicht registriert",
+      "missingDescription": "Für {{mailbox}} ist kein Gmail-Watch registriert, daher gehen keine E-Mails ein. Aktualisieren Sie Pub/Sub-Watch, um einen zu registrieren.",
+      "expiringTitle": "Gmail-Push-Zustellung läuft innerhalb eines Tages ab",
+      "expiringDescription": "Ein Gmail-Watch gilt sieben Tage. Aktualisieren Sie Pub/Sub-Watch, bevor dieser abläuft, sonst bleiben eingehende E-Mails ohne weitere Meldung aus."
     }
   },
   "forms": {

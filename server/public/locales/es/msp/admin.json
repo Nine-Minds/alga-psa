@@ -628,5 +628,35 @@
       "error": "Error",
       "metadata": "Metadatos"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnósticos de entrega de Gmail",
+    "description": "Comprueba el tema de Pub/Sub, sus permisos, el punto de conexión push y su audiencia, la vigilancia de Gmail y cuándo llegó la última notificación push.",
+    "labels": {
+      "provider": "Proveedor:",
+      "mailbox": "Buzón:",
+      "overall": "General:",
+      "recommendations": "Recomendaciones",
+      "error": "Error"
+    },
+    "audienceMismatch": {
+      "title": "La audiencia del push no coincide con esta instancia",
+      "expected": "Se esperaba:",
+      "actual": "Google está usando:"
+    },
+    "actions": {
+      "copySupportBundle": "Copiar paquete de soporte",
+      "copied": "Copiado"
+    },
+    "states": {
+      "running": "Ejecutando diagnósticos...",
+      "diagnosticsFailed": "Los diagnósticos fallaron"
+    },
+    "statuses": {
+      "pass": "Aprobado",
+      "warn": "Aviso",
+      "fail": "Fallido",
+      "skip": "Omitido"
+    }
   }
 }

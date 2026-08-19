@@ -159,7 +159,8 @@
       "resyncMailbox": "11111",
       "pause": "11111",
       "resume": "11111",
-      "delete": "11111"
+      "delete": "11111",
+      "runGmailDiagnostics": "11111"
     },
     "feedback": {
       "paused": "11111",
@@ -213,6 +214,14 @@
       "title": "11111",
       "description": "11111",
       "action": "11111"
+    },
+    "gmailWatch": {
+      "expiredTitle": "11111",
+      "expiredDescription": "11111 {{mailbox}} 11111",
+      "missingTitle": "11111",
+      "missingDescription": "11111 {{mailbox}} 11111",
+      "expiringTitle": "11111",
+      "expiringDescription": "11111"
     }
   },
   "forms": {
