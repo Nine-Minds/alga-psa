@@ -61,8 +61,22 @@ jobs:
 
       # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
       # assert on source layout; it isn't on the runner by default.
+      # A hung apt mirror once stalled this seconds-long install until the 6h
+      # runner cap; bound each apt call and retry so a transient network flake
+      # fails fast instead of holding the job for hours.
+      # LEVERAGE: pattern install-ripgrep-with-retry — same block repeated in the coverage-report job and bidi-control-guard.yml
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3; do
+            if sudo timeout 120 apt-get update && sudo timeout 120 apt-get install -y ripgrep; then
+              exit 0
+            fi
+            echo "ripgrep install attempt $attempt failed; retrying in 15s" >&2
+            sleep 15
+          done
+          echo "ripgrep install failed after 3 attempts" >&2
+          exit 1
 
       # Build the shared infra libraries' dist before testing. Most package
       # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
@@ -134,6 +148,11 @@ jobs:
   coverage-report:
     name: Server unit suite + coverage
     runs-on: ubuntu-latest
+    # Backstop like the sibling unit-tests job: without this the 6h runner
+    # default applies, and a hung apt mirror in "Install ripgrep" once stalled
+    # this job for ~6h before it was cancelled. An hour comfortably covers the
+    # full server suite while still catching a hang 6x sooner.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -145,8 +164,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
       # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      # Bounded + retried install: a hung apt mirror here stalled this job for
+      # ~6h (the failure this backstop and the job timeout above address).
+      # LEVERAGE: pattern install-ripgrep-with-retry — same block as the unit-tests job above and bidi-control-guard.yml
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        timeout-minutes: 10
+        run: |
+          for attempt in 1 2 3; do
+            if sudo timeout 120 apt-get update && sudo timeout 120 apt-get install -y ripgrep; then
+              exit 0
+            fi
+            echo "ripgrep install attempt $attempt failed; retrying in 15s" >&2
+            sleep 15
+          done
+          echo "ripgrep install failed after 3 attempts" >&2
+          exit 1
       # Package suites that real-import @alga-psa/* through native Node
       # resolution (onboarding seeds are .cjs) need the dists on disk; same
       # project set the nx job builds.
