@@ -438,7 +438,8 @@
         "repeatedDigits": "This number is the same digit repeated.",
         "sequentialDigits": "This number runs straight up or down the keypad.",
         "fictionalRange": "This is in the 555-0100 range reserved for fiction."
-      }
+      },
+      "dismissWarning": "Dismiss"
     }
   },
   "commentThread": {

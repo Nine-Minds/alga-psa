@@ -421,7 +421,8 @@
         "repeatedDigits": "Ten numer składa się z powtórzonej tej samej cyfry.",
         "sequentialDigits": "Ten numer przebiega kolejno w górę lub w dół klawiatury.",
         "fictionalRange": "Mieści się w zakresie 555-0100 zarezerwowanym dla fikcji."
-      }
+      },
+      "dismissWarning": "Odrzuć"
     }
   },
   "commentThread": {

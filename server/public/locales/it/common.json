@@ -407,7 +407,8 @@
         "repeatedDigits": "Questo numero ripete sempre la stessa cifra.",
         "sequentialDigits": "Questo numero percorre la tastiera in sequenza.",
         "fictionalRange": "Rientra nell’intervallo 555-0100 riservato alla finzione."
-      }
+      },
+      "dismissWarning": "Ignora"
     }
   },
   "commentThread": {

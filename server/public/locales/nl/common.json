@@ -348,7 +348,8 @@
         "repeatedDigits": "Dit nummer bestaat uit hetzelfde cijfer.",
         "sequentialDigits": "Dit nummer loopt recht op of af over het toetsenblok.",
         "fictionalRange": "Dit valt in het bereik 555-0100 dat voor fictie is gereserveerd."
-      }
+      },
+      "dismissWarning": "Sluiten"
     }
   },
   "commentThread": {

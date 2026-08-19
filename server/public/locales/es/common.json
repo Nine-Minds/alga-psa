@@ -407,7 +407,8 @@
         "repeatedDigits": "Este número repite siempre el mismo dígito.",
         "sequentialDigits": "Este número recorre el teclado de forma consecutiva.",
         "fictionalRange": "Está en el rango 555-0100 reservado para la ficción."
-      }
+      },
+      "dismissWarning": "Descartar"
     }
   },
   "commentThread": {

@@ -574,6 +574,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 value={emailState}
                 onChange={(value) => {
                   setEmailState(value);
+                  // Keeps the warning slot below in step with the primary address.
+                  setFieldWarnings(prev => ({
+                    ...prev,
+                    contact_email: value.email.trim() ? validateEmailAddressField(value.email).warnings : []
+                  }));
                   if (fieldErrors.contact_email) {
                     setFieldErrors(prev => ({ ...prev, contact_email: '' }));
                   }

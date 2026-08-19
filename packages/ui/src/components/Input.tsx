@@ -4,6 +4,7 @@ import React, { InputHTMLAttributes, useEffect, useMemo, useRef, useState, useCa
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from '../ui-reflection/actionBuilders';
+import { useTranslation } from '../lib/i18n/client';
 
 type InputSize = 'sm' | 'md' | 'lg';
 
@@ -150,10 +151,6 @@ export function Input({
 
   const displayErrors = errors || (error ? [error] : []);
   const hasErrorState = hasError || displayErrors.length > 0;
-  const warningSignature = useMemo(() => (warnings ?? []).join('|'), [warnings]);
-  const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
-  // A new set of warnings resurfaces even if the previous set was dismissed.
-  const displayWarnings = dismissedSignature === warningSignature ? [] : warnings ?? [];
 
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
@@ -188,13 +185,7 @@ export function Input({
           ))}
         </div>
       )}
-      <FieldWarnings
-        warnings={displayWarnings}
-        onDismiss={() => {
-          setDismissedSignature(warningSignature);
-          onDismissWarnings?.();
-        }}
-      />
+      <FieldWarnings warnings={warnings ?? []} onDismiss={onDismissWarnings} />
     </div>
   );
 }
@@ -202,6 +193,10 @@ export function Input({
 /**
  * Field-level plausibility warning. Deliberately not styled as an error: it is an
  * opinion about the input, not a reason the save cannot proceed.
+ *
+ * Dismissal is handled here so every slot behaves the same whether it is rendered
+ * by `Input` or dropped beneath a composite editor. `onDismiss` is an optional
+ * notification, not the thing that makes the control appear.
  */
 export function FieldWarnings({
   warnings,
@@ -212,7 +207,13 @@ export function FieldWarnings({
   onDismiss?: () => void;
   className?: string;
 }) {
-  if (!warnings.length) {
+  const { t } = useTranslation('common');
+  const signature = useMemo(() => warnings.join('|'), [warnings]);
+  const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
+  // A new set of warnings resurfaces even if the previous set was dismissed.
+  const isDismissed = dismissedSignature === signature;
+
+  if (!warnings.length || isDismissed) {
     return null;
   }
 
@@ -229,15 +230,16 @@ export function FieldWarnings({
           </p>
         ))}
       </div>
-      {onDismiss && (
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="shrink-0 text-xs font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
-        >
-          Dismiss
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          setDismissedSignature(signature);
+          onDismiss?.();
+        }}
+        className="shrink-0 text-xs font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]"
+      >
+        {t('clients.validation.dismissWarning', { defaultValue: 'Dismiss' })}
+      </button>
     </div>
   );
 }

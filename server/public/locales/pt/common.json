@@ -438,7 +438,8 @@
         "repeatedDigits": "Este número repete sempre o mesmo dígito.",
         "sequentialDigits": "Este número percorre o teclado em sequência.",
         "fictionalRange": "Está na faixa 555-0100 reservada para ficção."
-      }
+      },
+      "dismissWarning": "Dispensar"
     }
   },
   "commentThread": {

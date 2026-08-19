@@ -1021,6 +1021,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   value={contactData}
                   onChange={(value) => {
                     setContactData(prev => ({ ...prev, ...value }));
+                    // Keeps the warning slot below in step with the primary address.
+                    setFieldWarnings(prev => ({
+                      ...prev,
+                      contact_email: value.email.trim() ? validateEmailAddressField(value.email).warnings : []
+                    }));
                     if (fieldErrors.contact_email) {
                       setFieldErrors(prev => ({ ...prev, contact_email: '' }));
                     }
@@ -1030,6 +1035,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   errorMessages={hasAttemptedSubmit ? contactEmailValidationErrors : undefined}
                   onValidationChange={setContactEmailValidationErrors}
                 />
+                <FieldWarnings warnings={fieldWarnings.contact_email ?? []} />
 
                 <ContactPhoneNumbersEditor
                   id="client-contact-phone"

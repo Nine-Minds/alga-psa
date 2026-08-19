@@ -348,7 +348,8 @@
         "repeatedDigits": "Ce numéro répète toujours le même chiffre.",
         "sequentialDigits": "Ce numéro suit le clavier de façon consécutive.",
         "fictionalRange": "Il se situe dans la plage 555-0100 réservée à la fiction."
-      }
+      },
+      "dismissWarning": "Ignorer"
     }
   },
   "commentThread": {

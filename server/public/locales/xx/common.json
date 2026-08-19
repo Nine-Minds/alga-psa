@@ -438,7 +438,8 @@
         "repeatedDigits": "11111",
         "sequentialDigits": "11111",
         "fictionalRange": "11111"
-      }
+      },
+      "dismissWarning": "11111"
     }
   },
   "commentThread": {

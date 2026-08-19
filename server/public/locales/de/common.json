@@ -348,7 +348,8 @@
         "repeatedDigits": "Diese Nummer besteht aus derselben Ziffer.",
         "sequentialDigits": "Diese Nummer läuft gerade auf- oder absteigend durch.",
         "fictionalRange": "Das liegt im Bereich 555-0100, der für Fiktion reserviert ist."
-      }
+      },
+      "dismissWarning": "Ausblenden"
     }
   },
   "commentThread": {
