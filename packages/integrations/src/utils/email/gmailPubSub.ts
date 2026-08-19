@@ -72,9 +72,16 @@ function isDevelopment(): boolean {
 }
 
 /**
- * Reduce a base URL to its canonical form: lowercase scheme and host, no
- * default port, no query or fragment, no trailing slash. Any path component is
- * preserved so instances mounted under a prefix stay self-consistent.
+ * Reduce a base URL to its canonical origin: lowercase scheme and host, no
+ * default port, no query, no fragment, no path.
+ *
+ * A path component is rejected rather than kept. Provisioning appends the fixed
+ * {@link GOOGLE_WEBHOOK_PATH}; verification appends `request.nextUrl.pathname`.
+ * If the base also carried a prefix, only one of those two would end up with it
+ * once — the other would double it or drop it, depending on how the app is
+ * mounted — and the resulting audience mismatch would be invisible. Serving
+ * Alga under a path prefix is therefore unsupported for Gmail push; the origin
+ * is the only part of the base URL that both sides may contribute.
  */
 export function normalizeGmailBaseUrl(raw: string): string {
   const trimmed = (raw ?? '').trim();
@@ -104,9 +111,17 @@ export function normalizeGmailBaseUrl(raw: string): string {
     (protocol === 'https:' && url.port === '443') ||
     (protocol === 'http:' && url.port === '80');
   const authority = portIsDefault ? host : `${host}:${url.port}`;
-  const path = url.pathname.replace(/\/+$/, '');
 
-  return `${protocol}//${authority}${path}`;
+  const path = url.pathname.replace(/\/+$/, '');
+  if (path) {
+    throw new GmailPubSubConfigurationError(
+      `"${trimmed}" includes the path "${path}". The Gmail webhook base URL must be an origin only ` +
+        `(for example https://alga.example.com); the webhook route path is appended automatically. ` +
+        'Serving Alga under a path prefix is not supported for Gmail push delivery.'
+    );
+  }
+
+  return `${protocol}//${authority}`;
 }
 
 /**

@@ -37,6 +37,8 @@ Grant it on the project:
 
 The `setIamPolicy` permissions matter more than they look: Alga uses them to complete step 5, and setup fails outright without them.
 
+Alga stores this key — along with the OAuth client secret and the mailbox's refresh token — as a tenant secret. On Kubernetes, check where those land before you upload anything: with `secrets_provider.writeProvider: filesystem` and no `SECRET_FS_BASE_PATH`, they are written to pod-local scratch and vanish on the next restart, taking the mailbox connection with them. Multi-replica installs should write to Vault (`secrets_provider.writeProvider: vault`); the `tenantSecrets.persistence` volume in the Helm chart is a single-replica option only, and `helm/values.yaml` explains why.
+
 ## 5. Publisher rights for Gmail's own service account
 
 Gmail publishes as `gmail-api-push@system.gserviceaccount.com`. That account needs `roles/pubsub.publisher` on the tenant's topic (`gmail-notifications-<tenant-id>`).
@@ -55,6 +57,8 @@ Pub/Sub push only delivers to a public HTTPS endpoint with a resolvable name. Al
 4. `PUBLIC_WEBHOOK_BASE_URL`
 
 The resolved value becomes both the push endpoint and the OIDC audience Google signs its token with — and the audience this instance checks that token against. The two are generated from the same normalization (lowercase scheme and host, no default port, no trailing slash), so they agree as long as the address itself is right.
+
+Give an origin only — `https://alga.example.com`, not `https://alga.example.com/alga`. The webhook route path is appended for you. A base URL carrying a path prefix is rejected outright, because provisioning and verification would each add the route path to it differently and the mismatch would surface only as an unexplained 401. Serving Alga under a path prefix is not supported for Gmail push delivery.
 
 Change the address later and existing subscriptions keep pushing to the old one, where every request is rejected as unauthorized. After any hostname change, run **Refresh Pub/Sub & Watch** on each Gmail provider.
 

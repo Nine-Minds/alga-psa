@@ -61,14 +61,21 @@ describe('normalizeGmailBaseUrl', () => {
     expect(normalizeGmailBaseUrl('https://alga.example.com:8443/')).toBe('https://alga.example.com:8443');
   });
 
-  it('preserves a path prefix so both sides agree on it', () => {
-    expect(normalizeGmailBaseUrl('https://example.com/alga/')).toBe('https://example.com/alga');
-  });
-
   it.each(['', 'not-a-url', 'alga.example.com', 'ftp://alga.example.com'])(
     'rejects %s rather than guessing',
     (input) => {
       expect(() => normalizeGmailBaseUrl(input)).toThrow(GmailPubSubConfigurationError);
+    }
+  );
+
+  // The base URL contributes the origin and nothing else. If it could also
+  // carry a path prefix, provisioning (which appends a fixed route path) and
+  // verification (which appends the request path) would disagree about how many
+  // times the prefix appears, and the mismatch would only show up as a 401.
+  it.each(['https://example.com/alga', 'https://example.com/alga/'])(
+    'rejects the path prefix in %s instead of silently doubling or dropping it',
+    (input) => {
+      expect(() => normalizeGmailBaseUrl(input)).toThrow(/path prefix is not supported/i);
     }
   );
 });
@@ -79,6 +86,15 @@ describe('buildGmailWebhookUrl', () => {
     const fromVerification = buildGmailWebhookUrl('HTTPS://alga.example.com:443', GOOGLE_WEBHOOK_PATH);
     expect(fromProvisioning).toBe('https://alga.example.com/api/email/webhooks/google');
     expect(fromVerification).toBe(fromProvisioning);
+  });
+
+  // With the origin as the only thing the base contributes, a prefix can reach
+  // the audience from exactly one source — the request path — so it can never
+  // appear twice.
+  it('takes any path prefix from the request path alone, never doubling it', () => {
+    expect(buildGmailWebhookUrl('https://alga.example.com', '/alga/api/email/webhooks/google')).toBe(
+      'https://alga.example.com/alga/api/email/webhooks/google'
+    );
   });
 });
 

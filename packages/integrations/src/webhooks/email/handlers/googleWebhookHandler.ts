@@ -189,8 +189,32 @@ export async function handleGoogleWebhook(request: NextRequest) {
     try {
       resolvedBase = await resolveGmailWebhookBaseUrl();
     } catch (baseUrlError) {
-      console.error('❌ Configured Gmail webhook base URL is unusable:', baseUrlError);
+      // A base URL that is set but unusable is a configuration fault, not a
+      // missing value. Falling back to request.nextUrl.origin here would verify
+      // against the container-internal address, which cannot match what
+      // provisioning signed — every push would 401 with "invalid audience" and
+      // nothing would say why. Reject with the actual reason instead.
+      console.error('❌ Rejecting Gmail push: the configured webhook base URL is unusable, so the expected audience cannot be derived.', {
+        providerId: provider.id,
+        tenant: provider.tenant,
+        error: baseUrlError instanceof Error ? baseUrlError.message : String(baseUrlError),
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    if (!resolvedBase) {
+      // Nothing configured at all — the historical behavior. The request origin
+      // is the container's own address, so it only matches when Alga is reached
+      // directly (local development). Say so rather than letting a mismatch
+      // surface as a bare 401.
+      console.warn(
+        '⚠️ No Gmail webhook base URL is configured; verifying against the request origin. ' +
+          'This only matches when Pub/Sub was provisioned against that same origin — set NEXT_PUBLIC_BASE_URL ' +
+          '(or NGROK_URL for local development) to the public address of this instance.',
+        { origin: request.nextUrl.origin, providerId: provider.id, tenant: provider.tenant }
+      );
+    }
+
     const webhookUrl = resolvedBase
       ? buildGmailWebhookUrl(resolvedBase.baseUrl, request.nextUrl.pathname)
       : `${request.nextUrl.origin}${request.nextUrl.pathname}`;
