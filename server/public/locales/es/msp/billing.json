@@ -570,5 +570,8 @@
       "uncovered": "No cubierto por ningún contrato",
       "ambiguous": "Coincide con más de una línea de contrato"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Ya existe una factura para este período de facturación recurrente."
   }
 }

@@ -570,5 +570,8 @@
       "uncovered": "55555",
       "ambiguous": "55555"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "55555"
   }
 }

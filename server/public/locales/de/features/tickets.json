@@ -1340,7 +1340,15 @@
     "updateWatchList": "Die Beobachtungsliste konnte nicht aktualisiert werden. Bitte versuche es erneut.",
     "fetchCategoryImports": "Verfügbare Kategorien für den Import konnten nicht abgerufen werden",
     "validateDeletionFailed": "Die Löschung konnte nicht validiert werden. Bitte versuchen Sie es erneut.",
-    "deleteTicketUnexpected": "Beim Löschen des Tickets ist ein unerwarteter Fehler aufgetreten."
+    "deleteTicketUnexpected": "Beim Löschen des Tickets ist ein unerwarteter Fehler aufgetreten.",
+    "action": {
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht oder verschoben. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketResourceNotFound": "Ticket-Ressource nicht gefunden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "agentAlreadyAssigned": "Dieser Benutzer ist bereits als zusätzlicher Bearbeiter zugewiesen.",
+      "teamNotFound": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "teamLeadNotFound": "Das ausgewählte Team hat keine Teamleitung. Wählen Sie ein anderes Team oder legen Sie zuerst eine Teamleitung fest.",
+      "commentNotFound": "Kommentar nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    }
   },
   "ticketSection": {
     "title": "Terminanfrage",

@@ -110,6 +110,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/ui": "*",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
     "ua-parser-js": "^1.0.37"

@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@alga-psa/auth';
+import { getCurrentUser, localizeActionError } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   isActionPermissionError,
@@ -49,10 +49,12 @@ async function assertAdminPermission(): Promise<LicenseAdminUser | ActionPermiss
   // raw NextAuth session.user exposes `id`, not `user_id`, and hasPermission
   // binds user_roles.user_id, so passing session.user yields an undefined-binding
   // SQL error rather than a permission check.
+  // Localized here rather than at withAuth: these actions run their own guard, so
+  // the payload never passes through the wrapper that would otherwise translate it.
   const user = await getCurrentUser();
-  if (!user) return permissionError('Unauthorized. Sign in to manage licensing.');
+  if (!user) return localizeActionError(permissionError('Unauthorized. Sign in to manage licensing.'));
   const allowed = await hasPermission(user, 'account_management', 'read');
-  if (!allowed) return permissionError('Permission denied: account_management read required');
+  if (!allowed) return localizeActionError(permissionError('Permission denied: account_management read required'));
   // Returned so callers can bind license checks to this install's tenant.
   return user;
 }

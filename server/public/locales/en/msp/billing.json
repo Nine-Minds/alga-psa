@@ -570,5 +570,8 @@
       "uncovered": "Not covered by any contract",
       "ambiguous": "More than one contract line matches"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "An invoice already exists for this recurring billing period."
   }
 }

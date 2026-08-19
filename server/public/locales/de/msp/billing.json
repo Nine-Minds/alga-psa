@@ -570,5 +570,8 @@
       "uncovered": "Durch keinen Vertrag abgedeckt",
       "ambiguous": "Mehr als eine Vertragsposition passt"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Für diesen wiederkehrenden Abrechnungszeitraum existiert bereits eine Rechnung."
   }
 }

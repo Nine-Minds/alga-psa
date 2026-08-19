@@ -570,5 +570,8 @@
       "uncovered": "Non coperto da alcun contratto",
       "ambiguous": "Corrisponde a più di una riga di contratto"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Esiste già una fattura per questo periodo di fatturazione ricorrente."
   }
 }

@@ -53,13 +53,23 @@ export function isAuthorizationThrow(error: unknown): boolean {
   return false;
 }
 
+/** Interpolation values for a localized action-error message. */
+export type ActionMessageParams = Record<string, string | number>;
+
 /**
  * Represents a permission error returned from a server action.
  * Next.js strips thrown error messages during serialization, so permission
  * errors must be returned as plain objects to reach the client intact.
+ *
+ * `messageKey` is the localization seam: the `withAuth` boundary rewrites the
+ * English string to the caller's locale before the payload reaches the client,
+ * and keeps the key on the payload so the rewrite is idempotent and log lines
+ * still have something stable to read.
  */
 export type ActionPermissionErrorShape = {
   readonly permissionError: string;
+  readonly messageKey?: string;
+  readonly messageParams?: ActionMessageParams;
 };
 
 export type ActionPermissionError = never;
@@ -70,14 +80,25 @@ export type ActionPermissionError = never;
  */
 export type ActionMessageErrorShape = {
   readonly actionError: string;
+  readonly messageKey?: string;
+  readonly messageParams?: ActionMessageParams;
 };
 
 export type ActionMessageError = never;
 
 /**
+ * What the type guards narrow to. Deliberately the *minimal* shapes: widening them
+ * with the optional localization fields breaks negative narrowing for the ~30 modules
+ * that declare their own `{ readonly actionError: string }` union member, and does so
+ * as a type error rather than at runtime.
+ */
+type ActionPermissionErrorMatch = { readonly permissionError: string };
+type ActionMessageErrorMatch = { readonly actionError: string };
+
+/**
  * Type guard: checks if a server action result is a permission error.
  */
-export function isActionPermissionError(value: unknown): value is ActionPermissionErrorShape {
+export function isActionPermissionError(value: unknown): value is ActionPermissionErrorMatch {
   const candidate = value as Record<string, unknown>;
   return (
     typeof value === 'object' &&
@@ -90,7 +111,7 @@ export function isActionPermissionError(value: unknown): value is ActionPermissi
 /**
  * Type guard: checks if a server action result is a user-safe action error.
  */
-export function isActionMessageError(value: unknown): value is ActionMessageErrorShape {
+export function isActionMessageError(value: unknown): value is ActionMessageErrorMatch {
   const candidate = value as Record<string, unknown>;
   return (
     typeof value === 'object' &&
@@ -100,19 +121,47 @@ export function isActionMessageError(value: unknown): value is ActionMessageErro
   );
 }
 
+/** The localization key an action attached to its error, if any. */
+export function getActionErrorMessageKey(value: unknown): string | undefined {
+  const candidate = value as { messageKey?: unknown };
+  return typeof candidate?.messageKey === 'string' ? candidate.messageKey : undefined;
+}
+
+/** The interpolation values an action attached to its error, if any. */
+export function getActionErrorMessageParams(value: unknown): ActionMessageParams | undefined {
+  const candidate = value as { messageParams?: unknown };
+  return candidate?.messageParams && typeof candidate.messageParams === 'object'
+    ? (candidate.messageParams as ActionMessageParams)
+    : undefined;
+}
+
 /**
  * Creates a permission error return value for server actions.
  * Use instead of `throw new Error('Permission denied: ...')`.
+ *
+ * Pass a namespaced `key` (e.g. `'msp/clients:errors.notAllowed'`) to have the
+ * boundary localize the message. Stays synchronous either way.
  */
-export function permissionError(message: string): ActionPermissionError {
-  return { permissionError: message } as ActionPermissionError;
+export function permissionError(
+  message: string,
+  key?: string,
+  params?: ActionMessageParams,
+): ActionPermissionError {
+  return { permissionError: message, ...(key ? { messageKey: key } : {}), ...(params ? { messageParams: params } : {}) } as ActionPermissionError;
 }
 
 /**
  * Creates a user-safe error return value for server actions.
+ *
+ * Pass a namespaced `key` (e.g. `'msp/clients:errors.duplicateName'`) to have the
+ * boundary localize the message. Stays synchronous either way.
  */
-export function actionError(message: string): ActionMessageError {
-  return { actionError: message } as ActionMessageError;
+export function actionError(
+  message: string,
+  key?: string,
+  params?: ActionMessageParams,
+): ActionMessageError {
+  return { actionError: message, ...(key ? { messageKey: key } : {}), ...(params ? { messageParams: params } : {}) } as ActionMessageError;
 }
 
 // --- Error detection utilities ---

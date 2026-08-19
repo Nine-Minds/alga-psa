@@ -1474,7 +1474,15 @@
     "updateWatchList": "Nie udało się zaktualizować listy obserwujących. Spróbuj ponownie.",
     "fetchCategoryImports": "Nie udało się pobrać dostępnych kategorii do importu",
     "validateDeletionFailed": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
-    "deleteTicketUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania zgłoszenia."
+    "deleteTicketUnexpected": "Wystąpił nieoczekiwany błąd podczas usuwania zgłoszenia.",
+    "action": {
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Mogło zostać usunięte lub przeniesione. Odśwież stronę i spróbuj ponownie.",
+      "ticketResourceNotFound": "Nie znaleziono zasobu zgłoszenia. Odśwież stronę i spróbuj ponownie.",
+      "agentAlreadyAssigned": "Ten użytkownik jest już przypisany jako dodatkowy agent.",
+      "teamNotFound": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "teamLeadNotFound": "Wybrany zespół nie ma lidera. Wybierz inny zespół lub najpierw wyznacz lidera.",
+      "commentNotFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie."
+    }
   },
   "ticketSection": {
     "title": "Prośba o wizytę",

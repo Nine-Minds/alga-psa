@@ -1340,7 +1340,15 @@
     "updateWatchList": "Volglijst bijwerken is mislukt. Probeer het opnieuw.",
     "fetchCategoryImports": "Beschikbare categorieën voor import ophalen is mislukt",
     "validateDeletionFailed": "Verwijderen kon niet worden gevalideerd. Probeer het opnieuw.",
-    "deleteTicketUnexpected": "Er is een onverwachte fout opgetreden bij het verwijderen van het ticket."
+    "deleteTicketUnexpected": "Er is een onverwachte fout opgetreden bij het verwijderen van het ticket.",
+    "action": {
+      "ticketNotFound": "Ticket niet gevonden. Het is mogelijk verwijderd of verplaatst. Vernieuw de pagina en probeer het opnieuw.",
+      "ticketResourceNotFound": "Ticketresource niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "agentAlreadyAssigned": "Deze gebruiker is al toegewezen als extra behandelaar.",
+      "teamNotFound": "Team niet gevonden. Het is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "teamLeadNotFound": "Het geselecteerde team heeft geen teamleider. Kies een ander team of wijs eerst een teamleider toe.",
+      "commentNotFound": "Reactie niet gevonden. Deze is mogelijk verwijderd. Vernieuw de pagina en probeer het opnieuw."
+    }
   },
   "ticketSection": {
     "title": "Afspraakverzoek",

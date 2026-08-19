@@ -19,6 +19,7 @@ import {
   actionError,
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { localizeActionError } from '@alga-psa/auth';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
@@ -175,7 +176,9 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
     return await submitSurveyResponseInternal(input);
   } catch (error) {
     const expected = surveyResponseActionErrorFrom(error);
-    if (expected) return expected;
+    // Anonymous token flow: no session, so this never passes through withAuth.
+    // Localize at its own return instead, off the visitor's cookie / Accept-Language.
+    if (expected) return await localizeActionError(expected);
     throw error;
   }
 }

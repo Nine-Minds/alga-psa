@@ -76,7 +76,7 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { DUPLICATE_RECURRING_INVOICE_CODE } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
@@ -690,11 +690,15 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
       error.message.startsWith('Purchase Order is required') ||
       error.message.startsWith('Client ') ||
       error.message.startsWith('Service "') ||
-      error.message.startsWith('Invoice already exists for this recurring execution window') ||
       error.message.startsWith('Recurring service periods were not materialized') ||
       error.message.includes('Mixed currency billing is not supported')
     ) {
       return actionError(error.message);
+    }
+
+    if (error.message.startsWith('Invoice already exists for this recurring execution window')) {
+      // Keyed so the recurring run can recognize it after the boundary translates it.
+      return actionError(error.message, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY);
     }
   }
 

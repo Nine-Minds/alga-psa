@@ -1340,7 +1340,15 @@
     "updateWatchList": "Impossibile aggiornare l'elenco osservati. Riprova.",
     "fetchCategoryImports": "Impossibile recuperare le categorie disponibili da importare",
     "validateDeletionFailed": "Impossibile convalidare l'eliminazione. Riprova.",
-    "deleteTicketUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del ticket."
+    "deleteTicketUnexpected": "Si è verificato un errore imprevisto durante l'eliminazione del ticket.",
+    "action": {
+      "ticketNotFound": "Ticket non trovato. Potrebbe essere stato eliminato o spostato. Aggiornare la pagina e riprovare.",
+      "ticketResourceNotFound": "Risorsa del ticket non trovata. Aggiornare la pagina e riprovare.",
+      "agentAlreadyAssigned": "Questo utente è già assegnato come operatore aggiuntivo.",
+      "teamNotFound": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "teamLeadNotFound": "Il team selezionato non ha un responsabile. Scegliere un altro team o assegnare prima un responsabile.",
+      "commentNotFound": "Commento non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare."
+    }
   },
   "ticketSection": {
     "title": "Richiesta appuntamento",

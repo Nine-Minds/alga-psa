@@ -1340,7 +1340,15 @@
     "updateWatchList": "Impossible de mettre à jour la liste de surveillance. Veuillez réessayer.",
     "fetchCategoryImports": "Échec de la récupération des catégories disponibles pour l'importation",
     "validateDeletionFailed": "Échec de la validation de la suppression. Veuillez réessayer.",
-    "deleteTicketUnexpected": "Une erreur inattendue s'est produite lors de la suppression du ticket."
+    "deleteTicketUnexpected": "Une erreur inattendue s'est produite lors de la suppression du ticket.",
+    "action": {
+      "ticketNotFound": "Ticket introuvable. Il a peut-être été supprimé ou déplacé. Veuillez actualiser la page et réessayer.",
+      "ticketResourceNotFound": "Ressource du ticket introuvable. Veuillez actualiser la page et réessayer.",
+      "agentAlreadyAssigned": "Cet utilisateur est déjà affecté comme intervenant supplémentaire.",
+      "teamNotFound": "Équipe introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "teamLeadNotFound": "L’équipe sélectionnée n’a pas de responsable. Choisissez une autre équipe ou désignez d’abord un responsable.",
+      "commentNotFound": "Commentaire introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer."
+    }
   },
   "ticketSection": {
     "title": "Demande de rendez-vous",

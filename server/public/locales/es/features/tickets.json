@@ -1340,7 +1340,15 @@
     "updateWatchList": "No se pudo actualizar la lista de seguimiento. Inténtelo de nuevo.",
     "fetchCategoryImports": "No se pudieron obtener las categorías disponibles para importar",
     "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
-    "deleteTicketUnexpected": "Se produjo un error inesperado al eliminar el ticket."
+    "deleteTicketUnexpected": "Se produjo un error inesperado al eliminar el ticket.",
+    "action": {
+      "ticketNotFound": "Ticket no encontrado. Es posible que se haya eliminado o movido. Actualice la página e inténtelo de nuevo.",
+      "ticketResourceNotFound": "Recurso del ticket no encontrado. Actualice la página e inténtelo de nuevo.",
+      "agentAlreadyAssigned": "Este usuario ya está asignado como agente adicional.",
+      "teamNotFound": "Equipo no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "teamLeadNotFound": "El equipo seleccionado no tiene responsable. Elija otro equipo o asigne un responsable primero.",
+      "commentNotFound": "Comentario no encontrado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo."
+    }
   },
   "ticketSection": {
     "title": "Solicitud de cita",

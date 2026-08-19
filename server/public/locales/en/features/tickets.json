@@ -1348,7 +1348,15 @@
     "updateWatchList": "Unable to update watch list. Please try again.",
     "fetchCategoryImports": "Failed to fetch available categories for import",
     "validateDeletionFailed": "Failed to validate deletion. Please try again.",
-    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket."
+    "deleteTicketUnexpected": "An unexpected error occurred while deleting the ticket.",
+    "action": {
+      "ticketNotFound": "Ticket not found. It may have been deleted or moved. Please refresh and try again.",
+      "ticketResourceNotFound": "Ticket resource not found. Please refresh and try again.",
+      "agentAlreadyAssigned": "This user is already assigned as an additional agent.",
+      "teamNotFound": "Team not found. It may have been deleted. Please refresh and try again.",
+      "teamLeadNotFound": "The selected team does not have a team lead. Choose another team or assign a lead first.",
+      "commentNotFound": "Comment not found. It may have been deleted. Please refresh and try again."
+    }
   },
   "ticketSection": {
     "title": "Appointment Request",

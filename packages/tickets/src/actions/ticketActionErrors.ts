@@ -31,6 +31,18 @@ const TICKET_CODE_MESSAGES: Record<TicketErrorCode, string> = {
   COMMENT_NOT_FOUND: 'Comment not found. It may have been deleted. Please refresh and try again.',
 };
 
+const TICKET_CODE_MESSAGE_KEYS: Record<TicketErrorCode, string> = {
+  TICKET_NOT_FOUND: 'features/tickets:errors.action.ticketNotFound',
+  TICKET_RESOURCE_NOT_FOUND: 'features/tickets:errors.action.ticketResourceNotFound',
+  RESOURCE_ALREADY_EXISTS: 'features/tickets:errors.action.agentAlreadyAssigned',
+  TEAM_NOT_FOUND: 'features/tickets:errors.action.teamNotFound',
+  TEAM_LEAD_NOT_FOUND: 'features/tickets:errors.action.teamLeadNotFound',
+  COMMENT_NOT_FOUND: 'features/tickets:errors.action.commentNotFound',
+};
+
+/** Read by callers that need to tell "not found" apart after the message is localized. */
+export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_FOUND;
+
 /**
  * DEPRECATED fallback channel. Every entry is the message of an internal
  * `throw new Error(...)` that is safe to show a user, matched by prefix.
@@ -143,7 +155,7 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
 
   const ticketCode = ticketErrorCodeOf(error);
   if (ticketCode) {
-    return actionError(TICKET_CODE_MESSAGES[ticketCode]);
+    return actionError(TICKET_CODE_MESSAGES[ticketCode], TICKET_CODE_MESSAGE_KEYS[ticketCode]);
   }
 
   if (error instanceof Error) {

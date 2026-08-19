@@ -1348,7 +1348,15 @@
     "updateWatchList": "11111",
     "fetchCategoryImports": "11111",
     "validateDeletionFailed": "11111",
-    "deleteTicketUnexpected": "11111"
+    "deleteTicketUnexpected": "11111",
+    "action": {
+      "ticketNotFound": "11111",
+      "ticketResourceNotFound": "11111",
+      "agentAlreadyAssigned": "11111",
+      "teamNotFound": "11111",
+      "teamLeadNotFound": "11111",
+      "commentNotFound": "11111"
+    }
   },
   "ticketSection": {
     "title": "11111",

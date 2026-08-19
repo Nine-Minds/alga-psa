@@ -1340,7 +1340,15 @@
     "updateWatchList": "Não foi possível atualizar a lista de observação. Por favor, tente novamente.",
     "fetchCategoryImports": "Falha ao buscar categorias disponíveis para importação",
     "validateDeletionFailed": "Falha ao validar a exclusão. Por favor, tente novamente.",
-    "deleteTicketUnexpected": "Ocorreu um erro inesperado ao excluir o ticket."
+    "deleteTicketUnexpected": "Ocorreu um erro inesperado ao excluir o ticket.",
+    "action": {
+      "ticketNotFound": "Ticket não encontrado. Ele pode ter sido excluído ou movido. Atualize a página e tente novamente.",
+      "ticketResourceNotFound": "Recurso do ticket não encontrado. Atualize a página e tente novamente.",
+      "agentAlreadyAssigned": "Este usuário já está atribuído como agente adicional.",
+      "teamNotFound": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "teamLeadNotFound": "A equipe selecionada não tem líder. Escolha outra equipe ou defina um líder primeiro.",
+      "commentNotFound": "Comentário não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente."
+    }
   },
   "ticketSection": {
     "title": "Solicitação de agendamento",

@@ -570,5 +570,8 @@
       "uncovered": "Niet gedekt door een contract",
       "ambiguous": "Meer dan één contractregel komt overeen"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Er bestaat al een factuur voor deze terugkerende factuurperiode."
   }
 }

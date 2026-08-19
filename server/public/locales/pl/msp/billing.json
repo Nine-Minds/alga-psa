@@ -570,5 +570,8 @@
       "uncovered": "Nieobjęte żadną umową",
       "ambiguous": "Pasuje więcej niż jedna pozycja umowy"
     }
+  },
+  "errors": {
+    "duplicateRecurringInvoice": "Dla tego cyklicznego okresu rozliczeniowego istnieje już faktura."
   }
 }
