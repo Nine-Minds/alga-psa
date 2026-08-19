@@ -2967,5 +2967,82 @@
         "cancel": "Annuleren"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Toestemming geweigerd: het team kan niet worden aangemaakt.",
+        "update": "Toestemming geweigerd: het team kan niet worden bijgewerkt.",
+        "modify": "Toestemming geweigerd: het team kan niet worden gewijzigd.",
+        "modifyMembers": "Toestemming geweigerd: teamleden kunnen niet worden gewijzigd.",
+        "view": "Toestemming geweigerd: het team kan niet worden bekeken.",
+        "viewAll": "Toestemming geweigerd: teams kunnen niet worden bekeken.",
+        "assignManager": "Toestemming geweigerd: de teammanager kan niet worden toegewezen."
+      },
+      "notFoundRefresh": "Team niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "leadRequired": "Een team moet een teamleider hebben. Selecteer een teamleider en probeer het opnieuw.",
+      "inactiveUser": "Inactieve gebruikers kunnen niet aan een team worden toegevoegd.",
+      "cannotRemoveLead": "De teamleider kan niet worden verwijderd. Wijs eerst een nieuwe teamleider toe.",
+      "invalidValue": "Een van de geselecteerde teamwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateMember": "Deze gebruiker is al lid van het team.",
+      "referenceMissing": "De geselecteerde teamleider of het teamlid is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht teamveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht teamveld: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels te bekijken",
+        "create": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels aan te maken",
+        "update": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels bij te werken",
+        "delete": "Toestemming geweigerd: u hebt geen rechten om SLA-beleidsregels te verwijderen"
+      },
+      "policyNotFound": "SLA-beleidsregel niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "targetNotFound": "SLA-beleidsdoel niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "priorityNotFound": "Geselecteerde prioriteit niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "clientNotFound": "Geselecteerde klant niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "boardNotFound": "Geselecteerd bord niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "ticketNotFound": "Ticket niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicateTarget": "Er bestaat al een doel voor deze prioriteit in deze beleidsregel.",
+      "pauseRequiresBoardStatus": "De SLA-pauzeconfiguratie vereist een ticketstatus die bij het bord hoort.",
+      "invalidValue": "Een van de geselecteerde SLA-waarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde SLA-record of de gerelateerde waarde bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze SLA-wijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de SLA-waarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht SLA-veld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht SLA-veld: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Bord niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "userNotFound": "De geselecteerde escalatiemanager is niet gevonden. Vernieuw de pagina en kies een andere gebruiker.",
+      "configNotFound": "Configuratie van de escalatiemanager niet gevonden. Mogelijk is deze al verwijderd.",
+      "recordInvalid": "Een van de geselecteerde records van de escalatiemanager is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde bord of de gebruiker bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er is al een escalatiemanager geconfigureerd voor dit bord en niveau.",
+      "missingField": "Er ontbreekt een verplicht veld van de escalatiemanager.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de escalatiemanager: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde gerelateerde record voor deze status bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "orderInUse": "Dit volgnummer is al in gebruik. Kies een ander volgnummer.",
+      "duplicateName": "Er bestaat al een status met deze naam.",
+      "notAllowed": "Een van de statuswaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht statusveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht statusveld: {{field}}.",
+      "nameRequired": "Statusnaam is verplicht",
+      "nameEmpty": "De statusnaam mag niet leeg zijn",
+      "idRequired": "Status-ID is verplicht",
+      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen"
+    },
+    "priority": {
+      "notFound": "Prioriteit niet gevonden.",
+      "boardMissing": "Het geselecteerde bord bestaat niet meer.",
+      "duplicate": "Er bestaat al een prioriteit met deze gegevens.",
+      "referenceInvalid": "De geselecteerde prioriteitsverwijzing is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidData": "Ongeldige prioriteitsgegevens opgegeven. Controleer de prioriteitsgegevens.",
+      "missingField": "Er ontbreekt een verplicht prioriteitsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht prioriteitsveld: {{field}}."
+    }
   }
 }

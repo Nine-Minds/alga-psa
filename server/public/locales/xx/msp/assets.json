@@ -1490,5 +1490,35 @@
       "inactive": "11111",
       "maintenance": "11111"
     }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "11111",
+      "readAssetTypes": "11111",
+      "manageAssetTypes": "11111",
+      "readDocuments": "11111",
+      "associateDocuments": "11111",
+      "removeDocuments": "11111",
+      "updateDocumentNotes": "11111"
+    },
+    "asset": {
+      "notFoundRefresh": "11111",
+      "clientNotFound": "11111",
+      "maintenanceNotFound": "11111",
+      "maintenanceMismatch": "11111",
+      "locationUnavailable": "11111",
+      "selfRelation": "11111",
+      "selectAtLeastOne": "11111",
+      "typeUnavailable": "11111",
+      "typeUnavailableNamed": "11111 {{assetType}} 11111",
+      "documentAssociationNotFound": "11111",
+      "invalidValue": "11111",
+      "invalidDate": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    }
   }
 }

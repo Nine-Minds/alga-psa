@@ -2967,5 +2967,82 @@
         "cancel": "Annuler"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Autorisation refusée : impossible de créer l’équipe.",
+        "update": "Autorisation refusée : impossible de mettre à jour l’équipe.",
+        "modify": "Autorisation refusée : impossible de modifier l’équipe.",
+        "modifyMembers": "Autorisation refusée : impossible de modifier les membres de l’équipe.",
+        "view": "Autorisation refusée : impossible de consulter l’équipe.",
+        "viewAll": "Autorisation refusée : impossible de consulter les équipes.",
+        "assignManager": "Autorisation refusée : impossible d’affecter le responsable de l’équipe."
+      },
+      "notFoundRefresh": "Équipe introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "leadRequired": "Une équipe doit avoir un responsable. Sélectionnez un responsable et réessayez.",
+      "inactiveUser": "Les utilisateurs inactifs ne peuvent pas être ajoutés à une équipe.",
+      "cannotRemoveLead": "Impossible de retirer le responsable de l’équipe. Affectez d’abord un nouveau responsable.",
+      "invalidValue": "L’une des valeurs d’équipe sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "duplicateMember": "Cet utilisateur est déjà membre de l’équipe.",
+      "referenceMissing": "Le responsable ou le membre d’équipe sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de l’équipe est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de l’équipe est manquant : {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Autorisation refusée : vous n’avez pas l’autorisation de consulter les politiques SLA",
+        "create": "Autorisation refusée : vous n’avez pas l’autorisation de créer des politiques SLA",
+        "update": "Autorisation refusée : vous n’avez pas l’autorisation de mettre à jour les politiques SLA",
+        "delete": "Autorisation refusée : vous n’avez pas l’autorisation de supprimer des politiques SLA"
+      },
+      "policyNotFound": "Politique SLA introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "targetNotFound": "Cible de la politique SLA introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "priorityNotFound": "Priorité sélectionnée introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "clientNotFound": "Client sélectionné introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "boardNotFound": "Tableau sélectionné introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "ticketNotFound": "Ticket introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "duplicateTarget": "Une cible pour cette priorité existe déjà dans cette politique.",
+      "pauseRequiresBoardStatus": "La configuration de pause du SLA nécessite un statut de ticket appartenant au tableau.",
+      "invalidValue": "L’une des valeurs SLA sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’enregistrement SLA ou la valeur associée sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "conflict": "Cette modification du SLA entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs SLA n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du SLA est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du SLA est manquant : {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Tableau introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "userNotFound": "L’utilisateur responsable d’escalade sélectionné est introuvable. Veuillez actualiser la page et choisir un autre utilisateur.",
+      "configNotFound": "Configuration du responsable d’escalade introuvable. Elle a peut-être déjà été supprimée.",
+      "recordInvalid": "L’un des enregistrements de responsable d’escalade sélectionnés n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le tableau ou l’utilisateur sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un responsable d’escalade est déjà configuré pour ce tableau et ce niveau.",
+      "missingField": "Un champ obligatoire du responsable d’escalade est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du responsable d’escalade est manquant : {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Statut introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de statut sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’enregistrement associé sélectionné pour ce statut n’existe plus. Veuillez actualiser la page et réessayer.",
+      "orderInUse": "Ce numéro d’ordre est déjà utilisé. Veuillez choisir un autre numéro d’ordre.",
+      "duplicateName": "Un statut portant ce nom existe déjà.",
+      "notAllowed": "L’une des valeurs de statut n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du statut est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du statut est manquant : {{field}}.",
+      "nameRequired": "Le nom du statut est obligatoire",
+      "nameEmpty": "Le nom du statut ne peut pas être vide",
+      "idRequired": "L’identifiant du statut est obligatoire",
+      "manageFromBoard": "Les statuts de ticket doivent être gérés depuis les paramètres du tableau"
+    },
+    "priority": {
+      "notFound": "Priorité introuvable.",
+      "boardMissing": "Le tableau sélectionné n’existe plus.",
+      "duplicate": "Une priorité avec ces informations existe déjà.",
+      "referenceInvalid": "La référence de priorité sélectionnée n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "invalidData": "Données de priorité non valides. Veuillez vérifier les détails de la priorité.",
+      "missingField": "Un champ obligatoire de la priorité est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la priorité est manquant : {{field}}."
+    }
   }
 }

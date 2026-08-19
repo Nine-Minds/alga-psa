@@ -2967,5 +2967,82 @@
         "cancel": "Cancel"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permission denied: cannot create team.",
+        "update": "Permission denied: cannot update team.",
+        "modify": "Permission denied: cannot modify team.",
+        "modifyMembers": "Permission denied: cannot modify team members.",
+        "view": "Permission denied: cannot view team.",
+        "viewAll": "Permission denied: cannot view teams.",
+        "assignManager": "Permission denied: cannot assign team manager."
+      },
+      "notFoundRefresh": "Team not found. It may have been deleted. Please refresh and try again.",
+      "leadRequired": "A team must have a team lead. Select a team lead and try again.",
+      "inactiveUser": "Inactive users cannot be added to a team.",
+      "cannotRemoveLead": "Cannot remove the team lead. Please assign a new team lead first.",
+      "invalidValue": "One of the selected team values is invalid. Please refresh and try again.",
+      "duplicateMember": "This user is already a member of the team.",
+      "referenceMissing": "The selected team lead or member is no longer valid. Please refresh and try again.",
+      "missingField": "Missing required team field.",
+      "missingFieldNamed": "Missing required team field: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permission denied: You don't have permission to view SLA policies",
+        "create": "Permission denied: You don't have permission to create SLA policies",
+        "update": "Permission denied: You don't have permission to update SLA policies",
+        "delete": "Permission denied: You don't have permission to delete SLA policies"
+      },
+      "policyNotFound": "SLA policy not found. It may have been deleted. Please refresh and try again.",
+      "targetNotFound": "SLA policy target not found. It may have been deleted. Please refresh and try again.",
+      "priorityNotFound": "Selected priority not found. It may have been deleted. Please refresh and try again.",
+      "clientNotFound": "Selected client not found. It may have been deleted. Please refresh and try again.",
+      "boardNotFound": "Selected board not found. It may have been deleted. Please refresh and try again.",
+      "ticketNotFound": "Ticket not found. It may have been deleted. Please refresh and try again.",
+      "duplicateTarget": "A target for this priority already exists in this policy.",
+      "pauseRequiresBoardStatus": "SLA pause configuration requires a board-owned ticket status.",
+      "invalidValue": "One of the selected SLA values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected SLA record or related value no longer exists. Please refresh and try again.",
+      "conflict": "This SLA change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the SLA values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required SLA field.",
+      "missingFieldNamed": "Missing required SLA field: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board not found. It may have been deleted. Please refresh and try again.",
+      "userNotFound": "Selected escalation manager user not found. Please refresh and choose another user.",
+      "configNotFound": "Escalation manager configuration not found. It may have already been deleted.",
+      "recordInvalid": "One of the selected escalation manager records is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected board or user no longer exists. Please refresh and try again.",
+      "duplicate": "An escalation manager is already configured for this board and level.",
+      "missingField": "Missing required escalation manager field.",
+      "missingFieldNamed": "Missing required escalation manager field: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status not found. It may have been deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected status values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected related record for this status no longer exists. Please refresh and try again.",
+      "orderInUse": "This order number is already in use. Please choose a different order number.",
+      "duplicateName": "A status with this name already exists.",
+      "notAllowed": "One of the status values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required status field.",
+      "missingFieldNamed": "Missing required status field: {{field}}.",
+      "nameRequired": "Status name is required",
+      "nameEmpty": "Status name cannot be empty",
+      "idRequired": "Status ID is required",
+      "manageFromBoard": "Ticket statuses must be managed from board settings"
+    },
+    "priority": {
+      "notFound": "Priority not found.",
+      "boardMissing": "The selected board no longer exists.",
+      "duplicate": "A priority with these details already exists.",
+      "referenceInvalid": "The selected priority reference is no longer valid. Please refresh and try again.",
+      "invalidData": "Invalid priority data provided. Please check the priority details.",
+      "missingField": "Missing required priority field.",
+      "missingFieldNamed": "Missing required priority field: {{field}}."
+    }
   }
 }

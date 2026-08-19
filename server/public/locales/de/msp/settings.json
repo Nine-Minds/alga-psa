@@ -2967,5 +2967,82 @@
         "cancel": "Abbrechen"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Berechtigung verweigert: Team kann nicht erstellt werden.",
+        "update": "Berechtigung verweigert: Team kann nicht aktualisiert werden.",
+        "modify": "Berechtigung verweigert: Team kann nicht geändert werden.",
+        "modifyMembers": "Berechtigung verweigert: Teammitglieder können nicht geändert werden.",
+        "view": "Berechtigung verweigert: Team kann nicht angezeigt werden.",
+        "viewAll": "Berechtigung verweigert: Teams können nicht angezeigt werden.",
+        "assignManager": "Berechtigung verweigert: Teamleitung kann nicht zugewiesen werden."
+      },
+      "notFoundRefresh": "Team nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "leadRequired": "Ein Team muss eine Teamleitung haben. Wählen Sie eine Teamleitung und versuchen Sie es erneut.",
+      "inactiveUser": "Inaktive Benutzer können keinem Team hinzugefügt werden.",
+      "cannotRemoveLead": "Die Teamleitung kann nicht entfernt werden. Weisen Sie zuerst eine neue Teamleitung zu.",
+      "invalidValue": "Einer der ausgewählten Teamwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateMember": "Dieser Benutzer ist bereits Mitglied des Teams.",
+      "referenceMissing": "Die ausgewählte Teamleitung oder das Mitglied ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Teamfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Teamfeld fehlt: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien anzuzeigen",
+        "create": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu erstellen",
+        "update": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu aktualisieren",
+        "delete": "Berechtigung verweigert: Sie haben keine Berechtigung, SLA-Richtlinien zu löschen"
+      },
+      "policyNotFound": "SLA-Richtlinie nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "targetNotFound": "SLA-Richtlinienziel nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "priorityNotFound": "Ausgewählte Priorität nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "clientNotFound": "Ausgewählter Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "boardNotFound": "Ausgewähltes Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicateTarget": "Für diese Priorität existiert in dieser Richtlinie bereits ein Ziel.",
+      "pauseRequiresBoardStatus": "Die SLA-Pausenkonfiguration erfordert einen Ticketstatus, der zu einem Board gehört.",
+      "invalidValue": "Einer der ausgewählten SLA-Werte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte SLA-Datensatz oder ein zugehöriger Wert existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese SLA-Änderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der SLA-Werte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches SLA-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches SLA-Feld fehlt: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Board nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "userNotFound": "Der ausgewählte Benutzer für die Eskalationsleitung wurde nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie einen anderen Benutzer.",
+      "configNotFound": "Konfiguration der Eskalationsleitung nicht gefunden. Sie wurde möglicherweise bereits gelöscht.",
+      "recordInvalid": "Einer der ausgewählten Datensätze der Eskalationsleitung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Board oder der Benutzer existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Für dieses Board und diese Stufe ist bereits eine Eskalationsleitung konfiguriert.",
+      "missingField": "Erforderliches Feld der Eskalationsleitung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Eskalationsleitung fehlt: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte zugehörige Datensatz für diesen Status existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "orderInUse": "Diese Reihenfolgennummer wird bereits verwendet. Bitte wählen Sie eine andere Nummer.",
+      "duplicateName": "Ein Status mit diesem Namen existiert bereits.",
+      "notAllowed": "Einer der Statuswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Statusfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Statusfeld fehlt: {{field}}.",
+      "nameRequired": "Der Statusname ist erforderlich",
+      "nameEmpty": "Der Statusname darf nicht leer sein",
+      "idRequired": "Die Status-ID ist erforderlich",
+      "manageFromBoard": "Ticketstatus müssen in den Board-Einstellungen verwaltet werden"
+    },
+    "priority": {
+      "notFound": "Priorität nicht gefunden.",
+      "boardMissing": "Das ausgewählte Board existiert nicht mehr.",
+      "duplicate": "Eine Priorität mit diesen Angaben existiert bereits.",
+      "referenceInvalid": "Der ausgewählte Prioritätsverweis ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidData": "Ungültige Prioritätsdaten übermittelt. Bitte prüfen Sie die Prioritätsdetails.",
+      "missingField": "Erforderliches Prioritätsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Prioritätsfeld fehlt: {{field}}."
+    }
   }
 }

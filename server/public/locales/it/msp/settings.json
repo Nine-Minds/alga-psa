@@ -2967,5 +2967,82 @@
         "cancel": "Annulla"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Autorizzazione negata: impossibile creare il team.",
+        "update": "Autorizzazione negata: impossibile aggiornare il team.",
+        "modify": "Autorizzazione negata: impossibile modificare il team.",
+        "modifyMembers": "Autorizzazione negata: impossibile modificare i membri del team.",
+        "view": "Autorizzazione negata: impossibile visualizzare il team.",
+        "viewAll": "Autorizzazione negata: impossibile visualizzare i team.",
+        "assignManager": "Autorizzazione negata: impossibile assegnare il responsabile del team."
+      },
+      "notFoundRefresh": "Team non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "leadRequired": "Un team deve avere un responsabile. Selezionare un responsabile e riprovare.",
+      "inactiveUser": "Gli utenti inattivi non possono essere aggiunti a un team.",
+      "cannotRemoveLead": "Non è possibile rimuovere il responsabile del team. Assegnare prima un nuovo responsabile.",
+      "invalidValue": "Uno dei valori del team selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "duplicateMember": "Questo utente è già membro del team.",
+      "referenceMissing": "Il responsabile o il membro del team selezionato non è più valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio del team.",
+      "missingFieldNamed": "Manca un campo obbligatorio del team: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Autorizzazione negata: non si dispone dell’autorizzazione per visualizzare le policy SLA",
+        "create": "Autorizzazione negata: non si dispone dell’autorizzazione per creare policy SLA",
+        "update": "Autorizzazione negata: non si dispone dell’autorizzazione per aggiornare le policy SLA",
+        "delete": "Autorizzazione negata: non si dispone dell’autorizzazione per eliminare policy SLA"
+      },
+      "policyNotFound": "Policy SLA non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "targetNotFound": "Obiettivo della policy SLA non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "priorityNotFound": "Priorità selezionata non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "clientNotFound": "Cliente selezionato non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "boardNotFound": "Bacheca selezionata non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "ticketNotFound": "Ticket non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "duplicateTarget": "In questa policy esiste già un obiettivo per questa priorità.",
+      "pauseRequiresBoardStatus": "La configurazione della pausa SLA richiede uno stato del ticket appartenente alla bacheca.",
+      "invalidValue": "Uno dei valori SLA selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il record SLA o il valore correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica dello SLA è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori SLA non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio dello SLA.",
+      "missingFieldNamed": "Manca un campo obbligatorio dello SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Bacheca non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "userNotFound": "L’utente responsabile dell’escalation selezionato non è stato trovato. Aggiornare la pagina e scegliere un altro utente.",
+      "configNotFound": "Configurazione del responsabile dell’escalation non trovata. Potrebbe essere già stata eliminata.",
+      "recordInvalid": "Uno dei record del responsabile dell’escalation selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "La bacheca o l’utente selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Per questa bacheca e questo livello è già configurato un responsabile dell’escalation.",
+      "missingField": "Manca un campo obbligatorio del responsabile dell’escalation.",
+      "missingFieldNamed": "Manca un campo obbligatorio del responsabile dell’escalation: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Stato non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori di stato selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il record correlato selezionato per questo stato non esiste più. Aggiornare la pagina e riprovare.",
+      "orderInUse": "Questo numero d’ordine è già in uso. Scegliere un numero d’ordine diverso.",
+      "duplicateName": "Esiste già uno stato con questo nome.",
+      "notAllowed": "Uno dei valori di stato non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio dello stato.",
+      "missingFieldNamed": "Manca un campo obbligatorio dello stato: {{field}}.",
+      "nameRequired": "Il nome dello stato è obbligatorio",
+      "nameEmpty": "Il nome dello stato non può essere vuoto",
+      "idRequired": "L’ID dello stato è obbligatorio",
+      "manageFromBoard": "Gli stati dei ticket devono essere gestiti dalle impostazioni della bacheca"
+    },
+    "priority": {
+      "notFound": "Priorità non trovata.",
+      "boardMissing": "La bacheca selezionata non esiste più.",
+      "duplicate": "Esiste già una priorità con questi dati.",
+      "referenceInvalid": "Il riferimento alla priorità selezionato non è più valido. Aggiornare la pagina e riprovare.",
+      "invalidData": "Dati della priorità non validi. Controllare i dettagli della priorità.",
+      "missingField": "Manca un campo obbligatorio della priorità.",
+      "missingFieldNamed": "Manca un campo obbligatorio della priorità: {{field}}."
+    }
   }
 }

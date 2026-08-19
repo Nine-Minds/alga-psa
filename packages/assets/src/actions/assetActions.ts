@@ -54,7 +54,7 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
@@ -165,10 +165,15 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     return ids;
 }
 
-function assetActionErrorMessage(error: unknown, fallback: string): string {
+// Reports failure as a bare string, so withAuth's boundary never sees the
+// payload's messageKey. Localize before flattening.
+async function assetActionErrorMessage(error: unknown, fallback: string): Promise<string> {
     const expected = expectedAssetActionError(error);
     if (expected) {
-        const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+        const candidate = (await localizeActionError(expected)) as unknown as {
+            permissionError?: unknown;
+            actionError?: unknown;
+        };
         return typeof candidate.permissionError === 'string'
             ? candidate.permissionError
             : String(candidate.actionError ?? fallback);
@@ -1471,7 +1476,7 @@ export async function deleteAssetRecord(
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: assetActionErrorMessage(expected, 'Failed to delete asset'),
+            message: await assetActionErrorMessage(expected, 'Failed to delete asset'),
             dependencies: [],
             alternatives: []
         };
@@ -1530,7 +1535,7 @@ export const bulkUpdateAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to update asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to update asset'),
                     };
                 }
                 return { asset_id, success: true, asset };
@@ -1538,7 +1543,7 @@ export const bulkUpdateAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to update asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to update asset'),
                 };
             }
         }
@@ -1580,7 +1585,7 @@ export const bulkDeleteAssets = withAuth(async (
                     return {
                         asset_id,
                         success: false,
-                        error: assetActionErrorMessage(expected, 'Failed to delete asset'),
+                        error: await assetActionErrorMessage(expected, 'Failed to delete asset'),
                     };
                 }
                 const success = result.success === true;
@@ -1593,7 +1598,7 @@ export const bulkDeleteAssets = withAuth(async (
                 return {
                     asset_id,
                     success: false,
-                    error: assetActionErrorMessage(error, 'Failed to delete asset'),
+                    error: await assetActionErrorMessage(error, 'Failed to delete asset'),
                 };
             }
         }

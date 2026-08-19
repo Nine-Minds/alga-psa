@@ -2967,5 +2967,82 @@
         "cancel": "Cancelar"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permiso denegado: no se puede crear el equipo.",
+        "update": "Permiso denegado: no se puede actualizar el equipo.",
+        "modify": "Permiso denegado: no se puede modificar el equipo.",
+        "modifyMembers": "Permiso denegado: no se pueden modificar los miembros del equipo.",
+        "view": "Permiso denegado: no se puede ver el equipo.",
+        "viewAll": "Permiso denegado: no se pueden ver los equipos.",
+        "assignManager": "Permiso denegado: no se puede asignar el responsable del equipo."
+      },
+      "notFoundRefresh": "No se encontró el equipo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "leadRequired": "Un equipo debe tener un responsable. Seleccione un responsable e inténtelo de nuevo.",
+      "inactiveUser": "Los usuarios inactivos no se pueden añadir a un equipo.",
+      "cannotRemoveLead": "No se puede quitar al responsable del equipo. Asigne primero un nuevo responsable.",
+      "invalidValue": "Uno de los valores del equipo seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicateMember": "Este usuario ya es miembro del equipo.",
+      "referenceMissing": "El responsable o el miembro del equipo seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del equipo.",
+      "missingFieldNamed": "Falta un campo obligatorio del equipo: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permiso denegado: no tiene permiso para ver las políticas de SLA",
+        "create": "Permiso denegado: no tiene permiso para crear políticas de SLA",
+        "update": "Permiso denegado: no tiene permiso para actualizar políticas de SLA",
+        "delete": "Permiso denegado: no tiene permiso para eliminar políticas de SLA"
+      },
+      "policyNotFound": "No se encontró la política de SLA. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "targetNotFound": "No se encontró el objetivo de la política de SLA. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "priorityNotFound": "No se encontró la prioridad seleccionada. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "clientNotFound": "No se encontró el cliente seleccionado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "boardNotFound": "No se encontró el tablero seleccionado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "ticketNotFound": "No se encontró el ticket. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "duplicateTarget": "Ya existe un objetivo para esta prioridad en esta política.",
+      "pauseRequiresBoardStatus": "La configuración de pausa del SLA requiere un estado de ticket propio del tablero.",
+      "invalidValue": "Uno de los valores de SLA seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El registro de SLA o el valor relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "conflict": "Este cambio del SLA entra en conflicto con un registro existente. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del SLA no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del SLA.",
+      "missingFieldNamed": "Falta un campo obligatorio del SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "No se encontró el tablero. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "userNotFound": "No se encontró el usuario responsable de escalado seleccionado. Actualice la página y elija otro usuario.",
+      "configNotFound": "No se encontró la configuración del responsable de escalado. Es posible que ya se haya eliminado.",
+      "recordInvalid": "Uno de los registros del responsable de escalado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El tablero o el usuario seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya hay un responsable de escalado configurado para este tablero y nivel.",
+      "missingField": "Falta un campo obligatorio del responsable de escalado.",
+      "missingFieldNamed": "Falta un campo obligatorio del responsable de escalado: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "No se encontró el estado. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de estado seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El registro relacionado seleccionado para este estado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "orderInUse": "Este número de orden ya está en uso. Elija un número de orden diferente.",
+      "duplicateName": "Ya existe un estado con este nombre.",
+      "notAllowed": "Uno de los valores de estado no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del estado.",
+      "missingFieldNamed": "Falta un campo obligatorio del estado: {{field}}.",
+      "nameRequired": "El nombre del estado es obligatorio",
+      "nameEmpty": "El nombre del estado no puede estar vacío",
+      "idRequired": "El ID del estado es obligatorio",
+      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero"
+    },
+    "priority": {
+      "notFound": "No se encontró la prioridad.",
+      "boardMissing": "El tablero seleccionado ya no existe.",
+      "duplicate": "Ya existe una prioridad con estos datos.",
+      "referenceInvalid": "La referencia de prioridad seleccionada ya no es válida. Actualice la página e inténtelo de nuevo.",
+      "invalidData": "Se proporcionaron datos de prioridad no válidos. Compruebe los datos de la prioridad.",
+      "missingField": "Falta un campo obligatorio de la prioridad.",
+      "missingFieldNamed": "Falta un campo obligatorio de la prioridad: {{field}}."
+    }
   }
 }

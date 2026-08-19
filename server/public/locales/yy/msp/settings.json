@@ -2967,5 +2967,82 @@
         "cancel": "55555"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "55555",
+        "update": "55555",
+        "modify": "55555",
+        "modifyMembers": "55555",
+        "view": "55555",
+        "viewAll": "55555",
+        "assignManager": "55555"
+      },
+      "notFoundRefresh": "55555",
+      "leadRequired": "55555",
+      "inactiveUser": "55555",
+      "cannotRemoveLead": "55555",
+      "invalidValue": "55555",
+      "duplicateMember": "55555",
+      "referenceMissing": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "sla": {
+      "permissions": {
+        "view": "55555",
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555"
+      },
+      "policyNotFound": "55555",
+      "targetNotFound": "55555",
+      "priorityNotFound": "55555",
+      "clientNotFound": "55555",
+      "boardNotFound": "55555",
+      "ticketNotFound": "55555",
+      "duplicateTarget": "55555",
+      "pauseRequiresBoardStatus": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "conflict": "55555",
+      "notAllowed": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "escalation": {
+      "boardNotFound": "55555",
+      "userNotFound": "55555",
+      "configNotFound": "55555",
+      "recordInvalid": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "status": {
+      "notFoundRefresh": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "orderInUse": "55555",
+      "duplicateName": "55555",
+      "notAllowed": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "nameRequired": "55555",
+      "nameEmpty": "55555",
+      "idRequired": "55555",
+      "manageFromBoard": "55555"
+    },
+    "priority": {
+      "notFound": "55555",
+      "boardMissing": "55555",
+      "duplicate": "55555",
+      "referenceInvalid": "55555",
+      "invalidData": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    }
   }
 }

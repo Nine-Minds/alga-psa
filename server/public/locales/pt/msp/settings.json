@@ -2967,5 +2967,82 @@
         "cancel": "Cancelar"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Permissão negada: não é possível criar a equipe.",
+        "update": "Permissão negada: não é possível atualizar a equipe.",
+        "modify": "Permissão negada: não é possível modificar a equipe.",
+        "modifyMembers": "Permissão negada: não é possível modificar os membros da equipe.",
+        "view": "Permissão negada: não é possível visualizar a equipe.",
+        "viewAll": "Permissão negada: não é possível visualizar as equipes.",
+        "assignManager": "Permissão negada: não é possível atribuir o gestor da equipe."
+      },
+      "notFoundRefresh": "Equipe não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "leadRequired": "Uma equipe precisa ter um líder. Selecione um líder e tente novamente.",
+      "inactiveUser": "Usuários inativos não podem ser adicionados a uma equipe.",
+      "cannotRemoveLead": "Não é possível remover o líder da equipe. Atribua um novo líder primeiro.",
+      "invalidValue": "Um dos valores de equipe selecionados é inválido. Atualize a página e tente novamente.",
+      "duplicateMember": "Este usuário já é membro da equipe.",
+      "referenceMissing": "O líder ou membro da equipe selecionado não é mais válido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da equipe.",
+      "missingFieldNamed": "Falta um campo obrigatório da equipe: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Permissão negada: você não tem permissão para visualizar as políticas de SLA",
+        "create": "Permissão negada: você não tem permissão para criar políticas de SLA",
+        "update": "Permissão negada: você não tem permissão para atualizar as políticas de SLA",
+        "delete": "Permissão negada: você não tem permissão para excluir políticas de SLA"
+      },
+      "policyNotFound": "Política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "targetNotFound": "Meta da política de SLA não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "priorityNotFound": "Prioridade selecionada não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "clientNotFound": "Cliente selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "boardNotFound": "Quadro selecionado não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "duplicateTarget": "Já existe uma meta para esta prioridade nesta política.",
+      "pauseRequiresBoardStatus": "A configuração de pausa do SLA exige um status de ticket pertencente ao quadro.",
+      "invalidValue": "Um dos valores de SLA selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro de SLA ou o valor relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do SLA conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores de SLA não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do SLA.",
+      "missingFieldNamed": "Falta um campo obrigatório do SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Quadro não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "userNotFound": "Usuário responsável pelo escalonamento selecionado não encontrado. Atualize a página e escolha outro usuário.",
+      "configNotFound": "Configuração do responsável pelo escalonamento não encontrada. Ela pode já ter sido excluída.",
+      "recordInvalid": "Um dos registros do responsável pelo escalonamento selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O quadro ou o usuário selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já há um responsável pelo escalonamento configurado para este quadro e nível.",
+      "missingField": "Falta um campo obrigatório do responsável pelo escalonamento.",
+      "missingFieldNamed": "Falta um campo obrigatório do responsável pelo escalonamento: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Status não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores de status selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O registro relacionado selecionado para este status não existe mais. Atualize a página e tente novamente.",
+      "orderInUse": "Este número de ordem já está em uso. Escolha um número de ordem diferente.",
+      "duplicateName": "Já existe um status com este nome.",
+      "notAllowed": "Um dos valores de status não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do status.",
+      "missingFieldNamed": "Falta um campo obrigatório do status: {{field}}.",
+      "nameRequired": "O nome do status é obrigatório",
+      "nameEmpty": "O nome do status não pode ficar vazio",
+      "idRequired": "O ID do status é obrigatório",
+      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro"
+    },
+    "priority": {
+      "notFound": "Prioridade não encontrada.",
+      "boardMissing": "O quadro selecionado não existe mais.",
+      "duplicate": "Já existe uma prioridade com estes dados.",
+      "referenceInvalid": "A referência de prioridade selecionada não é mais válida. Atualize a página e tente novamente.",
+      "invalidData": "Dados de prioridade inválidos. Verifique os detalhes da prioridade.",
+      "missingField": "Falta um campo obrigatório da prioridade.",
+      "missingFieldNamed": "Falta um campo obrigatório da prioridade: {{field}}."
+    }
   }
 }

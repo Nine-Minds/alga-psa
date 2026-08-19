@@ -34,7 +34,7 @@ export function statusActionErrorFrom(error: unknown): StatusActionError | null 
       return permissionError(message);
     }
     if (message === 'Status not found') {
-      return actionError('Status not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Status not found. It may have been deleted. Please refresh and try again.', 'msp/settings:errors.status.notFoundRefresh');
     }
     if (
       message === 'Status name is required' ||
@@ -49,22 +49,28 @@ export function statusActionErrorFrom(error: unknown): StatusActionError | null 
 
   const dbError = error as { code?: string; constraint?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected status values is invalid. Please refresh and try again.');
+    return actionError('One of the selected status values is invalid. Please refresh and try again.', 'msp/settings:errors.status.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required status field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required status field: ${dbError.column}.`,
+          'msp/settings:errors.status.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required status field.', 'msp/settings:errors.status.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected related record for this status no longer exists. Please refresh and try again.');
+    return actionError('The selected related record for this status no longer exists. Please refresh and try again.', 'msp/settings:errors.status.referenceMissing');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('order')) {
-      return actionError('This order number is already in use. Please choose a different order number.');
+      return actionError('This order number is already in use. Please choose a different order number.', 'msp/settings:errors.status.orderInUse');
     }
-    return actionError('A status with this name already exists.');
+    return actionError('A status with this name already exists.', 'msp/settings:errors.status.duplicateName');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the status values is not allowed. Please review the form and try again.');
+    return actionError('One of the status values is not allowed. Please review the form and try again.', 'msp/settings:errors.status.notAllowed');
   }
 
   return null;

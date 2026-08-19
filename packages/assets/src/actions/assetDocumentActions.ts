@@ -24,7 +24,7 @@ export const associateDocumentWithAsset = withAuth(async (
 
     // Check permission for asset updating (document associations are considered update operations)
     if (!await hasPermission(user, 'asset', 'update')) {
-        return permissionError('Permission denied: Cannot associate documents with assets');
+        return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
     }
 
     try {
@@ -63,7 +63,7 @@ export const removeDocumentFromAsset = withAuth(async (
 
     // Check permission for asset deletion
     if (!await hasPermission(user, 'asset', 'delete')) {
-        return permissionError('Permission denied: Cannot remove documents from assets');
+        return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
     }
 
     try {
@@ -101,7 +101,7 @@ export const getAssetDocuments = withAuth(async (
 
     // Check permission for asset reading
     if (!await hasPermission(user, 'asset', 'read')) {
-        return permissionError('Permission denied: Cannot read asset documents');
+        return permissionError('Permission denied: Cannot read asset documents', 'msp/assets:errors.permissions.readDocuments');
     }
 
     try {
@@ -157,7 +157,7 @@ export const updateAssetDocumentNotes = withAuth(async (
 
     // Check permission for asset updating
     if (!await hasPermission(user, 'asset', 'update')) {
-        return permissionError('Permission denied: Cannot update asset document notes');
+        return permissionError('Permission denied: Cannot update asset document notes', 'msp/assets:errors.permissions.updateDocumentNotes');
     }
 
     try {

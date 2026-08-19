@@ -2995,5 +2995,82 @@
         "cancel": "Anuluj"
       }
     }
+  },
+  "errors": {
+    "teams": {
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można utworzyć zespołu.",
+        "update": "Odmowa uprawnień: nie można zaktualizować zespołu.",
+        "modify": "Odmowa uprawnień: nie można modyfikować zespołu.",
+        "modifyMembers": "Odmowa uprawnień: nie można modyfikować członków zespołu.",
+        "view": "Odmowa uprawnień: nie można wyświetlić zespołu.",
+        "viewAll": "Odmowa uprawnień: nie można wyświetlić zespołów.",
+        "assignManager": "Odmowa uprawnień: nie można przypisać kierownika zespołu."
+      },
+      "notFoundRefresh": "Nie znaleziono zespołu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "leadRequired": "Zespół musi mieć lidera. Wybierz lidera zespołu i spróbuj ponownie.",
+      "inactiveUser": "Nieaktywnych użytkowników nie można dodać do zespołu.",
+      "cannotRemoveLead": "Nie można usunąć lidera zespołu. Najpierw przypisz nowego lidera.",
+      "invalidValue": "Jedna z wybranych wartości zespołu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "duplicateMember": "Ten użytkownik jest już członkiem zespołu.",
+      "referenceMissing": "Wybrany lider lub członek zespołu nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola zespołu.",
+      "missingFieldNamed": "Brakuje wymaganego pola zespołu: {{field}}."
+    },
+    "sla": {
+      "permissions": {
+        "view": "Odmowa uprawnień: brak uprawnień do wyświetlania zasad SLA",
+        "create": "Odmowa uprawnień: brak uprawnień do tworzenia zasad SLA",
+        "update": "Odmowa uprawnień: brak uprawnień do aktualizowania zasad SLA",
+        "delete": "Odmowa uprawnień: brak uprawnień do usuwania zasad SLA"
+      },
+      "policyNotFound": "Nie znaleziono zasady SLA. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "targetNotFound": "Nie znaleziono celu zasady SLA. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "priorityNotFound": "Nie znaleziono wybranego priorytetu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "clientNotFound": "Nie znaleziono wybranego klienta. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "boardNotFound": "Nie znaleziono wybranej tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Mogło zostać usunięte. Odśwież stronę i spróbuj ponownie.",
+      "duplicateTarget": "W tej zasadzie istnieje już cel dla tego priorytetu.",
+      "pauseRequiresBoardStatus": "Konfiguracja wstrzymania SLA wymaga statusu zgłoszenia należącego do tablicy.",
+      "invalidValue": "Jedna z wybranych wartości SLA jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany rekord SLA lub powiązana wartość już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana SLA jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości SLA jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola SLA.",
+      "missingFieldNamed": "Brakuje wymaganego pola SLA: {{field}}."
+    },
+    "escalation": {
+      "boardNotFound": "Nie znaleziono tablicy. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "userNotFound": "Nie znaleziono wybranego użytkownika odpowiedzialnego za eskalację. Odśwież stronę i wybierz innego użytkownika.",
+      "configNotFound": "Nie znaleziono konfiguracji osoby odpowiedzialnej za eskalację. Mogła już zostać usunięta.",
+      "recordInvalid": "Jeden z wybranych rekordów osoby odpowiedzialnej za eskalację jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana tablica lub użytkownik już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Dla tej tablicy i poziomu skonfigurowano już osobę odpowiedzialną za eskalację.",
+      "missingField": "Brakuje wymaganego pola osoby odpowiedzialnej za eskalację.",
+      "missingFieldNamed": "Brakuje wymaganego pola osoby odpowiedzialnej za eskalację: {{field}}."
+    },
+    "status": {
+      "notFoundRefresh": "Nie znaleziono statusu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany powiązany rekord dla tego statusu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "orderInUse": "Ten numer kolejności jest już używany. Wybierz inny numer kolejności.",
+      "duplicateName": "Status o tej nazwie już istnieje.",
+      "notAllowed": "Jedna z wartości statusu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola statusu.",
+      "missingFieldNamed": "Brakuje wymaganego pola statusu: {{field}}.",
+      "nameRequired": "Nazwa statusu jest wymagana",
+      "nameEmpty": "Nazwa statusu nie może być pusta",
+      "idRequired": "Identyfikator statusu jest wymagany",
+      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy"
+    },
+    "priority": {
+      "notFound": "Nie znaleziono priorytetu.",
+      "boardMissing": "Wybrana tablica już nie istnieje.",
+      "duplicate": "Priorytet o takich danych już istnieje.",
+      "referenceInvalid": "Wybrane odwołanie do priorytetu nie jest już prawidłowe. Odśwież stronę i spróbuj ponownie.",
+      "invalidData": "Podano nieprawidłowe dane priorytetu. Sprawdź szczegóły priorytetu.",
+      "missingField": "Brakuje wymaganego pola priorytetu.",
+      "missingFieldNamed": "Brakuje wymaganego pola priorytetu: {{field}}."
+    }
   }
 }

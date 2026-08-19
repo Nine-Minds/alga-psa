@@ -34,31 +34,37 @@ export function teamActionErrorFrom(error: unknown): TeamActionError | null {
       return permissionError(message);
     }
     if (message.includes('Team not found')) {
-      return actionError('Team not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Team not found. It may have been deleted. Please refresh and try again.', 'msp/settings:errors.teams.notFoundRefresh');
     }
     if (message.includes('manager_id is required') || message.includes('A team must have a manager')) {
-      return actionError('A team must have a team lead. Select a team lead and try again.');
+      return actionError('A team must have a team lead. Select a team lead and try again.', 'msp/settings:errors.teams.leadRequired');
     }
     if (message.includes('Cannot add inactive users to team') || message.includes('Cannot add inactive user to team')) {
-      return actionError('Inactive users cannot be added to a team.');
+      return actionError('Inactive users cannot be added to a team.', 'msp/settings:errors.teams.inactiveUser');
     }
     if (message.includes('Cannot remove the team lead')) {
-      return actionError('Cannot remove the team lead. Please assign a new team lead first.');
+      return actionError('Cannot remove the team lead. Please assign a new team lead first.', 'msp/settings:errors.teams.cannotRemoveLead');
     }
   }
 
   const dbError = error as { code?: string; constraint?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected team values is invalid. Please refresh and try again.');
+    return actionError('One of the selected team values is invalid. Please refresh and try again.', 'msp/settings:errors.teams.invalidValue');
   }
   if (dbError?.code === '23505') {
-    return actionError('This user is already a member of the team.');
+    return actionError('This user is already a member of the team.', 'msp/settings:errors.teams.duplicateMember');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required team field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required team field: ${dbError.column}.`,
+          'msp/settings:errors.teams.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required team field.', 'msp/settings:errors.teams.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected team lead or member is no longer valid. Please refresh and try again.');
+    return actionError('The selected team lead or member is no longer valid. Please refresh and try again.', 'msp/settings:errors.teams.referenceMissing');
   }
 
   return null;

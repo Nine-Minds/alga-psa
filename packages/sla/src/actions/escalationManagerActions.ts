@@ -50,28 +50,34 @@ function escalationManagerActionErrorFrom(error: unknown): EscalationManagerActi
       return permissionError(message);
     }
     if (/^Board .+ not found$/.test(message)) {
-      return actionError('Board not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Board not found. It may have been deleted. Please refresh and try again.', 'msp/settings:errors.escalation.boardNotFound');
     }
     if (/^User .+ not found$/.test(message)) {
-      return actionError('Selected escalation manager user not found. Please refresh and choose another user.');
+      return actionError('Selected escalation manager user not found. Please refresh and choose another user.', 'msp/settings:errors.escalation.userNotFound');
     }
     if (/^Escalation manager configuration .+ not found$/.test(message)) {
-      return actionError('Escalation manager configuration not found. It may have already been deleted.');
+      return actionError('Escalation manager configuration not found. It may have already been deleted.', 'msp/settings:errors.escalation.configNotFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected escalation manager records is invalid. Please refresh and try again.');
+    return actionError('One of the selected escalation manager records is invalid. Please refresh and try again.', 'msp/settings:errors.escalation.recordInvalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required escalation manager field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required escalation manager field: ${dbError.column}.`,
+          'msp/settings:errors.escalation.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required escalation manager field.', 'msp/settings:errors.escalation.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected board or user no longer exists. Please refresh and try again.');
+    return actionError('The selected board or user no longer exists. Please refresh and try again.', 'msp/settings:errors.escalation.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('An escalation manager is already configured for this board and level.');
+    return actionError('An escalation manager is already configured for this board and level.', 'msp/settings:errors.escalation.duplicate');
   }
 
   return null;
