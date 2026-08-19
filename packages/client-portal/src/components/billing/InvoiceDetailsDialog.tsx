@@ -11,6 +11,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { triggerInvoicePdfDownload } from './invoicePdfDownload';
 import {
   LocationAddress,
   buildLocationGroups,
@@ -214,15 +215,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         return;
       }
 
-      if (result.success && result.fileId) {
-        // Trigger download
-        const downloadUrl = `/api/documents/download/${result.fileId}`;
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = '';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      if (result.success && triggerInvoicePdfDownload(result)) {
         toast.success(t('invoice.downloadComplete', 'PDF downloaded successfully.'));
       } else {
         toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));
