@@ -722,7 +722,7 @@
             "consentMissing": "Microsoft zalogował Cię, ale odmówił dostępu do listy zarządzanych dzierżaw. Administrator globalny musi udzielić zgody administratora na żądane uprawnienia. Nic nie zostało zapisane — spróbuj ponownie po udzieleniu zgody.",
             "expired": "Próba połączenia wygasła przed zakończeniem. Nic nie zostało zapisane — rozpocznij połączenie ponownie.",
             "generic": "Nie połączono z Microsoft Entra i nic nie zostało zapisane. Spróbuj ponownie.",
-            "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych dzierżaw; nic nie zostało zapisane. Uprawnienia zostały zaakceptowane — zwykle oznacza to, że dzierżawa partnera nie jest wdrożona w Microsoft 365 Lighthouse lub nie ma aktywnych relacji GDAP.",
+            "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych organizacji; nic nie zostało zapisane. Uprawnienia zostały zaakceptowane — zwykle oznacza to, że organizacja partnerska nie jest wdrożona w Microsoft 365 Lighthouse lub nie ma aktywnych relacji GDAP.",
             "tokenRejected": "Microsoft odrzucił token dostępu połączenia; nic nie zostało zapisane. Rozpocznij połączenie ponownie."
           },
           "cippServerLabel": "Serwer CIPP",
@@ -943,7 +943,7 @@
               "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej organizacji.",
               "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
               "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami.",
-              "lighthouse": "Microsoft 365 Lighthouse wdrożony w dzierżawie partnera."
+              "lighthouse": "Microsoft 365 Lighthouse wdrożony w organizacji partnerskiej."
             }
           },
           "directReassurance": "Zobaczysz prośbę o uprawnienia, zanim cokolwiek zostanie przyznane.",
