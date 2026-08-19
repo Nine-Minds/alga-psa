@@ -13,6 +13,25 @@ function makeTrx() {
   return { trx, builder };
 }
 
+// makeTrx()'s builder has no `join`; joined countQueries need one that records
+// the join clauses so the tenant-scoping `andOn` can be asserted.
+function makeJoinTrx(count = 0) {
+  const joinClause = {
+    on: vi.fn().mockReturnThis(),
+    andOn: vi.fn().mockReturnThis()
+  };
+  const builder: any = {};
+  builder.join = vi.fn((_table: string, callback: (this: typeof joinClause) => void) => {
+    callback.call(joinClause);
+    return builder;
+  });
+  builder.where = vi.fn().mockReturnValue(builder);
+  builder.count = vi.fn().mockReturnValue(builder);
+  builder.first = vi.fn().mockResolvedValue({ count: String(count) });
+  const trx = vi.fn().mockReturnValue(builder) as unknown as Knex;
+  return { trx, builder, joinClause };
+}
+
 describe('deletion configs', () => {
   it('T019: client config has correct foreign keys', () => {
     const config = DELETION_CONFIGS.client;
@@ -181,6 +200,49 @@ describe('deletion configs', () => {
       entity_id: 'id-1',
       entity_type: 'project'
     });
+  });
+
+  it('T031: tax rate config exposes composite_tax_mapping dependency with a countQuery', () => {
+    const dep = DELETION_CONFIGS.tax_rate.dependencies.find((d) => d.type === 'composite_tax_mapping');
+
+    expect(dep, 'tax_rate should have composite_tax_mapping dep').toBeDefined();
+    expect(dep?.table).toBe('composite_tax_mappings');
+    expect(dep?.label).toBe('composite tax mapping');
+    // Indirect relationship (tax_rates -> tax_components -> composite_tax_mappings),
+    // so it must not degrade to a plain foreignKey count.
+    expect(dep?.foreignKey).toBeUndefined();
+    expect(dep?.countQuery).toBeDefined();
+  });
+
+  it('T032: composite_tax_mapping countQuery joins through tax_components and is tenant-scoped', async () => {
+    const dep = DELETION_CONFIGS.tax_rate.dependencies.find((d) => d.type === 'composite_tax_mapping');
+    const { trx, builder, joinClause } = makeJoinTrx(2);
+
+    const count = await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'rate-a' });
+
+    expect(trx).toHaveBeenCalledWith('composite_tax_mappings as ctm');
+    expect(builder.join).toHaveBeenCalledTimes(2);
+    expect(builder.join.mock.calls[0][0]).toBe('tax_components as tc');
+    expect(builder.join.mock.calls[1][0]).toBe('tax_rates as owner');
+    expect(joinClause.on).toHaveBeenCalledWith('tc.tax_component_id', '=', 'ctm.tax_component_id');
+    expect(joinClause.on).toHaveBeenCalledWith('owner.tax_rate_id', '=', 'ctm.composite_tax_id');
+    // composite_tax_mappings has no tenant column of its own, so the owning
+    // composite rate is pinned to the component's tenant.
+    expect(joinClause.andOn).toHaveBeenCalledWith('owner.tenant', '=', 'tc.tenant');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'tc.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, { 'tc.tax_rate_id': 'rate-a' });
+    expect(count).toBe(2);
+  });
+
+  it('T033: composite_tax_mapping countQuery excludes mappings owned by the rate being deleted', async () => {
+    const dep = DELETION_CONFIGS.tax_rate.dependencies.find((d) => d.type === 'composite_tax_mapping');
+    const { trx, builder } = makeJoinTrx(0);
+
+    await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'rate-a' });
+
+    // Without this exclusion a composite rate that maps its own components
+    // would block its own deletion — those mappings are cascaded by deleteTaxRate.
+    expect(builder.where).toHaveBeenCalledWith('ctm.composite_tax_id', '!=', 'rate-a');
   });
 
   it('asset config has no blocking dependencies (cascaded by deleteAsset)', () => {
