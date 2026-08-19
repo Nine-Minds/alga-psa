@@ -45,15 +45,35 @@ Landed on `i18n/error_messages`:
   `localizeActionError` in `packages/auth`, wired into `withAuth` and `withOptionalAuth`, with tests for the
   no-key, missing-namespace, idempotent and no-request-scope paths. surveys / recurring billing / license
   management localize at their own return.
-- **Category 1 step 3 — client-portal done** (47 keys × 8 locales, all 9 files). `appointmentSchemas` deduped
-  from three identical copies into `@alga-psa/scheduling`. **Next: clients → tickets → billing → integrations.**
+- **Category 1 step 3 — client-portal, clients and tickets done.** client-portal: 47 keys × 8 locales, all 9
+  files; `appointmentSchemas` deduped from three identical copies into `@alga-psa/scheduling`. clients: 69
+  call sites across 15 action files plus `billingHelpers`, 68 keys in `msp/clients` and one in
+  `msp/contacts`. tickets: 53 call sites across 10 action files, 58 keys extending the `features/tickets`
+  `errors.*` block the category-3 work started. **Next: billing (731) → integrations (436) → rest.**
+
+  Three conventions worth not re-deriving:
+
+  1. Messages that forward a thrown error's own text stay keyless. A thrown string has no catalogue entry to
+     point at, and `find-untranslated-ui.cjs` excludes throws by design.
+  2. **An action that reports failure as a bare string has to localize it itself.** `withAuth` can only
+     rewrite a payload it can still see; the moment the code does `String(candidate.actionError)` the key is
+     gone. Six such sites so far — `createClient` and `clientActionMessageFrom` in clients,
+     `ticketBulkFailureMessage`, `ticketImportRowErrorMessage` and two inline returns in tickets. Grep each
+     new package for `candidate.actionError` before calling it done. The browser walk is what found the
+     first one: every test passed while the German run came back in English.
+  3. Concatenated messages have to become whole sentences, one per branch. Four missing-field strings and the
+     singular/plural bundle-master prefix went that way; a prefix and a tail do not agree across languages.
 - **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
   Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
 
-Ratchet at time of writing: error-shaped literals **3,328 across 534 files** (from 3,365/533), high-severity
-files **153** (from 155). Note the error-literal number moves slowly by design — `actionError('English', 'key')`
-still contains the English, so a migrated call site keeps counting until the fallback is dropped. Judge
-category 1 by packages migrated, not by this number.
+Ratchet at time of writing: high-severity files **153** (from 155), unchanged by the clients pass, which
+touched no unwired component. Note the error-literal number moves slowly by design —
+`actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
+fallback is dropped. Judge category 1 by packages migrated, not by this number.
+
+`find-untranslated-ui.cjs --json` currently emits invalid JSON: a JSX prop spanning two lines puts a raw
+newline in `detail` (`RoleManagement.tsx` around line 270), which breaks the string. Pre-existing and
+unrelated to this plan, but it means the `--json` ratchet has to be read from the human output for now.
 
 Walked in a browser against a running app (2026-08-19), driving the real sign-in form and the real
 language picker rather than a cookie:
@@ -68,8 +88,18 @@ language picker rather than a cookie:
   stored preference, not a cookie, which is the property that matters: `localizeActionError` resolves the
   *reader's* locale on the server, so the payload crosses the wire already translated.
 
-That covers both halves of the design. What a browser still cannot reach is the packages that have no keys
-yet — everything below `clients` in the migration order.
+- **The keyed packages, one path each.** Duplicate client name in Quick Add Client: "A client with the name
+  "Emerald City" already exists…" / "Ein Kunde mit dem Namen „Emerald City" existiert bereits…" /
+  `11111 Emerald City 11111` — note the interpolated name survives the pseudo-locale, which is the check that
+  a `{{param}}` was not folded into the translated string. `/msp/tickets/<unknown-uuid>`: "Ticket not
+  found." / "Ticket nicht gefunden.".
+
+That covers both halves of the design and all three namespace shapes a key can take — `client-portal:`,
+`msp/clients:` and `features/tickets:` — which is worth having checked, since the boundary resolves the
+namespace by splitting the key at its last colon and reading that file from disk.
+
+What a browser still cannot reach is the packages that have no keys yet: everything below `tickets` in the
+migration order.
 
 ## Existing infrastructure to build on (do not rebuild)
 
