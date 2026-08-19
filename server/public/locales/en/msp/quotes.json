@@ -798,5 +798,32 @@
     "labels": {
       "custom": "Custom"
     }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permission denied: Cannot create quotes",
+      "update": "Permission denied: Cannot update quotes",
+      "read": "Permission denied: Cannot read quotes",
+      "delete": "Permission denied: Cannot delete quotes",
+      "readOne": "Permission denied: Cannot read quote",
+      "approve": "Permission denied: Cannot approve quotes",
+      "updateApprovalSettings": "Permission denied: Cannot update quote approval settings",
+      "readDocumentTemplates": "Permission denied: Cannot read quote document templates",
+      "modifyDocumentTemplates": "Permission denied: Cannot modify quote document templates",
+      "setDefaultDocumentTemplate": "Permission denied: Cannot set default quote document template",
+      "deleteDocumentTemplates": "Permission denied: Cannot delete quote document templates"
+    },
+    "quote": {
+      "formInvalid": "Quote form contains invalid values. Please review and try again.",
+      "notFoundRefresh": "Quote not found. It may have been updated or deleted. Please refresh and try again.",
+      "itemNotFoundRefresh": "Quote item not found. It may have been updated or deleted. Please refresh and try again.",
+      "templateNotFoundRefresh": "Quote template not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected quote values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected quote, client, contact, or service no longer exists. Please refresh and try again.",
+      "conflict": "This quote change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the quote values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required quote field.",
+      "missingFieldNamed": "Missing required quote field: {{field}}."
+    }
   }
 }

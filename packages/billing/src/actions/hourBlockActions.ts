@@ -50,52 +50,52 @@ function hourBlockActionErrorFrom(error: unknown): HourBlockActionError | null {
       return permissionError(error.message);
     }
     if (error.message === 'Client ID is required') {
-      return actionError('Client ID is required.');
+      return actionError('Client ID is required.', 'msp/billing:errors.client.idRequired');
     }
     if (error.message === 'Client not found') {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
     if (/^Hour block with ID .+ not found$/.test(error.message)) {
-      return actionError('Hour block not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Hour block not found. It may have been updated or deleted. Please refresh and try again.', 'msp/hour-blocks:errors.block.notFoundRefresh');
     }
     if (/^Service .+ not found$/.test(error.message)) {
-      return actionError('Service not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Service not found. It may have been updated or deleted. Please refresh and try again.', 'msp/hour-blocks:errors.block.serviceNotFound');
     }
     if (error.message === 'Block hours must be greater than zero') {
-      return actionError('Block hours must be greater than zero.');
+      return actionError('Block hours must be greater than zero.', 'msp/hour-blocks:errors.block.hoursPositive');
     }
     if (error.message === 'Hourly rate must be zero or greater') {
-      return actionError('Hourly rate must be zero or greater.');
+      return actionError('Hourly rate must be zero or greater.', 'msp/hour-blocks:errors.block.ratePositive');
     }
     if (error.message === 'Reason is required for this operation') {
-      return actionError('A reason is required for this operation.');
+      return actionError('A reason is required for this operation.', 'msp/hour-blocks:errors.block.reasonRequired');
     }
     if (error.message === 'Cannot adjust an expired or voided hour block') {
-      return actionError('Cannot adjust an expired or voided hour block.');
+      return actionError('Cannot adjust an expired or voided hour block.', 'msp/hour-blocks:errors.block.adjustExpiredOrVoided');
     }
     if (error.message === 'Cannot void an hour block that has been used') {
-      return actionError('This hour block has been used and cannot be voided. Expire it instead.');
+      return actionError('This hour block has been used and cannot be voided. Expire it instead.', 'msp/hour-blocks:errors.block.usedCannotVoid');
     }
     if (error.message === 'Only pending or active hour blocks can be voided') {
-      return actionError('Only pending or active hour blocks can be voided.');
+      return actionError('Only pending or active hour blocks can be voided.', 'msp/hour-blocks:errors.block.onlyPendingOrActiveVoid');
     }
     if (error.message === 'Cannot expire a voided hour block') {
-      return actionError('Cannot expire a voided hour block.');
+      return actionError('Cannot expire a voided hour block.', 'msp/hour-blocks:errors.block.expireVoided');
     }
     if (error.message === 'Cannot update expiration of a voided hour block') {
-      return actionError('Cannot update the expiration of a voided hour block.');
+      return actionError('Cannot update the expiration of a voided hour block.', 'msp/hour-blocks:errors.block.updateExpirationVoided');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected hour block values is invalid. Please refresh and try again.');
+    return actionError('One of the selected hour block values is invalid. Please refresh and try again.', 'msp/hour-blocks:errors.block.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError('A required hour block field is missing. Please review the form and try again.');
+    return actionError('A required hour block field is missing. Please review the form and try again.', 'msp/hour-blocks:errors.block.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, service, or invoice no longer exists. Please refresh and try again.');
+    return actionError('The selected client, service, or invoice no longer exists. Please refresh and try again.', 'msp/hour-blocks:errors.block.referenceMissing');
   }
 
   return null;

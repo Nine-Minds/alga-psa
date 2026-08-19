@@ -798,5 +798,32 @@
     "labels": {
       "custom": "11111"
     }
+  },
+  "errors": {
+    "permissions": {
+      "create": "11111",
+      "update": "11111",
+      "read": "11111",
+      "delete": "11111",
+      "readOne": "11111",
+      "approve": "11111",
+      "updateApprovalSettings": "11111",
+      "readDocumentTemplates": "11111",
+      "modifyDocumentTemplates": "11111",
+      "setDefaultDocumentTemplate": "11111",
+      "deleteDocumentTemplates": "11111"
+    },
+    "quote": {
+      "formInvalid": "11111",
+      "notFoundRefresh": "11111",
+      "itemNotFoundRefresh": "11111",
+      "templateNotFoundRefresh": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    }
   }
 }

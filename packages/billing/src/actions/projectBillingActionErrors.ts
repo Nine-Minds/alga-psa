@@ -30,19 +30,25 @@ export function projectBillingActionErrorFrom(error: unknown): ProjectBillingAct
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected project billing values is invalid. Please refresh and try again.');
+    return actionError('One of the selected project billing values is invalid. Please refresh and try again.', 'msp/billing:errors.projectBilling.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required project billing field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required project billing field: ${dbError.column}.`,
+          'msp/billing:errors.projectBilling.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required project billing field.', 'msp/billing:errors.projectBilling.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected project, invoice, phase, service, or billing record no longer exists. Please refresh and try again.');
+    return actionError('The selected project, invoice, phase, service, or billing record no longer exists. Please refresh and try again.', 'msp/billing:errors.projectBilling.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting project billing record already exists. Please refresh and try again.');
+    return actionError('A conflicting project billing record already exists. Please refresh and try again.', 'msp/billing:errors.projectBilling.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('The project billing values violate a data rule. Review the form and try again.');
+    return actionError('The project billing values violate a data rule. Review the form and try again.', 'msp/billing:errors.projectBilling.ruleViolation');
   }
 
   const invalid = validationMessage(error);
@@ -107,7 +113,7 @@ export function withProjectBillingActionErrors<TArgs extends unknown[], TResult>
       const expected = projectBillingActionErrorFrom(error);
       if (expected) return expected;
       console.error('[project-billing] Unexpected action failure', error);
-      return actionError('Project billing could not complete the request. Please refresh and try again.');
+      return actionError('Project billing could not complete the request. Please refresh and try again.', 'msp/billing:errors.projectBilling.requestFailed');
     }
   };
 }

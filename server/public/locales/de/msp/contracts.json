@@ -2372,5 +2372,60 @@
   "wizardBucketPools": {
     "heading": "Stundenkontingente für diese Zeile",
     "empty": "Noch keine Stundenkontingente auf dieser Zeile. Fügen Sie ein Kontingent hinzu, um vorausbezahlte Stunden einzuschließen."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Berechtigung verweigert: Vertragslinien können nicht geändert werden",
+      "deleteContracts": "Berechtigung verweigert: Abrechnungsverträge können nicht gelöscht werden"
+    },
+    "contract": {
+      "hasInvoices": "Diesem Vertrag sind Rechnungen zugeordnet; er kann nicht gelöscht werden.",
+      "invalidValue": "Einer der ausgewählten Vertragswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Vertrag, Kunde oder ein zugehöriger Datensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Vertragsänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Vertragswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Vertragsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Vertragsfeld fehlt: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Berechtigung verweigert: Abrechnungsvorlagen können nicht erstellt werden",
+        "createContracts": "Berechtigung verweigert: Abrechnungsverträge können nicht erstellt werden",
+        "listTemplates": "Berechtigung verweigert: Vertragsvorlagen können nicht aufgelistet werden",
+        "viewSnapshot": "Berechtigung verweigert: Momentaufnahme der Vertragsvorlage kann nicht angezeigt werden",
+        "resumeContracts": "Berechtigung verweigert: Abrechnungsverträge können nicht fortgesetzt werden"
+      },
+      "templateNotFound": "Vorlage nicht gefunden",
+      "contractNotFound": "Vertrag nicht gefunden",
+      "notDraft": "Der Vertrag ist kein Entwurf",
+      "missingClient": "Dem Vertragsentwurf fehlt die Kundenzuordnung",
+      "invalidStartDate": "Der Vertragsentwurf hat ein ungültiges Startdatum",
+      "recordInvalid": "Einer der ausgewählten Datensätze des Vertragsassistenten ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",
+      "overlaps": "Dieser Zeitplan überschneidet sich mit einem vorhandenen Preiszeitplan",
+      "wouldOverlap": "Dieser Zeitplan würde sich mit einem vorhandenen Preiszeitplan überschneiden",
+      "notFound": "Preiszeitplan nicht gefunden"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Berechtigung verweigert: Verlängerungswarteschlange kann nicht gelesen werden",
+        "update": "Berechtigung verweigert: Verlängerungswarteschlange kann nicht aktualisiert werden",
+        "ownerOtherTenant": "Berechtigung verweigert: Verlängerungen können keinem Benutzer eines anderen Mandanten zugewiesen werden.",
+        "contractOtherTenant": "Berechtigung verweigert: Die Verlängerung kann nicht mit einem Vertrag eines anderen Mandanten abgeschlossen werden."
+      },
+      "clientContractIdRequired": "Die Vertrags-ID des Kunden ist erforderlich.",
+      "workItemNotFound": "Verlängerungsvorgang nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "snoozeDateRequired": "Wählen Sie vor dem Speichern ein Erinnerungsdatum aus.",
+      "snoozeDateInvalid": "Wählen Sie ein gültiges Erinnerungsdatum aus.",
+      "snoozeDateFuture": "Wählen Sie ein Erinnerungsdatum in der Zukunft aus.",
+      "ownerInvalid": "Wählen Sie einen gültigen Verantwortlichen für die Verlängerung aus.",
+      "ownerUnavailable": "Der ausgewählte Verantwortliche für die Verlängerung ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "activatedContractIdRequired": "Die ID des aktivierten Verlängerungsvertrags ist erforderlich.",
+      "contractNotActive": "Der aktivierte Verlängerungsvertrag ist nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "manualRetryDueOnly": "Ein manueller Wiederholungsversuch ist nur für fällige Verlängerungszyklen möglich."
+    }
   }
 }

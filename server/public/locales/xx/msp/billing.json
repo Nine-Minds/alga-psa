@@ -572,6 +572,117 @@
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "11111"
+    "duplicateRecurringInvoice": "11111",
+    "permissions": {
+      "billingRead": "11111",
+      "billingUpdate": "11111",
+      "billingCreate": "11111",
+      "billingDelete": "11111",
+      "clientRead": "11111",
+      "otherClientLocations": "11111",
+      "clientPortalUnavailable": "11111",
+      "resolveCurrency": "11111"
+    },
+    "context": {
+      "tenantNotFound": "11111",
+      "tenantContextNotFound": "11111",
+      "noTenantContext": "11111",
+      "clientContextNotFound": "11111",
+      "notAuthenticated": "11111",
+      "notLoggedIn": "11111"
+    },
+    "client": {
+      "notFound": "11111",
+      "notFoundRefresh": "11111",
+      "idRequired": "11111"
+    },
+    "clientContract": {
+      "notFound": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "cycle": {
+      "cannotCreateNext": "11111"
+    },
+    "currency": {
+      "multipleActive": "11111 {{currencies}} 11111"
+    },
+    "bucketOverlay": {
+      "invalidValue": "11111",
+      "recordInvalid": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "bucketPool": {
+      "duplicate": "11111",
+      "recordInvalid": "11111",
+      "notAllowed": "11111"
+    },
+    "material": {
+      "invalidValue": "11111",
+      "recordInvalid": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "usage": {
+      "notFoundRefresh": "11111",
+      "bucketUpdateFailed": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "alreadyDeleted": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "projectBilling": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "ruleViolation": "11111",
+      "requestFailed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "profitability": {
+      "dateRangeRequired": "11111"
+    },
+    "recurringRun": {
+      "selectPeriods": "11111",
+      "invoicePermission": "11111"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "11111",
+      "scheduleKeyRequiredRepair": "11111"
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "11111",
+      "permissions": {
+        "create": "11111",
+        "read": "11111",
+        "update": "11111",
+        "execute": "11111"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "11111"
+    },
+    "documentTemplate": {
+      "unknownType": "11111 {{documentType}} 11111",
+      "permissions": {
+        "read": "11111",
+        "modify": "11111",
+        "setDefault": "11111",
+        "clearOverride": "11111",
+        "delete": "11111",
+        "preview": "11111"
+      }
+    }
   }
 }

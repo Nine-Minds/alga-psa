@@ -671,13 +671,13 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
     }
 
     if (error.message === 'Billing cycle not found') {
-      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.billingCycle.notFoundRefresh');
     }
     if (error.message === 'Invoice not found') {
-      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.', 'msp/invoicing:errors.invoice.notFoundRefresh');
     }
     if (error.message === 'Invalid billing cycle dates') {
-      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.');
+      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.', 'msp/invoicing:errors.billingCycle.invalidDates');
     }
     if (
       error.message === 'No recurring execution windows selected' ||
@@ -704,16 +704,22 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected invoice values is invalid. Please refresh and try again.');
+    return actionError('One of the selected invoice values is invalid. Please refresh and try again.', 'msp/invoicing:errors.invoice.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required invoice field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required invoice field: ${dbError.column}.`,
+          'msp/invoicing:errors.invoice.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required invoice field.', 'msp/invoicing:errors.invoice.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.');
+    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting invoice already exists. Please refresh and try again.');
+    return actionError('A conflicting invoice already exists. Please refresh and try again.', 'msp/invoicing:errors.invoice.duplicate');
   }
 
   return null;

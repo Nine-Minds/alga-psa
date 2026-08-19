@@ -2001,5 +2001,55 @@
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
+      "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
+      "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
+      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente"
+    },
+    "invoice": {
+      "notFound": "Fattura non trovata",
+      "notFoundRefresh": "Fattura non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiornare la pagina e riprovare.",
+      "notFoundNumbered": "La fattura {{invoiceId}} non è stata trovata.",
+      "clientNotFoundForInvoice": "Nessun cliente trovato per la fattura {{invoiceNumber}}.",
+      "numberRequired": "Il numero della fattura è obbligatorio",
+      "dateRequired": "La data della fattura è obbligatoria",
+      "dateInvalid": "La data della fattura non è valida",
+      "dueDateInvalid": "La data di scadenza non è valida",
+      "onlyDraftEditable": "Solo le fatture in bozza possono essere modificate",
+      "numberExists": "Il numero della fattura esiste già. Scegliere un numero diverso.",
+      "notFinalized": "La fattura non è finalizzata",
+      "unfinalizeFailed": "Non è stato possibile annullare la finalizzazione della fattura a causa di un errore imprevisto nei dati. Aggiornare la pagina e riprovare.",
+      "paidOrCancelled": "Non è possibile modificare una fattura pagata o annullata",
+      "syncedVoidInstead": "Questa fattura è sincronizzata con un sistema contabile: annullarla anziché eliminarla.",
+      "invalidValue": "Uno dei valori della fattura selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "La fattura, il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della fattura.",
+      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "invalidDates": "Il ciclo di fatturazione contiene date non valide. Controllare il ciclo e riprovare."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Selezionare almeno una fattura per generare i PDF.",
+      "selectInvoicesEmail": "Selezionare almeno una fattura da inviare via email.",
+      "selectInvoices": "Selezionare almeno una fattura.",
+      "emailNotConfigured": "L’email non è configurata. Configurare le impostazioni email in Impostazioni prima di inviare le fatture."
+    },
+    "template": {
+      "selectStandard": "Selezionare un modello di fattura standard prima di salvare.",
+      "selectBeforePreview": "Selezionare un modello di fattura prima dell’anteprima.",
+      "notFoundRefresh": "Modello di fattura non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "missingDesign": "Al modello di fattura manca il contenuto di progettazione. Scegliere un altro modello.",
+      "invalidValue": "Uno dei valori selezionati del modello di fattura non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il modello di fattura o il cliente selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un modello di fattura con queste impostazioni.",
+      "missingField": "Manca un campo obbligatorio del modello di fattura.",
+      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
+    }
   }
 }

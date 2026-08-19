@@ -2001,5 +2001,55 @@
       "packingSlip": "Lieferschein",
       "pickList": "Kommissionierliste"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
+      "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
+      "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
+      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden"
+    },
+    "invoice": {
+      "notFound": "Rechnung nicht gefunden",
+      "notFoundRefresh": "Rechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notFoundNumbered": "Rechnung {{invoiceId}} wurde nicht gefunden.",
+      "clientNotFoundForInvoice": "Für die Rechnung {{invoiceNumber}} wurde kein Kunde gefunden.",
+      "numberRequired": "Rechnungsnummer ist erforderlich",
+      "dateRequired": "Rechnungsdatum ist erforderlich",
+      "dateInvalid": "Rechnungsdatum ist ungültig",
+      "dueDateInvalid": "Fälligkeitsdatum ist ungültig",
+      "onlyDraftEditable": "Nur Rechnungsentwürfe können bearbeitet werden",
+      "numberExists": "Die Rechnungsnummer existiert bereits. Wählen Sie eine andere Nummer.",
+      "notFinalized": "Die Rechnung ist nicht finalisiert",
+      "unfinalizeFailed": "Die Finalisierung der Rechnung konnte wegen eines unerwarteten Datenfehlers nicht aufgehoben werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "paidOrCancelled": "Eine bezahlte oder stornierte Rechnung kann nicht geändert werden",
+      "syncedVoidInstead": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert – stornieren Sie sie, statt sie zu löschen.",
+      "invalidValue": "Einer der ausgewählten Rechnungswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Rechnung, der Kunde, Vertrag oder Abrechnungsdatensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Rechnungsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidDates": "Der Abrechnungszeitraum enthält ungültige Daten. Bitte prüfen Sie den Zeitraum und versuchen Sie es erneut."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Wählen Sie mindestens eine Rechnung aus, um PDFs zu erzeugen.",
+      "selectInvoicesEmail": "Wählen Sie mindestens eine Rechnung zum Versenden per E-Mail aus.",
+      "selectInvoices": "Wählen Sie mindestens eine Rechnung aus.",
+      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Rechnungen versenden."
+    },
+    "template": {
+      "selectStandard": "Wählen Sie vor dem Speichern eine Standard-Rechnungsvorlage aus.",
+      "selectBeforePreview": "Wählen Sie vor der Vorschau eine Rechnungsvorlage aus.",
+      "notFoundRefresh": "Rechnungsvorlage nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingDesign": "Der Rechnungsvorlage fehlt ihr Design-Inhalt. Bitte wählen Sie eine andere Vorlage.",
+      "invalidValue": "Einer der ausgewählten Werte der Rechnungsvorlage ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Rechnungsvorlage oder der Kunde existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Rechnungsvorlage mit diesen Einstellungen existiert bereits.",
+      "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}."
+    }
   }
 }

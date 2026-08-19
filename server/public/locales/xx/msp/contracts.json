@@ -2372,5 +2372,60 @@
   "wizardBucketPools": {
     "heading": "11111",
     "empty": "11111"
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "11111",
+      "deleteContracts": "11111"
+    },
+    "contract": {
+      "hasInvoices": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "11111",
+        "createContracts": "11111",
+        "listTemplates": "11111",
+        "viewSnapshot": "11111",
+        "resumeContracts": "11111"
+      },
+      "templateNotFound": "11111",
+      "contractNotFound": "11111",
+      "notDraft": "11111",
+      "missingClient": "11111",
+      "invalidStartDate": "11111",
+      "recordInvalid": "11111",
+      "duplicate": "11111"
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "11111",
+      "overlaps": "11111",
+      "wouldOverlap": "11111",
+      "notFound": "11111"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "11111",
+        "update": "11111",
+        "ownerOtherTenant": "11111",
+        "contractOtherTenant": "11111"
+      },
+      "clientContractIdRequired": "11111",
+      "workItemNotFound": "11111",
+      "snoozeDateRequired": "11111",
+      "snoozeDateInvalid": "11111",
+      "snoozeDateFuture": "11111",
+      "ownerInvalid": "11111",
+      "ownerUnavailable": "11111",
+      "activatedContractIdRequired": "11111",
+      "contractNotActive": "11111",
+      "manualRetryDueOnly": "11111"
+    }
   }
 }

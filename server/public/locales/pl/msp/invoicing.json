@@ -2055,5 +2055,55 @@
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
+      "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
+      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta"
+    },
+    "invoice": {
+      "notFound": "Nie znaleziono faktury",
+      "notFoundRefresh": "Nie znaleziono faktury. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "notFoundNumbered": "Nie znaleziono faktury {{invoiceId}}.",
+      "clientNotFoundForInvoice": "Nie znaleziono klienta dla faktury {{invoiceNumber}}.",
+      "numberRequired": "Numer faktury jest wymagany",
+      "dateRequired": "Data faktury jest wymagana",
+      "dateInvalid": "Data faktury jest nieprawidłowa",
+      "dueDateInvalid": "Termin płatności jest nieprawidłowy",
+      "onlyDraftEditable": "Edytować można tylko faktury w wersji roboczej",
+      "numberExists": "Numer faktury już istnieje. Wybierz inny numer.",
+      "notFinalized": "Faktura nie została sfinalizowana",
+      "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury z powodu nieoczekiwanego błędu danych. Odśwież stronę i spróbuj ponownie.",
+      "paidOrCancelled": "Nie można modyfikować opłaconej lub anulowanej faktury",
+      "syncedVoidInstead": "Ta faktura jest zsynchronizowana z systemem księgowym — anuluj ją zamiast usuwać.",
+      "invalidValue": "Jedna z wybranych wartości faktury jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana faktura, klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola faktury.",
+      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidDates": "Cykl rozliczeniowy zawiera nieprawidłowe daty. Sprawdź cykl i spróbuj ponownie."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Wybierz co najmniej jedną fakturę, aby wygenerować pliki PDF.",
+      "selectInvoicesEmail": "Wybierz co najmniej jedną fakturę do wysłania e-mailem.",
+      "selectInvoices": "Wybierz co najmniej jedną fakturę.",
+      "emailNotConfigured": "E-mail nie jest skonfigurowany. Skonfiguruj ustawienia e-mail w Ustawieniach przed wysłaniem faktur."
+    },
+    "template": {
+      "selectStandard": "Przed zapisaniem wybierz standardowy szablon faktury.",
+      "selectBeforePreview": "Przed podglądem wybierz szablon faktury.",
+      "notFoundRefresh": "Nie znaleziono szablonu faktury. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "missingDesign": "W szablonie faktury brakuje danych projektu. Wybierz inny szablon.",
+      "invalidValue": "Jedna z wybranych wartości szablonu faktury jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany szablon faktury lub klient już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Szablon faktury o tych ustawieniach już istnieje.",
+      "missingField": "Brakuje wymaganego pola szablonu faktury.",
+      "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}."
+    }
   }
 }

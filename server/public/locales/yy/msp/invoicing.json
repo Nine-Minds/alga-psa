@@ -2001,5 +2001,55 @@
       "packingSlip": "55555",
       "pickList": "55555"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "55555",
+      "invoiceDelete": "55555",
+      "invoiceAccess": "55555",
+      "otherClientInvoices": "55555"
+    },
+    "invoice": {
+      "notFound": "55555",
+      "notFoundRefresh": "55555",
+      "notFoundNumbered": "55555 {{invoiceId}} 55555",
+      "clientNotFoundForInvoice": "55555 {{invoiceNumber}} 55555",
+      "numberRequired": "55555",
+      "dateRequired": "55555",
+      "dateInvalid": "55555",
+      "dueDateInvalid": "55555",
+      "onlyDraftEditable": "55555",
+      "numberExists": "55555",
+      "notFinalized": "55555",
+      "unfinalizeFailed": "55555",
+      "paidOrCancelled": "55555",
+      "syncedVoidInstead": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "billingCycle": {
+      "notFoundRefresh": "55555",
+      "invalidDates": "55555"
+    },
+    "jobs": {
+      "selectInvoicesPdf": "55555",
+      "selectInvoicesEmail": "55555",
+      "selectInvoices": "55555",
+      "emailNotConfigured": "55555"
+    },
+    "template": {
+      "selectStandard": "55555",
+      "selectBeforePreview": "55555",
+      "notFoundRefresh": "55555",
+      "missingDesign": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    }
   }
 }

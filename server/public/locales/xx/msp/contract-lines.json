@@ -801,5 +801,49 @@
     },
     "label": "11111",
     "placeholder": "11111"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "templateLine": {
+      "unavailable": "11111"
+    },
+    "mapping": {
+      "duplicate": "11111"
+    },
+    "preset": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "notFoundDuringUpdate": "11111 {{presetId}} 11111"
+    },
+    "service": {
+      "unavailable": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "addedOnce": "11111",
+      "removedOnce": "11111",
+      "addedAndRemoved": "11111"
+    },
+    "configuration": {
+      "unavailable": "11111",
+      "invalidValue": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "bucketOverlayFieldsMissing": "11111"
+    }
   }
 }

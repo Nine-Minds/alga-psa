@@ -9,7 +9,13 @@ import { Knex } from 'knex';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { actionError, permissionError, isAuthorizationThrow } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  getActionErrorMessageKey,
+  getActionErrorMessageParams,
+  isAuthorizationThrow,
+  permissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { normalizeGtin } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -33,11 +39,15 @@ function isServiceActionError(value: unknown): value is ServiceActionError {
 function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
   if (error && typeof error === 'object') {
     const candidate = error as { permissionError?: unknown; actionError?: unknown };
+    // Carry the key across the re-wrap; dropping it here would leave the boundary
+    // with nothing to translate.
+    const messageKey = getActionErrorMessageKey(error);
+    const messageParams = getActionErrorMessageParams(error);
     if (typeof candidate.permissionError === 'string') {
-      return permissionError(candidate.permissionError);
+      return permissionError(candidate.permissionError, messageKey, messageParams);
     }
     if (typeof candidate.actionError === 'string') {
-      return actionError(candidate.actionError);
+      return actionError(candidate.actionError, messageKey, messageParams);
     }
   }
 
@@ -50,28 +60,28 @@ function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
       return actionError(message);
     }
     if (message === 'custom_service_type_id is required to create a service.') {
-      return actionError('Select a service type before saving.');
+      return actionError('Select a service type before saving.', 'msp/service-catalog:errors.service.selectType');
     }
     if (message.includes('ServiceType ID') && message.includes('not found')) {
-      return actionError('The selected service type was not found. Please refresh and choose another service type.');
+      return actionError('The selected service type was not found. Please refresh and choose another service type.', 'msp/service-catalog:errors.service.typeNotFound');
     }
     if (message === 'billing_method is required to create a service.') {
-      return actionError('Select a billing method before saving.');
+      return actionError('Select a billing method before saving.', 'msp/service-catalog:errors.service.selectBillingMethod');
     }
     if (message.includes('Service with id') && message.includes('not found')) {
-      return actionError('Service not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Service not found. It may have been deleted. Please refresh and try again.', 'msp/service-catalog:errors.service.notFoundRefresh');
     }
     if (message === 'Product not found') {
-      return actionError('Product not found. It may have already been deleted.');
+      return actionError('Product not found. It may have already been deleted.', 'msp/service-catalog:errors.product.alreadyDeleted');
     }
     if (message === 'Service type already exists') {
-      return actionError('A service type with this name already exists.');
+      return actionError('A service type with this name already exists.', 'msp/service-catalog:errors.serviceType.duplicateName');
     }
     if (message.includes('Service type with id') && message.includes('not found')) {
-      return actionError('Service type not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Service type not found. It may have been deleted. Please refresh and try again.', 'msp/service-catalog:errors.serviceType.notFoundRefresh');
     }
     if (message === 'Service type not found.') {
-      return actionError('Service type not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Service type not found. It may have been deleted. Please refresh and try again.', 'msp/service-catalog:errors.serviceType.notFoundRefresh');
     }
     if (message.includes('currently in use')) {
       return actionError(message);
@@ -80,22 +90,28 @@ function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
 
   const dbError = error as { code?: string; constraint?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected service values is invalid. Please refresh and try again.');
+    return actionError('One of the selected service values is invalid. Please refresh and try again.', 'msp/service-catalog:errors.service.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required service field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required service field: ${dbError.column}.`,
+          'msp/service-catalog:errors.service.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required service field.', 'msp/service-catalog:errors.service.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected service, category, tax rate, or service type is no longer available. Please refresh and try again.');
+    return actionError('The selected service, category, tax rate, or service type is no longer available. Please refresh and try again.', 'msp/service-catalog:errors.service.referenceMissing');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('service_catalog_product_barcode_unique')) {
-      return actionError('A product with this barcode already exists. Use a different barcode or edit the existing product.');
+      return actionError('A product with this barcode already exists. Use a different barcode or edit the existing product.', 'msp/service-catalog:errors.product.barcodeExists');
     }
     if (dbError.constraint?.includes('service_catalog_product_sku_unique')) {
-      return actionError('A product with this SKU already exists. Use a different SKU or edit the existing product.');
+      return actionError('A product with this SKU already exists. Use a different SKU or edit the existing product.', 'msp/service-catalog:errors.product.skuExists');
     }
-    return actionError('A service or product with these values already exists.');
+    return actionError('A service or product with these values already exists.', 'msp/service-catalog:errors.service.duplicate');
   }
 
   return null;
@@ -483,7 +499,11 @@ function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unk
         typedError.constraint?.includes('service_catalog_product_barcode_unique')
     ) {
         const normalizedBarcode = normalizeGtin(serviceData.barcode);
-        return actionError(`A product with barcode "${normalizedBarcode}" already exists. Use a different barcode or edit the existing product.`);
+        return actionError(
+            `A product with barcode "${normalizedBarcode}" already exists. Use a different barcode or edit the existing product.`,
+            'msp/service-catalog:errors.product.barcodeExistsNamed',
+            { barcode: normalizedBarcode },
+        );
     }
 
     if (
@@ -492,7 +512,11 @@ function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unk
         serviceData.sku?.trim() &&
         typedError.constraint?.includes('service_catalog_product_sku_unique')
     ) {
-        return actionError(`A product with SKU "${serviceData.sku.trim()}" already exists. Use a different SKU or edit the existing product.`);
+        return actionError(
+            `A product with SKU "${serviceData.sku.trim()}" already exists. Use a different SKU or edit the existing product.`,
+            'msp/service-catalog:errors.product.skuExistsNamed',
+            { sku: serviceData.sku.trim() },
+        );
     }
 
     return null;
@@ -514,7 +538,7 @@ export const createService = withAuth(async (
 ): Promise<IService | ActionPermissionError | ActionMessageError> => {
     const canCreate = await hasPermission(user, 'service', 'create');
     if (!canCreate) {
-      return permissionError('Permission denied: Cannot create services/products');
+      return permissionError('Permission denied: Cannot create services/products', 'msp/service-catalog:errors.permissions.createServices');
     }
 
     try {
@@ -588,7 +612,7 @@ export const updateService = withAuth(async (
 ): Promise<IService | ServiceActionError> => {
     const canUpdate = await hasPermission(user, 'service', 'update');
     if (!canUpdate) {
-      return permissionError('Permission denied: Cannot update services/products');
+      return permissionError('Permission denied: Cannot update services/products', 'msp/service-catalog:errors.permissions.updateServices');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -629,7 +653,7 @@ export const deleteService = withAuth(async (
     serviceId: string
   ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean } | ActionPermissionError> => {
     if (!await hasPermission(_user, 'service', 'delete')) {
-      return permissionError('Permission denied: Cannot delete services');
+      return permissionError('Permission denied: Cannot delete services', 'msp/service-catalog:errors.permissions.deleteServices');
     }
 
     try {
@@ -831,7 +855,7 @@ export const deleteProductPermanently = withAuth(async (
 ): Promise<void | ActionPermissionError | ActionMessageError> => {
     const canDelete = await hasPermission(user, 'service', 'delete');
     if (!canDelete) {
-      return permissionError('Permission denied: Cannot delete services/products');
+      return permissionError('Permission denied: Cannot delete services/products', 'msp/service-catalog:errors.permissions.deleteServicesProducts');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -845,7 +869,7 @@ export const deleteProductPermanently = withAuth(async (
             }
             if (!check.canDelete) {
                 const reasons = check.associations.map(a => a.description).join(', ');
-                return actionError(`Cannot delete product: ${reasons}`);
+                return actionError(`Cannot delete product: ${reasons}`, 'msp/service-catalog:errors.product.cannotDelete', { reasons });
             }
 
             // Delete related records that are safe to remove (pricing, config records)
@@ -878,7 +902,7 @@ export const deleteProductPermanently = withAuth(async (
                 .del();
 
             if (deletedCount === 0) {
-                return actionError('Product not found');
+                return actionError('Product not found', 'msp/service-catalog:errors.product.notFound');
             }
 
             await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, serviceId, {
@@ -942,7 +966,7 @@ export const createServiceType = withAuth(async (
   data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'>
 ): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'create')) {
-    return permissionError('Permission denied: Cannot create service types');
+    return permissionError('Permission denied: Cannot create service types', 'msp/service-catalog:errors.permissions.createServiceTypes');
   }
 
   try {
@@ -970,7 +994,7 @@ export const updateServiceType = withAuth(async (
   data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
 ): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'update')) {
-    return permissionError('Permission denied: Cannot update service types');
+    return permissionError('Permission denied: Cannot update service types', 'msp/service-catalog:errors.permissions.updateServiceTypes');
   }
 
   try {
@@ -1016,7 +1040,7 @@ export const deleteServiceType = withAuth(async (
   id: string
 ): Promise<void | ActionPermissionError | ActionMessageError> => {
   if (!await hasPermission(user, 'service', 'delete')) {
-    return permissionError('Permission denied: Cannot delete service types');
+    return permissionError('Permission denied: Cannot delete service types', 'msp/service-catalog:errors.permissions.deleteServiceTypes');
   }
 
   try {
@@ -1035,14 +1059,18 @@ export const deleteServiceType = withAuth(async (
         .first();
 
       if (servicesUsingType && parseInt(String(servicesUsingType.count)) > 0) {
-        return actionError(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
+        return actionError(
+          `Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`,
+          'msp/service-catalog:errors.serviceType.inUseByCount',
+          { serviceCount: String(servicesUsingType.count) },
+        );
       }
 
       // Tenant context is handled within the model method
       const deleted = await ServiceTypeModel.delete(trx, tenantId, id);
       if (!deleted) {
         // Handle the case where the type wasn't found
-        return actionError('Service type not found.');
+        return actionError('Service type not found.', 'msp/service-catalog:errors.serviceType.notFound');
       }
 
       // Revalidate paths for the service type management page
@@ -1053,7 +1081,7 @@ export const deleteServiceType = withAuth(async (
 
       // Check for PostgreSQL foreign key constraint violation
       if (error.code === '23503' || (error.message && error.message.includes('foreign key constraint'))) {
-          return actionError('Cannot delete service type because it is currently in use by one or more services.');
+          return actionError('Cannot delete service type because it is currently in use by one or more services.', 'msp/service-catalog:errors.serviceType.inUse');
       }
 
       // If we already have a specific error message, use it
@@ -1081,7 +1109,7 @@ export const createServiceTypeInline = withAuth(async (
   name: string
 ): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'create')) {
-    return permissionError('Permission denied: Cannot create service types');
+    return permissionError('Permission denied: Cannot create service types', 'msp/service-catalog:errors.permissions.createServiceTypes');
   }
 
   try {
@@ -1139,7 +1167,7 @@ export const createServiceTypeInline = withAuth(async (
 
     // If we somehow still hit a unique constraint, surface a friendlier message
     if ((error as any)?.code === '23505') {
-      return actionError('A service type with this name already exists.');
+      return actionError('A service type with this name already exists.', 'msp/service-catalog:errors.serviceType.duplicateName');
     }
 
     const expected = serviceActionErrorFrom(error);
@@ -1153,7 +1181,7 @@ export const createServiceTypeInline = withAuth(async (
  */
 export const updateServiceTypeInline = withAuth(async (user, { tenant }, id: string, name: string): Promise<IServiceType | ServiceActionError> => {
   if (!await hasPermission(user, 'service', 'update')) {
-    return permissionError('Permission denied: Cannot update service types');
+    return permissionError('Permission denied: Cannot update service types', 'msp/service-catalog:errors.permissions.updateServiceTypes');
   }
 
   try {
@@ -1187,7 +1215,7 @@ export const deleteServiceTypeInline = withAuth(async (
   id: string
 ): Promise<void | ActionPermissionError | ActionMessageError> => {
   if (!await hasPermission(user, 'service', 'delete')) {
-    return permissionError('Permission denied: Cannot delete service types');
+    return permissionError('Permission denied: Cannot delete service types', 'msp/service-catalog:errors.permissions.deleteServiceTypes');
   }
 
   // This is the same as deleteServiceType but renamed for clarity
@@ -1242,7 +1270,7 @@ export const setServicePrice = withAuth(async (
 ): Promise<IServicePrice | ActionPermissionError> => {
   const canUpdate = await hasPermission(user, 'service', 'update');
   if (!canUpdate) {
-    return permissionError('Permission denied: Cannot update service pricing');
+    return permissionError('Permission denied: Cannot update service pricing', 'msp/service-catalog:errors.permissions.updatePricing');
   }
 
   const { knex: db } = await createTenantKnex();
@@ -1269,7 +1297,7 @@ export const setServicePrices = withAuth(async (
 ): Promise<IServicePrice[] | ActionPermissionError> => {
   const canUpdate = await hasPermission(user, 'service', 'update');
   if (!canUpdate) {
-    return permissionError('Permission denied: Cannot update service pricing');
+    return permissionError('Permission denied: Cannot update service pricing', 'msp/service-catalog:errors.permissions.updatePricing');
   }
 
   const { knex: db } = await createTenantKnex();
@@ -1291,7 +1319,7 @@ export const setServicePrices = withAuth(async (
 export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: string, currencyCode: string): Promise<boolean | ActionPermissionError> => {
   const canUpdate = await hasPermission(user, 'service', 'update');
   if (!canUpdate) {
-    return permissionError('Permission denied: Cannot update service pricing');
+    return permissionError('Permission denied: Cannot update service pricing', 'msp/service-catalog:errors.permissions.updatePricing');
   }
 
   const { knex: db } = await createTenantKnex();

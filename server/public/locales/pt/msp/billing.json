@@ -572,6 +572,117 @@
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "Já existe uma fatura para este período de faturamento recorrente."
+    "duplicateRecurringInvoice": "Já existe uma fatura para este período de faturamento recorrente.",
+    "permissions": {
+      "billingRead": "Permissão negada: é necessária permissão de leitura de faturamento",
+      "billingUpdate": "Permissão negada: é necessária permissão de atualização de faturamento",
+      "billingCreate": "Permissão negada: é necessária permissão de criação de faturamento",
+      "billingDelete": "Permissão negada: é necessária permissão de exclusão de faturamento",
+      "clientRead": "Permissão negada: é necessária permissão de leitura de clientes",
+      "otherClientLocations": "Permissão negada: não é possível acessar os locais de outro cliente",
+      "clientPortalUnavailable": "Permissão negada: operação não disponível no portal do cliente",
+      "resolveCurrency": "Permissão negada: não é possível determinar a moeda de faturamento do cliente"
+    },
+    "context": {
+      "tenantNotFound": "Tenant não encontrado",
+      "tenantContextNotFound": "Contexto do tenant não encontrado",
+      "noTenantContext": "Sem contexto de tenant. Atualize a página e tente novamente.",
+      "clientContextNotFound": "Contexto do cliente não encontrado",
+      "notAuthenticated": "Não autorizado: nenhum usuário autenticado encontrado",
+      "notLoggedIn": "o usuário não está conectado"
+    },
+    "client": {
+      "notFound": "Cliente não encontrado",
+      "notFoundRefresh": "Cliente não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "idRequired": "O ID do cliente é obrigatório."
+    },
+    "clientContract": {
+      "notFound": "Atribuição de contrato do cliente não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "invalidValue": "Um dos valores selecionados do contrato do cliente é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O cliente, contrato ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Esta atribuição de contrato do cliente já existe.",
+      "missingField": "Falta um campo obrigatório do contrato do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório do contrato do cliente: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Não é possível criar o próximo ciclo de faturamento no momento"
+    },
+    "currency": {
+      "multipleActive": "O cliente tem contratos ativos em várias moedas ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Um dos valores selecionados da sobreposição do banco de horas é inválido. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros selecionados da sobreposição do banco de horas não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma sobreposição de banco de horas para este serviço.",
+      "notAllowed": "Um dos valores da sobreposição do banco de horas não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da sobreposição do banco de horas.",
+      "missingFieldNamed": "Falta um campo obrigatório da sobreposição do banco de horas: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Já existe um pool de banco de horas ou membro com esta configuração. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros selecionados do pool de banco de horas não é mais válido. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do pool de banco de horas não é permitido. Revise o formulário e tente novamente."
+    },
+    "material": {
+      "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",
+      "recordInvalid": "Um dos registros de material selecionados não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Este registro de material já existe.",
+      "notAllowed": "Um dos valores de material não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do material.",
+      "missingFieldNamed": "Falta um campo obrigatório do material: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Registro de uso não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "bucketUpdateFailed": "Não é possível atualizar o consumo do banco de horas para este registro de uso. Atualize a página e tente novamente.",
+      "invalidValue": "O registro de uso, cliente, serviço ou linha de contrato selecionado é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O cliente, serviço ou linha de contrato selecionado não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de uso conflitante. Atualize a página e tente novamente.",
+      "alreadyDeleted": "Registro de uso não encontrado. Ele pode já ter sido excluído.",
+      "missingField": "Falta um campo obrigatório do registro de uso.",
+      "missingFieldNamed": "Falta um campo obrigatório do registro de uso: {{field}}."
+    },
+    "projectBilling": {
+      "invalidValue": "Um dos valores selecionados do faturamento do projeto é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O projeto, fatura, fase, serviço ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de faturamento do projeto conflitante. Atualize a página e tente novamente.",
+      "ruleViolation": "Os valores de faturamento do projeto violam uma regra de dados. Revise o formulário e tente novamente.",
+      "requestFailed": "O faturamento do projeto não conseguiu concluir a solicitação. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do faturamento do projeto.",
+      "missingFieldNamed": "Falta um campo obrigatório do faturamento do projeto: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "A data de início e a data de término são obrigatórias."
+    },
+    "recurringRun": {
+      "selectPeriods": "Selecione pelo menos um período de faturamento recorrente para gerar.",
+      "invoicePermission": "Permissão negada: é necessária permissão para criar ou gerar faturas"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "É necessária uma chave de agenda para inspecionar os períodos de serviço recorrentes.",
+      "scheduleKeyRequiredRepair": "É necessária uma chave de agenda para reparar os períodos de serviço recorrentes."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Usuários do portal do cliente não têm permissão para gerenciar exportações contábeis",
+      "permissions": {
+        "create": "Permissão negada: não é possível criar lotes de exportação contábil",
+        "read": "Permissão negada: não é possível acessar os lotes de exportação contábil",
+        "update": "Permissão negada: não é possível modificar os lotes de exportação contábil",
+        "execute": "Permissão negada: não é possível executar os lotes de exportação contábil"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Fatura do fornecedor não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente."
+    },
+    "documentTemplate": {
+      "unknownType": "Tipo de documento desconhecido: {{documentType}}",
+      "permissions": {
+        "read": "Permissão negada: não é possível ler os modelos de documento",
+        "modify": "Permissão negada: não é possível modificar os modelos de documento",
+        "setDefault": "Permissão negada: não é possível definir o modelo de documento padrão",
+        "clearOverride": "Permissão negada: não é possível remover a substituição do modelo de documento",
+        "delete": "Permissão negada: não é possível excluir os modelos de documento",
+        "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento"
+      }
+    }
   }
 }

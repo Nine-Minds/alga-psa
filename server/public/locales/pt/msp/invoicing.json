@@ -2001,5 +2001,55 @@
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de separação"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
+      "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
+      "invoiceAccess": "Permissão negada: acesso à fatura negado",
+      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente"
+    },
+    "invoice": {
+      "notFound": "Fatura não encontrada",
+      "notFoundRefresh": "Fatura não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "notFoundNumbered": "A fatura {{invoiceId}} não foi encontrada.",
+      "clientNotFoundForInvoice": "Nenhum cliente encontrado para a fatura {{invoiceNumber}}.",
+      "numberRequired": "O número da fatura é obrigatório",
+      "dateRequired": "A data da fatura é obrigatória",
+      "dateInvalid": "A data da fatura é inválida",
+      "dueDateInvalid": "A data de vencimento é inválida",
+      "onlyDraftEditable": "Somente faturas em rascunho podem ser editadas",
+      "numberExists": "O número da fatura já existe. Escolha um número diferente.",
+      "notFinalized": "A fatura não está finalizada",
+      "unfinalizeFailed": "Não foi possível reverter a finalização da fatura devido a um erro inesperado nos dados. Atualize a página e tente novamente.",
+      "paidOrCancelled": "Não é possível modificar uma fatura paga ou cancelada",
+      "syncedVoidInstead": "Esta fatura está sincronizada com um sistema contábil — anule-a em vez de excluí-la.",
+      "invalidValue": "Um dos valores de fatura selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "A fatura, cliente, contrato ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da fatura.",
+      "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "invalidDates": "O ciclo de faturamento contém datas inválidas. Revise o ciclo e tente novamente."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Selecione pelo menos uma fatura para gerar os PDFs.",
+      "selectInvoicesEmail": "Selecione pelo menos uma fatura para enviar por email.",
+      "selectInvoices": "Selecione pelo menos uma fatura.",
+      "emailNotConfigured": "O email não está configurado. Configure as opções de email em Configurações antes de enviar faturas."
+    },
+    "template": {
+      "selectStandard": "Selecione um modelo de fatura padrão antes de salvar.",
+      "selectBeforePreview": "Selecione um modelo de fatura antes de pré-visualizar.",
+      "notFoundRefresh": "Modelo de fatura não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "missingDesign": "O modelo de fatura está sem o conteúdo de design. Escolha outro modelo.",
+      "invalidValue": "Um dos valores selecionados do modelo de fatura é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O modelo de fatura ou o cliente selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um modelo de fatura com essas configurações.",
+      "missingField": "Falta um campo obrigatório do modelo de fatura.",
+      "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}."
+    }
   }
 }

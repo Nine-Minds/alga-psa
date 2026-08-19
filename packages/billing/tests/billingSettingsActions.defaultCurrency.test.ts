@@ -221,6 +221,7 @@ describe('updateDefaultBillingSettings — default currency', () => {
 
     expect(result).toEqual({
       permissionError: 'Permission denied: Cannot update billing settings',
+      messageKey: 'msp/billing-settings:errors.permissions.updateSettings',
     });
     expect(mockState.updates).toHaveLength(0);
     expect(mockState.inserts).toHaveLength(0);

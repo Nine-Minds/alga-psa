@@ -572,6 +572,117 @@
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "Dla tego cyklicznego okresu rozliczeniowego istnieje już faktura."
+    "duplicateRecurringInvoice": "Dla tego cyklicznego okresu rozliczeniowego istnieje już faktura.",
+    "permissions": {
+      "billingRead": "Odmowa uprawnień: wymagane uprawnienie odczytu rozliczeń",
+      "billingUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji rozliczeń",
+      "billingCreate": "Odmowa uprawnień: wymagane uprawnienie tworzenia rozliczeń",
+      "billingDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania rozliczeń",
+      "clientRead": "Odmowa uprawnień: wymagane uprawnienie odczytu klientów",
+      "otherClientLocations": "Odmowa uprawnień: brak dostępu do lokalizacji innego klienta",
+      "clientPortalUnavailable": "Odmowa uprawnień: operacja niedostępna w portalu klienta",
+      "resolveCurrency": "Odmowa uprawnień: nie można ustalić waluty rozliczeniowej klienta"
+    },
+    "context": {
+      "tenantNotFound": "Nie znaleziono organizacji",
+      "tenantContextNotFound": "Nie znaleziono kontekstu organizacji",
+      "noTenantContext": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
+      "clientContextNotFound": "Nie znaleziono kontekstu klienta",
+      "notAuthenticated": "Brak autoryzacji: nie znaleziono uwierzytelnionego użytkownika",
+      "notLoggedIn": "użytkownik nie jest zalogowany"
+    },
+    "client": {
+      "notFound": "Nie znaleziono klienta",
+      "notFoundRefresh": "Nie znaleziono klienta. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "idRequired": "Identyfikator klienta jest wymagany."
+    },
+    "clientContract": {
+      "notFound": "Nie znaleziono przypisania umowy klienta. Mogło zostać zaktualizowane lub usunięte. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości umowy klienta jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "To przypisanie umowy klienta już istnieje.",
+      "missingField": "Brakuje wymaganego pola umowy klienta.",
+      "missingFieldNamed": "Brakuje wymaganego pola umowy klienta: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "Nie można teraz utworzyć następnego cyklu rozliczeniowego"
+    },
+    "currency": {
+      "multipleActive": "Klient ma aktywne umowy w wielu walutach ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Jedna z wybranych wartości nakładki pakietu godzin jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów nakładki pakietu godzin nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Nakładka pakietu godzin dla tej usługi już istnieje.",
+      "notAllowed": "Jedna z wartości nakładki pakietu godzin jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola nakładki pakietu godzin.",
+      "missingFieldNamed": "Brakuje wymaganego pola nakładki pakietu godzin: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Pula pakietu godzin lub członek o tej konfiguracji już istnieje. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów puli pakietu godzin nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości puli pakietu godzin jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+    },
+    "material": {
+      "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "recordInvalid": "Jeden z wybranych rekordów materiału nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ten rekord materiału już istnieje.",
+      "notAllowed": "Jedna z wartości materiału jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola materiału.",
+      "missingFieldNamed": "Brakuje wymaganego pola materiału: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "Nie znaleziono rekordu zużycia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "bucketUpdateFailed": "Nie można zaktualizować zużycia pakietu godzin dla tego rekordu. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Wybrany rekord zużycia, klient, usługa lub linia umowy jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany klient, usługa lub linia umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczny rekord zużycia. Odśwież stronę i spróbuj ponownie.",
+      "alreadyDeleted": "Nie znaleziono rekordu zużycia. Mógł już zostać usunięty.",
+      "missingField": "Brakuje wymaganego pola zużycia.",
+      "missingFieldNamed": "Brakuje wymaganego pola zużycia: {{field}}."
+    },
+    "projectBilling": {
+      "invalidValue": "Jedna z wybranych wartości rozliczeń projektu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany projekt, faktura, faza, usługa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczny zapis rozliczeń projektu. Odśwież stronę i spróbuj ponownie.",
+      "ruleViolation": "Wartości rozliczeń projektu naruszają regułę danych. Sprawdź formularz i spróbuj ponownie.",
+      "requestFailed": "Rozliczenia projektu nie mogły zrealizować żądania. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola rozliczeń projektu.",
+      "missingFieldNamed": "Brakuje wymaganego pola rozliczeń projektu: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "Data początkowa i data końcowa są wymagane."
+    },
+    "recurringRun": {
+      "selectPeriods": "Wybierz co najmniej jeden cykliczny okres rozliczeniowy do wygenerowania.",
+      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Do sprawdzenia cyklicznych okresów usługi wymagany jest klucz harmonogramu.",
+      "scheduleKeyRequiredRepair": "Do naprawy cyklicznych okresów usługi wymagany jest klucz harmonogramu."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Użytkownicy portalu klienta nie mogą zarządzać eksportami księgowymi",
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można tworzyć partii eksportu księgowego",
+        "read": "Odmowa uprawnień: brak dostępu do partii eksportu księgowego",
+        "update": "Odmowa uprawnień: nie można modyfikować partii eksportu księgowego",
+        "execute": "Odmowa uprawnień: nie można uruchamiać partii eksportu księgowego"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "Nie znaleziono faktury dostawcy. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie."
+    },
+    "documentTemplate": {
+      "unknownType": "Nieznany typ dokumentu: {{documentType}}",
+      "permissions": {
+        "read": "Odmowa uprawnień: nie można odczytywać szablonów dokumentów",
+        "modify": "Odmowa uprawnień: nie można modyfikować szablonów dokumentów",
+        "setDefault": "Odmowa uprawnień: nie można ustawić domyślnego szablonu dokumentu",
+        "clearOverride": "Odmowa uprawnień: nie można wyczyścić nadpisania szablonu dokumentu",
+        "delete": "Odmowa uprawnień: nie można usuwać szablonów dokumentów",
+        "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów"
+      }
+    }
   }
 }

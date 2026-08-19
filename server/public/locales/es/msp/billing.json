@@ -572,6 +572,117 @@
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "Ya existe una factura para este período de facturación recurrente."
+    "duplicateRecurringInvoice": "Ya existe una factura para este período de facturación recurrente.",
+    "permissions": {
+      "billingRead": "Permiso denegado: se requiere permiso de lectura de facturación",
+      "billingUpdate": "Permiso denegado: se requiere permiso de actualización de facturación",
+      "billingCreate": "Permiso denegado: se requiere permiso de creación de facturación",
+      "billingDelete": "Permiso denegado: se requiere permiso de eliminación de facturación",
+      "clientRead": "Permiso denegado: se requiere permiso de lectura de clientes",
+      "otherClientLocations": "Permiso denegado: no se puede acceder a las ubicaciones de otro cliente",
+      "clientPortalUnavailable": "Permiso denegado: la operación no está disponible en el portal del cliente",
+      "resolveCurrency": "Permiso denegado: no se puede determinar la moneda de facturación del cliente"
+    },
+    "context": {
+      "tenantNotFound": "Inquilino no encontrado",
+      "tenantContextNotFound": "No se encontró el contexto del inquilino",
+      "noTenantContext": "No hay contexto de inquilino. Actualice la página e inténtelo de nuevo.",
+      "clientContextNotFound": "No se encontró el contexto del cliente",
+      "notAuthenticated": "No autorizado: no se encontró ningún usuario autenticado",
+      "notLoggedIn": "el usuario no ha iniciado sesión"
+    },
+    "client": {
+      "notFound": "Cliente no encontrado",
+      "notFoundRefresh": "Cliente no encontrado. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "idRequired": "Se requiere el ID del cliente."
+    },
+    "clientContract": {
+      "notFound": "No se encontró la asignación de contrato del cliente. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores seleccionados del contrato del cliente no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Esta asignación de contrato del cliente ya existe.",
+      "missingField": "Falta un campo obligatorio del contrato del cliente.",
+      "missingFieldNamed": "Falta un campo obligatorio del contrato del cliente: {{field}}."
+    },
+    "cycle": {
+      "cannotCreateNext": "No se puede crear el siguiente ciclo de facturación en este momento"
+    },
+    "currency": {
+      "multipleActive": "El cliente tiene contratos activos en varias monedas ({{currencies}})."
+    },
+    "bucketOverlay": {
+      "invalidValue": "Uno de los valores seleccionados de la superposición de bolsa de horas no es válido. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros seleccionados de la superposición de bolsa de horas ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una superposición de bolsa de horas para este servicio.",
+      "notAllowed": "Uno de los valores de la superposición de bolsa de horas no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la superposición de bolsa de horas.",
+      "missingFieldNamed": "Falta un campo obligatorio de la superposición de bolsa de horas: {{field}}."
+    },
+    "bucketPool": {
+      "duplicate": "Ya existe un grupo de bolsa de horas o un miembro con esta configuración. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros seleccionados del grupo de bolsa de horas ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "notAllowed": "Uno de los valores del grupo de bolsa de horas no está permitido. Revise el formulario e inténtelo de nuevo."
+    },
+    "material": {
+      "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "recordInvalid": "Uno de los registros de material seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Este registro de material ya existe.",
+      "notAllowed": "Uno de los valores de material no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del material.",
+      "missingFieldNamed": "Falta un campo obligatorio del material: {{field}}."
+    },
+    "usage": {
+      "notFoundRefresh": "No se encontró el registro de uso. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "bucketUpdateFailed": "No se puede actualizar el consumo de la bolsa de horas para este registro de uso. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "El registro de uso, cliente, servicio o línea de contrato seleccionado no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El cliente, servicio o línea de contrato seleccionado ya no es válido. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro de uso en conflicto. Actualice la página e inténtelo de nuevo.",
+      "alreadyDeleted": "No se encontró el registro de uso. Es posible que ya se haya eliminado.",
+      "missingField": "Falta un campo obligatorio del registro de uso.",
+      "missingFieldNamed": "Falta un campo obligatorio del registro de uso: {{field}}."
+    },
+    "projectBilling": {
+      "invalidValue": "Uno de los valores seleccionados de la facturación del proyecto no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El proyecto, factura, fase, servicio o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro de facturación del proyecto en conflicto. Actualice la página e inténtelo de nuevo.",
+      "ruleViolation": "Los valores de facturación del proyecto infringen una regla de datos. Revise el formulario e inténtelo de nuevo.",
+      "requestFailed": "La facturación del proyecto no pudo completar la solicitud. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la facturación del proyecto.",
+      "missingFieldNamed": "Falta un campo obligatorio de la facturación del proyecto: {{field}}."
+    },
+    "profitability": {
+      "dateRangeRequired": "La fecha de inicio y la fecha de fin son obligatorias."
+    },
+    "recurringRun": {
+      "selectPeriods": "Seleccione al menos un período de facturación recurrente para generar.",
+      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas"
+    },
+    "recurringServicePeriod": {
+      "scheduleKeyRequiredInspect": "Se requiere una clave de calendario para inspeccionar los períodos de servicio recurrentes.",
+      "scheduleKeyRequiredRepair": "Se requiere una clave de calendario para reparar los períodos de servicio recurrentes."
+    },
+    "accountingExport": {
+      "clientPortalForbidden": "Los usuarios del portal del cliente no pueden gestionar las exportaciones contables",
+      "permissions": {
+        "create": "Permiso denegado: no se pueden crear lotes de exportación contable",
+        "read": "Permiso denegado: no se puede acceder a los lotes de exportación contable",
+        "update": "Permiso denegado: no se pueden modificar los lotes de exportación contable",
+        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable"
+      }
+    },
+    "vendorBill": {
+      "notFoundRefresh": "No se encontró la factura de proveedor. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo."
+    },
+    "documentTemplate": {
+      "unknownType": "Tipo de documento desconocido: {{documentType}}",
+      "permissions": {
+        "read": "Permiso denegado: no se pueden leer las plantillas de documento",
+        "modify": "Permiso denegado: no se pueden modificar las plantillas de documento",
+        "setDefault": "Permiso denegado: no se puede establecer la plantilla de documento predeterminada",
+        "clearOverride": "Permiso denegado: no se puede borrar la anulación de la plantilla de documento",
+        "delete": "Permiso denegado: no se pueden eliminar las plantillas de documento",
+        "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento"
+      }
+    }
   }
 }

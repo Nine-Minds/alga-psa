@@ -1151,7 +1151,47 @@
   },
   "errors": {
     "failedToLoadSettings": "55555",
-    "failedToSaveSettings": "55555"
+    "failedToSaveSettings": "55555",
+    "permissions": {
+      "readSettings": "55555",
+      "updateSettings": "55555",
+      "readClientSettings": "55555",
+      "updateClientSettings": "55555",
+      "settingsRead": "55555",
+      "settingsUpdate": "55555",
+      "readTaxRates": "55555",
+      "createTaxRates": "55555",
+      "updateTaxRates": "55555",
+      "updateTaxRegions": "55555"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "55555",
+      "overlap": "55555",
+      "regionRequired": "55555",
+      "idRequired": "55555",
+      "notFound": "55555",
+      "invalid": "55555",
+      "regionInvalid": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "55555",
+      "componentNotFound": "55555",
+      "bracketNotFound": "55555",
+      "holidayNotFound": "55555",
+      "recordInvalid": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "notAllowed": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "taxRegion": {
+      "duplicateCode": "55555 {{code}} 55555",
+      "notFoundCode": "55555 {{code}} 55555"
+    }
   },
   "toast": {
     "saved": "55555"

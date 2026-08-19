@@ -1151,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Failed to load settings",
-    "failedToSaveSettings": "Failed to save settings"
+    "failedToSaveSettings": "Failed to save settings",
+    "permissions": {
+      "readSettings": "Permission denied: Cannot read billing settings",
+      "updateSettings": "Permission denied: Cannot update billing settings",
+      "readClientSettings": "Permission denied: Cannot read client billing settings",
+      "updateClientSettings": "Permission denied: Cannot update client billing settings",
+      "settingsRead": "Permission denied: billing_settings read required",
+      "settingsUpdate": "Permission denied: billing_settings update required",
+      "readTaxRates": "Permission denied: Cannot read tax rates",
+      "createTaxRates": "Permission denied: Cannot create tax rates",
+      "updateTaxRates": "Permission denied: Cannot update tax rates",
+      "updateTaxRegions": "Permission denied: Cannot update tax regions"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Permission denied: Billing tax rates are not available for this tenant.",
+      "overlap": "Tax rate date range overlaps with an existing rate for this region.",
+      "regionRequired": "Region is required.",
+      "idRequired": "Tax rate ID is required for updates.",
+      "notFound": "Tax rate not found.",
+      "notFoundOrAlreadyDeleted": "Tax rate not found or already deleted.",
+      "invalid": "The selected tax rate or region is invalid. Please refresh and try again.",
+      "regionInvalid": "The selected tax region is no longer valid. Please refresh and choose another region.",
+      "duplicate": "A tax rate already exists for this region and date range.",
+      "missingField": "Missing required tax rate field.",
+      "missingFieldNamed": "Missing required tax rate field: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Configure at least one active tax rate before creating default tax settings.",
+      "componentNotFound": "Tax component not found. It may have been updated or deleted. Please refresh and try again.",
+      "bracketNotFound": "Tax bracket not found. It may have been updated or deleted. Please refresh and try again.",
+      "holidayNotFound": "Tax holiday not found. It may have been updated or deleted. Please refresh and try again.",
+      "recordInvalid": "One of the selected tax records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected tax records no longer exists. Please refresh and try again.",
+      "duplicate": "A tax record with those details already exists.",
+      "notAllowed": "One of the tax values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required tax field.",
+      "missingFieldNamed": "Missing required tax field: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Tax region with code \"{{code}}\" already exists.",
+      "notFoundCode": "Tax region with code \"{{code}}\" not found."
+    }
   },
   "toast": {
     "saved": "Saved successfully"

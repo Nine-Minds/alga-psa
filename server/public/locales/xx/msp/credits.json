@@ -194,5 +194,24 @@
     "recurringLineagePreserved": "11111",
     "financialOnly": "11111",
     "noRecurringServicePeriod": "11111"
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "11111",
+      "originalTransactionMissing": "11111",
+      "sourceNotFound": "11111",
+      "targetClientNotFound": "11111",
+      "insufficientTransferAmount": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "11111",
+      "updateFailed": "11111"
+    }
   }
 }

@@ -445,5 +445,65 @@
       "summary": "55555 {{rate}} 55555 {{unit}} 55555",
       "help": "55555"
     }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "55555",
+      "updateServices": "55555",
+      "deleteServices": "55555",
+      "deleteServicesProducts": "55555",
+      "createServiceTypes": "55555",
+      "updateServiceTypes": "55555",
+      "deleteServiceTypes": "55555",
+      "updatePricing": "55555"
+    },
+    "category": {
+      "duplicateName": "55555",
+      "notFound": "55555",
+      "invalid": "55555",
+      "inUse": "55555",
+      "inUseByServices": "55555",
+      "inUseByTickets": "55555",
+      "nameRequired": "55555",
+      "nameEmpty": "55555",
+      "idRequired": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "service": {
+      "selectType": "55555",
+      "typeNotFound": "55555",
+      "selectBillingMethod": "55555",
+      "notFoundRefresh": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "product": {
+      "notFound": "55555",
+      "alreadyDeleted": "55555",
+      "barcodeExists": "55555",
+      "barcodeExistsNamed": "55555 {{barcode}} 55555",
+      "skuExists": "55555",
+      "skuExistsNamed": "55555 {{sku}} 55555",
+      "cannotDelete": "55555 {{reasons}} 55555"
+    },
+    "serviceType": {
+      "duplicateName": "55555",
+      "notFoundRefresh": "55555",
+      "notFound": "55555",
+      "inUse": "55555",
+      "inUseByCount": "55555 {{serviceCount}} 55555"
+    },
+    "rateTier": {
+      "overlap": "55555",
+      "notFound": "55555",
+      "invalid": "55555",
+      "serviceInvalid": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    }
   }
 }

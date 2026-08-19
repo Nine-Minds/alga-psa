@@ -137,5 +137,22 @@
     "remaining": "11111 {{hours}} 11111",
     "submit": "11111",
     "title": "11111"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "11111",
+      "serviceNotFound": "11111",
+      "hoursPositive": "11111",
+      "ratePositive": "11111",
+      "reasonRequired": "11111",
+      "adjustExpiredOrVoided": "11111",
+      "usedCannotVoid": "11111",
+      "onlyPendingOrActiveVoid": "11111",
+      "expireVoided": "11111",
+      "updateExpirationVoided": "11111",
+      "invalidValue": "11111",
+      "missingField": "11111",
+      "referenceMissing": "11111"
+    }
   }
 }

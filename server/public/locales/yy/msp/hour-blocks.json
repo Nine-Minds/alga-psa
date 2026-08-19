@@ -137,5 +137,22 @@
     "remaining": "55555 {{hours}} 55555",
     "submit": "55555",
     "title": "55555"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "55555",
+      "serviceNotFound": "55555",
+      "hoursPositive": "55555",
+      "ratePositive": "55555",
+      "reasonRequired": "55555",
+      "adjustExpiredOrVoided": "55555",
+      "usedCannotVoid": "55555",
+      "onlyPendingOrActiveVoid": "55555",
+      "expireVoided": "55555",
+      "updateExpirationVoided": "55555",
+      "invalidValue": "55555",
+      "missingField": "55555",
+      "referenceMissing": "55555"
+    }
   }
 }

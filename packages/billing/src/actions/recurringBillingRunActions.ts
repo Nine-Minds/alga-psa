@@ -104,11 +104,11 @@ export async function selectClientCadenceRecurringRunTargets(
 } | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return localizeActionError(permissionError('Unauthorized: No authenticated user found'));
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
-    return localizeActionError(permissionError('Permission denied: billing read required'));
+    return localizeActionError(permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead'));
   }
 
   const recurringDueWork = await getAvailableRecurringDueWork(options);
@@ -185,16 +185,16 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return localizeActionError(permissionError('Unauthorized: No authenticated user found'));
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    return localizeActionError(permissionError('Permission denied: invoice create or generate required'));
+    return localizeActionError(permissionError('Permission denied: invoice create or generate required', 'msp/billing:errors.recurringRun.invoicePermission'));
   }
 
   const targets = normalizeRecurringBillingRunTargets(params);
   if (targets.length === 0) {
-    return localizeActionError(actionError('Select at least one recurring billing period to generate.'));
+    return localizeActionError(actionError('Select at least one recurring billing period to generate.', 'msp/billing:errors.recurringRun.selectPeriods'));
   }
 
   const tenantId = currentUser.tenant;
@@ -352,16 +352,16 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    return localizeActionError(permissionError('Unauthorized: No authenticated user found'));
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    return localizeActionError(permissionError('Permission denied: invoice create or generate required'));
+    return localizeActionError(permissionError('Permission denied: invoice create or generate required', 'msp/billing:errors.recurringRun.invoicePermission'));
   }
 
   const groupedTargets = normalizeRecurringBillingRunGroupedTargets(params);
   if (groupedTargets.length === 0) {
-    return localizeActionError(actionError('Select at least one recurring billing period to generate.'));
+    return localizeActionError(actionError('Select at least one recurring billing period to generate.', 'msp/billing:errors.recurringRun.selectPeriods'));
   }
 
   const flattenedExecutionWindows = groupedTargets.flatMap((group) =>

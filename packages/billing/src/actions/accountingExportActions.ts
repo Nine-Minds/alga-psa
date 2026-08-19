@@ -38,6 +38,15 @@ const ACTION_DESCRIPTIONS: Record<AccountingExportPermission, string> = {
   execute: 'execute accounting export batches'
 };
 
+// A prefix plus an English fragment does not survive translation, so each action
+// carries its own whole-sentence key.
+const ACTION_PERMISSION_KEYS: Record<AccountingExportPermission, string> = {
+  create: 'msp/billing:errors.accountingExport.permissions.create',
+  read: 'msp/billing:errors.accountingExport.permissions.read',
+  update: 'msp/billing:errors.accountingExport.permissions.update',
+  execute: 'msp/billing:errors.accountingExport.permissions.execute'
+};
+
 const PREVIEW_LINE_LIMIT = 50;
 
 export interface AccountingExportActionError {
@@ -133,7 +142,7 @@ async function checkAccountingExportPermission(
   action: AccountingExportPermission
 ): Promise<ActionPermissionError | null> {
   if (user.user_type === 'client') {
-    return permissionError('Client portal users are not permitted to manage accounting exports');
+    return permissionError('Client portal users are not permitted to manage accounting exports', 'msp/billing:errors.accountingExport.clientPortalForbidden');
   }
 
   // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
@@ -141,7 +150,7 @@ async function checkAccountingExportPermission(
   const billingAction = action === 'read' ? 'read' : 'update';
   const allowed = await hasPermission(user, 'billing_settings', billingAction);
   if (!allowed) {
-    return permissionError(`Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`);
+    return permissionError(`Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`, ACTION_PERMISSION_KEYS[action]);
   }
   return null;
 }

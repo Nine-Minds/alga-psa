@@ -194,5 +194,24 @@
       "loadClientsFailed": "Klanten konden niet worden geladen. Probeer het opnieuw.",
       "submitFailed": "Krediet kon niet worden toegevoegd. Probeer het opnieuw."
     }
+  },
+  "errors": {
+    "credit": {
+      "notFoundRefresh": "Krediet niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "originalTransactionMissing": "De oorspronkelijke kredietboeking kon niet worden gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "sourceNotFound": "Bronkrediet niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "targetClientNotFound": "Doelklant niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "insufficientTransferAmount": "Het resterende bedrag is niet toereikend voor de overdracht.",
+      "invalidValue": "Een van de geselecteerde kredietwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde krediet, de klant, de factuur of de transactie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende kredietboeking. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de kredietwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht kredietveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht kredietveld: {{field}}."
+    },
+    "prepaidAlerts": {
+      "settingsInvalid": "Ongeldige instellingen voor waarschuwingen over prepaidsaldo",
+      "updateFailed": "Kan de instellingen voor waarschuwingen over prepaidsaldo niet bijwerken"
+    }
   }
 }

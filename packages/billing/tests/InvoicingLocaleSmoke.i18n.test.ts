@@ -53,6 +53,7 @@ describe('Invoicing locale smoke', () => {
       'invoiceDesigner',
       'draftInvoiceDetails',
       'documentTemplates',
+      'errors',
     ]);
   });
 

@@ -801,5 +801,49 @@
     },
     "label": "Vertragszeilentyp",
     "placeholder": "Wählen Sie den Vertragszeilentyp aus"
+  },
+  "errors": {
+    "line": {
+      "unavailable": "Die ausgewählte Vertragslinie ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Werte der Vertragslinie ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Vertrag oder die Vertragslinie existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Änderung der Vertragslinie steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Werte der Vertragslinie ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Vertragslinie fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Vertragslinie fehlt: {{field}}."
+    },
+    "templateLine": {
+      "unavailable": "Die ausgewählte Vorlagenzeile ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "mapping": {
+      "duplicate": "Diese Vertragslinie ist dem ausgewählten Vertrag bereits zugeordnet."
+    },
+    "preset": {
+      "invalidValue": "Einer der ausgewählten Werte der Vertragslinien-Voreinstellung ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Vertragslinien-Voreinstellung, der Vertrag oder Dienst existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Änderung der Vertragslinien-Voreinstellung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Werte der Vertragslinien-Voreinstellung ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Vertragslinien-Voreinstellung fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Vertragslinien-Voreinstellung fehlt: {{field}}.",
+      "notFoundDuringUpdate": "Vertragslinien-Voreinstellung mit der ID {{presetId}} wurde bei der Aktualisierung nicht gefunden."
+    },
+    "service": {
+      "unavailable": "Der ausgewählte Dienst der Vertragslinie ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Vertragslinie oder der Dienst existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Dieser Dienst ist der ausgewählten Vertragslinie bereits zugeordnet.",
+      "notAllowed": "Einer der Dienstwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "addedOnce": "Ein Dienst kann bei der Bearbeitung einer Vertragslinie nur einmal hinzugefügt werden.",
+      "removedOnce": "Ein Dienst kann bei der Bearbeitung einer Vertragslinie nur einmal entfernt werden.",
+      "addedAndRemoved": "Derselbe Dienst kann bei der Bearbeitung einer Vertragslinie nicht gleichzeitig hinzugefügt und entfernt werden."
+    },
+    "configuration": {
+      "unavailable": "Die ausgewählte Dienstkonfiguration ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Werte der Dienstkonfiguration ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Diese Dienstkonfiguration existiert für die ausgewählte Vertragslinie bereits.",
+      "notAllowed": "Einer der Werte der Dienstkonfiguration ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Dienstkonfiguration fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Dienstkonfiguration fehlt: {{field}}.",
+      "bucketOverlayFieldsMissing": "Erforderliche Felder des Stundenkontingent-Overlays fehlen."
+    }
   }
 }
