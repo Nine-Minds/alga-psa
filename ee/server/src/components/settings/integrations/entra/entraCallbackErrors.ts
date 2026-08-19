@@ -10,6 +10,10 @@ export const buildEntraCallbackErrorKey = (errorCode: string | null | undefined)
     case 'consent_missing':
       return 'integrations.entra.settings.connection.callbackErrors.consentMissing';
     case 'auth_rejected':
+      return 'integrations.entra.settings.connection.callbackErrors.tokenRejected';
+    // Not a permission problem — those arrive as consent_missing. The remaining
+    // probe failures are almost always a partner tenant without Lighthouse/GDAP,
+    // and the message must not send the operator to the permissions screen.
     case 'validation_failed':
       return 'integrations.entra.settings.connection.callbackErrors.validationFailed';
     case 'expired_state':

@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
       console.error('[Entra OAuth] Direct connection rejected before persisting', {
         code: probe.code,
         status: probe.status,
+        detail: probe.detail,
       });
       return failureRedirect(probe.code, probe.error);
     }

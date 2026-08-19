@@ -127,6 +127,12 @@ Confirm all of the following:
    type.
 3. Under **Authentication**, add the callback from AlgaPSA as a **Web** redirect
    URI: `https://<your-host>/api/auth/microsoft/callback`.
+   If this app registration will also serve other AlgaPSA Microsoft integrations,
+   register their callbacks too — each flow has its own and Microsoft validates
+   them independently: `/api/auth/microsoft/email-setup/callback` (provider setup
+   wizard), `/api/auth/microsoft/calendar/callback` (calendar), and
+   `/api/auth/microsoft/entra/callback` (Entra Identity, EE). A missing entry
+   fails that flow with `AADSTS50011` after the consent screen.
 4. Under **API permissions**, add `Mail.Read`, `Mail.Read.Shared`, `Mail.Send`,
    and `offline_access` as delegated permissions.
 5. If your tenant policy requires administrator approval, select **Grant admin
