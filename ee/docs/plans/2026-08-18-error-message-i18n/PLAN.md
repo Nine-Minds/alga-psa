@@ -45,13 +45,19 @@ Landed on `i18n/error_messages`:
   `localizeActionError` in `packages/auth`, wired into `withAuth` and `withOptionalAuth`, with tests for the
   no-key, missing-namespace, idempotent and no-request-scope paths. surveys / recurring billing / license
   management localize at their own return.
-- **Category 1 step 3 — client-portal, clients and tickets done.** client-portal: 47 keys × 8 locales, all 9
-  files; `appointmentSchemas` deduped from three identical copies into `@alga-psa/scheduling`. clients: 91
-  call sites across 16 action files plus `billingHelpers`, 68 keys in `msp/clients` and 18 in
-  `msp/contacts`. tickets: 53 call sites across 10 action files, 58 keys extending the `features/tickets`
-  `errors.*` block the category-3 work started. **Next: billing (731) → integrations (436) → rest.**
+- **Category 1 step 3 — client-portal, clients, tickets, billing and integrations done.** client-portal: 47
+  keys × 8 locales, all 9 files; `appointmentSchemas` deduped from three identical copies into
+  `@alga-psa/scheduling`. clients: 91 call sites across 16 action files plus `billingHelpers`, 68 keys in
+  `msp/clients` and 18 in `msp/contacts`. tickets: 53 call sites across 10 action files, 58 keys extending
+  the `features/tickets` `errors.*` block the category-3 work started. billing: 480 call sites across 52
+  action files, 305 keys spread over the namespaces that already serve each feature — `msp/invoicing`,
+  `msp/quotes`, `msp/contracts`, `msp/contract-lines`, `msp/credits`, `msp/hour-blocks`,
+  `msp/service-catalog`, `msp/billing-settings`, and `msp/billing` for what genuinely spans them (the four
+  `Permission denied: billing … required` strings alone cover 104 sites, so they get one key each).
+  integrations: 71 call sites across 11 action files, 103 keys in `msp/email-providers` and
+  `msp/integrations`. **Next: scheduling (209) → projects (196) → the rest.**
 
-  Four conventions worth not re-deriving:
+  Six conventions worth not re-deriving:
 
   1. Messages that forward a thrown error's own text stay keyless. A thrown string has no catalogue entry to
      point at, and `find-untranslated-ui.cjs` excludes throws by design.
@@ -66,9 +72,24 @@ Landed on `i18n/error_messages`:
      English, because the English fallback is still correct English.
   3. Concatenated messages have to become whole sentences, one per branch. Five missing-field strings and the
      singular/plural bundle-master prefix went that way; a prefix and a tail do not agree across languages.
+     The same shape hides behind a helper that takes an English noun: `Cannot ${ACTION_DESCRIPTIONS[action]}`,
+     `Connect QuickBooks before loading ${catalogName}`, `Failed to load ${label}`. Give the helper a typed id
+     instead of the noun and a table of whole-sentence keys — 21 for the QuickBooks catalogues, 16 for Xero,
+     7 for the ticket field-option loaders, 4 for accounting exports. Generate the locale strings from a frame
+     plus a noun table if there are many; Polish needs the genitive after `przed wczytaniem`, which is exactly
+     the agreement a shared prefix cannot deliver.
   4. **Inventory with `--include="*.ts" --include="*.tsx"`.** `contactActions.tsx` is an action module with a
      `.tsx` extension, and a `.ts`-only grep reported the clients package complete while 22 of its call sites
      were untouched.
+  5. **A package may clone `actionError` locally.** `invoiceJobActions` and `categoryActions` each declared a
+     one-argument copy, so a key passed at the call site would not have compiled (and, before the key, had
+     nowhere to go). Route them through `@alga-psa/ui/lib/errorHandling` — the shared helpers return `never`,
+     which is assignable to the module's own narrow union. Grep
+     `function \(actionError\|permissionError\)(` per package before starting.
+  6. **A caught payload that is re-wrapped drops the key unless it is carried.** `serviceActions` and
+     `categoryActions` map a thrown payload back into a fresh one; both now pass `getActionErrorMessageKey` /
+     `getActionErrorMessageParams` through. This is the same failure as convention 2 with a different shape,
+     and it is equally silent — the English fallback is still correct English.
 - **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
   Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
 
@@ -104,8 +125,19 @@ That covers both halves of the design and all three namespace shapes a key can t
 `msp/clients:` and `features/tickets:` — which is worth having checked, since the boundary resolves the
 namespace by splitting the key at its last colon and reading that file from disk.
 
-What a browser still cannot reach is the packages that have no keys yet: everything below `tickets` in the
-migration order.
+- **billing, after its pass.** Billing → Service Types → Add Custom Type with a name that collides:
+  "A service or product with these values already exists." / "Ein Dienst oder Produkt mit diesen Werten
+  existiert bereits." (byte-identical to `de/msp/service-catalog.json`) / `11111`, switching locale through
+  the real Language Preference picker on `/msp/profile` each time. So a key resolves in a namespace nobody
+  had put errors in before, which is the part of billing worth proving.
+
+integrations has no browser walk yet: its reachable surfaces here are the QuickBooks/Xero catalogues (needs a
+connected tenant) and the managed-email domain form, which is an EE component talking to an API that returns
+`{ success, error }` rather than an action payload — a category-4 site, not the boundary. Its keys are covered
+by unit assertions and the lang-pack gate instead.
+
+What a browser still cannot reach is the packages that have no keys yet: everything below `integrations` in
+the migration order.
 
 ## Existing infrastructure to build on (do not rebuild)
 
@@ -283,9 +315,9 @@ Closes the gaps left by the current diff. Half a day.
   branches in favour of the validator, or route them through `vt`.
 - ~~Dead `vt` in `QuickAddContact`'s `ErrorFallback` and `UserProfile`'s `ConnectSsoLoading`~~ — both removed
   in `ee808b432b`.
-- `packages/integrations/src/components/settings/integrations/MicrosoftEmailSetupDialog.tsx` still carries an
-  English→key lookup map of the kind this diff removed from `ClientInfoStep`. Convert it once category 1
-  gives its action keys.
+- ~~`MicrosoftEmailSetupDialog.tsx` carries an English→key lookup map~~ — the map is gone; the file now reads
+  `result.error || t('…')`, which is a category-4 site, not a category-3 one. The only `Record<string, string>`
+  left nearby is `TeamsIntegrationSettings`'s wizard-step map, and that is keyed by step id, not by prose.
 
 ## Sequencing
 
@@ -339,3 +371,12 @@ trigger the error paths; that is the only way the pseudo-locale catches an error
   If an English `throw` reaches a user, the bug is that it is thrown instead of returned via `actionError`.
 - Residual false positives in the audit are brand names and enum-ish values (`'Google'`, `'Pro'`, `'Net 30'`).
   Skim before filing.
+- Tests that pin a payload with `toEqual` have to name the key beside the English, and they are not all in the
+  package: `server/src/test/integration/accounting/mappingPermissions.integration.test.ts` and
+  `…/billing/profitabilityReporting.integration.test.ts` are PR-gated DB tests that assert billing and
+  integrations payloads. Tests using `expect(result.permissionError).toBe(…)` need no change, and the
+  namespace-shape tests (`Object.keys(en)`) do — a new `errors` group is a new top-level key.
+- Adding a key to a package can pull `@alga-psa/ui/lib/i18n/serverOnly` into its Vitest graph for the first
+  time, which is how the tickets suite found that its config mapped every `@alga-psa/db/*` subpath to
+  `db/src/$1` while the package's exports put `tenant`, `connection` and `workDate` under `db/src/lib`. Check
+  the alias table before assuming a red suite means red code.
