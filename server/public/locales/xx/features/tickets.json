@@ -503,7 +503,10 @@
     },
     "exportSelectedAction": "11111 {{count}} 11111",
     "exportAction": "11111",
-    "importAction": "11111"
+    "importAction": "11111",
+    "boardTabs": {
+      "all": "11111"
+    }
   },
   "bulk": {
     "bundleTickets": "11111",

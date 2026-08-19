@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
+import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
@@ -39,6 +40,7 @@ import {
   moveTicketsToBoard,
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
+import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
@@ -67,6 +69,14 @@ import {
   TICKET_STATUS_FILTER_OPEN,
   type TicketStatusFilterOption,
 } from '../lib/ticketStatusFilter';
+import {
+  boardIdFromTabId,
+  boardTabId,
+  boardTabSelection,
+  buildBoardSelectionFilterUpdate,
+  buildBoardTabs,
+} from '../lib/boardTabs';
+import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 import { useTicketsRouteState } from './TicketsRouteProvider';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -92,7 +102,7 @@ interface TicketingDashboardProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onFilterChange: (update: Partial<ITicketListFilters>) => void;
+  onFilterChange: (update: Partial<ITicketListFilters>, options?: TicketFilterChangeOptions) => void;
   filterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
@@ -523,6 +533,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
     [rawStatusOptions, selectedBoard, selectedStatus]
   );
+
+  // Board tab strip: open-ticket counts are decoration, so they load out of band
+  // and the tabs render without pills until (or unless) the stats arrive.
+  const [boardStats, setBoardStats] = useState<Record<string, BoardListStats> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const stats = await getBoardListStats();
+        if (!cancelled) {
+          setBoardStats(stats);
+        }
+      } catch (error) {
+        // Counts are not worth a toast; the strip stays usable without them.
+        console.error('Failed to load board ticket counts:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const boardTabs = useMemo(
+    () => buildBoardTabs({
+      boards,
+      activeBoardId: selectedBoard,
+      stats: boardStats,
+      allTabLabel: t('dashboard.boardTabs.all', 'All tickets'),
+      unnamedBoardLabel: t('bulk.move.unnamedBoard', 'Unnamed board'),
+    }),
+    [boards, selectedBoard, boardStats, t]
+  );
+  const activeBoardTabId = boardTabId(selectedBoard);
 
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
@@ -1662,21 +1705,36 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
 
   const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
-    // Status options are board-scoped; only scope when exactly one real board is selected.
-    const scopedBoardId = newSelectedBoards.length === 1 && newSelectedBoards[0] !== NO_BOARD_VALUE
-      ? newSelectedBoards[0]
-      : undefined;
-    const nextStatusOptions = buildTicketStatusFilterOptions(rawStatusOptions, scopedBoardId, selectedStatus);
-    const statusStillAvailable = nextStatusOptions.some(option => option.value === selectedStatus);
-
-    onFilterChange({
-      boardId: undefined, // clear legacy single-board field; arrays are the source of truth
-      boardIds: newSelectedBoards.length > 0 ? newSelectedBoards : undefined,
-      excludeBoardIds: newExcludedBoards.length > 0 ? newExcludedBoards : undefined,
-      statusId: statusStillAvailable ? selectedStatus : TICKET_STATUS_FILTER_OPEN,
-      showOpenOnly: statusStillAvailable ? isTicketStatusOpenFilter(selectedStatus) : true,
-    });
+    onFilterChange(buildBoardSelectionFilterUpdate({
+      selectedBoards: newSelectedBoards,
+      excludedBoards: newExcludedBoards,
+      statusOptions: rawStatusOptions,
+      currentStatusId: selectedStatus,
+    }));
   }, [onFilterChange, rawStatusOptions, selectedStatus]);
+
+  // A board tab is the same single-board filter the picker sets, so it goes
+  // through the identical update path — the tab only adds "this was a
+  // navigation" (history entry + last-active-board preference).
+  const handleBoardTabSelect = useCallback((tabId: string) => {
+    const nextBoardId = boardIdFromTabId(tabId);
+    // Radix fires onValueChange for the already-active tab in some interactions
+    // (and clicking "All tickets" while already there must not wipe a
+    // multi-board selection). Bail before emitting so one click is one fetch.
+    if (nextBoardId === selectedBoard) {
+      return;
+    }
+    const { selectedBoards: nextSelected, excludedBoards: nextExcluded } = boardTabSelection(nextBoardId);
+    onFilterChange(
+      buildBoardSelectionFilterUpdate({
+        selectedBoards: nextSelected,
+        excludedBoards: nextExcluded,
+        statusOptions: rawStatusOptions,
+        currentStatusId: selectedStatus,
+      }),
+      { pushHistory: true, activeBoardTab: nextBoardId }
+    );
+  }, [onFilterChange, rawStatusOptions, selectedBoard, selectedStatus]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
     onFilterChange({
@@ -1915,6 +1973,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </div>
       </div>
+      <BoardTabStrip
+        id={`${id}-board-tabs`}
+        tabs={boardTabs}
+        value={activeBoardTabId}
+        onChange={handleBoardTabSelect}
+      />
       <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">

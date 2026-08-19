@@ -503,7 +503,10 @@
     },
     "exportSelectedAction": "Export selected ({{count}})",
     "exportAction": "Export CSV",
-    "importAction": "Import CSV"
+    "importAction": "Import CSV",
+    "boardTabs": {
+      "all": "All tickets"
+    }
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",

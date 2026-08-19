@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -22,6 +22,13 @@ import {
   shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
+import {
+  buildBoardSelectionFilterUpdate,
+  hasBoardFilterParam,
+  resolveInitialBoardTab,
+  TICKETS_LAST_ACTIVE_BOARD_SETTING,
+} from '../lib/boardTabs';
+import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -243,8 +250,28 @@ export default function TicketingDashboardContainer({
     }
   );
 
+  const {
+    value: storedActiveBoard,
+    setValue: setStoredActiveBoard,
+    isLoading: isActiveBoardPreferenceLoading,
+  } = useUserPreference<string>(
+    TICKETS_LAST_ACTIVE_BOARD_SETTING,
+    {
+      // '' means the "All tickets" tab — a distinct, storable choice rather than
+      // "unset", so returning to All is remembered like any other tab.
+      defaultValue: '',
+      localStorageKey: TICKETS_LAST_ACTIVE_BOARD_SETTING,
+      debounceMs: 500,
+    }
+  );
+
   // Function to sync filter state and pagination to URL
-  const updateURLWithFilters = useCallback((filters: Partial<ITicketListFilters>, page?: number, pageSize?: number) => {
+  const updateURLWithFilters = useCallback((
+    filters: Partial<ITicketListFilters>,
+    page?: number,
+    pageSize?: number,
+    historyMode: 'replace' | 'push' = 'replace',
+  ) => {
     const params = new URLSearchParams();
 
     // Add pagination params
@@ -314,9 +341,15 @@ export default function TicketingDashboardContainer({
       params.set('bundleView', filters.bundleView);
     }
 
-    // Update URL without triggering a server-side re-render
+    // Update URL without triggering a server-side re-render. Board-tab moves
+    // push so back/forward walks the tabs; every other filter edit replaces, so
+    // refining a view does not bury the previous page in history.
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
-    window.history.replaceState(null, '', newURL);
+    if (historyMode === 'push') {
+      window.history.pushState(null, '', newURL);
+    } else {
+      window.history.replaceState(null, '', newURL);
+    }
     lastAppliedSearchRef.current = params.toString() ? `?${params.toString()}` : '';
   }, []);
 
@@ -425,6 +458,13 @@ export default function TicketingDashboardContainer({
 
     isSyncingFromHistoryRef.current = true;
     try {
+      // A history move supersedes any filter edit still sitting in the debounce
+      // window; letting it fire would refetch (and re-render) the state the user
+      // just navigated away from.
+      if (filterFetchTimeoutRef.current) {
+        clearTimeout(filterFetchTimeoutRef.current);
+        filterFetchTimeoutRef.current = null;
+      }
       const parsed = parseTicketListStateFromSearch(normalizedSearch, allowSlaStatusFilter);
       setCurrentPage(parsed.page);
       setPageSize(parsed.pageSize);
@@ -499,6 +539,55 @@ export default function TicketingDashboardContainer({
     updateURLWithFilters,
   ]);
 
+  // Restore the last-active board tab on a bare /msp/tickets. Applied at most
+  // once per mount (appliedInitialBoardRef) and only once the preference has
+  // actually resolved from the server, so a shared link is never stomped by a
+  // preference that arrives a tick later. A URL that names a board wins outright.
+  const availableBoardIds = useMemo(
+    () => effectiveOptions.boardOptions.map(board => board.board_id).filter((id): id is string => Boolean(id)),
+    [effectiveOptions.boardOptions]
+  );
+  const appliedInitialBoardRef = useRef(false);
+  useEffect(() => {
+    if (appliedInitialBoardRef.current || isActiveBoardPreferenceLoading || typeof window === 'undefined') {
+      return;
+    }
+    appliedInitialBoardRef.current = true;
+
+    const decision = resolveInitialBoardTab({
+      urlHasBoardFilter: hasBoardFilterParam(window.location.search),
+      storedBoardId: storedActiveBoard,
+      availableBoardIds,
+    });
+    if (!decision.apply) {
+      return;
+    }
+
+    const mergedFilters: Partial<ITicketListFilters> = {
+      ...activeFiltersRef.current,
+      ...buildBoardSelectionFilterUpdate({
+        selectedBoards: [decision.boardId],
+        excludedBoards: [],
+        statusOptions: effectiveOptions.statusOptions,
+        currentStatusId: activeFiltersRef.current.statusId,
+      }),
+    };
+    setActiveFilters(mergedFilters);
+    activeFiltersRef.current = mergedFilters;
+    setCurrentPage(1);
+    // Replace (not push): restoring a remembered tab is where the user landed,
+    // so "back" should leave the page rather than fall through to All tickets.
+    updateURLWithFilters(mergedFilters, 1, pageSize);
+    void fetchTicketsRef.current(mergedFilters, 1, pageSize);
+  }, [
+    isActiveBoardPreferenceLoading,
+    storedActiveBoard,
+    availableBoardIds,
+    effectiveOptions.statusOptions,
+    pageSize,
+    updateURLWithFilters,
+  ]);
+
   const handlePageChange = useCallback(async (newPage: number) => {
     setCurrentPage(newPage);
     updateURLWithFilters(activeFilters, newPage, pageSize);
@@ -513,7 +602,10 @@ export default function TicketingDashboardContainer({
     await fetchTickets(activeFilters, 1, newPageSize);
   }, [fetchTickets, activeFilters, updateURLWithFilters, setStoredPageSize]);
 
-  const handleFilterChange = useCallback((update: Partial<ITicketListFilters>) => {
+  const handleFilterChange = useCallback((
+    update: Partial<ITicketListFilters>,
+    options?: TicketFilterChangeOptions,
+  ) => {
     // Non-empty update: skip if no values actually differ (guards against
     // controlled components that call onChange on mount to normalize state).
     // Empty update ({}) = force refresh (e.g., after bundling tickets).
@@ -547,7 +639,14 @@ export default function TicketingDashboardContainer({
     setActiveFilters(mergedFilters);
     // Update ref immediately so rapid back-to-back calls merge with fresh state
     activeFiltersRef.current = mergedFilters;
-    updateURLWithFilters(mergedFilters, 1, pageSize);
+    updateURLWithFilters(mergedFilters, 1, pageSize, options?.pushHistory ? 'push' : 'replace');
+
+    // Board tabs are the only navigation-shaped filter change, so they are the
+    // only ones that update "where the user was last". Keyed on presence, not
+    // truthiness: null is the "All tickets" tab, not an absent value.
+    if (options && 'activeBoardTab' in options) {
+      setStoredActiveBoard(options.activeBoardTab ?? '');
+    }
 
     // Debounce the fetch: cancel any pending debounced fetch and schedule a new one.
     // This prevents N concurrent server requests when the user rapidly clicks filters
@@ -565,7 +664,7 @@ export default function TicketingDashboardContainer({
         void fetchTicketsRef.current(mergedFilters, 1, pageSize);
       }, 300);
     }
-  }, [pageSize, updateURLWithFilters, sortBy, sortDirection]);
+  }, [pageSize, updateURLWithFilters, sortBy, sortDirection, setStoredActiveBoard]);
 
   const handleSortChange = useCallback(async (columnId: string, direction: 'asc' | 'desc') => {
     const updatedFilters = {
