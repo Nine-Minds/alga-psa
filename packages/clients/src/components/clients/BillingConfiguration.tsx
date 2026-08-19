@@ -51,7 +51,7 @@ const isReturnedActionError = (value: unknown) =>
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onSave, contacts = [] }) => {
     const { t } = useTranslation('msp/clients');
     const [activeTab, setActiveTab] = useState('general');
-    const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1.5-feature', {
+    const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
         defaultValue: false,
     });
     const [billingConfig, setBillingConfig] = useState({

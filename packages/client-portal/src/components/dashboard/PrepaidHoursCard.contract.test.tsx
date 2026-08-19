@@ -74,7 +74,7 @@ function bucketRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('PrepaidHoursCard dashboard widget (release-v1.5-feature)', () => {
+describe('PrepaidHoursCard dashboard widget (release-v1-5-feature)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagState.enabled = false;

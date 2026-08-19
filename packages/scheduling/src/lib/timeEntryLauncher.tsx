@@ -16,7 +16,7 @@ interface LaunchTimeEntryParams {
   context: TimeEntryWorkItemContext;
   onComplete?: () => void;
   existingEntryId?: string;
-  // release-v1.5-feature launch feedback. Absent/false reproduces the legacy
+  // release-v1-5-feature launch feedback. Absent/false reproduces the legacy
   // toast behavior exactly (plain toast, legacy copy); true switches to the
   // deduplicated long-lived blocked toast with the refreshed copy.
   enhancedLaunchFeedback?: boolean;
@@ -71,7 +71,7 @@ const deriveDefaultTimes = (context: TimeEntryWorkItemContext) => {
 };
 
 export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, context, onComplete, existingEntryId, enhancedLaunchFeedback }: LaunchTimeEntryParams): Promise<void> {
-  // release-v1.5-feature gate: flag off keeps the exact legacy toast surface
+  // release-v1-5-feature gate: flag off keeps the exact legacy toast surface
   // (plain toast.error, legacy copy); flag on gets the deduplicated long-lived
   // blocked toast with the refreshed copy.
   const launchBlockedToast = (message: string) => {

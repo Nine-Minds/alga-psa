@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 
-// Wiring coverage for the release-v1.5-feature gate: the provider is the React
+// Wiring coverage for the release-v1-5-feature gate: the provider is the React
 // boundary that resolves the flag (the launcher is a plain async function) and
 // must thread it into every launchTimeEntry call — flag off keeps the launcher
 // on the legacy path (enhancedLaunchFeedback falsy), flag on enables it.
@@ -67,7 +67,7 @@ describe('SchedulingProviderWithCallbacks launch feedback flag wiring', () => {
       context: { workItemId: 't1', workItemType: 'ticket', workItemName: 'T1' },
     });
 
-    expect(useFeatureFlagMock).toHaveBeenCalledWith('release-v1.5-feature', { defaultValue: false });
+    expect(useFeatureFlagMock).toHaveBeenCalledWith('release-v1-5-feature', { defaultValue: false });
     expect(launchTimeEntryForWorkItem).toHaveBeenCalledTimes(1);
     expect(launchTimeEntryForWorkItem.mock.calls[0][0].enhancedLaunchFeedback).toBe(false);
   });

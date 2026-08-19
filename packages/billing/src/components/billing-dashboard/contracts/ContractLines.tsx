@@ -139,7 +139,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const formatContractLineType = useFormatContractLineType();
   // Flag-on line-level bucket pools (weighted-burn model). Flag off keeps the
   // existing per-service overlay UI served by the compat layer.
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [bucketSchedules, setBucketSchedules] = useState<Array<{

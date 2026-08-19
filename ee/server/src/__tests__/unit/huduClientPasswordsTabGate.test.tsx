@@ -4,7 +4,7 @@
  * (client-passwords-tab group).
  *
  * Since the credentials vault, the client Passwords surface is gated by
- * `useCredentialsVaultTab` (EE + release-v1.5-feature + credentials tier);
+ * `useCredentialsVaultTab` (EE + release-v1-5-feature + credentials tier);
  * when that vault gate is ON the unified Passwords tab REPLACES only the
  * legacy Hudu-only Passwords tab. The general "Hudu" client tab (F070) stays
  * registered whenever EE + Hudu connected + this client mapped — the flag

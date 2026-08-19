@@ -56,7 +56,7 @@ export function NotificationSectionFiltersDialog({
   onApplyFilters,
 }: NotificationSectionFiltersDialogProps) {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled } = useFeatureFlag('release-v1-5-feature');
 
   // Notification categories mapping
   const NOTIFICATION_CATEGORIES = [

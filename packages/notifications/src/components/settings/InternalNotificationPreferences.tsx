@@ -29,7 +29,7 @@ export function InternalNotificationPreferences() {
   const { t, i18n } = useTranslation('client-portal');
   // Priority configuration is gated behind the v1.5 release flag. With the flag
   // off this component renders exactly as before (switches only).
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   const { data: session } = useSession();
   const [categories, setCategories] = useState<InternalNotificationCategory[]>([]);
   const [subtypes, setSubtypes] = useState<Record<number, InternalNotificationSubtype[]>>({});

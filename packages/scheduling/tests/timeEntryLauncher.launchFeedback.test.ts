@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-// Behavioral coverage for the release-v1.5-feature gate on time-entry launch
+// Behavioral coverage for the release-v1-5-feature gate on time-entry launch
 // feedback. Flag OFF (no enhancedLaunchFeedback) must reproduce the exact
 // legacy toast surface: plain single-argument toast.error calls with the
 // legacy no-time-period copy. Flag ON switches to the deduplicated
@@ -61,7 +61,7 @@ beforeEach(() => {
   getTimeEntryById.mockResolvedValue(null);
 });
 
-describe('launchTimeEntryForWorkItem launch feedback (release-v1.5-feature)', () => {
+describe('launchTimeEntryForWorkItem launch feedback (release-v1-5-feature)', () => {
   it('flag off: uses the exact legacy plain toast and copy when no time period covers today', async () => {
     getCurrentTimePeriod.mockResolvedValueOnce(null);
 
