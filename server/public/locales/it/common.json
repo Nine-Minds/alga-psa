@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "articoli della base di conoscenza",
       "opportunity": "opportunità"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "Il nome dello stato è obbligatorio",
+    "orderTaken": "Il numero d'ordine {{order}} è già occupato da «{{name}}». Scegli un numero d'ordine diverso.",
+    "updated": "Stato aggiornato correttamente",
+    "created": "Stato creato correttamente",
+    "orderInUse": "Questo numero d'ordine è già in uso. Scegli un numero d'ordine diverso.",
+    "updateFailed": "Impossibile aggiornare lo stato",
+    "createFailed": "Impossibile creare lo stato",
+    "submitUpdate": "Aggiorna stato",
+    "submitAdd": "Aggiungi stato",
+    "editTitle": "Modifica stato",
+    "addTitle": "Aggiungi nuovo stato",
+    "nameLabel": "Nome dello stato",
+    "namePlaceholder": "ad es. In corso",
+    "orderLabel": "Numero d'ordine (1-100, i numeri più bassi compaiono per primi)",
+    "orderHelp": "Determina l'ordine in cui gli stati compaiono nei menu a discesa in tutta la piattaforma.",
+    "usedOrders": "Numeri d'ordine già usati: {{orders}}",
+    "noUsedOrders": "Nessun numero d'ordine ancora usato",
+    "markClosed": "Contrassegna come stato chiuso",
+    "setDefault": "Imposta come stato predefinito per i nuovi ticket"
   }
 }

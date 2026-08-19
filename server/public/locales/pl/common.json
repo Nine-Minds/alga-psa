@@ -1481,5 +1481,26 @@
       "knowledge_base_article": "artykułów bazy wiedzy",
       "opportunity": "szans sprzedaży"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "Nazwa statusu jest wymagana",
+    "orderTaken": "Numer kolejności {{order}} jest już zajęty przez „{{name}}”. Wybierz inny numer kolejności.",
+    "updated": "Status został zaktualizowany",
+    "created": "Status został utworzony",
+    "orderInUse": "Ten numer kolejności jest już używany. Wybierz inny numer kolejności.",
+    "updateFailed": "Nie udało się zaktualizować statusu",
+    "createFailed": "Nie udało się utworzyć statusu",
+    "submitUpdate": "Zaktualizuj status",
+    "submitAdd": "Dodaj status",
+    "editTitle": "Edytuj status",
+    "addTitle": "Dodaj nowy status",
+    "nameLabel": "Nazwa statusu",
+    "namePlaceholder": "np. W toku",
+    "orderLabel": "Numer kolejności (1-100, niższe numery pojawiają się jako pierwsze)",
+    "orderHelp": "Określa kolejność, w jakiej statusy pojawiają się w listach rozwijanych w całej platformie.",
+    "usedOrders": "Zajęte numery kolejności: {{orders}}",
+    "noUsedOrders": "Żaden numer kolejności nie jest jeszcze zajęty",
+    "markClosed": "Oznacz jako status zamknięty",
+    "setDefault": "Ustaw jako domyślny status nowych zgłoszeń"
   }
 }

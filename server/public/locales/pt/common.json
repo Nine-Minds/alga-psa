@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "artigos da base de conhecimento",
       "opportunity": "oportunidades"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "O nome do status é obrigatório",
+    "orderTaken": "O número de ordem {{order}} já está ocupado por \"{{name}}\". Escolha outro número de ordem.",
+    "updated": "Status atualizado com sucesso",
+    "created": "Status criado com sucesso",
+    "orderInUse": "Este número de ordem já está em uso. Escolha outro número de ordem.",
+    "updateFailed": "Não foi possível atualizar o status",
+    "createFailed": "Não foi possível criar o status",
+    "submitUpdate": "Atualizar status",
+    "submitAdd": "Adicionar status",
+    "editTitle": "Editar status",
+    "addTitle": "Adicionar novo status",
+    "nameLabel": "Nome do status",
+    "namePlaceholder": "por exemplo, Em andamento",
+    "orderLabel": "Número de ordem (1-100, números menores aparecem primeiro)",
+    "orderHelp": "Define a ordem em que os status aparecem nos menus suspensos em toda a plataforma.",
+    "usedOrders": "Números de ordem em uso: {{orders}}",
+    "noUsedOrders": "Nenhum número de ordem em uso ainda",
+    "markClosed": "Marcar como status fechado",
+    "setDefault": "Definir como status padrão para novos tickets"
   }
 }

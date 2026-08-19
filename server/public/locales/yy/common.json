@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "55555",
       "opportunity": "55555"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "55555",
+    "orderTaken": "55555 {{order}} 55555 {{name}} 55555",
+    "updated": "55555",
+    "created": "55555",
+    "orderInUse": "55555",
+    "updateFailed": "55555",
+    "createFailed": "55555",
+    "submitUpdate": "55555",
+    "submitAdd": "55555",
+    "editTitle": "55555",
+    "addTitle": "55555",
+    "nameLabel": "55555",
+    "namePlaceholder": "55555",
+    "orderLabel": "55555",
+    "orderHelp": "55555",
+    "usedOrders": "55555 {{orders}} 55555",
+    "noUsedOrders": "55555",
+    "markClosed": "55555",
+    "setDefault": "55555"
   }
 }

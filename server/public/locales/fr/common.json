@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "articles de la base de connaissances",
       "opportunity": "opportunités"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "Le nom du statut est obligatoire",
+    "orderTaken": "Le numéro d'ordre {{order}} est déjà utilisé par « {{name}} ». Veuillez choisir un autre numéro d'ordre.",
+    "updated": "Statut mis à jour",
+    "created": "Statut créé",
+    "orderInUse": "Ce numéro d'ordre est déjà utilisé. Veuillez choisir un autre numéro d'ordre.",
+    "updateFailed": "Impossible de mettre à jour le statut",
+    "createFailed": "Impossible de créer le statut",
+    "submitUpdate": "Mettre à jour le statut",
+    "submitAdd": "Ajouter un statut",
+    "editTitle": "Modifier le statut",
+    "addTitle": "Ajouter un nouveau statut",
+    "nameLabel": "Nom du statut",
+    "namePlaceholder": "p. ex. En cours",
+    "orderLabel": "Numéro d'ordre (1-100, les numéros les plus bas apparaissent en premier)",
+    "orderHelp": "Détermine l'ordre d'affichage des statuts dans les menus déroulants de toute la plateforme.",
+    "usedOrders": "Numéros d'ordre utilisés : {{orders}}",
+    "noUsedOrders": "Aucun numéro d'ordre utilisé pour l'instant",
+    "markClosed": "Marquer comme statut fermé",
+    "setDefault": "Définir comme statut par défaut des nouveaux tickets"
   }
 }

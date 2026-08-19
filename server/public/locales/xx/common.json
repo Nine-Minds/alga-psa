@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "11111",
       "opportunity": "11111"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "11111",
+    "orderTaken": "11111 {{order}} 11111 {{name}} 11111",
+    "updated": "11111",
+    "created": "11111",
+    "orderInUse": "11111",
+    "updateFailed": "11111",
+    "createFailed": "11111",
+    "submitUpdate": "11111",
+    "submitAdd": "11111",
+    "editTitle": "11111",
+    "addTitle": "11111",
+    "nameLabel": "11111",
+    "namePlaceholder": "11111",
+    "orderLabel": "11111",
+    "orderHelp": "11111",
+    "usedOrders": "11111 {{orders}} 11111",
+    "noUsedOrders": "11111",
+    "markClosed": "11111",
+    "setDefault": "11111"
   }
 }

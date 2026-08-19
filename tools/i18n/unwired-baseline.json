@@ -55,7 +55,6 @@
     "packages/product-extensions/ee/DockerExtensionIframe.tsx",
     "packages/product-extensions/ee/ExtensionIframe.tsx",
     "packages/projects/src/components/KanbanZoomControl.tsx",
-    "packages/reference-data/src/components/dialogs/StatusDialog.tsx",
     "packages/scheduling/src/components/settings/time-entry/TimeEntrySettings.tsx",
     "packages/scheduling/src/components/settings/time-entry/TimePeriodForm.tsx",
     "packages/scheduling/src/components/settings/time-entry/TimePeriodList.tsx",

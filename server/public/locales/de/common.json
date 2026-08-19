@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "Wissensdatenbank-Artikeln",
       "opportunity": "Verkaufschancen"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "Der Statusname ist erforderlich",
+    "orderTaken": "Die Reihenfolgennummer {{order}} ist bereits durch „{{name}}“ belegt. Bitte wählen Sie eine andere Nummer.",
+    "updated": "Status wurde aktualisiert",
+    "created": "Status wurde erstellt",
+    "orderInUse": "Diese Reihenfolgennummer wird bereits verwendet. Bitte wählen Sie eine andere Nummer.",
+    "updateFailed": "Der Status konnte nicht aktualisiert werden",
+    "createFailed": "Der Status konnte nicht erstellt werden",
+    "submitUpdate": "Status aktualisieren",
+    "submitAdd": "Status hinzufügen",
+    "editTitle": "Status bearbeiten",
+    "addTitle": "Neuen Status hinzufügen",
+    "nameLabel": "Statusname",
+    "namePlaceholder": "z. B. In Bearbeitung",
+    "orderLabel": "Reihenfolgennummer (1–100, niedrigere Nummern erscheinen zuerst)",
+    "orderHelp": "Legt fest, in welcher Reihenfolge Status in Auswahlmenüs in der gesamten Anwendung erscheinen.",
+    "usedOrders": "Belegte Reihenfolgennummern: {{orders}}",
+    "noUsedOrders": "Noch keine Reihenfolgennummern belegt",
+    "markClosed": "Als abgeschlossenen Status markieren",
+    "setDefault": "Als Standardstatus für neue Tickets festlegen"
   }
 }

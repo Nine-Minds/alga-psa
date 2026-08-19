@@ -1449,5 +1449,26 @@
       "knowledge_base_article": "knowledge base articles",
       "opportunity": "opportunities"
     }
+  },
+  "statusDialog": {
+    "nameRequired": "Status name is required",
+    "orderTaken": "Order number {{order}} is already taken by \"{{name}}\". Please choose a different order number.",
+    "updated": "Status updated successfully",
+    "created": "Status created successfully",
+    "orderInUse": "This order number is already in use. Please choose a different order number.",
+    "updateFailed": "Failed to update status",
+    "createFailed": "Failed to create status",
+    "submitUpdate": "Update Status",
+    "submitAdd": "Add Status",
+    "editTitle": "Edit Status",
+    "addTitle": "Add New Status",
+    "nameLabel": "Status Name",
+    "namePlaceholder": "e.g., In Progress",
+    "orderLabel": "Order Number (1-100, lower numbers appear first)",
+    "orderHelp": "Controls the order in which statuses appear in dropdown menus throughout the platform.",
+    "usedOrders": "Used order numbers: {{orders}}",
+    "noUsedOrders": "No order numbers used yet",
+    "markClosed": "Mark as closed status",
+    "setDefault": "Set as default status for new tickets"
   }
 }
