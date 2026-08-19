@@ -24,6 +24,8 @@ Add `packages/integrations/src/utils/email/gmailPubSub.ts` as the single source 
 
 Provisioning, verification, and diagnostics all build the push endpoint and the audience from this one function, so the two strings are equal by construction rather than by coincidence. Setup **refuses** a loopback, private-network, or plain-HTTP address instead of falling back to `http://localhost:3000`; `NGROK_URL` (written by the ngrok-sync container to `/app/ngrok/url`) remains the sanctioned local-development escape hatch.
 
+The scope of the unification is deliberately the *push* path — the endpoint Google delivers to and the audience it signs. The OAuth **redirect URI** base (`.../api/auth/google/callback`, derived in `persistGoogleConfig`) is a distinct concern with different failure modes (it is checked by Google's consent flow, not by our JWT verification), so it is intentionally left on its own env-or-secret derivation and not routed through this helper. That fourth site is flagged in code with `// LEVERAGE: pattern base-url-resolution` as a candidate for a later, broader base-URL layer; folding it in is out of scope here because it cannot cause the silent-audience-mismatch failure this card targets.
+
 Errors are typed and written to be read straight off the provider card: `GmailPubSubConfigurationError` for a base URL/name that cannot be derived, `GmailPubSubSetupError` for a provisioning step that failed against Google, each message naming the resource and the missing permission.
 
 ### 2. Nothing reports success it did not verify
@@ -32,6 +34,8 @@ Errors are typed and written to be read straight off the provider card: `GmailPu
 - `setupPubSub` reads the subscription back after creating it and fails when the push endpoint or the OIDC audience does not match what it just provisioned.
 - `registerWatch` already reported failure by return value; that value was being discarded. It is now read, and a failed or skipped `watch()` sets `success: false` with the underlying Google message attached (`configureGmailProvider.ts`).
 - Every outcome — success or failure — is written to `email_providers.status` / `error_message`, because the card renders from the row.
+- One coordination rule with the existing auth-pause lifecycle (from the auto-pause card): a provider that was auto-paused on repeated auth failures has its status/error text owned by `EmailProviderLifecycleService`'s recovery path. The honest-status write here therefore **skips** rows where `inbound_paused_at` is set with `inbound_pause_reason = 'auth_failure'`, captured as `pausedForAuthFailure` at the start of the call. For those providers a failed configure sets `authFailureRecovery = 'failed'` with reconnect-oriented copy instead of overwriting the paused row. This keeps the two owners of the row from fighting over it while still making a non-recovering reconnect report failure rather than success.
+- A missing OAuth token is now a failure for every provider, paused or not: without tokens there is no watch, so provisioning a topic delivers nothing. The earlier "success if Pub/Sub was configured" partial-success branch is removed.
 
 ### 3. Re-save honestly re-provisions; no fake cooldown
 
@@ -39,7 +43,9 @@ The 24-hour `pubsub_initialised_at` guard (`configureGmailProvider.ts:69-93`) th
 
 ### 4. A real health check: `runGmailDiagnostics`
 
-Add `GmailDiagnosticsService` plus an action and a `GmailDiagnosticsDialog`, in the shape of the Microsoft 365 precedent. It checks, and prints expected-vs-actual where they differ: the base URL, the service-account key, the topic, the publisher binding, the subscription's push endpoint and audience, the watch and its expiry, and **when a push was last accepted**. That last signal comes from a new `google_email_provider_config.last_push_received_at` column, written by the webhook route after JWT verification — the only end-to-end proof that Google can actually reach the endpoint. Interfaces live in `shared/interfaces/gmail-diagnostics.interfaces.ts`.
+Add `GmailDiagnosticsService` (exporting `runGmailDeliveryDiagnostics`) plus a `runGmailDiagnostics` action and a `GmailDiagnosticsDialog`, in the shape of the Microsoft 365 precedent. It checks, and prints expected-vs-actual where they differ: the base URL, the service-account key, the topic, the publisher binding, the subscription's push endpoint and audience, the watch and its expiry, and **when a push was last accepted**. That last signal comes from a new `google_email_provider_config.last_push_received_at` column (an additive, idempotent `hasColumn`-guarded migration), written by the webhook route after JWT verification — the only end-to-end proof that Google can actually reach the endpoint. Interfaces live in `shared/interfaces/gmail-diagnostics.interfaces.ts`.
+
+The diagnostics dialog is the on-demand deep check. The provider card also carries an always-on, passive watch-health banner that does not require opening the dialog: `EmailProviderCard` renders three distinct states from the stored `watch_expiration` — expired ("Gmail is no longer sending new mail here"), missing ("Gmail push delivery is not registered"), and expiring within a day — each naming the mailbox and offering **Refresh Pub/Sub & Watch** as the one-click remedy. This is what makes the 7-day expiry visible on stacks without the renewal scheduler (see Non-goals).
 
 ### 5. Webhook route: fail loud on a configured-but-unusable base URL
 
@@ -63,7 +69,7 @@ Add `docs/inbound-email/setup/gmail-google-cloud-prerequisites.md` and extend `d
 ## Non-goals (scoped as follow-up)
 
 - **Platform / shared Google app path.** Google remains tenant-owned in this card. A hosted platform-credential path mirroring Microsoft's `providerReadiness.ts:60-102` — so a trial user need not bring their own GCP project — is the highest-leverage fix for trial failure but is a larger change; documenting the prerequisites (§7) is the interim answer.
-- **CE-safe watch renewal.** The 7-day renewal remains EE-Temporal-scheduled. A CE/non-Temporal renewal path is a known gap; diagnostics (§4) at least surfaces an imminent/expired watch instead of letting it die silently.
+- **CE-safe watch renewal.** The 7-day renewal remains EE-Temporal-scheduled. A CE/non-Temporal renewal path is a known gap; the passive card banner and diagnostics (§4) at least surface an imminent/expired watch with a one-click Refresh remedy instead of letting it die silently, but the tenant must act on it.
 - No change to the shared ingestion/ticket-processing pipeline.
 
 ## Review risks
