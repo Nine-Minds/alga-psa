@@ -55,7 +55,21 @@ files **153** (from 155). Note the error-literal number moves slowly by design �
 still contains the English, so a migrated call site keeps counting until the fallback is dropped. Judge
 category 1 by packages migrated, not by this number.
 
-Not verified: the pseudo-locale walkthrough. It needs a running app, which this pass did not have.
+Walked in a browser against a running app (2026-08-19), driving the real sign-in form and the real
+language picker rather than a cookie:
+
+- **Category 6, `validatePassword`.** Settings → Users → Create New MSP User with `abcdefgh`. The toast reads
+  "Password must contain at least one uppercase letter" at `en`, "Das Passwort muss mindestens einen
+  Großbuchstaben enthalten" at `de` (byte-identical to `de/common.json`), and `11111` at `xx`.
+- **Category 1, the boundary.** `/client-portal/tickets/<unknown-uuid>` returns
+  `actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied')` from a
+  `withAuth` action, and the page renders it as "Ticket not found or access denied" / "Ticket nicht gefunden
+  oder Zugriff verweigert" / `11111` — with no render-site change. The German run was the portal user's own
+  stored preference, not a cookie, which is the property that matters: `localizeActionError` resolves the
+  *reader's* locale on the server, so the payload crosses the wire already translated.
+
+That covers both halves of the design. What a browser still cannot reach is the packages that have no keys
+yet — everything below `clients` in the migration order.
 
 ## Existing infrastructure to build on (do not rebuild)
 
