@@ -161,8 +161,12 @@ function createCreditApplicationTrx() {
         where: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         andWhere: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         whereNot: vi.fn(() => builder),
+        whereIn: vi.fn(() => builder),
         orderBy: vi.fn(() => builder),
         forUpdate: vi.fn(() => builder),
+        // The stable-order lock read (whereIn → orderBy → forUpdate → select)
+        // resolves through the thenable below to the same credit entries.
+        select: vi.fn(() => builder),
         sum: vi.fn(() => { summing = true; return builder; }),
         first: vi.fn(async () =>
           summing

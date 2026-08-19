@@ -10,6 +10,7 @@ import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
 import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -1469,12 +1470,13 @@ export const unfinalizeInvoice = withAuth(async (
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Check if invoice exists and is finalized. FOR UPDATE: this
-      // transaction later deletes credit_tracking rows (project-deposit
-      // rollback) and then writes the invoice row — locking the invoice row
-      // first matches applyCreditToInvoiceInternal's invoice-then-credit
-      // lock order, so a concurrent credit application queues here instead
-      // of deadlocking against the rollback's credit-row locks.
+      // Check if invoice exists and is finalized. Lock the invoice row first
+      // (invoice row, then credit rows — the shared lock order every credit
+      // writer follows) so the credit reversal below cannot interleave with a
+      // concurrent apply/void on the same invoice. This also matches
+      // applyCreditToInvoiceInternal's invoice-then-credit lock order, so a
+      // concurrent credit application queues here instead of deadlocking
+      // against the rollback's credit-row locks.
       const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .forUpdate()
@@ -1503,6 +1505,12 @@ export const unfinalizeInvoice = withAuth(async (
     // Hour blocks minted by this invoice follow it back to draft — unused
     // blocks return to pending; used blocks abort the whole unfinalization.
     await deactivateHourBlocksForUnfinalizedInvoice(trx, tenant, invoiceId, user.user_id);
+
+    // A draft invoice carries no applied credit: reverse the credit
+    // applications (repeat-safe — already-reversed applications are skipped)
+    // so re-finalizing re-applies credit under the then-current draw-down
+    // policy, symmetric with finalize auto-apply.
+    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_unfinalized');
 
     // When unfinalizing make sure the invoice returns to draft status even if some
     // environments only toggle the status flag without storing finalized_at.
@@ -2032,10 +2040,12 @@ export const hardDeleteInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
-    // 1. Get invoice details. FOR UPDATE: deletion rolls back project-deposit
-    // credit_tracking rows before deleting the invoice row — taking the
-    // invoice row lock first preserves the invoice-then-credit lock order
-    // applyCreditToInvoiceInternal relies on (deadlock avoidance).
+    // 1. Get invoice details. Lock the invoice row first (invoice row, then
+    // credit rows — the shared lock order every credit writer follows) so the
+    // credit reversal below cannot interleave with a concurrent apply/void.
+    // The lock also preserves the invoice-then-credit lock order that
+    // applyCreditToInvoiceInternal relies on before the deletion's
+    // project-deposit credit_tracking rollback.
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
@@ -2102,41 +2112,11 @@ export const hardDeleteInvoice = withAuth(async (
        // TODO: Recalculate client balance after reversals
     }
 
-    // 3. Handle credit applied to this invoice
-    if (invoice.credit_applied > 0) {
-        // Find the credit application transaction
-        const creditAppTransaction = await tenantScopedTable(trx, tenant, 'transactions')
-            .where({
-                invoice_id: invoiceId,
-                type: 'credit_application',
-                tenant: tenant
-            })
-            .first();
-
-        // Find related credit tracking entries that were used
-        const creditTrackingUsed = await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .select('credit_id', 'amount_used');
-
-        // Restore the used amounts back to the original credit_tracking entries
-        for (const usage of creditTrackingUsed) {
-            await tenantScopedTable(trx, tenant, 'credit_tracking')
-                .where({ credit_id: usage.credit_id })
-                .increment('remaining_amount', usage.amount_used)
-                .update({ updated_at: new Date().toISOString() }); // Update timestamp
-        }
-
-        // Delete the credit tracking usage records
-        await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .delete();
-
-        // Delete the credit application transaction itself. The restored
-        // remaining_amounts above put the credit back in the derived balance.
-        await tenantScopedTable(trx, tenant, 'transactions')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .delete();
-    }
+    // 3. Handle credit applied to this invoice: restore every application's
+    // credits to the pool through the canonical primitive (repeat-safe, all
+    // application transactions, credit rows locked in stable order) BEFORE the
+    // transaction-history cleanup below deletes the provenance it reads.
+    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_deleted');
 
     // Handle credit issued *from* this invoice (if it was negative)
     const creditIssuanceTransaction = await tenantScopedTable(trx, tenant, 'transactions')
@@ -2213,14 +2193,24 @@ export const hardDeleteInvoice = withAuth(async (
       )
       .update({ invoiced: false });
 
-    // 6. Delete other transactions related to the invoice (e.g., invoice_generated, price_adjustment)
+    // 6. Delete other transactions related to the invoice (e.g., invoice_generated,
+    // price_adjustment, and the credit_application/credit_adjustment ledger rows —
+    // restoration already completed above, so this cleanup no longer loses credit).
+    // Allocation rows FK the application transactions, so they go first.
+    await tenantScopedTable(trx, tenant, 'credit_allocations')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
     await tenantScopedTable(trx, tenant, 'transactions')
       .where({
         invoice_id: invoiceId,
         tenant
       })
-      // Exclude types already handled (payment, payment_reversal, credit_application, credit_issuance...)
-      .whereNotIn('type', ['payment', 'payment_reversal', 'credit_application', 'credit_issuance_from_negative_invoice'])
+      // Exclude types already handled (payment, payment_reversal, credit_issuance...)
+      .whereNotIn('type', ['payment', 'payment_reversal', 'credit_issuance_from_negative_invoice'])
       .delete();
 
     // 7. Delete join records
