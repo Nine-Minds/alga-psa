@@ -129,4 +129,50 @@ describe('PhoneInput', () => {
 
     expect(onChange).toHaveBeenLastCalledWith('+1 4155550123');
   });
+
+  it('keeps a stored number on its own dial code when the picker disagrees', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    // The location editor binds the picker to the *address* country, so a UK
+    // number sits under a +1 picker. Correcting a digit must not re-home it.
+    render(
+      <PhoneInput
+        id="foreign-phone"
+        label="Phone Number"
+        value="+442079460958"
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /\+44/i })).toBeTruthy();
+
+    await user.type(screen.getByRole('textbox'), '9');
+
+    expect(onChange).toHaveBeenLastCalledWith('+44 20794609589');
+  });
+
+  it('clears to empty rather than to a bare dial code', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <PhoneInput
+        id="cleared-phone"
+        label="Phone Number"
+        value="+442079460958"
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    await user.clear(screen.getByRole('textbox'));
+
+    expect(onChange).toHaveBeenLastCalledWith('');
+  });
 });

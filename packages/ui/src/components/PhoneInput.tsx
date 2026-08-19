@@ -142,6 +142,15 @@ export const PhoneInput = ({
   // to pull one back out of it.
   const extensionValue = extension ?? '';
 
+  // A stored number that already carries its own dial code keeps it. The picker is
+  // often bound to the address country, and letting that win would quietly re-home
+  // a +44 number to +1 the moment somebody corrects a single digit.
+  const valueDialCode = useMemo(
+    () => detectPhoneCodeFromValue(value ?? '', countries),
+    [value, countries]
+  );
+  const effectiveDialCode = valueDialCode ?? resolvedPhoneCode;
+
   // Clean phone number display - strip the country code from the input
   useEffect(() => {
     const phone = value ?? '';
@@ -172,12 +181,18 @@ export const PhoneInput = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
     setDisplayValue(phoneNumber);
+    if (!phoneNumber.trim()) {
+      // Cleared means cleared — not "a bare dial code" — so the next number typed
+      // is homed to the picker rather than to whatever used to be here.
+      onChange('');
+      return;
+    }
     // A number typed or pasted with its own dial code already carries one; adding
     // the picker's on top produces "+1 +44 20 …", which parses as nothing.
     const carriesOwnDialCode = phoneNumber.trim().startsWith('+');
     onChange(
-      resolvedPhoneCode && !carriesOwnDialCode
-        ? `${resolvedPhoneCode} ${phoneNumber}`.trim()
+      effectiveDialCode && !carriesOwnDialCode
+        ? `${effectiveDialCode} ${phoneNumber}`.trim()
         : phoneNumber
     );
   };
@@ -285,7 +300,7 @@ export const PhoneInput = ({
     return () => window.clearTimeout(timer);
   }, [isDropdownOpen]);
 
-  const displayPhoneCode = resolvedPhoneCode || '+1';
+  const displayPhoneCode = effectiveDialCode || '+1';
 
   return (
     <div className={`w-full ${className}`.trim()}>
