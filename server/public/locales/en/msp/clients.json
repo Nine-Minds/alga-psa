@@ -1698,5 +1698,99 @@
     "saveContractOverride": "Save contract override",
     "contractSaveSuccess": "Contract replenishment policy saved",
     "contractSaveError": "Failed to save contract replenishment policy"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Client not found",
+      "signInRequired": "You must be signed in to manage clients.",
+      "duplicateName": "A client with the name \"{{name}}\" already exists. Please choose a different name.",
+      "duplicate": "A client with these details already exists. Please check the client name.",
+      "referencedDataMissing": "Referenced data not found. Please check account manager, billing contact, and related client settings.",
+      "invalidValue": "One of the selected client values is invalid. Please refresh and try again.",
+      "invalidData": "Invalid client data provided. Please check all fields and try again.",
+      "missingField": "Missing required client field.",
+      "missingFieldNamed": "Missing required client field: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Permission denied: Cannot read clients",
+      "updateClients": "Permission denied: Cannot update clients"
+    },
+    "timeline": {
+      "invalidCursor": "Invalid client timeline cursor"
+    },
+    "location": {
+      "notFound": "Location not found or is no longer active.",
+      "defaultRequired": "Add another active location or choose a different default before unsetting this location as the default.",
+      "missingField": "Missing required location field.",
+      "missingFieldNamed": "Missing required location field: {{field}}.",
+      "referenceInvalid": "The selected client, country, tax region, or related location data is no longer valid. Please refresh and try again.",
+      "duplicate": "A conflicting location record already exists. Please refresh locations and try again.",
+      "invalidData": "Invalid location data provided. Please check the address and contact fields."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Failed to add inbound email domain. Please try again.",
+      "notFound": "Inbound email domain not found."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Missing required inbound ticket destination field.",
+      "missingFieldNamed": "Missing required inbound ticket destination field: {{field}}.",
+      "referenceInvalid": "The selected inbound ticket destination is no longer valid. Please refresh and try again."
+    },
+    "interaction": {
+      "notFound": "Interaction not found",
+      "signInRequired": "You must be signed in to manage interactions.",
+      "identifierInvalid": "One of the interaction identifiers is invalid. Please refresh and try again.",
+      "missingField": "Missing required interaction field.",
+      "missingFieldNamed": "Missing required interaction field: {{field}}.",
+      "referenceMissing": "The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.",
+      "duplicate": "An interaction with these details already exists."
+    },
+    "interactionType": {
+      "notFound": "Interaction type not found or you do not have access to it.",
+      "missingField": "Missing required interaction type field.",
+      "missingFieldNamed": "Missing required interaction type field: {{field}}.",
+      "referenceInvalid": "Referenced interaction type data is no longer valid. Please refresh and try again.",
+      "duplicate": "An interaction type with these details already exists.",
+      "invalidData": "Invalid interaction type data provided. Please check the name, icon, and display order."
+    },
+    "taxRate": {
+      "signInRequired": "You must be signed in to update client tax rates.",
+      "invalidReference": "The selected client or tax rate is invalid. Please refresh and try again.",
+      "missingField": "Missing required client tax-rate field.",
+      "missingFieldNamed": "Missing required client tax-rate field: {{field}}.",
+      "referenceMissing": "The selected client or tax rate no longer exists. Please refresh and try again.",
+      "duplicate": "This tax rate is already associated with the client.",
+      "associationNotFound": "Client tax rate association not found.",
+      "rateNotFound": "Tax rate with ID {{id}} not found."
+    },
+    "alias": {
+      "required": "Alias is required",
+      "tooLong": "Alias is too long",
+      "addFailed": "Failed to add client alias. Please try again.",
+      "notFound": "Alias not found."
+    },
+    "contractLine": {
+      "signInRequired": "You must be signed in to manage client contract lines.",
+      "refreshAssignment": "Please refresh the contract assignment and try again.",
+      "sharedByAssignments": "This contract line is shared by multiple active assignments. Edit the specific contract assignment before changing its lines.",
+      "duplicate": "A contract line with these details already exists for this client.",
+      "invalidReference": "The selected client or contract line is invalid. Please refresh and try again.",
+      "missingField": "Missing required contract line field.",
+      "missingFieldNamed": "Missing required contract line field: {{field}}.",
+      "referenceInvalid": "The selected contract line reference is no longer valid. Please refresh and try again.",
+      "storageUnavailable": "Client contract line storage is unavailable. Please try again later.",
+      "invalidData": "Client contract line data is invalid. Please refresh and try again.",
+      "addFailed": "Failed to add client contract line."
+    },
+    "billingSettings": {
+      "updateDenied": "Permission denied: Cannot update billing settings",
+      "readRequired": "Permission denied: billing_settings read required",
+      "updateRequired": "Permission denied: billing_settings update required",
+      "tenantContextMissing": "Tenant context not found",
+      "clientContextMissing": "Client context not found",
+      "prepaidAlertsDisabled": "Prepaid balance alerts are not enabled for this workspace",
+      "invalidPrepaidAlertSettings": "Invalid prepaid balance alert settings",
+      "prepaidAlertUpdateFailed": "Failed to update prepaid balance alert settings"
+    }
   }
 }

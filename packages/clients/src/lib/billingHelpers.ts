@@ -138,7 +138,7 @@ export const updateClientContractLineSettingsAsync = withAuth(async (
   // Client billing settings are billing configuration: mirror the tenant-level
   // gate in billingSettingsActions so authentication alone cannot mutate them.
   if (!await hasPermission(user, 'billing_settings', 'update')) {
-    return permissionError('Permission denied: Cannot update billing settings');
+    return permissionError('Permission denied: Cannot update billing settings', 'msp/clients:errors.billingSettings.updateDenied');
   }
 
   const { knex } = await createTenantKnex();
@@ -552,21 +552,21 @@ export const getPrepaidBalanceAlertSettingsAsync = withAuth(async (
   clientId: string | null
 ): Promise<PrepaidBalanceAlertSettingsReadResult> => {
   if (!tenant) {
-    return actionError('Tenant context not found');
+    return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
   }
   if (!(await prepaidAlertFeatureEnabled(tenant))) {
-    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
+    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
   }
   if (!(await hasPermission(_user, 'billing_settings', 'read'))) {
-    return permissionError('Permission denied: billing_settings read required');
+    return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
   }
 
   const { knex } = await createTenantKnex();
   if (!clientId) {
-    return actionError('Client context not found');
+    return actionError('Client context not found', 'msp/clients:errors.billingSettings.clientContextMissing');
   }
   const result = await getPrepaidBalanceAlertSettingsDb(knex, tenant, clientId);
-  return result ?? actionError('Client not found');
+  return result ?? actionError('Client not found', 'msp/clients:errors.client.notFound');
 });
 
 export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
@@ -575,18 +575,18 @@ export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
   input: PrepaidBalanceAlertSettingsInput
 ): Promise<PrepaidBalanceAlertSettingsUpdateResult> => {
   if (!tenant) {
-    return actionError('Tenant context not found');
+    return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
   }
   if (!(await prepaidAlertFeatureEnabled(tenant))) {
-    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
+    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
   }
   if (!(await hasPermission(_user, 'billing_settings', 'update'))) {
-    return permissionError('Permission denied: billing_settings update required');
+    return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
   }
 
   const parsed = prepaidBalanceAlertSettingsInputSchema.safeParse(input);
   if (!parsed.success) {
-    return actionError('Invalid prepaid balance alert settings');
+    return actionError('Invalid prepaid balance alert settings', 'msp/clients:errors.billingSettings.invalidPrepaidAlertSettings');
   }
 
   try {
@@ -597,7 +597,7 @@ export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error updating prepaid balance alert settings:', error);
-    return actionError('Failed to update prepaid balance alert settings');
+    return actionError('Failed to update prepaid balance alert settings', 'msp/clients:errors.billingSettings.prepaidAlertUpdateFailed');
   }
 });
 

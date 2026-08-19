@@ -706,5 +706,10 @@
       "saveFailed": "Impossible de mettre a jour le contact",
       "saveFailedDescription": "Impossible de mettre à jour le contact. Réessayez."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contact introuvable"
+    }
   }
 }

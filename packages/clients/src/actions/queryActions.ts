@@ -39,7 +39,7 @@ function queryActionErrorFrom(error: unknown): QueryActionError | null {
     return permissionError(error.message);
   }
   if (error.message === 'Interaction not found') {
-    return actionError('Interaction not found');
+    return actionError('Interaction not found', 'msp/clients:errors.interaction.notFound');
   }
   return null;
 }

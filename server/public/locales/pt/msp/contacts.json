@@ -706,5 +706,10 @@
       "saveFailed": "Nao foi possivel atualizar o contato",
       "saveFailedDescription": "Não foi possível atualizar o contato. Tente novamente."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contato não encontrado"
+    }
   }
 }

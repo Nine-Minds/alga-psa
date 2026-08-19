@@ -1698,5 +1698,99 @@
     "saveContractOverride": "Salvar substituição do contrato",
     "contractSaveSuccess": "Política de reabastecimento do contrato salva",
     "contractSaveError": "Não foi possível salvar a política de reabastecimento do contrato"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Cliente não encontrado",
+      "signInRequired": "Você precisa estar conectado para gerenciar clientes.",
+      "duplicateName": "Já existe um cliente com o nome \"{{name}}\". Escolha um nome diferente.",
+      "duplicate": "Já existe um cliente com estes dados. Verifique o nome do cliente.",
+      "referencedDataMissing": "Dados referenciados não encontrados. Verifique o gerente de conta, o contato de faturamento e as configurações de cliente relacionadas.",
+      "invalidValue": "Um dos valores de cliente selecionados é inválido. Atualize a página e tente novamente.",
+      "invalidData": "Dados de cliente inválidos. Verifique todos os campos e tente novamente.",
+      "missingField": "Falta um campo obrigatório do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório do cliente: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Permissão negada: não é possível ler clientes",
+      "updateClients": "Permissão negada: não é possível atualizar clientes"
+    },
+    "timeline": {
+      "invalidCursor": "Cursor de linha do tempo do cliente inválido"
+    },
+    "location": {
+      "notFound": "Local não encontrado ou não está mais ativo.",
+      "defaultRequired": "Adicione outro local ativo ou escolha um padrão diferente antes de remover este local como padrão.",
+      "missingField": "Falta um campo obrigatório do local.",
+      "missingFieldNamed": "Falta um campo obrigatório do local: {{field}}.",
+      "referenceInvalid": "O cliente, o país, a região fiscal ou os dados de local relacionados selecionados não são mais válidos. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de local conflitante. Atualize os locais e tente novamente.",
+      "invalidData": "Dados de local inválidos. Verifique os campos de endereço e contato."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Não foi possível adicionar o domínio de e-mail de entrada. Tente novamente.",
+      "notFound": "Domínio de e-mail de entrada não encontrado."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Falta um campo obrigatório do destino de tickets de entrada.",
+      "missingFieldNamed": "Falta um campo obrigatório do destino de tickets de entrada: {{field}}.",
+      "referenceInvalid": "O destino de tickets de entrada selecionado não é mais válido. Atualize a página e tente novamente."
+    },
+    "interaction": {
+      "notFound": "Interação não encontrada",
+      "signInRequired": "Você precisa estar conectado para gerenciar interações.",
+      "identifierInvalid": "Um dos identificadores de interação é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da interação.",
+      "missingFieldNamed": "Falta um campo obrigatório da interação: {{field}}.",
+      "referenceMissing": "A interação, o cliente, o contato, o usuário, o status ou o tipo selecionados não existem mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma interação com estes dados."
+    },
+    "interactionType": {
+      "notFound": "Tipo de interação não encontrado ou você não tem acesso a ele.",
+      "missingField": "Falta um campo obrigatório do tipo de interação.",
+      "missingFieldNamed": "Falta um campo obrigatório do tipo de interação: {{field}}.",
+      "referenceInvalid": "Os dados referenciados do tipo de interação não são mais válidos. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um tipo de interação com estes dados.",
+      "invalidData": "Dados de tipo de interação inválidos. Verifique o nome, o ícone e a ordem de exibição."
+    },
+    "taxRate": {
+      "signInRequired": "Você precisa estar conectado para atualizar as alíquotas de imposto do cliente.",
+      "invalidReference": "O cliente ou a alíquota de imposto selecionados são inválidos. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da alíquota de imposto do cliente.",
+      "missingFieldNamed": "Falta um campo obrigatório da alíquota de imposto do cliente: {{field}}.",
+      "referenceMissing": "O cliente ou a alíquota de imposto selecionados não existem mais. Atualize a página e tente novamente.",
+      "duplicate": "Esta alíquota de imposto já está associada ao cliente.",
+      "associationNotFound": "Associação da alíquota de imposto do cliente não encontrada.",
+      "rateNotFound": "Alíquota de imposto com o ID {{id}} não encontrada."
+    },
+    "alias": {
+      "required": "O alias é obrigatório",
+      "tooLong": "O alias é muito longo",
+      "addFailed": "Não foi possível adicionar o alias do cliente. Tente novamente.",
+      "notFound": "Alias não encontrado."
+    },
+    "contractLine": {
+      "signInRequired": "Você precisa estar conectado para gerenciar as linhas de contrato do cliente.",
+      "refreshAssignment": "Atualize a atribuição de contrato e tente novamente.",
+      "sharedByAssignments": "Esta linha de contrato é compartilhada por várias atribuições ativas. Edite a atribuição de contrato específica antes de alterar suas linhas.",
+      "duplicate": "Já existe uma linha de contrato com estes dados para este cliente.",
+      "invalidReference": "O cliente ou a linha de contrato selecionados são inválidos. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório da linha de contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}.",
+      "referenceInvalid": "A referência da linha de contrato selecionada não é mais válida. Atualize a página e tente novamente.",
+      "storageUnavailable": "O armazenamento de linhas de contrato do cliente está indisponível. Tente novamente mais tarde.",
+      "invalidData": "Os dados da linha de contrato do cliente são inválidos. Atualize a página e tente novamente.",
+      "addFailed": "Não foi possível adicionar a linha de contrato do cliente."
+    },
+    "billingSettings": {
+      "updateDenied": "Permissão negada: não é possível atualizar as configurações de faturamento",
+      "readRequired": "Permissão negada: é necessária permissão de leitura de billing_settings",
+      "updateRequired": "Permissão negada: é necessária permissão de atualização de billing_settings",
+      "tenantContextMissing": "Contexto de tenant não encontrado",
+      "clientContextMissing": "Contexto de cliente não encontrado",
+      "prepaidAlertsDisabled": "Os alertas de saldo pré-pago não estão habilitados para este espaço de trabalho",
+      "invalidPrepaidAlertSettings": "Configurações de alerta de saldo pré-pago inválidas",
+      "prepaidAlertUpdateFailed": "Não foi possível atualizar as configurações de alerta de saldo pré-pago"
+    }
   }
 }

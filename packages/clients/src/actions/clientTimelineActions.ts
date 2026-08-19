@@ -36,7 +36,7 @@ function clientTimelineActionErrorFrom(error: unknown): ClientTimelineActionErro
     return permissionError(error.message);
   }
   if (error.message === 'Invalid client timeline cursor') {
-    return actionError('Invalid client timeline cursor');
+    return actionError('Invalid client timeline cursor', 'msp/clients:errors.timeline.invalidCursor');
   }
   return null;
 }

@@ -706,5 +706,10 @@
       "saveFailed": "Kontakt konnte nicht aktualisiert werden",
       "saveFailedDescription": "Der Kontakt konnte nicht aktualisiert werden. Versuchen Sie es erneut."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Kontakt nicht gefunden"
+    }
   }
 }

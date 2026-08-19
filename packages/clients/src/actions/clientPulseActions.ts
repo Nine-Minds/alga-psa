@@ -41,7 +41,7 @@ function clientPulseActionErrorFrom(error: unknown): ClientPulseActionError | nu
     return permissionError(error.message);
   }
   if (error.message === 'Client not found') {
-    return actionError('Client not found');
+    return actionError('Client not found', 'msp/clients:errors.client.notFound');
   }
   return null;
 }

@@ -7,7 +7,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
-import { withAuth } from '@alga-psa/auth';
+import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   assertMspOrClientPortalOwnClientPermission,
   assertMspPermission,
@@ -85,40 +85,56 @@ function updateClientExpectedErrorFrom(error: unknown, clientName?: string | nul
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to manage clients.');
+      return permissionError('You must be signed in to manage clients.', 'msp/clients:errors.client.signInRequired');
     }
     if (error.message === 'Client not found') {
-      return actionError('Client not found');
+      return actionError('Client not found', 'msp/clients:errors.client.notFound');
     }
   }
 
   const dbError = error as { code?: string; constraint?: string; column?: string; message?: string };
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('clients_tenant_client_name_unique')) {
-      return actionError(`A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`);
+      return actionError(
+        `A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`,
+        'msp/clients:errors.client.duplicateName',
+        { name: clientName || 'this name' },
+      );
     }
-    return actionError('A client with these details already exists. Please check the client name.');
+    return actionError('A client with these details already exists. Please check the client name.', 'msp/clients:errors.client.duplicate');
   }
   if (dbError?.code === '23503') {
-    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.');
+    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.', 'msp/clients:errors.client.referencedDataMissing');
   }
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected client values is invalid. Please refresh and try again.');
+    return actionError('One of the selected client values is invalid. Please refresh and try again.', 'msp/clients:errors.client.invalidValue');
   }
   if (dbError?.code === '23514') {
-    return actionError('Invalid client data provided. Please check all fields and try again.');
+    return actionError('Invalid client data provided. Please check all fields and try again.', 'msp/clients:errors.client.invalidData');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required client field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required client field: ${dbError.column}.`,
+          'msp/clients:errors.client.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required client field.', 'msp/clients:errors.client.missingField');
   }
 
   return null;
 }
 
-function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): string {
+// Callers here report failure as a bare string instead of returning the payload,
+// so withAuth's boundary never sees the messageKey. Localize before flattening,
+// otherwise the key travels the whole way and is discarded at the last step.
+async function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): Promise<string> {
   const expected = updateClientExpectedErrorFrom(error, clientName);
   if (expected) {
-    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    const candidate = (await localizeActionError(expected)) as unknown as {
+      actionError?: unknown;
+      permissionError?: unknown;
+    };
     return typeof candidate.actionError === 'string'
       ? candidate.actionError
       : String(candidate.permissionError ?? fallback);
@@ -619,7 +635,14 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
 
     const expected = updateClientExpectedErrorFrom(error, client.client_name);
     if (expected) {
-      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      // This action reports failure as a bare string rather than returning the
+      // payload, so withAuth's boundary never sees a messageKey to act on.
+      // Localize here instead, or the key would be carried all this way and
+      // then thrown away.
+      const candidate = (await localizeActionError(expected)) as unknown as {
+        actionError?: unknown;
+        permissionError?: unknown;
+      };
       return {
         success: false,
         error: typeof candidate.permissionError === 'string'
@@ -1343,7 +1366,7 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: clientActionMessageFrom(error, 'Failed to delete client'),
+      message: await clientActionMessageFrom(error, 'Failed to delete client'),
       dependencies: [],
       alternatives: []
     };
@@ -1969,7 +1992,7 @@ export const uploadClientLogo = withAuth(async (
     return { success: true, logoUrl: result.imageUrl };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
-    const message = clientActionMessageFrom(error, 'Failed to upload client logo');
+    const message = await clientActionMessageFrom(error, 'Failed to upload client logo');
     return { success: false, message };
   }
 });
@@ -2009,7 +2032,7 @@ export const deleteClientLogo = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting client logo:', error);
-    const message = clientActionMessageFrom(error, 'Failed to delete client logo');
+    const message = await clientActionMessageFrom(error, 'Failed to delete client logo');
     return { success: false, message };
   }
 });
@@ -2063,7 +2086,7 @@ export const deactivateClientContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error deactivating client contacts:', error);
-    const message = clientActionMessageFrom(error, 'Failed to deactivate client contacts');
+    const message = await clientActionMessageFrom(error, 'Failed to deactivate client contacts');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -2144,7 +2167,7 @@ export const markClientInactiveWithContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error marking client and contacts as inactive:', error);
-    const message = clientActionMessageFrom(error, 'Failed to mark client as inactive');
+    const message = await clientActionMessageFrom(error, 'Failed to mark client as inactive');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -2213,7 +2236,7 @@ export const markClientActiveWithContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error marking client and contacts as active:', error);
-    const message = clientActionMessageFrom(error, 'Failed to mark client as active');
+    const message = await clientActionMessageFrom(error, 'Failed to mark client as active');
     return { success: false, contactsReactivated: 0, message };
   }
 });
@@ -2267,7 +2290,7 @@ export const reactivateClientContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error reactivating client contacts:', error);
-    const message = clientActionMessageFrom(error, 'Failed to reactivate client contacts');
+    const message = await clientActionMessageFrom(error, 'Failed to reactivate client contacts');
     return { success: false, contactsReactivated: 0, message };
   }
 });

@@ -706,5 +706,10 @@
       "saveFailed": "Could not update contact",
       "saveFailedDescription": "The contact could not be updated. Please try again."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contact not found"
+    }
   }
 }

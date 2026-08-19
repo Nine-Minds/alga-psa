@@ -1698,5 +1698,99 @@
     "saveContractOverride": "55555",
     "contractSaveSuccess": "55555",
     "contractSaveError": "55555"
+  },
+  "errors": {
+    "client": {
+      "notFound": "55555",
+      "signInRequired": "55555",
+      "duplicateName": "55555 {{name}} 55555",
+      "duplicate": "55555",
+      "referencedDataMissing": "55555",
+      "invalidValue": "55555",
+      "invalidData": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "permissions": {
+      "readClients": "55555",
+      "updateClients": "55555"
+    },
+    "timeline": {
+      "invalidCursor": "55555"
+    },
+    "location": {
+      "notFound": "55555",
+      "defaultRequired": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "duplicate": "55555",
+      "invalidData": "55555"
+    },
+    "inboundEmailDomain": {
+      "addFailed": "55555",
+      "notFound": "55555"
+    },
+    "inboundTicketDestination": {
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555"
+    },
+    "interaction": {
+      "notFound": "55555",
+      "signInRequired": "55555",
+      "identifierInvalid": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555"
+    },
+    "interactionType": {
+      "notFound": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "duplicate": "55555",
+      "invalidData": "55555"
+    },
+    "taxRate": {
+      "signInRequired": "55555",
+      "invalidReference": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "associationNotFound": "55555",
+      "rateNotFound": "55555 {{id}} 55555"
+    },
+    "alias": {
+      "required": "55555",
+      "tooLong": "55555",
+      "addFailed": "55555",
+      "notFound": "55555"
+    },
+    "contractLine": {
+      "signInRequired": "55555",
+      "refreshAssignment": "55555",
+      "sharedByAssignments": "55555",
+      "duplicate": "55555",
+      "invalidReference": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "referenceInvalid": "55555",
+      "storageUnavailable": "55555",
+      "invalidData": "55555",
+      "addFailed": "55555"
+    },
+    "billingSettings": {
+      "updateDenied": "55555",
+      "readRequired": "55555",
+      "updateRequired": "55555",
+      "tenantContextMissing": "55555",
+      "clientContextMissing": "55555",
+      "prepaidAlertsDisabled": "55555",
+      "invalidPrepaidAlertSettings": "55555",
+      "prepaidAlertUpdateFailed": "55555"
+    }
   }
 }

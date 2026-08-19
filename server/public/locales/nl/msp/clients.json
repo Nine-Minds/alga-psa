@@ -1698,5 +1698,99 @@
     "saveContractOverride": "Contractoverschrijving opslaan",
     "contractSaveSuccess": "Contractaanvullingsbeleid opgeslagen",
     "contractSaveError": "Contractaanvullingsbeleid kon niet worden opgeslagen"
+  },
+  "errors": {
+    "client": {
+      "notFound": "Klant niet gevonden",
+      "signInRequired": "U moet aangemeld zijn om klanten te beheren.",
+      "duplicateName": "Er bestaat al een klant met de naam ‘{{name}}’. Kies een andere naam.",
+      "duplicate": "Er bestaat al een klant met deze gegevens. Controleer de klantnaam.",
+      "referencedDataMissing": "Gerefereerde gegevens niet gevonden. Controleer de accountmanager, het factuurcontact en de bijbehorende klantinstellingen.",
+      "invalidValue": "Een van de geselecteerde klantwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidData": "Ongeldige klantgegevens opgegeven. Controleer alle velden en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht klantveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht klantveld: {{field}}."
+    },
+    "permissions": {
+      "readClients": "Toestemming geweigerd: klanten kunnen niet worden gelezen",
+      "updateClients": "Toestemming geweigerd: klanten kunnen niet worden bijgewerkt"
+    },
+    "timeline": {
+      "invalidCursor": "Ongeldige cursor voor klanttijdlijn"
+    },
+    "location": {
+      "notFound": "Locatie niet gevonden of niet langer actief.",
+      "defaultRequired": "Voeg een andere actieve locatie toe of kies een andere standaardlocatie voordat u deze locatie als standaard verwijdert.",
+      "missingField": "Er ontbreekt een verplicht locatieveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht locatieveld: {{field}}.",
+      "referenceInvalid": "De geselecteerde klant, het land, de belastingregio of de bijbehorende locatiegegevens zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterend locatierecord. Vernieuw de locaties en probeer het opnieuw.",
+      "invalidData": "Ongeldige locatiegegevens opgegeven. Controleer de adres- en contactvelden."
+    },
+    "inboundEmailDomain": {
+      "addFailed": "Het inkomende e-maildomein kon niet worden toegevoegd. Probeer het opnieuw.",
+      "notFound": "Inkomend e-maildomein niet gevonden."
+    },
+    "inboundTicketDestination": {
+      "missingField": "Er ontbreekt een verplicht veld van de inkomende ticketbestemming.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de inkomende ticketbestemming: {{field}}.",
+      "referenceInvalid": "De geselecteerde inkomende ticketbestemming is niet langer geldig. Vernieuw de pagina en probeer het opnieuw."
+    },
+    "interaction": {
+      "notFound": "Interactie niet gevonden",
+      "signInRequired": "U moet aangemeld zijn om interacties te beheren.",
+      "identifierInvalid": "Een van de interactie-ID’s is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht interactieveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht interactieveld: {{field}}.",
+      "referenceMissing": "De geselecteerde interactie, klant, contactpersoon, gebruiker, status of het type bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een interactie met deze gegevens."
+    },
+    "interactionType": {
+      "notFound": "Interactietype niet gevonden of u hebt er geen toegang toe.",
+      "missingField": "Er ontbreekt een verplicht veld van het interactietype.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het interactietype: {{field}}.",
+      "referenceInvalid": "De gerefereerde gegevens van het interactietype zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een interactietype met deze gegevens.",
+      "invalidData": "Ongeldige gegevens voor het interactietype opgegeven. Controleer de naam, het pictogram en de weergavevolgorde."
+    },
+    "taxRate": {
+      "signInRequired": "U moet aangemeld zijn om belastingtarieven van klanten bij te werken.",
+      "invalidReference": "De geselecteerde klant of het belastingtarief is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van het belastingtarief van de klant.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het belastingtarief van de klant: {{field}}.",
+      "referenceMissing": "De geselecteerde klant of het belastingtarief bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Dit belastingtarief is al gekoppeld aan de klant.",
+      "associationNotFound": "Koppeling van het belastingtarief van de klant niet gevonden.",
+      "rateNotFound": "Belastingtarief met ID {{id}} niet gevonden."
+    },
+    "alias": {
+      "required": "Alias is verplicht",
+      "tooLong": "Alias is te lang",
+      "addFailed": "De klantalias kon niet worden toegevoegd. Probeer het opnieuw.",
+      "notFound": "Alias niet gevonden."
+    },
+    "contractLine": {
+      "signInRequired": "U moet aangemeld zijn om contractregels van klanten te beheren.",
+      "refreshAssignment": "Vernieuw de contracttoewijzing en probeer het opnieuw.",
+      "sharedByAssignments": "Deze contractregel wordt gedeeld door meerdere actieve toewijzingen. Bewerk de specifieke contracttoewijzing voordat u de regels ervan wijzigt.",
+      "duplicate": "Er bestaat al een contractregel met deze gegevens voor deze klant.",
+      "invalidReference": "De geselecteerde klant of contractregel is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de contractregel.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de contractregel: {{field}}.",
+      "referenceInvalid": "De geselecteerde contractregelreferentie is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "storageUnavailable": "De opslag van contractregels van klanten is niet beschikbaar. Probeer het later opnieuw.",
+      "invalidData": "De gegevens van de contractregel van de klant zijn ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "addFailed": "De contractregel van de klant kon niet worden toegevoegd."
+    },
+    "billingSettings": {
+      "updateDenied": "Toestemming geweigerd: factureringsinstellingen kunnen niet worden bijgewerkt",
+      "readRequired": "Toestemming geweigerd: leesrecht voor billing_settings vereist",
+      "updateRequired": "Toestemming geweigerd: bijwerkrecht voor billing_settings vereist",
+      "tenantContextMissing": "Tenantcontext niet gevonden",
+      "clientContextMissing": "Klantcontext niet gevonden",
+      "prepaidAlertsDisabled": "Waarschuwingen voor prepaidsaldo zijn niet ingeschakeld voor deze werkruimte",
+      "invalidPrepaidAlertSettings": "Ongeldige instellingen voor prepaidsaldowaarschuwingen",
+      "prepaidAlertUpdateFailed": "De instellingen voor prepaidsaldowaarschuwingen konden niet worden bijgewerkt"
+    }
   }
 }

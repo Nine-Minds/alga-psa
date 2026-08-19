@@ -706,5 +706,10 @@
       "saveFailed": "Contact kon niet worden bijgewerkt",
       "saveFailedDescription": "Het contact kon niet worden bijgewerkt. Probeer het opnieuw."
     }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contactpersoon niet gevonden"
+    }
   }
 }
