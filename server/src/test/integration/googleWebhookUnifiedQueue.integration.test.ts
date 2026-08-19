@@ -19,6 +19,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: vi.fn(async () => null),
   getSecretProviderInstance: async () => ({
     getTenantSecret: (...args: any[]) => getTenantSecretMock(...args),
+    getAppSecret: async () => undefined,
   }),
 }));
 
@@ -45,6 +46,11 @@ function createJwt(email: string): string {
 
 describe('Google unified inbound pointer queue ingress', () => {
   beforeEach(() => {
+    // The expected audience is derived from a fixed source precedence, so the
+    // higher-priority sources have to be absent for NEXTAUTH_URL to be the one
+    // that answers.
+    delete process.env.NGROK_URL;
+    delete process.env.NEXT_PUBLIC_BASE_URL;
     process.env.NEXTAUTH_URL = 'https://example.test';
 
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();

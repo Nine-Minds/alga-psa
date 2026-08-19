@@ -512,11 +512,30 @@ secrets_provider:
 # a hostPath into the server pod and points the filesystem secret provider at it
 # via SECRET_FS_BASE_PATH, so tenant secrets the server writes are visible to
 # other appliance services (e.g. email-service) that mount the same hostPath.
-# Disabled by default → cloud/hosted rendering is unchanged.
+# Takes precedence over tenantSecrets.persistence below.
 sharedTenantSecrets:
   enabled: false
   hostPath: /var/lib/alga-appliance/tenant-secrets
   mountPath: /shared-tenant-secrets
+
+# Durable home for tenant secrets the server writes at runtime — Google service
+# account keys, OAuth client credentials, and refresh tokens among them. The
+# default write provider is `filesystem`, and with no SECRET_FS_BASE_PATH set the
+# provider falls back to the read-only /run/secrets mount or to pod-local
+# scratch. Either way a tenant reconnects Gmail, the pod restarts, and the
+# credentials are gone. A claim-backed path is therefore the default; set
+# sharedTenantSecrets.enabled on the appliance, or persistence.enabled=false when
+# secrets are written to Vault instead.
+tenantSecrets:
+  mountPath: /var/lib/alga/tenant-secrets
+  persistence:
+    enabled: true
+    existingClaim: ""
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: ""
+    annotations: {}
 
 # Development environment configuration
 devEnv:
