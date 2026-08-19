@@ -3043,6 +3043,63 @@
       "invalidData": "11111",
       "missingField": "11111",
       "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "users": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "readClientInfoPermission": "11111"
+    },
+    "roles": {
+      "userNotFound": "11111",
+      "roleNotFound": "11111",
+      "portalRoleOnMspUser": "11111",
+      "mspRoleOnPortalUser": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "changePermission": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "secrets": {
+      "tenantContextMissing": "11111",
+      "notFound": "11111",
+      "invalidName": "11111",
+      "readOnly": "11111",
+      "recordInvalid": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "permissions": {
+        "create": "11111",
+        "update": "11111",
+        "delete": "11111"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "11111",
+      "invalidValue": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "invalidTimezone": "11111 {{timezone}} 11111",
+      "permissions": {
+        "clearOnboarding": "11111",
+        "update": "11111",
+        "enableAiAssistant": "11111"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "11111",
+      "templateNotFound": "11111",
+      "categoryNotFound": "11111",
+      "subtypeNotFound": "11111",
+      "notificationNotFound": "11111",
+      "recordInvalid": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
     }
   }
 }

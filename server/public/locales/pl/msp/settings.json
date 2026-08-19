@@ -3071,6 +3071,63 @@
       "invalidData": "Podano nieprawidłowe dane priorytetu. Sprawdź szczegóły priorytetu.",
       "missingField": "Brakuje wymaganego pola priorytetu.",
       "missingFieldNamed": "Brakuje wymaganego pola priorytetu: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Jeden z wybranych użytkowników jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych użytkowników już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "readClientInfoPermission": "Odmowa uprawnień: nie można odczytać informacji o kliencie użytkownika"
+    },
+    "roles": {
+      "userNotFound": "Nie znaleziono użytkownika. Odśwież listę użytkowników i spróbuj ponownie.",
+      "roleNotFound": "Nie znaleziono roli. Odśwież listę ról i spróbuj ponownie.",
+      "portalRoleOnMspUser": "Nie można przypisać roli portalu klienta użytkownikowi MSP.",
+      "mspRoleOnPortalUser": "Nie można przypisać roli MSP użytkownikowi portalu klienta.",
+      "invalidValue": "Jedna z wybranych wartości użytkownika lub roli jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany użytkownik lub rola już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ten użytkownik ma już wybraną rolę.",
+      "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
+      "missingField": "Brakuje wymaganego pola roli użytkownika.",
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
+      "notFound": "Nie znaleziono sekretu. Mógł już zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidName": "Nieprawidłowa nazwa organizacji lub sekretu.",
+      "readOnly": "Magazyn sekretów jest w tym środowisku tylko do odczytu.",
+      "recordInvalid": "Jeden z wybranych rekordów sekretów jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów sekretów już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Sekret o tej nazwie już istnieje.",
+      "missingField": "Brakuje wymaganego pola sekretu.",
+      "missingFieldNamed": "Brakuje wymaganego pola sekretu: {{field}}.",
+      "permissions": {
+        "create": "Odmowa uprawnień: nie można tworzyć sekretów",
+        "update": "Odmowa uprawnień: nie można aktualizować sekretów",
+        "delete": "Odmowa uprawnień: nie można usuwać sekretów"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Identyfikator organizacji jest wymagany.",
+      "invalidValue": "Jedna z wybranych wartości ustawień organizacji jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola ustawień organizacji.",
+      "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
+      "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
+        "update": "Odmowa uprawnień: nie można zaktualizować ustawień",
+        "enableAiAssistant": "Odmowa uprawnień: nie można włączyć asystenta AI dla tej organizacji"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Nie znaleziono szablonu systemowego. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "templateNotFound": "Nie znaleziono szablonu powiadomienia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "categoryNotFound": "Nie znaleziono kategorii powiadomień. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "subtypeNotFound": "Nie znaleziono podtypu powiadomienia. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "notificationNotFound": "Nie znaleziono powiadomienia. Mogło już zostać zaktualizowane lub usunięte.",
+      "recordInvalid": "Jeden z wybranych rekordów powiadomień jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów powiadomień już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Ustawienie powiadomienia o takich danych już istnieje.",
+      "missingField": "Brakuje wymaganego pola powiadomienia.",
+      "missingFieldNamed": "Brakuje wymaganego pola powiadomienia: {{field}}."
     }
   }
 }

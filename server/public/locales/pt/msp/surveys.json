@@ -461,5 +461,37 @@
       "topIssues": "Não há respostas negativas neste período.",
       "recentResponses": "Não há respostas neste período."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Modelo de pesquisa não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente."
+    },
+    "trigger": {
+      "notFound": "Gatilho da pesquisa não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "templateRequired": "Escolha um modelo de pesquisa existente antes de salvar o gatilho."
+    },
+    "survey": {
+      "invalidValue": "Um dos valores de pesquisa selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O modelo de pesquisa ou o registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro de pesquisa com estes dados.",
+      "notAllowed": "Um dos valores da pesquisa não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório da pesquisa.",
+      "missingFieldNamed": "Falta um campo obrigatório da pesquisa: {{field}}."
+    },
+    "options": {
+      "boardsFailed": "Não é possível carregar os quadros.",
+      "statusesFailed": "Não é possível carregar os status.",
+      "prioritiesFailed": "Não é possível carregar as prioridades.",
+      "triggerOptionsFailed": "Não é possível carregar as opções de gatilho da pesquisa. Tente novamente."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Este link de feedback não é mais válido ou já foi utilizado.",
+      "ratingRequired": "Selecione uma avaliação entre as opções exibidas antes de enviar.",
+      "linkInvalidOrExpired": "Este link de feedback é inválido ou expirou.",
+      "ticketInactive": "Este link de feedback não está mais vinculado a um ticket ativo. Entre em contato com seu técnico.",
+      "alreadyCompleted": "Esta pesquisa já foi concluída.",
+      "missingField": "Falta um campo obrigatório do feedback.",
+      "missingFieldNamed": "Falta um campo obrigatório do feedback: {{field}}."
+    }
   }
 }

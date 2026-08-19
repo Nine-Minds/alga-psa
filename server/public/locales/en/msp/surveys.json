@@ -461,5 +461,37 @@
       "topIssues": "No negative responses in this period.",
       "recentResponses": "No responses in this period."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Survey template not found. It may have been deleted. Please refresh and try again."
+    },
+    "trigger": {
+      "notFound": "Survey trigger not found. It may have been deleted. Please refresh and try again.",
+      "templateRequired": "Choose an existing survey template before saving the trigger."
+    },
+    "survey": {
+      "invalidValue": "One of the selected survey values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected survey template or related record no longer exists. Please refresh and try again.",
+      "duplicate": "A survey record with these details already exists.",
+      "notAllowed": "One of the survey values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required survey field.",
+      "missingFieldNamed": "Missing required survey field: {{field}}."
+    },
+    "options": {
+      "boardsFailed": "Unable to load boards.",
+      "statusesFailed": "Unable to load statuses.",
+      "prioritiesFailed": "Unable to load priorities.",
+      "triggerOptionsFailed": "Unable to load survey trigger options. Please try again."
+    },
+    "response": {
+      "linkInvalidOrUsed": "This feedback link is no longer valid or has already been used.",
+      "ratingRequired": "Select a rating from the choices shown before submitting.",
+      "linkInvalidOrExpired": "This feedback link is invalid or expired.",
+      "ticketInactive": "This feedback link is no longer connected to an active ticket. Please contact your technician.",
+      "alreadyCompleted": "This survey has already been completed.",
+      "missingField": "Missing required feedback field.",
+      "missingFieldNamed": "Missing required feedback field: {{field}}."
+    }
   }
 }

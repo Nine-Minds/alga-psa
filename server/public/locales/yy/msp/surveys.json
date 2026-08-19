@@ -461,5 +461,37 @@
       "topIssues": "55555",
       "recentResponses": "55555"
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "55555"
+    },
+    "trigger": {
+      "notFound": "55555",
+      "templateRequired": "55555"
+    },
+    "survey": {
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "duplicate": "55555",
+      "notAllowed": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "options": {
+      "boardsFailed": "55555",
+      "statusesFailed": "55555",
+      "prioritiesFailed": "55555",
+      "triggerOptionsFailed": "55555"
+    },
+    "response": {
+      "linkInvalidOrUsed": "55555",
+      "ratingRequired": "55555",
+      "linkInvalidOrExpired": "55555",
+      "ticketInactive": "55555",
+      "alreadyCompleted": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    }
   }
 }

@@ -3043,6 +3043,63 @@
       "invalidData": "Invalid priority data provided. Please check the priority details.",
       "missingField": "Missing required priority field.",
       "missingFieldNamed": "Missing required priority field: {{field}}."
+    },
+    "users": {
+      "invalidValue": "One of the selected users is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected users no longer exists. Please refresh and try again.",
+      "readClientInfoPermission": "Permission denied: Cannot read user client info"
+    },
+    "roles": {
+      "userNotFound": "User not found. Refresh the user list and try again.",
+      "roleNotFound": "Role not found. Refresh the role list and try again.",
+      "portalRoleOnMspUser": "Cannot assign a client portal role to an MSP user.",
+      "mspRoleOnPortalUser": "Cannot assign an MSP role to a client portal user.",
+      "invalidValue": "One of the selected user or role values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected user or role no longer exists. Please refresh and try again.",
+      "duplicate": "That user already has the selected role.",
+      "changePermission": "Permission denied: You do not have permission to change user roles.",
+      "missingField": "Missing required user role field.",
+      "missingFieldNamed": "Missing required user role field: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
+      "notFound": "Secret not found. It may have already been deleted. Please refresh and try again.",
+      "invalidName": "Invalid tenant or secret name.",
+      "readOnly": "Secret storage is read-only in this environment.",
+      "recordInvalid": "One of the selected secret records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected secret records no longer exists. Please refresh and try again.",
+      "duplicate": "A secret with this name already exists.",
+      "missingField": "Missing required secret field.",
+      "missingFieldNamed": "Missing required secret field: {{field}}.",
+      "permissions": {
+        "create": "Permission denied: Cannot create secrets",
+        "update": "Permission denied: Cannot update secrets",
+        "delete": "Permission denied: Cannot delete secrets"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Tenant id is required.",
+      "invalidValue": "One of the selected tenant setting values is invalid. Please refresh and try again.",
+      "missingField": "Missing required tenant settings field.",
+      "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
+      "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
+        "update": "Permission denied: Cannot update settings",
+        "enableAiAssistant": "Permission denied: Cannot enable AI Assistant for this tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "System template not found. It may have been deleted. Please refresh and try again.",
+      "templateNotFound": "Notification template not found. It may have been deleted. Please refresh and try again.",
+      "categoryNotFound": "Notification category not found. It may have been deleted. Please refresh and try again.",
+      "subtypeNotFound": "Notification subtype not found. It may have been deleted. Please refresh and try again.",
+      "notificationNotFound": "Notification not found. It may have already been updated or deleted.",
+      "recordInvalid": "One of the selected notification records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected notification records no longer exists. Please refresh and try again.",
+      "duplicate": "A notification setting with these details already exists.",
+      "missingField": "Missing required notification field.",
+      "missingFieldNamed": "Missing required notification field: {{field}}."
     }
   }
 }

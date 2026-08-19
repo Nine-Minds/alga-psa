@@ -3043,6 +3043,63 @@
       "invalidData": "Se proporcionaron datos de prioridad no válidos. Compruebe los datos de la prioridad.",
       "missingField": "Falta un campo obligatorio de la prioridad.",
       "missingFieldNamed": "Falta un campo obligatorio de la prioridad: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Uno de los usuarios seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los usuarios seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "readClientInfoPermission": "Permiso denegado: no se puede leer la información de cliente del usuario"
+    },
+    "roles": {
+      "userNotFound": "No se encontró el usuario. Actualice la lista de usuarios e inténtelo de nuevo.",
+      "roleNotFound": "No se encontró el rol. Actualice la lista de roles e inténtelo de nuevo.",
+      "portalRoleOnMspUser": "No se puede asignar un rol del portal del cliente a un usuario MSP.",
+      "mspRoleOnPortalUser": "No se puede asignar un rol MSP a un usuario del portal del cliente.",
+      "invalidValue": "Uno de los valores de usuario o rol seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El usuario o el rol seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ese usuario ya tiene el rol seleccionado.",
+      "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
+      "missingField": "Falta un campo obligatorio del rol de usuario.",
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
+      "notFound": "No se encontró el secreto. Es posible que ya se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidName": "Nombre de inquilino o de secreto no válido.",
+      "readOnly": "El almacenamiento de secretos es de solo lectura en este entorno.",
+      "recordInvalid": "Uno de los registros de secreto seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de secreto seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un secreto con este nombre.",
+      "missingField": "Falta un campo obligatorio del secreto.",
+      "missingFieldNamed": "Falta un campo obligatorio del secreto: {{field}}.",
+      "permissions": {
+        "create": "Permiso denegado: no se pueden crear secretos",
+        "update": "Permiso denegado: no se pueden actualizar secretos",
+        "delete": "Permiso denegado: no se pueden eliminar secretos"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Se requiere el id del inquilino.",
+      "invalidValue": "Uno de los valores de configuración del inquilino seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
+      "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
+      "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
+        "update": "Permiso denegado: no se puede actualizar la configuración",
+        "enableAiAssistant": "Permiso denegado: no se puede habilitar el Asistente de IA para este inquilino"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "No se encontró la plantilla del sistema. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "templateNotFound": "No se encontró la plantilla de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "categoryNotFound": "No se encontró la categoría de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "subtypeNotFound": "No se encontró el subtipo de notificación. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "notificationNotFound": "No se encontró la notificación. Es posible que ya se haya actualizado o eliminado.",
+      "recordInvalid": "Uno de los registros de notificación seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de notificación seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe una configuración de notificación con estos datos.",
+      "missingField": "Falta un campo obligatorio de la notificación.",
+      "missingFieldNamed": "Falta un campo obligatorio de la notificación: {{field}}."
     }
   }
 }

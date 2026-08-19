@@ -505,5 +505,13 @@
       "client": "Client",
       "currency": "Currency"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "One of the selected report records is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected report records no longer exists. Please refresh and try again.",
+      "missingField": "Missing required report field.",
+      "missingFieldNamed": "Missing required report field: {{field}}."
+    }
   }
 }

@@ -505,5 +505,13 @@
       "client": "Kunde",
       "currency": "Währung"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "Einer der ausgewählten Berichtsdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Berichtsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Berichtsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Berichtsfeld fehlt: {{field}}."
+    }
   }
 }

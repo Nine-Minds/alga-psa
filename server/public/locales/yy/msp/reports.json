@@ -505,5 +505,13 @@
       "client": "55555",
       "currency": "55555"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555"
+    }
   }
 }

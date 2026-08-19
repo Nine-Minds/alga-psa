@@ -461,5 +461,37 @@
       "topIssues": "Keine negativen Antworten in diesem Zeitraum.",
       "recentResponses": "Keine Antworten in diesem Zeitraum."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "Umfragevorlage nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "trigger": {
+      "notFound": "Umfrageauslöser nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "templateRequired": "Wählen Sie eine vorhandene Umfragevorlage aus, bevor Sie den Auslöser speichern."
+    },
+    "survey": {
+      "invalidValue": "Einer der ausgewählten Umfragewerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Die ausgewählte Umfragevorlage oder ein zugehöriger Datensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Umfragedatensatz mit diesen Angaben existiert bereits.",
+      "notAllowed": "Einer der Umfragewerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Umfragefeld fehlt.",
+      "missingFieldNamed": "Erforderliches Umfragefeld fehlt: {{field}}."
+    },
+    "options": {
+      "boardsFailed": "Die Boards können nicht geladen werden.",
+      "statusesFailed": "Die Status können nicht geladen werden.",
+      "prioritiesFailed": "Die Prioritäten können nicht geladen werden.",
+      "triggerOptionsFailed": "Die Optionen für Umfrageauslöser können nicht geladen werden. Bitte versuchen Sie es erneut."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Dieser Feedback-Link ist nicht mehr gültig oder wurde bereits verwendet.",
+      "ratingRequired": "Wählen Sie vor dem Absenden eine Bewertung aus den angezeigten Optionen aus.",
+      "linkInvalidOrExpired": "Dieser Feedback-Link ist ungültig oder abgelaufen.",
+      "ticketInactive": "Dieser Feedback-Link ist mit keinem aktiven Ticket mehr verknüpft. Bitte wenden Sie sich an Ihren Techniker.",
+      "alreadyCompleted": "Diese Umfrage wurde bereits abgeschlossen.",
+      "missingField": "Erforderliches Feedback-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches Feedback-Feld fehlt: {{field}}."
+    }
   }
 }

@@ -3043,6 +3043,63 @@
       "invalidData": "Ongeldige prioriteitsgegevens opgegeven. Controleer de prioriteitsgegevens.",
       "missingField": "Er ontbreekt een verplicht prioriteitsveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht prioriteitsveld: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Een van de geselecteerde gebruikers is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde gebruikers bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "readClientInfoPermission": "Toestemming geweigerd: klantgegevens van de gebruiker kunnen niet worden gelezen"
+    },
+    "roles": {
+      "userNotFound": "Gebruiker niet gevonden. Vernieuw de gebruikerslijst en probeer het opnieuw.",
+      "roleNotFound": "Rol niet gevonden. Vernieuw de rollenlijst en probeer het opnieuw.",
+      "portalRoleOnMspUser": "Een klantenportaalrol kan niet aan een MSP-gebruiker worden toegewezen.",
+      "mspRoleOnPortalUser": "Een MSP-rol kan niet aan een gebruiker van het klantenportaal worden toegewezen.",
+      "invalidValue": "Een van de geselecteerde gebruikers- of rolwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde gebruiker of rol bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
+      "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
+      "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
+      "notFound": "Secret niet gevonden. Mogelijk is het al verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidName": "Ongeldige tenant- of secretnaam.",
+      "readOnly": "De secretopslag is alleen-lezen in deze omgeving.",
+      "recordInvalid": "Een van de geselecteerde secretrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde secretrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een secret met deze naam.",
+      "missingField": "Er ontbreekt een verplicht secretveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht secretveld: {{field}}.",
+      "permissions": {
+        "create": "Toestemming geweigerd: secrets kunnen niet worden aangemaakt",
+        "update": "Toestemming geweigerd: secrets kunnen niet worden bijgewerkt",
+        "delete": "Toestemming geweigerd: secrets kunnen niet worden verwijderd"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "Tenant-ID is verplicht.",
+      "invalidValue": "Een van de geselecteerde tenantinstellingswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
+      "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
+        "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",
+        "enableAiAssistant": "Toestemming geweigerd: de AI-assistent kan niet worden ingeschakeld voor deze tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Systeemsjabloon niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "templateNotFound": "Meldingssjabloon niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "categoryNotFound": "Meldingscategorie niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "subtypeNotFound": "Meldingssubtype niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notificationNotFound": "Melding niet gevonden. Mogelijk is deze al bijgewerkt of verwijderd.",
+      "recordInvalid": "Een van de geselecteerde meldingsrecords is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde meldingsrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een meldingsinstelling met deze gegevens.",
+      "missingField": "Er ontbreekt een verplicht meldingsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht meldingsveld: {{field}}."
     }
   }
 }

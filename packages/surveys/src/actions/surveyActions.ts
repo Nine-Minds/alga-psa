@@ -51,13 +51,13 @@ function surveyActionErrorFrom(error: unknown): SurveyActionError | null {
       return permissionError(message);
     }
     if (message === 'Survey template not found') {
-      return actionError('Survey template not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Survey template not found. It may have been deleted. Please refresh and try again.', 'msp/surveys:errors.template.notFound');
     }
     if (message === 'Survey trigger not found') {
-      return actionError('Survey trigger not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Survey trigger not found. It may have been deleted. Please refresh and try again.', 'msp/surveys:errors.trigger.notFound');
     }
     if (message === 'Template does not belong to current tenant') {
-      return actionError('Choose an existing survey template before saving the trigger.');
+      return actionError('Choose an existing survey template before saving the trigger.', 'msp/surveys:errors.trigger.templateRequired');
     }
     if (
       message === 'Unable to load boards.' ||
@@ -70,19 +70,25 @@ function surveyActionErrorFrom(error: unknown): SurveyActionError | null {
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected survey values is invalid. Please refresh and try again.');
+    return actionError('One of the selected survey values is invalid. Please refresh and try again.', 'msp/surveys:errors.survey.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required survey field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required survey field: ${dbError.column}.`,
+          'msp/surveys:errors.survey.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required survey field.', 'msp/surveys:errors.survey.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected survey template or related record no longer exists. Please refresh and try again.');
+    return actionError('The selected survey template or related record no longer exists. Please refresh and try again.', 'msp/surveys:errors.survey.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A survey record with these details already exists.');
+    return actionError('A survey record with these details already exists.', 'msp/surveys:errors.survey.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the survey values is not allowed. Please review the form and try again.');
+    return actionError('One of the survey values is not allowed. Please review the form and try again.', 'msp/surveys:errors.survey.notAllowed');
   }
 
   return null;
@@ -659,7 +665,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
           const expected = surveyActionErrorFrom(error);
           if (expected) throw expected;
           console.error('[surveyActions] Failed to load boards for trigger reference data', error);
-          throw actionError('Unable to load boards.');
+          throw actionError('Unable to load boards.', 'msp/surveys:errors.options.boardsFailed');
         }),
       getTicketStatuses()
         .then((result) => {
@@ -670,7 +676,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
           const expected = surveyActionErrorFrom(error);
           if (expected) throw expected;
           console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
-          throw actionError('Unable to load statuses.');
+          throw actionError('Unable to load statuses.', 'msp/surveys:errors.options.statusesFailed');
         }),
       getProjectStatusesForSurveys().catch((error: unknown) => {
         console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
@@ -685,7 +691,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
           const expected = surveyActionErrorFrom(error);
           if (expected) throw expected;
           console.error('[surveyActions] Failed to load priorities for trigger reference data', error);
-          throw actionError('Unable to load priorities.');
+          throw actionError('Unable to load priorities.', 'msp/surveys:errors.options.prioritiesFailed');
         }),
     ]);
 
@@ -699,7 +705,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
     const expected = surveyActionErrorFrom(error);
     if (expected) return expected;
     console.error('[surveyActions] Failed to load trigger reference data', error);
-    return actionError('Unable to load survey trigger options. Please try again.');
+    return actionError('Unable to load survey trigger options. Please try again.', 'msp/surveys:errors.options.triggerOptionsFailed');
   }
 }
 

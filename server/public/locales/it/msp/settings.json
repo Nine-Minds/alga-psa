@@ -3043,6 +3043,63 @@
       "invalidData": "Dati della priorità non validi. Controllare i dettagli della priorità.",
       "missingField": "Manca un campo obbligatorio della priorità.",
       "missingFieldNamed": "Manca un campo obbligatorio della priorità: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Uno degli utenti selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno degli utenti selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "readClientInfoPermission": "Autorizzazione negata: impossibile leggere le informazioni cliente dell’utente"
+    },
+    "roles": {
+      "userNotFound": "Utente non trovato. Aggiornare l’elenco degli utenti e riprovare.",
+      "roleNotFound": "Ruolo non trovato. Aggiornare l’elenco dei ruoli e riprovare.",
+      "portalRoleOnMspUser": "Non è possibile assegnare un ruolo del portale clienti a un utente MSP.",
+      "mspRoleOnPortalUser": "Non è possibile assegnare un ruolo MSP a un utente del portale clienti.",
+      "invalidValue": "Uno dei valori di utente o ruolo selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "L’utente o il ruolo selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Questo utente ha già il ruolo selezionato.",
+      "changePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per modificare i ruoli degli utenti.",
+      "missingField": "Manca un campo obbligatorio del ruolo utente.",
+      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
+      "notFound": "Secret non trovato. Potrebbe essere già stato eliminato. Aggiornare la pagina e riprovare.",
+      "invalidName": "Nome del tenant o del secret non valido.",
+      "readOnly": "L’archivio dei secret è di sola lettura in questo ambiente.",
+      "recordInvalid": "Uno dei record dei secret selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record dei secret selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un secret con questo nome.",
+      "missingField": "Manca un campo obbligatorio del secret.",
+      "missingFieldNamed": "Manca un campo obbligatorio del secret: {{field}}.",
+      "permissions": {
+        "create": "Autorizzazione negata: impossibile creare secret",
+        "update": "Autorizzazione negata: impossibile aggiornare i secret",
+        "delete": "Autorizzazione negata: impossibile eliminare i secret"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "L’id del tenant è obbligatorio.",
+      "invalidValue": "Uno dei valori delle impostazioni del tenant selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio delle impostazioni del tenant.",
+      "missingFieldNamed": "Manca un campo obbligatorio delle impostazioni del tenant: {{field}}.",
+      "invalidTimezone": "Fuso orario non valido: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Autorizzazione negata: solo gli amministratori possono cancellare i dati di onboarding.",
+        "update": "Autorizzazione negata: impossibile aggiornare le impostazioni",
+        "enableAiAssistant": "Autorizzazione negata: impossibile abilitare l’assistente IA per questo tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Modello di sistema non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "templateNotFound": "Modello di notifica non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "categoryNotFound": "Categoria di notifica non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "subtypeNotFound": "Sottotipo di notifica non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "notificationNotFound": "Notifica non trovata. Potrebbe essere già stata aggiornata o eliminata.",
+      "recordInvalid": "Uno dei record di notifica selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record di notifica selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un’impostazione di notifica con questi dati.",
+      "missingField": "Manca un campo obbligatorio della notifica.",
+      "missingFieldNamed": "Manca un campo obbligatorio della notifica: {{field}}."
     }
   }
 }

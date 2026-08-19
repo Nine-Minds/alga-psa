@@ -3043,6 +3043,63 @@
       "invalidData": "Dados de prioridade inválidos. Verifique os detalhes da prioridade.",
       "missingField": "Falta um campo obrigatório da prioridade.",
       "missingFieldNamed": "Falta um campo obrigatório da prioridade: {{field}}."
+    },
+    "users": {
+      "invalidValue": "Um dos usuários selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos usuários selecionados não existe mais. Atualize a página e tente novamente.",
+      "readClientInfoPermission": "Permissão negada: não é possível ler as informações de cliente do usuário"
+    },
+    "roles": {
+      "userNotFound": "Usuário não encontrado. Atualize a lista de usuários e tente novamente.",
+      "roleNotFound": "Função não encontrada. Atualize a lista de funções e tente novamente.",
+      "portalRoleOnMspUser": "Não é possível atribuir uma função do portal do cliente a um usuário MSP.",
+      "mspRoleOnPortalUser": "Não é possível atribuir uma função MSP a um usuário do portal do cliente.",
+      "invalidValue": "Um dos valores de usuário ou função selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O usuário ou a função selecionada não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Esse usuário já tem a função selecionada.",
+      "changePermission": "Permissão negada: você não tem permissão para alterar as funções dos usuários.",
+      "missingField": "Falta um campo obrigatório da função do usuário.",
+      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}."
+    },
+    "secrets": {
+      "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
+      "notFound": "Segredo não encontrado. Ele pode já ter sido excluído. Atualize a página e tente novamente.",
+      "invalidName": "Nome de tenant ou de segredo inválido.",
+      "readOnly": "O armazenamento de segredos é somente leitura neste ambiente.",
+      "recordInvalid": "Um dos registros de segredo selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segredo selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um segredo com este nome.",
+      "missingField": "Falta um campo obrigatório do segredo.",
+      "missingFieldNamed": "Falta um campo obrigatório do segredo: {{field}}.",
+      "permissions": {
+        "create": "Permissão negada: não é possível criar segredos",
+        "update": "Permissão negada: não é possível atualizar segredos",
+        "delete": "Permissão negada: não é possível excluir segredos"
+      }
+    },
+    "tenantSettings": {
+      "tenantIdRequired": "O id do tenant é obrigatório.",
+      "invalidValue": "Um dos valores de configuração do tenant selecionados é inválido. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório das configurações do tenant.",
+      "missingFieldNamed": "Falta um campo obrigatório das configurações do tenant: {{field}}.",
+      "invalidTimezone": "Fuso horário inválido: {{timezone}}",
+      "permissions": {
+        "clearOnboarding": "Permissão negada: apenas administradores podem limpar os dados de onboarding.",
+        "update": "Permissão negada: não é possível atualizar as configurações",
+        "enableAiAssistant": "Permissão negada: não é possível ativar o Assistente de IA para este tenant"
+      }
+    },
+    "notifications": {
+      "systemTemplateNotFound": "Modelo do sistema não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "templateNotFound": "Modelo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "categoryNotFound": "Categoria de notificação não encontrada. Ela pode ter sido excluída. Atualize a página e tente novamente.",
+      "subtypeNotFound": "Subtipo de notificação não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "notificationNotFound": "Notificação não encontrada. Ela pode já ter sido atualizada ou excluída.",
+      "recordInvalid": "Um dos registros de notificação selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de notificação selecionados não existe mais. Atualize a página e tente novamente.",
+      "duplicate": "Já existe uma configuração de notificação com estes dados.",
+      "missingField": "Falta um campo obrigatório da notificação.",
+      "missingFieldNamed": "Falta um campo obrigatório da notificação: {{field}}."
     }
   }
 }

@@ -42,13 +42,19 @@ export function reportingActionErrorFrom(error: unknown): ReportingActionError |
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected report records is invalid. Please refresh and try again.');
+    return actionError('One of the selected report records is invalid. Please refresh and try again.', 'msp/reports:errors.report.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required report field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required report field: ${dbError.column}.`,
+          'msp/reports:errors.report.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required report field.', 'msp/reports:errors.report.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected report records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected report records no longer exists. Please refresh and try again.', 'msp/reports:errors.report.referenceMissing');
   }
 
   return null;

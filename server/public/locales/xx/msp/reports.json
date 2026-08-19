@@ -505,5 +505,13 @@
       "client": "11111",
       "currency": "11111"
     }
+  },
+  "errors": {
+    "report": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    }
   }
 }
