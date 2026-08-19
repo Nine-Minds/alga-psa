@@ -375,7 +375,26 @@ node tools/i18n/find-untranslated-ui.cjs --severity=high   # against 155
 ```
 
 Manual QA: switch locale to `xx` and walk the migrated flow — every string should read `11111`. Deliberately
-trigger the error paths; that is the only way the pseudo-locale catches an error message.
+trigger the error paths; that is the only way the pseudo-locale catches an error message. The dev app signs in
+with a seeded user whose `hashed_password` column is PBKDF2 `salt:hash` over `NEXTAUTH_SECRET + salt`
+(`shared/utils/encryption.ts`), so a local QA password is one `UPDATE users` away.
+
+Two checks worth running before calling a package done, because neither the gate nor the type-checker covers
+them:
+
+```bash
+# every key a call site names actually resolves in en (a typo silently falls back to English)
+# collect '<namespace>:errors.<key>' from src, look each one up in server/public/locales/en/<namespace>.json
+
+# every catalogued key landed in all eight real locales with the text that was written
+# (the merge writes eight files per namespace; a second pass over the same key overwrites silently)
+```
+
+The per-package shape that worked: scan for `actionError(`/`permissionError(` call sites, write one catalogue
+of `{ key: { en, de, es, fr, it, nl, pl, pt } }`, apply the keys with a codemod that only touches sites whose
+sole argument is a plain literal, then merge the catalogue into the locale files and regenerate. Everything
+that is not a plain literal — templates, helpers taking an English noun — is worth doing by hand, and is where
+all the interesting decisions are.
 
 ## Notes for the implementer
 
