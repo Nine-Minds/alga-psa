@@ -1,6 +1,6 @@
 # Error-message i18n — remediation plan
 
-Status: proposed, not started. Written 2026-08-18 for handover.
+Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19.
 
 ## Context
 
@@ -39,8 +39,11 @@ scheduling 209, tickets 205, projects 196.
 - `packages/core/src/lib/i18n/config.ts` — `ROUTE_NAMESPACES`, only ~50 routes mapped.
 - `tools/i18n/find-untranslated-ui.cjs` — the measurement tool. `--json`, `--file=PATH`, `--severity=high`.
 - `tools/i18n/unwired-baseline.json` — debt ratchet for the no-i18n files. Delete a line when you wire a file up.
-- `tools/i18n/ci-gate.mjs` — gates run **report-only** until `I18N_ENFORCE=true` in
-  `.github/workflows/validate-translations.yml`.
+- `tools/i18n/ci-gate.mjs` — **already enforcing.** `I18N_ENFORCE: 'true'` was set in
+  `.github/workflows/validate-translations.yml` on 2026-08-10 (`649512b488`), so the gate is red on any
+  regression today. Consequence for this plan: every PR that adds a key must ship **all 7 real locales**
+  translated and glossary-clean, plus regenerated pseudo-locales — there is no report-only grace period,
+  and the final "flip the switch" step in the sequencing below is already done.
 - `npm run test:i18n` — the whole gate (pseudo-locale generation, key validation, audits, glossary tests).
 
 ## Decision to carry into implementation
@@ -71,7 +74,7 @@ Rejected alternatives, with reasons, so this is not relitigated:
 - *English→key maps in the component* — this is what `docs/architecture/i18n.md` currently documents under
   "Error and toast messages", and it is what the in-flight diff just deleted from `ClientInfoStep`. It
   couples error identity to English prose, which is already causing the problem in category 3 below.
-  **The doc section must be rewritten as part of this work.**
+  The doc section has since been rewritten to document the boundary; it no longer contradicts this plan.
 
 ## Category 1 — server-action error channel (the bulk: ~1,443 literals)
 
@@ -103,8 +106,16 @@ and it makes the operation idempotent when a wrapped action calls another wrappe
 Steps:
 1. Land `localizeActionError` plus the extended type and `actionError` signature. Behaviour is unchanged until
    the first key is passed — the wrapper is a no-op on key-less payloads.
-2. Handle the 19 `actionError` files that do not go through `withAuth`: wrap them, or apply
-   `localizeActionError` at their own boundary. Do this before enabling any key in those files.
+2. Triage — not blanket-wrap — the `actionError` files that do not go through `withAuth`. Sixteen of the
+   nineteen are `*ActionErrors.ts` / `*Errors.ts` **mapper modules**: they build a payload that is returned
+   through an already-wrapped caller, so the boundary covers them and wrapping them would be wrong. The real
+   work is three files plus one wrapper:
+   - `packages/surveys/src/actions/surveyResponseActions.ts` — anonymous token flow, no session; localize at
+     its own return via `resolveRequestLocale`.
+   - `packages/billing/src/actions/recurringBillingRunActions.ts` — declares its own local `actionError` /
+     `permissionError`; route it through the shared helpers so the boundary can see the payload.
+   - `server/src/lib/actions/licenseManagementActions.ts` — same shape, hand-rolled permission guard.
+   - `withOptionalAuth` needs `localizeActionError` too (the anonymous branch returns without `runWithTenant`).
 3. Migrate by package, most user-visible first: **client-portal (266) → clients (266) → tickets (205) →
    billing (731) → integrations (436) → the rest.** Per package: add an `errors.*` block to that package's
    namespace under `server/public/locales/en/`, then pass keys at each `actionError` call. No client changes.
@@ -112,8 +123,8 @@ Steps:
    only genuinely app-wide errors go in `common.json`. Follow the shape in `docs/architecture/i18n.md`
    ("How to Add Translation Keys"). Namespace choice is now a server-side disk read, so it is not constrained
    by `ROUTE_NAMESPACES`.
-5. Rewrite the "Error and toast messages" section of `docs/architecture/i18n.md` to document this pattern
-   and mark the English-map pattern as deprecated.
+5. ~~Rewrite the "Error and toast messages" section of `docs/architecture/i18n.md`~~ — done; it now documents
+   boundary translation and marks the English-map pattern deprecated.
 
 Do not attempt this in one pass. One package per PR, each independently shippable.
 
@@ -181,16 +192,17 @@ Closes the gaps left by the current diff. Half a day.
   (a component that already has `vt`) and returned from
   `packages/users/src/actions/user-actions/userInvitationActions.ts:271`. Give it the same
   `ValidationTranslator` parameter and add `common:…password.*` keys.
-- Missed call sites: `server/src/components/settings/profile/UserProfile.tsx:269` (submit path lacks `vt`
-  while the blur path at `:470` has it — same field, two languages);
-  `packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx:125`;
-  `packages/auth/src/components/RegisterForm.tsx:108` and `:198`.
-- `packages/clients/src/components/clients/QuickAddClient.tsx` lines 278, 317, 319, 324, 326, 349, 351, 355,
-  357 — inline English that runs *before* the now-translated validator and shadows it for the common phone
-  failures. Delete these branches in favour of the validator, or route them through `vt`.
-- Dead code: `vt` declared in `packages/clients/src/components/contacts/QuickAddContact.tsx:56`
-  (`ErrorFallback`) and `server/src/components/settings/profile/UserProfile.tsx:252` (`ConnectSsoLoading`) —
-  neither component validates anything. Remove, and narrow those two `useTranslation` namespace arrays back.
+- Missed call sites: `packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx:125` (plus its
+  hardcoded `"Phone N:"` / `"Enter a complete phone number."` prose);
+  `packages/auth/src/components/RegisterForm.tsx:108` and `:198`;
+  `packages/users/src/actions/user-actions/userInvitationActions.ts:271` — server-side, so it needs a key on
+  the payload once the category-1 boundary lands, or client-side validation before submit.
+  *(`UserProfile.tsx:269`, listed here originally, was fixed in `ee808b432b`.)*
+- `packages/clients/src/components/clients/QuickAddClient.tsx` lines ~278 and 315–357 — inline English that
+  runs *before* the now-translated validator and shadows it for the common phone failures. Delete these
+  branches in favour of the validator, or route them through `vt`.
+- ~~Dead `vt` in `QuickAddContact`'s `ErrorFallback` and `UserProfile`'s `ConnectSsoLoading`~~ — both removed
+  in `ee808b432b`.
 - `packages/integrations/src/components/settings/integrations/MicrosoftEmailSetupDialog.tsx` still carries an
   English→key lookup map of the kind this diff removed from `ClientInfoStep`. Convert it once category 1
   gives its action keys.
@@ -205,7 +217,9 @@ Closes the gaps left by the current diff. Half a day.
 4. Category 1 step 3 — migrate package by package, client-portal first. Category 2 rides along per package;
    category 4 largely resolves itself.
 5. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired.
-6. Flip `I18N_ENFORCE=true` once the ratchet holds.
+
+`I18N_ENFORCE=true` is already set, so there is no flip to schedule — instead, every step above must leave
+`npm run test:i18n` green, all 7 locales included, before it merges.
 
 ## Verification
 
@@ -239,8 +253,8 @@ trigger the error paths; that is the only way the pseudo-locale catches an error
   from disk server-side.
 - Verify `localizeActionError` runs inside `runWithTenant` or after it as appropriate — locale resolution
   reads `tenant_settings`, so it needs tenant context.
-- The MSP portal is gated by the `msp-i18n-enabled` feature flag and forces English when off; client portal
-  is not gated. Test with the flag on.
+- The `msp-i18n-enabled` feature flag no longer exists in code — it survives only in old plan documents under
+  `ee/docs/plans/2026-0*-msp-i18n-*`. MSP translations are unconditional; there is no flag to turn on.
 - `find-untranslated-ui.cjs` suppresses `throw new Error(…)` by design — internal throws are not in scope.
   If an English `throw` reaches a user, the bug is that it is thrown instead of returned via `actionError`.
 - Residual false positives in the audit are brand names and enum-ish values (`'Google'`, `'Pro'`, `'Net 30'`).
