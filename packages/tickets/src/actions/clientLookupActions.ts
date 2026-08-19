@@ -11,6 +11,10 @@ import {
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
+import {
+  listClientBillingProfiles,
+  type ClientBillingProfileRow,
+} from '@alga-psa/shared/billingClients/billingProfiles';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
@@ -90,6 +94,26 @@ export const getAllActiveContacts = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getAllActiveContactsModel(trx, tenant, sortDirection);
+  });
+});
+
+/**
+ * The client's billing profiles, for the ticket profile picker (F047).
+ *
+ * A thin wrapper over the shared model rather than a re-implementation: the
+ * D6 invisibility rule reads `profiles.length > 1`, and two implementations of
+ * that list would eventually disagree about whether a client is segmented.
+ */
+export const getClientBillingProfiles = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+): Promise<ClientBillingProfileRow[]> => {
+  await assertInternalReadAccess(user, 'client');
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return listClientBillingProfiles(trx, tenant, clientId);
   });
 });
 

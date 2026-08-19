@@ -1798,6 +1798,12 @@
       "approved": "Approuvé : {{amount}}",
       "ready": "Prêt : {{amount}}",
       "total": "Total: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil par défaut du client",
+      "hint": "Les charges de temps et d'échéancier de ce projet sont facturées à ce profil, sauf si un contrat les revendique.",
+      "updated": "Profil de facturation mis à jour"
     }
   },
   "taskTypes": {

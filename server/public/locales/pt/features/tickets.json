@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Falha ao abrir o agendador",
     "loadCommentsFailed": "Falha ao carregar os comentários",
     "updateTicketFailed": "Falha ao atualizar o ticket",
-    "errorWithMessage": "Erro: {{message}}"
+    "errorWithMessage": "Erro: {{message}}",
+    "billingProfileUpdated": "Perfil de faturamento atualizado",
+    "updateBillingProfileFailed": "Falha ao atualizar o perfil de faturamento"
   },
   "conversation": {
     "comments": "Comentários",
@@ -955,7 +957,10 @@
       "selective": "Selecione membros individuais para manter/remover"
     },
     "noTeamMembersOnTicket": "Nenhum membro da equipe encontrado neste ticket.",
-    "unnamedUser": "Usuário Sem Nome"
+    "unnamedUser": "Usuário Sem Nome",
+    "billingProfile": "Perfil de faturamento",
+    "billingProfileUnassigned": "Usar o perfil padrão",
+    "billingProfileHint": "Só é usado quando nenhum contrato atribui este trabalho a um perfil."
   },
   "settings": {
     "categories": {

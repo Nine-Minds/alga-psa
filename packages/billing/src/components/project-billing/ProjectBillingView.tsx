@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ProjectBillingProfileCard } from './ProjectBillingProfileCard';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -178,6 +179,12 @@ export default function ProjectBillingView({
           />
         </>
       )}
+
+      <ProjectBillingProfileCard
+        projectId={projectId}
+        clientId={clientId}
+        canManage={canManage}
+      />
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
         <BudgetVsActualCard config={config} rollup={rollup} capUsage={cap_usage} />

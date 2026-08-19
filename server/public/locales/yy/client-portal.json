@@ -426,7 +426,8 @@
       "recentInvoicesTitle": "55555",
       "billingHistoryTitle": "55555",
       "labels": {
-        "defaultTag": "55555"
+        "defaultTag": "55555",
+        "paysFor": "55555 {{profile}} 55555"
       },
       "actions": {
         "setDefault": "55555",
@@ -440,7 +441,8 @@
         "expiryMonth": "55555",
         "expiryYear": "55555",
         "cvv": "55555",
-        "setAsDefault": "55555"
+        "setAsDefault": "55555",
+        "billingProfile": "55555"
       },
       "history": {
         "period": "55555",
@@ -893,6 +895,15 @@
         "backToBilling": "55555",
         "viewInvoice": "55555"
       }
+    },
+    "segments": {
+      "allSegments": "55555",
+      "organizationTotalLabel": "55555",
+      "periodLabel": "55555 {{start}} 55555 {{end}} 55555",
+      "selectorLabel": "55555",
+      "empty": "55555",
+      "chargesTitle": "55555",
+      "noCharges": "55555"
     }
   },
   "assets": {

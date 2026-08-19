@@ -2,6 +2,7 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
+import type { BillingProfileSource } from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -105,6 +106,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
   location_id?: string | null;
+  /**
+   * Billing profile this charge is attributed to, and which step of the
+   * resolution chain produced it. Written for every generated charge.
+   */
+  billing_profile_id?: string | null;
+  billing_profile_source?: BillingProfileSource | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header

@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Der Terminplaner konnte nicht geöffnet werden",
     "loadCommentsFailed": "Kommentare konnten nicht geladen werden",
     "updateTicketFailed": "Das Ticket konnte nicht aktualisiert werden",
-    "errorWithMessage": "Fehler: {{message}}"
+    "errorWithMessage": "Fehler: {{message}}",
+    "billingProfileUpdated": "Abrechnungsprofil aktualisiert",
+    "updateBillingProfileFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -955,7 +957,10 @@
       "selective": "Einzelne Mitglieder zum Behalten/Entfernen auswählen"
     },
     "noTeamMembersOnTicket": "Keine Teammitglieder auf diesem Ticket gefunden.",
-    "unnamedUser": "Unbenannter Benutzer"
+    "unnamedUser": "Unbenannter Benutzer",
+    "billingProfile": "Abrechnungsprofil",
+    "billingProfileUnassigned": "Standardprofil verwenden",
+    "billingProfileHint": "Wird nur verwendet, wenn kein Vertrag diese Arbeit einem Profil zuordnet."
   },
   "settings": {
     "categories": {

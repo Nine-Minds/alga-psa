@@ -1798,6 +1798,12 @@
       "approved": "Approved: {{amount}}",
       "ready": "Ready: {{amount}}",
       "total": "Total: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Billing profile",
+      "none": "Use the client's default profile",
+      "hint": "Time and schedule charges from this project are billed to this profile unless a contract claims them.",
+      "updated": "Billing profile updated"
     }
   },
   "taskTypes": {

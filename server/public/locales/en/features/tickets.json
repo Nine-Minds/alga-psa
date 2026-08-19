@@ -308,7 +308,9 @@
     "closeFailed": "Failed to close ticket",
     "loadCommentsFailed": "Failed to load comments",
     "updateTicketFailed": "Failed to update ticket",
-    "errorWithMessage": "Error: {{message}}"
+    "errorWithMessage": "Error: {{message}}",
+    "billingProfileUpdated": "Billing profile updated",
+    "updateBillingProfileFailed": "Failed to update billing profile"
   },
   "conversation": {
     "comments": "Comments",
@@ -963,7 +965,10 @@
       "selective": "Select individual members to keep/remove"
     },
     "noTeamMembersOnTicket": "No team members found on this ticket.",
-    "unnamedUser": "Unnamed User"
+    "unnamedUser": "Unnamed User",
+    "billingProfile": "Billing profile",
+    "billingProfileUnassigned": "Use the default profile",
+    "billingProfileHint": "Only used when no contract assigns this work to a profile."
   },
   "settings": {
     "categories": {

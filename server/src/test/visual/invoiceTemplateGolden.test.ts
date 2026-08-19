@@ -17,6 +17,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers';
 
 // Pixel-golden layout regression suite for the standard invoice templates
 // shipped by the migrations (`standard_invoice_templates`). A fully
@@ -356,7 +357,7 @@ describeDb('visual goldens: standard invoice templates', () => {
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
     const januaryCycleId = 'dddd1111-2222-4333-8444-555566667777';
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,

@@ -6,7 +6,8 @@
     "invoices": "Rechnungen",
     "overview": "Übersicht",
     "quotes": "Angebote",
-    "usageMetrics": "Nutzungskennzahlen"
+    "usageMetrics": "Nutzungskennzahlen",
+    "segments": "Nach Segment"
   },
   "currentContractLine": "Aktueller Tarif",
   "nextInvoice": "Nächste Rechnung",

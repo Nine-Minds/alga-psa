@@ -24,6 +24,11 @@ import { KnexCompanyMappingRepository } from '../../services/companySync/company
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+import {
+  BILLING_PROFILE_ENTITY_TYPE,
+  CLIENT_ENTITY_TYPE,
+  resolveInvoiceExportTarget,
+} from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
 import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
@@ -39,6 +44,7 @@ type DbInvoice = {
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
   invoice_type?: string | null;
+  billing_profile_id?: string | null;
 };
 
 type DbCharge = {
@@ -259,14 +265,27 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         throw new Error(`QuickBooks adapter: client ${clientId} not found for invoice ${invoiceId}`);
       }
 
-      let clientMapping = clientData.mappings.get(clientId);
+      // Which external customer this invoice belongs to: the client's parent
+      // customer, or the sub-customer of the profile that billed it (F121).
+      // An invoice raised for a separately-billing site is a demand on that
+      // site — exporting it against the parent puts the balance on the wrong
+      // ledger and the wrong statement.
+      const exportTarget = await resolveInvoiceExportTarget(
+        knex,
+        tenantId,
+        clientId,
+        clientRow.client_name ?? clientId,
+        invoice.billing_profile_id ?? null
+      );
+
+      let clientMapping = clientData.mappings.get(exportTarget.algaEntityId);
       if (!clientMapping) {
         // Defense in depth behind the batch-validation check: without explicit
         // opt-in, the delivery path never creates or links QBO customers —
         // that decision belongs to a human in the mapping wizard.
         if (!syncSettings?.autoProvisionCustomers) {
           throw new Error(
-            `QuickBooks adapter: customer "${clientRow.client_name ?? clientId}" has no QuickBooks mapping and automatic customer creation is disabled — link the customer from the QuickBooks customer mapping screen`
+            `QuickBooks adapter: customer "${exportTarget.displayName}" has no QuickBooks mapping and automatic customer creation is disabled — link the customer from the QuickBooks customer mapping screen`
           );
         }
 
@@ -274,18 +293,51 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           throw new Error('QuickBooks adapter requires batch target realm to sync customers');
         }
 
+        // A sub-customer cannot be created without its parent, so the client's
+        // own customer is resolved first (F118).
+        let parentExternalId: string | null = null;
+        if (exportTarget.isSubCustomer) {
+          const parentMapping =
+            clientData.mappings.get(clientId) ??
+            mappingFromResolution(
+              clientId,
+              (await resolver.ensureCompanyMapping({
+                tenantId,
+                adapterType: this.type,
+                companyId: clientId,
+                payload: buildNormalizedCompanyPayload({
+                  companyId: clientId,
+                  name: clientRow.client_name ?? clientId,
+                  primaryEmail: clientRow.billing_email ?? null
+                }),
+                targetRealm: context.batch.target_realm
+              })) ??
+                (() => {
+                  throw new Error(
+                    `QuickBooks adapter: unable to resolve parent customer for client ${clientId}`
+                  );
+                })(),
+              this.type,
+              context.batch.target_realm
+            );
+          clientData.mappings.set(clientId, parentMapping);
+          parentExternalId = parentMapping.external_entity_id;
+        }
+
         const companyPayload = buildNormalizedCompanyPayload({
-          companyId: clientId,
-          name: clientRow.client_name ?? clientId,
+          companyId: exportTarget.algaEntityId,
+          name: exportTarget.displayName,
           primaryEmail: clientRow.billing_email ?? null
         });
+        companyPayload.parentExternalId = parentExternalId;
 
         const mappingResolution = await resolver.ensureCompanyMapping({
           tenantId,
           adapterType: this.type,
-          companyId: clientId,
+          companyId: exportTarget.algaEntityId,
           payload: companyPayload,
-          targetRealm: context.batch.target_realm
+          targetRealm: context.batch.target_realm,
+          algaEntityType: exportTarget.algaEntityType
         });
 
         if (!mappingResolution) {
@@ -293,12 +345,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         clientMapping = mappingFromResolution(
-          clientId,
+          exportTarget.algaEntityId,
           mappingResolution,
           this.type,
           context.batch.target_realm
         );
-        clientData.mappings.set(clientId, clientMapping);
+        clientData.mappings.set(exportTarget.algaEntityId, clientMapping);
       }
 
       if (!clientMapping) {
@@ -1078,7 +1130,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'client_id',
         'currency_code',
         'exchange_rate_basis_points',
-        'invoice_type'
+        'invoice_type',
+        'billing_profile_id'
       )
       .whereIn('invoice_id', invoiceIds);
 
@@ -1125,10 +1178,16 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     invoices: Map<string, DbInvoice>
   ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow> }> {
     const clientIds = new Set<string>();
+    // Profiles the invoices in this batch bill for. A sub-customer mapping is
+    // keyed on the profile, not the client (F121).
+    const profileIds = new Set<string>();
 
     for (const invoice of invoices.values()) {
       if (invoice.client_id) {
         clientIds.add(invoice.client_id);
+      }
+      if (invoice.billing_profile_id) {
+        profileIds.add(invoice.billing_profile_id);
       }
     }
 
@@ -1151,8 +1210,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
       .where('integration_type', this.type)
-      .whereIn('alga_entity_type', ['client'])
-      .whereIn('alga_entity_id', Array.from(clientIds))
+      // Profile-level rows sit in the same table under a second entity type
+      // (F116). Loading both here keeps the export a single query rather than
+      // a per-invoice lookup.
+      .whereIn('alga_entity_type', [CLIENT_ENTITY_TYPE, BILLING_PROFILE_ENTITY_TYPE])
+      .whereIn('alga_entity_id', [...clientIds, ...profileIds])
       .modify((qb) => {
         if (context.batch.target_realm) {
           qb.andWhere((builder) => {

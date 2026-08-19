@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
     "updateTicketFailed": "Ticket bijwerken mislukt",
-    "errorWithMessage": "Fout: {{message}}"
+    "errorWithMessage": "Fout: {{message}}",
+    "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
+    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt"
   },
   "conversation": {
     "comments": "Reacties",
@@ -955,7 +957,10 @@
       "selective": "Selecteer individuele leden om te behouden/verwijderen"
     },
     "noTeamMembersOnTicket": "Geen teamleden gevonden op dit ticket.",
-    "unnamedUser": "Naamloze gebruiker"
+    "unnamedUser": "Naamloze gebruiker",
+    "billingProfile": "Facturatieprofiel",
+    "billingProfileUnassigned": "Standaardprofiel gebruiken",
+    "billingProfileHint": "Wordt alleen gebruikt als geen enkel contract dit werk aan een profiel toewijst."
   },
   "settings": {
     "categories": {

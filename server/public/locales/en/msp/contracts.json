@@ -471,6 +471,12 @@
       "createCustom": "Create Custom",
       "expandLine": "Expand contract line"
     },
+    "billingProfile": {
+      "hint": "Charges from this line are billed to this profile, overriding the contract.",
+      "label": "Billing profile",
+      "none": "Use the contract's profile",
+      "updated": "Billing profile updated"
+    },
     "bucket": {
       "billingPeriod": "Billing Period: {{period}}",
       "defaultUnit": "unit",

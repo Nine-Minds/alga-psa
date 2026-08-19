@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Factures récentes",
       "billingHistoryTitle": "Historique de facturation",
       "labels": {
-        "defaultTag": "(Par défaut)"
+        "defaultTag": "(Par défaut)",
+        "paysFor": "Paie pour {{profile}}"
       },
       "actions": {
         "setDefault": "Définir par défaut",
@@ -391,7 +392,8 @@
         "expiryMonth": "Mois",
         "expiryYear": "Année",
         "cvv": "CVV",
-        "setAsDefault": "Définir comme méthode de paiement par défaut"
+        "setAsDefault": "Définir comme méthode de paiement par défaut",
+        "billingProfile": "Paie pour"
       },
       "history": {
         "period": "Période",
@@ -893,6 +895,15 @@
         "backToBilling": "Retour à la facturation",
         "viewInvoice": "Voir la facture"
       }
+    },
+    "segments": {
+      "allSegments": "Toute l’organisation",
+      "organizationTotalLabel": "Total de votre organisation",
+      "periodLabel": "du {{start}} au {{end}}",
+      "selectorLabel": "Afficher",
+      "empty": "Aucune charge facturée sur cette période.",
+      "chargesTitle": "Charges de ce segment",
+      "noCharges": "Aucune charge sur cette période."
     }
   },
   "assets": {

@@ -12,6 +12,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 // P0 journey (docs: journey-first testing pivot): the through-line an MSP
 // actually walks — client exists, admin runs the contract wizard with the
@@ -161,7 +162,7 @@ describe('journey: contract wizard → monthly invoice', () => {
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
     const januaryCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,

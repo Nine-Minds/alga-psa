@@ -731,7 +731,10 @@
     "deactivateError": "Échec de la désactivation du contrat",
     "updateError": "Échec de la mise à jour du contrat",
     "createContract": "Créer un contrat",
-    "quickAdd": "Ajout rapide"
+    "quickAdd": "Ajout rapide",
+    "billingProfile": "Profil de facturation",
+    "billingProfileUnassigned": "Non attribué",
+    "billingProfileUpdated": "Profil de facturation mis à jour"
   },
   "clientContractDialog": {
     "assignTitle": "Attribuer un contrat au client",
@@ -1366,7 +1369,10 @@
         "stateProvince": "État/Province",
         "stateProvinceHelper": "Nom de l'État ou de la province",
         "taxRegion": "Région fiscale",
-        "taxRegionHelper": "Sélectionnez la région fiscale applicable"
+        "taxRegionHelper": "Sélectionnez la région fiscale applicable",
+        "defaultBillingProfile": "Profil de facturation par défaut",
+        "defaultBillingProfileNone": "Aucun",
+        "defaultBillingProfileHelper": "Les nouveaux tickets à ce site démarrent avec ce profil de facturation. Il reste modifiable sur le ticket."
       },
       "listTitle": "Emplacements",
       "loading": "Chargement des emplacements...",
@@ -1601,6 +1607,54 @@
       "notFound": "Contact introuvable.",
       "loadFailed": "Échec du chargement du contact."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Profils de facturation",
+    "description": "Facturez séparément des sites, entités ou établissements au sein de ce client. Les charges sont attribuées à un profil via le contrat, la ligne de contrat ou l'élément de travail dont elles proviennent ; ce qui n'est pas attribué revient au profil par défaut.",
+    "loading": "Chargement des profils de facturation…",
+    "defaultBadge": "Par défaut",
+    "rename": "Renommer",
+    "makeDefault": "Définir par défaut",
+    "archive": "Archiver",
+    "delete": "Supprimer",
+    "restore": "Restaurer",
+    "archivedHeading": "Archivés",
+    "addLabel": "Ajouter un profil de facturation",
+    "addPlaceholder": "p. ex. Usine Nord",
+    "addButton": "Ajouter un profil",
+    "created": "Profil de facturation « {{name}} » créé",
+    "renamed": "Profil de facturation renommé",
+    "madeDefault": "« {{name}} » est désormais le profil de facturation par défaut",
+    "archived": "« {{name}} » archivé",
+    "deleted": "« {{name}} » supprimé",
+    "restored": "« {{name}} » restauré",
+    "settings": "Paramètres de facturation"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segments de facturation",
+    "restrictedHint": "Cet utilisateur ne voit que les segments sélectionnés ci-dessous.",
+    "allHint": "Cet utilisateur voit tous les segments de facturation, y compris ceux ajoutés plus tard.",
+    "save": "Enregistrer l’accès aux segments",
+    "saved": "Accès aux segments du portail mis à jour",
+    "emptyWarning": "Sélectionnez au moins un segment, ou désactivez la restriction pour tous les afficher."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Paramètres du profil de facturation enregistrés",
+    "inherited": "Hérité : {{value}}",
+    "notSet": "Non défini",
+    "billsSeparately": "Facturé séparément",
+    "billsSeparatelyHint": "Générer une facture distincte pour ce profil, avec son propre destinataire, moyen de paiement et solde.",
+    "billToName": "Nom de facturation",
+    "billingEmail": "E-mail de facturation",
+    "poNumber": "Numéro de commande",
+    "taxIdNumber": "Numéro fiscal",
+    "taxExemptionCertificate": "Certificat d’exonération",
+    "invoiceDeliveryMethod": "Mode d’envoi des factures",
+    "billingCycle": "Cycle de facturation",
+    "paymentTerms": "Conditions de paiement",
+    "taxExempt": "Exonéré de taxe",
+    "taxExemptInherited": "Hérité du client ({{value}})",
+    "regionNote": "La région fiscale ne se définit pas ici. Elle suit le lieu de livraison : le service, puis le site de la ligne de contrat, puis la valeur par défaut du client."
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertes de solde prépayé",

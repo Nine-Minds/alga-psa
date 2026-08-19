@@ -15,6 +15,9 @@ export default defineConfig({
       // published package name; resolve those to src so tests don't need a
       // pre-built dist/.
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, 'src$1') },
+      // Same reason: resolve the types package to its source so tests see the
+      // current definitions rather than a stale dist/.
+      { find: '@alga-psa/types', replacement: path.resolve(__dirname, '../types/src') },
     ],
   },
 });

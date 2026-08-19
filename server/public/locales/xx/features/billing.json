@@ -6,7 +6,8 @@
     "invoices": "11111",
     "overview": "11111",
     "quotes": "11111",
-    "usageMetrics": "11111"
+    "usageMetrics": "11111",
+    "segments": "11111"
   },
   "currentContractLine": "11111",
   "nextInvoice": "11111",

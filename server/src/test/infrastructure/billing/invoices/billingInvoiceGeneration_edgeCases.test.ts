@@ -6,6 +6,7 @@ import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
 
 vi.mock('@alga-psa/auth', async () => {
@@ -180,7 +181,7 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     const billingCycleId = uuidv4();
-    await context.db('client_billing_cycles').insert({
+    await seedBillingCycle(context.db, context.tenantId, {
       billing_cycle_id: billingCycleId,
       client_id: context.clientId,
       tenant: context.tenantId,
@@ -227,7 +228,7 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     const billingCycleId = uuidv4();
-    await context.db('client_billing_cycles').insert({
+    await seedBillingCycle(context.db, context.tenantId, {
       billing_cycle_id: billingCycleId,
       client_id: context.clientId,
       tenant: context.tenantId,

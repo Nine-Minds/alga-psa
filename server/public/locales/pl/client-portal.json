@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Ostatnie faktury",
       "billingHistoryTitle": "Historia rozliczeń",
       "labels": {
-        "defaultTag": "(Domyślna)"
+        "defaultTag": "(Domyślna)",
+        "paysFor": "Płaci za {{profile}}"
       },
       "actions": {
         "setDefault": "Ustaw jako domyślną",
@@ -391,7 +392,8 @@
         "expiryMonth": "Miesiąc",
         "expiryYear": "Rok",
         "cvv": "CVV",
-        "setAsDefault": "Ustaw jako domyślną metodę płatności"
+        "setAsDefault": "Ustaw jako domyślną metodę płatności",
+        "billingProfile": "Płaci za"
       },
       "history": {
         "period": "Okres",
@@ -895,6 +897,15 @@
         "backToBilling": "Wróć do rozliczeń",
         "viewInvoice": "Wyświetl fakturę"
       }
+    },
+    "segments": {
+      "allSegments": "Cała organizacja",
+      "organizationTotalLabel": "Suma dla Twojej organizacji",
+      "periodLabel": "{{start}} – {{end}}",
+      "selectorLabel": "Pokaż",
+      "empty": "Brak rozliczonych opłat w tym okresie.",
+      "chargesTitle": "Opłaty w tym segmencie",
+      "noCharges": "Brak opłat w tym okresie."
     }
   },
   "assets": {

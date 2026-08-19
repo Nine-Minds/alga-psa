@@ -342,7 +342,9 @@
     "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
     "loadCommentsFailed": "Nie udało się wczytać komentarzy",
     "updateTicketFailed": "Nie udało się zaktualizować zgłoszenia",
-    "errorWithMessage": "Błąd: {{message}}"
+    "errorWithMessage": "Błąd: {{message}}",
+    "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
+    "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -1065,7 +1067,10 @@
       "selective": "Wybierz poszczególnych członków do zachowania/usunięcia"
     },
     "noTeamMembersOnTicket": "Nie znaleziono członków zespołu w tym zgłoszeniu.",
-    "unnamedUser": "Nieznany użytkownik"
+    "unnamedUser": "Nieznany użytkownik",
+    "billingProfile": "Profil rozliczeniowy",
+    "billingProfileUnassigned": "Użyj profilu domyślnego",
+    "billingProfileHint": "Używany tylko wtedy, gdy żadna umowa nie przypisuje tej pracy do profilu."
   },
   "settings": {
     "categories": {

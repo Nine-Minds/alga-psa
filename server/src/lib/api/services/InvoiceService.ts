@@ -85,6 +85,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
 
@@ -2416,6 +2417,17 @@ export class InvoiceService extends BaseService<IInvoice> {
     // server-side from `unit_price`/`quantity` when the caller omits them.
     // Fallbacks use nullish checks only: `quantity` (and the derived amounts)
     // may legitimately be zero, and `||` would silently rewrite a valid 0.
+    // Every persisted charge carries an attribution. An API-supplied line item
+    // can name a profile explicitly; otherwise the chain terminates at the
+    // client default (F033).
+    const invoice = await tenantDb(trx, context.tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .select('client_id')
+      .first();
+    const defaultBillingProfileId = invoice?.client_id
+      ? await getClientDefaultBillingProfileId(trx, context.tenant, invoice.client_id)
+      : null;
+
     const lineItemsData = lineItems.map((item) => {
       const quantity = item.quantity ?? 1;
       const unitPrice = item.unit_price ?? 0;
@@ -2441,6 +2453,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         location_id: item.location_id,
+        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
+        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
         created_by: context.userId,
         tenant: context.tenant,
         created_at: new Date()

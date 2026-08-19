@@ -11,7 +11,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * Fixed-charge math extracted from BillingEngine.calculateFixedPriceCharges.
@@ -67,6 +69,12 @@ export interface FixedChargeComputeInputs {
   planServices: FixedPlanServiceRow[];
   /** Loaded by the caller when planServices is empty; null otherwise. */
   fallbackService: FixedFallbackServiceRow | null;
+  /**
+   * Fixed charges have no per-occurrence source record — there is only the
+   * contract line and its recurring periods — so they stop at the contract
+   * step of the resolution chain (F026, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface FixedChargeComputeResult {
@@ -298,7 +306,9 @@ export function computeFixedCharges(
     customRateSource,
     planServices,
     fallbackService,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
 
   const {
     duePosition: lineBillingTiming,
@@ -399,7 +409,13 @@ export function computeFixedCharges(
       taxPorts.getClientDefaultTaxRegionCode(client.client_id);
     let fallbackTaxAmount = 0;
     let fallbackTaxRate = 0;
-    if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
+    // Exemption is per billing profile (F131), not per client — one invoice
+    // can carry both exempt and non-exempt lines.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      fallbackIsTaxable &&
+      fallbackTaxRegion
+    ) {
       const taxResult = taxPorts.calculateTax(
         client.client_id,
         baseRateInCents,
@@ -407,6 +423,7 @@ export function computeFixedCharges(
         fallbackTaxRegion,
         true,
         currencyCode,
+        resolvedProfile?.billingProfileId ?? null,
       );
       fallbackTaxRate = taxResult.taxRate;
       fallbackTaxAmount = taxResult.taxAmount;
@@ -432,6 +449,8 @@ export function computeFixedCharges(
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,
         location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
         base_rate: baseRateInCents,
         enable_proration: planLevelEnableProration,
         fmv: baseRateInCents,
@@ -503,7 +522,7 @@ export function computeFixedCharges(
 
       let taxAmount = 0;
       let taxRate = 0;
-      if (!client.is_tax_exempt && isTaxable) {
+      if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && isTaxable) {
         const effectiveTaxRegion =
           serviceTaxRegion ??
           taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
@@ -517,6 +536,7 @@ export function computeFixedCharges(
             effectiveTaxRegion,
             true,
             currencyCode,
+            resolvedProfile?.billingProfileId ?? null,
           );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
@@ -576,6 +596,8 @@ export function computeFixedCharges(
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,
         location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
         config_id: planService.config_id,
         base_rate: baseRateInCents,
         enable_proration: planLevelEnableProration,
@@ -677,6 +699,8 @@ export function computeFixedCharges(
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
           location_id: clientContractLine.location_id ?? null,
+          billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+          billing_profile_source: resolvedProfile?.source ?? null,
           tax_amount: 0,
           tax_rate: 0,
           tax_region:
@@ -689,7 +713,7 @@ export function computeFixedCharges(
           config_id: service.config_id,
           base_rate: baseRateInCents,
         };
-        if (!client.is_tax_exempt && charge.is_taxable) {
+        if (!taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) && charge.is_taxable) {
           const effectiveTaxRegion = charge.tax_region ?? "";
           if (effectiveTaxRegion) {
             const taxResult = taxPorts.calculateTax(
@@ -699,6 +723,7 @@ export function computeFixedCharges(
               effectiveTaxRegion,
               true,
               currencyCode,
+              resolvedProfile?.billingProfileId ?? null,
             );
             charge.tax_rate = taxResult.taxRate;
             charge.tax_amount = taxResult.taxAmount;

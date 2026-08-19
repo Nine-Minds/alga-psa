@@ -92,6 +92,14 @@ vi.mock('lucide-react', () => ({
   RefreshCw: () => <span />,
 }));
 
+// S12 added the billing-profile access section to this tab. Its behaviour has
+// its own coverage (PortalBillingProfileAccess tests); loading the real one
+// here drags the @alga-psa/ui components barrel (IconPicker and its full
+// lucide-react icon set) into this suite's minimal lucide mock.
+vi.mock('./PortalBillingProfileAccess', () => ({
+  PortalBillingProfileAccess: () => null,
+}));
+
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: any) => <span>{children}</span>,
 }));

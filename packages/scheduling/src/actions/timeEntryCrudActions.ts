@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
+import { resolveContractLineSelection } from '../lib/contractLineDisambiguation';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
 // the dropped `client_contract_lines` table and caused a prod outage on
@@ -15,8 +15,10 @@ import {
   reverseTimeEntryAllocations,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import {
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   ITimeEntry,
   ITimeEntryWithWorkItem,
+  type ContractLineSource,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -438,6 +440,10 @@ export const saveTimeEntry = withAuth(async (
       service_id,
       tax_region,
       contract_line_id,
+      // Provenance for the contract line (F062). A caller-supplied line is
+      // 'explicit' by definition; the resolver below overwrites this when it
+      // picks (or fails to pick) one itself.
+      contract_line_source: (contract_line_id ? 'explicit' : null) as ContractLineSource | null,
       tax_rate_id, // Add tax_rate_id to the object being saved
       user_id: timeEntryUserId,
       updated_by: actorUserId,
@@ -455,6 +461,11 @@ export const saveTimeEntry = withAuth(async (
       try {
         const effectiveDateForContractResolution = work_date || start_time;
         let defaultContractClientId: string | null = null;
+        // The work item's billing profile narrows contract-line selection when
+        // more than one line is eligible — the case parallel per-profile
+        // contracts create (F134). Selected alongside the client so the
+        // narrowing costs no extra round trip.
+        let workItemBillingProfileId: string | null = null;
 
         if (work_item_type === 'project_task') {
           const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
@@ -470,30 +481,41 @@ export const saveTimeEntry = withAuth(async (
             'project_phases.project_id',
             'projects.project_id',
           );
-          defaultContractClientId = (await projectTaskClientQuery
+          const projectRow = await projectTaskClientQuery
             .where({ 'project_tasks.task_id': work_item_id })
-            .first('projects.client_id'))?.client_id ?? null;
+            .first('projects.client_id', 'projects.billing_profile_id');
+          defaultContractClientId = projectRow?.client_id ?? null;
+          workItemBillingProfileId = projectRow?.billing_profile_id ?? null;
         } else if (work_item_type === 'ticket') {
-          defaultContractClientId = (await tenantScopedDb.table('tickets')
+          const ticketRow = await tenantScopedDb.table('tickets')
             .where({ ticket_id: work_item_id })
-            .first('client_id'))?.client_id ?? null;
+            .first('client_id', 'billing_profile_id');
+          defaultContractClientId = ticketRow?.client_id ?? null;
+          workItemBillingProfileId = ticketRow?.billing_profile_id ?? null;
         } else if (work_item_type === 'interaction') {
           defaultContractClientId = (await tenantScopedDb.table('interactions')
             .where({ interaction_id: work_item_id })
             .first('client_id'))?.client_id ?? null;
         }
 
-        const defaultPlanId = await determineDefaultContractLine(
+        const selection = await resolveContractLineSelection(
           defaultContractClientId as string,
           service_id,
-          effectiveDateForContractResolution
+          effectiveDateForContractResolution,
+          { billingProfileId: workItemBillingProfileId }
         );
 
-        if (defaultPlanId) {
-          cleanedEntry.contract_line_id = defaultPlanId;
+        if (selection.selectedContractLineId) {
+          cleanedEntry.contract_line_id = selection.selectedContractLineId;
         }
+        // Record how the line was chosen, including the unresolved case — the
+        // reason is what the review queue and the attribution inspector read
+        // (F062, F063).
+        cleanedEntry.contract_line_source =
+          CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
       } catch (error) {
         console.error('Error determining default contract line:', error);
+        cleanedEntry.contract_line_source = 'unresolved';
       }
     }
 
