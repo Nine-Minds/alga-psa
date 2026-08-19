@@ -137,7 +137,8 @@
         "updateStatus": "Permessi insufficienti per aggiornare lo stato del ticket",
         "addComments": "Permessi insufficienti per aggiungere commenti",
         "updateComments": "Permessi insufficienti per aggiornare i commenti",
-        "deleteComments": "Permessi insufficienti per eliminare i commenti"
+        "deleteComments": "Permessi insufficienti per eliminare i commenti",
+        "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
       }
     }
   },

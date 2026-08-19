@@ -935,5 +935,55 @@
     },
     "notAvailable": "55555",
     "detailsTitle": "55555"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "55555",
+      "userNotLinkedToClient": "55555",
+      "contactNotLinkedToClient": "55555",
+      "clientNotFound": "55555",
+      "serviceNotFound": "55555",
+      "serviceUpgradeUnavailable": "55555"
+    },
+    "records": {
+      "invalid": "55555",
+      "missing": "55555"
+    },
+    "access": {
+      "unauthorized": "55555",
+      "projectBillingData": "55555",
+      "quoteData": "55555",
+      "invoiceData": "55555",
+      "billingData": "55555",
+      "settingsUpdate": "55555"
+    },
+    "billing": {
+      "quoteNotFound": "55555",
+      "quoteStale": "55555",
+      "quoteStaleAccept": "55555",
+      "quoteStaleReject": "55555",
+      "invoiceNotFound": "55555",
+      "jobNotFound": "55555",
+      "quoteInvalidState": "55555",
+      "rejectionCommentRequired": "55555",
+      "emailSendFailed": "55555"
+    },
+    "tickets": {
+      "notFoundOrDenied": "55555"
+    },
+    "visibilityGroups": {
+      "checkDetails": "55555",
+      "boardsUnavailable": "55555",
+      "contactNotFound": "55555",
+      "otherClient": "55555",
+      "selectClientOrContact": "55555",
+      "groupNotFound": "55555",
+      "groupNotValidForContact": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "recordInvalid": "55555",
+      "duplicate": "55555",
+      "invalidData": "55555"
+    }
   }
 }

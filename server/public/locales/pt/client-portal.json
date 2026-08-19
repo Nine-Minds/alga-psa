@@ -935,5 +935,55 @@
     },
     "notAvailable": "N/D",
     "detailsTitle": "Detalhes do ativo"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Seu usuário do portal não está vinculado a nenhum contato. Entre em contato com o suporte se isso continuar.",
+      "userNotLinkedToClient": "Seu usuário do portal não está vinculado a nenhuma conta de cliente. Entre em contato com o suporte se isso continuar.",
+      "contactNotLinkedToClient": "Seu contato não está vinculado a nenhuma conta de cliente. Entre em contato com o suporte se isso continuar.",
+      "clientNotFound": "Conta de cliente não encontrada. Ela pode ter sido excluída ou você pode não ter mais acesso.",
+      "serviceNotFound": "Serviço não encontrado ou não está mais ativo. Atualize a página e tente novamente.",
+      "serviceUpgradeUnavailable": "O upgrade de serviços está temporariamente indisponível. Entre em contato com o suporte para alterar seu plano."
+    },
+    "records": {
+      "invalid": "Um dos registros selecionados é inválido. Atualize a página e tente novamente.",
+      "missing": "Um dos registros selecionados não existe mais. Atualize a página e tente novamente."
+    },
+    "access": {
+      "unauthorized": "Não autorizado",
+      "projectBillingData": "Sem autorização para acessar os dados de faturamento do projeto",
+      "quoteData": "Sem autorização para acessar os dados da cotação",
+      "invoiceData": "Sem autorização para acessar os dados da fatura",
+      "billingData": "Sem autorização para acessar os dados de faturamento",
+      "settingsUpdate": "Você não tem permissão para alterar estas configurações."
+    },
+    "billing": {
+      "quoteNotFound": "Cotação não encontrada ou acesso negado",
+      "quoteStale": "A cotação não está mais disponível. Atualize a cotação e tente novamente.",
+      "quoteStaleAccept": "A cotação não está mais disponível. Atualize a cotação antes de aceitá-la.",
+      "quoteStaleReject": "A cotação não está mais disponível. Atualize a cotação antes de recusá-la.",
+      "invoiceNotFound": "Fatura não encontrada ou acesso negado",
+      "jobNotFound": "Tarefa não encontrada",
+      "quoteInvalidState": "A cotação não está em um estado válido para esta ação",
+      "rejectionCommentRequired": "É necessário um comentário de recusa",
+      "emailSendFailed": "Não foi possível iniciar o envio do e-mail"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket não encontrado ou acesso negado"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Verifique os dados do grupo de visibilidade e tente novamente.",
+      "boardsUnavailable": "Um ou mais quadros selecionados não estão mais disponíveis. Atualize a página e tente novamente.",
+      "contactNotFound": "Contato não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "otherClient": "Você não tem permissão para gerenciar grupos de visibilidade de outro cliente.",
+      "selectClientOrContact": "Selecione um cliente ou contato antes de gerenciar grupos de visibilidade.",
+      "groupNotFound": "Grupo de visibilidade não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
+      "groupNotValidForContact": "O grupo de visibilidade selecionado não é válido para este contato. Atualize a página e tente novamente.",
+      "missingField": "Falta um campo obrigatório do grupo de visibilidade.",
+      "missingFieldNamed": "Falta um campo obrigatório do grupo de visibilidade: {{field}}.",
+      "recordInvalid": "Um dos registros de grupo de visibilidade selecionados não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
+      "invalidData": "Dados do grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados."
+    }
   }
 }

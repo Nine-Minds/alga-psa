@@ -168,7 +168,8 @@
         "updateStatus": "Permissões insuficientes para atualizar o status do ticket",
         "addComments": "Permissões insuficientes para adicionar comentários",
         "updateComments": "Permissões insuficientes para atualizar comentários",
-        "deleteComments": "Permissões insuficientes para excluir comentários"
+        "deleteComments": "Permissões insuficientes para excluir comentários",
+        "viewDocuments": "Permissões insuficientes para ver os documentos do ticket"
       }
     }
   },

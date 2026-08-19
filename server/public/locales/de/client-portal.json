@@ -935,5 +935,55 @@
     },
     "notAvailable": "N/V",
     "detailsTitle": "Asset-Details"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "Ihr Portal-Benutzer ist mit keinem Kontakt verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "userNotLinkedToClient": "Ihr Portal-Benutzer ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "contactNotLinkedToClient": "Ihr Kontakt ist mit keinem Kundenkonto verknüpft. Wenden Sie sich an den Support, falls dies weiterhin auftritt.",
+      "clientNotFound": "Kundenkonto nicht gefunden. Es wurde möglicherweise gelöscht oder Sie haben keinen Zugriff mehr darauf.",
+      "serviceNotFound": "Service nicht gefunden oder nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceUpgradeUnavailable": "Das Höherstufen von Services ist vorübergehend nicht verfügbar. Wenden Sie sich an den Support, um Ihren Tarif zu ändern."
+    },
+    "records": {
+      "invalid": "Einer der ausgewählten Datensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missing": "Einer der ausgewählten Datensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    },
+    "access": {
+      "unauthorized": "Nicht autorisiert",
+      "projectBillingData": "Kein Zugriff auf Projektabrechnungsdaten",
+      "quoteData": "Kein Zugriff auf Angebotsdaten",
+      "invoiceData": "Kein Zugriff auf Rechnungsdaten",
+      "billingData": "Kein Zugriff auf Abrechnungsdaten",
+      "settingsUpdate": "Sie haben keine Berechtigung, diese Einstellungen zu ändern."
+    },
+    "billing": {
+      "quoteNotFound": "Angebot nicht gefunden oder Zugriff verweigert",
+      "quoteStale": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot und versuchen Sie es erneut.",
+      "quoteStaleAccept": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es annehmen.",
+      "quoteStaleReject": "Das Angebot ist nicht mehr verfügbar. Aktualisieren Sie das Angebot, bevor Sie es ablehnen.",
+      "invoiceNotFound": "Rechnung nicht gefunden oder Zugriff verweigert",
+      "jobNotFound": "Auftrag nicht gefunden",
+      "quoteInvalidState": "Das Angebot befindet sich nicht in einem gültigen Status für diese Aktion",
+      "rejectionCommentRequired": "Ein Ablehnungskommentar ist erforderlich",
+      "emailSendFailed": "Der E-Mail-Versand konnte nicht gestartet werden"
+    },
+    "tickets": {
+      "notFoundOrDenied": "Ticket nicht gefunden oder Zugriff verweigert"
+    },
+    "visibilityGroups": {
+      "checkDetails": "Bitte überprüfen Sie die Angaben zur Sichtbarkeitsgruppe und versuchen Sie es erneut.",
+      "boardsUnavailable": "Eines oder mehrere ausgewählte Boards sind nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "contactNotFound": "Kontakt nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "otherClient": "Sie haben keine Berechtigung, Sichtbarkeitsgruppen eines anderen Kunden zu verwalten.",
+      "selectClientOrContact": "Wählen Sie einen Kunden oder Kontakt aus, bevor Sie Sichtbarkeitsgruppen verwalten.",
+      "groupNotFound": "Sichtbarkeitsgruppe nicht gefunden. Sie wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "groupNotValidForContact": "Die ausgewählte Sichtbarkeitsgruppe ist für diesen Kontakt nicht gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt.",
+      "missingFieldNamed": "Erforderliches Feld der Sichtbarkeitsgruppe fehlt: {{field}}.",
+      "recordInvalid": "Einer der ausgewählten Sichtbarkeitsgruppen-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
+      "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
+    }
   }
 }

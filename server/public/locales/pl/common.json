@@ -151,7 +151,8 @@
         "updateStatus": "Niewystarczające uprawnienia do aktualizacji statusu zgłoszenia",
         "addComments": "Niewystarczające uprawnienia do dodawania komentarzy",
         "updateComments": "Niewystarczające uprawnienia do aktualizacji komentarzy",
-        "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy"
+        "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy",
+        "viewDocuments": "Niewystarczające uprawnienia do wyświetlania dokumentów zgłoszenia"
       }
     }
   },

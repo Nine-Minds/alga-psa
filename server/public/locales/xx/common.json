@@ -168,7 +168,8 @@
         "updateStatus": "11111",
         "addComments": "11111",
         "updateComments": "11111",
-        "deleteComments": "11111"
+        "deleteComments": "11111",
+        "viewDocuments": "11111"
       }
     }
   },

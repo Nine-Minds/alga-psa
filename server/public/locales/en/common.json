@@ -168,7 +168,8 @@
         "updateStatus": "Insufficient permissions to update ticket status",
         "addComments": "Insufficient permissions to add comments",
         "updateComments": "Insufficient permissions to update comments",
-        "deleteComments": "Insufficient permissions to delete comments"
+        "deleteComments": "Insufficient permissions to delete comments",
+        "viewDocuments": "Insufficient permissions to view ticket documents"
       }
     }
   },

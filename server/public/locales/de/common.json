@@ -137,7 +137,8 @@
         "updateStatus": "Unzureichende Berechtigungen zum Aktualisieren des Ticketstatus",
         "addComments": "Unzureichende Berechtigungen zum Hinzufügen von Kommentaren",
         "updateComments": "Unzureichende Berechtigungen zum Aktualisieren von Kommentaren",
-        "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren"
+        "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren",
+        "viewDocuments": "Unzureichende Berechtigungen zum Anzeigen von Ticket-Dokumenten"
       }
     }
   },

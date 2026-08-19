@@ -137,7 +137,8 @@
         "updateStatus": "Onvoldoende rechten om ticketstatus bij te werken",
         "addComments": "Onvoldoende rechten om opmerkingen toe te voegen",
         "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
-        "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen"
+        "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
+        "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
       }
     }
   },

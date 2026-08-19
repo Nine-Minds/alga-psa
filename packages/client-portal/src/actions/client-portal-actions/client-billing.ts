@@ -34,20 +34,25 @@ import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/r
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  isAuthorizationThrow,
+  permissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getClientIdFromPortalUser as getClientIdFromUser,
   hasClientBillingReadPermission as hasBillingPermission,
 } from './clientBillingPermissions';
 import { selectJobArtifactFileId } from './jobArtifact';
 
 export type ClientBillingActionError =
-  | { readonly actionError: string }
-  | { readonly permissionError: string };
+  | ActionMessageErrorShape
+  | ActionPermissionErrorShape;
 
 export type ClientBillingActionResult<T> = T | ClientBillingActionError;
-
-function actionError(message: string): ClientBillingActionError {
-  return { actionError: message };
-}
 
 /**
  * Whole-day difference between two YYYY-MM-DD calendar dates (`to` minus
@@ -61,20 +66,13 @@ function calendarDayDifference(from: string, to: string): number {
   return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86_400_000);
 }
 
-function permissionError(message: string): ClientBillingActionError {
-  return { permissionError: message };
-}
-
-function isClientBillingActionError(value: unknown): value is ClientBillingActionError {
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (
-      (typeof candidate.actionError === 'string') ||
-      (typeof candidate.permissionError === 'string')
-    )
-  );
+// Narrows to the minimal shapes on purpose — see the note on the shared guards in
+// @alga-psa/ui/lib/errorHandling: widening the predicate to the localizable shape
+// stops TypeScript excluding this branch from a result union.
+function isClientBillingActionError(
+  value: unknown,
+): value is { readonly actionError: string } | { readonly permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 function permissionErrorFrom(error: unknown): ClientBillingActionError | null {
@@ -82,7 +80,7 @@ function permissionErrorFrom(error: unknown): ClientBillingActionError | null {
     return null;
   }
 
-  if (error.message.startsWith('Unauthorized') || error.message.includes('Permission denied')) {
+  if (isAuthorizationThrow(error) || error.message.startsWith('Unauthorized')) {
     return permissionError(error.message);
   }
 
@@ -105,17 +103,17 @@ function billingActionErrorFrom(error: unknown): ClientBillingActionError | null
 
   switch (error.message) {
     case 'Quote not found after marking viewed':
-      return actionError('Quote not found or access denied');
+      return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
     case 'Quote not found after updating selections':
-      return actionError('Quote is no longer available. Refresh the quote and try again.');
+      return actionError('Quote is no longer available. Refresh the quote and try again.', 'client-portal:errors.billing.quoteStale');
     case 'Quote not found after acceptance':
-      return actionError('Quote is no longer available. Refresh the quote before accepting it.');
+      return actionError('Quote is no longer available. Refresh the quote before accepting it.', 'client-portal:errors.billing.quoteStaleAccept');
     case 'Quote not found after rejection':
-      return actionError('Quote is no longer available. Refresh the quote before rejecting it.');
+      return actionError('Quote is no longer available. Refresh the quote before rejecting it.', 'client-portal:errors.billing.quoteStaleReject');
     case 'Invoice not found after authorization':
-      return actionError('Invoice not found or access denied');
+      return actionError('Invoice not found or access denied', 'client-portal:errors.billing.invoiceNotFound');
     case 'Job not found':
-      return actionError('Job not found');
+      return actionError('Job not found', 'client-portal:errors.billing.jobNotFound');
     default:
       return null;
   }
@@ -137,21 +135,21 @@ async function getAuthorizedClientQuote(
 ): Promise<ClientBillingActionResult<IQuote>> {
   const clientId = await getClientIdFromUser(trx, user, tenant);
   if (!clientId) {
-    return permissionError('Unauthorized');
+    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
   }
 
   const hasAccess = await hasBillingPermission(trx, user, tenant);
   if (!hasAccess) {
-    return permissionError('Unauthorized to access quote data');
+    return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
   }
 
   const quote = await Quote.getById(trx, tenant, quoteId);
   if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
-    return actionError('Quote not found or access denied');
+    return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
   }
 
   if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
-    return actionError('Quote is not in a valid state for this action');
+    return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
   }
 
   return quote;
@@ -165,12 +163,12 @@ async function validateClientInvoiceAccess(
 ): Promise<ClientBillingActionError | null> {
   const clientId = await getClientIdFromUser(trx, user, tenant);
   if (!clientId) {
-    return permissionError('Unauthorized');
+    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
   }
 
   const hasAccess = await hasBillingPermission(trx, user, tenant);
   if (!hasAccess) {
-    return permissionError('Unauthorized to access invoice data');
+    return permissionError('Unauthorized to access invoice data', 'client-portal:errors.access.invoiceData');
   }
 
   const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
@@ -182,7 +180,7 @@ async function validateClientInvoiceAccess(
     .first();
 
   if (!invoiceCheck) {
-    return actionError('Invoice not found or access denied');
+    return actionError('Invoice not found or access denied', 'client-portal:errors.billing.invoiceNotFound');
   }
 
   return null;
@@ -226,7 +224,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       // Query via client_contracts -> contracts -> contract_lines
@@ -284,12 +282,12 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Clie
     const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const id = await getClientIdFromUser(trx, user, tenant);
       if (!id) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access invoice data');
+        return permissionError('Unauthorized to access invoice data', 'client-portal:errors.access.invoiceData');
       }
 
       return id;
@@ -344,12 +342,12 @@ export const getClientCreditSummary = withAuth(async (user, { tenant }): Promise
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       const db = tenantDb(trx, tenant);
@@ -428,12 +426,12 @@ export const getClientCreditHistory = withAuth(async (user, { tenant }): Promise
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       const db = tenantDb(trx, tenant);
@@ -497,12 +495,12 @@ export const getClientQuotes = withAuth(async (user, { tenant }): Promise<Client
     const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const id = await getClientIdFromUser(trx, user, tenant);
       if (!id) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access quote data');
+        return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
       }
 
       return id;
@@ -561,7 +559,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
-        return actionError('Quote not found or access denied');
+        return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
       }
 
       return updatedQuote;
@@ -601,7 +599,7 @@ export const updateClientQuoteSelections = withAuth(async (
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote and try again.');
+        return actionError('Quote is no longer available. Refresh the quote and try again.', 'client-portal:errors.billing.quoteStale');
       }
 
       return updatedQuote;
@@ -660,7 +658,7 @@ export const acceptClientQuote = withAuth(async (
 
       const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!acceptedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before accepting it.');
+        return actionError('Quote is no longer available. Refresh the quote before accepting it.', 'client-portal:errors.billing.quoteStaleAccept');
       }
 
       await onQuoteAccepted(trx, acceptedQuote);
@@ -687,7 +685,7 @@ export const rejectClientQuote = withAuth(async (
   const trimmedReason = rejectionReason.trim();
 
   if (!trimmedReason) {
-    return actionError('A rejection comment is required');
+    return actionError('A rejection comment is required', 'client-portal:errors.billing.rejectionCommentRequired');
   }
 
   try {
@@ -717,7 +715,7 @@ export const rejectClientQuote = withAuth(async (
 
       const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!rejectedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before rejecting it.');
+        return actionError('Quote is no longer available. Refresh the quote before rejecting it.', 'client-portal:errors.billing.quoteStaleReject');
       }
 
       return rejectedQuote;
@@ -754,7 +752,7 @@ export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId:
       return invoice;
     }
     if (!invoice) {
-      return actionError('Invoice not found or access denied');
+      return actionError('Invoice not found or access denied', 'client-portal:errors.billing.invoiceNotFound');
     }
     return invoice;
   } catch (error) {
@@ -810,12 +808,12 @@ export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Prom
     const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access invoice data');
+        return permissionError('Unauthorized to access invoice data', 'client-portal:errors.access.invoiceData');
       }
 
       return null;
@@ -982,7 +980,7 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
     }
 
     if (!result?.jobId) {
-      return actionError('Failed to start email sending');
+      return actionError('Failed to start email sending', 'client-portal:errors.billing.emailSendFailed');
     }
 
     // Poll until job completes
@@ -1098,12 +1096,12 @@ export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: strin
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access invoice data');
+        return permissionError('Unauthorized to access invoice data', 'client-portal:errors.access.invoiceData');
       }
 
       // Jobs carry no client context — restrict access to jobs the caller
@@ -1113,7 +1111,7 @@ export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: strin
         .where({ job_id: jobId })
         .first('user_id');
       if (!job || job.user_id !== user.user_id) {
-        return actionError('Job not found');
+        return actionError('Job not found', 'client-portal:errors.billing.jobNotFound');
       }
 
       return await getJobStatus(jobId, tenant);
@@ -1138,7 +1136,7 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<Client
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const currentDate = new Date().toISOString().slice(0, 10);
@@ -1364,12 +1362,12 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       const db = tenantDb(trx, tenant);
@@ -1449,12 +1447,12 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        return permissionError('Unauthorized');
+        return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       const db = tenantDb(trx, tenant);

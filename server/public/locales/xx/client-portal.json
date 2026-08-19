@@ -935,5 +935,55 @@
     },
     "notAvailable": "11111",
     "detailsTitle": "11111"
+  },
+  "errors": {
+    "account": {
+      "userNotLinkedToContact": "11111",
+      "userNotLinkedToClient": "11111",
+      "contactNotLinkedToClient": "11111",
+      "clientNotFound": "11111",
+      "serviceNotFound": "11111",
+      "serviceUpgradeUnavailable": "11111"
+    },
+    "records": {
+      "invalid": "11111",
+      "missing": "11111"
+    },
+    "access": {
+      "unauthorized": "11111",
+      "projectBillingData": "11111",
+      "quoteData": "11111",
+      "invoiceData": "11111",
+      "billingData": "11111",
+      "settingsUpdate": "11111"
+    },
+    "billing": {
+      "quoteNotFound": "11111",
+      "quoteStale": "11111",
+      "quoteStaleAccept": "11111",
+      "quoteStaleReject": "11111",
+      "invoiceNotFound": "11111",
+      "jobNotFound": "11111",
+      "quoteInvalidState": "11111",
+      "rejectionCommentRequired": "11111",
+      "emailSendFailed": "11111"
+    },
+    "tickets": {
+      "notFoundOrDenied": "11111"
+    },
+    "visibilityGroups": {
+      "checkDetails": "11111",
+      "boardsUnavailable": "11111",
+      "contactNotFound": "11111",
+      "otherClient": "11111",
+      "selectClientOrContact": "11111",
+      "groupNotFound": "11111",
+      "groupNotValidForContact": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "recordInvalid": "11111",
+      "duplicate": "11111",
+      "invalidData": "11111"
+    }
   }
 }
