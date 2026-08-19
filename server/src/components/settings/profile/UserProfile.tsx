@@ -34,7 +34,7 @@ import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShor
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
-import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
+import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -267,12 +267,15 @@ export default function UserProfile({ userId }: UserProfileProps) {
       }
     });
 
-    // Validate optional phone field if provided
-    if (phone.trim()) {
-      const phoneError = validatePhoneNumber(phone.trim());
-      if (phoneError) {
-        newErrors.phone = phoneError;
+    // Validate optional phone field if provided, and store what the parser made of it
+    let normalizedPhone = phone.trim();
+    if (normalizedPhone) {
+      const phoneResult = validatePhoneNumberField(normalizedPhone);
+      if (phoneResult.error) {
+        newErrors.phone = phoneResult.error;
         hasValidationErrors = true;
+      } else {
+        normalizedPhone = phoneResult.value;
       }
     }
 
@@ -288,7 +291,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         first_name: firstName,
         last_name: lastName,
         email: email,
-        phone: phone,
+        phone: normalizedPhone,
         phone_extension: phoneExtension,
         timezone: timezone
       });
