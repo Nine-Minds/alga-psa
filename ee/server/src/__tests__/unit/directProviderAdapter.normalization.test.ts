@@ -79,7 +79,7 @@ describe('DirectProviderAdapter normalization', () => {
       sourceUserCount: 42,
     });
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants?$top=999',
+      'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=999',
       expect.objectContaining({
         headers: { Authorization: 'Bearer access-token-direct' },
       })

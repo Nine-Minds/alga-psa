@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft vous a connecté mais a refusé l'accès à votre liste de locataires gérés. Un administrateur général doit accorder le consentement administrateur pour les autorisations demandées. Rien n'a été enregistré — réessayez une fois le consentement accordé.",
             "expired": "La tentative de connexion a expiré avant de se terminer. Rien n'a été enregistré — relancez la connexion.",
             "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
-            "validationFailed": "Microsoft vous a connecté, mais votre liste de locataires gérés n'a pas pu être lue, donc rien n'a été enregistré. Vérifiez les autorisations de la connexion et réessayez."
+            "validationFailed": "Microsoft vous a connecté, mais la liste des locataires gérés n'a pas pu être lue ; rien n'a été enregistré. Vos autorisations ont été acceptées — en général, le locataire partenaire n'est pas intégré à Microsoft 365 Lighthouse ou n'a aucune relation GDAP active.",
+            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion."
           },
           "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Des identifiants OAuth Microsoft configurés pour ce locataire.",
               "globalAdmin": "Un administrateur général capable d'approuver les autorisations.",
-              "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez."
+              "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez.",
+              "lighthouse": "Microsoft 365 Lighthouse intégré dans votre locataire partenaire."
             }
           },
           "directReassurance": "Vous verrez la demande d'autorisations avant que quoi que ce soit ne soit accordé.",

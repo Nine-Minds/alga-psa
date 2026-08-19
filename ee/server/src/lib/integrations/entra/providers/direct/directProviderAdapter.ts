@@ -1,6 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  getMicrosoftGraphBaseUrl,
+  getMicrosoftGraphBetaBaseUrl,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import {
   refreshEntraDirectAccessTokenForTenant,
   refreshEntraDirectToken,
@@ -24,8 +27,11 @@ const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
 
 // Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
 // Graph emulator (test-harness/graph-emulator) so the integration can be walked
-// end to end without a CSP tenant.
+// end to end without a CSP tenant. The managedTenants endpoints live on the
+// beta base (the API is beta-only; v1.0 answers 400), with its own emulator
+// override MICROSOFT_GRAPH_BETA_BASE_URL.
 const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
+const graphBetaBaseUrl = (): string => getMicrosoftGraphBetaBaseUrl();
 
 // Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
 // /organization and /users so the partner's own tenant acts as a single managed
@@ -319,7 +325,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     const tenants: EntraManagedTenantRecord[] = [];
     const seenTenantIds = new Set<string>();
-    let nextUrl = `${graphBaseUrl()}/tenantRelationships/managedTenants/tenants?$top=999`;
+    let nextUrl = `${graphBetaBaseUrl()}/tenantRelationships/managedTenants/tenants?$top=999`;
 
     while (nextUrl) {
       const payload = await this.graphGet(input.tenant, nextUrl);
@@ -376,7 +382,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     ].join(',');
 
     let nextUrl =
-      `${graphBaseUrl()}/tenantRelationships/managedTenants/users` +
+      `${graphBetaBaseUrl()}/tenantRelationships/managedTenants/users` +
       `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
 
     while (nextUrl) {

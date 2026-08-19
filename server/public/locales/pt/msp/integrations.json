@@ -722,7 +722,8 @@
             "consentMissing": "A Microsoft fez seu login, mas negou o acesso à lista de tenants gerenciados. Um administrador global deve conceder o consentimento de administrador para as permissões solicitadas. Nada foi salvo. Tente novamente depois que o consentimento for concedido.",
             "expired": "A tentativa de conexão expirou antes da conclusão. Nada foi salvo. Inicie a conexão novamente.",
             "generic": "O Microsoft Entra não foi conectado e nada foi salvo. Tente novamente.",
-            "validationFailed": "A Microsoft fez seu login, mas não foi possível ler a lista de tenants gerenciados, então nada foi salvo. Verifique as permissões da conexão e tente novamente."
+            "validationFailed": "A Microsoft fez seu login, mas a lista de tenants gerenciados não pôde ser lida; nada foi salvo. Suas permissões foram aceitas — geralmente significa que o tenant de parceiro não está integrado ao Microsoft 365 Lighthouse ou não tem relações GDAP ativas.",
+            "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente."
           },
           "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": "(Conectando...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Credenciais OAuth da Microsoft configuradas para este tenant.",
               "globalAdmin": "Um administrador global que possa aprovar as permissões.",
-              "partnerRelationship": "Uma relação de parceiro (GDAP) com os tenants que você gerencia."
+              "partnerRelationship": "Uma relação de parceiro (GDAP) com os tenants que você gerencia.",
+              "lighthouse": "Microsoft 365 Lighthouse integrado no seu tenant de parceiro."
             }
           },
           "directReassurance": "Você poderá revisar as permissões solicitadas antes de concedê-las.",

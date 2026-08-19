@@ -17,7 +17,9 @@ async function waitFor(url) {
 }
 
 async function graph(path, headers = {}) {
-  return fetch(`${base}/v1.0${path}`, {
+  // managedTenants lives on beta, as on real Graph; everything else on v1.0.
+  const version = path.startsWith('/tenantRelationships/managedTenants') ? 'beta' : 'v1.0';
+  return fetch(`${base}/${version}${path}`, {
     headers: { authorization: `Bearer ${accessToken}`, ...headers },
   });
 }
@@ -81,10 +83,19 @@ test('the probe endpoint answers before anything is persisted', async () => {
 });
 
 test('an unknown token is rejected, so a failed probe is reachable', async () => {
-  const response = await fetch(`${base}/v1.0/tenantRelationships/managedTenants/tenants`, {
+  const response = await fetch(`${base}/beta/tenantRelationships/managedTenants/tenants`, {
     headers: { authorization: 'Bearer not-a-token' },
   });
   assert.equal(response.status, 401);
+});
+
+test('managedTenants on v1.0 answers 400 like real Graph, so the endpoint-version bug stays dead', async () => {
+  const response = await fetch(`${base}/v1.0/tenantRelationships/managedTenants/tenants?$top=1`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  assert.equal(response.status, 400);
+  const payload = await response.json();
+  assert.equal(payload.error.code, 'BadRequest');
 });
 
 test('users come back per tenant, including the disabled account', async () => {
@@ -104,7 +115,7 @@ test('users come back per tenant, including the disabled account', async () => {
 
 test('pages with @odata.nextLink so the adapters have to follow it', async () => {
   const filter = encodeURIComponent(`tenantId eq '${CONTOSO}'`);
-  let url = `${base}/v1.0/tenantRelationships/managedTenants/users?$filter=${filter}&$top=2`;
+  let url = `${base}/beta/tenantRelationships/managedTenants/users?$filter=${filter}&$top=2`;
   const seen = [];
   let pages = 0;
 
