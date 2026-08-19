@@ -37,7 +37,7 @@ const VaultEntityCredentialsSection = dynamic(
 );
 
 export function DocumentCredentialsSection({ documentId }: DocumentCredentialsSectionProps) {
-  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   if (!flagEnabled) {

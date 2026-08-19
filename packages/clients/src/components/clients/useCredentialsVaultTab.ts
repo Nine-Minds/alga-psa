@@ -11,14 +11,14 @@ export interface CredentialsVaultTabGate {
 
 /**
  * Visibility gate for the unified client "Passwords" tab (credentials vault):
- * EE edition AND the `release-v1.5-feature` flag AND the credentials tier.
+ * EE edition AND the `release-v1-5-feature` flag AND the credentials tier.
  * The tier probe is edition-swapped (EE server action; CE stub returns
  * tierOk=false), so any probe failure resolves hidden. Flag off ⇒ the legacy
  * Hudu-only Passwords tab keeps its current registration.
  */
 export function useCredentialsVaultTab(): CredentialsVaultTabGate {
   const enabled = isEnterprise;
-  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   const [tierOk, setTierOk] = useState(false);

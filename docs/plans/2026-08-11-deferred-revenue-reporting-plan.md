@@ -25,7 +25,7 @@ liability. Accountants currently have nothing to tie out at close.
   (remaining amount, expiration, source — flagging prepayment-sourced credits that
   never reach QBO) and individual bucket lines (remaining minutes, period, value).
 - CSV download of the rollforward plus a printable view.
-- All new UI gated behind the `release-v1.5-feature` feature flag; flag off
+- All new UI gated behind the `release-v1-5-feature` feature flag; flag off
   preserves existing UI and behavior exactly.
 
 ## Non-goals
@@ -152,12 +152,12 @@ source).
 ## UI
 
 - **Page:** `server/src/app/msp/reports/deferred-revenue/page.tsx` — server
-  component that checks `featureFlags.isEnabled('release-v1.5-feature', …)` and the
+  component that checks `featureFlags.isEnabled('release-v1-5-feature', …)` and the
   user's permission; flag off → `notFound()`. Renders a client component from
   `packages/reporting/src/components/deferred-revenue/`.
 - **Hub card:** add a `billing`-category entry to the `REPORTS` catalog in
   `packages/msp-composition/src/reports/Reports.tsx` (`kind: 'link'`, href to the
-  new page), rendered only when the `release-v1.5-feature` flag is on
+  new page), rendered only when the `release-v1-5-feature` flag is on
   (`useFeatureFlag`, `defaultValue: false`).
 - **Report component:** month picker (default: previous month — the close month);
   summary stat row (total liability per currency, split credits vs hours, delta vs

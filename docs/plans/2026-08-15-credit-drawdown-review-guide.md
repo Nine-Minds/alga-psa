@@ -67,7 +67,7 @@ facts to verify:
   `export type CreditActionError = ...` alias; the `resolveCreditDrawdownPolicy`
   re-export at line 463 is a value re-export).
 
-### Four UI surfaces (all gated behind `release-v1.5-feature`)
+### Four UI surfaces (all gated behind `release-v1-5-feature`)
 1. `CreditDrawdownSettings.tsx` (new) — tenant defaults on the Billing Settings
    page, mounted from `BillingSettings.tsx`.
 2. `ClientCreditDrawdownSettings.tsx` (new) — per-client overrides, mounted from

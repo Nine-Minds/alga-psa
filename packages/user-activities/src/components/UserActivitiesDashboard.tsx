@@ -19,7 +19,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function UserActivitiesDashboard() {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled } = useFeatureFlag('release-v1-5-feature');
   const searchParams = useSearchParams();
   // Bell "View all notifications" deep-links here with ?focus=notifications. Treat it
   // as an EPHEMERAL card-view override (task 29.8.46) — only honoured with the flag on.

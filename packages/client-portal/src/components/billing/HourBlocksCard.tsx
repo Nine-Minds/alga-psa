@@ -30,7 +30,7 @@ function isActionError(value: unknown): boolean {
  */
 export default function HourBlocksCard() {
   const { t } = useTranslation('features/billing');
-  const { enabled: widgetEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: widgetEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [blocks, setBlocks] = useState<ClientPortalHourBlock[] | null>(null);

@@ -40,7 +40,7 @@ export function ClientNotificationFiltersDialog({
   onApplyFilters,
 }: ClientNotificationFiltersDialogProps) {
   const { t } = useTranslation('client-portal');
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   const [localFilters, setLocalFilters] = useState<Partial<ActivityFilters>>(() => initialFilters);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialFilters.search || 'all');
   const [selectedPriority, setSelectedPriority] = useState<PriorityFilterKey>(() => priorityKeyFromFilters(initialFilters));

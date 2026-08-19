@@ -9,7 +9,7 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 
-export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
+export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 export const prepaidBalanceAlertSettingsInputSchema = z
   .object({

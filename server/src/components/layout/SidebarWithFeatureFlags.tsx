@@ -117,7 +117,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
-  const credentialsVaultFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const credentialsVaultFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const credentialsVaultEnabled =
     typeof credentialsVaultFlag === 'boolean'
       ? credentialsVaultFlag

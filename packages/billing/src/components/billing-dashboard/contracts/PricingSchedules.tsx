@@ -44,7 +44,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId, currenc
   const { t } = useTranslation('msp/contracts');
   const { locale } = useFormatters();
   const { money } = useCurrencyFormat();
-  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: contractCurrencyEnabled, loading: flagLoading } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   // Flag off preserves the legacy ambient-currency two-decimal rendering.
