@@ -27,6 +27,36 @@ Baseline numbers to re-measure against when done:
 Top areas by error-literal count: billing 731, integrations 436, clients 266, client-portal 266,
 scheduling 209, tickets 205, projects 196.
 
+## Progress (2026-08-19)
+
+Landed on `i18n/error_messages`:
+
+- **Category 6 — done.** `passwordValidation.ts` takes the translator (`common:auth.validation.password.*`,
+  9 keys × 9 locales); wired at `UserManagement` ×2, the team-setup page, and `RegisterForm`.
+  `completeUserInvitationSetup` returns the failing rule's key beside the English.
+  `ContactPhoneNumbersEditor` returns translated messages with a numeric `rowIndex`, and
+  `translateContactPhoneValidationErrors` is deleted. `QuickAddClient`'s inline phone branches are gone.
+- **Category 3 — done for every payload-level match.** `isPermissionError` (both copies) is shape-based;
+  `CodedError` / `errorCodeOf` / `isAuthorizationThrow` give thrown errors a code channel, adopted by 13
+  `*ActionErrors` mappers; contact save errors parse `{ code, detail }` through one helper. `ticketActionErrors`
+  classifies by `TicketErrorCode` first. The 52-prefix list survives as an explicitly deprecated fallback — the
+  prose there is safe *because it is thrown*, and thrown messages never cross the boundary.
+- **Category 1 steps 1–2 — done.** `messageKey` / `messageParams` on both payload shapes,
+  `localizeActionError` in `packages/auth`, wired into `withAuth` and `withOptionalAuth`, with tests for the
+  no-key, missing-namespace, idempotent and no-request-scope paths. surveys / recurring billing / license
+  management localize at their own return.
+- **Category 1 step 3 — client-portal done** (47 keys × 8 locales, all 9 files). `appointmentSchemas` deduped
+  from three identical copies into `@alga-psa/scheduling`. **Next: clients → tickets → billing → integrations.**
+- **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
+  Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
+
+Ratchet at time of writing: error-shaped literals **3,328 across 534 files** (from 3,365/533), high-severity
+files **153** (from 155). Note the error-literal number moves slowly by design — `actionError('English', 'key')`
+still contains the English, so a migrated call site keeps counting until the fallback is dropped. Judge
+category 1 by packages migrated, not by this number.
+
+Not verified: the pseudo-locale walkthrough. It needs a running app, which this pass did not have.
+
 ## Existing infrastructure to build on (do not rebuild)
 
 - `packages/ui/src/lib/errorHandling.ts` — `actionError(msg)` / `permissionError(msg)` return
