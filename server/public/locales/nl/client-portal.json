@@ -301,6 +301,25 @@
         "contactSupport": "Neem contact op met het supportteam van uw organisatie",
         "tryAnother": "Ander e-mailadres proberen"
       }
+    },
+    "register": {
+      "emailLabel": "E-mailadres",
+      "checkingEmail": "E-mailadres controleren...",
+      "existingContactsOnly": "Registratie is alleen mogelijk voor bestaande contactpersonen. Neem contact op met uw beheerder.",
+      "contactVerified": "Contactpersoon geverifieerd. Maak uw wachtwoord aan.",
+      "passwordPlaceholder": "Maak een wachtwoord aan",
+      "passwordMustContain": "Wachtwoord moet bevatten:",
+      "completeRequiredFields": "Vul de verplichte velden in:",
+      "creatingAccount": "Bezig met account aanmaken...",
+      "createAccount": "Account aanmaken",
+      "failed": "Registratie mislukt",
+      "unexpectedError": "Er is een onverwachte fout opgetreden tijdens de registratie.",
+      "missing": {
+        "email": "E-mail",
+        "validEmail": "Geldig e-mailadres",
+        "verifiedContact": "Geverifieerd e-mailadres van de contactpersoon",
+        "validPassword": "Geldig wachtwoord"
+      }
     }
   },
   "account": {

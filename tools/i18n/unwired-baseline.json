@@ -4,7 +4,6 @@
     "packages/assets/src/components/AssetInventoryProvenance.tsx",
     "packages/auth/src/actions/useRegister.tsx",
     "packages/auth/src/components/Alert.tsx",
-    "packages/auth/src/components/RegisterForm.tsx",
     "packages/auth/src/components/SignOutDialog.tsx",
     "packages/auth/src/components/TwoFA.tsx",
     "packages/auth/src/components/settings/policy/PolicyManagement.tsx",

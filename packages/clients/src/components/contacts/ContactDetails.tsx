@@ -539,7 +539,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         return;
       }
 
-      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers });
+      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers, t });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         toast({

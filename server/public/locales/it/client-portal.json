@@ -301,6 +301,25 @@
         "contactSupport": "Contatta il team di supporto della tua organizzazione",
         "tryAnother": "Prova con un’altra email"
       }
+    },
+    "register": {
+      "emailLabel": "Indirizzo email",
+      "checkingEmail": "Verifica dell’email in corso...",
+      "existingContactsOnly": "La registrazione è disponibile solo per i contatti esistenti. Contattare l’amministratore.",
+      "contactVerified": "Contatto verificato. Creare la password.",
+      "passwordPlaceholder": "Crea una password",
+      "passwordMustContain": "La password deve contenere:",
+      "completeRequiredFields": "Compilare i campi obbligatori:",
+      "creatingAccount": "Creazione account in corso...",
+      "createAccount": "Crea account",
+      "failed": "Registrazione non riuscita",
+      "unexpectedError": "Si è verificato un errore imprevisto durante la registrazione.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Indirizzo email valido",
+        "verifiedContact": "Email di contatto verificata",
+        "validPassword": "Password valida"
+      }
     }
   },
   "account": {

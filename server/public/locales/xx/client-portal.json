@@ -350,6 +350,25 @@
         "contactSupport": "11111",
         "tryAnother": "11111"
       }
+    },
+    "register": {
+      "emailLabel": "11111",
+      "checkingEmail": "11111",
+      "existingContactsOnly": "11111",
+      "contactVerified": "11111",
+      "passwordPlaceholder": "11111",
+      "passwordMustContain": "11111",
+      "completeRequiredFields": "11111",
+      "creatingAccount": "11111",
+      "createAccount": "11111",
+      "failed": "11111",
+      "unexpectedError": "11111",
+      "missing": {
+        "email": "11111",
+        "validEmail": "11111",
+        "verifiedContact": "11111",
+        "validPassword": "11111"
+      }
     }
   },
   "account": {

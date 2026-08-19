@@ -199,6 +199,19 @@
       "existingContactsOnly": "11111",
       "registerFromSignIn": "11111",
       "returnToSignIn": "11111"
+    },
+    "validation": {
+      "password": {
+        "required": "11111",
+        "tooShort": "11111",
+        "tooLong": "11111",
+        "missingUppercase": "11111",
+        "missingLowercase": "11111",
+        "missingNumber": "11111",
+        "missingSpecialCharacter": "11111",
+        "tooCommon": "11111",
+        "sequentialCharacters": "11111"
+      }
     }
   },
   "share": {

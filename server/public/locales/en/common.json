@@ -199,6 +199,19 @@
       "existingContactsOnly": "Registration is now only available for existing contacts. Please contact your administrator to be added as a contact first.",
       "registerFromSignIn": "If you are an existing contact, you can register directly from the sign-in page using your contact email address.",
       "returnToSignIn": "Return to Sign In"
+    },
+    "validation": {
+      "password": {
+        "required": "Password is required",
+        "tooShort": "Password must be at least 8 characters long",
+        "tooLong": "Password must be 128 characters or less",
+        "missingUppercase": "Password must contain at least one uppercase letter",
+        "missingLowercase": "Password must contain at least one lowercase letter",
+        "missingNumber": "Password must contain at least one number",
+        "missingSpecialCharacter": "Password must contain at least one special character",
+        "tooCommon": "Password is too common. Please choose a stronger password",
+        "sequentialCharacters": "Password cannot contain sequential characters"
+      }
     }
   },
   "share": {

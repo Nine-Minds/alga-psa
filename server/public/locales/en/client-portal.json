@@ -350,6 +350,25 @@
         "contactSupport": "Contact your organization's support team",
         "tryAnother": "Try Another Email"
       }
+    },
+    "register": {
+      "emailLabel": "Email address",
+      "checkingEmail": "Checking email...",
+      "existingContactsOnly": "Registration is only available for existing contacts. Please contact your administrator.",
+      "contactVerified": "Contact verified. Please create your password.",
+      "passwordPlaceholder": "Create a password",
+      "passwordMustContain": "Password must contain:",
+      "completeRequiredFields": "Please fill in the required fields:",
+      "creatingAccount": "Creating account...",
+      "createAccount": "Create account",
+      "failed": "Registration failed",
+      "unexpectedError": "An unexpected error occurred during registration.",
+      "missing": {
+        "email": "Email",
+        "validEmail": "Valid email address",
+        "verifiedContact": "Verified contact email",
+        "validPassword": "Valid password"
+      }
     }
   },
   "account": {

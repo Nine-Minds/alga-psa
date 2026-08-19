@@ -679,6 +679,19 @@
       "existingContactsOnly": "L'inscription n'est désormais possible que pour les contacts existants. Veuillez contacter votre administrateur afin d'être d'abord ajouté comme contact.",
       "registerFromSignIn": "Si vous êtes déjà un contact existant, vous pouvez vous inscrire directement depuis la page de connexion avec votre adresse e-mail de contact.",
       "returnToSignIn": "Retour à la connexion"
+    },
+    "validation": {
+      "password": {
+        "required": "Le mot de passe est obligatoire",
+        "tooShort": "Le mot de passe doit contenir au moins 8 caractères",
+        "tooLong": "Le mot de passe ne peut pas dépasser 128 caractères",
+        "missingUppercase": "Le mot de passe doit contenir au moins une majuscule",
+        "missingLowercase": "Le mot de passe doit contenir au moins une minuscule",
+        "missingNumber": "Le mot de passe doit contenir au moins un chiffre",
+        "missingSpecialCharacter": "Le mot de passe doit contenir au moins un caractère spécial",
+        "tooCommon": "Le mot de passe est trop courant. Veuillez en choisir un plus robuste",
+        "sequentialCharacters": "Le mot de passe ne peut pas contenir de caractères qui se suivent"
+      }
     }
   },
   "share": {

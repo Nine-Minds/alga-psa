@@ -262,8 +262,8 @@
         "hasUppercase": "Uma letra maiúscula",
         "hasLowercase": "Uma letra minúscula",
         "hasNumber": "Um número",
-        "hasSpecialChar": "Um personagem especial",
-        "passwordsMatch": "Correspondência de senhas"
+        "hasSpecialChar": "Um caractere especial",
+        "passwordsMatch": "As senhas coincidem"
       },
       "createAccount": "Criar conta no portal",
       "creatingAccount": "Criando conta...",
@@ -349,6 +349,25 @@
         "verifyAddress": "Confirme se o endereço de e-mail está correto",
         "contactSupport": "Entre em contato com a equipe de suporte da sua organização",
         "tryAnother": "Tentar outro e-mail"
+      }
+    },
+    "register": {
+      "emailLabel": "Endereço de e-mail",
+      "checkingEmail": "Verificando o e-mail...",
+      "existingContactsOnly": "O registro está disponível apenas para contatos existentes. Entre em contato com o administrador.",
+      "contactVerified": "Contato verificado. Crie sua senha.",
+      "passwordPlaceholder": "Crie uma senha",
+      "passwordMustContain": "A senha deve conter:",
+      "completeRequiredFields": "Preencha os campos obrigatórios:",
+      "creatingAccount": "Criando conta...",
+      "createAccount": "Criar conta",
+      "failed": "Falha no registro",
+      "unexpectedError": "Ocorreu um erro inesperado durante o registro.",
+      "missing": {
+        "email": "E-mail",
+        "validEmail": "Endereço de e-mail válido",
+        "verifiedContact": "E-mail de contato verificado",
+        "validPassword": "Senha válida"
       }
     }
   },

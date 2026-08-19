@@ -143,6 +143,19 @@
       "existingContactsOnly": "El registro ahora solo está disponible para contactos existentes. Comuníquese con su administrador para que primero lo agregue como contacto.",
       "registerFromSignIn": "Si ya es un contacto existente, puede registrarse directamente desde la página de inicio de sesión con la dirección de correo electrónico de su contacto.",
       "returnToSignIn": "Volver al inicio de sesión"
+    },
+    "validation": {
+      "password": {
+        "required": "La contraseña es obligatoria",
+        "tooShort": "La contraseña debe tener al menos 8 caracteres",
+        "tooLong": "La contraseña no puede tener más de 128 caracteres",
+        "missingUppercase": "La contraseña debe contener al menos una letra mayúscula",
+        "missingLowercase": "La contraseña debe contener al menos una letra minúscula",
+        "missingNumber": "La contraseña debe contener al menos un número",
+        "missingSpecialCharacter": "La contraseña debe contener al menos un carácter especial",
+        "tooCommon": "La contraseña es demasiado común. Elija una contraseña más segura",
+        "sequentialCharacters": "La contraseña no puede contener caracteres secuenciales"
+      }
     }
   },
   "share": {

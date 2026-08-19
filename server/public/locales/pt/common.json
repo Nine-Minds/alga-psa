@@ -199,6 +199,19 @@
       "existingContactsOnly": "O cadastro agora está disponível apenas para contatos existentes. Fale com seu administrador para ser adicionado como contato primeiro.",
       "registerFromSignIn": "Se você já for um contato existente, pode se cadastrar diretamente na página de login usando o endereço de email do seu contato.",
       "returnToSignIn": "Voltar ao login"
+    },
+    "validation": {
+      "password": {
+        "required": "A senha é obrigatória",
+        "tooShort": "A senha deve ter pelo menos 8 caracteres",
+        "tooLong": "A senha deve ter no máximo 128 caracteres",
+        "missingUppercase": "A senha deve conter pelo menos uma letra maiúscula",
+        "missingLowercase": "A senha deve conter pelo menos uma letra minúscula",
+        "missingNumber": "A senha deve conter pelo menos um número",
+        "missingSpecialCharacter": "A senha deve conter pelo menos um caractere especial",
+        "tooCommon": "A senha é muito comum. Escolha uma senha mais forte",
+        "sequentialCharacters": "A senha não pode conter caracteres em sequência"
+      }
     }
   },
   "share": {

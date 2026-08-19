@@ -31,7 +31,6 @@ import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
-  translateContactPhoneValidationErrors,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -287,10 +286,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(...currentEmailErrors);
     }
 
-    const currentPhoneErrors = translateContactPhoneValidationErrors(
-      validateContactPhoneNumbers(phoneNumbers),
-      t
-    );
+    const currentPhoneErrors = validateContactPhoneNumbers(phoneNumbers, { t });
     setPhoneValidationErrors(currentPhoneErrors);
     if (currentPhoneErrors.length > 0) {
       fieldValidationErrors.contact_phone = currentPhoneErrors[0];

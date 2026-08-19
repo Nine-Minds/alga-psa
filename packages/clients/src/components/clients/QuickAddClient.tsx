@@ -292,7 +292,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       clearWarnings();
       // Only client name is required, all other fields are optional
       if (fieldName === 'client_name' && isSubmitting) {
-        error = 'Client name is required';
+        error = tValidation('clients.validation.clientName.required', { defaultValue: 'Client name is required' });
       }
       // For optional fields, clear any existing errors when empty
       setFieldErrors(prev => ({
@@ -315,6 +315,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       case 'location_email':
         error = applyField(validateEmailAddressField(value));
         break;
+      // Both phone fields defer entirely to the shared validator. The inline copies
+      // that used to run first duplicated its length and fake-pattern rules in
+      // untranslatable English, so the user's language decided which message they saw.
       case 'location_phone':
         // A bare dial prefix means the user has not started typing yet.
         if (trimmedValue && !/^\+\d{1,4}\s*$/.test(trimmedValue)) {
@@ -399,7 +402,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
     }
 
-    const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
+    const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers, { t });
     setContactPhoneValidationErrors(currentContactPhoneErrors);
     if (currentContactPhoneErrors.length > 0) {
       validationResult.isValid = false;

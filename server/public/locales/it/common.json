@@ -168,6 +168,19 @@
       "existingContactsOnly": "La registrazione ora è disponibile solo per i contatti esistenti. Contatta il tuo amministratore per farti aggiungere prima come contatto.",
       "registerFromSignIn": "Se sei già un contatto esistente, puoi registrarti direttamente dalla pagina di accesso usando il tuo indirizzo email di contatto.",
       "returnToSignIn": "Torna all'accesso"
+    },
+    "validation": {
+      "password": {
+        "required": "La password è obbligatoria",
+        "tooShort": "La password deve contenere almeno 8 caratteri",
+        "tooLong": "La password non può superare i 128 caratteri",
+        "missingUppercase": "La password deve contenere almeno una lettera maiuscola",
+        "missingLowercase": "La password deve contenere almeno una lettera minuscola",
+        "missingNumber": "La password deve contenere almeno un numero",
+        "missingSpecialCharacter": "La password deve contenere almeno un carattere speciale",
+        "tooCommon": "La password è troppo comune. Scegliere una password più sicura",
+        "sequentialCharacters": "La password non può contenere caratteri in sequenza"
+      }
     }
   },
   "share": {

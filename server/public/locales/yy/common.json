@@ -199,6 +199,19 @@
       "existingContactsOnly": "55555",
       "registerFromSignIn": "55555",
       "returnToSignIn": "55555"
+    },
+    "validation": {
+      "password": {
+        "required": "55555",
+        "tooShort": "55555",
+        "tooLong": "55555",
+        "missingUppercase": "55555",
+        "missingLowercase": "55555",
+        "missingNumber": "55555",
+        "missingSpecialCharacter": "55555",
+        "tooCommon": "55555",
+        "sequentialCharacters": "55555"
+      }
     }
   },
   "share": {

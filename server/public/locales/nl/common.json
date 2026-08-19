@@ -679,6 +679,19 @@
       "existingContactsOnly": "Registratie is nu alleen beschikbaar voor bestaande contacten. Neem contact op met uw beheerder om eerst als contact te worden toegevoegd.",
       "registerFromSignIn": "Als u al een bestaand contact bent, kunt u zich rechtstreeks registreren op de aanmeldpagina met uw contact-e-mailadres.",
       "returnToSignIn": "Terug naar aanmelden"
+    },
+    "validation": {
+      "password": {
+        "required": "Wachtwoord is verplicht",
+        "tooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "tooLong": "Wachtwoord mag maximaal 128 tekens lang zijn",
+        "missingUppercase": "Wachtwoord moet minimaal één hoofdletter bevatten",
+        "missingLowercase": "Wachtwoord moet minimaal één kleine letter bevatten",
+        "missingNumber": "Wachtwoord moet minimaal één cijfer bevatten",
+        "missingSpecialCharacter": "Wachtwoord moet minimaal één speciaal teken bevatten",
+        "tooCommon": "Wachtwoord komt te vaak voor. Kies een sterker wachtwoord",
+        "sequentialCharacters": "Wachtwoord mag geen opeenvolgende tekens bevatten"
+      }
     }
   },
   "share": {

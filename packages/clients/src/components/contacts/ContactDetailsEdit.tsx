@@ -24,7 +24,6 @@ import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
-  translateContactPhoneValidationErrors,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -194,10 +193,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
 
-      const currentPhoneErrors = translateContactPhoneValidationErrors(
-        validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers }),
-        t
-      );
+      const currentPhoneErrors = validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers, t });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         setError(currentPhoneErrors[0]);

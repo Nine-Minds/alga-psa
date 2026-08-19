@@ -544,7 +544,7 @@ const fetchContacts = async (): Promise<void> => {
           await fetchUsers();
         } else {
           // Use unified password validation
-          const passwordError = validatePassword(newUser.password);
+          const passwordError = validatePassword(newUser.password, tValidation);
           if (passwordError) {
             toast.error(passwordError);
             return;
@@ -587,7 +587,7 @@ const fetchContacts = async (): Promise<void> => {
         await fetchPendingInvitations();
       } else {
         // Create MSP user immediately with the admin-provided password
-        const passwordError = validatePassword(newUser.password);
+        const passwordError = validatePassword(newUser.password, tValidation);
         if (passwordError) {
           toast.error(passwordError);
           return;

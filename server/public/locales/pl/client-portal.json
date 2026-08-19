@@ -301,6 +301,25 @@
         "contactSupport": "Skontaktuj się z zespołem wsparcia swojej organizacji",
         "tryAnother": "Spróbuj innego adresu e-mail"
       }
+    },
+    "register": {
+      "emailLabel": "Adres e-mail",
+      "checkingEmail": "Sprawdzanie adresu e-mail...",
+      "existingContactsOnly": "Rejestracja jest dostępna wyłącznie dla istniejących kontaktów. Skontaktuj się z administratorem.",
+      "contactVerified": "Kontakt zweryfikowany. Utwórz hasło.",
+      "passwordPlaceholder": "Utwórz hasło",
+      "passwordMustContain": "Hasło musi zawierać:",
+      "completeRequiredFields": "Uzupełnij wymagane pola:",
+      "creatingAccount": "Tworzenie konta...",
+      "createAccount": "Utwórz konto",
+      "failed": "Rejestracja nie powiodła się",
+      "unexpectedError": "Podczas rejestracji wystąpił nieoczekiwany błąd.",
+      "missing": {
+        "email": "E-mail",
+        "validEmail": "Prawidłowy adres e-mail",
+        "verifiedContact": "Zweryfikowany adres e-mail kontaktu",
+        "validPassword": "Prawidłowe hasło"
+      }
     }
   },
   "account": {

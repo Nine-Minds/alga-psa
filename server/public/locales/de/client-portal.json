@@ -301,6 +301,25 @@
         "contactSupport": "Wenden Sie sich an das Support-Team Ihrer Organisation",
         "tryAnother": "Andere E-Mail-Adresse versuchen"
       }
+    },
+    "register": {
+      "emailLabel": "E-Mail-Adresse",
+      "checkingEmail": "E-Mail wird geprüft...",
+      "existingContactsOnly": "Die Registrierung ist nur für bestehende Kontakte möglich. Bitte wenden Sie sich an Ihren Administrator.",
+      "contactVerified": "Kontakt bestätigt. Bitte legen Sie Ihr Passwort fest.",
+      "passwordPlaceholder": "Passwort erstellen",
+      "passwordMustContain": "Das Passwort muss enthalten:",
+      "completeRequiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+      "creatingAccount": "Konto wird erstellt...",
+      "createAccount": "Konto erstellen",
+      "failed": "Registrierung fehlgeschlagen",
+      "unexpectedError": "Bei der Registrierung ist ein unerwarteter Fehler aufgetreten.",
+      "missing": {
+        "email": "E-Mail",
+        "validEmail": "Gültige E-Mail-Adresse",
+        "verifiedContact": "Bestätigte Kontakt-E-Mail-Adresse",
+        "validPassword": "Gültiges Passwort"
+      }
     }
   },
   "account": {

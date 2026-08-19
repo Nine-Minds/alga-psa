@@ -182,6 +182,19 @@
       "existingContactsOnly": "Rejestracja jest teraz dostępna tylko dla istniejących kontaktów. Skontaktuj się z administratorem, aby najpierw dodać Cię jako kontakt.",
       "registerFromSignIn": "Jeśli jesteś już istniejącym kontaktem, możesz zarejestrować się bezpośrednio na stronie logowania, używając adresu e-mail swojego kontaktu.",
       "returnToSignIn": "Wróć do logowania"
+    },
+    "validation": {
+      "password": {
+        "required": "Hasło jest wymagane",
+        "tooShort": "Hasło musi mieć co najmniej 8 znaków",
+        "tooLong": "Hasło może mieć maksymalnie 128 znaków",
+        "missingUppercase": "Hasło musi zawierać co najmniej jedną wielką literę",
+        "missingLowercase": "Hasło musi zawierać co najmniej jedną małą literę",
+        "missingNumber": "Hasło musi zawierać co najmniej jedną cyfrę",
+        "missingSpecialCharacter": "Hasło musi zawierać co najmniej jeden znak specjalny",
+        "tooCommon": "Hasło jest zbyt popularne. Proszę wybrać silniejsze hasło",
+        "sequentialCharacters": "Hasło nie może zawierać znaków następujących po sobie"
+      }
     }
   },
   "share": {

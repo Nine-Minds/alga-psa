@@ -350,6 +350,25 @@
         "contactSupport": "55555",
         "tryAnother": "55555"
       }
+    },
+    "register": {
+      "emailLabel": "55555",
+      "checkingEmail": "55555",
+      "existingContactsOnly": "55555",
+      "contactVerified": "55555",
+      "passwordPlaceholder": "55555",
+      "passwordMustContain": "55555",
+      "completeRequiredFields": "55555",
+      "creatingAccount": "55555",
+      "createAccount": "55555",
+      "failed": "55555",
+      "unexpectedError": "55555",
+      "missing": {
+        "email": "55555",
+        "validEmail": "55555",
+        "verifiedContact": "55555",
+        "validPassword": "55555"
+      }
     }
   },
   "account": {
