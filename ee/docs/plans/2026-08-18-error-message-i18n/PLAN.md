@@ -55,7 +55,16 @@ Landed on `i18n/error_messages`:
   `msp/service-catalog`, `msp/billing-settings`, and `msp/billing` for what genuinely spans them (the four
   `Permission denied: billing … required` strings alone cover 104 sites, so they get one key each).
   integrations: 71 call sites across 11 action files, 103 keys in `msp/email-providers` and
-  `msp/integrations`. **Next: scheduling (209) → projects (196) → the rest.**
+  `msp/integrations`. scheduling: 44 sites, 46 keys in `msp/time-entry` and `msp/schedule`. projects: 44
+  sites, 52 keys in `projects`. assets / teams / sla / reference-data: 78 sites, 85 keys in `msp/assets` and
+  the `msp/settings` blocks that already serve those screens. documents: 96 sites, 30 keys (the bare
+  `'Permission denied'` was twenty-two of them). surveys / users / tenancy / notifications / reporting: 72
+  sites, 68 keys. tags / auth policy + sessions / user-composition / jobs: 44 sites, 36 keys.
+
+  **What is left: `packages/inventory` (205 sites), `server/src` (39) and `ee/server/src` (11).** That is the
+  whole remaining inventory of literal `actionError` / `permissionError` call sites; every other package is
+  through. Re-measure with `node /tmp`-style scan or simply
+  `grep -rn "actionError('\|permissionError('" <package>/src`.
 
   Six conventions worth not re-deriving:
 
@@ -64,12 +73,15 @@ Landed on `i18n/error_messages`:
   2. **An action that reports failure as a bare string has to localize it itself.** `withAuth` can only
      rewrite a payload it can still see; the moment the code does `String(candidate.actionError)` the key is
      gone. Grep `String(candidate\.\(actionError\|permissionError\)` before calling a package done — that is
-     the whole inventory, and it is short. Seven are fixed (clients `createClient`, `clientActionMessageFrom`,
-     `contactActionResultErrorFrom`; tickets `ticketBulkFailureMessage`, `ticketImportRowErrorMessage` and
-     two inline returns). Eight remain, one each in **assets ×2, documents, projects, reference-data,
-     scheduling, sla, teams** — harmless while those packages carry no keys, and a silent failure the moment
-     they do. The browser walk is what found the first: every test passed while the German run came back in
-     English, because the English fallback is still correct English.
+     the whole inventory, and it is short. Every server-side one is now fixed: clients `createClient`,
+     `clientActionMessageFrom`, `contactActionResultErrorFrom`; tickets `ticketBulkFailureMessage`,
+     `ticketImportRowErrorMessage` and two inline returns; scheduling `timeSheetRemovalErrorMessage`;
+     projects `regenerateOrderKeys`; assets `assetActionErrorMessage`; documents
+     `documentActionErrorMessage`. What the grep still finds is **client components** flattening a payload
+     the boundary already localized (teams via `BulkAssignTicketsDialog`, reference-data via the status
+     dialogs, assets via `assetDrawerActions`) and one dead helper in sla — those are fine as they are.
+     The browser walk is what found the first: every test passed while the German run came back in English,
+     because the English fallback is still correct English.
   3. Concatenated messages have to become whole sentences, one per branch. Five missing-field strings and the
      singular/plural bundle-master prefix went that way; a prefix and a tail do not agree across languages.
      The same shape hides behind a helper that takes an English noun: `Cannot ${ACTION_DESCRIPTIONS[action]}`,
@@ -93,8 +105,8 @@ Landed on `i18n/error_messages`:
 - **Category 5 — 2 of 155 done** (`RegisterForm`, `TimePeriodSettings`), plus 3 stale baseline entries dropped.
   Ratchet is at 153. `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last.
 
-Ratchet at time of writing: high-severity files **153** (from 155), unchanged by the clients pass, which
-touched no unwired component. Note the error-literal number moves slowly by design —
+Ratchet at time of writing: high-severity files **153** (from 155), unchanged by any of the category-1
+passes, which touch actions rather than unwired components. Note the error-literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
@@ -135,6 +147,11 @@ integrations has no browser walk yet: its reachable surfaces here are the QuickB
 connected tenant) and the managed-email domain form, which is an EE component talking to an API that returns
 `{ success, error }` rather than an action payload — a category-4 site, not the boundary. Its keys are covered
 by unit assertions and the lang-pack gate instead.
+
+After the whole pass, a signed-in walk of `/msp/dashboard`, `/msp/tickets`, `/msp/clients`,
+`/msp/billing?tab=service-types`, `/msp/projects`, `/msp/schedule`, `/msp/assets`, `/msp/documents` and
+`/msp/settings` renders every screen with no 500 and no locale-file 404. The only failing requests are the
+local SSO discovery probe and document previews for seeded rows whose files are not in local storage.
 
 What a browser still cannot reach is the packages that have no keys yet: everything below `integrations` in
 the migration order.
@@ -379,4 +396,12 @@ trigger the error paths; that is the only way the pseudo-locale catches an error
 - Adding a key to a package can pull `@alga-psa/ui/lib/i18n/serverOnly` into its Vitest graph for the first
   time, which is how the tickets suite found that its config mapped every `@alga-psa/db/*` subpath to
   `db/src/$1` while the package's exports put `tenant`, `connection` and `workDate` under `db/src/lib`. Check
-  the alias table before assuming a red suite means red code.
+  the alias table before assuming a red suite means red code. It cost tickets and projects a config repair
+  each, and the same wrong shape is still sitting in `authorization`, `core`, `email`, `event-bus`, `tenancy`
+  and `users` — untouched because their suites do not reach the boundary yet.
+- A package that flattens a payload needs `localizeActionError`, and importing it from the `@alga-psa/auth`
+  root drags next-auth into the test graph. Import `@alga-psa/auth/localizeActionError` instead — the subpath
+  exists for exactly this — and note that `@alga-psa/ui` publishes `./lib/*` from `dist`, so a package whose
+  Vitest config does not alias ui to source will fail to resolve `serverOnly` even so.
+- A package may also need `@alga-psa/auth` *declared*: scheduling, projects, assets and documents were all
+  importing it already. Add it to `dependencies` and regenerate the lockfile in the same commit.
