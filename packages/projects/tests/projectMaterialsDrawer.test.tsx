@@ -3,8 +3,19 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
+import { configure, render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
+
+// Several assertions here await an async data load — most notably the
+// getServicePrices() fetch that fires from a useEffect after a product is
+// selected, then re-renders the price options. Testing Library's default
+// findBy/waitFor timeout is 1000ms, which is comfortable in isolation (this
+// file runs in ~1s) but occasionally too tight under the full server unit
+// suite's CPU contention (12k+ tests, single worker), producing a rare
+// "Unable to find element: USD - $10.00" flake. Widen the async timeout for
+// this file so the assertions are load-independent; no product behavior is
+// affected.
+configure({ asyncUtilTimeout: 5000 });
 import type { CatalogPickerItem } from '../src/actions/materialCatalogActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 

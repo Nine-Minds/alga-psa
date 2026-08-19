@@ -34,6 +34,20 @@ export interface InvoiceZipJobData extends Record<string, unknown> {
   };
 }
 
+/**
+ * The client an exported bundle belongs to, or null when it does not belong to
+ * one. A bundle of a single client's invoices files naturally under that client;
+ * a mixed bundle has no defensible owner, so it is filed with no client
+ * association rather than against an unrelated one. The per-invoice PDFs inside
+ * are already associated to their own invoice and client by the PDF service.
+ */
+export function selectBundleClientId(clientIds: readonly (string | null | undefined)[]): string | null {
+  const distinct = new Set(
+    clientIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+  return distinct.size === 1 ? [...distinct][0] : null;
+}
+
 export class InvoiceZipJobHandler {
   private jobService: JobService;
   private storageService: StorageService;
@@ -204,16 +218,19 @@ export class InvoiceZipJobHandler {
 
       const knex = await getConnection(tenantId);
 
-      // Tenant's default client, straight from the database.
+      // The bundle belongs to the invoices in it, not to whichever client the
+      // tenant happens to have flagged default — a fresh tenant has none at all,
+      // and hard-failing here would throw away a ZIP that is already stored.
       const scopedDb = tenantDb(knex, tenantId);
-      const defaultClientQuery = scopedDb.table('tenant_companies as tc')
-        .where('tc.is_default', true)
-        .whereNull('tc.deleted_at')
-        .select('tc.client_id')
-        .first<{ client_id: string } | undefined>();
-      const defaultClient = await defaultClientQuery;
-      if (!defaultClient) {
-        throw new Error('No default client found for tenant');
+      const invoiceClientIds = await scopedDb.table('invoices')
+        .whereIn('invoice_id', invoiceIds)
+        .pluck<Array<string | null>>('client_id');
+      const bundleClientId = selectBundleClientId(invoiceClientIds);
+      if (!bundleClientId) {
+        console.log(
+          `Invoice bundle for tenant ${tenantId} spans ${new Set(invoiceClientIds).size} client(s); ` +
+            'filing the archive without a client association.'
+        );
       }
 
       // Read zip file contents and store the archive as a document owned by
@@ -245,12 +262,14 @@ export class InvoiceZipJobHandler {
           is_client_visible: false,
         } as IDocument);
 
-        await DocumentAssociation.create(trx, {
-          document_id: documentId,
-          entity_id: defaultClient.client_id,
-          entity_type: 'client',
-          tenant: tenantId,
-        });
+        if (bundleClientId) {
+          await DocumentAssociation.create(trx, {
+            document_id: documentId,
+            entity_id: bundleClientId,
+            entity_type: 'client',
+            tenant: tenantId,
+          });
+        }
       });
 
       // Complete ZIP creation

@@ -4,6 +4,7 @@ const currentUser = { user_id: 'user-1', tenant: 'tenant-1', roles: [] };
 
 const getConnectionMock = vi.fn();
 const generateAndStoreMock = vi.fn();
+const getStoredInvoicePdfMock = vi.fn();
 let storedInvoiceDocument: { file_id: string } | undefined;
 let invoiceRow: Record<string, unknown> | undefined;
 
@@ -40,6 +41,7 @@ vi.mock('@alga-psa/billing/models/quoteActivity', () => ({ default: {} }));
 vi.mock('@alga-psa/billing/services', () => ({
   recalculateQuoteFinancials: vi.fn(),
   createPDFGenerationService: vi.fn(() => ({ generateAndStore: generateAndStoreMock })),
+  getStoredInvoicePdf: (...args: any[]) => getStoredInvoicePdfMock(...args),
 }));
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesByClient: vi.fn(),
@@ -85,22 +87,44 @@ describe('downloadClientInvoicePdf', () => {
     expect(generateAndStoreMock).not.toHaveBeenCalled();
   });
 
-  it('generates and files a PDF directly when no published copy exists', async () => {
+  it('returns bytes, never a file id, when no published copy exists', async () => {
     storedInvoiceDocument = undefined;
-    generateAndStoreMock.mockResolvedValue({ file_id: 'generated-file-1', storage_path: '/x' });
+    getStoredInvoicePdfMock.mockResolvedValue(Buffer.from([37, 80, 68, 70]));
 
     const { downloadClientInvoicePdf } = await import('./client-billing');
     const result = await downloadClientInvoicePdf('invoice-1');
 
-    // Direct generation, not the zip job: the job resolves its acting user
-    // from the request session, which a background job does not have.
-    expect(generateAndStoreMock).toHaveBeenCalledWith({
+    expect(getStoredInvoicePdfMock).toHaveBeenCalledWith({
+      tenant: 'tenant-1',
       invoiceId: 'invoice-1',
       invoiceNumber: 'INV-001',
-      version: 1,
       userId: 'user-1',
+      logLabel: '[downloadClientInvoicePdf]',
     });
-    expect(result).toEqual({ success: true, fileId: 'generated-file-1' });
+    // A freshly filed invoice document is is_client_visible=false, which the
+    // documents download route denies to portal users, so handing back its
+    // file id would 404. Bytes are unconditional.
+    expect(result).toEqual({
+      success: true,
+      pdfData: [37, 80, 68, 70],
+      invoiceNumber: 'INV-001',
+    });
+    expect((result as { fileId?: string }).fileId).toBeUndefined();
+  });
+
+  it('surfaces a typed error instead of throwing when the render fails', async () => {
+    storedInvoiceDocument = undefined;
+    getStoredInvoicePdfMock.mockRejectedValue(new Error('Failed to launch the browser process'));
+
+    const { downloadClientInvoicePdf } = await import('./client-billing');
+    const result = await downloadClientInvoicePdf('invoice-1');
+
+    // Thrown server-action messages are redacted in production, which is how a
+    // missing chromium binary became a generic "Failed to download PDF" toast.
+    expect(result).toEqual({
+      actionError:
+        'The invoice PDF could not be generated. Please try again, and contact support if the problem continues.',
+    });
   });
 
   it('refuses invoices the portal user cannot see before looking for a document', async () => {
@@ -111,5 +135,6 @@ describe('downloadClientInvoicePdf', () => {
 
     expect(result).toEqual({ actionError: 'Invoice not found or access denied' });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
+    expect(getStoredInvoicePdfMock).not.toHaveBeenCalled();
   });
 });

@@ -41,7 +41,7 @@ import Invoice from '@alga-psa/billing/models/invoice';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
-import { StorageService } from '@alga-psa/storage/StorageService';
+import { getStoredInvoicePdf } from '../services/invoicePdfDeliveryService';
 import { toPlainDate, toISODate, toISOTimestamp } from '@alga-psa/core';
 import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
@@ -2825,41 +2825,6 @@ export const generateInvoicePDF = withAuth(async (
   });
 });
 
-/**
- * Bytes of the invoice's filed PDF: reuses the document already on file — unless a
- * different template was asked for — and refreshes it while the invoice has not been
- * issued yet. Falls back to a plain render if the document store is unavailable: a
- * download must not depend on filing succeeding.
- */
-async function getStoredInvoicePdf(options: {
-  tenant: string;
-  invoiceId: string;
-  invoiceNumber: string;
-  userId: string;
-  templateId?: string;
-}): Promise<Buffer> {
-  const pdfGenerationService = createPDFGenerationService(options.tenant);
-
-  try {
-    const stored = await pdfGenerationService.generateAndStore({
-      invoiceId: options.invoiceId,
-      invoiceNumber: options.invoiceNumber,
-      templateId: options.templateId,
-      userId: options.userId,
-    });
-
-    const { buffer } = await StorageService.downloadFile(stored.file_id);
-    return Buffer.from(buffer);
-  } catch (error) {
-    console.error('[downloadInvoicePDF] Falling back to an unfiled render:', error);
-    return pdfGenerationService.generatePDF({
-      invoiceId: options.invoiceId,
-      userId: options.userId,
-      templateId: options.templateId,
-    });
-  }
-}
-
 export const downloadInvoicePDF = withAuth(async (
   user,
   { tenant },
@@ -2897,6 +2862,7 @@ export const downloadInvoicePDF = withAuth(async (
       invoiceNumber: invoice.invoice_number,
       userId: user.user_id,
       templateId: templateId || undefined,
+      logLabel: '[downloadInvoicePDF]',
     });
 
     console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
