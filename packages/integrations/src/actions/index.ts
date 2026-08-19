@@ -11,6 +11,8 @@ export {
   saveQboCredentials,
   disconnectQbo,
   getQboTaxCodes,
+  getQboAutomatedSalesTaxMode,
+  setQboAutomatedSalesTaxMode,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,

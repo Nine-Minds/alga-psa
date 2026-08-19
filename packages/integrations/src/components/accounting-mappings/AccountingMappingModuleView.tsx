@@ -75,12 +75,38 @@ export function AccountingMappingModuleView({
   }, [loadData]);
 
   const handleCreateOrUpdate = useCallback(
-    async (input: {
+    async (rawInput: {
       algaEntityId: string;
       externalEntityId: string;
       metadata?: Record<string, unknown> | null;
       mappingId?: string;
     }) => {
+      // Only the JSON editor can express metadata, and it is seeded from the
+      // stored row, so what it returns is the user's whole intent. Without it
+      // the dialog always reports null, which must not be read as "delete
+      // everything" — module-owned keys (a service's classId, an invoice's
+      // chargeLineMappings) are written elsewhere and would be lost on any edit.
+      const existingMetadata = rawInput.mappingId
+        ? mappings.find((mapping) => mapping.id === rawInput.mappingId)?.metadata
+        : undefined;
+      const baseMetadata = module.metadata?.enableJsonEditor
+        ? rawInput.metadata
+        : (rawInput.metadata ?? existingMetadata);
+
+      // Persist the selected option's label so the mapping stays readable even
+      // when a later catalog load misses this id (pseudo codes, other realm,
+      // entity deactivated upstream).
+      const externalDisplayName = externalOptions.find(
+        (option) => option.id === rawInput.externalEntityId
+      )?.name;
+
+      const input = {
+        ...rawInput,
+        metadata: externalDisplayName
+          ? { ...((baseMetadata as Record<string, unknown> | null) ?? {}), externalDisplayName }
+          : baseMetadata
+      };
+
       if (input.mappingId) {
         if (overrides?.updateMapping) {
           await overrides.updateMapping(context, input.mappingId, {
@@ -114,7 +140,7 @@ export function AccountingMappingModuleView({
       }
       await loadData();
     },
-    [context, loadData, module, overrides]
+    [context, externalOptions, loadData, mappings, module, overrides]
   );
 
   const handleDelete = useCallback(async () => {
@@ -294,8 +320,20 @@ function enrichMappings(
   return mappings.map((mapping) => ({
     ...mapping,
     algaName: algaLookup.get(mapping.alga_entity_id),
-    externalName: externalLookup.get(mapping.external_entity_id)
+    // The live catalog wins — it is the current truth. The name captured when
+    // the mapping was saved is the fallback, and it is the only thing standing
+    // between the user and a bare QuickBooks id once the catalog stops carrying
+    // the entity: deactivated tax codes, a realm switch, the AST pseudo codes.
+    externalName:
+      externalLookup.get(mapping.external_entity_id) ??
+      readExternalDisplayName(mapping.metadata)
   }));
+}
+
+function readExternalDisplayName(metadata: unknown): string | undefined {
+  if (!metadata || typeof metadata !== 'object') return undefined;
+  const value = (metadata as Record<string, unknown>).externalDisplayName;
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 function useOverrides(

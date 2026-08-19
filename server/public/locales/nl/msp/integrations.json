@@ -1858,6 +1858,7 @@
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
@@ -1879,9 +1880,21 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Tenant-eigen OAuth-app",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Via welke Intuit-app deze tenant verbinding maakt. Secrets worden na opslaan nooit teruggestuurd naar de browser.",
+        "tenantOauthTitle": "Intuit-app-gegevens",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "De Automated Sales Tax-modus staat uit. Alga blijft de belasting voor dit bedrijf berekenen.",
+          "enabledMessage": "QuickBooks berekent vanaf nu de omzetbelasting voor gedelegeerde facturen van dit bedrijf.",
+          "hint": "Zet dit aan wanneer dit QuickBooks-bedrijf Automated Sales Tax gebruikt. Intuit belast geëxporteerde facturen dan op basis van het klantadres en de belasting komt terug naar Alga.",
+          "label": "QuickBooks berekent de omzetbelasting"
+        },
+        "credentialSource": {
+          "app": "Deze omgeving biedt een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Vul de velden hieronder alleen in als deze tenant een eigen Intuit-app moet gebruiken.",
+          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
+          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
+        },
+        "setupGuideLink": "QuickBooks-installatiegids"
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -1970,6 +1983,15 @@
         "errors": {
           "previewFailed": "Importvoorbeeld laden mislukt.",
           "executeFailed": "De import is mislukt."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — niet belastbaar",
+          "taxable": "TAX — belastbaar (Automated Sales Tax bepaalt het tarief)"
         }
       }
     },

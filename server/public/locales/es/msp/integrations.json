@@ -1858,6 +1858,7 @@
         "environmentProduction": "Producción",
         "environmentSandbox": "Entorno de pruebas",
         "errors": {
+          "automatedSalesTax": "No se pudo actualizar el modo Automated Sales Tax.",
           "disconnect": "No se pudo desconectar QuickBooks.",
           "load": "No se pudo cargar la configuración de QuickBooks.",
           "saveCredentials": "No se pudieron guardar las credenciales de QuickBooks."
@@ -1879,9 +1880,21 @@
         "requiredScopes": "Scopes requeridos",
         "storedClientId": "Client ID almacenado: {{value}}",
         "storedClientSecret": "Client secret almacenado: {{value}}",
-        "tenantOauthDescription": "Pegue las credenciales de la aplicación Intuit registradas para este inquilino, o déjelas en blanco para usar la aplicación QuickBooks a nivel de aplicación si hay una configurada. Los valores de secreto nunca se devuelven al navegador después de guardarse.",
-        "tenantOauthTitle": "Aplicación OAuth propia del inquilino",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "A través de qué app de Intuit se conecta este inquilino. Los secretos nunca se devuelven al navegador una vez guardados.",
+        "tenantOauthTitle": "Credenciales de la app de Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "El modo Automated Sales Tax está desactivado. Alga sigue calculando el impuesto de esta empresa.",
+          "enabledMessage": "QuickBooks calculará a partir de ahora el impuesto sobre las ventas de las facturas delegadas de esta empresa.",
+          "hint": "Active esta opción cuando esta empresa de QuickBooks use Automated Sales Tax: Intuit calculará el impuesto de las facturas exportadas a partir de la dirección del cliente y el importe volverá a Alga.",
+          "label": "QuickBooks calcula el impuesto sobre las ventas"
+        },
+        "credentialSource": {
+          "app": "Esta instalación ofrece una app de Intuit compartida, así que puede conectar QuickBooks sin registrar ninguna. Rellene los campos siguientes solo si desea que este inquilino use su propia app de Intuit.",
+          "none": "Todavía no hay ninguna app de Intuit disponible. Registre una en el portal Intuit Developer y pegue abajo su ID de cliente y su secreto; la guía de configuración lo explica paso a paso.",
+          "tenant": "Este inquilino se conecta mediante su propia app de Intuit, con las credenciales guardadas abajo."
+        },
+        "setupGuideLink": "Guía de configuración de QuickBooks"
       },
       "sync": {
         "healthCardTitle": "Estado de sincronización",
@@ -1970,6 +1983,15 @@
         "errors": {
           "previewFailed": "No se pudo cargar la vista previa de la importación.",
           "executeFailed": "La importación falló."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — exento de impuesto",
+          "taxable": "TAX — sujeto a impuesto (Automated Sales Tax elige la tasa)"
         }
       }
     },

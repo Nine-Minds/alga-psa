@@ -1858,6 +1858,7 @@
         "environmentProduction": "Produção",
         "environmentSandbox": "Caixa de areia",
         "errors": {
+          "automatedSalesTax": "Não foi possível atualizar o modo Automated Sales Tax.",
           "disconnect": "Falha ao desconectar QuickBooks.",
           "load": "Falha ao carregar as configurações do QuickBooks.",
           "saveCredentials": "Falha ao salvar as credenciais do QuickBooks."
@@ -1879,9 +1880,21 @@
         "requiredScopes": "Escopos necessários",
         "storedClientId": "ID do cliente armazenado: {{value}}",
         "storedClientSecret": "Segredo do cliente armazenado: {{value}}",
-        "tenantOauthDescription": "Cole as credenciais do aplicativo Intuit registradas para este locatário ou deixe em branco para usar o aplicativo QuickBooks no nível do aplicativo, se houver algum configurado. Os valores secretos nunca são retornados ao navegador depois de salvos.",
-        "tenantOauthTitle": "Aplicativo OAuth de propriedade do locatário",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Através de que aplicação Intuit este inquilino se liga. Os segredos nunca são devolvidos ao navegador depois de guardados.",
+        "tenantOauthTitle": "Credenciais da aplicação Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "O modo Automated Sales Tax está desativado. O Alga continua a calcular o imposto desta empresa.",
+          "enabledMessage": "O QuickBooks passará a calcular o imposto sobre vendas das faturas delegadas desta empresa.",
+          "hint": "Ative esta opção quando esta empresa do QuickBooks usar o Automated Sales Tax: a Intuit calcula o imposto das faturas exportadas a partir do endereço do cliente e o valor retorna ao Alga.",
+          "label": "O QuickBooks calcula o imposto sobre vendas"
+        },
+        "credentialSource": {
+          "app": "Esta instalação fornece uma aplicação Intuit partilhada, por isso pode ligar o QuickBooks sem registar nenhuma. Preencha os campos abaixo apenas se quiser que este inquilino use a sua própria aplicação Intuit.",
+          "none": "Ainda não há nenhuma aplicação Intuit disponível. Registe uma no portal Intuit Developer e cole abaixo o ID de cliente e o segredo — o guia de configuração explica o processo.",
+          "tenant": "Este inquilino liga-se através da sua própria aplicação Intuit, com as credenciais guardadas abaixo."
+        },
+        "setupGuideLink": "Guia de configuração do QuickBooks"
       },
       "sync": {
         "healthCardTitle": "Sincronizar saúde",
@@ -1970,6 +1983,15 @@
         "errors": {
           "previewFailed": "Falha ao carregar a pré-visualização da importação.",
           "executeFailed": "A importação falhou."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — não tributável",
+          "taxable": "TAX — tributável (o Automated Sales Tax escolhe a taxa)"
         }
       }
     },
