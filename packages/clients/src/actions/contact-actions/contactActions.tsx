@@ -50,6 +50,7 @@ import {
   normalizePhone,
   parseSubmittedFields
 } from '@alga-psa/validation';
+import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
 /**
  * Structural validation, applied on write only. Pass `existing` on an update so a
@@ -60,7 +61,7 @@ import {
 function applyContactStructuralSchema<T extends Record<string, any>>(
   payload: T,
   options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
-): { ok: true; data: T } | { ok: false; error: string } {
+): StructuralResult<T> {
   const result = parseSubmittedFields(contactCoreFieldsSchema, payload, options);
   if (!result.success) {
     return { ok: false, error: `VALIDATION_ERROR: ${result.error ?? 'Invalid contact data'}` };
@@ -648,7 +649,7 @@ export const addContact = withAuth(async (
       { full_name: contactData.full_name || '', email: contactData.email ?? undefined },
       { partial: false }
     );
-    if (!structural.ok) {
+    if (isStructuralFailure(structural)) {
       throw new Error(structural.error);
     }
 
@@ -863,7 +864,7 @@ export const updateContact = withAuth(async (
       // row: a contact that predates the schema keeps its legacy values until
       // somebody actually edits them.
       const structural = applyContactStructuralSchema(contactData, { existing: existingContact as Record<string, unknown> });
-      if (!structural.ok) {
+      if (isStructuralFailure(structural)) {
         throw new Error(structural.error);
       }
       Object.assign(contactData, structural.data);
@@ -1597,7 +1598,7 @@ export const createClientContact = withAuth(async (
       { full_name: fullName, email },
       { partial: false }
     );
-    if (!structural.ok) {
+    if (isStructuralFailure(structural)) {
       throw new Error(structural.error);
     }
     const normalizedEmail = structural.data.email ?? '';

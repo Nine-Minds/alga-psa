@@ -24,6 +24,7 @@ import {
   normalizePhone,
   parseSubmittedFields
 } from '@alga-psa/validation';
+import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 
 type ClientLocationActionError = ActionMessageError | ActionPermissionError;
 
@@ -46,7 +47,7 @@ function applyLocationStructuralSchema<T extends Record<string, any>>(
   payload: T,
   countryCode?: string | null,
   existing?: Record<string, unknown> | null
-): { ok: true; data: T } | { ok: false; error: ClientLocationActionError } {
+): StructuralResult<T, ClientLocationActionError> {
   const candidate: Record<string, unknown> = { ...payload };
   for (const field of ['phone', 'fax'] as const) {
     const value = candidate[field];
@@ -199,7 +200,7 @@ export const createClientLocation = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const structural = applyLocationStructuralSchema(locationData, locationData.country_code);
-  if (!structural.ok) {
+  if (isStructuralFailure(structural)) {
     return structural.error;
   }
   const validatedLocationData = structural.data;
@@ -273,7 +274,7 @@ export const updateClientLocation = withAuth(async (
         locationData.country_code ?? existingLocation.country_code,
         existingLocation as unknown as Record<string, unknown>
       );
-      if (!structural.ok) {
+      if (isStructuralFailure(structural)) {
         throw new StructuralLocationError(structural.error);
       }
 

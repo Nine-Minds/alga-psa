@@ -40,6 +40,7 @@ import {
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, parseSubmittedFields } from '@alga-psa/validation';
+import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -61,7 +62,7 @@ class ClientStructuralError extends Error {}
 function applyClientStructuralSchema<T extends Record<string, any>>(
   payload: T,
   options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
-): { ok: true; data: T } | { ok: false; error: string } {
+): StructuralResult<T> {
   const result = parseSubmittedFields(clientCoreFieldsSchema, payload, options);
   if (!result.success) {
     return { ok: false, error: result.error ?? 'Invalid client data' };
@@ -298,7 +299,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       // Structural rules apply to what the caller is actually changing. Anything
       // that comes back identical to the stored value is grandfathered.
       const structural = applyClientStructuralSchema(sanitizedUpdateData, { existing: currentClient });
-      if (!structural.ok) {
+      if (isStructuralFailure(structural)) {
         throw new ClientStructuralError(structural.error);
       }
       permittedUpdateData = structural.data;
@@ -538,7 +539,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     // Validate after the website/url sync so a bad properties.website cannot reach
     // the url column unchecked, and write the normalized values back to both.
     const structural = applyClientStructuralSchema(clientData, { partial: false });
-    if (!structural.ok) {
+    if (isStructuralFailure(structural)) {
       return { success: false, error: structural.error };
     }
     Object.assign(clientData, structural.data);
