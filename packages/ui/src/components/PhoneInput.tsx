@@ -172,7 +172,14 @@ export const PhoneInput = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phoneNumber = e.target.value;
     setDisplayValue(phoneNumber);
-    onChange(resolvedPhoneCode ? `${resolvedPhoneCode} ${phoneNumber}`.trim() : phoneNumber);
+    // A number typed or pasted with its own dial code already carries one; adding
+    // the picker's on top produces "+1 +44 20 …", which parses as nothing.
+    const carriesOwnDialCode = phoneNumber.trim().startsWith('+');
+    onChange(
+      resolvedPhoneCode && !carriesOwnDialCode
+        ? `${resolvedPhoneCode} ${phoneNumber}`.trim()
+        : phoneNumber
+    );
   };
 
   const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {

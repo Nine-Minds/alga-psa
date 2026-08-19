@@ -85,4 +85,48 @@ describe('PhoneInput', () => {
 
     expect(onChange).toHaveBeenLastCalledWith('+44 555 123 4567');
   });
+
+  it('does not stack the picker dial code on a number that brought its own', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <PhoneInput
+        id="pasted-phone"
+        label="Phone Number"
+        value=""
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    // "+1 +44 …" parses as nothing, which used to be stored silently and now
+    // blocks the save — so the prefix must not be added twice.
+    await user.type(screen.getByRole('textbox'), '+442079460958');
+
+    expect(onChange).toHaveBeenLastCalledWith('+442079460958');
+  });
+
+  it('still adds the picker dial code to a bare national number', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <PhoneInput
+        id="national-phone"
+        label="Phone Number"
+        value=""
+        onChange={onChange}
+        countryCode="US"
+        phoneCode="+1"
+        countries={countries}
+      />
+    );
+
+    await user.type(screen.getByRole('textbox'), '4155550123');
+
+    expect(onChange).toHaveBeenLastCalledWith('+1 4155550123');
+  });
 });
