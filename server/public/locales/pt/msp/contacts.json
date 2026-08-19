@@ -709,7 +709,24 @@
   },
   "errors": {
     "contact": {
-      "notFound": "Contato não encontrado"
+      "notFound": "Contato não encontrado",
+      "otherClient": "Permissão negada: não é possível gerenciar contatos de outro cliente",
+      "notAssociatedWithClient": "O contato não está associado a um cliente",
+      "emailExists": "Já existe no sistema um contato com este endereço de e-mail",
+      "fieldRequired": "{{field}} é obrigatório",
+      "clientInvalid": "O cliente selecionado não é mais válido",
+      "duplicate": "Já existe um contato com estes dados.",
+      "destinationInvalid": "O cliente ou o destino de tickets de entrada selecionados não são mais válidos",
+      "invalidDataRefresh": "Dados de contato inválidos. Atualize a página e tente novamente.",
+      "invalidDataFields": "Dados de contato inválidos. Verifique todos os campos e tente novamente.",
+      "bulkEmailExists": "Um ou mais contatos já têm este endereço de e-mail",
+      "invalidReference": "Referência inválida nos dados de atualização",
+      "visibilityMissingField": "Falta um campo obrigatório do grupo de visibilidade.",
+      "visibilityMissingFieldNamed": "Falta um campo obrigatório do grupo de visibilidade: {{field}}.",
+      "visibilityReferenceInvalid": "O contato, o grupo de visibilidade ou o quadro selecionados não são mais válidos. Atualize a página e tente novamente.",
+      "visibilityDuplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
+      "visibilityInvalidData": "Dados de grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados.",
+      "groupNameRequired": "O nome do grupo é obrigatório"
     }
   }
 }

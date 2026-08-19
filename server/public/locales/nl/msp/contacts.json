@@ -709,7 +709,24 @@
   },
   "errors": {
     "contact": {
-      "notFound": "Contactpersoon niet gevonden"
+      "notFound": "Contactpersoon niet gevonden",
+      "otherClient": "Toestemming geweigerd: contactpersonen van een andere klant kunnen niet worden beheerd",
+      "notAssociatedWithClient": "De contactpersoon is niet aan een klant gekoppeld",
+      "emailExists": "Er bestaat al een contactpersoon met dit e-mailadres in het systeem",
+      "fieldRequired": "{{field}} is verplicht",
+      "clientInvalid": "De geselecteerde klant is niet langer geldig",
+      "duplicate": "Er bestaat al een contactpersoon met deze gegevens.",
+      "destinationInvalid": "De geselecteerde klant of inkomende ticketbestemming is niet langer geldig",
+      "invalidDataRefresh": "Ongeldige contactgegevens opgegeven. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDataFields": "Ongeldige contactgegevens opgegeven. Controleer alle velden en probeer het opnieuw.",
+      "bulkEmailExists": "Een of meer contactpersonen hebben dit e-mailadres al",
+      "invalidReference": "Ongeldige verwijzing in de bijwerkgegevens",
+      "visibilityMissingField": "Er ontbreekt een verplicht veld van de zichtbaarheidsgroep.",
+      "visibilityMissingFieldNamed": "Er ontbreekt een verplicht veld van de zichtbaarheidsgroep: {{field}}.",
+      "visibilityReferenceInvalid": "De geselecteerde contactpersoon, zichtbaarheidsgroep of het bord is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "visibilityDuplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
+      "visibilityInvalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep opgegeven. Controleer de groepsgegevens en de geselecteerde borden.",
+      "groupNameRequired": "Groepsnaam is verplicht"
     }
   }
 }

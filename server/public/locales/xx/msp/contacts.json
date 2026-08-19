@@ -709,7 +709,24 @@
   },
   "errors": {
     "contact": {
-      "notFound": "11111"
+      "notFound": "11111",
+      "otherClient": "11111",
+      "notAssociatedWithClient": "11111",
+      "emailExists": "11111",
+      "fieldRequired": "11111 {{field}} 11111",
+      "clientInvalid": "11111",
+      "duplicate": "11111",
+      "destinationInvalid": "11111",
+      "invalidDataRefresh": "11111",
+      "invalidDataFields": "11111",
+      "bulkEmailExists": "11111",
+      "invalidReference": "11111",
+      "visibilityMissingField": "11111",
+      "visibilityMissingFieldNamed": "11111 {{field}} 11111",
+      "visibilityReferenceInvalid": "11111",
+      "visibilityDuplicate": "11111",
+      "visibilityInvalidData": "11111",
+      "groupNameRequired": "11111"
     }
   }
 }

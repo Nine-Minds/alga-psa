@@ -709,7 +709,24 @@
   },
   "errors": {
     "contact": {
-      "notFound": "Contact not found"
+      "notFound": "Contact not found",
+      "otherClient": "Permission denied: Cannot manage contacts for another client",
+      "notAssociatedWithClient": "Contact is not associated with a client",
+      "emailExists": "A contact with this email address already exists in the system",
+      "fieldRequired": "The {{field}} is required",
+      "clientInvalid": "The selected client is no longer valid",
+      "duplicate": "A contact with these details already exists.",
+      "destinationInvalid": "The selected client or inbound ticket destination is no longer valid",
+      "invalidDataRefresh": "Invalid contact data provided. Please refresh and try again.",
+      "invalidDataFields": "Invalid contact data provided. Please check all fields and try again.",
+      "bulkEmailExists": "One or more contacts already have this email address",
+      "invalidReference": "Invalid reference in update data",
+      "visibilityMissingField": "Missing required visibility group field.",
+      "visibilityMissingFieldNamed": "Missing required visibility group field: {{field}}.",
+      "visibilityReferenceInvalid": "The selected contact, visibility group, or board is no longer valid. Please refresh and try again.",
+      "visibilityDuplicate": "A visibility group with these details already exists for this client.",
+      "visibilityInvalidData": "Invalid visibility group data provided. Please check the group details and selected boards.",
+      "groupNameRequired": "Group name is required"
     }
   }
 }
