@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Requiert votre attention ({{count}})",
     "lowPriority": "Priorité basse ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Résoudre les conflits d'import",
+    "description": "Certains éléments existent déjà. Choisissez comment traiter chaque conflit.",
+    "apply": "Appliquer les résolutions",
+    "reason": {
+      "name": "Conflit : ce nom existe déjà",
+      "order": "Conflit : l'ordre {{order}} est déjà pris",
+      "item": "Conflit : cet élément existe déjà"
+    },
+    "skip": "Ignorer cet élément",
+    "rename": "Importer sous un autre nom",
+    "newNamePlaceholder": "Saisissez le nouveau nom",
+    "reorder": "Importer avec un ordre différent",
+    "newOrderPlaceholder": "Saisissez le nouvel ordre"
+  },
+  "tags": {
+    "editTitle": "Modifier l'étiquette",
+    "noPermission": "Vous n'avez pas l'autorisation de modifier les étiquettes. Contactez votre administrateur pour obtenir l'accès.",
+    "preview": "Aperçu de l'étiquette",
+    "textLabel": "Texte de l'étiquette",
+    "textPlaceholder": "Saisissez le texte de l'étiquette",
+    "quickColors": "Sélection rapide des couleurs",
+    "presetSwatch": "Arrière-plan : {{background}}, texte : {{text}}",
+    "backgroundColorLabel": "Couleur d'arrière-plan",
+    "textColorLabel": "Couleur du texte",
+    "pickBackgroundColor": "Choisir la couleur d'arrière-plan",
+    "pickTextColor": "Choisir la couleur du texte",
+    "resetColors": "Réinitialiser les couleurs",
+    "deleteAll": "Tout supprimer",
+    "deleting": "Suppression...",
+    "deleteAllTitle": "Supprimer toutes les étiquettes",
+    "deleteAllMessage": "Voulez-vous vraiment supprimer toutes les étiquettes portant le texte « {{tag}} » ? Cette étiquette sera retirée de tous les {{entityType}}. Cette action est irréversible.",
+    "deletedAll": "Toutes les étiquettes « {{tag}} » ont été supprimées",
+    "deleteFailed": "Impossible de supprimer les étiquettes",
+    "saveFailed": "Impossible d'enregistrer les modifications de l'étiquette",
+    "textRequired": "Le texte de l'étiquette ne peut pas être vide",
+    "updated": "Étiquette mise à jour",
+    "entityTypes": {
+      "client": "clients",
+      "contact": "contacts",
+      "ticket": "tickets",
+      "project": "projets",
+      "project_task": "tâches de projet",
+      "workflow_form": "formulaires de workflow",
+      "document": "documents",
+      "knowledge_base_article": "articles de la base de connaissances",
+      "opportunity": "opportunités"
+    }
   }
 }

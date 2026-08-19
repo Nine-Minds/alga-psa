@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "55555 {{count}} 55555",
     "lowPriority": "55555 {{count}} 55555"
+  },
+  "importConflicts": {
+    "title": "55555",
+    "description": "55555",
+    "apply": "55555",
+    "reason": {
+      "name": "55555",
+      "order": "55555 {{order}} 55555",
+      "item": "55555"
+    },
+    "skip": "55555",
+    "rename": "55555",
+    "newNamePlaceholder": "55555",
+    "reorder": "55555",
+    "newOrderPlaceholder": "55555"
+  },
+  "tags": {
+    "editTitle": "55555",
+    "noPermission": "55555",
+    "preview": "55555",
+    "textLabel": "55555",
+    "textPlaceholder": "55555",
+    "quickColors": "55555",
+    "presetSwatch": "55555 {{background}} 55555 {{text}} 55555",
+    "backgroundColorLabel": "55555",
+    "textColorLabel": "55555",
+    "pickBackgroundColor": "55555",
+    "pickTextColor": "55555",
+    "resetColors": "55555",
+    "deleteAll": "55555",
+    "deleting": "55555",
+    "deleteAllTitle": "55555",
+    "deleteAllMessage": "55555 {{tag}} 55555 {{entityType}} 55555",
+    "deletedAll": "55555 {{tag}} 55555",
+    "deleteFailed": "55555",
+    "saveFailed": "55555",
+    "textRequired": "55555",
+    "updated": "55555",
+    "entityTypes": {
+      "client": "55555",
+      "contact": "55555",
+      "ticket": "55555",
+      "project": "55555",
+      "project_task": "55555",
+      "workflow_form": "55555",
+      "document": "55555",
+      "knowledge_base_article": "55555",
+      "opportunity": "55555"
+    }
   }
 }

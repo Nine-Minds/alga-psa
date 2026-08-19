@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Needs attention ({{count}})",
     "lowPriority": "Low priority ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Resolve Import Conflicts",
+    "description": "Some items already exist. Choose how to handle each conflict.",
+    "apply": "Apply Resolutions",
+    "reason": {
+      "name": "Conflict: this name already exists",
+      "order": "Conflict: order {{order}} is already taken",
+      "item": "Conflict: this item already exists"
+    },
+    "skip": "Skip this item",
+    "rename": "Import with a different name",
+    "newNamePlaceholder": "Enter new name",
+    "reorder": "Import with a different order",
+    "newOrderPlaceholder": "Enter new order"
+  },
+  "tags": {
+    "editTitle": "Edit Tag",
+    "noPermission": "You don't have permission to edit tags. Contact your administrator for access.",
+    "preview": "Tag Preview",
+    "textLabel": "Tag Text",
+    "textPlaceholder": "Enter tag text",
+    "quickColors": "Quick Select Colors",
+    "presetSwatch": "Background: {{background}}, Text: {{text}}",
+    "backgroundColorLabel": "Background Color",
+    "textColorLabel": "Text Color",
+    "pickBackgroundColor": "Pick background color",
+    "pickTextColor": "Pick text color",
+    "resetColors": "Reset colors",
+    "deleteAll": "Delete All",
+    "deleting": "Deleting...",
+    "deleteAllTitle": "Delete All Tags",
+    "deleteAllMessage": "Are you sure you want to delete all tags with the text \"{{tag}}\"? This will remove this tag from all {{entityType}}. This action cannot be undone.",
+    "deletedAll": "All \"{{tag}}\" tags deleted successfully",
+    "deleteFailed": "Failed to delete tags",
+    "saveFailed": "Failed to save tag changes",
+    "textRequired": "Tag text cannot be empty",
+    "updated": "Tag updated successfully",
+    "entityTypes": {
+      "client": "clients",
+      "contact": "contacts",
+      "ticket": "tickets",
+      "project": "projects",
+      "project_task": "project tasks",
+      "workflow_form": "workflow forms",
+      "document": "documents",
+      "knowledge_base_article": "knowledge base articles",
+      "opportunity": "opportunities"
+    }
   }
 }

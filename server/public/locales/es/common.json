@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Requiere atención ({{count}})",
     "lowPriority": "Prioridad baja ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Resolver conflictos de importación",
+    "description": "Algunos elementos ya existen. Elija cómo tratar cada conflicto.",
+    "apply": "Aplicar resoluciones",
+    "reason": {
+      "name": "Conflicto: este nombre ya existe",
+      "order": "Conflicto: el orden {{order}} ya está ocupado",
+      "item": "Conflicto: este elemento ya existe"
+    },
+    "skip": "Omitir este elemento",
+    "rename": "Importar con un nombre diferente",
+    "newNamePlaceholder": "Introduzca el nuevo nombre",
+    "reorder": "Importar con un orden diferente",
+    "newOrderPlaceholder": "Introduzca el nuevo orden"
+  },
+  "tags": {
+    "editTitle": "Editar etiqueta",
+    "noPermission": "No tiene permiso para editar etiquetas. Contacte con su administrador para obtener acceso.",
+    "preview": "Vista previa de la etiqueta",
+    "textLabel": "Texto de la etiqueta",
+    "textPlaceholder": "Introduzca el texto de la etiqueta",
+    "quickColors": "Selección rápida de colores",
+    "presetSwatch": "Fondo: {{background}}, texto: {{text}}",
+    "backgroundColorLabel": "Color de fondo",
+    "textColorLabel": "Color del texto",
+    "pickBackgroundColor": "Elegir color de fondo",
+    "pickTextColor": "Elegir color del texto",
+    "resetColors": "Restablecer colores",
+    "deleteAll": "Eliminar todas",
+    "deleting": "Eliminando...",
+    "deleteAllTitle": "Eliminar todas las etiquetas",
+    "deleteAllMessage": "¿Seguro que desea eliminar todas las etiquetas con el texto «{{tag}}»? Esto quitará esta etiqueta de todos los {{entityType}}. Esta acción no se puede deshacer.",
+    "deletedAll": "Se eliminaron todas las etiquetas «{{tag}}»",
+    "deleteFailed": "No se pudieron eliminar las etiquetas",
+    "saveFailed": "No se pudieron guardar los cambios de la etiqueta",
+    "textRequired": "El texto de la etiqueta no puede estar vacío",
+    "updated": "Etiqueta actualizada correctamente",
+    "entityTypes": {
+      "client": "clientes",
+      "contact": "contactos",
+      "ticket": "tickets",
+      "project": "proyectos",
+      "project_task": "tareas de proyecto",
+      "workflow_form": "formularios de flujo de trabajo",
+      "document": "documentos",
+      "knowledge_base_article": "artículos de la base de conocimientos",
+      "opportunity": "oportunidades"
+    }
   }
 }

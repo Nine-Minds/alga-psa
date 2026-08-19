@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Requer atenção ({{count}})",
     "lowPriority": "Prioridade baixa ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Resolver conflitos de importação",
+    "description": "Alguns itens já existem. Escolha como tratar cada conflito.",
+    "apply": "Aplicar resoluções",
+    "reason": {
+      "name": "Conflito: este nome já existe",
+      "order": "Conflito: a ordem {{order}} já está ocupada",
+      "item": "Conflito: este item já existe"
+    },
+    "skip": "Ignorar este item",
+    "rename": "Importar com um nome diferente",
+    "newNamePlaceholder": "Informe o novo nome",
+    "reorder": "Importar com uma ordem diferente",
+    "newOrderPlaceholder": "Informe a nova ordem"
+  },
+  "tags": {
+    "editTitle": "Editar tag",
+    "noPermission": "Você não tem permissão para editar tags. Entre em contato com seu administrador para obter acesso.",
+    "preview": "Prévia da tag",
+    "textLabel": "Texto da tag",
+    "textPlaceholder": "Informe o texto da tag",
+    "quickColors": "Seleção rápida de cores",
+    "presetSwatch": "Fundo: {{background}}, texto: {{text}}",
+    "backgroundColorLabel": "Cor de fundo",
+    "textColorLabel": "Cor do texto",
+    "pickBackgroundColor": "Escolher cor de fundo",
+    "pickTextColor": "Escolher cor do texto",
+    "resetColors": "Redefinir cores",
+    "deleteAll": "Excluir todas",
+    "deleting": "Excluindo...",
+    "deleteAllTitle": "Excluir todas as tags",
+    "deleteAllMessage": "Tem certeza de que deseja excluir todas as tags com o texto \"{{tag}}\"? Isso removerá esta tag de todos os {{entityType}}. Esta ação não pode ser desfeita.",
+    "deletedAll": "Todas as tags \"{{tag}}\" foram excluídas",
+    "deleteFailed": "Não foi possível excluir as tags",
+    "saveFailed": "Não foi possível salvar as alterações da tag",
+    "textRequired": "O texto da tag não pode ficar vazio",
+    "updated": "Tag atualizada com sucesso",
+    "entityTypes": {
+      "client": "clientes",
+      "contact": "contatos",
+      "ticket": "tickets",
+      "project": "projetos",
+      "project_task": "tarefas de projeto",
+      "workflow_form": "formulários de workflow",
+      "document": "documentos",
+      "knowledge_base_article": "artigos da base de conhecimento",
+      "opportunity": "oportunidades"
+    }
   }
 }

@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Vereist aandacht ({{count}})",
     "lowPriority": "Lage prioriteit ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Importconflicten oplossen",
+    "description": "Sommige items bestaan al. Kies hoe u elk conflict wilt afhandelen.",
+    "apply": "Oplossingen toepassen",
+    "reason": {
+      "name": "Conflict: deze naam bestaat al",
+      "order": "Conflict: volgorde {{order}} is al bezet",
+      "item": "Conflict: dit item bestaat al"
+    },
+    "skip": "Dit item overslaan",
+    "rename": "Importeren met een andere naam",
+    "newNamePlaceholder": "Voer een nieuwe naam in",
+    "reorder": "Importeren met een andere volgorde",
+    "newOrderPlaceholder": "Voer een nieuwe volgorde in"
+  },
+  "tags": {
+    "editTitle": "Label bewerken",
+    "noPermission": "U hebt geen rechten om labels te bewerken. Neem contact op met uw beheerder voor toegang.",
+    "preview": "Labelvoorbeeld",
+    "textLabel": "Labeltekst",
+    "textPlaceholder": "Voer labeltekst in",
+    "quickColors": "Kleuren snel kiezen",
+    "presetSwatch": "Achtergrond: {{background}}, tekst: {{text}}",
+    "backgroundColorLabel": "Achtergrondkleur",
+    "textColorLabel": "Tekstkleur",
+    "pickBackgroundColor": "Achtergrondkleur kiezen",
+    "pickTextColor": "Tekstkleur kiezen",
+    "resetColors": "Kleuren herstellen",
+    "deleteAll": "Alles verwijderen",
+    "deleting": "Verwijderen...",
+    "deleteAllTitle": "Alle labels verwijderen",
+    "deleteAllMessage": "Weet u zeker dat u alle labels met de tekst '{{tag}}' wilt verwijderen? Dit label wordt van alle {{entityType}} verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+    "deletedAll": "Alle labels '{{tag}}' zijn verwijderd",
+    "deleteFailed": "Labels konden niet worden verwijderd",
+    "saveFailed": "Labelwijzigingen konden niet worden opgeslagen",
+    "textRequired": "De labeltekst mag niet leeg zijn",
+    "updated": "Label bijgewerkt",
+    "entityTypes": {
+      "client": "klanten",
+      "contact": "contacten",
+      "ticket": "tickets",
+      "project": "projecten",
+      "project_task": "projecttaken",
+      "workflow_form": "workflowformulieren",
+      "document": "documenten",
+      "knowledge_base_article": "kennisbankartikelen",
+      "opportunity": "opportuniteiten"
+    }
   }
 }

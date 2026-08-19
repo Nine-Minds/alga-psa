@@ -1432,5 +1432,54 @@
   "notifications": {
     "needsAttention": "Wymaga uwagi ({{count}})",
     "lowPriority": "Niski priorytet ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Rozwiąż konflikty importu",
+    "description": "Niektóre elementy już istnieją. Wybierz sposób rozwiązania każdego konfliktu.",
+    "apply": "Zastosuj rozwiązania",
+    "reason": {
+      "name": "Konflikt: ta nazwa już istnieje",
+      "order": "Konflikt: kolejność {{order}} jest już zajęta",
+      "item": "Konflikt: ten element już istnieje"
+    },
+    "skip": "Pomiń ten element",
+    "rename": "Importuj pod inną nazwą",
+    "newNamePlaceholder": "Wpisz nową nazwę",
+    "reorder": "Importuj z inną kolejnością",
+    "newOrderPlaceholder": "Wpisz nową kolejność"
+  },
+  "tags": {
+    "editTitle": "Edytuj tag",
+    "noPermission": "Nie masz uprawnień do edytowania tagów. Skontaktuj się z administratorem, aby uzyskać dostęp.",
+    "preview": "Podgląd tagu",
+    "textLabel": "Tekst tagu",
+    "textPlaceholder": "Wpisz tekst tagu",
+    "quickColors": "Szybki wybór kolorów",
+    "presetSwatch": "Tło: {{background}}, tekst: {{text}}",
+    "backgroundColorLabel": "Kolor tła",
+    "textColorLabel": "Kolor tekstu",
+    "pickBackgroundColor": "Wybierz kolor tła",
+    "pickTextColor": "Wybierz kolor tekstu",
+    "resetColors": "Przywróć kolory",
+    "deleteAll": "Usuń wszystkie",
+    "deleting": "Usuwanie...",
+    "deleteAllTitle": "Usuń wszystkie tagi",
+    "deleteAllMessage": "Czy na pewno chcesz usunąć wszystkie tagi o treści „{{tag}}”? Spowoduje to usunięcie tego tagu ze wszystkich {{entityType}}. Tej operacji nie można cofnąć.",
+    "deletedAll": "Usunięto wszystkie tagi „{{tag}}”",
+    "deleteFailed": "Nie udało się usunąć tagów",
+    "saveFailed": "Nie udało się zapisać zmian tagu",
+    "textRequired": "Tekst tagu nie może być pusty",
+    "updated": "Tag został zaktualizowany",
+    "entityTypes": {
+      "client": "klientów",
+      "contact": "kontaktów",
+      "ticket": "zgłoszeń",
+      "project": "projektów",
+      "project_task": "zadań projektowych",
+      "workflow_form": "formularzy workflow",
+      "document": "dokumentów",
+      "knowledge_base_article": "artykułów bazy wiedzy",
+      "opportunity": "szans sprzedaży"
+    }
   }
 }

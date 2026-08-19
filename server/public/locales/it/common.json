@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Richiede attenzione ({{count}})",
     "lowPriority": "Priorità bassa ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Risolvi i conflitti di importazione",
+    "description": "Alcuni elementi esistono già. Scegli come gestire ogni conflitto.",
+    "apply": "Applica le risoluzioni",
+    "reason": {
+      "name": "Conflitto: questo nome esiste già",
+      "order": "Conflitto: l'ordine {{order}} è già occupato",
+      "item": "Conflitto: questo elemento esiste già"
+    },
+    "skip": "Salta questo elemento",
+    "rename": "Importa con un nome diverso",
+    "newNamePlaceholder": "Inserisci il nuovo nome",
+    "reorder": "Importa con un ordine diverso",
+    "newOrderPlaceholder": "Inserisci il nuovo ordine"
+  },
+  "tags": {
+    "editTitle": "Modifica tag",
+    "noPermission": "Non hai l'autorizzazione per modificare i tag. Contatta l'amministratore per ottenere l'accesso.",
+    "preview": "Anteprima del tag",
+    "textLabel": "Testo del tag",
+    "textPlaceholder": "Inserisci il testo del tag",
+    "quickColors": "Selezione rapida dei colori",
+    "presetSwatch": "Sfondo: {{background}}, testo: {{text}}",
+    "backgroundColorLabel": "Colore di sfondo",
+    "textColorLabel": "Colore del testo",
+    "pickBackgroundColor": "Scegli il colore di sfondo",
+    "pickTextColor": "Scegli il colore del testo",
+    "resetColors": "Reimposta i colori",
+    "deleteAll": "Elimina tutti",
+    "deleting": "Eliminazione...",
+    "deleteAllTitle": "Elimina tutti i tag",
+    "deleteAllMessage": "Vuoi davvero eliminare tutti i tag con il testo «{{tag}}»? Il tag verrà rimosso da tutti i {{entityType}}. Questa azione non può essere annullata.",
+    "deletedAll": "Tutti i tag «{{tag}}» sono stati eliminati",
+    "deleteFailed": "Impossibile eliminare i tag",
+    "saveFailed": "Impossibile salvare le modifiche al tag",
+    "textRequired": "Il testo del tag non può essere vuoto",
+    "updated": "Tag aggiornato correttamente",
+    "entityTypes": {
+      "client": "clienti",
+      "contact": "contatti",
+      "ticket": "ticket",
+      "project": "progetti",
+      "project_task": "attività di progetto",
+      "workflow_form": "moduli di workflow",
+      "document": "documenti",
+      "knowledge_base_article": "articoli della base di conoscenza",
+      "opportunity": "opportunità"
+    }
   }
 }

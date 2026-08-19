@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "Erfordert Aufmerksamkeit ({{count}})",
     "lowPriority": "Niedrige Priorität ({{count}})"
+  },
+  "importConflicts": {
+    "title": "Importkonflikte lösen",
+    "description": "Einige Einträge existieren bereits. Wählen Sie, wie mit jedem Konflikt umgegangen werden soll.",
+    "apply": "Lösungen anwenden",
+    "reason": {
+      "name": "Konflikt: Dieser Name existiert bereits",
+      "order": "Konflikt: Reihenfolge {{order}} ist bereits vergeben",
+      "item": "Konflikt: Dieser Eintrag existiert bereits"
+    },
+    "skip": "Diesen Eintrag überspringen",
+    "rename": "Mit einem anderen Namen importieren",
+    "newNamePlaceholder": "Neuen Namen eingeben",
+    "reorder": "Mit einer anderen Reihenfolge importieren",
+    "newOrderPlaceholder": "Neue Reihenfolge eingeben"
+  },
+  "tags": {
+    "editTitle": "Tag bearbeiten",
+    "noPermission": "Sie haben keine Berechtigung, Tags zu bearbeiten. Wenden Sie sich für den Zugriff an Ihren Administrator.",
+    "preview": "Tag-Vorschau",
+    "textLabel": "Tag-Text",
+    "textPlaceholder": "Tag-Text eingeben",
+    "quickColors": "Farben schnell auswählen",
+    "presetSwatch": "Hintergrund: {{background}}, Text: {{text}}",
+    "backgroundColorLabel": "Hintergrundfarbe",
+    "textColorLabel": "Textfarbe",
+    "pickBackgroundColor": "Hintergrundfarbe wählen",
+    "pickTextColor": "Textfarbe wählen",
+    "resetColors": "Farben zurücksetzen",
+    "deleteAll": "Alle löschen",
+    "deleting": "Wird gelöscht...",
+    "deleteAllTitle": "Alle Tags löschen",
+    "deleteAllMessage": "Möchten Sie wirklich alle Tags mit dem Text „{{tag}}“ löschen? Dadurch wird dieses Tag von allen {{entityType}} entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deletedAll": "Alle Tags „{{tag}}“ wurden gelöscht",
+    "deleteFailed": "Die Tags konnten nicht gelöscht werden",
+    "saveFailed": "Die Tag-Änderungen konnten nicht gespeichert werden",
+    "textRequired": "Der Tag-Text darf nicht leer sein",
+    "updated": "Tag wurde aktualisiert",
+    "entityTypes": {
+      "client": "Kunden",
+      "contact": "Kontakten",
+      "ticket": "Tickets",
+      "project": "Projekten",
+      "project_task": "Projektaufgaben",
+      "workflow_form": "Workflow-Formularen",
+      "document": "Dokumenten",
+      "knowledge_base_article": "Wissensdatenbank-Artikeln",
+      "opportunity": "Verkaufschancen"
+    }
   }
 }

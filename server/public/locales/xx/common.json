@@ -1400,5 +1400,54 @@
   "notifications": {
     "needsAttention": "11111 {{count}} 11111",
     "lowPriority": "11111 {{count}} 11111"
+  },
+  "importConflicts": {
+    "title": "11111",
+    "description": "11111",
+    "apply": "11111",
+    "reason": {
+      "name": "11111",
+      "order": "11111 {{order}} 11111",
+      "item": "11111"
+    },
+    "skip": "11111",
+    "rename": "11111",
+    "newNamePlaceholder": "11111",
+    "reorder": "11111",
+    "newOrderPlaceholder": "11111"
+  },
+  "tags": {
+    "editTitle": "11111",
+    "noPermission": "11111",
+    "preview": "11111",
+    "textLabel": "11111",
+    "textPlaceholder": "11111",
+    "quickColors": "11111",
+    "presetSwatch": "11111 {{background}} 11111 {{text}} 11111",
+    "backgroundColorLabel": "11111",
+    "textColorLabel": "11111",
+    "pickBackgroundColor": "11111",
+    "pickTextColor": "11111",
+    "resetColors": "11111",
+    "deleteAll": "11111",
+    "deleting": "11111",
+    "deleteAllTitle": "11111",
+    "deleteAllMessage": "11111 {{tag}} 11111 {{entityType}} 11111",
+    "deletedAll": "11111 {{tag}} 11111",
+    "deleteFailed": "11111",
+    "saveFailed": "11111",
+    "textRequired": "11111",
+    "updated": "11111",
+    "entityTypes": {
+      "client": "11111",
+      "contact": "11111",
+      "ticket": "11111",
+      "project": "11111",
+      "project_task": "11111",
+      "workflow_form": "11111",
+      "document": "11111",
+      "knowledge_base_article": "11111",
+      "opportunity": "11111"
+    }
   }
 }
