@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Time Entry Settings",
-    "description": "Manage your time entry settings and time periods"
+    "description": "Manage your time entry settings and time periods",
+    "timePeriods": {
+      "title": "Time Period Settings",
+      "description": "Configure billing time period settings",
+      "loading": "Loading time period settings...",
+      "addNew": "Add New Time Period Setting",
+      "help": {
+        "title": "Understanding Time Period Settings",
+        "intro": "You can define multiple active settings to create complex billing cycles. End Day is the last day included in the period.",
+        "exampleIntro": "For example, to set up semi-monthly periods (1st–15th and 16th–End of Month):",
+        "firstSettingLabel": "Setting 1:",
+        "firstSetting": "Start Day: 1, End Day: 15 → Period covers 1st through 15th",
+        "secondSettingLabel": "Setting 2:",
+        "secondSetting": "Start Day: 16, End Day: End of month → Period covers 16th through last day",
+        "outro": "The system uses these settings to suggest and generate time periods. Ensure your settings cover the entire cycle without gaps."
+      },
+      "form": {
+        "requiredFields": "Please fill in the required fields:",
+        "frequency": "Frequency *",
+        "frequencyPlaceholder": "Enter frequency",
+        "frequencyUnit": "Frequency Unit *",
+        "frequencyUnitPlaceholder": "Select frequency unit",
+        "startDay": "Start Day *",
+        "selectDay": "Select day",
+        "startDayPlaceholder": "Enter start day",
+        "endDay": "End Day *",
+        "endDayPlaceholder": "Enter end day",
+        "endOfUnit": "End of {{unit}}",
+        "endOfMonth": "End of month",
+        "startMonth": "Start Month",
+        "endMonth": "End Month",
+        "startDayOfMonth": "Start Day of Month *",
+        "endDayOfMonth": "End Day of Month *",
+        "add": "Add Time Period Setting"
+      },
+      "validation": {
+        "frequencyMin": "Frequency must be at least 1",
+        "startDayRequired": "Start day is required",
+        "endDayRequired": "End day is required",
+        "startDayOfMonthRequired": "Start day of month is required",
+        "endDayOfMonthRequired": "End day of month is required"
+      },
+      "errors": {
+        "fetch": "Failed to fetch time period settings",
+        "overlap": "This time period setting overlaps with an existing active setting.",
+        "add": "Failed to add time period setting. Please check the values and try again.",
+        "update": "Failed to update time period setting",
+        "delete": "Failed to delete time period setting"
+      },
+      "summary": {
+        "frequency": "Frequency: every {{count}} × {{unit}}",
+        "startDay": "Start Day: {{value}}",
+        "endDay": "End Day: {{value}}",
+        "start": "Start: {{value}}",
+        "end": "End: {{value}}",
+        "effectiveFrom": "Effective From: {{value}}",
+        "effectiveTo": "Effective To: {{value}}",
+        "noEnd": "No end",
+        "notSet": "Not set"
+      },
+      "units": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "weekDays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      }
+    }
   },
   "billing": {
     "title": "Billing Settings",

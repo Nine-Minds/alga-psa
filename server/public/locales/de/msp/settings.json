@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Zeiterfassungseinstellungen",
-    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume"
+    "description": "Verwalten Sie Ihre Zeiterfassungseinstellungen und Zeiträume",
+    "timePeriods": {
+      "title": "Abrechnungszeitraum-Einstellungen",
+      "description": "Abrechnungszeiträume konfigurieren",
+      "loading": "Abrechnungszeitraum-Einstellungen werden geladen...",
+      "addNew": "Neue Abrechnungszeitraum-Einstellung hinzufügen",
+      "help": {
+        "title": "Abrechnungszeitraum-Einstellungen verstehen",
+        "intro": "Sie können mehrere aktive Einstellungen definieren, um komplexe Abrechnungszyklen abzubilden. Der Endtag ist der letzte Tag, der zum Zeitraum gehört.",
+        "exampleIntro": "Beispiel für halbmonatliche Zeiträume (1.–15. und 16.–Monatsende):",
+        "firstSettingLabel": "Einstellung 1:",
+        "firstSetting": "Starttag: 1, Endtag: 15 → Zeitraum umfasst den 1. bis 15.",
+        "secondSettingLabel": "Einstellung 2:",
+        "secondSetting": "Starttag: 16, Endtag: Monatsende → Zeitraum umfasst den 16. bis zum letzten Tag",
+        "outro": "Das System nutzt diese Einstellungen, um Zeiträume vorzuschlagen und zu erzeugen. Achten Sie darauf, dass die Einstellungen den gesamten Zyklus lückenlos abdecken."
+      },
+      "form": {
+        "requiredFields": "Bitte füllen Sie die erforderlichen Felder aus:",
+        "frequency": "Häufigkeit *",
+        "frequencyPlaceholder": "Häufigkeit eingeben",
+        "frequencyUnit": "Häufigkeitseinheit *",
+        "frequencyUnitPlaceholder": "Häufigkeitseinheit wählen",
+        "startDay": "Starttag *",
+        "selectDay": "Tag wählen",
+        "startDayPlaceholder": "Starttag eingeben",
+        "endDay": "Endtag *",
+        "endDayPlaceholder": "Endtag eingeben",
+        "endOfUnit": "Ende: {{unit}}",
+        "endOfMonth": "Monatsende",
+        "startMonth": "Startmonat",
+        "endMonth": "Endmonat",
+        "startDayOfMonth": "Starttag im Monat *",
+        "endDayOfMonth": "Endtag im Monat *",
+        "add": "Abrechnungszeitraum-Einstellung hinzufügen"
+      },
+      "validation": {
+        "frequencyMin": "Die Häufigkeit muss mindestens 1 betragen",
+        "startDayRequired": "Starttag ist erforderlich",
+        "endDayRequired": "Endtag ist erforderlich",
+        "startDayOfMonthRequired": "Starttag im Monat ist erforderlich",
+        "endDayOfMonthRequired": "Endtag im Monat ist erforderlich"
+      },
+      "errors": {
+        "fetch": "Die Abrechnungszeitraum-Einstellungen konnten nicht geladen werden",
+        "overlap": "Diese Abrechnungszeitraum-Einstellung überschneidet sich mit einer bestehenden aktiven Einstellung.",
+        "add": "Die Abrechnungszeitraum-Einstellung konnte nicht hinzugefügt werden. Bitte prüfen Sie die Werte und versuchen Sie es erneut.",
+        "update": "Die Abrechnungszeitraum-Einstellung konnte nicht aktualisiert werden",
+        "delete": "Die Abrechnungszeitraum-Einstellung konnte nicht gelöscht werden"
+      },
+      "summary": {
+        "frequency": "Häufigkeit: alle {{count}} × {{unit}}",
+        "startDay": "Starttag: {{value}}",
+        "endDay": "Endtag: {{value}}",
+        "start": "Beginn: {{value}}",
+        "end": "Ende: {{value}}",
+        "effectiveFrom": "Gültig ab: {{value}}",
+        "effectiveTo": "Gültig bis: {{value}}",
+        "noEnd": "Kein Enddatum",
+        "notSet": "Nicht festgelegt"
+      },
+      "units": {
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat",
+        "year": "Jahr"
+      },
+      "months": {
+        "1": "Januar",
+        "2": "Februar",
+        "3": "März",
+        "4": "April",
+        "5": "Mai",
+        "6": "Juni",
+        "7": "Juli",
+        "8": "August",
+        "9": "September",
+        "10": "Oktober",
+        "11": "November",
+        "12": "Dezember"
+      },
+      "weekDays": {
+        "1": "Montag",
+        "2": "Dienstag",
+        "3": "Mittwoch",
+        "4": "Donnerstag",
+        "5": "Freitag",
+        "6": "Samstag",
+        "7": "Sonntag"
+      }
+    }
   },
   "billing": {
     "title": "Abrechnungseinstellungen",

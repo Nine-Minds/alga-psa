@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "55555",
-    "description": "55555"
+    "description": "55555",
+    "timePeriods": {
+      "title": "55555",
+      "description": "55555",
+      "loading": "55555",
+      "addNew": "55555",
+      "help": {
+        "title": "55555",
+        "intro": "55555",
+        "exampleIntro": "55555",
+        "firstSettingLabel": "55555",
+        "firstSetting": "55555",
+        "secondSettingLabel": "55555",
+        "secondSetting": "55555",
+        "outro": "55555"
+      },
+      "form": {
+        "requiredFields": "55555",
+        "frequency": "55555",
+        "frequencyPlaceholder": "55555",
+        "frequencyUnit": "55555",
+        "frequencyUnitPlaceholder": "55555",
+        "startDay": "55555",
+        "selectDay": "55555",
+        "startDayPlaceholder": "55555",
+        "endDay": "55555",
+        "endDayPlaceholder": "55555",
+        "endOfUnit": "55555 {{unit}} 55555",
+        "endOfMonth": "55555",
+        "startMonth": "55555",
+        "endMonth": "55555",
+        "startDayOfMonth": "55555",
+        "endDayOfMonth": "55555",
+        "add": "55555"
+      },
+      "validation": {
+        "frequencyMin": "55555",
+        "startDayRequired": "55555",
+        "endDayRequired": "55555",
+        "startDayOfMonthRequired": "55555",
+        "endDayOfMonthRequired": "55555"
+      },
+      "errors": {
+        "fetch": "55555",
+        "overlap": "55555",
+        "add": "55555",
+        "update": "55555",
+        "delete": "55555"
+      },
+      "summary": {
+        "frequency": "55555 {{count}} 55555 {{unit}} 55555",
+        "startDay": "55555 {{value}} 55555",
+        "endDay": "55555 {{value}} 55555",
+        "start": "55555 {{value}} 55555",
+        "end": "55555 {{value}} 55555",
+        "effectiveFrom": "55555 {{value}} 55555",
+        "effectiveTo": "55555 {{value}} 55555",
+        "noEnd": "55555",
+        "notSet": "55555"
+      },
+      "units": {
+        "day": "55555",
+        "week": "55555",
+        "month": "55555",
+        "year": "55555"
+      },
+      "months": {
+        "1": "55555",
+        "2": "55555",
+        "3": "55555",
+        "4": "55555",
+        "5": "55555",
+        "6": "55555",
+        "7": "55555",
+        "8": "55555",
+        "9": "55555",
+        "10": "55555",
+        "11": "55555",
+        "12": "55555"
+      },
+      "weekDays": {
+        "1": "55555",
+        "2": "55555",
+        "3": "55555",
+        "4": "55555",
+        "5": "55555",
+        "6": "55555",
+        "7": "55555"
+      }
+    }
   },
   "billing": {
     "title": "55555",

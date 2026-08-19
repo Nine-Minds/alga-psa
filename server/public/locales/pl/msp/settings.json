@@ -1697,7 +1697,96 @@
   },
   "timeEntry": {
     "title": "Ustawienia wpisów czasu",
-    "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi"
+    "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi",
+    "timePeriods": {
+      "title": "Ustawienia okresów rozliczeniowych",
+      "description": "Skonfiguruj okresy rozliczeniowe",
+      "loading": "Ładowanie ustawień okresów rozliczeniowych...",
+      "addNew": "Dodaj nowe ustawienie okresu",
+      "help": {
+        "title": "Jak działają ustawienia okresów",
+        "intro": "Możesz zdefiniować wiele aktywnych ustawień, aby tworzyć złożone cykle rozliczeniowe. Dzień końcowy to ostatni dzień wchodzący w skład okresu.",
+        "exampleIntro": "Na przykład, aby ustawić okresy półmiesięczne (1–15 i 16–koniec miesiąca):",
+        "firstSettingLabel": "Ustawienie 1:",
+        "firstSetting": "Dzień początkowy: 1, dzień końcowy: 15 → okres obejmuje dni od 1 do 15",
+        "secondSettingLabel": "Ustawienie 2:",
+        "secondSetting": "Dzień początkowy: 16, dzień końcowy: koniec miesiąca → okres obejmuje dni od 16 do ostatniego",
+        "outro": "System wykorzystuje te ustawienia do proponowania i generowania okresów. Upewnij się, że pokrywają cały cykl bez przerw."
+      },
+      "form": {
+        "requiredFields": "Uzupełnij wymagane pola:",
+        "frequency": "Częstotliwość *",
+        "frequencyPlaceholder": "Podaj częstotliwość",
+        "frequencyUnit": "Jednostka częstotliwości *",
+        "frequencyUnitPlaceholder": "Wybierz jednostkę częstotliwości",
+        "startDay": "Dzień początkowy *",
+        "selectDay": "Wybierz dzień",
+        "startDayPlaceholder": "Podaj dzień początkowy",
+        "endDay": "Dzień końcowy *",
+        "endDayPlaceholder": "Podaj dzień końcowy",
+        "endOfUnit": "Koniec: {{unit}}",
+        "endOfMonth": "Koniec miesiąca",
+        "startMonth": "Miesiąc początkowy",
+        "endMonth": "Miesiąc końcowy",
+        "startDayOfMonth": "Dzień początkowy miesiąca *",
+        "endDayOfMonth": "Dzień końcowy miesiąca *",
+        "add": "Dodaj ustawienie okresu"
+      },
+      "validation": {
+        "frequencyMin": "Częstotliwość musi wynosić co najmniej 1",
+        "startDayRequired": "Dzień początkowy jest wymagany",
+        "endDayRequired": "Dzień końcowy jest wymagany",
+        "startDayOfMonthRequired": "Dzień początkowy miesiąca jest wymagany",
+        "endDayOfMonthRequired": "Dzień końcowy miesiąca jest wymagany"
+      },
+      "errors": {
+        "fetch": "Nie udało się pobrać ustawień okresów rozliczeniowych",
+        "overlap": "To ustawienie okresu nakłada się na istniejące aktywne ustawienie.",
+        "add": "Nie udało się dodać ustawienia okresu. Sprawdź wartości i spróbuj ponownie.",
+        "update": "Nie udało się zaktualizować ustawienia okresu",
+        "delete": "Nie udało się usunąć ustawienia okresu"
+      },
+      "summary": {
+        "frequency": "Częstotliwość: co {{count}} × {{unit}}",
+        "startDay": "Dzień początkowy: {{value}}",
+        "endDay": "Dzień końcowy: {{value}}",
+        "start": "Początek: {{value}}",
+        "end": "Koniec: {{value}}",
+        "effectiveFrom": "Obowiązuje od: {{value}}",
+        "effectiveTo": "Obowiązuje do: {{value}}",
+        "noEnd": "Bez końca",
+        "notSet": "Nie ustawiono"
+      },
+      "units": {
+        "day": "Dzień",
+        "week": "Tydzień",
+        "month": "Miesiąc",
+        "year": "Rok"
+      },
+      "months": {
+        "1": "styczeń",
+        "2": "luty",
+        "3": "marzec",
+        "4": "kwiecień",
+        "5": "maj",
+        "6": "czerwiec",
+        "7": "lipiec",
+        "8": "sierpień",
+        "9": "wrzesień",
+        "10": "październik",
+        "11": "listopad",
+        "12": "grudzień"
+      },
+      "weekDays": {
+        "1": "poniedziałek",
+        "2": "wtorek",
+        "3": "środa",
+        "4": "czwartek",
+        "5": "piątek",
+        "6": "sobota",
+        "7": "niedziela"
+      }
+    }
   },
   "billing": {
     "title": "Ustawienia rozliczeń",

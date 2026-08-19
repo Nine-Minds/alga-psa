@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Impostazioni registrazione ore",
-    "description": "Gestisci le impostazioni di registrazione ore e i periodi temporali"
+    "description": "Gestisci le impostazioni di registrazione ore e i periodi temporali",
+    "timePeriods": {
+      "title": "Impostazioni dei periodi",
+      "description": "Configurare i periodi di fatturazione",
+      "loading": "Caricamento delle impostazioni dei periodi...",
+      "addNew": "Aggiungi impostazione di periodo",
+      "help": {
+        "title": "Come funzionano le impostazioni dei periodi",
+        "intro": "È possibile definire più impostazioni attive per creare cicli di fatturazione complessi. Il giorno finale è l’ultimo giorno incluso nel periodo.",
+        "exampleIntro": "Ad esempio, per impostare periodi quindicinali (dal 1 al 15 e dal 16 a fine mese):",
+        "firstSettingLabel": "Impostazione 1:",
+        "firstSetting": "Giorno iniziale: 1, giorno finale: 15 → il periodo copre dal 1 al 15",
+        "secondSettingLabel": "Impostazione 2:",
+        "secondSetting": "Giorno iniziale: 16, giorno finale: fine mese → il periodo copre dal 16 all’ultimo giorno",
+        "outro": "Il sistema usa queste impostazioni per suggerire e generare i periodi. Verificare che coprano l’intero ciclo senza interruzioni."
+      },
+      "form": {
+        "requiredFields": "Compilare i campi obbligatori:",
+        "frequency": "Frequenza *",
+        "frequencyPlaceholder": "Inserire la frequenza",
+        "frequencyUnit": "Unità di frequenza *",
+        "frequencyUnitPlaceholder": "Selezionare l’unità di frequenza",
+        "startDay": "Giorno iniziale *",
+        "selectDay": "Selezionare il giorno",
+        "startDayPlaceholder": "Inserire il giorno iniziale",
+        "endDay": "Giorno finale *",
+        "endDayPlaceholder": "Inserire il giorno finale",
+        "endOfUnit": "Fine: {{unit}}",
+        "endOfMonth": "Fine mese",
+        "startMonth": "Mese iniziale",
+        "endMonth": "Mese finale",
+        "startDayOfMonth": "Giorno iniziale del mese *",
+        "endDayOfMonth": "Giorno finale del mese *",
+        "add": "Aggiungi impostazione di periodo"
+      },
+      "validation": {
+        "frequencyMin": "La frequenza deve essere almeno 1",
+        "startDayRequired": "Il giorno iniziale è obbligatorio",
+        "endDayRequired": "Il giorno finale è obbligatorio",
+        "startDayOfMonthRequired": "Il giorno iniziale del mese è obbligatorio",
+        "endDayOfMonthRequired": "Il giorno finale del mese è obbligatorio"
+      },
+      "errors": {
+        "fetch": "Impossibile caricare le impostazioni dei periodi",
+        "overlap": "Questa impostazione di periodo si sovrappone a un’impostazione attiva esistente.",
+        "add": "Impossibile aggiungere l’impostazione di periodo. Verificare i valori e riprovare.",
+        "update": "Impossibile aggiornare l’impostazione di periodo",
+        "delete": "Impossibile eliminare l’impostazione di periodo"
+      },
+      "summary": {
+        "frequency": "Frequenza: ogni {{count}} × {{unit}}",
+        "startDay": "Giorno iniziale: {{value}}",
+        "endDay": "Giorno finale: {{value}}",
+        "start": "Inizio: {{value}}",
+        "end": "Fine: {{value}}",
+        "effectiveFrom": "In vigore dal: {{value}}",
+        "effectiveTo": "In vigore fino al: {{value}}",
+        "noEnd": "Nessuna fine",
+        "notSet": "Non impostato"
+      },
+      "units": {
+        "day": "Giorno",
+        "week": "Settimana",
+        "month": "Mese",
+        "year": "Anno"
+      },
+      "months": {
+        "1": "gennaio",
+        "2": "febbraio",
+        "3": "marzo",
+        "4": "aprile",
+        "5": "maggio",
+        "6": "giugno",
+        "7": "luglio",
+        "8": "agosto",
+        "9": "settembre",
+        "10": "ottobre",
+        "11": "novembre",
+        "12": "dicembre"
+      },
+      "weekDays": {
+        "1": "lunedì",
+        "2": "martedì",
+        "3": "mercoledì",
+        "4": "giovedì",
+        "5": "venerdì",
+        "6": "sabato",
+        "7": "domenica"
+      }
+    }
   },
   "billing": {
     "title": "Impostazioni di fatturazione",

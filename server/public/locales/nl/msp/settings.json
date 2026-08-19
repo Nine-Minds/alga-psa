@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Tijdregistratie-instellingen",
-    "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes"
+    "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes",
+    "timePeriods": {
+      "title": "Instellingen voor factuurperioden",
+      "description": "Configureer de factuurperioden",
+      "loading": "Instellingen voor factuurperioden laden...",
+      "addNew": "Nieuwe periode-instelling toevoegen",
+      "help": {
+        "title": "Uitleg over periode-instellingen",
+        "intro": "U kunt meerdere actieve instellingen definiëren om complexe facturatiecycli te maken. De einddag is de laatste dag die tot de periode behoort.",
+        "exampleIntro": "Bijvoorbeeld, voor halfmaandelijkse perioden (1–15 en 16–einde maand):",
+        "firstSettingLabel": "Instelling 1:",
+        "firstSetting": "Startdag: 1, einddag: 15 → de periode loopt van de 1e tot en met de 15e",
+        "secondSettingLabel": "Instelling 2:",
+        "secondSetting": "Startdag: 16, einddag: einde maand → de periode loopt van de 16e tot en met de laatste dag",
+        "outro": "Het systeem gebruikt deze instellingen om perioden voor te stellen en aan te maken. Zorg dat ze de volledige cyclus zonder gaten dekken."
+      },
+      "form": {
+        "requiredFields": "Vul de verplichte velden in:",
+        "frequency": "Frequentie *",
+        "frequencyPlaceholder": "Voer de frequentie in",
+        "frequencyUnit": "Frequentie-eenheid *",
+        "frequencyUnitPlaceholder": "Selecteer de frequentie-eenheid",
+        "startDay": "Startdag *",
+        "selectDay": "Selecteer de dag",
+        "startDayPlaceholder": "Voer de startdag in",
+        "endDay": "Einddag *",
+        "endDayPlaceholder": "Voer de einddag in",
+        "endOfUnit": "Einde: {{unit}}",
+        "endOfMonth": "Einde maand",
+        "startMonth": "Startmaand",
+        "endMonth": "Eindmaand",
+        "startDayOfMonth": "Startdag van de maand *",
+        "endDayOfMonth": "Einddag van de maand *",
+        "add": "Periode-instelling toevoegen"
+      },
+      "validation": {
+        "frequencyMin": "De frequentie moet minimaal 1 zijn",
+        "startDayRequired": "Startdag is verplicht",
+        "endDayRequired": "Einddag is verplicht",
+        "startDayOfMonthRequired": "Startdag van de maand is verplicht",
+        "endDayOfMonthRequired": "Einddag van de maand is verplicht"
+      },
+      "errors": {
+        "fetch": "De instellingen voor factuurperioden konden niet worden geladen",
+        "overlap": "Deze periode-instelling overlapt met een bestaande actieve instelling.",
+        "add": "De periode-instelling kon niet worden toegevoegd. Controleer de waarden en probeer het opnieuw.",
+        "update": "De periode-instelling kon niet worden bijgewerkt",
+        "delete": "De periode-instelling kon niet worden verwijderd"
+      },
+      "summary": {
+        "frequency": "Frequentie: elke {{count}} × {{unit}}",
+        "startDay": "Startdag: {{value}}",
+        "endDay": "Einddag: {{value}}",
+        "start": "Begin: {{value}}",
+        "end": "Einde: {{value}}",
+        "effectiveFrom": "Geldig vanaf: {{value}}",
+        "effectiveTo": "Geldig tot: {{value}}",
+        "noEnd": "Geen einddatum",
+        "notSet": "Niet ingesteld"
+      },
+      "units": {
+        "day": "Dag",
+        "week": "Week",
+        "month": "Maand",
+        "year": "Jaar"
+      },
+      "months": {
+        "1": "januari",
+        "2": "februari",
+        "3": "maart",
+        "4": "april",
+        "5": "mei",
+        "6": "juni",
+        "7": "juli",
+        "8": "augustus",
+        "9": "september",
+        "10": "oktober",
+        "11": "november",
+        "12": "december"
+      },
+      "weekDays": {
+        "1": "maandag",
+        "2": "dinsdag",
+        "3": "woensdag",
+        "4": "donderdag",
+        "5": "vrijdag",
+        "6": "zaterdag",
+        "7": "zondag"
+      }
+    }
   },
   "billing": {
     "title": "Facturatie-instellingen",

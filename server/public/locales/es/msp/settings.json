@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Configuración de registro de tiempo",
-    "description": "Administre la configuración de registro de tiempo y los períodos de tiempo"
+    "description": "Administre la configuración de registro de tiempo y los períodos de tiempo",
+    "timePeriods": {
+      "title": "Configuración de períodos de tiempo",
+      "description": "Configure los períodos de tiempo de facturación",
+      "loading": "Cargando la configuración de períodos de tiempo...",
+      "addNew": "Añadir nueva configuración de período",
+      "help": {
+        "title": "Cómo funcionan las configuraciones de período",
+        "intro": "Puede definir varias configuraciones activas para crear ciclos de facturación complejos. El día final es el último día incluido en el período.",
+        "exampleIntro": "Por ejemplo, para configurar períodos quincenales (del 1 al 15 y del 16 al fin de mes):",
+        "firstSettingLabel": "Configuración 1:",
+        "firstSetting": "Día inicial: 1, día final: 15 → el período cubre del 1 al 15",
+        "secondSettingLabel": "Configuración 2:",
+        "secondSetting": "Día inicial: 16, día final: fin de mes → el período cubre del 16 al último día",
+        "outro": "El sistema usa estas configuraciones para sugerir y generar períodos. Asegúrese de que cubran el ciclo completo sin huecos."
+      },
+      "form": {
+        "requiredFields": "Complete los campos obligatorios:",
+        "frequency": "Frecuencia *",
+        "frequencyPlaceholder": "Introduzca la frecuencia",
+        "frequencyUnit": "Unidad de frecuencia *",
+        "frequencyUnitPlaceholder": "Seleccione la unidad de frecuencia",
+        "startDay": "Día inicial *",
+        "selectDay": "Seleccione el día",
+        "startDayPlaceholder": "Introduzca el día inicial",
+        "endDay": "Día final *",
+        "endDayPlaceholder": "Introduzca el día final",
+        "endOfUnit": "Fin de: {{unit}}",
+        "endOfMonth": "Fin de mes",
+        "startMonth": "Mes inicial",
+        "endMonth": "Mes final",
+        "startDayOfMonth": "Día inicial del mes *",
+        "endDayOfMonth": "Día final del mes *",
+        "add": "Añadir configuración de período"
+      },
+      "validation": {
+        "frequencyMin": "La frecuencia debe ser al menos 1",
+        "startDayRequired": "El día inicial es obligatorio",
+        "endDayRequired": "El día final es obligatorio",
+        "startDayOfMonthRequired": "El día inicial del mes es obligatorio",
+        "endDayOfMonthRequired": "El día final del mes es obligatorio"
+      },
+      "errors": {
+        "fetch": "No se pudo cargar la configuración de períodos de tiempo",
+        "overlap": "Esta configuración de período se solapa con otra configuración activa.",
+        "add": "No se pudo añadir la configuración de período. Revise los valores e inténtelo de nuevo.",
+        "update": "No se pudo actualizar la configuración de período",
+        "delete": "No se pudo eliminar la configuración de período"
+      },
+      "summary": {
+        "frequency": "Frecuencia: cada {{count}} × {{unit}}",
+        "startDay": "Día inicial: {{value}}",
+        "endDay": "Día final: {{value}}",
+        "start": "Inicio: {{value}}",
+        "end": "Fin: {{value}}",
+        "effectiveFrom": "Vigente desde: {{value}}",
+        "effectiveTo": "Vigente hasta: {{value}}",
+        "noEnd": "Sin fin",
+        "notSet": "Sin definir"
+      },
+      "units": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año"
+      },
+      "months": {
+        "1": "enero",
+        "2": "febrero",
+        "3": "marzo",
+        "4": "abril",
+        "5": "mayo",
+        "6": "junio",
+        "7": "julio",
+        "8": "agosto",
+        "9": "septiembre",
+        "10": "octubre",
+        "11": "noviembre",
+        "12": "diciembre"
+      },
+      "weekDays": {
+        "1": "lunes",
+        "2": "martes",
+        "3": "miércoles",
+        "4": "jueves",
+        "5": "viernes",
+        "6": "sábado",
+        "7": "domingo"
+      }
+    }
   },
   "billing": {
     "title": "Configuración de facturación",

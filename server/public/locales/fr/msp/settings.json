@@ -1691,7 +1691,96 @@
   },
   "timeEntry": {
     "title": "Paramètres de saisie du temps",
-    "description": "Gérez vos paramètres de saisie du temps et les périodes de temps"
+    "description": "Gérez vos paramètres de saisie du temps et les périodes de temps",
+    "timePeriods": {
+      "title": "Paramètres des périodes",
+      "description": "Configurez les périodes de facturation",
+      "loading": "Chargement des paramètres de période...",
+      "addNew": "Ajouter un paramètre de période",
+      "help": {
+        "title": "Comprendre les paramètres de période",
+        "intro": "Vous pouvez définir plusieurs paramètres actifs pour créer des cycles de facturation complexes. Le jour de fin est le dernier jour inclus dans la période.",
+        "exampleIntro": "Par exemple, pour des périodes bimensuelles (du 1er au 15 et du 16 à la fin du mois) :",
+        "firstSettingLabel": "Paramètre 1 :",
+        "firstSetting": "Jour de début : 1, jour de fin : 15 → la période couvre du 1er au 15",
+        "secondSettingLabel": "Paramètre 2 :",
+        "secondSetting": "Jour de début : 16, jour de fin : fin du mois → la période couvre du 16 au dernier jour",
+        "outro": "Le système s’appuie sur ces paramètres pour proposer et générer les périodes. Veillez à couvrir le cycle entier sans interruption."
+      },
+      "form": {
+        "requiredFields": "Veuillez renseigner les champs obligatoires :",
+        "frequency": "Fréquence *",
+        "frequencyPlaceholder": "Saisissez la fréquence",
+        "frequencyUnit": "Unité de fréquence *",
+        "frequencyUnitPlaceholder": "Sélectionnez l’unité de fréquence",
+        "startDay": "Jour de début *",
+        "selectDay": "Sélectionnez le jour",
+        "startDayPlaceholder": "Saisissez le jour de début",
+        "endDay": "Jour de fin *",
+        "endDayPlaceholder": "Saisissez le jour de fin",
+        "endOfUnit": "Fin de : {{unit}}",
+        "endOfMonth": "Fin du mois",
+        "startMonth": "Mois de début",
+        "endMonth": "Mois de fin",
+        "startDayOfMonth": "Jour de début du mois *",
+        "endDayOfMonth": "Jour de fin du mois *",
+        "add": "Ajouter le paramètre de période"
+      },
+      "validation": {
+        "frequencyMin": "La fréquence doit être d’au moins 1",
+        "startDayRequired": "Le jour de début est obligatoire",
+        "endDayRequired": "Le jour de fin est obligatoire",
+        "startDayOfMonthRequired": "Le jour de début du mois est obligatoire",
+        "endDayOfMonthRequired": "Le jour de fin du mois est obligatoire"
+      },
+      "errors": {
+        "fetch": "Impossible de charger les paramètres de période",
+        "overlap": "Ce paramètre de période chevauche un paramètre actif existant.",
+        "add": "Impossible d’ajouter le paramètre de période. Vérifiez les valeurs et réessayez.",
+        "update": "Impossible de mettre à jour le paramètre de période",
+        "delete": "Impossible de supprimer le paramètre de période"
+      },
+      "summary": {
+        "frequency": "Fréquence : tous les {{count}} × {{unit}}",
+        "startDay": "Jour de début : {{value}}",
+        "endDay": "Jour de fin : {{value}}",
+        "start": "Début : {{value}}",
+        "end": "Fin : {{value}}",
+        "effectiveFrom": "En vigueur depuis : {{value}}",
+        "effectiveTo": "En vigueur jusqu’au : {{value}}",
+        "noEnd": "Sans fin",
+        "notSet": "Non défini"
+      },
+      "units": {
+        "day": "Jour",
+        "week": "Semaine",
+        "month": "Mois",
+        "year": "Année"
+      },
+      "months": {
+        "1": "janvier",
+        "2": "février",
+        "3": "mars",
+        "4": "avril",
+        "5": "mai",
+        "6": "juin",
+        "7": "juillet",
+        "8": "août",
+        "9": "septembre",
+        "10": "octobre",
+        "11": "novembre",
+        "12": "décembre"
+      },
+      "weekDays": {
+        "1": "lundi",
+        "2": "mardi",
+        "3": "mercredi",
+        "4": "jeudi",
+        "5": "vendredi",
+        "6": "samedi",
+        "7": "dimanche"
+      }
+    }
   },
   "billing": {
     "title": "Paramètres de facturation",
