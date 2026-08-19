@@ -11,5 +11,77 @@
         "wbsCode": "Kod WBS"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Odmowa uprawnień: nie można utworzyć projektu",
+      "readProject": "Odmowa uprawnień: nie można odczytać projektu",
+      "updateProject": "Odmowa uprawnień: nie można zaktualizować projektu",
+      "deleteProject": "Odmowa uprawnień: nie można usunąć projektu",
+      "materialRead": "Odmowa uprawnień: wymagane uprawnienie odczytu projektów",
+      "materialUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji projektów"
+    },
+    "project": {
+      "notFound": "Nie znaleziono projektu",
+      "validationFailed": "Weryfikacja projektu nie powiodła się. Sprawdź szczegóły projektu i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości projektu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów projektu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana projektu jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości projektu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola projektu.",
+      "missingFieldNamed": "Brakuje wymaganego pola projektu: {{field}}.",
+      "statusesNotConfigured": "Nie skonfigurowano statusów projektu. Dodaj co najmniej jeden status projektu przed utworzeniem projektów.",
+      "taskStatusesNotConfigured": "Nie skonfigurowano statusów zadań projektu. Dodaj co najmniej jeden status zadania przed utworzeniem projektów.",
+      "detailsUnavailableAfterCreate": "Nie udało się utworzyć projektu, ponieważ nie można było wczytać jego szczegółów. Spróbuj ponownie."
+    },
+    "task": {
+      "validationFailed": "Popraw szczegóły zadania: {{details}}",
+      "invalidValue": "Jedna z wybranych wartości zadania jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów projektu lub zadania już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "conflict": "Ta zmiana zadania jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
+      "notAllowed": "Jedna z wartości zadania jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola zadania.",
+      "missingFieldNamed": "Brakuje wymaganego pola zadania: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Tylko użytkownicy wewnętrzni mogą komentować zadania.",
+      "taskNotFound": "Nie znaleziono zadania. Mogło zostać usunięte. Odśwież stronę i spróbuj ponownie.",
+      "parentNotFound": "Nie znaleziono komentarza, na który odpowiadasz. Odśwież stronę i spróbuj ponownie.",
+      "sameThreadRequired": "Odpowiedzi muszą pozostać w tym samym wątku zadania. Odśwież stronę i spróbuj ponownie.",
+      "parentDeleted": "Nie można odpowiedzieć na usunięty komentarz.",
+      "notFound": "Nie znaleziono komentarza. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrane zadanie lub komentarz już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola komentarza.",
+      "missingFieldNamed": "Brakuje wymaganego pola komentarza: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Jeden z wybranych projektów, faz lub zadań jest nieprawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola eksportu projektu.",
+      "missingFieldNamed": "Brakuje wymaganego pola eksportu projektu: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Jedna z wybranych wartości statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych statusów projektu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Status zadania projektu o tych ustawieniach już istnieje.",
+      "notAllowed": "Jedna z wartości statusu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola statusu.",
+      "missingFieldNamed": "Brakuje wymaganego pola statusu: {{field}}."
+    },
+    "template": {
+      "validationFailed": "Weryfikacja szablonu nie powiodła się. Sprawdź szczegóły szablonu i spróbuj ponownie.",
+      "invalidUuid": "Żądanie szablonu zawiera nieprawidłowy identyfikator UUID",
+      "missingStatuses": "Ten szablon odwołuje się do statusów, które już nie istnieją. Napraw jego kolumny statusów i spróbuj ponownie."
+    },
+    "ordering": {
+      "invalidValue": "Jedna z wybranych wartości projektu, fazy, zadania lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów kolejności projektu już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola kolejności projektu.",
+      "missingFieldNamed": "Brakuje wymaganego pola kolejności projektu: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Wybrany projekt, klient, produkt lub jednostka magazynowa nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola materiału.",
+      "missingFieldNamed": "Brakuje wymaganego pola materiału: {{field}}."
+    }
   }
 }

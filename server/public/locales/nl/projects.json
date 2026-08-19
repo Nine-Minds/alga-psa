@@ -11,5 +11,77 @@
         "wbsCode": "WBS-code"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Toestemming geweigerd: het project kan niet worden aangemaakt",
+      "readProject": "Toestemming geweigerd: het project kan niet worden gelezen",
+      "updateProject": "Toestemming geweigerd: het project kan niet worden bijgewerkt",
+      "deleteProject": "Toestemming geweigerd: het project kan niet worden verwijderd",
+      "materialRead": "Toestemming geweigerd: leesrechten voor projecten vereist",
+      "materialUpdate": "Toestemming geweigerd: bijwerkrechten voor projecten vereist"
+    },
+    "project": {
+      "notFound": "Project niet gevonden",
+      "validationFailed": "De validatie van het project is mislukt. Controleer de projectgegevens en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde projectwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde projectrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze projectwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de projectwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht projectveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht projectveld: {{field}}.",
+      "statusesNotConfigured": "Er zijn geen projectstatussen geconfigureerd. Voeg minstens één projectstatus toe voordat u projecten aanmaakt.",
+      "taskStatusesNotConfigured": "Er zijn geen taakstatussen voor projecten geconfigureerd. Voeg minstens één taakstatus toe voordat u projecten aanmaakt.",
+      "detailsUnavailableAfterCreate": "Het project kon niet worden aangemaakt omdat de gegevens niet konden worden geladen. Probeer het opnieuw."
+    },
+    "task": {
+      "validationFailed": "Corrigeer de taakgegevens: {{details}}",
+      "invalidValue": "Een van de geselecteerde taakwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde project- of taakrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "conflict": "Deze taakwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
+      "notAllowed": "Een van de taakwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht taakveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht taakveld: {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Alleen interne gebruikers kunnen opmerkingen bij taken plaatsen.",
+      "taskNotFound": "Taak niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "parentNotFound": "De opmerking waarop u reageert, is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "sameThreadRequired": "Reacties moeten in dezelfde taakthread blijven. Vernieuw de pagina en probeer het opnieuw.",
+      "parentDeleted": "U kunt niet reageren op een verwijderde opmerking.",
+      "notFound": "Opmerking niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde taak of opmerking bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht opmerkingsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht opmerkingsveld: {{field}}."
+    },
+    "export": {
+      "invalidValue": "Een van de geselecteerde projecten, fasen of taken is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de projectexport.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de projectexport: {{field}}."
+    },
+    "status": {
+      "invalidValue": "Een van de geselecteerde statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde projectstatussen bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een projecttaakstatus met deze instellingen.",
+      "notAllowed": "Een van de statuswaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht statusveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht statusveld: {{field}}."
+    },
+    "template": {
+      "validationFailed": "De validatie van het sjabloon is mislukt. Controleer de sjabloongegevens en probeer het opnieuw.",
+      "invalidUuid": "De sjabloonaanvraag bevat een ongeldige UUID",
+      "missingStatuses": "Dit sjabloon verwijst naar statussen die niet meer bestaan. Herstel de statuskolommen en probeer het opnieuw."
+    },
+    "ordering": {
+      "invalidValue": "Een van de geselecteerde project-, fase-, taak- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde volgorderecords van het project bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de projectvolgorde.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de projectvolgorde: {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Het geselecteerde project, de klant, het product of de voorraadeenheid is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht materiaalveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht materiaalveld: {{field}}."
+    }
   }
 }

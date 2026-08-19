@@ -11,5 +11,77 @@
         "wbsCode": "11111"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "11111",
+      "readProject": "11111",
+      "updateProject": "11111",
+      "deleteProject": "11111",
+      "materialRead": "11111",
+      "materialUpdate": "11111"
+    },
+    "project": {
+      "notFound": "11111",
+      "validationFailed": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "statusesNotConfigured": "11111",
+      "taskStatusesNotConfigured": "11111",
+      "detailsUnavailableAfterCreate": "11111"
+    },
+    "task": {
+      "validationFailed": "11111 {{details}} 11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "conflict": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "comment": {
+      "internalOnly": "11111",
+      "taskNotFound": "11111",
+      "parentNotFound": "11111",
+      "sameThreadRequired": "11111",
+      "parentDeleted": "11111",
+      "notFound": "11111",
+      "referenceMissing": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "export": {
+      "invalidValue": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "status": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "template": {
+      "validationFailed": "11111",
+      "invalidUuid": "11111",
+      "missingStatuses": "11111"
+    },
+    "ordering": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "material": {
+      "referenceMissing": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    }
   }
 }
