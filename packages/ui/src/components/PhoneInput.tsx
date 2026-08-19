@@ -15,6 +15,23 @@ interface Country {
 // Common countries pinned at top (enterprise standard)
 const COMMON_COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR', 'JP', 'CN'];
 
+// Dial codes for the pinned countries, used only until the fetched list arrives.
+// The picker renders a dial code from the first paint; without this, a number typed
+// and saved inside the fetch window is stored bare, and a bare national number has
+// no region for normalizePhone to work from, so it never reaches E.164.
+const FALLBACK_PHONE_CODES: Record<string, string> = {
+  US: '+1',
+  CA: '+1',
+  GB: '+44',
+  AU: '+61',
+  IN: '+91',
+  DE: '+49',
+  FR: '+33',
+  BR: '+55',
+  JP: '+81',
+  CN: '+86',
+};
+
 // Country code to flag emoji mapping
 const getCountryFlag = (countryCode: string): string => {
   const codePoints = countryCode
@@ -138,7 +155,9 @@ export const PhoneInput = ({
   const awaitingDialCodeRef = useRef<string | null>(null);
   const resolvedCountryCode = countryCode || getDefaultCountryFromLocale();
   const currentCountry = countries?.find(c => c.code === resolvedCountryCode);
-  const resolvedPhoneCode = normalizePhoneCode(phoneCode || currentCountry?.phone_code);
+  const resolvedPhoneCode =
+    normalizePhoneCode(phoneCode || currentCountry?.phone_code)
+    ?? FALLBACK_PHONE_CODES[resolvedCountryCode];
 
   // The extension lives in its own value/column, so the number is never re-parsed
   // to pull one back out of it.

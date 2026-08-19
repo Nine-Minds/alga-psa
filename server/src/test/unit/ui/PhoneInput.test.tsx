@@ -166,7 +166,7 @@ describe('PhoneInput', () => {
     );
 
     await user.type(screen.getByRole('textbox'), '2125550147');
-    expect(onChange).toHaveBeenLastCalledWith('2125550147');
+    expect(onChange).toHaveBeenLastCalledWith('+1 2125550147');
 
     rerender(
       <PhoneInput
@@ -205,6 +205,37 @@ describe('PhoneInput', () => {
     );
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('homes a number saved inside the country-fetch window', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    // The editors save from local state, so a row typed and saved before the fetch
+    // resolves never gets a second chance to be re-homed — and a bare national
+    // number carries no region, so the server stores it verbatim instead of E.164.
+    render(
+      <PhoneInput id="fast-save-phone" label="Phone Number" value="" onChange={onChange} countryCode="US" countries={[]} />
+    );
+
+    await user.type(screen.getByRole('textbox'), '3125550189');
+
+    expect(onChange).toHaveBeenLastCalledWith('+1 3125550189');
+  });
+
+  it('falls back to the picker country dial code, not always +1', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <PhoneInput id="gb-fast-phone" label="Phone Number" value="" onChange={onChange} countryCode="GB" countries={[]} />
+    );
+
+    expect(screen.getByRole('button', { name: /\+44/i })).toBeTruthy();
+
+    await user.type(screen.getByRole('textbox'), '2079460958');
+
+    expect(onChange).toHaveBeenLastCalledWith('+44 2079460958');
   });
 
   it('clears to empty rather than to a bare dial code', async () => {
