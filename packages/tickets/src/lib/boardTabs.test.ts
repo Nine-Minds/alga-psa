@@ -12,6 +12,8 @@ import {
   hasBoardFilterParam,
   resolveActiveBoardId,
   resolveInitialBoardTab,
+  hasTicketViewFilterParams,
+  shouldApplyBoardDefaultView,
 } from './boardTabs';
 import { NO_BOARD_VALUE } from './boardFilterValues';
 import {
@@ -324,5 +326,52 @@ describe('resolveInitialBoardTab (URL beats preference)', () => {
       storedBoardId: BOARD_C,
       availableBoardIds: [BOARD_A, BOARD_B],
     })).toEqual({ apply: false, reason: 'board-unavailable' });
+  });
+});
+
+describe('hasTicketViewFilterParams', () => {
+  it('ignores board scope and pagination, which are not filter opinions', () => {
+    expect(hasTicketViewFilterParams('?boardId=abc')).toBe(false);
+    expect(hasTicketViewFilterParams('?boardIds=a,b&excludeBoardIds=c')).toBe(false);
+    expect(hasTicketViewFilterParams('?page=3&pageSize=50')).toBe(false);
+    expect(hasTicketViewFilterParams('')).toBe(false);
+  });
+
+  it('detects a genuine filter opinion', () => {
+    expect(hasTicketViewFilterParams('?priorityId=high')).toBe(true);
+    expect(hasTicketViewFilterParams('?boardId=abc&statusId=open')).toBe(true);
+    expect(hasTicketViewFilterParams('?sortBy=due_date')).toBe(true);
+  });
+
+  it('treats a present-but-empty param as no opinion', () => {
+    expect(hasTicketViewFilterParams('?priorityId=')).toBe(false);
+  });
+});
+
+describe('shouldApplyBoardDefaultView', () => {
+  it('always applies on a tab click, even when the URL carries filter params', () => {
+    // THE regression this function exists for. updateURLWithFilters writes the
+    // live filter state back into the address bar, so after the first arrival
+    // the URL almost always "has an opinion" — but it is the app's own echo,
+    // not a shared link. Letting it veto a click meant the second board you
+    // visited silently wore the first board's filters, forever after.
+    expect(shouldApplyBoardDefaultView({ trigger: 'tab-click', urlHasFilterOpinion: true })).toBe(true);
+    expect(shouldApplyBoardDefaultView({ trigger: 'tab-click', urlHasFilterOpinion: false })).toBe(true);
+  });
+
+  it('lets a filter-bearing entry URL win on first paint', () => {
+    expect(shouldApplyBoardDefaultView({ trigger: 'initial', urlHasFilterOpinion: true })).toBe(false);
+  });
+
+  it('applies on first paint when the entry URL expressed no filter opinion', () => {
+    expect(shouldApplyBoardDefaultView({ trigger: 'initial', urlHasFilterOpinion: false })).toBe(true);
+  });
+
+  it('keeps a shared link authoritative for exactly one arrival', () => {
+    // A deep link with filters wins on entry...
+    expect(shouldApplyBoardDefaultView({ trigger: 'initial', urlHasFilterOpinion: true })).toBe(false);
+    // ...but the user then clicking to another board is a navigation, and that
+    // board must look like itself rather than inherit the link's filters.
+    expect(shouldApplyBoardDefaultView({ trigger: 'tab-click', urlHasFilterOpinion: true })).toBe(true);
   });
 });

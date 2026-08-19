@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import type { ITicketListFilters } from '@alga-psa/types';
 import { TICKET_COLUMNS } from '../../lib/ticketColumnCatalog';
-import type { TicketViewSettings } from '../../lib/ticketViewSettings';
+import type { CaptureExcludedFilterKey, TicketViewSettings } from '../../lib/ticketViewSettings';
 
 /**
  * Write-side validation for boards.list_view_settings.
@@ -11,8 +12,10 @@ import type { TicketViewSettings } from '../../lib/ticketViewSettings';
  *   - on **write**, this schema is strict. Unknown keys are *rejected*, not
  *     silently stored, so a typo or a stale client cannot deposit a key that
  *     nothing will ever read and that the next reader will mistake for meaning.
- *   - on **read**, ids that no longer resolve are dropped
- *     (validateCapturedFilters), because a board's saved statusId can die at any
+ *   - on **read**, nothing here applies. Stored documents are coerced by
+ *     sanitizeStoredTicketView (key-dropping, no Zod — z.record(z.enum) errors
+ *     on an unknown key rather than dropping it) and their ids are checked by
+ *     validateCapturedFilters, because a board's saved statusId can die at any
  *     time through no fault of the document.
  *
  * Lives outside boardActions.ts because that module is "use server" and may not
@@ -23,12 +26,25 @@ const columnKeys = TICKET_COLUMNS.map((column) => column.key) as [string, ...str
 const ticketColumnKeySchema = z.enum(columnKeys);
 
 /**
- * Captured filters. Mirrors ITicketListFilters minus CAPTURE_EXCLUDED_FILTER_KEYS
- * — those keys are stripped by capture, so accepting them here would let a
- * hand-rolled write reintroduce exactly the board-scope confusion capture exists
- * to prevent.
+ * Captured filters: every ITicketListFilters key that capture can produce, i.e. all of them minus
+ * the excluded ones.
+ *
+ * Typing the shape below against this is what keeps "every new filter is
+ * defaultable for free" honest. Capture is a deny-list (a new key is captured
+ * unless someone excludes it) while this schema is an allow-list, so without a
+ * link between them the next key added to ITicketListFilters would be captured
+ * from the live list and then rejected on save — a failure that would surface
+ * only at runtime, to a user, as a save that mysteriously does not work.
+ * Declared as a mapped type instead, TypeScript fails the build at this file
+ * with the missing key named.
+ *
+ * The excluded keys are absent for a second reason too: accepting them would let
+ * a hand-rolled write reintroduce exactly the board-scope confusion capture
+ * exists to prevent.
  */
-const capturedFiltersShape = {
+type CapturableFilterKey = Exclude<keyof ITicketListFilters, CaptureExcludedFilterKey>;
+
+const capturedFiltersShape: { [K in CapturableFilterKey]: z.ZodTypeAny } = {
     statusId: z.string(),
     priorityId: z.string(),
     categoryId: z.string(),
@@ -75,11 +91,6 @@ export const ticketViewSettingsSchema = z
   .partial()
   .strict();
 
-/** Read-side: unknown keys are dropped rather than fatal, at both levels. */
-const storedTicketViewSettingsSchema = z
-  .object(viewSettingsShape(z.object(capturedFiltersShape).partial()))
-  .partial();
-
 export type ParsedTicketViewSettings = z.infer<typeof ticketViewSettingsSchema>;
 
 /** Throws with a readable message on invalid input; returns the parsed document. */
@@ -92,27 +103,4 @@ export function parseTicketViewSettings(value: unknown): TicketViewSettings {
     throw new Error(`Invalid board view settings — ${detail}`);
   }
   return result.data as TicketViewSettings;
-}
-
-/**
- * Read-side coercion for a stored document. A row written before this schema
- * existed (or by a future version that added a key) must still render the list
- * rather than throw on a settings screen, so unknown keys are dropped here
- * instead of rejecting — the strict rejection belongs on write, where there is a
- * user to tell.
- */
-export function coerceStoredTicketViewSettings(value: unknown): TicketViewSettings | null {
-  if (value === null || value === undefined) return null;
-  const raw = typeof value === 'string' ? safeJsonParse(value) : value;
-  if (!raw || typeof raw !== 'object') return null;
-  const result = storedTicketViewSettingsSchema.safeParse(raw);
-  return result.success ? (result.data as TicketViewSettings) : null;
-}
-
-function safeJsonParse(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }

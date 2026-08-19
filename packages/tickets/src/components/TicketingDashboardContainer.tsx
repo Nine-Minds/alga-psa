@@ -27,11 +27,14 @@ import {
   hasBoardFilterParam,
   hasTicketViewFilterParams,
   resolveInitialBoardTab,
+  shouldApplyBoardDefaultView,
+  type BoardArrivalTrigger,
   TICKETS_LAST_ACTIVE_BOARD_SETTING,
 } from '../lib/boardTabs';
 import {
   buildBoardArrivalFilters,
   resolveTicketViewSettings,
+  sanitizeStoredTicketView,
   validateCapturedFilters,
   type ResolvedTicketViewSettings,
   type TicketViewSettings,
@@ -474,13 +477,19 @@ export default function TicketingDashboardContainer({
   // into the *existing* merge path below rather than becoming a second effect
   // that fires its own fetch. One fetch per navigation is a property the smoke
   // pass on this branch established and this must not spend.
-  const tenantViewSettings = displaySettings?.list as TicketViewSettings | undefined;
+  const tenantViewSettings = useMemo(
+    () => sanitizeStoredTicketView(displaySettings?.list) ?? undefined,
+    [displaySettings?.list]
+  );
 
   const storedBoardViews = useMemo(() => {
     const map = new Map<string, TicketViewSettings | null>();
     for (const board of effectiveOptions.boardOptions) {
       if (board.board_id) {
-        map.set(board.board_id, (board.list_view_settings as TicketViewSettings | null) ?? null);
+        // Sanitized, not cast: the row is a JSONB document that may predate or
+        // postdate this code, and one stale key must not be able to poison the
+        // resolved view (or spread junk into ITicketListFilters).
+        map.set(board.board_id, sanitizeStoredTicketView(board.list_view_settings));
       }
     }
     return map;
@@ -565,6 +574,19 @@ export default function TicketingDashboardContainer({
   }), []);
 
   /**
+   * Did the URL the page was *entered* with carry filter params?
+   *
+   * Captured once, at mount, and never re-read — because updateURLWithFilters
+   * writes the live filter state back into the address bar, so from the first
+   * arrival onwards window.location.search reflects the app's own output rather
+   * than anything the user linked to. Re-reading it per click is what made board
+   * default filters stop applying after the first filtered navigation.
+   */
+  const entryUrlHasFilterOpinion = useRef(
+    typeof window !== 'undefined' && hasTicketViewFilterParams(window.location.search)
+  );
+
+  /**
    * The filters a board tab arrival produces, or null when the board's stored
    * filters must not apply.
    *
@@ -575,15 +597,21 @@ export default function TicketingDashboardContainer({
   const boardArrivalFilters = useCallback((
     boardId: string | null,
     boardSelection: Partial<ITicketListFilters>,
-    urlHasFilterOpinion: boolean,
+    trigger: BoardArrivalTrigger,
   ): Partial<ITicketListFilters> | null => {
-    if (urlHasFilterOpinion) {
+    if (!shouldApplyBoardDefaultView({
+      trigger,
+      urlHasFilterOpinion: entryUrlHasFilterOpinion.current,
+    })) {
       return null;
     }
+    // No early-return for "this board stores no filters". A board that has been
+    // configured with nothing still has a view — the neutral one — and arriving
+    // at it must produce that, not whatever the previous board left behind.
+    // Returning null here made an unconfigured board inherit the filters of
+    // whichever board you came from, which is the same defect as reading the
+    // URL per click, one layer down.
     const resolved = resolveViewForBoard(boardId);
-    if (!resolved.filters || Object.keys(resolved.filters).length === 0) {
-      return null;
-    }
     return buildBoardArrivalFilters({
       baseline: neutralListFilters(),
       boardSelection,
@@ -727,11 +755,7 @@ export default function TicketingDashboardContainer({
     // applies here exactly as it does on a click — layered into this effect's
     // existing single fetch rather than chasing it with another.
     applyBoardViewPresentation(decision.boardId);
-    const arrival = boardArrivalFilters(
-      decision.boardId,
-      boardSelection,
-      hasTicketViewFilterParams(window.location.search),
-    );
+    const arrival = boardArrivalFilters(decision.boardId, boardSelection, 'initial');
     const mergedFilters: Partial<ITicketListFilters> =
       arrival ?? { ...activeFiltersRef.current, ...boardSelection };
     if (arrival?.sortBy) setSortBy(arrival.sortBy);
@@ -812,11 +836,7 @@ export default function TicketingDashboardContainer({
     if (options && 'activeBoardTab' in options) {
       const destinationBoardId = options.activeBoardTab ?? null;
       applyBoardViewPresentation(destinationBoardId);
-      const arrival = boardArrivalFilters(
-        destinationBoardId,
-        update,
-        typeof window !== 'undefined' && hasTicketViewFilterParams(window.location.search),
-      );
+      const arrival = boardArrivalFilters(destinationBoardId, update, 'tab-click');
       if (arrival) {
         mergedFilters = { ...arrival, sortBy: arrival.sortBy ?? sortBy, sortDirection: arrival.sortDirection ?? sortDirection };
         if (mergedFilters.sortBy !== sortBy) setSortBy(mergedFilters.sortBy as string);

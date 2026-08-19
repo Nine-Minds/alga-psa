@@ -14,7 +14,7 @@ import {
   clearBoardDefaultView,
 } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import BoardHeader from '../BoardHeader';
-import { resolveTicketColumnVisibility, type TicketListColumnKey } from '@alga-psa/tickets/lib';
+import { TICKET_COLUMNS, resolveTicketColumnVisibility, type TicketListColumnKey } from '@alga-psa/tickets/lib';
 import {
   getBoardTicketStatuses,
 } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
@@ -217,39 +217,59 @@ function getManagedTicketStatusValidationError(
  * a reader from "this board's view is empty". Inheriting is a decision, and the
  * summary says so.
  */
+/** i18next `t` with interpolation options, as the rest of this screen uses it. */
+type TranslateWithOptions = (key: string, options?: Record<string, unknown>) => string;
+
 function describeBoardSavedView(
   // The stored document as it comes off the row: structurally typed and not
   // catalog-keyed, because a document written by an older (or newer) version
   // must still be describable rather than un-typeable.
   view: NonNullable<IBoard['list_view_settings']> | null | undefined,
-  t: (key: string, fallback: string) => string
+  t: TranslateWithOptions,
+  tTickets: TranslateWithOptions
 ): string {
+  const inherits = () =>
+    t('ticketing.boards.appearance.inheritsTenant', { defaultValue: 'Inherits tenant defaults' });
+
   if (!view) {
-    return t('ticketing.boards.appearance.inheritsTenant', 'Inherits tenant defaults');
+    return inherits();
   }
 
   const parts: string[] = [];
   const filters = (view.filters ?? {}) as Record<string, unknown>;
 
   if (filters.showOpenOnly === true) {
-    parts.push(t('ticketing.boards.appearance.summary.openOnly', 'Open only'));
+    parts.push(t('ticketing.boards.appearance.summary.openOnly', { defaultValue: 'Open only' }));
   }
   if (typeof filters.sortBy === 'string') {
+    // The stored sort key is a dataIndex ('due_date'), not something to show a
+    // user. Route it through the column catalog so the summary names the column
+    // the way the list header does, in the reader's language.
+    const column = TICKET_COLUMNS.find((c) => c.dataIndex === filters.sortBy);
+    const fieldLabel = column
+      ? tTickets(column.titleKey, { defaultValue: column.titleFallback })
+      : (filters.sortBy as string);
     const direction = filters.sortDirection === 'asc' ? '\u2191' : '\u2193';
-    parts.push(`${t('ticketing.boards.appearance.summary.sortedBy', 'sorted by')} ${filters.sortBy} ${direction}`);
+    parts.push(
+      `${t('ticketing.boards.appearance.summary.sortedBy', { defaultValue: 'sorted by {{field}}', field: fieldLabel })} ${direction}`
+    );
   }
   if (view.columnVisibility) {
     const stored = view.columnVisibility as Partial<Record<TicketListColumnKey, boolean>>;
     const visible = Object.values(resolveTicketColumnVisibility(stored)).filter(Boolean).length;
-    parts.push(`${visible} ${t('ticketing.boards.appearance.summary.columns', 'columns')}`);
+    parts.push(
+      // `columns`, not `count`: `count` is reserved by i18next for plural
+      // resolution, and we have declared no plural forms for this key.
+      t('ticketing.boards.appearance.summary.columns', { defaultValue: '{{columns}} columns', columns: visible })
+    );
   }
   if (typeof view.densityLevel === 'number') {
-    parts.push(`${t('ticketing.boards.appearance.summary.density', 'density')} ${view.densityLevel}`);
+    parts.push(
+      t('ticketing.boards.appearance.summary.density', { defaultValue: 'density {{level}}', level: view.densityLevel })
+    );
   }
 
-  return parts.length > 0
-    ? parts.join(' \u00b7 ')
-    : t('ticketing.boards.appearance.inheritsTenant', 'Inherits tenant defaults');
+  return parts.length > 0 ? parts.join(' \u00b7 ') : inherits();
 }
 
 const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, string> = {
@@ -380,6 +400,11 @@ interface BoardsSettingsProps {
 
 const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
+  // BoardHeader is a ticket-list component and asks for dashboard.boardHeader.*
+  // and bulk.move.unnamedBoard, which live in features/tickets. Handing it this
+  // screen's msp/settings `t` would resolve nothing and silently render every
+  // label in English in every locale.
+  const { t: tTickets } = useTranslation('features/tickets');
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -1047,6 +1072,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          // The pin toggle renders during creation too, so it has to be sent:
+          // createBoard defaults is_pinned to true, which would silently ignore
+          // an admin turning it off on the way in.
+          is_pinned: formData.is_pinned,
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
             ? (formData.copy_ticket_statuses_from_board_id || null)
             : null,
@@ -1699,7 +1728,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                         slaPolicyName:
                           slaPolicies.find((policy) => policy.sla_policy_id === formData.sla_policy_id)?.policy_name ?? null,
                       }}
-                      t={t as (key: string, fallback: string) => string}
+                      t={tTickets as (key: string, fallback: string) => string}
                     />
                     <div className="space-y-1.5 px-3 py-2">
                       {[0, 1, 2].map((row) => (
@@ -1716,7 +1745,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 <div className="rounded-md border border-gray-200 p-3">
                   <Label>{t('ticketing.boards.appearance.savedView', 'Saved view')}</Label>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {describeBoardSavedView(editingBoard.list_view_settings ?? null, t)}
+                    {describeBoardSavedView(
+                      editingBoard.list_view_settings ?? null,
+                      t as TranslateWithOptions,
+                      tTickets as TranslateWithOptions
+                    )}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {t(

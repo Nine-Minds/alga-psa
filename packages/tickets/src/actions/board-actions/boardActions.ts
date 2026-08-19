@@ -899,6 +899,16 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);
       }
 
+      // updateBoard is a second write path to the same two columns that
+      // saveBoardDefaultView/clearBoardDefaultView guard, so it has to enforce
+      // the same permission — otherwise the gate on those actions is decorative.
+      // Scoped to the new fields deliberately: this action's existing lack of a
+      // permission check covers pre-existing fields and is its own change.
+      const touchesViewConfig = 'is_pinned' in sanitizedData || 'list_view_settings' in sanitizedData;
+      if (touchesViewConfig && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+
       const { ticket_statuses: ticketStatuses, list_view_settings: listViewSettings, ...rest } =
         sanitizedData;
       const boardUpdateData: Record<string, unknown> = { ...rest };

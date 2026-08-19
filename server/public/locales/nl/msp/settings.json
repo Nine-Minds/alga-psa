@@ -813,7 +813,7 @@
         "preview": "Voorbeeld",
         "summary": {
           "openOnly": "Alleen openstaand",
-          "columns": "{{count}} kolommen",
+          "columns": "{{columns}} kolommen",
           "density": "dichtheid {{level}}",
           "sortedBy": "gesorteerd op {{field}}"
         }

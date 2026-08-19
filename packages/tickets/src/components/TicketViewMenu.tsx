@@ -188,16 +188,21 @@ export const TicketViewMenu: React.FC<TicketViewMenuProps> = ({
                 ? t('dashboard.viewMenu.saveBoardDefault', "Save as this board's default view")
                 : t('dashboard.viewMenu.saveTenantDefault', 'Save as the default view for everyone')}
             </button>
-            <button
-              type="button"
-              id={`${id}-reset-default`}
-              disabled={isSaving || (scope === 'board' && !hasStoredDefault)}
-              onClick={() => void onResetDefault()}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--color-border-50))] disabled:opacity-50"
-            >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
-              {t('dashboard.viewMenu.resetToTenant', 'Reset to tenant default')}
-            </button>
+            {/* Only rendered on a board tab. The All-tickets tab *is* the tenant
+                layer, so "reset to tenant default" there has no destination —
+                rendering it enabled would be a control that does nothing. */}
+            {scope === 'board' && (
+              <button
+                type="button"
+                id={`${id}-reset-default`}
+                disabled={isSaving || !hasStoredDefault}
+                onClick={() => void onResetDefault()}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--color-border-50))] disabled:opacity-50"
+              >
+                <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                {t('dashboard.viewMenu.resetToTenant', 'Reset to tenant default')}
+              </button>
+            )}
           </div>
         )}
       </DropdownMenuContent>

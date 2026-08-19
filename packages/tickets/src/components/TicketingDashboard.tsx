@@ -93,6 +93,7 @@ import {
   boardTabId,
   boardTabSelection,
   buildBoardSelectionFilterUpdate,
+  resolveActiveBoardId,
   buildBoardTabs,
 } from '../lib/boardTabs';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
@@ -1859,13 +1860,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
 
   const handleBoardSelect = useCallback((newSelectedBoards: string[], newExcludedBoards: string[]) => {
-    onFilterChange(buildBoardSelectionFilterUpdate({
+    const update = buildBoardSelectionFilterUpdate({
       selectedBoards: newSelectedBoards,
       excludedBoards: newExcludedBoards,
       statusOptions: rawStatusOptions,
       currentStatusId: selectedStatus,
-    }));
-  }, [onFilterChange, rawStatusOptions, selectedStatus]);
+    });
+
+    // Narrowing the picker to exactly one board lands on that board's tab and
+    // reveals its header, so it is an arrival by the same definition
+    // resolveActiveBoardId uses and must apply that board's view. Without this,
+    // the header would name one board while the columns, density and filters
+    // still belonged to the previous one. Any other picker selection (none,
+    // several, the no-board sentinel) is a multi-board filter, not an arrival —
+    // it has no single board whose view could apply.
+    const nextBoardId = resolveActiveBoardId(newSelectedBoards);
+    const isArrival = nextBoardId !== null && nextBoardId !== selectedBoard;
+
+    onFilterChange(update, isArrival ? { activeBoardTab: nextBoardId } : undefined);
+  }, [onFilterChange, rawStatusOptions, selectedBoard, selectedStatus]);
 
   // A board tab is the same single-board filter the picker sets, so it goes
   // through the identical update path — the tab only adds "this was a

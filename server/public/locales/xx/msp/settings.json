@@ -813,7 +813,7 @@
         "preview": "11111",
         "summary": {
           "openOnly": "11111",
-          "columns": "11111 {{count}} 11111",
+          "columns": "11111 {{columns}} 11111",
           "density": "11111 {{level}} 11111",
           "sortedBy": "11111 {{field}} 11111"
         }

@@ -98,14 +98,40 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
+
+  // `list` merges key-group-wise; everything else still replaces wholesale.
+  //
+  // This mattered the moment `list` widened from two keys to the full
+  // TicketViewSettings, because it now has two writers that own different
+  // subsets of it: Settings → Display authors columnVisibility +
+  // tagsInlineUnderTitle, while `View ▾` → "save as default" authors the whole
+  // document (columnOrder, densityLevel, filters included). Replacing `list`
+  // wholesale meant whichever screen saved last silently deleted the other's
+  // keys — save a tenant default view, then change anything in Display
+  // Settings, and the tenant's column order, density and filters were gone with
+  // no error and no way to tell. Before the widening both writers happened to
+  // send the same two keys, so replacement was lossless; it no longer is.
+  //
+  // A writer therefore replaces the groups it names and leaves the rest alone,
+  // which is the same group-level rule the board→tenant resolver already uses.
+  const mergedList = updated.list
+    ? { ...(currentDisplay.list || {}), ...updated.list }
+    : currentDisplay.list;
+
   const mergedDisplay = {
     ...currentDisplay,
     ...updated,
+    ...(mergedList ? { list: mergedList } : {}),
   };
 
   const rootSettings = (existingRow?.settings as any) || {};
   const ticketing = rootSettings.ticketing || {};
   const display = ticketing.display || {};
+  // Same group-level rule on the legacy nested copy, so the two paths cannot
+  // disagree about what a partial write means.
+  const mergedNestedList = updated.list
+    ? { ...(display.list || {}), ...updated.list }
+    : display.list;
   const mergedSettings = {
     ...rootSettings,
     ticketing: {
@@ -113,6 +139,7 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
       display: {
         ...display,
         ...updated,
+        ...(mergedNestedList ? { list: mergedNestedList } : {}),
       },
     },
   };

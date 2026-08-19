@@ -1,5 +1,6 @@
 import type { ITicketListFilters } from '@alga-psa/types';
 import {
+  TICKET_COLUMNS,
   resolveTicketColumnOrder,
   resolveTicketColumnVisibility,
   type TicketListColumnKey,
@@ -173,6 +174,85 @@ export function captureTicketViewSettings(view: {
     captured.densityLevel = density;
   }
   return captured;
+}
+
+/**
+ * Coerce a document as it comes off the row into something safe to resolve.
+ *
+ * This is the read-side counterpart to the strict write schema, and it is
+ * deliberately **key-dropping rather than rejecting**. A stored view can be
+ * older or newer than the code reading it — a retired column key in
+ * `columnVisibility`, a filter key from a later release — and none of that is
+ * the document's fault. Validating it all-or-nothing would throw away an
+ * otherwise perfectly good saved view over one stale key, which is exactly the
+ * tolerance `resolveTicketColumnOrder` was written to provide and would quietly
+ * undo it.
+ *
+ * Deliberately hand-rolled rather than a Zod schema: this runs in the browser on
+ * the ticket-list render path, and `z.record(z.enum([...]))` *errors* on an
+ * unknown key rather than dropping it — the opposite of what is wanted here.
+ *
+ * Strictness still exists, just at the right end: writes go through
+ * `parseTicketViewSettings`, where there is a user to tell.
+ */
+export function sanitizeStoredTicketView(raw: unknown): TicketViewSettings | null {
+  const source = typeof raw === 'string' ? safeJsonParse(raw) : raw;
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+  const doc = source as Record<string, unknown>;
+  const out: TicketViewSettings = {};
+
+  if (doc.columnVisibility && typeof doc.columnVisibility === 'object') {
+    const stored = doc.columnVisibility as Record<string, unknown>;
+    const visibility: Partial<Record<TicketListColumnKey, boolean>> = {};
+    for (const column of TICKET_COLUMNS) {
+      const value = stored[column.key];
+      if (typeof value === 'boolean') {
+        visibility[column.key] = value;
+      }
+    }
+    if (Object.keys(visibility).length > 0) {
+      out.columnVisibility = visibility;
+    }
+  }
+
+  if (Array.isArray(doc.columnOrder)) {
+    // resolveTicketColumnOrder already drops keys the catalog no longer knows.
+    out.columnOrder = resolveTicketColumnOrder(doc.columnOrder.filter((k): k is string => typeof k === 'string'));
+  }
+
+  if (typeof doc.tagsInlineUnderTitle === 'boolean') {
+    out.tagsInlineUnderTitle = doc.tagsInlineUnderTitle;
+  }
+
+  if (typeof doc.densityLevel === 'number' && Number.isFinite(doc.densityLevel)) {
+    out.densityLevel = doc.densityLevel;
+  }
+
+  if (doc.filters && typeof doc.filters === 'object' && !Array.isArray(doc.filters)) {
+    const storedFilters = doc.filters as Record<string, unknown>;
+    const filters: Partial<ITicketListFilters> = {};
+    for (const [key, value] of Object.entries(storedFilters)) {
+      // Board scope can never come from a stored document, however it got there.
+      if (EXCLUDED_KEY_SET.has(key)) continue;
+      const isScalar = typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number';
+      const isStringList = Array.isArray(value) && value.every((item) => typeof item === 'string');
+      if (!isScalar && !isStringList) continue;
+      (filters as Record<string, unknown>)[key] = value;
+    }
+    out.filters = filters;
+  }
+
+  return out;
+}
+
+function safeJsonParse(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 /**

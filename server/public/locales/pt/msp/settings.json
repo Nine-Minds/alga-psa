@@ -813,7 +813,7 @@
         "preview": "Pré-visualização",
         "summary": {
           "openOnly": "Somente abertos",
-          "columns": "{{count}} colunas",
+          "columns": "{{columns}} colunas",
           "density": "densidade {{level}}",
           "sortedBy": "ordenado por {{field}}"
         }

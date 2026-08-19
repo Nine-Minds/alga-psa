@@ -7,6 +7,7 @@ import {
   CAPTURE_EXCLUDED_FILTER_KEYS,
   captureTicketViewSettings,
   resolveTicketViewSettings,
+  sanitizeStoredTicketView,
   ticketViewDiffersFromSaved,
   validateCapturedFilters,
   TICKET_VIEW_DENSITY_DEFAULT,
@@ -320,6 +321,21 @@ describe('buildBoardArrivalFilters', () => {
     expect(arrival.searchQuery).toBeUndefined();
   });
 
+  it('resets to neutral for a board that stores no filters at all', () => {
+    // An unconfigured board still has a view — the neutral one. Arriving at it
+    // must produce that rather than whatever the previous board left behind,
+    // which is what an "if there are no stored filters, skip" shortcut would do.
+    const arrival = buildBoardArrivalFilters({
+      baseline,
+      boardSelection,
+      viewFilters: {},
+    });
+
+    expect(arrival.priorityId).toBe('all');
+    expect(arrival.statusId).toBe('open');
+    expect(arrival.boardIds).toEqual(['board-1']);
+  });
+
   it('lets the stored view outrank the generic status reconciliation', () => {
     const arrival = buildBoardArrivalFilters({
       baseline,
@@ -356,5 +372,77 @@ describe('ticketViewDiffersFromSaved', () => {
 
   it('is true against a null saved view once the user has arranged anything', () => {
     expect(ticketViewDiffersFromSaved({ densityLevel: 30 }, null)).toBe(true);
+  });
+});
+
+describe('sanitizeStoredTicketView (read-side leniency)', () => {
+  it('keeps a good document intact', () => {
+    const doc = {
+      columnVisibility: { status: false, client: true },
+      columnOrder: ['client', 'status'],
+      tagsInlineUnderTitle: false,
+      densityLevel: 30,
+      filters: { priorityId: 'p1', tags: ['urgent'], showOpenOnly: true },
+    };
+    const clean = sanitizeStoredTicketView(doc)!;
+    expect(clean.columnVisibility).toMatchObject({ status: false, client: true });
+    expect(clean.columnOrder?.slice(0, 2)).toEqual(['client', 'status']);
+    expect(clean.densityLevel).toBe(30);
+    expect(clean.filters).toEqual({ priorityId: 'p1', tags: ['urgent'], showOpenOnly: true });
+  });
+
+  it('DROPS a retired column key rather than discarding the whole view', () => {
+    // The point of read-side leniency. A Zod record over the catalog enum would
+    // *error* on `a_retired_column`, throwing away an otherwise good saved view
+    // over one stale key — and quietly undoing the tolerance
+    // resolveTicketColumnOrder was written to provide.
+    const clean = sanitizeStoredTicketView({
+      columnVisibility: { status: false, a_retired_column: true },
+      columnOrder: ['a_retired_column', 'client'],
+      densityLevel: 30,
+    })!;
+
+    expect(clean).not.toBeNull();
+    expect(clean.columnVisibility).not.toHaveProperty('a_retired_column');
+    expect(clean.columnVisibility?.status).toBe(false);
+    expect(clean.columnOrder).not.toContain('a_retired_column');
+    expect(clean.densityLevel).toBe(30);
+  });
+
+  it('drops board scope even if a hand-written document smuggled it in', () => {
+    const clean = sanitizeStoredTicketView({
+      filters: { boardIds: ['other'], excludeBoardIds: ['x'], searchQuery: 'sticky', priorityId: 'p1' },
+    })!;
+    expect(clean.filters).toEqual({ priorityId: 'p1' });
+  });
+
+  it('drops filter values that are not scalars or string lists', () => {
+    const clean = sanitizeStoredTicketView({
+      filters: { priorityId: 'p1', junk: { nested: true }, alsoJunk: [{ a: 1 }] },
+    })!;
+    expect(clean.filters).toEqual({ priorityId: 'p1' });
+  });
+
+  it('returns null for anything that is not a document', () => {
+    expect(sanitizeStoredTicketView(null)).toBeNull();
+    expect(sanitizeStoredTicketView(undefined)).toBeNull();
+    expect(sanitizeStoredTicketView('not json')).toBeNull();
+    expect(sanitizeStoredTicketView([1, 2])).toBeNull();
+    expect(sanitizeStoredTicketView(42)).toBeNull();
+  });
+
+  it('parses a JSON string, since some drivers hand back jsonb as text', () => {
+    const clean = sanitizeStoredTicketView(JSON.stringify({ densityLevel: 20 }))!;
+    expect(clean.densityLevel).toBe(20);
+  });
+
+  it('survives into the resolver rather than collapsing to defaults', () => {
+    const clean = sanitizeStoredTicketView({
+      columnVisibility: { created_by: true, a_retired_column: false },
+      densityLevel: 20,
+    });
+    const resolved = resolveTicketViewSettings({ board: clean, tenant: null });
+    expect(resolved.densityLevel).toBe(20);
+    expect(resolved.columnVisibility.created_by).toBe(true);
   });
 });

@@ -205,6 +205,41 @@ export function hasTicketViewFilterParams(search: string): boolean {
   return TICKET_VIEW_URL_FILTER_PARAMS.some(param => (params.get(param) ?? '').trim().length > 0);
 }
 
+/** How the user got to the board tab whose default view is being considered. */
+export type BoardArrivalTrigger =
+  /** The user clicked a tab (or picked a single board in the filter picker). */
+  | 'tab-click'
+  /** First paint: a deep link, or the restored last-active-board preference. */
+  | 'initial';
+
+/**
+ * Whether arriving at a board tab should apply that board's stored default view.
+ *
+ * The subtlety that makes this worth its own function: **the URL is not a
+ * reliable signal of user intent, because the app writes to it.**
+ * `updateURLWithFilters` reflects the live filter state into the address bar on
+ * every change, so a second or two after any arrival the URL "carries filter
+ * params" — but those params are the app's own echo, not a shared link. Reading
+ * `window.location.search` at click time therefore reports an opinion on almost
+ * every click after the first, which silently disables board default *filters*
+ * from then on and leaves each board wearing the previous board's filters.
+ *
+ * So the URL only gets a vote on `initial` — the one moment where its contents
+ * genuinely came from outside the app. An explicit tab click is a user
+ * navigation and always applies the destination board's view; that is the whole
+ * premise of "the board reliably looks like itself when you go there".
+ *
+ * (Back/forward needs no case here: `syncFromUrl` applies the URL's filters
+ * directly, because on a history step the URL *is* the state being restored.)
+ */
+export function shouldApplyBoardDefaultView(params: {
+  trigger: BoardArrivalTrigger;
+  /** Whether the URL the page was *entered* with carried filter params. */
+  urlHasFilterOpinion: boolean;
+}): boolean {
+  return params.trigger === 'tab-click' ? true : !params.urlHasFilterOpinion;
+}
+
 export type InitialBoardTabDecision =
   | { apply: false; reason: 'url-wins' | 'no-preference' | 'board-unavailable' }
   | { apply: true; boardId: string };

@@ -817,7 +817,7 @@
         "preview": "Podgląd",
         "summary": {
           "openOnly": "Tylko otwarte",
-          "columns": "{{count}} kolumn",
+          "columns": "{{columns}} kolumn",
           "density": "gęstość {{level}}",
           "sortedBy": "sortowanie według {{field}}"
         }
