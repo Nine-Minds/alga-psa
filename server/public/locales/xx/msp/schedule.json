@@ -685,5 +685,34 @@
     "notAvailable": "11111",
     "title": "11111",
     "unknownUser": "11111"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "11111",
+      "invalid": "11111",
+      "assigneesMissing": "11111"
+    },
+    "activities": {
+      "otherUserForbidden": "11111"
+    },
+    "workItem": {
+      "adHocTimesRequired": "11111",
+      "typeUnsupported": "11111",
+      "entryOrUserUnavailable": "11111",
+      "invalid": "11111",
+      "referenceMissing": "11111",
+      "duplicateEntry": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "11111",
+      "refreshPermission": "11111",
+      "refreshFailed": "11111",
+      "graphForbidden": "11111",
+      "graphNotFound": "11111",
+      "graphThrottled": "11111",
+      "graphHttpStatus": "11111 {{status}} 11111"
+    }
   }
 }

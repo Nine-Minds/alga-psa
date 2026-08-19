@@ -685,5 +685,34 @@
     "notAvailable": "N/D",
     "title": "Detalles de la interacción",
     "unknownUser": "Desconocido"
+  },
+  "errors": {
+    "entry": {
+      "notFound": "No se encontró la entrada del calendario.",
+      "invalid": "La entrada del calendario seleccionada no es válida. Actualice la página e inténtelo de nuevo.",
+      "assigneesMissing": "No se pudieron encontrar uno o más usuarios asignados."
+    },
+    "activities": {
+      "otherUserForbidden": "Permiso denegado: no se pueden ver las actividades del calendario de otro usuario"
+    },
+    "workItem": {
+      "adHocTimesRequired": "La hora de inicio y la hora de fin son obligatorias para las entradas ad hoc.",
+      "typeUnsupported": "Ese tipo de elemento de trabajo no se admite en la planificación.",
+      "entryOrUserUnavailable": "La entrada del calendario o el usuario seleccionado ya no está disponible. Actualice la página e inténtelo de nuevo.",
+      "invalid": "El elemento de trabajo seleccionado no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "El elemento de trabajo, la entrada del calendario o la persona asignada seleccionada ya no es válida. Actualice la página e inténtelo de nuevo.",
+      "duplicateEntry": "Esa entrada del calendario ya existe. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del calendario.",
+      "missingFieldNamed": "Falta un campo obligatorio del calendario: {{field}}."
+    },
+    "meetingArtifacts": {
+      "meetingIdRequired": "El ID de la reunión es obligatorio",
+      "refreshPermission": "Permiso denegado: no se pueden actualizar las grabaciones de reuniones.",
+      "refreshFailed": "No se pudieron actualizar las grabaciones de reuniones. Inténtelo de nuevo.",
+      "graphForbidden": "Microsoft Graph denegó el acceso a la grabación de Teams. Compruebe los permisos de grabación e inténtelo de nuevo.",
+      "graphNotFound": "La grabación de Teams ya no está disponible en Microsoft Graph.",
+      "graphThrottled": "Microsoft Graph está limitando la velocidad de las descargas de grabaciones. Inténtelo de nuevo en breve.",
+      "graphHttpStatus": "Microsoft Graph devolvió HTTP {{status}} al descargar la grabación de Teams."
+    }
   }
 }

@@ -463,5 +463,42 @@
   "bundleNotice": {
     "withNumber": "11111 {{number}} 11111",
     "withoutNumber": "11111"
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "11111",
+      "onlySubmittedApprovable": "11111",
+      "idRequired": "11111",
+      "ticketIdRequired": "11111",
+      "workItemRemoveFailed": "11111",
+      "onlyDraftRemovable": "11111",
+      "removeEntriesFirst": "11111",
+      "onlyApprovedReopenable": "11111",
+      "invoicedCannotReopen": "11111"
+    },
+    "timeEntry": {
+      "notFoundRefresh": "11111",
+      "serviceRequired": "11111",
+      "alreadyInvoiced": "11111",
+      "workItemTypeUnsupported": "11111",
+      "bucketUpdateFailed": "11111",
+      "wrongTimeSheet": "11111",
+      "outsidePeriod": "11111",
+      "invalidReference": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "timePeriod": {
+      "datesRequired": "11111"
+    },
+    "timePeriodSettings": {
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111"
+    }
   }
 }
