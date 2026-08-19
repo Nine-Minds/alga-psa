@@ -12,6 +12,7 @@ import {
   KB_IMPORT_ALLOWED_EXTENSIONS,
   KB_IMPORT_MAX_FILES,
   KB_IMPORT_MAX_FILE_BYTES,
+  KB_IMPORT_MAX_TOTAL_BYTES,
 } from '../lib/kbImportLimits';
 import {
   KB_ARTICLE_SELECT_COLUMNS,
@@ -1112,6 +1113,7 @@ export const startArticleImport = withAuth(
       throw new Error(`You can import at most ${KB_IMPORT_MAX_FILES} files at a time`);
     }
 
+    let totalBytes = 0;
     for (const file of files) {
       if (!file.filename?.trim()) {
         throw new Error('Each file must have a name');
@@ -1122,9 +1124,16 @@ export const startArticleImport = withAuth(
       if (!file.content?.trim()) {
         throw new Error(`${file.filename} is empty`);
       }
-      if (Buffer.byteLength(file.content, 'utf8') > KB_IMPORT_MAX_FILE_BYTES) {
+      const fileBytes = Buffer.byteLength(file.content, 'utf8');
+      if (fileBytes > KB_IMPORT_MAX_FILE_BYTES) {
         throw new Error(
           `${file.filename} is larger than ${Math.floor(KB_IMPORT_MAX_FILE_BYTES / (1024 * 1024))}MB`,
+        );
+      }
+      totalBytes += fileBytes;
+      if (totalBytes > KB_IMPORT_MAX_TOTAL_BYTES) {
+        throw new Error(
+          `This batch is larger than ${Math.floor(KB_IMPORT_MAX_TOTAL_BYTES / (1024 * 1024))}MB. Import fewer files at once.`,
         );
       }
     }

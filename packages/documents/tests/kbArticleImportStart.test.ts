@@ -81,7 +81,11 @@ vi.mock('@alga-psa/core', () => ({
 }));
 
 import { getArticleImportStatus, startArticleImport } from '../src/actions/kbArticleActions';
-import { KB_IMPORT_MAX_FILES, KB_IMPORT_MAX_FILE_BYTES } from '../src/lib/kbImportLimits';
+import {
+  KB_IMPORT_MAX_FILES,
+  KB_IMPORT_MAX_FILE_BYTES,
+  KB_IMPORT_MAX_TOTAL_BYTES,
+} from '../src/lib/kbImportLimits';
 
 const file = (overrides: Partial<{ filename: string; content: string }> = {}) => ({
   filename: 'printer-guide.md',
@@ -158,6 +162,16 @@ describe('startArticleImport', () => {
     await expect(
       startArticleImport({ files: [file({ content: 'x'.repeat(KB_IMPORT_MAX_FILE_BYTES + 1) })] }),
     ).rejects.toThrow('printer-guide.md is larger than 5MB');
+
+    // Under the per-file cap but over the batch cap: the browser refuses this
+    // too, but the action is the authoritative check.
+    const fatBatch = Array.from(
+      { length: Math.ceil(KB_IMPORT_MAX_TOTAL_BYTES / KB_IMPORT_MAX_FILE_BYTES) + 1 },
+      (_, i) => file({ filename: `doc-${i}.md`, content: 'x'.repeat(KB_IMPORT_MAX_FILE_BYTES) }),
+    );
+    await expect(startArticleImport({ files: fatBatch })).rejects.toThrow(
+      'This batch is larger than 20MB. Import fewer files at once.',
+    );
 
     expect(tables.kb_import_files).toHaveLength(0);
     expect(enqueueMock).not.toHaveBeenCalled();
