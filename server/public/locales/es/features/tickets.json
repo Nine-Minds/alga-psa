@@ -495,7 +495,10 @@
     },
     "exportSelectedAction": "Exportar seleccionados ({{count}})",
     "exportAction": "Exportar CSV",
-    "importAction": "Importar CSV"
+    "importAction": "Importar CSV",
+    "boardTabs": {
+      "all": "Todos los tickets"
+    }
   },
   "bulk": {
     "bundleTickets": "Agrupar tickets",

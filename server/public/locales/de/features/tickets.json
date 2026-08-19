@@ -495,7 +495,10 @@
     },
     "exportSelectedAction": "Auswahl exportieren ({{count}})",
     "exportAction": "CSV exportieren",
-    "importAction": "CSV importieren"
+    "importAction": "CSV importieren",
+    "boardTabs": {
+      "all": "Alle Tickets"
+    }
   },
   "bulk": {
     "bundleTickets": "Tickets bündeln",
