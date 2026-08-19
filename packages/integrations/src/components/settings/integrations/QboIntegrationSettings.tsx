@@ -129,6 +129,13 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           : t('integrations.qbo.settings.automatedSalesTax.disabledMessage', { defaultValue: 'Automated Sales Tax mode is off. Alga keeps calculating tax for this company.' })
       );
       await load();
+    } catch {
+      // A throw here — the action never reached the server, or the deployment
+      // restarted mid-click — must not leave the optimistic flip standing as if
+      // it saved. Which way tax is calculated is too consequential to show a
+      // state we have no confirmation of.
+      setAutomatedSalesTax(!enabled);
+      setError(t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
     } finally {
       setSavingAutomatedSalesTax(false);
     }
@@ -438,9 +445,10 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                     {t('integrations.qbo.settings.automatedSalesTax.hint', { defaultValue: 'Turn this on when this QuickBooks company uses Automated Sales Tax, so exported invoices are taxed by Intuit from the customer address and the tax comes back to Alga.' })}
                   </p>
                 </div>
+                {/* No `label` prop: Switch renders its own label beside the
+                    thumb when given one, which would repeat the Label above. */}
                 <Switch
                   id="qbo-automated-sales-tax-toggle"
-                  label={t('integrations.qbo.settings.automatedSalesTax.label', { defaultValue: 'QuickBooks calculates sales tax' })}
                   checked={automatedSalesTax}
                   disabled={savingAutomatedSalesTax || loading}
                   onCheckedChange={(checked) => void handleAutomatedSalesTaxChange(checked)}

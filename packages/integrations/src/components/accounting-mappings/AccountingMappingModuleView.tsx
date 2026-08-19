@@ -81,17 +81,23 @@ export function AccountingMappingModuleView({
       metadata?: Record<string, unknown> | null;
       mappingId?: string;
     }) => {
+      // Metadata is tri-state from here down, and each state means something
+      // different to the server: an object sets it, null clears it, undefined
+      // leaves the stored value alone.
+      //
       // Only the JSON editor can express metadata, and it is seeded from the
-      // stored row, so what it returns is the user's whole intent. Without it
-      // the dialog always reports null, which must not be read as "delete
-      // everything" — module-owned keys (a service's classId, an invoice's
+      // stored row, so what it returns is the user's whole intent — including
+      // an emptied editor, which is a real request to clear. Without the editor
+      // the dialog always reports null, and that must NOT be read as "delete
+      // everything": module-owned keys (a service's classId, an invoice's
       // chargeLineMappings) are written elsewhere and would be lost on any edit.
       const existingMetadata = rawInput.mappingId
         ? mappings.find((mapping) => mapping.id === rawInput.mappingId)?.metadata
         : undefined;
-      const baseMetadata = module.metadata?.enableJsonEditor
-        ? rawInput.metadata
-        : (rawInput.metadata ?? existingMetadata);
+      const baseMetadata: Record<string, unknown> | null | undefined =
+        module.metadata?.enableJsonEditor
+          ? rawInput.metadata
+          : (rawInput.metadata ?? (existingMetadata as Record<string, unknown> | null | undefined));
 
       // Persist the selected option's label so the mapping stays readable even
       // when a later catalog load misses this id (pseudo codes, other realm,
@@ -100,24 +106,23 @@ export function AccountingMappingModuleView({
         (option) => option.id === rawInput.externalEntityId
       )?.name;
 
-      const input = {
-        ...rawInput,
-        metadata: externalDisplayName
-          ? { ...((baseMetadata as Record<string, unknown> | null) ?? {}), externalDisplayName }
-          : baseMetadata
-      };
+      const metadataForSave: Record<string, unknown> | null | undefined = externalDisplayName
+        ? { ...(baseMetadata ?? {}), externalDisplayName }
+        : baseMetadata;
+
+      const input = { ...rawInput, metadata: metadataForSave };
 
       if (input.mappingId) {
         if (overrides?.updateMapping) {
           await overrides.updateMapping(context, input.mappingId, {
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.update(context, input.mappingId, {
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       } else {
@@ -128,13 +133,13 @@ export function AccountingMappingModuleView({
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
             external_realm_id: context.realmId ?? null,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.create(context, {
             algaEntityId: input.algaEntityId,
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       }

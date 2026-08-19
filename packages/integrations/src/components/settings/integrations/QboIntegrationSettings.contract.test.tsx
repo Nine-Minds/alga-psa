@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -419,6 +419,23 @@ describe('QboIntegrationSettings contracts', () => {
     expect(toggle).toHaveAttribute('aria-checked', 'true');
   });
 
+  it('T068b: the toggle label is rendered once, not doubled by the Switch', async () => {
+    // Switch renders its own label beside the thumb when given a `label` prop,
+    // which would repeat the Label in the description column.
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    const section = document.getElementById('qbo-automated-sales-tax-section') as HTMLElement;
+    expect(within(section).getAllByText('QuickBooks calculates sales tax')).toHaveLength(1);
+  });
+
   it('T069: toggling writes the new mode for the connected realm', async () => {
     getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
     getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
@@ -459,6 +476,28 @@ describe('QboIntegrationSettings contracts', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Automated Sales Tax mode could not be saved.')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('T070b: a thrown action reverts the toggle and surfaces an error', async () => {
+    getQboConnectionStatusMock.mockResolvedValue(connectedStatus);
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    setQboAutomatedSalesTaxModeMock.mockRejectedValue(new Error('network down'));
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-automated-sales-tax-section')).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    // An optimistic flip left standing would tell the user tax is delegated to
+    // Intuit when nothing was saved.
+    await waitFor(() => {
+      expect(screen.getByText('Failed to update Automated Sales Tax mode.')).toBeInTheDocument();
     });
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   });
