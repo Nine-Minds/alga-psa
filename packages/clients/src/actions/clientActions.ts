@@ -506,15 +506,10 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
   try {
     await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
 
-    const structural = applyClientStructuralSchema(client, { partial: false });
-    if (!structural.ok) {
-      return { success: false, error: structural.error };
-    }
-
     const { knex } = await createTenantKnex();
 
     // Ensure website field is synchronized between properties.website and url
-    const clientData = { ...structural.data };
+    const clientData = { ...client };
 
     // If properties.website exists but url doesn't, sync url from properties.website
     if (clientData.properties?.website && !clientData.url) {
@@ -527,6 +522,17 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
         clientData.properties = {};
       }
       clientData.properties.website = clientData.url;
+    }
+
+    // Validate after the website/url sync so a bad properties.website cannot reach
+    // the url column unchecked, and write the normalized values back to both.
+    const structural = applyClientStructuralSchema(clientData, { partial: false });
+    if (!structural.ok) {
+      return { success: false, error: structural.error };
+    }
+    Object.assign(clientData, structural.data);
+    if (clientData.properties?.website) {
+      clientData.properties.website = clientData.url ?? clientData.properties.website;
     }
 
     // When no explicit currency is provided, adopt the tenant's configured default
@@ -1632,6 +1638,20 @@ export const importClientsFromCSV = withAuth(async (
       });
       if (!rowStructural.success) {
         throw new Error(rowStructural.error ?? 'Invalid client data');
+      }
+
+      // Store the normalized values, not the raw CSV cells.
+      const normalizedRow = rowStructural.data ?? {};
+      clientData.client_name = normalizedRow.client_name ?? clientData.client_name;
+      if (normalizedRow.url !== undefined) {
+        clientData.url = normalizedRow.url;
+        clientData.website = normalizedRow.url;
+      }
+      if (normalizedRow.email !== undefined) {
+        clientData.email = normalizedRow.email;
+      }
+      if (normalizedRow.phone_no !== undefined) {
+        clientData.phone_number = normalizedRow.phone_no;
       }
 
       let savedClient: IClient | undefined;
