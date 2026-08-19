@@ -1009,9 +1009,10 @@ export async function createFixedPlanAssignment(
   };
 }
 
-// Invoice generation refuses clients without a billing email
-// (validateClientBillingEmail), which is read off a billing-or-default
-// client_locations row. Clients created straight through createEntity have none.
+// Invoice generation refuses clients that resolve to no billing recipient
+// (validateClientBillingEmail: billing contact, then clients.billing_email, then a
+// billing-or-default client_locations email). Clients created straight through
+// createEntity satisfy none of those, so this seeds the location email.
 export async function ensureClientBillingEmail(
   context: TestContext,
   clientId?: string

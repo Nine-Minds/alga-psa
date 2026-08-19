@@ -11,6 +11,7 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -254,22 +255,26 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
 }
 
 /**
- * Gets the billing email for a client.
- * Checks billing location first (is_billing_address=true), then falls back to default location.
- * Returns null if no email is found.
+ * Gets the billing email for a client: the address an invoice for this client
+ * would actually be emailed to.
+ *
+ * Delegates to `resolveInvoiceBillingRecipient`, the shared resolver behind email
+ * preview, direct and scheduled delivery, and Stripe customer creation, so that
+ * "can this client be invoiced?" asks exactly the same question as "where does
+ * that invoice get sent?". Precedence is the resolver's: active billing contact,
+ * then clients.billing_email, then an active billing location, then an active
+ * default location.
+ *
+ * Returns null when no candidate carries a valid email.
  */
 export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
-  const location = await tenantScopedTable(knex, tenant, 'client_locations')
-    .where('client_id', clientId)
-    .where(function() {
-      this.where('is_billing_address', true)
-          .orWhere('is_default', true);
-    })
-    .orderByRaw('is_billing_address DESC, is_default DESC')
-    .select('email')
-    .first();
+  const recipient = await resolveInvoiceBillingRecipient({
+    knexOrTrx: knex,
+    tenantId: tenant,
+    clientId,
+  });
 
-  return location?.email || null;
+  return recipient.recipientEmail || null;
 }
 
 export interface ValidationResult {
@@ -292,7 +297,7 @@ export async function validateClientBillingEmail(knex: Knex, tenant: string, cli
       code: 'NO_BILLING_EMAIL',
       params: { clientName },
       error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
-        `Please set an email address on the client's billing location before generating invoices.`
+        `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
     };
   }
   return { valid: true };
