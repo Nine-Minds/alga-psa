@@ -314,6 +314,117 @@
         "title": "Nog geen locaties toegevoegd",
         "description": "Klik op \"Locatie toevoegen\" om te beginnen"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "Adres mag geen emoji's bevatten",
+        "empty": "Adres mag niet leeg zijn",
+        "invalidCharacters": "Adres bevat ongeldige tekens",
+        "noLetters": "Adres moet letters bevatten",
+        "tooLong": "Adres mag maximaal 100 tekens bevatten"
+      },
+      "annualRevenue": {
+        "emoji": "Jaaromzet mag geen emoji's bevatten",
+        "invalid": "Voer een geldige jaaromzet in (bijv. \"€ 1.000.000\", \"vijf miljoen\", \"2,5 mln\", \"10 mln-50 mln\", \"niet bekendgemaakt\")",
+        "tooLong": "Jaaromzet mag maximaal 50 tekens bevatten"
+      },
+      "city": {
+        "emoji": "Plaatsnaam mag geen emoji's bevatten",
+        "empty": "Plaatsnaam mag niet leeg zijn",
+        "invalidCharacters": "Plaatsnaam bevat ongeldige tekens",
+        "noLetters": "Plaatsnaam moet letters bevatten",
+        "tooLong": "Plaatsnaam mag maximaal 100 tekens bevatten"
+      },
+      "clientName": {
+        "abbreviationOnly": "Klantnaam mag niet alleen een rechtsvormafkorting zijn",
+        "invalidCharacters": "Klantnaam bevat ongeldige tekens",
+        "looksLikeUrl": "Klantnaam mag geen webadres zijn",
+        "noAlphanumeric": "Klantnaam moet minstens één letter of cijfer bevatten",
+        "notMeaningful": "Klantnaam moet betekenisvolle tekens bevatten",
+        "repeatedCharacters": "Klantnaam mag geen overmatig herhaalde tekens bevatten",
+        "required": "Klantnaam is verplicht",
+        "tooLong": "Klantnaam mag maximaal 256 tekens bevatten",
+        "tooShort": "Klantnaam moet minimaal 2 tekens bevatten",
+        "tooShortMeaningful": "Klantnaam moet minimaal 2 betekenisvolle tekens bevatten"
+      },
+      "companySize": {
+        "emoji": "Bedrijfsgrootte mag geen emoji's bevatten",
+        "invalid": "Voer een geldige bedrijfsgrootte in (bijv. \"50\", \"10-50\", \"vijfhonderd\", \"2,5 mln\", \"klein\", \"grootbedrijf\")",
+        "tooLong": "Bedrijfsgrootte mag maximaal 50 tekens bevatten"
+      },
+      "contactName": {
+        "invalidCharacters": "Contactnaam bevat ongeldige tekens",
+        "noLetters": "Contactnaam moet letters bevatten",
+        "notMeaningful": "Contactnaam moet betekenisvolle tekens bevatten",
+        "placeholder": "Voer een echte contactnaam in",
+        "tooLong": "Contactnaam mag maximaal 40 tekens bevatten"
+      },
+      "email": {
+        "disposable": "Gebruik een permanent zakelijk e-mailadres",
+        "emoji": "E-mailadres mag geen emoji's bevatten",
+        "invalid": "Voer een geldig e-mailadres in",
+        "invalidDomain": "Voer een geldig e-maildomein in",
+        "onlySpaces": "E-mailadres mag niet alleen spaties bevatten",
+        "required": "E-mailadres is verplicht",
+        "testDomain": "Voer een geldig zakelijk e-mailadres in"
+      },
+      "industry": {
+        "invalidCharacters": "Branche bevat ongeldige tekens",
+        "noLetters": "Branche moet letters bevatten",
+        "tooLong": "Branche mag maximaal 100 tekens bevatten",
+        "tooShort": "Branche moet minimaal 2 tekens bevatten",
+        "tooShortText": "Branche moet minimaal 2 teksttekens bevatten"
+      },
+      "notes": {
+        "tooLong": "Notities mogen maximaal 2000 tekens bevatten"
+      },
+      "phone": {
+        "emoji": "Telefoonnummer mag geen emoji's bevatten",
+        "incomplete": "Voer een volledig telefoonnummer in",
+        "invalid": "Voer een geldig telefoonnummer in",
+        "invalidCharacters": "Telefoonnummer mag alleen cijfers en opmaaktekens bevatten",
+        "tooLong": "Telefoonnummer is te lang"
+      },
+      "postalCode": {
+        "au": "Voer een geldige Australische postcode in (bijv. 2000)",
+        "br": "Voer een geldige Braziliaanse postcode in (bijv. 01234-567)",
+        "ca": "Voer een geldige Canadese postcode in (bijv. K1A 0A6)",
+        "ch": "Voer een geldige Zwitserse postcode in (bijv. 8001)",
+        "de": "Voer een geldige Duitse postcode in (bijv. 10115)",
+        "emoji": "Postcode mag geen emoji's bevatten",
+        "es": "Voer een geldige Spaanse postcode in (bijv. 28001)",
+        "fr": "Voer een geldige Franse postcode in (bijv. 75001)",
+        "gb": "Voer een geldige Britse postcode in (bijv. SW1A 1AA)",
+        "generic": "Voer een geldige postcode in",
+        "in": "Voer een geldige Indiase postcode in (bijv. 110001)",
+        "it": "Voer een geldige Italiaanse postcode in (bijv. 00118)",
+        "jp": "Voer een geldige Japanse postcode in (bijv. 123-4567)",
+        "nl": "Voer een geldige Nederlandse postcode in (bijv. 1234AB)",
+        "onlySpaces": "Postcode mag niet alleen spaties bevatten",
+        "us": "Voer een geldige ZIP-code in (bijv. 12345 of 12345-6789)",
+        "usShort": "Voer een geldige ZIP-code in"
+      },
+      "role": {
+        "noAlphanumeric": "Functie moet letters of cijfers bevatten",
+        "onlySpaces": "Functie mag niet alleen spaties bevatten",
+        "tooLong": "Functie mag maximaal 100 tekens bevatten"
+      },
+      "stateProvince": {
+        "emoji": "Staat/provincie mag geen emoji's bevatten",
+        "empty": "Staat/provincie mag niet leeg zijn",
+        "invalidCharacters": "Staat/provincie bevat ongeldige tekens",
+        "noLetters": "Staat/provincie moet letters bevatten",
+        "tooLong": "Staat/provincie mag maximaal 100 tekens bevatten"
+      },
+      "websiteUrl": {
+        "invalid": "Voer een geldige website-URL in",
+        "invalidWithExample": "Voer een geldige website-URL in (bijv. apple.com)",
+        "ipAddress": "Voer een domeinnaam in, geen IP-adres",
+        "missingTld": "Voer een geldige website-URL met domeinextensie in",
+        "notPublic": "Voer een openbare zakelijke website-URL in",
+        "testDomain": "Voer een echte zakelijke website-URL in",
+        "tooLong": "Website-URL mag maximaal 256 tekens bevatten"
+      }
     }
   },
   "commentThread": {

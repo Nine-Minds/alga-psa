@@ -404,6 +404,117 @@
         "title": "11111",
         "description": "11111"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "11111",
+        "empty": "11111",
+        "invalidCharacters": "11111",
+        "noLetters": "11111",
+        "tooLong": "11111"
+      },
+      "annualRevenue": {
+        "emoji": "11111",
+        "invalid": "11111",
+        "tooLong": "11111"
+      },
+      "city": {
+        "emoji": "11111",
+        "empty": "11111",
+        "invalidCharacters": "11111",
+        "noLetters": "11111",
+        "tooLong": "11111"
+      },
+      "clientName": {
+        "abbreviationOnly": "11111",
+        "invalidCharacters": "11111",
+        "looksLikeUrl": "11111",
+        "noAlphanumeric": "11111",
+        "notMeaningful": "11111",
+        "repeatedCharacters": "11111",
+        "required": "11111",
+        "tooLong": "11111",
+        "tooShort": "11111",
+        "tooShortMeaningful": "11111"
+      },
+      "companySize": {
+        "emoji": "11111",
+        "invalid": "11111",
+        "tooLong": "11111"
+      },
+      "contactName": {
+        "invalidCharacters": "11111",
+        "noLetters": "11111",
+        "notMeaningful": "11111",
+        "placeholder": "11111",
+        "tooLong": "11111"
+      },
+      "email": {
+        "disposable": "11111",
+        "emoji": "11111",
+        "invalid": "11111",
+        "invalidDomain": "11111",
+        "onlySpaces": "11111",
+        "required": "11111",
+        "testDomain": "11111"
+      },
+      "industry": {
+        "invalidCharacters": "11111",
+        "noLetters": "11111",
+        "tooLong": "11111",
+        "tooShort": "11111",
+        "tooShortText": "11111"
+      },
+      "notes": {
+        "tooLong": "11111"
+      },
+      "phone": {
+        "emoji": "11111",
+        "incomplete": "11111",
+        "invalid": "11111",
+        "invalidCharacters": "11111",
+        "tooLong": "11111"
+      },
+      "postalCode": {
+        "au": "11111",
+        "br": "11111",
+        "ca": "11111",
+        "ch": "11111",
+        "de": "11111",
+        "emoji": "11111",
+        "es": "11111",
+        "fr": "11111",
+        "gb": "11111",
+        "generic": "11111",
+        "in": "11111",
+        "it": "11111",
+        "jp": "11111",
+        "nl": "11111",
+        "onlySpaces": "11111",
+        "us": "11111",
+        "usShort": "11111"
+      },
+      "role": {
+        "noAlphanumeric": "11111",
+        "onlySpaces": "11111",
+        "tooLong": "11111"
+      },
+      "stateProvince": {
+        "emoji": "11111",
+        "empty": "11111",
+        "invalidCharacters": "11111",
+        "noLetters": "11111",
+        "tooLong": "11111"
+      },
+      "websiteUrl": {
+        "invalid": "11111",
+        "invalidWithExample": "11111",
+        "ipAddress": "11111",
+        "missingTld": "11111",
+        "notPublic": "11111",
+        "testDomain": "11111",
+        "tooLong": "11111"
+      }
     }
   },
   "commentThread": {

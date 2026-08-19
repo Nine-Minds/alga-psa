@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ClientLifecycleStatus, ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
@@ -32,6 +32,7 @@ import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
+  toValidationTranslator,
   validateClientForm, 
   validateClientName, 
   validateWebsiteUrl, 
@@ -82,7 +83,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   trigger,
   initialLifecycleStatus = 'active',
 }) => {
-  const { t } = useTranslation('msp/clients');
+  const { t } = useTranslation(['msp/clients', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
   const initialFormData: CreateClientData = {
     client_name: '',
     client_type: 'company',
@@ -285,16 +287,16 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     
     switch (fieldName) {
       case 'client_name':
-        error = validateClientName(value);
+        error = validateClientName(value, vt);
         break;
       case 'url':
-        error = validateWebsiteUrl(value);
+        error = validateWebsiteUrl(value, vt);
         break;
       case 'industry':
-        error = validateIndustry(value);
+        error = validateIndustry(value, vt);
         break;
       case 'location_email':
-        error = validateEmailAddress(value);
+        error = validateEmailAddress(value, vt);
         break;
       case 'location_phone':
         // Enterprise phone validation - Unicode international support
@@ -324,7 +326,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
               error = 'Please enter a valid phone number';
             } else {
               // Use the existing validator for more complex validation
-              error = validatePhoneNumber(trimmedValue);
+              error = validatePhoneNumber(trimmedValue, vt);
             }
           }
         }
@@ -354,31 +356,31 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
               error = 'Please enter a valid phone number';
             } else {
-              error = validatePhoneNumber(trimmedValue);
+              error = validatePhoneNumber(trimmedValue, vt);
             }
           }
         }
         break;
       case 'postal_code':
-        error = validatePostalCode(value, additionalData?.countryCode);
+        error = validatePostalCode(value, additionalData?.countryCode, vt);
         break;
       case 'city':
-        error = validateCityName(value);
+        error = validateCityName(value, vt);
         break;
       case 'state_province':
-        error = validateStateProvince(value);
+        error = validateStateProvince(value, vt);
         break;
       case 'address_line1':
-        error = validateAddress(value);
+        error = validateAddress(value, vt);
         break;
       case 'contact_name':
-        error = validateContactName(value);
+        error = validateContactName(value, vt);
         break;
       case 'contact_email':
-        error = validateEmailAddress(value);
+        error = validateEmailAddress(value, vt);
         break;
       case 'notes':
-        error = validateNotes(value);
+        error = validateNotes(value, vt);
         break;
     }
     
@@ -412,7 +414,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       contactEmail: contactData.email ?? '',
       contactPhone: getPrimaryContactPhone(contactData.phone_numbers),
       notes: formData.notes
-    });
+    }, vt);
 
     // Cross-field validation: if any contact field is filled, require name and email
     if (hasAnyContactData(contactData)) {

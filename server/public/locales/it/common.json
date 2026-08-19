@@ -373,6 +373,117 @@
         "title": "Nessuna sede aggiunta",
         "description": "Fai clic su \"Aggiungi sede\" per iniziare"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "L'indirizzo non può contenere emoji",
+        "empty": "L'indirizzo non può essere vuoto",
+        "invalidCharacters": "L'indirizzo contiene caratteri non validi",
+        "noLetters": "L'indirizzo deve contenere lettere",
+        "tooLong": "L'indirizzo non può superare i 100 caratteri"
+      },
+      "annualRevenue": {
+        "emoji": "Il fatturato annuo non può contenere emoji",
+        "invalid": "Inserisci un fatturato annuo valido (ad es. \"1.000.000 €\", \"cinque milioni\", \"2,5 Mln\", \"10-50 Mln\", \"non divulgato\")",
+        "tooLong": "Il fatturato annuo non può superare i 50 caratteri"
+      },
+      "city": {
+        "emoji": "Il nome della città non può contenere emoji",
+        "empty": "Il nome della città non può essere vuoto",
+        "invalidCharacters": "Il nome della città contiene caratteri non validi",
+        "noLetters": "Il nome della città deve contenere lettere",
+        "tooLong": "Il nome della città non può superare i 100 caratteri"
+      },
+      "clientName": {
+        "abbreviationOnly": "Il nome del cliente non può essere solo un'abbreviazione societaria",
+        "invalidCharacters": "Il nome del cliente contiene caratteri non validi",
+        "looksLikeUrl": "Il nome del cliente non può essere un indirizzo web",
+        "noAlphanumeric": "Il nome del cliente deve contenere almeno una lettera o un numero",
+        "notMeaningful": "Il nome del cliente deve contenere caratteri significativi",
+        "repeatedCharacters": "Il nome del cliente non può contenere caratteri ripetuti eccessivamente",
+        "required": "Il nome del cliente è obbligatorio",
+        "tooLong": "Il nome del cliente non può superare i 256 caratteri",
+        "tooShort": "Il nome del cliente deve contenere almeno 2 caratteri",
+        "tooShortMeaningful": "Il nome del cliente deve contenere almeno 2 caratteri significativi"
+      },
+      "companySize": {
+        "emoji": "Le dimensioni dell'azienda non possono contenere emoji",
+        "invalid": "Inserisci dimensioni aziendali valide (ad es. \"50\", \"10-50\", \"cinquecento\", \"2,5 Mln\", \"piccola\", \"grande impresa\")",
+        "tooLong": "Le dimensioni dell'azienda non possono superare i 50 caratteri"
+      },
+      "contactName": {
+        "invalidCharacters": "Il nome del contatto contiene caratteri non validi",
+        "noLetters": "Il nome del contatto deve contenere lettere",
+        "notMeaningful": "Il nome del contatto deve contenere caratteri significativi",
+        "placeholder": "Inserisci un nome di contatto reale",
+        "tooLong": "Il nome del contatto non può superare i 40 caratteri"
+      },
+      "email": {
+        "disposable": "Utilizza un indirizzo e-mail aziendale permanente",
+        "emoji": "L'indirizzo e-mail non può contenere emoji",
+        "invalid": "Inserisci un indirizzo e-mail valido",
+        "invalidDomain": "Inserisci un dominio e-mail valido",
+        "onlySpaces": "L'indirizzo e-mail non può contenere solo spazi",
+        "required": "L'indirizzo e-mail è obbligatorio",
+        "testDomain": "Inserisci un indirizzo e-mail aziendale valido"
+      },
+      "industry": {
+        "invalidCharacters": "Il settore contiene caratteri non validi",
+        "noLetters": "Il settore deve contenere lettere",
+        "tooLong": "Il settore non può superare i 100 caratteri",
+        "tooShort": "Il settore deve contenere almeno 2 caratteri",
+        "tooShortText": "Il settore deve contenere almeno 2 caratteri di testo"
+      },
+      "notes": {
+        "tooLong": "Le note non possono superare i 2000 caratteri"
+      },
+      "phone": {
+        "emoji": "Il numero di telefono non può contenere emoji",
+        "incomplete": "Inserisci un numero di telefono completo",
+        "invalid": "Inserisci un numero di telefono valido",
+        "invalidCharacters": "Il numero di telefono può contenere solo numeri e caratteri di formattazione",
+        "tooLong": "Il numero di telefono è troppo lungo"
+      },
+      "postalCode": {
+        "au": "Inserisci un codice postale australiano valido (ad es. 2000)",
+        "br": "Inserisci un codice postale brasiliano valido (ad es. 01234-567)",
+        "ca": "Inserisci un codice postale canadese valido (ad es. K1A 0A6)",
+        "ch": "Inserisci un codice postale svizzero valido (ad es. 8001)",
+        "de": "Inserisci un codice postale tedesco valido (ad es. 10115)",
+        "emoji": "Il codice postale non può contenere emoji",
+        "es": "Inserisci un codice postale spagnolo valido (ad es. 28001)",
+        "fr": "Inserisci un codice postale francese valido (ad es. 75001)",
+        "gb": "Inserisci un codice postale britannico valido (ad es. SW1A 1AA)",
+        "generic": "Inserisci un codice postale valido",
+        "in": "Inserisci un codice postale indiano valido (ad es. 110001)",
+        "it": "Inserisci un codice postale italiano valido (ad es. 00118)",
+        "jp": "Inserisci un codice postale giapponese valido (ad es. 123-4567)",
+        "nl": "Inserisci un codice postale olandese valido (ad es. 1234AB)",
+        "onlySpaces": "Il codice postale non può contenere solo spazi",
+        "us": "Inserisci un codice ZIP valido (ad es. 12345 o 12345-6789)",
+        "usShort": "Inserisci un codice ZIP valido"
+      },
+      "role": {
+        "noAlphanumeric": "Il ruolo deve contenere lettere o numeri",
+        "onlySpaces": "Il ruolo non può contenere solo spazi",
+        "tooLong": "Il ruolo non può superare i 100 caratteri"
+      },
+      "stateProvince": {
+        "emoji": "Stato/provincia non può contenere emoji",
+        "empty": "Stato/provincia non può essere vuoto",
+        "invalidCharacters": "Stato/provincia contiene caratteri non validi",
+        "noLetters": "Stato/provincia deve contenere lettere",
+        "tooLong": "Stato/provincia non può superare i 100 caratteri"
+      },
+      "websiteUrl": {
+        "invalid": "Inserisci un URL di sito web valido",
+        "invalidWithExample": "Inserisci un URL di sito web valido (ad es. apple.com)",
+        "ipAddress": "Inserisci un nome di dominio, non un indirizzo IP",
+        "missingTld": "Inserisci un URL di sito web valido con estensione di dominio",
+        "notPublic": "Inserisci l'URL di un sito web aziendale pubblico",
+        "testDomain": "Inserisci l'URL di un sito web aziendale reale",
+        "tooLong": "L'URL del sito web non può superare i 256 caratteri"
+      }
     }
   },
   "commentThread": {

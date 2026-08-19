@@ -55,6 +55,13 @@ describe('Client Form Validation', () => {
       expect(validateClientName('www.acme.com')).toBe('Client name cannot be a web address');
     });
 
+    it('routes messages through the supplied translator', () => {
+      const seen: string[] = [];
+      const t = (key: string, defaultValue: string) => { seen.push(key); return `[${key}]`; };
+      expect(validateClientName('', t)).toBe('[common:clients.validation.clientName.required]');
+      expect(seen).toEqual(['common:clients.validation.clientName.required']);
+    });
+
     it('accepts a name that is only a short word (CO is a real name, not just an abbreviation)', () => {
       expect(validateClientName('Co')).toBeNull();
       // The unambiguous suffixes are still rejected on their own.

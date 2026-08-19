@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { X } from 'lucide-react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
+  toValidationTranslator,
   validateContactName,
   validateEmailAddress,
   validateNotes
@@ -86,7 +87,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   selectedClientId = null
 }) => {
   const { toast } = useToast();
-  const { t } = useTranslation('msp/contacts');
+  const { t } = useTranslation(['msp/contacts', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
   const [fullName, setFullName] = useState('');
   const [emailState, setEmailState] = useState<QuickAddContactEmailState>({
     email: '',
@@ -195,7 +197,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         } else if (/^\s+$/.test(value)) {
           nextError = t('quickAddContact.validation.fullNameSpaces', { defaultValue: 'Full name cannot contain only spaces' });
         } else {
-          nextError = validateContactName(trimmedValue);
+          nextError = validateContactName(trimmedValue, vt);
         }
         break;
       case 'contact_email':
@@ -206,7 +208,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         } else if (/^\s+$/.test(value)) {
           nextError = t('quickAddContact.validation.emailSpaces', { defaultValue: 'Email address cannot contain only spaces' });
         } else {
-          nextError = validateEmailAddress(trimmedValue);
+          nextError = validateEmailAddress(trimmedValue, vt);
         }
         break;
       case 'role':
@@ -225,7 +227,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           if (/^\s+$/.test(value)) {
             nextError = t('quickAddContact.validation.notesSpaces', { defaultValue: 'Notes cannot contain only spaces' });
           } else {
-            nextError = validateNotes(trimmedValue);
+            nextError = validateNotes(trimmedValue, vt);
           }
         }
         break;

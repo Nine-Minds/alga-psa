@@ -10,7 +10,7 @@ import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpe
 import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { validateClientName } from '@alga-psa/validation';
+import { toValidationTranslator, validateClientName } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -235,7 +235,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null,
   isAlgaDeskMode = false,
 }) => {
-  const { t } = useTranslation('msp/clients');
+  const { t } = useTranslation(['msp/clients', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
@@ -965,7 +966,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'client_name') {
-        const error = validateClientName(value);
+        const error = validateClientName(value, vt);
         if (error) {
           newErrors[field] = error;
           hasValidationErrors = true;

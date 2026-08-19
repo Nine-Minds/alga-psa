@@ -10,7 +10,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress } from '@alga-psa/validation';
+import { toValidationTranslator, validateEmailAddress } from '@alga-psa/validation';
 import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -25,7 +25,8 @@ interface ClientInfoStepProps extends StepProps {
 }
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
-  const { t } = useTranslation('msp/onboarding');
+  const { t } = useTranslation(['msp/onboarding', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
   const { locale: currentLocale, setLocale } = useI18n();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -196,43 +197,6 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
   const password = data.newPassword || '';
   const confirmPassword = data.confirmPassword || '';
 
-  const translateEmailValidationMessage = (message: string | null) => {
-    if (!message) return '';
-
-    const validationMessages: Record<string, { key: string; defaultValue: string }> = {
-      'Email address is required': {
-        key: 'clientInfoStep.validation.email.required',
-        defaultValue: 'Email address is required'
-      },
-      'Email address cannot contain only spaces': {
-        key: 'clientInfoStep.validation.email.spacesOnly',
-        defaultValue: 'Email address cannot contain only spaces'
-      },
-      'Email address cannot contain emojis': {
-        key: 'clientInfoStep.validation.email.noEmoji',
-        defaultValue: 'Email address cannot contain emojis'
-      },
-      'Please enter a valid email address': {
-        key: 'clientInfoStep.validation.email.invalid',
-        defaultValue: 'Please enter a valid email address'
-      },
-      'Please use a permanent business email address': {
-        key: 'clientInfoStep.validation.email.permanentBusiness',
-        defaultValue: 'Please use a permanent business email address'
-      },
-      'Please enter a valid business email address': {
-        key: 'clientInfoStep.validation.email.business',
-        defaultValue: 'Please enter a valid business email address'
-      },
-      'Please enter a valid email domain': {
-        key: 'clientInfoStep.validation.email.domain',
-        defaultValue: 'Please enter a valid email domain'
-      }
-    };
-
-    const translation = validationMessages[message];
-    return translation ? t(translation.key, { defaultValue: translation.defaultValue }) : message;
-  };
 
   // Password strength validation
   useEffect(() => {
@@ -440,8 +404,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             }
           }}
           onBlur={() => {
-            const error = validateEmailAddress(data.email || '');
-            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(error) }));
+            const error = validateEmailAddress(data.email || '', vt);
+            setFieldErrors(prev => ({ ...prev, email: error ?? '' }));
           }}
           placeholder={t('clientInfoStep.fields.email.placeholder', {
             defaultValue: 'john@acmeit.com'

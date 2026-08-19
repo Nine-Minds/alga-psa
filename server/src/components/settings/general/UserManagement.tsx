@@ -1,7 +1,7 @@
 'use client'
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
 import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -79,7 +79,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
+import { toValidationTranslator, validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -88,7 +88,8 @@ import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddConta
 import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation(['msp/settings', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -264,15 +265,15 @@ const UserManagement = (): React.JSX.Element => {
     
     switch (fieldName) {
       case 'first_name':
-        error = validateContactName(value);
+        error = validateContactName(value, vt);
         if (error) errors = [error];
         break;
       case 'last_name':
-        error = validateContactName(value);
+        error = validateContactName(value, vt);
         if (error) errors = [error];
         break;
       case 'email':
-        error = validateEmailAddress(value);
+        error = validateEmailAddress(value, vt);
         if (error) errors = [error];
         break;
       default:

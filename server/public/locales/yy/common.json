@@ -404,6 +404,117 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "55555",
+        "empty": "55555",
+        "invalidCharacters": "55555",
+        "noLetters": "55555",
+        "tooLong": "55555"
+      },
+      "annualRevenue": {
+        "emoji": "55555",
+        "invalid": "55555",
+        "tooLong": "55555"
+      },
+      "city": {
+        "emoji": "55555",
+        "empty": "55555",
+        "invalidCharacters": "55555",
+        "noLetters": "55555",
+        "tooLong": "55555"
+      },
+      "clientName": {
+        "abbreviationOnly": "55555",
+        "invalidCharacters": "55555",
+        "looksLikeUrl": "55555",
+        "noAlphanumeric": "55555",
+        "notMeaningful": "55555",
+        "repeatedCharacters": "55555",
+        "required": "55555",
+        "tooLong": "55555",
+        "tooShort": "55555",
+        "tooShortMeaningful": "55555"
+      },
+      "companySize": {
+        "emoji": "55555",
+        "invalid": "55555",
+        "tooLong": "55555"
+      },
+      "contactName": {
+        "invalidCharacters": "55555",
+        "noLetters": "55555",
+        "notMeaningful": "55555",
+        "placeholder": "55555",
+        "tooLong": "55555"
+      },
+      "email": {
+        "disposable": "55555",
+        "emoji": "55555",
+        "invalid": "55555",
+        "invalidDomain": "55555",
+        "onlySpaces": "55555",
+        "required": "55555",
+        "testDomain": "55555"
+      },
+      "industry": {
+        "invalidCharacters": "55555",
+        "noLetters": "55555",
+        "tooLong": "55555",
+        "tooShort": "55555",
+        "tooShortText": "55555"
+      },
+      "notes": {
+        "tooLong": "55555"
+      },
+      "phone": {
+        "emoji": "55555",
+        "incomplete": "55555",
+        "invalid": "55555",
+        "invalidCharacters": "55555",
+        "tooLong": "55555"
+      },
+      "postalCode": {
+        "au": "55555",
+        "br": "55555",
+        "ca": "55555",
+        "ch": "55555",
+        "de": "55555",
+        "emoji": "55555",
+        "es": "55555",
+        "fr": "55555",
+        "gb": "55555",
+        "generic": "55555",
+        "in": "55555",
+        "it": "55555",
+        "jp": "55555",
+        "nl": "55555",
+        "onlySpaces": "55555",
+        "us": "55555",
+        "usShort": "55555"
+      },
+      "role": {
+        "noAlphanumeric": "55555",
+        "onlySpaces": "55555",
+        "tooLong": "55555"
+      },
+      "stateProvince": {
+        "emoji": "55555",
+        "empty": "55555",
+        "invalidCharacters": "55555",
+        "noLetters": "55555",
+        "tooLong": "55555"
+      },
+      "websiteUrl": {
+        "invalid": "55555",
+        "invalidWithExample": "55555",
+        "ipAddress": "55555",
+        "missingTld": "55555",
+        "notPublic": "55555",
+        "testDomain": "55555",
+        "tooLong": "55555"
+      }
     }
   },
   "commentThread": {

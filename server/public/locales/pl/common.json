@@ -387,6 +387,117 @@
         "title": "Brak dodanych lokalizacji",
         "description": "Kliknij „Dodaj lokalizację”, aby rozpocząć"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "Adres nie może zawierać emoji",
+        "empty": "Adres nie może być pusty",
+        "invalidCharacters": "Adres zawiera nieprawidłowe znaki",
+        "noLetters": "Adres musi zawierać litery",
+        "tooLong": "Adres może mieć maksymalnie 100 znaków"
+      },
+      "annualRevenue": {
+        "emoji": "Roczny przychód nie może zawierać emoji",
+        "invalid": "Podaj prawidłowy roczny przychód (np. \"1 000 000 zł\", \"pięć milionów\", \"2,5 mln\", \"10-50 mln\", \"nie ujawniono\")",
+        "tooLong": "Roczny przychód może mieć maksymalnie 50 znaków"
+      },
+      "city": {
+        "emoji": "Nazwa miasta nie może zawierać emoji",
+        "empty": "Nazwa miasta nie może być pusta",
+        "invalidCharacters": "Nazwa miasta zawiera nieprawidłowe znaki",
+        "noLetters": "Nazwa miasta musi zawierać litery",
+        "tooLong": "Nazwa miasta może mieć maksymalnie 100 znaków"
+      },
+      "clientName": {
+        "abbreviationOnly": "Nazwa klienta nie może być samym skrótem formy prawnej",
+        "invalidCharacters": "Nazwa klienta zawiera nieprawidłowe znaki",
+        "looksLikeUrl": "Nazwa klienta nie może być adresem internetowym",
+        "noAlphanumeric": "Nazwa klienta musi zawierać co najmniej jedną literę lub cyfrę",
+        "notMeaningful": "Nazwa klienta musi zawierać znaczące znaki",
+        "repeatedCharacters": "Nazwa klienta nie może zawierać nadmiernie powtórzonych znaków",
+        "required": "Nazwa klienta jest wymagana",
+        "tooLong": "Nazwa klienta może mieć maksymalnie 256 znaków",
+        "tooShort": "Nazwa klienta musi mieć co najmniej 2 znaki",
+        "tooShortMeaningful": "Nazwa klienta musi zawierać co najmniej 2 znaczące znaki"
+      },
+      "companySize": {
+        "emoji": "Wielkość firmy nie może zawierać emoji",
+        "invalid": "Podaj prawidłową wielkość firmy (np. \"50\", \"10-50\", \"pięćset\", \"2,5 mln\", \"mała\", \"korporacja\")",
+        "tooLong": "Wielkość firmy może mieć maksymalnie 50 znaków"
+      },
+      "contactName": {
+        "invalidCharacters": "Nazwa kontaktu zawiera nieprawidłowe znaki",
+        "noLetters": "Nazwa kontaktu musi zawierać litery",
+        "notMeaningful": "Nazwa kontaktu musi zawierać znaczące znaki",
+        "placeholder": "Podaj rzeczywistą nazwę kontaktu",
+        "tooLong": "Nazwa kontaktu może mieć maksymalnie 40 znaków"
+      },
+      "email": {
+        "disposable": "Użyj stałego służbowego adresu e-mail",
+        "emoji": "Adres e-mail nie może zawierać emoji",
+        "invalid": "Podaj prawidłowy adres e-mail",
+        "invalidDomain": "Podaj prawidłową domenę e-mail",
+        "onlySpaces": "Adres e-mail nie może składać się tylko ze spacji",
+        "required": "Adres e-mail jest wymagany",
+        "testDomain": "Podaj prawidłowy służbowy adres e-mail"
+      },
+      "industry": {
+        "invalidCharacters": "Branża zawiera nieprawidłowe znaki",
+        "noLetters": "Branża musi zawierać litery",
+        "tooLong": "Branża może mieć maksymalnie 100 znaków",
+        "tooShort": "Branża musi mieć co najmniej 2 znaki",
+        "tooShortText": "Branża musi zawierać co najmniej 2 znaki tekstowe"
+      },
+      "notes": {
+        "tooLong": "Notatki mogą mieć maksymalnie 2000 znaków"
+      },
+      "phone": {
+        "emoji": "Numer telefonu nie może zawierać emoji",
+        "incomplete": "Podaj pełny numer telefonu",
+        "invalid": "Podaj prawidłowy numer telefonu",
+        "invalidCharacters": "Numer telefonu może zawierać tylko cyfry i znaki formatowania",
+        "tooLong": "Numer telefonu jest za długi"
+      },
+      "postalCode": {
+        "au": "Podaj prawidłowy australijski kod pocztowy (np. 2000)",
+        "br": "Podaj prawidłowy brazylijski kod pocztowy (np. 01234-567)",
+        "ca": "Podaj prawidłowy kanadyjski kod pocztowy (np. K1A 0A6)",
+        "ch": "Podaj prawidłowy szwajcarski kod pocztowy (np. 8001)",
+        "de": "Podaj prawidłowy niemiecki kod pocztowy (np. 10115)",
+        "emoji": "Kod pocztowy nie może zawierać emoji",
+        "es": "Podaj prawidłowy hiszpański kod pocztowy (np. 28001)",
+        "fr": "Podaj prawidłowy francuski kod pocztowy (np. 75001)",
+        "gb": "Podaj prawidłowy brytyjski kod pocztowy (np. SW1A 1AA)",
+        "generic": "Podaj prawidłowy kod pocztowy",
+        "in": "Podaj prawidłowy indyjski kod pocztowy (np. 110001)",
+        "it": "Podaj prawidłowy włoski kod pocztowy (np. 00118)",
+        "jp": "Podaj prawidłowy japoński kod pocztowy (np. 123-4567)",
+        "nl": "Podaj prawidłowy holenderski kod pocztowy (np. 1234AB)",
+        "onlySpaces": "Kod pocztowy nie może składać się tylko ze spacji",
+        "us": "Podaj prawidłowy kod ZIP (np. 12345 lub 12345-6789)",
+        "usShort": "Podaj prawidłowy kod ZIP"
+      },
+      "role": {
+        "noAlphanumeric": "Rola musi zawierać litery lub cyfry",
+        "onlySpaces": "Rola nie może składać się tylko ze spacji",
+        "tooLong": "Rola może mieć maksymalnie 100 znaków"
+      },
+      "stateProvince": {
+        "emoji": "Stan/województwo nie może zawierać emoji",
+        "empty": "Stan/województwo nie może być puste",
+        "invalidCharacters": "Stan/województwo zawiera nieprawidłowe znaki",
+        "noLetters": "Stan/województwo musi zawierać litery",
+        "tooLong": "Stan/województwo może mieć maksymalnie 100 znaków"
+      },
+      "websiteUrl": {
+        "invalid": "Podaj prawidłowy adres URL witryny",
+        "invalidWithExample": "Podaj prawidłowy adres URL witryny (np. apple.com)",
+        "ipAddress": "Podaj nazwę domeny, a nie adres IP",
+        "missingTld": "Podaj prawidłowy adres URL witryny z rozszerzeniem domeny",
+        "notPublic": "Podaj publiczny adres witryny firmowej",
+        "testDomain": "Podaj rzeczywisty adres witryny firmowej",
+        "tooLong": "Adres URL witryny może mieć maksymalnie 256 znaków"
+      }
     }
   },
   "commentThread": {

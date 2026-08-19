@@ -314,6 +314,117 @@
         "title": "Aucun emplacement ajouté pour le moment",
         "description": "Cliquez sur \"Ajouter un emplacement\" pour commencer"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "L'adresse ne peut pas contenir d'émojis",
+        "empty": "L'adresse ne peut pas être vide",
+        "invalidCharacters": "L'adresse contient des caractères non valides",
+        "noLetters": "L'adresse doit contenir des lettres",
+        "tooLong": "L'adresse ne peut pas dépasser 100 caractères"
+      },
+      "annualRevenue": {
+        "emoji": "Le chiffre d'affaires annuel ne peut pas contenir d'émojis",
+        "invalid": "Veuillez saisir un chiffre d'affaires annuel valide (par ex. \"1 000 000 €\", \"cinq millions\", \"2,5 M\", \"10 M-50 M\", \"non communiqué\")",
+        "tooLong": "Le chiffre d'affaires annuel ne peut pas dépasser 50 caractères"
+      },
+      "city": {
+        "emoji": "Le nom de la ville ne peut pas contenir d'émojis",
+        "empty": "Le nom de la ville ne peut pas être vide",
+        "invalidCharacters": "Le nom de la ville contient des caractères non valides",
+        "noLetters": "Le nom de la ville doit contenir des lettres",
+        "tooLong": "Le nom de la ville ne peut pas dépasser 100 caractères"
+      },
+      "clientName": {
+        "abbreviationOnly": "Le nom du client ne peut pas être uniquement une abréviation juridique",
+        "invalidCharacters": "Le nom du client contient des caractères non valides",
+        "looksLikeUrl": "Le nom du client ne peut pas être une adresse web",
+        "noAlphanumeric": "Le nom du client doit contenir au moins une lettre ou un chiffre",
+        "notMeaningful": "Le nom du client doit contenir des caractères significatifs",
+        "repeatedCharacters": "Le nom du client ne peut pas contenir de caractères trop répétés",
+        "required": "Le nom du client est obligatoire",
+        "tooLong": "Le nom du client ne peut pas dépasser 256 caractères",
+        "tooShort": "Le nom du client doit comporter au moins 2 caractères",
+        "tooShortMeaningful": "Le nom du client doit comporter au moins 2 caractères significatifs"
+      },
+      "companySize": {
+        "emoji": "La taille de l'entreprise ne peut pas contenir d'émojis",
+        "invalid": "Veuillez saisir une taille d'entreprise valide (par ex. \"50\", \"10-50\", \"cinq cents\", \"2,5 M\", \"petite\", \"grand groupe\")",
+        "tooLong": "La taille de l'entreprise ne peut pas dépasser 50 caractères"
+      },
+      "contactName": {
+        "invalidCharacters": "Le nom du contact contient des caractères non valides",
+        "noLetters": "Le nom du contact doit contenir des lettres",
+        "notMeaningful": "Le nom du contact doit contenir des caractères significatifs",
+        "placeholder": "Veuillez saisir un nom de contact réel",
+        "tooLong": "Le nom du contact ne peut pas dépasser 40 caractères"
+      },
+      "email": {
+        "disposable": "Veuillez utiliser une adresse e-mail professionnelle permanente",
+        "emoji": "L'adresse e-mail ne peut pas contenir d'émojis",
+        "invalid": "Veuillez saisir une adresse e-mail valide",
+        "invalidDomain": "Veuillez saisir un domaine de messagerie valide",
+        "onlySpaces": "L'adresse e-mail ne peut pas contenir uniquement des espaces",
+        "required": "L'adresse e-mail est obligatoire",
+        "testDomain": "Veuillez saisir une adresse e-mail professionnelle valide"
+      },
+      "industry": {
+        "invalidCharacters": "Le secteur contient des caractères non valides",
+        "noLetters": "Le secteur doit contenir des lettres",
+        "tooLong": "Le secteur ne peut pas dépasser 100 caractères",
+        "tooShort": "Le secteur doit comporter au moins 2 caractères",
+        "tooShortText": "Le secteur doit contenir au moins 2 caractères de texte"
+      },
+      "notes": {
+        "tooLong": "Les notes ne peuvent pas dépasser 2000 caractères"
+      },
+      "phone": {
+        "emoji": "Le numéro de téléphone ne peut pas contenir d'émojis",
+        "incomplete": "Veuillez saisir un numéro de téléphone complet",
+        "invalid": "Veuillez saisir un numéro de téléphone valide",
+        "invalidCharacters": "Le numéro de téléphone ne peut contenir que des chiffres et des caractères de mise en forme",
+        "tooLong": "Le numéro de téléphone est trop long"
+      },
+      "postalCode": {
+        "au": "Veuillez saisir un code postal australien valide (par ex. 2000)",
+        "br": "Veuillez saisir un code postal brésilien valide (par ex. 01234-567)",
+        "ca": "Veuillez saisir un code postal canadien valide (par ex. K1A 0A6)",
+        "ch": "Veuillez saisir un code postal suisse valide (par ex. 8001)",
+        "de": "Veuillez saisir un code postal allemand valide (par ex. 10115)",
+        "emoji": "Le code postal ne peut pas contenir d'émojis",
+        "es": "Veuillez saisir un code postal espagnol valide (par ex. 28001)",
+        "fr": "Veuillez saisir un code postal français valide (par ex. 75001)",
+        "gb": "Veuillez saisir un code postal britannique valide (par ex. SW1A 1AA)",
+        "generic": "Veuillez saisir un code postal valide",
+        "in": "Veuillez saisir un code postal indien valide (par ex. 110001)",
+        "it": "Veuillez saisir un code postal italien valide (par ex. 00118)",
+        "jp": "Veuillez saisir un code postal japonais valide (par ex. 123-4567)",
+        "nl": "Veuillez saisir un code postal néerlandais valide (par ex. 1234AB)",
+        "onlySpaces": "Le code postal ne peut pas contenir uniquement des espaces",
+        "us": "Veuillez saisir un code ZIP valide (par ex. 12345 ou 12345-6789)",
+        "usShort": "Veuillez saisir un code ZIP valide"
+      },
+      "role": {
+        "noAlphanumeric": "Le rôle doit contenir des lettres ou des chiffres",
+        "onlySpaces": "Le rôle ne peut pas contenir uniquement des espaces",
+        "tooLong": "Le rôle ne peut pas dépasser 100 caractères"
+      },
+      "stateProvince": {
+        "emoji": "L'état/la province ne peut pas contenir d'émojis",
+        "empty": "L'état/la province ne peut pas être vide",
+        "invalidCharacters": "L'état/la province contient des caractères non valides",
+        "noLetters": "L'état/la province doit contenir des lettres",
+        "tooLong": "L'état/la province ne peut pas dépasser 100 caractères"
+      },
+      "websiteUrl": {
+        "invalid": "Veuillez saisir une URL de site web valide",
+        "invalidWithExample": "Veuillez saisir une URL de site web valide (par ex. apple.com)",
+        "ipAddress": "Veuillez saisir un nom de domaine, pas une adresse IP",
+        "missingTld": "Veuillez saisir une URL de site web valide avec une extension de domaine",
+        "notPublic": "Veuillez saisir l'URL d'un site web professionnel public",
+        "testDomain": "Veuillez saisir l'URL d'un véritable site web professionnel",
+        "tooLong": "L'URL du site web ne peut pas dépasser 256 caractères"
+      }
     }
   },
   "commentThread": {

@@ -34,7 +34,7 @@ import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShor
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
-import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
+import { toValidationTranslator, validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -88,7 +88,8 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ userId }: UserProfileProps) {
-  const { t } = useTranslation('msp/profile');
+  const { t } = useTranslation(['msp/profile', 'common']);
+  const vt = useMemo(() => toValidationTranslator(t), [t]);
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const { isAlgaDesk } = useProduct();
@@ -248,14 +249,14 @@ export default function UserProfile({ userId }: UserProfileProps) {
           newErrors[field] = field === 'first_name' ? t('profile.validation.firstNameRequired') : t('profile.validation.lastNameRequired');
           hasValidationErrors = true;
         } else {
-          const error = validateContactName(value);
+          const error = validateContactName(value, vt);
           if (error) {
             newErrors[field] = error;
             hasValidationErrors = true;
           }
         }
       } else if (field === 'email') {
-        const error = validateEmailAddress(value);
+        const error = validateEmailAddress(value, vt);
         if (error) {
           newErrors[field] = error;
           hasValidationErrors = true;
@@ -265,7 +266,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
     // Validate optional phone field if provided
     if (phone.trim()) {
-      const phoneError = validatePhoneNumber(phone.trim());
+      const phoneError = validatePhoneNumber(phone.trim(), vt);
       if (phoneError) {
         newErrors.phone = phoneError;
         hasValidationErrors = true;
@@ -393,7 +394,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                     }
                   }}
                   onBlur={() => {
-                    const error = validateContactName(firstName);
+                    const error = validateContactName(firstName, vt);
                     setFieldErrors(prev => ({ ...prev, first_name: error || '' }));
                   }}
                   className={fieldErrors.first_name ? 'border-destructive' : ''}
@@ -417,7 +418,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                     }
                   }}
                   onBlur={() => {
-                    const error = validateContactName(lastName);
+                    const error = validateContactName(lastName, vt);
                     setFieldErrors(prev => ({ ...prev, last_name: error || '' }));
                   }}
                   className={fieldErrors.last_name ? 'border-destructive' : ''}
@@ -443,7 +444,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   }
                 }}
                 onBlur={() => {
-                  const error = validateEmailAddress(email);
+                  const error = validateEmailAddress(email, vt);
                   setFieldErrors(prev => ({ ...prev, email: error || '' }));
                 }}
                 className={fieldErrors.email ? 'border-destructive' : ''}
@@ -466,7 +467,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 }}
                 onBlur={() => {
                   if (phone.trim()) {
-                    const error = validatePhoneNumber(phone);
+                    const error = validatePhoneNumber(phone, vt);
                     setFieldErrors(prev => ({ ...prev, phone: error || '' }));
                   }
                 }}

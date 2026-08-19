@@ -314,6 +314,117 @@
         "title": "Noch keine Standorte hinzugefügt",
         "description": "Klicke auf \"Standort hinzufügen\", um zu beginnen"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "Adresse darf keine Emojis enthalten",
+        "empty": "Adresse darf nicht leer sein",
+        "invalidCharacters": "Adresse enthält ungültige Zeichen",
+        "noLetters": "Adresse muss Buchstaben enthalten",
+        "tooLong": "Adresse darf höchstens 100 Zeichen lang sein"
+      },
+      "annualRevenue": {
+        "emoji": "Jahresumsatz darf keine Emojis enthalten",
+        "invalid": "Bitte geben Sie einen gültigen Jahresumsatz ein (z. B. \"1.000.000 €\", \"fünf Millionen\", \"2,5 Mio.\", \"10-50 Mio.\", \"keine Angabe\")",
+        "tooLong": "Jahresumsatz darf höchstens 50 Zeichen lang sein"
+      },
+      "city": {
+        "emoji": "Ortsname darf keine Emojis enthalten",
+        "empty": "Ortsname darf nicht leer sein",
+        "invalidCharacters": "Ortsname enthält ungültige Zeichen",
+        "noLetters": "Ortsname muss Buchstaben enthalten",
+        "tooLong": "Ortsname darf höchstens 100 Zeichen lang sein"
+      },
+      "clientName": {
+        "abbreviationOnly": "Kundenname darf nicht nur aus einer Rechtsformabkürzung bestehen",
+        "invalidCharacters": "Kundenname enthält ungültige Zeichen",
+        "looksLikeUrl": "Kundenname darf keine Webadresse sein",
+        "noAlphanumeric": "Kundenname muss mindestens einen Buchstaben oder eine Ziffer enthalten",
+        "notMeaningful": "Kundenname muss aussagekräftige Zeichen enthalten",
+        "repeatedCharacters": "Kundenname darf keine übermäßig wiederholten Zeichen enthalten",
+        "required": "Kundenname ist erforderlich",
+        "tooLong": "Kundenname darf höchstens 256 Zeichen lang sein",
+        "tooShort": "Kundenname muss mindestens 2 Zeichen lang sein",
+        "tooShortMeaningful": "Kundenname muss mindestens 2 aussagekräftige Zeichen enthalten"
+      },
+      "companySize": {
+        "emoji": "Unternehmensgröße darf keine Emojis enthalten",
+        "invalid": "Bitte geben Sie eine gültige Unternehmensgröße ein (z. B. \"50\", \"10-50\", \"fünfhundert\", \"2,5 Mio.\", \"klein\", \"Konzern\")",
+        "tooLong": "Unternehmensgröße darf höchstens 50 Zeichen lang sein"
+      },
+      "contactName": {
+        "invalidCharacters": "Kontaktname enthält ungültige Zeichen",
+        "noLetters": "Kontaktname muss Buchstaben enthalten",
+        "notMeaningful": "Kontaktname muss aussagekräftige Zeichen enthalten",
+        "placeholder": "Bitte geben Sie einen echten Kontaktnamen ein",
+        "tooLong": "Kontaktname darf höchstens 40 Zeichen lang sein"
+      },
+      "email": {
+        "disposable": "Bitte verwenden Sie eine dauerhafte geschäftliche E-Mail-Adresse",
+        "emoji": "E-Mail-Adresse darf keine Emojis enthalten",
+        "invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+        "invalidDomain": "Bitte geben Sie eine gültige E-Mail-Domain ein",
+        "onlySpaces": "E-Mail-Adresse darf nicht nur aus Leerzeichen bestehen",
+        "required": "E-Mail-Adresse ist erforderlich",
+        "testDomain": "Bitte geben Sie eine gültige geschäftliche E-Mail-Adresse ein"
+      },
+      "industry": {
+        "invalidCharacters": "Branche enthält ungültige Zeichen",
+        "noLetters": "Branche muss Buchstaben enthalten",
+        "tooLong": "Branche darf höchstens 100 Zeichen lang sein",
+        "tooShort": "Branche muss mindestens 2 Zeichen lang sein",
+        "tooShortText": "Branche muss mindestens 2 Textzeichen enthalten"
+      },
+      "notes": {
+        "tooLong": "Notizen dürfen höchstens 2000 Zeichen lang sein"
+      },
+      "phone": {
+        "emoji": "Telefonnummer darf keine Emojis enthalten",
+        "incomplete": "Bitte geben Sie eine vollständige Telefonnummer ein",
+        "invalid": "Bitte geben Sie eine gültige Telefonnummer ein",
+        "invalidCharacters": "Telefonnummer darf nur Ziffern und Formatierungszeichen enthalten",
+        "tooLong": "Telefonnummer ist zu lang"
+      },
+      "postalCode": {
+        "au": "Bitte geben Sie eine gültige australische Postleitzahl ein (z. B. 2000)",
+        "br": "Bitte geben Sie eine gültige brasilianische Postleitzahl ein (z. B. 01234-567)",
+        "ca": "Bitte geben Sie eine gültige kanadische Postleitzahl ein (z. B. K1A 0A6)",
+        "ch": "Bitte geben Sie eine gültige Schweizer Postleitzahl ein (z. B. 8001)",
+        "de": "Bitte geben Sie eine gültige deutsche Postleitzahl ein (z. B. 10115)",
+        "emoji": "Postleitzahl darf keine Emojis enthalten",
+        "es": "Bitte geben Sie eine gültige spanische Postleitzahl ein (z. B. 28001)",
+        "fr": "Bitte geben Sie eine gültige französische Postleitzahl ein (z. B. 75001)",
+        "gb": "Bitte geben Sie eine gültige britische Postleitzahl ein (z. B. SW1A 1AA)",
+        "generic": "Bitte geben Sie eine gültige Postleitzahl ein",
+        "in": "Bitte geben Sie eine gültige indische Postleitzahl ein (z. B. 110001)",
+        "it": "Bitte geben Sie eine gültige italienische Postleitzahl ein (z. B. 00118)",
+        "jp": "Bitte geben Sie eine gültige japanische Postleitzahl ein (z. B. 123-4567)",
+        "nl": "Bitte geben Sie eine gültige niederländische Postleitzahl ein (z. B. 1234AB)",
+        "onlySpaces": "Postleitzahl darf nicht nur aus Leerzeichen bestehen",
+        "us": "Bitte geben Sie eine gültige ZIP-Code ein (z. B. 12345 oder 12345-6789)",
+        "usShort": "Bitte geben Sie eine gültige ZIP-Code ein"
+      },
+      "role": {
+        "noAlphanumeric": "Rolle muss Buchstaben oder Ziffern enthalten",
+        "onlySpaces": "Rolle darf nicht nur aus Leerzeichen bestehen",
+        "tooLong": "Rolle darf höchstens 100 Zeichen lang sein"
+      },
+      "stateProvince": {
+        "emoji": "Bundesland/Provinz darf keine Emojis enthalten",
+        "empty": "Bundesland/Provinz darf nicht leer sein",
+        "invalidCharacters": "Bundesland/Provinz enthält ungültige Zeichen",
+        "noLetters": "Bundesland/Provinz muss Buchstaben enthalten",
+        "tooLong": "Bundesland/Provinz darf höchstens 100 Zeichen lang sein"
+      },
+      "websiteUrl": {
+        "invalid": "Bitte geben Sie eine gültige Website-URL ein",
+        "invalidWithExample": "Bitte geben Sie eine gültige Website-URL ein (z. B. apple.com)",
+        "ipAddress": "Bitte geben Sie einen Domainnamen ein, keine IP-Adresse",
+        "missingTld": "Bitte geben Sie eine gültige Website-URL mit Domainendung ein",
+        "notPublic": "Bitte geben Sie eine öffentliche Unternehmenswebsite ein",
+        "testDomain": "Bitte geben Sie eine echte Unternehmenswebsite ein",
+        "tooLong": "Website-URL darf höchstens 256 Zeichen lang sein"
+      }
     }
   },
   "commentThread": {

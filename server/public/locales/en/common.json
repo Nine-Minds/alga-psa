@@ -404,6 +404,117 @@
         "title": "No locations added yet",
         "description": "Click \"Add Location\" to get started"
       }
+    },
+    "validation": {
+      "address": {
+        "emoji": "Address cannot contain emojis",
+        "empty": "Address cannot be empty",
+        "invalidCharacters": "Address contains invalid characters",
+        "noLetters": "Address must contain letters",
+        "tooLong": "Address must be 100 characters or less"
+      },
+      "annualRevenue": {
+        "emoji": "Annual revenue cannot contain emojis",
+        "invalid": "Please enter valid annual revenue (e.g., \"$1,000,000\", \"five million\", \"2.5M\", \"10M-50M\", \"not disclosed\")",
+        "tooLong": "Annual revenue must be 50 characters or less"
+      },
+      "city": {
+        "emoji": "City name cannot contain emojis",
+        "empty": "City name cannot be empty",
+        "invalidCharacters": "City name contains invalid characters",
+        "noLetters": "City name must contain letters",
+        "tooLong": "City name must be 100 characters or less"
+      },
+      "clientName": {
+        "abbreviationOnly": "Client name cannot be just a business abbreviation",
+        "invalidCharacters": "Client name contains invalid characters",
+        "looksLikeUrl": "Client name cannot be a web address",
+        "noAlphanumeric": "Client name must contain at least one letter or number",
+        "notMeaningful": "Client name must contain meaningful characters",
+        "repeatedCharacters": "Client name cannot contain excessively repeated characters",
+        "required": "Client name is required",
+        "tooLong": "Client name must be 256 characters or less",
+        "tooShort": "Client name must be at least 2 characters long",
+        "tooShortMeaningful": "Client name must be at least 2 meaningful characters"
+      },
+      "companySize": {
+        "emoji": "Company size cannot contain emojis",
+        "invalid": "Please enter a valid company size (e.g., \"50\", \"10-50\", \"five hundred\", \"2.5M\", \"small\", \"enterprise\")",
+        "tooLong": "Company size must be 50 characters or less"
+      },
+      "contactName": {
+        "invalidCharacters": "Contact name contains invalid characters",
+        "noLetters": "Contact name must contain letters",
+        "notMeaningful": "Contact name must contain meaningful characters",
+        "placeholder": "Please enter a real contact name",
+        "tooLong": "Contact name must be 40 characters or less"
+      },
+      "email": {
+        "disposable": "Please use a permanent business email address",
+        "emoji": "Email address cannot contain emojis",
+        "invalid": "Please enter a valid email address",
+        "invalidDomain": "Please enter a valid email domain",
+        "onlySpaces": "Email address cannot contain only spaces",
+        "required": "Email address is required",
+        "testDomain": "Please enter a valid business email address"
+      },
+      "industry": {
+        "invalidCharacters": "Industry contains invalid characters",
+        "noLetters": "Industry must contain letters",
+        "tooLong": "Industry must be 100 characters or less",
+        "tooShort": "Industry must be at least 2 characters long",
+        "tooShortText": "Industry must contain at least 2 text characters"
+      },
+      "notes": {
+        "tooLong": "Notes must be 2000 characters or less"
+      },
+      "phone": {
+        "emoji": "Phone number cannot contain emojis",
+        "incomplete": "Please enter a complete phone number",
+        "invalid": "Please enter a valid phone number",
+        "invalidCharacters": "Phone number can only contain numbers and formatting characters",
+        "tooLong": "Phone number is too long"
+      },
+      "postalCode": {
+        "au": "Please enter a valid Australian postal code (e.g., 2000)",
+        "br": "Please enter a valid Brazilian postal code (e.g., 01234-567)",
+        "ca": "Please enter a valid Canadian postal code (e.g., K1A 0A6)",
+        "ch": "Please enter a valid Swiss postal code (e.g., 8001)",
+        "de": "Please enter a valid German postal code (e.g., 10115)",
+        "emoji": "Postal code cannot contain emojis",
+        "es": "Please enter a valid Spanish postal code (e.g., 28001)",
+        "fr": "Please enter a valid French postal code (e.g., 75001)",
+        "gb": "Please enter a valid UK postal code (e.g., SW1A 1AA)",
+        "generic": "Please enter a valid postal code",
+        "in": "Please enter a valid Indian postal code (e.g., 110001)",
+        "it": "Please enter a valid Italian postal code (e.g., 00118)",
+        "jp": "Please enter a valid Japanese postal code (e.g., 123-4567)",
+        "nl": "Please enter a valid Dutch postal code (e.g., 1234AB)",
+        "onlySpaces": "Postal code cannot contain only spaces",
+        "us": "Please enter a valid ZIP code (e.g., 12345 or 12345-6789)",
+        "usShort": "Please enter a valid ZIP code"
+      },
+      "role": {
+        "noAlphanumeric": "Role must contain letters or numbers",
+        "onlySpaces": "Role cannot contain only spaces",
+        "tooLong": "Role must be 100 characters or less"
+      },
+      "stateProvince": {
+        "emoji": "State/Province cannot contain emojis",
+        "empty": "State/Province cannot be empty",
+        "invalidCharacters": "State/Province contains invalid characters",
+        "noLetters": "State/Province must contain letters",
+        "tooLong": "State/Province must be 100 characters or less"
+      },
+      "websiteUrl": {
+        "invalid": "Please enter a valid website URL",
+        "invalidWithExample": "Please enter a valid website URL (e.g., apple.com)",
+        "ipAddress": "Please enter a domain name, not an IP address",
+        "missingTld": "Please enter a valid website URL with a domain extension",
+        "notPublic": "Please enter a public business website URL",
+        "testDomain": "Please enter a real business website URL",
+        "tooLong": "Website URL must be 256 characters or less"
+      }
     }
   },
   "commentThread": {
