@@ -1880,7 +1880,7 @@
         "requiredScopes": "Wymagane zakresy",
         "storedClientId": "Zapisany Client ID: {{value}}",
         "storedClientSecret": "Zapisany Client Secret: {{value}}",
-        "tenantOauthDescription": "Przez którą aplikację Intuit łączy się ten najemca. Sekrety nigdy nie są zwracane do przeglądarki po zapisaniu.",
+        "tenantOauthDescription": "Przez którą aplikację Intuit łączy się ta organizacja. Sekrety nigdy nie są zwracane do przeglądarki po zapisaniu.",
         "tenantOauthTitle": "Poświadczenia aplikacji Intuit",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
@@ -1890,9 +1890,9 @@
           "label": "QuickBooks oblicza podatek od sprzedaży"
         },
         "credentialSource": {
-          "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Wypełnij poniższe pola tylko wtedy, gdy ten najemca ma używać własnej aplikacji Intuit.",
+          "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Wypełnij poniższe pola tylko wtedy, gdy ta organizacja ma używać własnej aplikacji Intuit.",
           "none": "Nie ma jeszcze dostępnej aplikacji Intuit. Zarejestruj ją w portalu Intuit Developer i wklej poniżej identyfikator klienta oraz sekret — przewodnik konfiguracji opisuje ten proces.",
-          "tenant": "Ten najemca łączy się przez własną aplikację Intuit, używając zapisanych poniżej poświadczeń."
+          "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej poświadczeń."
         },
         "setupGuideLink": "Przewodnik konfiguracji QuickBooks"
       },

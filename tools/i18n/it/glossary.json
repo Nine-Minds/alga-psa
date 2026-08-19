@@ -885,7 +885,8 @@
       "^\\(?\\{\\{count\\}\\} (?:team|ticket)\\)?$",
       "^• (?:Server|Database|VPN|Wi-Fi|Malware/Virus)$",
       "^(?:smtp|portal)\\.example\\.com$",
-      "^,$"
+      "^,$",
+      "^\\{\\{label\\}\\} · ID \\{\\{id\\}\\}$"
     ],
     "notes": "Questa allowlist è volutamente conservativa: l'audit deve segnalare il testo identico all'inglese salvo corrispondenza con uno di questi valori esatti, prestiti senza distinzione tra maiuscole e minuscole o pattern tecnici."
   }

@@ -982,7 +982,8 @@
       "^\\{\\{count\\}\\} kits$",
       "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
       "^\\(SN \\{\\{sn\\}\\}\\)$",
-      "^T[+-]\\{\\{days\\}\\}$"
+      "^T[+-]\\{\\{days\\}\\}$",
+      "^\\{\\{label\\}\\} · ID \\{\\{id\\}\\}$"
     ],
     "notes": "This allowlist is intentionally conservative; audit tooling should report English-identical German strings unless they match one of these exact values, case-insensitive established loanwords, or technical patterns."
   }
