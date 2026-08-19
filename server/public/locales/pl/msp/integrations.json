@@ -1987,7 +1987,7 @@
       },
       "taxCodes": {
         "labelWithDescription": "{{name}} — {{description}}",
-        "labelWithId": "{{label}} · ID {{id}}",
+        "labelWithId": "{{label}} · identyfikator {{id}}",
         "labelWithRate": "{{name}} ({{rate}})",
         "pseudo": {
           "nonTaxable": "NON — nie podlega opodatkowaniu",

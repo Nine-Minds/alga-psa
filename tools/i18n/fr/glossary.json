@@ -1003,8 +1003,7 @@
       "^1 service$",
       "^Phase / Section$",
       "^Client \\*$",
-      "^• (?:VPN|Wi-Fi)$",
-      "^\\{\\{label\\}\\} · ID \\{\\{id\\}\\}$"
+      "^• (?:VPN|Wi-Fi)$"
     ],
     "notes": "Cette liste d’autorisation est volontairement prudente ; l’outil d’audit doit signaler tout anglais identique qui ne correspond pas à l’une de ces valeurs exactes, à l’un de ces emprunts insensibles à la casse ou à l’un de ces motifs techniques."
   }

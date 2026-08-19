@@ -1015,8 +1015,7 @@
       "^\\{\\{count\\}\\} kits$",
       "^\\{\\{type\\}\\} \\{\\{qty\\}\\} × \\{\\{name\\}\\}$",
       "^\\(SN \\{\\{sn\\}\\}\\)$",
-      "^T[+-]\\{\\{days\\}\\}$",
-      "^\\{\\{label\\}\\} · ID \\{\\{id\\}\\}$"
+      "^T[+-]\\{\\{days\\}\\}$"
     ],
     "notes": "Ta lista dozwolonych wartości jest celowo zachowawcza; narzędzie audytowe powinno zgłaszać tekst identyczny z angielskim, chyba że pasuje on do jednej z tych dokładnych wartości, zapożyczeń bez rozróżniania wielkości liter albo wzorców technicznych."
   }

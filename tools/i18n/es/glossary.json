@@ -969,8 +969,7 @@
       "^[hm]$",
       "^\\{\\{location\\}\\} · 90d$",
       "^• (?:VPN|Wi-Fi|Malware/Virus)$",
-      "^—$",
-      "^\\{\\{label\\}\\} · ID \\{\\{id\\}\\}$"
+      "^—$"
     ],
     "notes": "Esta lista es deliberadamente conservadora; la auditoría debe señalar texto idéntico al inglés salvo que coincida con uno de estos valores exactos, préstamos sin distinción de mayúsculas o patrones técnicos."
   }
