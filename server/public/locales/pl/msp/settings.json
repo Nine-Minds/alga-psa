@@ -3128,6 +3128,23 @@
       "duplicate": "Ustawienie powiadomienia o takich danych już istnieje.",
       "missingField": "Brakuje wymaganego pola powiadomienia.",
       "missingFieldNamed": "Brakuje wymaganego pola powiadomienia: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Nie znaleziono roli lub uprawnienia. Odśwież listę uprawnień i spróbuj ponownie.",
+      "ticketNotFound": "Nie znaleziono zgłoszenia. Odśwież zgłoszenie i spróbuj ponownie.",
+      "policyNotFound": "Nie znaleziono zasady. Odśwież listę zasad i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości roli, uprawnienia lub zasady jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Jeden z wybranych rekordów zabezpieczeń już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "permissionAlreadyAssigned": "To uprawnienie jest już przypisane do tej roli.",
+      "duplicate": "Rekord zabezpieczeń o takich danych już istnieje.",
+      "missingField": "Brakuje wymaganego pola zabezpieczeń.",
+      "missingFieldNamed": "Brakuje wymaganego pola zabezpieczeń: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Odmowa uprawnień: administratorzy portalu klienta mogą zarządzać wyłącznie rolami portalu klienta.",
+        "portalUsersOnly": "Odmowa uprawnień: administratorzy portalu klienta mogą zarządzać wyłącznie użytkownikami portalu klienta.",
+        "portalAdminRequired": "Odmowa uprawnień: wymagany jest dostęp administratora portalu klienta.",
+        "otherClientUsers": "Odmowa uprawnień: nie można zarządzać użytkownikami innego klienta."
+      }
     }
   }
 }

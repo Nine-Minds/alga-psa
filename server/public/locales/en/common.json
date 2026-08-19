@@ -171,6 +171,23 @@
         "deleteComments": "Insufficient permissions to delete comments",
         "viewDocuments": "Insufficient permissions to view ticket documents"
       }
+    },
+    "tags": {
+      "notFound": "Tag not found. It may have been deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected tag values is invalid. Please refresh and try again.",
+      "textTooLongShort": "Tag text is too long.",
+      "referenceMissing": "The selected tag or tagged record no longer exists. Please refresh and try again.",
+      "alreadyApplied": "That tag is already applied to this item.",
+      "duplicate": "A tag with those details already exists.",
+      "notAllowed": "One of the tag values is not allowed. Please review the tag and try again.",
+      "missingField": "Missing required tag field.",
+      "missingFieldNamed": "Missing required tag field: {{field}}.",
+      "textRequired": "Tag text is required",
+      "textEmpty": "Tag text cannot be empty",
+      "textTooLong": "Tag text too long (max 50 characters)",
+      "textInvalidCharacters": "Tag text contains invalid characters",
+      "backgroundColorInvalid": "Invalid background color format. Must be a valid hex color code (e.g., #FF0000)",
+      "textColorInvalid": "Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)"
     }
   },
   "fields": {

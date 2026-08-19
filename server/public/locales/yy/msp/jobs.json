@@ -140,5 +140,10 @@
   "page": {
     "heading": "55555",
     "recentJobs": "55555"
+  },
+  "errors": {
+    "job": {
+      "notFound": "55555"
+    }
   }
 }

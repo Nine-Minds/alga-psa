@@ -3100,6 +3100,23 @@
       "duplicate": "11111",
       "missingField": "11111",
       "missingFieldNamed": "11111 {{field}} 11111"
+    },
+    "security": {
+      "roleNotFound": "11111",
+      "ticketNotFound": "11111",
+      "policyNotFound": "11111",
+      "invalidValue": "11111",
+      "referenceMissing": "11111",
+      "permissionAlreadyAssigned": "11111",
+      "duplicate": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "permissions": {
+        "portalRolesOnly": "11111",
+        "portalUsersOnly": "11111",
+        "portalAdminRequired": "11111",
+        "otherClientUsers": "11111"
+      }
     }
   }
 }

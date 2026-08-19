@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "Le contact, le groupe de visibilité ou le tableau sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
       "visibilityDuplicate": "Un groupe de visibilité avec ces informations existe déjà pour ce client.",
       "visibilityInvalidData": "Données de groupe de visibilité non valides. Veuillez vérifier les informations du groupe et les tableaux sélectionnés.",
-      "groupNameRequired": "Le nom du groupe est obligatoire"
+      "groupNameRequired": "Le nom du groupe est obligatoire",
+      "readPermission": "Autorisation refusée : impossible de lire des contacts"
     }
   }
 }

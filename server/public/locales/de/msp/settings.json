@@ -3100,6 +3100,23 @@
       "duplicate": "Eine Benachrichtigungseinstellung mit diesen Angaben existiert bereits.",
       "missingField": "Erforderliches Benachrichtigungsfeld fehlt.",
       "missingFieldNamed": "Erforderliches Benachrichtigungsfeld fehlt: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rolle oder Berechtigung nicht gefunden. Aktualisieren Sie die Berechtigungsliste und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Aktualisieren Sie das Ticket und versuchen Sie es erneut.",
+      "policyNotFound": "Richtlinie nicht gefunden. Aktualisieren Sie die Richtlinienliste und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Rollen-, Berechtigungs- oder Richtlinienwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Sicherheitsdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "permissionAlreadyAssigned": "Diese Berechtigung ist dieser Rolle bereits zugewiesen.",
+      "duplicate": "Ein Sicherheitsdatensatz mit diesen Angaben existiert bereits.",
+      "missingField": "Erforderliches Sicherheitsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Sicherheitsfeld fehlt: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Rollen verwalten.",
+        "portalUsersOnly": "Berechtigung verweigert: Kundenportal-Administratoren dürfen nur Kundenportal-Benutzer verwalten.",
+        "portalAdminRequired": "Berechtigung verweigert: Administratorzugriff für das Kundenportal ist erforderlich.",
+        "otherClientUsers": "Berechtigung verweigert: Benutzer eines anderen Kunden können nicht verwaltet werden."
+      }
     }
   }
 }

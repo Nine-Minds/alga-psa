@@ -140,6 +140,23 @@
         "deleteComments": "Permissions insuffisantes pour supprimer les commentaires",
         "viewDocuments": "Autorisations insuffisantes pour consulter les documents du ticket"
       }
+    },
+    "tags": {
+      "notFound": "Étiquette introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs d’étiquette sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "textTooLongShort": "Le texte de l’étiquette est trop long.",
+      "referenceMissing": "L’étiquette ou l’enregistrement étiqueté sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "alreadyApplied": "Cette étiquette est déjà appliquée à cet élément.",
+      "duplicate": "Une étiquette avec ces informations existe déjà.",
+      "notAllowed": "L’une des valeurs de l’étiquette n’est pas autorisée. Veuillez vérifier l’étiquette et réessayer.",
+      "missingField": "Un champ obligatoire de l’étiquette est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de l’étiquette est manquant : {{field}}.",
+      "textRequired": "Le texte de l’étiquette est obligatoire",
+      "textEmpty": "Le texte de l’étiquette ne peut pas être vide",
+      "textTooLong": "Texte d’étiquette trop long (50 caractères maximum)",
+      "textInvalidCharacters": "Le texte de l’étiquette contient des caractères non valides",
+      "backgroundColorInvalid": "Format de couleur d’arrière-plan non valide. Il doit s’agir d’un code couleur hexadécimal valide (par ex. #FF0000)",
+      "textColorInvalid": "Format de couleur de texte non valide. Il doit s’agir d’un code couleur hexadécimal valide (par ex. #FFFFFF)"
     }
   },
   "time": {

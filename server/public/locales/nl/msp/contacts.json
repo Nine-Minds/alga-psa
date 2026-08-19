@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "De geselecteerde contactpersoon, zichtbaarheidsgroep of het bord is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "visibilityDuplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
       "visibilityInvalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep opgegeven. Controleer de groepsgegevens en de geselecteerde borden.",
-      "groupNameRequired": "Groepsnaam is verplicht"
+      "groupNameRequired": "Groepsnaam is verplicht",
+      "readPermission": "Toestemming geweigerd: contacten kunnen niet worden gelezen"
     }
   }
 }

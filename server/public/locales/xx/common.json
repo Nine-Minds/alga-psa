@@ -171,6 +171,23 @@
         "deleteComments": "11111",
         "viewDocuments": "11111"
       }
+    },
+    "tags": {
+      "notFound": "11111",
+      "invalidValue": "11111",
+      "textTooLongShort": "11111",
+      "referenceMissing": "11111",
+      "alreadyApplied": "11111",
+      "duplicate": "11111",
+      "notAllowed": "11111",
+      "missingField": "11111",
+      "missingFieldNamed": "11111 {{field}} 11111",
+      "textRequired": "11111",
+      "textEmpty": "11111",
+      "textTooLong": "11111",
+      "textInvalidCharacters": "11111",
+      "backgroundColorInvalid": "11111",
+      "textColorInvalid": "11111"
     }
   },
   "fields": {

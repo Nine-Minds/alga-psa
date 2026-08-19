@@ -3100,6 +3100,23 @@
       "duplicate": "Já existe uma configuração de notificação com estes dados.",
       "missingField": "Falta um campo obrigatório da notificação.",
       "missingFieldNamed": "Falta um campo obrigatório da notificação: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Função ou permissão não encontrada. Atualize a lista de permissões e tente novamente.",
+      "ticketNotFound": "Ticket não encontrado. Atualize o ticket e tente novamente.",
+      "policyNotFound": "Política não encontrada. Atualize a lista de políticas e tente novamente.",
+      "invalidValue": "Um dos valores de função, permissão ou política selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "Um dos registros de segurança selecionados não existe mais. Atualize a página e tente novamente.",
+      "permissionAlreadyAssigned": "Essa permissão já está atribuída a esta função.",
+      "duplicate": "Já existe um registro de segurança com estes dados.",
+      "missingField": "Falta um campo obrigatório de segurança.",
+      "missingFieldNamed": "Falta um campo obrigatório de segurança: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar funções do portal do cliente.",
+        "portalUsersOnly": "Permissão negada: administradores do portal do cliente só podem gerenciar usuários do portal do cliente.",
+        "portalAdminRequired": "Permissão negada: é necessário acesso de administrador do portal do cliente.",
+        "otherClientUsers": "Permissão negada: não é possível gerenciar usuários de outro cliente."
+      }
     }
   }
 }

@@ -760,5 +760,10 @@
       "lastUsed": "Último uso el {{date}}",
       "notUsedYet": "Aún no utilizado"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Permiso denegado: no tiene permiso para ver todas las sesiones."
+    }
   }
 }

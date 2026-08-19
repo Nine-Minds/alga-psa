@@ -760,5 +760,10 @@
       "lastUsed": "Laatst gebruikt op {{date}}",
       "notUsedYet": "Nog niet gebruikt"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Toestemming geweigerd: u hebt geen rechten om alle sessies te bekijken."
+    }
   }
 }

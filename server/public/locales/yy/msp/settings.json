@@ -3100,6 +3100,23 @@
       "duplicate": "55555",
       "missingField": "55555",
       "missingFieldNamed": "55555 {{field}} 55555"
+    },
+    "security": {
+      "roleNotFound": "55555",
+      "ticketNotFound": "55555",
+      "policyNotFound": "55555",
+      "invalidValue": "55555",
+      "referenceMissing": "55555",
+      "permissionAlreadyAssigned": "55555",
+      "duplicate": "55555",
+      "missingField": "55555",
+      "missingFieldNamed": "55555 {{field}} 55555",
+      "permissions": {
+        "portalRolesOnly": "55555",
+        "portalUsersOnly": "55555",
+        "portalAdminRequired": "55555",
+        "otherClientUsers": "55555"
+      }
     }
   }
 }

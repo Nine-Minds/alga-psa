@@ -3100,6 +3100,23 @@
       "duplicate": "A notification setting with these details already exists.",
       "missingField": "Missing required notification field.",
       "missingFieldNamed": "Missing required notification field: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Role or permission not found. Refresh the permissions list and try again.",
+      "ticketNotFound": "Ticket not found. Refresh the ticket and try again.",
+      "policyNotFound": "Policy not found. Refresh the policy list and try again.",
+      "invalidValue": "One of the selected role, permission, or policy values is invalid. Please refresh and try again.",
+      "referenceMissing": "One of the selected security records no longer exists. Please refresh and try again.",
+      "permissionAlreadyAssigned": "That permission is already assigned to this role.",
+      "duplicate": "A security record with these details already exists.",
+      "missingField": "Missing required security field.",
+      "missingFieldNamed": "Missing required security field: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permission denied: Client portal admins may only manage client portal roles.",
+        "portalUsersOnly": "Permission denied: Client portal admins may only manage client portal users.",
+        "portalAdminRequired": "Permission denied: Client portal admin access is required.",
+        "otherClientUsers": "Permission denied: Cannot manage users for another client."
+      }
     }
   }
 }

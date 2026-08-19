@@ -3100,6 +3100,23 @@
       "duplicate": "Esiste già un’impostazione di notifica con questi dati.",
       "missingField": "Manca un campo obbligatorio della notifica.",
       "missingFieldNamed": "Manca un campo obbligatorio della notifica: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Ruolo o autorizzazione non trovati. Aggiornare l’elenco delle autorizzazioni e riprovare.",
+      "ticketNotFound": "Ticket non trovato. Aggiornare il ticket e riprovare.",
+      "policyNotFound": "Policy non trovata. Aggiornare l’elenco delle policy e riprovare.",
+      "invalidValue": "Uno dei valori di ruolo, autorizzazione o policy selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Uno dei record di sicurezza selezionati non esiste più. Aggiornare la pagina e riprovare.",
+      "permissionAlreadyAssigned": "Questa autorizzazione è già assegnata a questo ruolo.",
+      "duplicate": "Esiste già un record di sicurezza con questi dati.",
+      "missingField": "Manca un campo obbligatorio di sicurezza.",
+      "missingFieldNamed": "Manca un campo obbligatorio di sicurezza: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Autorizzazione negata: gli amministratori del portale clienti possono gestire solo i ruoli del portale clienti.",
+        "portalUsersOnly": "Autorizzazione negata: gli amministratori del portale clienti possono gestire solo gli utenti del portale clienti.",
+        "portalAdminRequired": "Autorizzazione negata: è richiesto l’accesso come amministratore del portale clienti.",
+        "otherClientUsers": "Autorizzazione negata: impossibile gestire gli utenti di un altro cliente."
+      }
     }
   }
 }

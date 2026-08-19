@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "The selected contact, visibility group, or board is no longer valid. Please refresh and try again.",
       "visibilityDuplicate": "A visibility group with these details already exists for this client.",
       "visibilityInvalidData": "Invalid visibility group data provided. Please check the group details and selected boards.",
-      "groupNameRequired": "Group name is required"
+      "groupNameRequired": "Group name is required",
+      "readPermission": "Permission denied: Cannot read contacts"
     }
   }
 }

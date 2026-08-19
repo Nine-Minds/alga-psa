@@ -154,6 +154,23 @@
         "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy",
         "viewDocuments": "Niewystarczające uprawnienia do wyświetlania dokumentów zgłoszenia"
       }
+    },
+    "tags": {
+      "notFound": "Nie znaleziono tagu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości tagu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "textTooLongShort": "Tekst tagu jest za długi.",
+      "referenceMissing": "Wybrany tag lub otagowany rekord już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "alreadyApplied": "Ten tag jest już przypisany do tego elementu.",
+      "duplicate": "Tag o takich danych już istnieje.",
+      "notAllowed": "Jedna z wartości tagu jest niedozwolona. Sprawdź tag i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola tagu.",
+      "missingFieldNamed": "Brakuje wymaganego pola tagu: {{field}}.",
+      "textRequired": "Tekst tagu jest wymagany",
+      "textEmpty": "Tekst tagu nie może być pusty",
+      "textTooLong": "Tekst tagu jest za długi (maksymalnie 50 znaków)",
+      "textInvalidCharacters": "Tekst tagu zawiera nieprawidłowe znaki",
+      "backgroundColorInvalid": "Nieprawidłowy format koloru tła. Musi to być prawidłowy kod szesnastkowy koloru (np. #FF0000)",
+      "textColorInvalid": "Nieprawidłowy format koloru tekstu. Musi to być prawidłowy kod szesnastkowy koloru (np. #FFFFFF)"
     }
   },
   "fields": {

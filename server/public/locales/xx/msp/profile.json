@@ -760,5 +760,10 @@
       "lastUsed": "11111 {{date}} 11111",
       "notUsedYet": "11111"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "11111"
+    }
   }
 }

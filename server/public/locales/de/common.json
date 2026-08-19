@@ -140,6 +140,23 @@
         "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren",
         "viewDocuments": "Unzureichende Berechtigungen zum Anzeigen von Ticket-Dokumenten"
       }
+    },
+    "tags": {
+      "notFound": "Tag nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Tag-Werte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "textTooLongShort": "Der Tag-Text ist zu lang.",
+      "referenceMissing": "Das ausgewählte Tag oder der getaggte Datensatz existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "alreadyApplied": "Dieses Tag ist diesem Element bereits zugewiesen.",
+      "duplicate": "Ein Tag mit diesen Angaben existiert bereits.",
+      "notAllowed": "Einer der Tag-Werte ist nicht zulässig. Bitte prüfen Sie das Tag und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Tag-Feld fehlt.",
+      "missingFieldNamed": "Erforderliches Tag-Feld fehlt: {{field}}.",
+      "textRequired": "Der Tag-Text ist erforderlich",
+      "textEmpty": "Der Tag-Text darf nicht leer sein",
+      "textTooLong": "Tag-Text zu lang (maximal 50 Zeichen)",
+      "textInvalidCharacters": "Der Tag-Text enthält ungültige Zeichen",
+      "backgroundColorInvalid": "Ungültiges Format der Hintergrundfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FF0000)",
+      "textColorInvalid": "Ungültiges Format der Textfarbe. Es muss ein gültiger Hex-Farbcode sein (z. B. #FFFFFF)"
     }
   },
   "time": {

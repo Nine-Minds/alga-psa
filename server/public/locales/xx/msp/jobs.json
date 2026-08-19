@@ -140,5 +140,10 @@
   "page": {
     "heading": "11111",
     "recentJobs": "11111"
+  },
+  "errors": {
+    "job": {
+      "notFound": "11111"
+    }
   }
 }

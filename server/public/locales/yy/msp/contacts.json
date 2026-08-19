@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "55555",
       "visibilityDuplicate": "55555",
       "visibilityInvalidData": "55555",
-      "groupNameRequired": "55555"
+      "groupNameRequired": "55555",
+      "readPermission": "55555"
     }
   }
 }

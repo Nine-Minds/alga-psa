@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "Il contatto, il gruppo di visibilità o la bacheca selezionati non sono più validi. Aggiornare la pagina e riprovare.",
       "visibilityDuplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
       "visibilityInvalidData": "Dati del gruppo di visibilità non validi. Controllare i dati del gruppo e le bacheche selezionate.",
-      "groupNameRequired": "Il nome del gruppo è obbligatorio"
+      "groupNameRequired": "Il nome del gruppo è obbligatorio",
+      "readPermission": "Autorizzazione negata: impossibile leggere i contatti"
     }
   }
 }

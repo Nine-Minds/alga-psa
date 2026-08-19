@@ -3100,6 +3100,23 @@
       "duplicate": "Er bestaat al een meldingsinstelling met deze gegevens.",
       "missingField": "Er ontbreekt een verplicht meldingsveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht meldingsveld: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "Rol of recht niet gevonden. Vernieuw de rechtenlijst en probeer het opnieuw.",
+      "ticketNotFound": "Ticket niet gevonden. Vernieuw het ticket en probeer het opnieuw.",
+      "policyNotFound": "Beleidsregel niet gevonden. Vernieuw de beleidslijst en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde rol-, recht- of beleidswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Een van de geselecteerde beveiligingsrecords bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "permissionAlreadyAssigned": "Dat recht is al toegewezen aan deze rol.",
+      "duplicate": "Er bestaat al een beveiligingsrecord met deze gegevens.",
+      "missingField": "Er ontbreekt een verplicht beveiligingsveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht beveiligingsveld: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Toestemming geweigerd: beheerders van het klantenportaal mogen alleen klantenportaalrollen beheren.",
+        "portalUsersOnly": "Toestemming geweigerd: beheerders van het klantenportaal mogen alleen klantenportaalgebruikers beheren.",
+        "portalAdminRequired": "Toestemming geweigerd: beheerderstoegang tot het klantenportaal is vereist.",
+        "otherClientUsers": "Toestemming geweigerd: gebruikers van een andere klant kunnen niet worden beheerd."
+      }
     }
   }
 }

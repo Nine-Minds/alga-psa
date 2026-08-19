@@ -140,6 +140,23 @@
         "deleteComments": "Permessi insufficienti per eliminare i commenti",
         "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
       }
+    },
+    "tags": {
+      "notFound": "Tag non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori del tag selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "textTooLongShort": "Il testo del tag è troppo lungo.",
+      "referenceMissing": "Il tag o il record contrassegnato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "alreadyApplied": "Questo tag è già applicato a questo elemento.",
+      "duplicate": "Esiste già un tag con questi dati.",
+      "notAllowed": "Uno dei valori del tag non è consentito. Controllare il tag e riprovare.",
+      "missingField": "Manca un campo obbligatorio del tag.",
+      "missingFieldNamed": "Manca un campo obbligatorio del tag: {{field}}.",
+      "textRequired": "Il testo del tag è obbligatorio",
+      "textEmpty": "Il testo del tag non può essere vuoto",
+      "textTooLong": "Testo del tag troppo lungo (massimo 50 caratteri)",
+      "textInvalidCharacters": "Il testo del tag contiene caratteri non validi",
+      "backgroundColorInvalid": "Formato del colore di sfondo non valido. Deve essere un codice colore esadecimale valido (ad es. #FF0000)",
+      "textColorInvalid": "Formato del colore del testo non valido. Deve essere un codice colore esadecimale valido (ad es. #FFFFFF)"
     }
   },
   "fields": {

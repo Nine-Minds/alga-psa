@@ -730,7 +730,8 @@
       "visibilityReferenceInvalid": "Wybrany kontakt, grupa widoczności lub tablica nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
       "visibilityDuplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "visibilityInvalidData": "Podano nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice.",
-      "groupNameRequired": "Nazwa grupy jest wymagana"
+      "groupNameRequired": "Nazwa grupy jest wymagana",
+      "readPermission": "Odmowa uprawnień: nie można odczytywać kontaktów"
     }
   }
 }

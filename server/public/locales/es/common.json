@@ -212,6 +212,23 @@
         "deleteComments": "Permisos insuficientes para eliminar comentarios",
         "viewDocuments": "Permisos insuficientes para ver los documentos del ticket"
       }
+    },
+    "tags": {
+      "notFound": "No se encontró la etiqueta. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de etiqueta seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "textTooLongShort": "El texto de la etiqueta es demasiado largo.",
+      "referenceMissing": "La etiqueta o el registro etiquetado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "alreadyApplied": "Esa etiqueta ya está aplicada a este elemento.",
+      "duplicate": "Ya existe una etiqueta con esos datos.",
+      "notAllowed": "Uno de los valores de la etiqueta no está permitido. Revise la etiqueta e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la etiqueta.",
+      "missingFieldNamed": "Falta un campo obligatorio de la etiqueta: {{field}}.",
+      "textRequired": "El texto de la etiqueta es obligatorio",
+      "textEmpty": "El texto de la etiqueta no puede estar vacío",
+      "textTooLong": "El texto de la etiqueta es demasiado largo (máximo 50 caracteres)",
+      "textInvalidCharacters": "El texto de la etiqueta contiene caracteres no válidos",
+      "backgroundColorInvalid": "Formato de color de fondo no válido. Debe ser un código de color hexadecimal válido (p. ej., #FF0000)",
+      "textColorInvalid": "Formato de color de texto no válido. Debe ser un código de color hexadecimal válido (p. ej., #FFFFFF)"
     }
   },
   "time": {

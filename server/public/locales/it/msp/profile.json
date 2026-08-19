@@ -760,5 +760,10 @@
       "lastUsed": "Ultimo utilizzo: {{date}}",
       "notUsedYet": "Non ancora utilizzato"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Autorizzazione negata: non si dispone dell’autorizzazione per visualizzare tutte le sessioni."
+    }
   }
 }

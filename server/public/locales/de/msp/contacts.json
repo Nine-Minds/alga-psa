@@ -726,7 +726,8 @@
       "visibilityReferenceInvalid": "Der ausgewählte Kontakt, die Sichtbarkeitsgruppe oder das Board ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "visibilityDuplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
       "visibilityInvalidData": "Ungültige Daten der Sichtbarkeitsgruppe übermittelt. Bitte prüfen Sie die Gruppenangaben und die ausgewählten Boards.",
-      "groupNameRequired": "Gruppenname ist erforderlich"
+      "groupNameRequired": "Gruppenname ist erforderlich",
+      "readPermission": "Berechtigung verweigert: Kontakte können nicht gelesen werden"
     }
   }
 }

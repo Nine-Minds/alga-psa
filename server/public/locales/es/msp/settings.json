@@ -3100,6 +3100,23 @@
       "duplicate": "Ya existe una configuración de notificación con estos datos.",
       "missingField": "Falta un campo obligatorio de la notificación.",
       "missingFieldNamed": "Falta un campo obligatorio de la notificación: {{field}}."
+    },
+    "security": {
+      "roleNotFound": "No se encontró el rol o el permiso. Actualice la lista de permisos e inténtelo de nuevo.",
+      "ticketNotFound": "No se encontró el ticket. Actualice el ticket e inténtelo de nuevo.",
+      "policyNotFound": "No se encontró la política. Actualice la lista de políticas e inténtelo de nuevo.",
+      "invalidValue": "Uno de los valores de rol, permiso o política seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "Uno de los registros de seguridad seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
+      "permissionAlreadyAssigned": "Ese permiso ya está asignado a este rol.",
+      "duplicate": "Ya existe un registro de seguridad con estos datos.",
+      "missingField": "Falta un campo obligatorio de seguridad.",
+      "missingFieldNamed": "Falta un campo obligatorio de seguridad: {{field}}.",
+      "permissions": {
+        "portalRolesOnly": "Permiso denegado: los administradores del portal del cliente solo pueden gestionar roles del portal del cliente.",
+        "portalUsersOnly": "Permiso denegado: los administradores del portal del cliente solo pueden gestionar usuarios del portal del cliente.",
+        "portalAdminRequired": "Permiso denegado: se requiere acceso de administrador del portal del cliente.",
+        "otherClientUsers": "Permiso denegado: no se pueden gestionar usuarios de otro cliente."
+      }
     }
   }
 }

@@ -140,6 +140,23 @@
         "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
         "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
       }
+    },
+    "tags": {
+      "notFound": "Label niet gevonden. Mogelijk is het verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidValue": "Een van de geselecteerde labelwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "textTooLongShort": "De labeltekst is te lang.",
+      "referenceMissing": "Het geselecteerde label of het gelabelde record bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "alreadyApplied": "Dat label is al toegepast op dit item.",
+      "duplicate": "Er bestaat al een label met deze gegevens.",
+      "notAllowed": "Een van de labelwaarden is niet toegestaan. Controleer het label en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht labelveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht labelveld: {{field}}.",
+      "textRequired": "Labeltekst is verplicht",
+      "textEmpty": "De labeltekst mag niet leeg zijn",
+      "textTooLong": "Labeltekst te lang (maximaal 50 tekens)",
+      "textInvalidCharacters": "De labeltekst bevat ongeldige tekens",
+      "backgroundColorInvalid": "Ongeldige indeling voor achtergrondkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FF0000)",
+      "textColorInvalid": "Ongeldige indeling voor tekstkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FFFFFF)"
     }
   },
   "time": {

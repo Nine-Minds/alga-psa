@@ -762,5 +762,10 @@
       "lastUsed": "Ostatnio użyto {{date}}",
       "notUsedYet": "Jeszcze nieużywane"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Odmowa uprawnień: brak uprawnień do wyświetlania wszystkich sesji."
+    }
   }
 }

@@ -760,5 +760,10 @@
       "lastUsed": "Zuletzt verwendet am {{date}}",
       "notUsedYet": "Noch nicht verwendet"
     }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Berechtigung verweigert: Sie haben keine Berechtigung, alle Sitzungen anzuzeigen."
+    }
   }
 }
