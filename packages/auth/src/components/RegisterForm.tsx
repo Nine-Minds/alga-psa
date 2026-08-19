@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
-import { validateEmailAddressField, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
+import { translateFieldValidation, validateEmailAddressField, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { verifyContactEmail, initiateRegistration } from '../lib/registrationHelpers';
 
 export default function RegisterForm() {
+  // Field messages live under common:clients.validation.*.
+  const { t: tValidation } = useTranslation('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -198,7 +201,7 @@ export default function RegisterForm() {
               }
             }}
             onBlur={() => {
-              const result = validateEmailAddressField(email);
+              const result = translateFieldValidation(validateEmailAddressField(email), tValidation);
               setFieldErrors(prev => ({ ...prev, email: result.error || '' }));
               setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
             }}

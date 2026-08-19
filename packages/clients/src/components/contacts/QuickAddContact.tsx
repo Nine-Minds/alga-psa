@@ -20,7 +20,9 @@ import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActi
 import {
   validateContactNameField,
   validateEmailAddressField,
-  validateNotes
+  validateNotes,
+  translateFieldValidation,
+  type FieldValidation
 } from '@alga-psa/validation';
 import { FieldWarnings } from '@alga-psa/ui/components/Input';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
@@ -88,6 +90,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const [fullName, setFullName] = useState('');
   const [emailState, setEmailState] = useState<QuickAddContactEmailState>({
     email: '',
@@ -187,7 +191,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     let nextError: string | null = null;
     const trimmedValue = value.trim();
 
-    const applyField = (result: { error: string | null; warnings: string[] }) => {
+    const applyField = (raw: FieldValidation) => {
+      const result = translateFieldValidation(raw, tValidation);
       setFieldWarnings(prev => ({ ...prev, [fieldName]: result.warnings }));
       return result.error;
     };
@@ -577,7 +582,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                   // Keeps the warning slot below in step with the primary address.
                   setFieldWarnings(prev => ({
                     ...prev,
-                    contact_email: value.email.trim() ? validateEmailAddressField(value.email).warnings : []
+                    contact_email: value.email.trim()
+                      ? translateFieldValidation(validateEmailAddressField(value.email), tValidation).warnings
+                      : []
                   }));
                   if (fieldErrors.contact_email) {
                     setFieldErrors(prev => ({ ...prev, contact_email: '' }));

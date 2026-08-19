@@ -34,7 +34,7 @@ import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShor
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
-import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -89,6 +89,8 @@ interface UserProfileProps {
 
 export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/profile');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const { isAlgaDesk } = useProduct();
@@ -270,7 +272,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     // Validate optional phone field if provided, and store what the parser made of it
     let normalizedPhone = phone.trim();
     if (normalizedPhone) {
-      const phoneResult = validatePhoneNumberField(normalizedPhone);
+      const phoneResult = translateFieldValidation(validatePhoneNumberField(normalizedPhone), tValidation);
       if (phoneResult.error) {
         newErrors.phone = phoneResult.error;
         hasValidationErrors = true;
@@ -451,7 +453,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   }
                 }}
                 onBlur={() => {
-                  const result = validateEmailAddressField(email);
+                  const result = translateFieldValidation(validateEmailAddressField(email), tValidation);
                   setFieldErrors(prev => ({ ...prev, email: result.error || '' }));
                   setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
                 }}
@@ -479,7 +481,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 }}
                 onBlur={() => {
                   if (phone.trim()) {
-                    const result = validatePhoneNumberField(phone);
+                    const result = translateFieldValidation(validatePhoneNumberField(phone), tValidation);
                     setFieldErrors(prev => ({ ...prev, phone: result.error || '' }));
                     setFieldWarnings(prev => ({ ...prev, phone: result.warnings }));
                   }

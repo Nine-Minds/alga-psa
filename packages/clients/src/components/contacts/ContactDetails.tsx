@@ -25,7 +25,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -107,11 +107,13 @@ const TextDetailItem: React.FC<{
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const handleBlur = () => {
     // Professional SaaS validation pattern: validate on blur, not while typing
     if (validateField) {
-      const result = validateField(localValue);
+      const result = translateFieldValidation(validateField(localValue), tValidation);
       setError(result.error);
       setWarnings(result.warnings);
     } else if (validate) {

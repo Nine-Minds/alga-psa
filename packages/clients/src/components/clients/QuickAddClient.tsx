@@ -44,7 +44,9 @@ import {
   validateAddress, 
   validateStateProvince,
   validateIndustry,
-  validateNotes
+  validateNotes,
+  translateFieldValidation,
+  type FieldValidation
 } from '@alga-psa/validation';
 import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
@@ -84,6 +86,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   initialLifecycleStatus = 'active',
 }) => {
   const { t } = useTranslation('msp/clients');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const initialFormData: CreateClientData = {
     client_name: '',
     client_type: 'company',
@@ -247,7 +251,8 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     const trimmedValue = value.trim();
 
     // Structural error blocks; plausibility only warns.
-    const applyField = (result: { error: string | null; warnings: string[] }) => {
+    const applyField = (raw: FieldValidation) => {
+      const result = translateFieldValidation(raw, tValidation);
       setFieldWarnings(prev => ({ ...prev, [fieldName]: result.warnings }));
       return result.error;
     };
@@ -1024,7 +1029,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     // Keeps the warning slot below in step with the primary address.
                     setFieldWarnings(prev => ({
                       ...prev,
-                      contact_email: value.email.trim() ? validateEmailAddressField(value.email).warnings : []
+                      contact_email: value.email.trim()
+                        ? translateFieldValidation(validateEmailAddressField(value.email), tValidation).warnings
+                        : []
                     }));
                     if (fieldErrors.contact_email) {
                       setFieldErrors(prev => ({ ...prev, contact_email: '' }));

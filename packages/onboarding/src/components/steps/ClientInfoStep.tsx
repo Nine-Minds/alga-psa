@@ -10,7 +10,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddressField } from '@alga-psa/validation';
+import { translateFieldValidation, validateEmailAddressField } from '@alga-psa/validation';
 import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -26,6 +26,8 @@ interface ClientInfoStepProps extends StepProps {
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const { t } = useTranslation('msp/onboarding');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const { locale: currentLocale, setLocale } = useI18n();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -442,7 +444,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             }
           }}
           onBlur={() => {
-            const result = validateEmailAddressField(data.email || '');
+            const result = translateFieldValidation(validateEmailAddressField(data.email || ''), tValidation);
             setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(result.error) }));
             setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
           }}

@@ -17,7 +17,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { isUnchangedFromStored, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
+import { isUnchangedFromStored, translateFieldValidation, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -350,11 +350,13 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation('msp/contacts');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
   // Plausibility only; the row still saves.
   const phoneWarnings = useMemo(
-    () => validatePhoneNumberField(row.phone_number ?? '').warnings,
-    [row.phone_number]
+    () => translateFieldValidation(validatePhoneNumberField(row.phone_number ?? ''), tValidation).warnings,
+    [row.phone_number, tValidation]
   );
   const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
   const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;

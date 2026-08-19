@@ -79,7 +79,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -89,6 +89,8 @@ import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -273,7 +275,7 @@ const UserManagement = (): React.JSX.Element => {
         if (error) errors = [error];
         break;
       case 'email': {
-        const result = validateEmailAddressField(value);
+        const result = translateFieldValidation(validateEmailAddressField(value), tValidation);
         error = result.error;
         if (error) errors = [error];
         // Plausibility only; never gates the invite.

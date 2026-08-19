@@ -5,7 +5,7 @@ import type { IClient, IContact, ISlaPolicy, ITag, SurveyClientSatisfactionSumma
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TagManager } from '@alga-psa/tags/components';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { validateAnnualRevenue, validateClientNameField, validateCompanySize, validateIndustry, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
+import { translateFieldValidation, validateAnnualRevenue, validateClientNameField, validateCompanySize, validateIndustry, validateWebsiteUrlField, type FieldValidation } from '@alga-psa/validation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -14,6 +14,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Flex, Text } from '@radix-ui/themes';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
@@ -70,6 +71,8 @@ const TextDetailItem: React.FC<{
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
@@ -93,7 +96,7 @@ const TextDetailItem: React.FC<{
 
   const handleBlur = () => {
     if (validateField) {
-      const result = validateField(localValue);
+      const result = translateFieldValidation(validateField(localValue), tValidation);
       setError(result.error);
       setWarnings(result.warnings);
     } else if (validate) {
