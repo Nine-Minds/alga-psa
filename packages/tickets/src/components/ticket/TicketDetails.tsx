@@ -551,10 +551,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
 
-    // Grid | Entry layout toggle (per-user preference). Entry is the default
-    // and renders the existing layout untouched.
+    // Grid | Entry layout toggle (per-user preference). Grid is the default;
+    // a stored 'entry' preference keeps the existing layout untouched.
     const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>(
-        bootstrap?.layoutPreference?.layout ?? 'entry',
+        bootstrap?.layoutPreference?.layout ?? 'grid',
     );
     const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>(
         bootstrap?.layoutPreference?.timelineOrder ?? 'asc',
