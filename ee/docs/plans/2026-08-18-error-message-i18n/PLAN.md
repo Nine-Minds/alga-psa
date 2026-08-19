@@ -1,7 +1,7 @@
 # Error-message i18n — remediation plan
 
 Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19.
-Categories 1, 3, 4 and 6 are done. Category 2 has not started; category 5 is a 151-file ratchet.
+Categories 1, 3, 4 and 6 are done. Category 2 has not started; category 5 is a 150-file ratchet.
 
 ## Context
 
@@ -127,11 +127,13 @@ Landed on `i18n/error_messages`:
      take a key: the keyed sentence and the un-keyable Zod message share one expression. Split the ternary so
      the fallback carries its key and the Zod message stays keyless until category 2 lands
      (`inboundWebhookActions`, `webhookActions`).
-- **Category 5 — 4 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
-  `ConflictResolutionDialog`), plus 3 stale baseline entries dropped. Ratchet is at **151**.
-  `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last. Both files wired this
-  pass take their keys from `common`, because neither belongs to one route's namespace — and both hid a
-  concatenation: `Conflict:` + a clause, and an English `"s"` appended to a raw `tagged_type`. The second is
+- **Category 5 — 5 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
+  `ConflictResolutionDialog`, `StatusDialog`), plus 3 stale baseline entries dropped. Ratchet is at **150**.
+  `RmmAlertAutomationSettings` (131 literals) is the next big one; `IconPicker` last. All three files wired
+  this pass take their keys from `common`, because none belongs to one route's namespace — check
+  `ROUTE_NAMESPACES` before reaching for a feature namespace, since `/msp/projects` does not load
+  `msp/settings` and `StatusDialog` renders from both. Each hid a concatenation: `Conflict:` + a clause,
+  `{editing ? 'Update' : 'Add'} Status`, and an English `"s"` appended to a raw `tagged_type`. The last is
   the client-side twin of convention 7, and it has an easier answer: a client component *has* a translator, so
   the noun can be translated before it is interpolated
   (`t('tags.entityTypes.' + tag.tagged_type)` into `{{entityType}}`). Import `useTranslation` from
@@ -139,14 +141,14 @@ Landed on `i18n/error_messages`:
   `react-i18next` in a package that does not have it. Leave letterform samples like `"Aa"` alone: a key whose
   value is identical in every locale fails `audit.cjs`.
 
-Ratchet at time of writing: high-severity files **151** (from 155). Error-shaped literals **3,081 across 505
+Ratchet at time of writing: high-severity files **150** (from 155). Error-shaped literals **3,081 across 505
 files** (from 3,365 across 533). Note the literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
 `find-untranslated-ui.cjs --json` emits valid JSON again (the two-line JSX prop that used to break the
 `detail` string is gone), so the ratchet can be read machine-readably:
-`node -e` over `high[]` for the 151, and over `high[].findings[] ∪ partial[].findings[]` filtered on
+`node -e` over `high[]` for the 150, and over `high[].findings[] ∪ partial[].findings[]` filtered on
 error-shaped prose for the 3,081.
 
 Two checks worth keeping, because neither the gate nor `tsc` covers them:
@@ -449,7 +451,7 @@ Closes the gaps left by the current diff. Half a day.
    issue `params` and map `issue → messageKey` where each action joins `error.issues`. Start where an action
    already has a keyed frame around the raw Zod detail (`projects`, `webhookActions`,
    `inboundWebhookActions`, `rmmAlertRuleActions`, `surveyActions`).
-6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 151 to go.
+6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 150 to go.
 
 `I18N_ENFORCE=true` is already set, so there is no flip to schedule — instead, every step above must leave
 `npm run test:i18n` green, all 7 locales included, before it merges.
