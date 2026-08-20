@@ -146,13 +146,14 @@ export function writeAtomicJson(file, value, { ownerUid = null, ownerGid = null 
 }
 
 export function verifyRecordingReceipt(metadata, receipt, publicKey) {
-  if (!metadata || !receipt || typeof publicKey !== 'string' || !publicKey.trim()) return { valid: false, reason: 'receipt_unavailable' };
+  const selectedKey = typeof publicKey === 'string' ? publicKey : publicKey && typeof publicKey === 'object' && typeof receipt?.keyId === 'string' ? publicKey[receipt.keyId] : null;
+  if (!metadata || !receipt || typeof selectedKey !== 'string' || !selectedKey.trim()) return { valid: false, reason: 'receipt_unavailable' };
   if (metadata.sessionId !== receipt.sessionId || metadata.segmentId !== receipt.segmentId || metadata.bytes !== receipt.bytes || metadata.digest !== receipt.digest || metadata.closedAt !== receipt.closedAt) {
     return { valid: false, reason: 'receipt_mismatch' };
   }
   const signed = JSON.stringify({ sessionId: receipt.sessionId, segmentId: receipt.segmentId, bytes: receipt.bytes, digest: receipt.digest, closedAt: receipt.closedAt, keyId: receipt.keyId });
   try {
-    const valid = crypto.verify(null, Buffer.from(signed), publicKey, Buffer.from(String(receipt.signature || ''), 'base64url'));
+    const valid = crypto.verify(null, Buffer.from(signed), selectedKey, Buffer.from(String(receipt.signature || ''), 'base64url'));
     return { valid, reason: valid ? null : 'invalid_signature' };
   } catch { return { valid: false, reason: 'invalid_signature' }; }
 }

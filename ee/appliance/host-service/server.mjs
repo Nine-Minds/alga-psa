@@ -771,6 +771,14 @@ const supportSessionManager = new SupportSessionManager({
     });
     return resolved?.manifest?.supportAgent || null;
   },
+  getSupportReceiptKeys: async () => {
+    const selection = readJsonFileForSupport(releaseSelectionFile) || {};
+    const resolved = await resolveReleaseManifestCached(selection.selectedChannel || 'stable', {
+      registryHost: selection.registryHost,
+      releaseRepository: selection.repository,
+    });
+    return resolved?.manifest?.supportReceiptKeys || null;
+  },
   waitForReadiness: async ({ session }) => {
     try {
       const central = await supportControlClient.getSession(session.sessionId, session.applianceToken);

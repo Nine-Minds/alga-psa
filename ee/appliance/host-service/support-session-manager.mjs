@@ -93,6 +93,7 @@ export class SupportSessionManager {
     kube,
     getLicense,
     getSupportAgentImage,
+    getSupportReceiptKeys = null,
     getCredential,
     now = () => Date.now(),
     waitForReadiness,
@@ -110,6 +111,7 @@ export class SupportSessionManager {
     this.kube = kube;
     this.getLicense = getLicense;
     this.getSupportAgentImage = getSupportAgentImage;
+    this.getSupportReceiptKeys = getSupportReceiptKeys;
     this.getCredential = getCredential;
     this.now = now;
     this.waitForReadiness = waitForReadiness || (async () => ({ ready: false, recorderReady: false }));
@@ -186,6 +188,12 @@ export class SupportSessionManager {
     try { license = await this.getLicense(); } catch { license = { status: 'unknown' }; }
     let image = null;
     try { image = await this.getSupportAgentImage(); } catch { image = null; }
+    if (typeof this.getSupportReceiptKeys === 'function') {
+      try {
+        const keys = await this.getSupportReceiptKeys();
+        if (keys && typeof keys === 'object' && !Array.isArray(keys)) this.publicReceiptKey = keys;
+      } catch { /* missing verification keys mark recordings unverified without enabling access */ }
+    }
     return { ...supportCapability({ license, centralConfigured: this.central.configured, supportAgentImage: image }), supportAgentImage: image };
   }
 

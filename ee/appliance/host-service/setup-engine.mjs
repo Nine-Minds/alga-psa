@@ -260,6 +260,7 @@ const OCI_MANIFEST_ACCEPT = [
 
 const RELEASE_MANIFEST_SCHEMA = 'alga.appliance.release/v1';
 const SUPPORT_AGENT_IMAGE_RE = /^ghcr\.io\/nine-minds\/alga-appliance-support-agent@sha256:[a-f0-9]{64}$/;
+const SUPPORT_RECEIPT_KEY_ID_RE = /^[A-Za-z0-9_.-]{1,64}$/;
 
 // ghcr and Docker-style registries hand out an anonymous pull token for public
 // repositories via the token endpoint advertised in the 401 challenge.
@@ -355,6 +356,16 @@ export function validateReleaseManifest(manifest) {
   if (supportAgent && !SUPPORT_AGENT_IMAGE_RE.test(supportAgent)) {
     throw new Error('Release manifest supportAgent must be the digest-pinned Nine Minds support-agent image.');
   }
+  const supportReceiptKeys = {};
+  if (manifest.supportReceiptKeys !== undefined && manifest.supportReceiptKeys !== null) {
+    if (!manifest.supportReceiptKeys || Array.isArray(manifest.supportReceiptKeys) || typeof manifest.supportReceiptKeys !== 'object') throw new Error('Release manifest supportReceiptKeys must be an object.');
+    const entries = Object.entries(manifest.supportReceiptKeys);
+    if (entries.length < 1 || entries.length > 2) throw new Error('Release manifest supportReceiptKeys must contain the current key and at most one previous key.');
+    for (const [keyId, publicKey] of entries) {
+      if (!SUPPORT_RECEIPT_KEY_ID_RE.test(keyId) || typeof publicKey !== 'string' || publicKey.length > 8192 || !publicKey.startsWith('-----BEGIN PUBLIC KEY-----')) throw new Error('Release manifest contains an invalid support receipt verification key.');
+      supportReceiptKeys[keyId] = publicKey;
+    }
+  }
   return {
     schema: RELEASE_MANIFEST_SCHEMA,
     version,
@@ -362,6 +373,7 @@ export function validateReleaseManifest(manifest) {
     images,
     controlPlane: manifest.controlPlane ? String(manifest.controlPlane).trim() : null,
     supportAgent,
+    supportReceiptKeys,
     config: {
       repository: String(config.repository).trim(),
       tag: config.tag ? String(config.tag).trim() : version,

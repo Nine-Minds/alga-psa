@@ -84,4 +84,6 @@ test('verification hashes the actual segment bytes before trusting a signed rece
   assert.equal(verification.valid, false);
   assert.equal(verification.reason, 'segment_digest_mismatch');
   assert.equal(recordingPlayback(root, SESSION_ID, { publicKey: publicPem }).verified, false);
+  assert.equal(verifyRecordingReceipt(metadata, receipt, { 'test-key': publicPem }).valid, true);
+  assert.equal(verifyRecordingReceipt(metadata, { ...receipt, keyId: 'retired' }, { 'test-key': publicPem }).reason, 'receipt_unavailable');
 });
