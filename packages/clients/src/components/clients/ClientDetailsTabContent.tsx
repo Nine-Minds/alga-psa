@@ -188,7 +188,6 @@ export interface ClientDetailsTabContentProps {
   setAliasDraft: (value: string) => void;
   isAliasBusy: boolean;
   isSaving: boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
   onFieldChange: (field: string, value: string | boolean | null) => void | Promise<void>;
   onDefaultContactChange: (contactId: string) => void;
   onAddInboundDomain: () => void | Promise<void>;
@@ -231,7 +230,6 @@ export function ClientDetailsTabContent({
   setAliasDraft,
   isAliasBusy,
   isSaving,
-  t,
   onFieldChange,
   onDefaultContactChange,
   onAddInboundDomain,
@@ -245,6 +243,7 @@ export function ClientDetailsTabContent({
   renderSurveySummaryCard,
 }: ClientDetailsTabContentProps) {
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const { t } = useTranslation('msp/clients');
 
   return (
     <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">

@@ -1379,7 +1379,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           setAliasDraft={setAliasDraft}
           isAliasBusy={isAliasBusy}
           isSaving={isSaving}
-          t={t}
           onFieldChange={handleFieldChange}
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
