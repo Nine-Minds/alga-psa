@@ -1647,7 +1647,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 onCheckedChange={(checked) => setFormData({ ...formData, is_inactive: checked })}
               />
             </div>
-            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50/60 p-3">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
               <div>
                 <Label htmlFor="is_default">{t('ticketing.boards.fields.defaultBoard.label', 'Default board for client portal tickets')}</Label>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -2359,7 +2359,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             )}
 
             {shouldManageTicketStatuses && (
-              <div className="space-y-3 rounded-md border border-gray-200 p-4 bg-gray-50/50">
+              <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
                 <div>
                   <Label>
                     {editingBoard
@@ -2516,7 +2516,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         </div>
 
         {/* Sticky whole-board save bar */}
-        <div className="sticky bottom-0 -mx-6 border-t border-gray-200 bg-white/95 px-6 py-3 backdrop-blur">
+        <div className="sticky bottom-0 -mx-6 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-6 py-3">
           <div className="flex items-center justify-between gap-3">
             <p className="flex items-center gap-1.5 text-xs text-gray-500">
               {anyDirty ? (

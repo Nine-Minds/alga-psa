@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Generale",
     "experimentalFeatures": "Funzionalità sperimentali",
+    "appearance": "Aspetto",
     "clientPortal": "Portale clienti",
     "users": "Utenti",
     "teams": "Team",
@@ -1127,25 +1128,42 @@
       "fields": {
         "companyName": "Nome dell'azienda",
         "companyLogo": "Logo dell'azienda",
+        "companyLogoDark": "Logo per sfondi scuri",
         "colorPalette": "Palette di colori",
         "primaryColor": "Colore primario",
         "secondaryColor": "Colore secondario",
         "supportEmail": "E-mail di supporto",
         "supportPhone": "Telefono di supporto",
-        "heroGradient": "Gradiente dell’intestazione della dashboard"
+        "heroGradient": "Gradiente dell’intestazione della dashboard",
+        "sidebarStyle": "Colore del pannello laterale",
+        "sidebarColor": "Colore personalizzato del pannello laterale",
+        "followTheme": "Usa il tema dell’organizzazione nel portale"
       },
       "help": {
         "companyName": "Verra visualizzato nell'intestazione del portale clienti",
+        "colorPalette": "Sono accenti sopra il tema dell’organizzazione: il colore primario dipinge pulsanti, link e il banner di benvenuto, il colore secondario la seconda metà del banner e gli accenti di supporto, e il pannello laterale adotta quello che scegli. Tutte le altre superfici — pagina, schede, testo, bordi — vengono dal tema in Impostazioni → Aspetto.",
         "companyLogo": "Consigliato: PNG o SVG, massimo 2 MB, sfondo trasparente",
+        "companyLogoMsp": "Questo logo sostituisce anche il marchio Alga nel menu laterale MSP.",
+        "companyLogoDark": "Facoltativo. Utilizzato nel pannello laterale del portale e nelle schermate in modalità scura. Se vuoto, viene usato il logo dell'azienda.",
         "primaryColor": "Utilizzato per pulsanti, link e evidenziazioni",
         "secondaryColor": "Utilizzato per accenti e azioni secondarie",
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
         "supportPhone": "Facoltativo. Viene mostrato accanto all'e-mail di supporto nelle e-mail rivolte ai clienti.",
-        "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente."
+        "heroGradient": "Controlla il gradiente del banner di benvenuto nella dashboard cliente.",
+        "sidebarStyle": "Applica il colore primario o secondario al pannello laterale del portale clienti.",
+        "sidebarColor": "Qualsiasi colore preferisci. Il pannello usa una tonalità più scura, così il testo chiaro del pannello laterale resta leggibile.",
+        "followTheme": "Se attivo, il portale clienti usa il tema scelto in Impostazioni → Aspetto. Se disattivato, i colori qui sotto lo sostituiscono.",
+        "followThemeActive": "I colori qui sotto vengono conservati ma non applicati finché il portale segue il tema dell’organizzazione."
       },
       "heroGradient": {
         "primaryShades": "Dal colore primario a una tonalità primaria",
         "primarySecondary": "Dal colore primario al colore secondario"
+      },
+      "sidebarStyle": {
+        "default": "Predefinito (ardesia scura)",
+        "primary": "Colore primario",
+        "secondary": "Colore secondario",
+        "custom": "Colore personalizzato"
       },
       "preview": "Anteprima",
       "previewDarkMode": "Anteprima modalita scura",
@@ -1299,6 +1317,130 @@
     "yourCompanyName": "Nome della tua azienda",
     "brandingPreviewMode": "Modalità tema anteprima branding",
     "brandingUpdated": "Impostazioni di branding aggiornate"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Scegli la coppia chiaro/scuro che tutti in questa organizzazione vedono, sia nell’app MSP sia nel portale clienti. Ogni persona continua a scegliere chiaro, scuro o sistema per sé.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "L’aspetto predefinito: superfici bianche e pulite di giorno, con sfumatura viola di notte."
+      },
+      "slate": {
+        "label": "Ardesia",
+        "description": "Grigi neutri con il tema scuro blu ardesia originale."
+      },
+      "ocean": {
+        "label": "Oceano",
+        "description": "Un pannello laterale blu navy con blu freddi su superfici nitide e leggermente fredde."
+      },
+      "sky": {
+        "label": "Cielo",
+        "description": "Un blu più chiaro e leggero con un secondario indaco."
+      },
+      "forest": {
+        "label": "Foresta",
+        "description": "Verdi profondi con un colore di successo turchese, così lo stato resta leggibile."
+      },
+      "sunset": {
+        "label": "Tramonto",
+        "description": "Arancioni caldi e rosa del crepuscolo su superfici color sabbia."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Marroni caffè su crema, espresso tostato al buio."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa e ciano neon su un viola notte di Miami."
+      },
+      "highContrast": {
+        "label": "Contrasto elevato",
+        "description": "Solo bianco e nero, con bordi accentuati. Solo i colori di stato mantengono la loro tonalità."
+      },
+      "custom": {
+        "label": "Personalizzato",
+        "description": "I tuoi colori, modificati qui sotto."
+      }
+    },
+    "custom": {
+      "title": "Tema personalizzato",
+      "description": "Crea le tue varianti chiara e scura. Le scale di colore complete vengono derivate da questi colori di base e il contrasto viene verificato prima del salvataggio.",
+      "lightMode": "Variante chiara",
+      "darkMode": "Variante scura",
+      "previewAlt": "Anteprima del tema personalizzato",
+      "seededFrom": "Questi colori partono dal tema {{pair}}: modifica solo quelli che ti interessano e le scale complete si adeguano.",
+      "contrastTitle": "Questi colori sono troppo vicini per essere leggibili. Correggili prima di salvare:",
+      "contrastIssue": "{{foreground}} potrebbe essere difficile da leggere su {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Sfondo della pagina",
+        "card": "Superficie della scheda",
+        "surface": "Superficie rialzata",
+        "textPrimary": "Testo principale",
+        "textSecondary": "Testo secondario",
+        "textMuted": "Testo attenuato",
+        "border": "Bordo",
+        "borderStrong": "Bordo marcato",
+        "primary": "Colore principale",
+        "secondary": "Colore secondario",
+        "accent": "Colore d’accento",
+        "sidebarBg": "Sfondo del pannello laterale",
+        "sidebarText": "Testo del pannello laterale",
+        "sidebarHover": "Pannello laterale al passaggio del mouse",
+        "headerBg": "Sfondo dell’intestazione",
+        "buttonLabel": "Etichette dei pulsanti in bianco"
+      },
+      "actions": {
+        "save": "Salva e usa il tema personalizzato",
+        "reset": "Ripristina i colori di {{pair}}",
+        "resetDone": "Colori ripristinati al tema {{pair}}: salva per applicarli",
+        "useSaved": "Usa i miei colori salvati",
+        "useSavedDone": "I tuoi colori salvati sono tornati: salva per applicarli"
+      },
+      "contrastHints": {
+        "lighten": "Scegli un {{foreground}} più chiaro o un {{background}} più scuro.",
+        "darken": "Scegli un {{foreground}} più scuro o un {{background}} più chiaro."
+      },
+      "mock": {
+        "caption": "Punta un colore qui sotto per vedere quale parte dell’app colora.",
+        "showing": "Evidenziato: {{token}}",
+        "nav": "Pagina iniziale",
+        "navActive": "Ticket",
+        "navMuted": "Report",
+        "headerTitle": "Ticket",
+        "cardTitle": "Stampante offline alla reception",
+        "cardBody": "Assegnato a Dana Reyes",
+        "cardMuted": "Aggiornato 2 ore fa",
+        "primaryAction": "Salva",
+        "secondaryAction": "Assegna",
+        "ghostAction": "Annulla",
+        "surface": "Attività recente"
+      }
+    },
+    "whiteLabel": {
+      "title": "Personalizza il marchio dell’app MSP",
+      "description": "Carica il tuo logo una volta sola. Sostituisce il marchio Alga nel menu laterale MSP e il portale clienti usa le stesse immagini.",
+      "logoHelp": "Il menu laterale MSP è scuro in entrambi i temi, quindi usa il logo per sfondi scuri quando lo fornisci e altrimenti ricorre al logo principale.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo per sfondi scuri"
+      },
+      "colors": {
+        "label": "Usa i colori del tuo marchio nell’app MSP",
+        "help": "Disattivato per impostazione predefinita. Quando è attivo, i tuoi colori primario e secondario sostituiscono gli accenti del tema per gli utenti MSP, come già avviene nel portale clienti."
+      }
+    },
+    "messages": {
+      "loadFailed": "Impossibile caricare le impostazioni di aspetto",
+      "saved": "Aspetto aggiornato",
+      "saveFailed": "Impossibile salvare le impostazioni di aspetto",
+      "discarded": "Anteprima annullata"
+    },
+    "unsaved": {
+      "notice": "Stai visualizzando l’anteprima di un tema non salvato. Gli altri mantengono quello salvato finché non lo applichi.",
+      "save": "Applica a tutti",
+      "discard": "Annulla modifiche"
+    }
   },
   "mspLanguage": {
     "title": "Lingua dell’organizzazione",

@@ -2,15 +2,22 @@
 
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { revalidateTag } from 'next/cache';
-import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
+import { generateBrandingStyles, scopeBrandingToEdition } from '../../lib/generateBrandingStyles';
+import { isEnterprise } from '@alga-psa/core/features';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
 export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
+export type PortalSidebarStyle = 'default' | 'primary' | 'secondary' | 'custom';
 
 export interface TenantBranding {
   logoUrl: string;
+  /**
+   * Optional logo for dark surfaces (portal side panel, dark-themed auth
+   * pages). Absent means every surface keeps using `logoUrl`.
+   */
+  logoDarkUrl?: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
@@ -19,6 +26,20 @@ export interface TenantBranding {
    * original primary-500 -> primary-700 behavior for existing tenants.
    */
   portalHeroGradient?: PortalHeroGradient;
+  /**
+   * Tints the client portal side panel with the primary/secondary palette, or
+   * with `portalSidebarColor` when set to 'custom'. Missing or 'default' keeps
+   * the stock slate side panel.
+   */
+  portalSidebarStyle?: PortalSidebarStyle;
+  /** Arbitrary side panel tint, used only when portalSidebarStyle is 'custom'. */
+  portalSidebarColor?: string;
+  /**
+   * When true the client portal drops these brand accents and wears the
+   * organization theme instead. Missing/false keeps the portal branding in
+   * charge, which is what every existing tenant configured.
+   */
+  portalFollowsTheme?: boolean;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
@@ -44,12 +65,24 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
 
   const existingSettings = existingRecord?.settings || {};
 
+  // Carry forward optional fields the caller didn't send so an older client or
+  // another settings tab can never wipe them.
+  const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
+  const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
+  const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
+  const portalFollowsTheme = isEnterprise
+    ? branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme
+    : false;
+
   // Precompute CSS styles for performance
   const computedStyles = generateBrandingStyles({
     logoUrl: branding.logoUrl,
     primaryColor: branding.primaryColor,
     secondaryColor: branding.secondaryColor,
     clientName: branding.clientName,
+    portalSidebarStyle,
+    portalSidebarColor,
+    portalFollowsTheme,
   });
 
   // Build updated settings with branding and computed styles.
@@ -61,10 +94,14 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     supportPhone: branding.supportPhone ?? existingSettings.supportPhone ?? '',
     branding: {
       logoUrl: branding.logoUrl,
+      logoDarkUrl,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
       portalHeroGradient: branding.portalHeroGradient,
+      portalSidebarStyle,
+      portalSidebarColor,
+      portalFollowsTheme,
       computedStyles, // Store precomputed CSS
     }
   };
@@ -109,11 +146,11 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
     return null;
   }
 
-  return {
+  return scopeBrandingToEdition({
     ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  };
+  }, isEnterprise);
 });
 
 /**
@@ -129,9 +166,9 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
     return null;
   }
 
-  return {
+  return scopeBrandingToEdition({
     ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  };
+  }, isEnterprise);
 }
