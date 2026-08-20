@@ -822,7 +822,179 @@ async function fetchClientBillingMetadataById(
     );
 }
 
+type PotentialUnresolvedTimeEntry = {
+    entry_id: string;
+    start_time: Date | string;
+    end_time: Date | string;
+    project_client_id?: string | null;
+    ticket_client_id?: string | null;
+};
+
+type PotentialUnresolvedUsageRecord = {
+    usage_id: string;
+    client_id: string;
+    usage_date: Date | string;
+};
+
+type BillingPeriodWindow = {
+    period: BillingPeriodWithMeta;
+    startMs: number;
+    endMs: number;
+};
+
+function toTimestampMs(value: Date | string | null | undefined): number | null {
+    if (value == null) {
+        return null;
+    }
+
+    const timestamp = value instanceof Date ? value.getTime() : Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+/**
+ * Find billing periods that can actually contain unresolved non-contract work.
+ *
+ * The previous reader invoked the full billing engine once for every open
+ * billing period, even though almost all periods contained no unresolved
+ * source rows. Large tenants therefore paid for thousands of transactions and
+ * repeated context/tax/source queries before pagination.
+ *
+ * These two tenant-scoped reads mirror the billing engine's coarse eligibility
+ * filters. They deliberately do not reproduce pricing, deterministic contract
+ * reconciliation, project-cap handling, or tax behavior; the authoritative
+ * billing-engine call still performs all of that for each populated window.
+ */
+async function filterBillingPeriodsWithPotentialUnresolvedWork(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    candidateBillingPeriods: BillingPeriodWithMeta[],
+): Promise<BillingPeriodWithMeta[]> {
+    if (candidateBillingPeriods.length === 0) {
+        return [];
+    }
+
+    const windowsByClientId = new Map<string, BillingPeriodWindow[]>();
+    let earliestStart: ISO8601String | null = null;
+    let latestEnd: ISO8601String | null = null;
+
+    for (const period of candidateBillingPeriods) {
+        const start = normalizeDateOnly(period.period_start_date) as ISO8601String | null;
+        const end = normalizeDateOnly(period.period_end_date) as ISO8601String | null;
+        const startMs = toTimestampMs(start);
+        const endMs = toTimestampMs(end);
+        if (!period.client_id || !start || !end || startMs == null || endMs == null) {
+            continue;
+        }
+
+        const windows = windowsByClientId.get(period.client_id) ?? [];
+        windows.push({ period, startMs, endMs });
+        windowsByClientId.set(period.client_id, windows);
+        earliestStart = earliestStart == null || start < earliestStart ? start : earliestStart;
+        latestEnd = latestEnd == null || end > latestEnd ? end : latestEnd;
+    }
+
+    if (!earliestStart || !latestEnd || windowsByClientId.size === 0) {
+        return [];
+    }
+
+    const clientIds = Array.from(windowsByClientId.keys());
+    const db = tenantDb(trx, tenant);
+    const potentialTimeEntriesQuery = db.table('time_entries');
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'project_tasks',
+        'time_entries.work_item_id',
+        'project_tasks.task_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'project_phases',
+        'project_tasks.phase_id',
+        'project_phases.phase_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'projects',
+        'project_phases.project_id',
+        'projects.project_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'tickets',
+        'time_entries.work_item_id',
+        'tickets.ticket_id',
+        { type: 'left' },
+    );
+
+    const [potentialTimeEntries, potentialUsageRecords] = await Promise.all([
+        potentialTimeEntriesQuery
+            .where('time_entries.tenant', tenant)
+            .where('time_entries.invoiced', false)
+            .whereNull('time_entries.contract_line_id')
+            .whereNotNull('time_entries.service_id')
+            .where('time_entries.approval_status', 'APPROVED')
+            .where('time_entries.billable_duration', '>', 0)
+            .where('time_entries.start_time', '>=', earliestStart)
+            .where('time_entries.end_time', '<', latestEnd)
+            .select(
+                'time_entries.entry_id',
+                'time_entries.start_time',
+                'time_entries.end_time',
+                'projects.client_id as project_client_id',
+                'tickets.client_id as ticket_client_id',
+            ) as Promise<PotentialUnresolvedTimeEntry[]>,
+        db.table('usage_tracking')
+            .where('usage_tracking.tenant', tenant)
+            .whereIn('usage_tracking.client_id', clientIds)
+            .where('usage_tracking.invoiced', false)
+            .whereNull('usage_tracking.contract_line_id')
+            .whereNotNull('usage_tracking.service_id')
+            .where('usage_tracking.usage_date', '>=', earliestStart)
+            .where('usage_tracking.usage_date', '<', latestEnd)
+            .select(
+                'usage_tracking.usage_id',
+                'usage_tracking.client_id',
+                'usage_tracking.usage_date',
+            ) as Promise<PotentialUnresolvedUsageRecord[]>,
+    ]);
+
+    const populatedPeriods = new Set<BillingPeriodWithMeta>();
+    const addMatchingPeriods = (
+        clientId: string | null | undefined,
+        sourceStartMs: number | null,
+        sourceEndMs: number | null = sourceStartMs,
+    ) => {
+        if (!clientId || sourceStartMs == null || sourceEndMs == null) {
+            return;
+        }
+
+        for (const window of windowsByClientId.get(clientId) ?? []) {
+            if (sourceStartMs >= window.startMs && sourceEndMs < window.endMs) {
+                populatedPeriods.add(window.period);
+            }
+        }
+    };
+
+    for (const entry of potentialTimeEntries) {
+        const startMs = toTimestampMs(entry.start_time);
+        const endMs = toTimestampMs(entry.end_time);
+        addMatchingPeriods(entry.project_client_id, startMs, endMs);
+        addMatchingPeriods(entry.ticket_client_id, startMs, endMs);
+    }
+
+    for (const record of potentialUsageRecords) {
+        const usageDateMs = toTimestampMs(record.usage_date);
+        addMatchingPeriods(record.client_id, usageDateMs);
+    }
+
+    return candidateBillingPeriods.filter((period) => populatedPeriods.has(period));
+}
+
 async function fetchUnresolvedNonContractDueWorkRows(
+    trx: BillingQueryExecutor,
     candidateBillingPeriods: BillingPeriodWithMeta[],
     asOf: ISO8601String,
     tenant: string,
@@ -832,10 +1004,21 @@ async function fetchUnresolvedNonContractDueWorkRows(
         return [];
     }
 
+    const populatedBillingPeriods = await filterBillingPeriodsWithPotentialUnresolvedWork(
+        trx,
+        tenant,
+        candidateBillingPeriods,
+    );
+    if (populatedBillingPeriods.length === 0) {
+        return [];
+    }
+
     const billingEngine = new BillingEngine();
     const rows: IRecurringDueWorkRow[] = [];
 
-    for (const period of candidateBillingPeriods) {
+    // Keep these calls serial: BillingEngine pins a transaction on the instance
+    // and may reconcile a uniquely assignable source record as it reads it.
+    for (const period of populatedBillingPeriods) {
         if (!period.period_start_date || !period.period_end_date) {
             continue;
         }
@@ -1665,6 +1848,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             return !suppressionKey || !backfillSuppressionKeys.has(suppressionKey);
         });
         const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
+            knex,
             candidateBillingPeriods,
             asOf,
             tenant,
