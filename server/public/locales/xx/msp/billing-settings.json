@@ -1170,6 +1170,7 @@
       "regionRequired": "11111",
       "idRequired": "11111",
       "notFound": "11111",
+      "notFoundOrAlreadyDeleted": "11111",
       "invalid": "11111",
       "regionInvalid": "11111",
       "duplicate": "11111",
