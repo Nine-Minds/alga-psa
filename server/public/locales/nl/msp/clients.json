@@ -1690,6 +1690,12 @@
     "save": "Opslaan",
     "saveSuccess": "Prepaid-saldomeldinginstellingen opgeslagen",
     "saveError": "Prepaid-saldomeldinginstellingen konden niet worden opgeslagen",
-    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen"
+    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen",
+    "contractOverrideTitle": "Contractaanvullingsoverschrijving",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Standaard van klant gebruiken",
+    "saveContractOverride": "Contractoverschrijving opslaan",
+    "contractSaveSuccess": "Contractaanvullingsbeleid opgeslagen",
+    "contractSaveError": "Contractaanvullingsbeleid kon niet worden opgeslagen"
   }
 }

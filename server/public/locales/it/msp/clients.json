@@ -1690,6 +1690,12 @@
     "save": "Salva",
     "saveSuccess": "Impostazioni avviso saldo prepagato salvate",
     "saveError": "Impossibile salvare le impostazioni avviso saldo prepagato",
-    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato"
+    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato",
+    "contractOverrideTitle": "Sostituzione della ricarica del contratto",
+    "contractOverrideContract": "Contratto",
+    "contractOverrideInherit": "Usa impostazione predefinita del cliente",
+    "saveContractOverride": "Salva sostituzione del contratto",
+    "contractSaveSuccess": "Criterio di ricarica del contratto salvato",
+    "contractSaveError": "Impossibile salvare il criterio di ricarica del contratto"
   }
 }

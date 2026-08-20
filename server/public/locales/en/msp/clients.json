@@ -1690,6 +1690,12 @@
     "save": "Save",
     "saveSuccess": "Prepaid balance alert settings saved",
     "saveError": "Failed to save prepaid balance alert settings",
-    "loadError": "Failed to load prepaid balance alert settings"
+    "loadError": "Failed to load prepaid balance alert settings",
+    "contractOverrideTitle": "Contract replenishment override",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Use client default",
+    "saveContractOverride": "Save contract override",
+    "contractSaveSuccess": "Contract replenishment policy saved",
+    "contractSaveError": "Failed to save contract replenishment policy"
   }
 }

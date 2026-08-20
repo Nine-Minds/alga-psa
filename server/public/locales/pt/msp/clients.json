@@ -1690,6 +1690,12 @@
     "save": "Salvar",
     "saveSuccess": "Configurações de alerta de saldo pré-pago salvas",
     "saveError": "Não foi possível salvar as configurações de alerta de saldo pré-pago",
-    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago"
+    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago",
+    "contractOverrideTitle": "Substituição de reabastecimento do contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar padrão do cliente",
+    "saveContractOverride": "Salvar substituição do contrato",
+    "contractSaveSuccess": "Política de reabastecimento do contrato salva",
+    "contractSaveError": "Não foi possível salvar a política de reabastecimento do contrato"
   }
 }

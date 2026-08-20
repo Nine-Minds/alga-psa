@@ -1690,6 +1690,12 @@
     "save": "Guardar",
     "saveSuccess": "Parámetros de alerta de saldo prepagado guardados",
     "saveError": "No se pudieron guardar los parámetros de alerta de saldo prepagado",
-    "loadError": "No se pudieron cargar los parámetros de alerta de saldo prepagado"
+    "loadError": "No se pudieron cargar los parámetros de alerta de saldo prepagado",
+    "contractOverrideTitle": "Anulación de reposición del contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar valor predeterminado del cliente",
+    "saveContractOverride": "Guardar anulación del contrato",
+    "contractSaveSuccess": "Política de reposición del contrato guardada",
+    "contractSaveError": "No se pudo guardar la política de reposición del contrato"
   }
 }

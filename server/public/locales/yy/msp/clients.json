@@ -1690,6 +1690,12 @@
     "save": "55555",
     "saveSuccess": "55555",
     "saveError": "55555",
-    "loadError": "55555"
+    "loadError": "55555",
+    "contractOverrideTitle": "55555",
+    "contractOverrideContract": "55555",
+    "contractOverrideInherit": "55555",
+    "saveContractOverride": "55555",
+    "contractSaveSuccess": "55555",
+    "contractSaveError": "55555"
   }
 }

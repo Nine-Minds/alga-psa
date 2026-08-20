@@ -1690,6 +1690,12 @@
     "save": "Enregistrer",
     "saveSuccess": "Paramètres d’alerte de solde prépayé enregistrés",
     "saveError": "Impossible d’enregistrer les paramètres d’alerte de solde prépayé",
-    "loadError": "Impossible de charger les paramètres d’alerte de solde prépayé"
+    "loadError": "Impossible de charger les paramètres d’alerte de solde prépayé",
+    "contractOverrideTitle": "Dérogation de réapprovisionnement du contrat",
+    "contractOverrideContract": "Contrat",
+    "contractOverrideInherit": "Utiliser la valeur par défaut du client",
+    "saveContractOverride": "Enregistrer la dérogation du contrat",
+    "contractSaveSuccess": "Politique de réapprovisionnement du contrat enregistrée",
+    "contractSaveError": "Impossible d’enregistrer la politique de réapprovisionnement du contrat"
   }
 }

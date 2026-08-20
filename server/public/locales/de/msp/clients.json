@@ -1690,6 +1690,12 @@
     "save": "Speichern",
     "saveSuccess": "Prepaid-Saldo-Warnungseinstellungen gespeichert",
     "saveError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht gespeichert werden",
-    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden"
+    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden",
+    "contractOverrideTitle": "Vertragsspezifische Auffüllungsüberschreibung",
+    "contractOverrideContract": "Vertrag",
+    "contractOverrideInherit": "Kundenstandard verwenden",
+    "saveContractOverride": "Vertragsüberschreibung speichern",
+    "contractSaveSuccess": "Vertragsauffüllungsrichtlinie gespeichert",
+    "contractSaveError": "Vertragsauffüllungsrichtlinie konnte nicht gespeichert werden"
   }
 }
