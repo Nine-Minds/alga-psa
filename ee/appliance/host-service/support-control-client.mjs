@@ -124,7 +124,17 @@ export class SupportControlClient {
       clientRequestId,
       credential,
     });
-    return validateCreateResponse(response, { durationHours, nowMs: Date.now() });
+    try {
+      return validateCreateResponse(response, { durationHours, nowMs: Date.now() });
+    } catch (error) {
+      // A malformed create response may still contain enough authority to
+      // close the central pending record. Never persist it locally, but make
+      // the cleanup attempt before returning the validation failure.
+      if (SESSION_ID_RE.test(String(response?.sessionId || '')) && typeof response?.applianceToken === 'string' && response.applianceToken.length >= 16 && response.applianceToken.length <= MAX_TOKEN_BYTES) {
+        try { await this.abandon(response.sessionId, response.applianceToken); } catch { /* best effort; the malformed authority was never persisted */ }
+      }
+      throw error;
+    }
   }
 
   acknowledge(sessionId, applianceToken) {

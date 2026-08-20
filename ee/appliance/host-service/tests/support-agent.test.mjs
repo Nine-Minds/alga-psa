@@ -29,7 +29,7 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   fs.mkdirSync(path.dirname(reconnect), { recursive: true, mode: 0o700 });
   fs.writeFileSync(reconnect, 'memory-reconnect-token-1234\n', { mode: 0o600 });
   const connector = path.join(root, 'missing-connector');
-  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: connector, reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, detachedGraceMs: 25, reconnectDelayMs: 100000 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: connector, reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, detachedGraceMs: 25, reconnectDelayMs: 100000, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
   agent.start();
   const socket = MockSocket.last;
   socket.readyState = MockSocket.OPEN;
@@ -58,4 +58,75 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   agent.stop('test');
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(fs.existsSync(recordingDirectory(root, SESSION_ID)), true);
+});
+
+test('support agent prefers the memory reconnect token when the projected connector file remains', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-token-order-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  const connector = path.join(root, 'connector-token');
+  fs.writeFileSync(reconnect, 'memory-token-preferred-1234\n', { mode: 0o600 });
+  fs.writeFileSync(connector, 'already-consumed-token-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: connector, reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last;
+  socket.readyState = MockSocket.OPEN;
+  socket.emit('open');
+  assert.equal(socket.sent[0].token, 'memory-token-preferred-1234');
+  assert.equal(fs.existsSync(connector), true);
+  agent.stop('test');
+});
+
+test('idle expiry closes only the PTY and mandatory frame sequencing/backpressure fail closed', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-idle-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-idle-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, idleTimeoutMs: 20, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(agent.getState().closed, false);
+  assert.equal(agent.getState().hasChild, false);
+  assert.equal(agent.launchShell(), true);
+  agent.stop('test');
+
+  const missingSequence = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing-2'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  missingSequence.start();
+  const missingSocket = MockSocket.last; missingSocket.readyState = MockSocket.OPEN; missingSocket.emit('open');
+  missingSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, type: 'ready' })));
+  assert.equal(missingSequence.getState().closed, true);
+  assert.equal(missingSequence.getState().stopReason, 'invalid-frame-sequence');
+
+  const backpressure = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing-3'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  backpressure.start();
+  const pressureSocket = MockSocket.last; pressureSocket.readyState = MockSocket.OPEN; pressureSocket.emit('open');
+  pressureSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  pressureSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  pressureSocket.bufferedAmount = 256 * 1024 + 1;
+  fakePtyFactory.last.emitOutput('must fail closed');
+  assert.equal(backpressure.getState().closed, true);
+  assert.equal(backpressure.getState().stopReason, 'relay-backpressure');
+});
+
+test('finalized segments queue across disconnect and resend in digest-chain order', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-queue-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-queue-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, detachedGraceMs: 10, reconnectDelayMs: 10, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const firstSocket = MockSocket.last; firstSocket.readyState = MockSocket.OPEN; firstSocket.emit('open');
+  firstSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready', reconnectToken: 'memory-token-queue-5678' })));
+  firstSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  firstSocket.readyState = 3; firstSocket.emit('close');
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  assert.equal(agent.launchShell(), true);
+  fakePtyFactory.last.emitExit();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const secondSocket = MockSocket.last; secondSocket.readyState = MockSocket.OPEN; secondSocket.emit('open');
+  secondSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  const finalizes = secondSocket.sent.filter((frame) => frame.type === 'recording-finalize');
+  assert.equal(finalizes.length, 2);
+  assert.equal(finalizes[1].segmentId !== finalizes[0].segmentId, true);
+  agent.stop('test');
 });

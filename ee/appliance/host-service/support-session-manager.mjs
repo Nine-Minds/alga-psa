@@ -9,6 +9,7 @@ export const SUPPORT_MAX_HOURS = 8;
 export const SUPPORT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 export const SUPPORT_RECONNECT_GRACE_MS = 2 * 60 * 1000;
 export const SUPPORT_PROVISIONING_TIMEOUT_MS = 60 * 1000;
+export const SUPPORT_RECONCILIATION_INTERVAL_MS = 15 * 1000;
 export const SUPPORT_STATE_SCHEMA = 1;
 const MAX_STATE_BYTES = 256 * 1024;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -96,6 +97,7 @@ export class SupportSessionManager {
     now = () => Date.now(),
     waitForReadiness,
     publicReceiptKey = process.env.ALGA_SUPPORT_RECEIPT_PUBLIC_KEY || null,
+    reconciliationIntervalMs = SUPPORT_RECONCILIATION_INTERVAL_MS,
   } = {}) {
     if (!central || !kube || typeof getLicense !== 'function' || typeof getSupportAgentImage !== 'function' || typeof getCredential !== 'function') throw new Error('SupportSessionManager dependencies are incomplete.');
     this.stateDir = path.resolve(stateDir);
@@ -114,6 +116,13 @@ export class SupportSessionManager {
     this.publicReceiptKey = publicReceiptKey;
     this.mutation = Promise.resolve();
     this.expiryTimer = null;
+    this.reconciliationTimer = setInterval(() => {
+      this._serialize(async () => {
+        const active = this._readActive();
+        if (active && (active.state === 'closing' || active.cleanupPending || active.state === 'reconnecting')) await this.reconcileStartup();
+      }).catch(() => {});
+    }, reconciliationIntervalMs);
+    this.reconciliationTimer.unref?.();
     secureDir(this.stateDir); secureDir(this.revokedDir); secureDir(this.closePendingDir); secureDir(this.historyDir);
     try {
       const existing = this._readActive();
@@ -209,7 +218,7 @@ export class SupportSessionManager {
     let ready = false;
     while (this.now() < deadline) {
       const result = await this.waitForReadiness({ session: descriptor, pod: await this._getPodStatus(descriptor.sessionId) });
-      if (result?.ready && result?.recorderReady !== false) { ready = true; break; }
+      if (result?.ready === true && result?.recorderReady === true) { ready = true; break; }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     if (!ready) throw new SupportSessionError('provisioning_timeout', 'Support recording and relay readiness were not reached.', 504);
@@ -268,10 +277,18 @@ export class SupportSessionManager {
       try {
         descriptor = validateDescriptor({ schema: SUPPORT_STATE_SCHEMA, sessionId: central.sessionId, state: 'pending_ack', createdAt, activatedAt: central.activatedAt, expiresAt: central.expiresAt, durationHours: duration, statusUrl: central.statusUrl, relayUrl: central.relayUrl, applianceToken: central.applianceToken, resumeGrant: central.resumeGrant, connectorState: 'pending', operator: null, recording: { bytes: 0, segments: [] }, lastStopReason: null, shareCode: central.shareCode, supportAgentImage: image });
       } catch (error) {
-        if (error instanceof SupportSessionError && error.code === 'invalid_state') throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid session authority.', 502);
+        if (error instanceof SupportSessionError && error.code === 'invalid_state') {
+          if (validId(central?.sessionId) && typeof central?.applianceToken === 'string' && central.applianceToken.length >= 16 && central.applianceToken.length <= 4096) {
+            try { await this.central.abandon(central.sessionId, central.applianceToken); } catch { /* malformed authority is not persisted; central cleanup is best effort */ }
+          }
+          throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid session authority.', 502);
+        }
         throw error;
       }
-      this._writeActive(descriptor);
+      try { this._writeActive(descriptor); } catch (error) {
+        try { await this.central.abandon(descriptor.sessionId, descriptor.applianceToken); } catch { /* unpersistable authority has no local access */ }
+        throw new SupportSessionError('state_persist_failed', 'The support window could not be safely persisted.', 503);
+      }
       let acknowledged = false;
       try {
         await this.central.acknowledge(descriptor.sessionId, descriptor.applianceToken);

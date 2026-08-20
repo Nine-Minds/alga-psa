@@ -5,6 +5,8 @@ import path from 'node:path';
 export const RECORDING_SCHEMA_VERSION = 1;
 export const MAX_RECORDING_BYTES = 100 * 1024 * 1024;
 export const LOCAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export const SUPPORT_RECORDING_OWNER_UID = 10001;
+export const SUPPORT_RECORDING_OWNER_GID = 10001;
 const MAX_READ_BYTES = 128 * 1024 * 1024;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -29,12 +31,15 @@ export function recordingDirectory(root, sessionId) {
   return directory;
 }
 
-function secureMkdir(directory) {
+function secureMkdir(directory, ownerUid = null, ownerGid = null) {
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   fs.chmodSync(directory, 0o700);
+  if (ownerUid !== null && ownerGid !== null) {
+    try { fs.chownSync(directory, ownerUid, ownerGid); } catch (error) { throw new RecordingError('recording_ownership', 'Recording ownership could not be established.', 500, error); }
+  }
 }
 
-function appendFsync(file, bytes) {
+function appendFsync(file, bytes, ownerUid = null, ownerGid = null) {
   const handle = fs.openSync(file, 'a', 0o600);
   try {
     fs.writeSync(handle, bytes);
@@ -43,16 +48,21 @@ function appendFsync(file, bytes) {
     fs.closeSync(handle);
   }
   fs.chmodSync(file, 0o600);
+  if (ownerUid !== null && ownerGid !== null) {
+    try { fs.chownSync(file, ownerUid, ownerGid); } catch (error) { throw new RecordingError('recording_ownership', 'Recording ownership could not be established.', 500, error); }
+  }
 }
 
 export class RecordingSegment {
-  constructor({ root, sessionId, segmentId = crypto.randomUUID(), width = 120, height = 40, now = () => new Date(), quota = null }) {
+  constructor({ root, sessionId, segmentId = crypto.randomUUID(), width = 120, height = 40, now = () => new Date(), quota = null, ownerUid = process.getuid?.() ?? 1000, ownerGid = process.getgid?.() ?? 1000 }) {
     this.root = recordingDirectory(root, sessionId);
     this.sessionId = sessionId;
     this.segmentId = segmentId;
     this.now = now;
+    this.ownerUid = ownerUid;
+    this.ownerGid = ownerGid;
     if (!validRecordingId(segmentId)) throw new RecordingError('invalid_segment_id', 'Recording segment ID is invalid.', 400);
-    secureMkdir(this.root);
+    secureMkdir(this.root, this.ownerUid, this.ownerGid);
     this.file = path.join(this.root, `segment-${segmentId}.cast`);
     this.digest = crypto.createHash('sha256');
     this.bytes = 0;
@@ -77,7 +87,7 @@ export class RecordingSegment {
   _appendRaw(text) {
     const bytes = Buffer.from(text, 'utf8');
     if (this.bytes + bytes.length > MAX_RECORDING_BYTES || this.quota.bytes + bytes.length > this.quota.limit) throw new RecordingError('recording_full', 'The local recording limit was reached.', 507);
-    appendFsync(this.file, bytes);
+    appendFsync(this.file, bytes, this.ownerUid, this.ownerGid);
     this.digest.update(bytes);
     this.bytes += bytes.length;
     this.quota.bytes += bytes.length;
@@ -108,14 +118,14 @@ export class RecordingSegment {
       closedAt: this.now().toISOString(),
       receipt: receipt ? { ...receipt } : null,
     };
-    writeAtomicJson(path.join(this.root, `receipt-${this.segmentId}.json`), metadata);
+    writeAtomicJson(path.join(this.root, `receipt-${this.segmentId}.json`), metadata, { ownerUid: this.ownerUid, ownerGid: this.ownerGid });
     return metadata;
   }
 }
 
-export function writeAtomicJson(file, value) {
+export function writeAtomicJson(file, value, { ownerUid = null, ownerGid = null } = {}) {
   const directory = path.dirname(file);
-  secureMkdir(directory);
+  secureMkdir(directory, ownerUid, ownerGid);
   const temp = path.join(directory, `.${path.basename(file)}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`);
   const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`, 'utf8');
   const handle = fs.openSync(temp, 'wx', 0o600);
@@ -125,6 +135,9 @@ export function writeAtomicJson(file, value) {
   } finally { fs.closeSync(handle); }
   fs.renameSync(temp, file);
   fs.chmodSync(file, 0o600);
+  if (ownerUid !== null && ownerGid !== null) {
+    try { fs.chownSync(file, ownerUid, ownerGid); } catch (error) { throw new RecordingError('recording_ownership', 'Recording ownership could not be established.', 500, error); }
+  }
   try {
     const dirHandle = fs.openSync(directory, 'r');
     fs.fsyncSync(dirHandle);
@@ -173,12 +186,30 @@ export function recordingStats(root, sessionId) {
   return { bytes, segments: segments.map((segment) => ({ segmentId: segment.segmentId, bytes: segment.bytes, digest: segment.digest, closedAt: segment.closedAt, verification: segment.verification })) };
 }
 
+function chronologicalSegments(metadata) {
+  const byPrevious = new Map(metadata.map((segment) => [segment.previousDigest || '__first__', segment]));
+  const ordered = [];
+  const used = new Set();
+  let previousDigest = null;
+  while (ordered.length < metadata.length) {
+    const next = byPrevious.get(previousDigest || '__first__');
+    if (!next || used.has(next.segmentId)) break;
+    ordered.push(next); used.add(next.segmentId); previousDigest = next.digest;
+  }
+  return ordered.concat(metadata.filter((segment) => !used.has(segment.segmentId)).sort((a, b) => {
+    const time = Date.parse(a.closedAt || '') - Date.parse(b.closedAt || '');
+    return Number.isFinite(time) && time !== 0 ? time : String(a.segmentId).localeCompare(String(b.segmentId));
+  }));
+}
+
 export function recordingPlayback(root, sessionId) {
   const directory = recordingDirectory(root, sessionId);
-  const metadata = listRecordingMetadata(root, sessionId);
+  const metadata = chronologicalSegments(listRecordingMetadata(root, sessionId));
   const events = [];
   if (!fs.existsSync(directory)) return { sessionId, segments: [], events, text: '' };
-  for (const name of fs.readdirSync(directory).filter((item) => /^segment-[0-9a-f-]+\.cast$/i.test(item)).sort().slice(0, 256)) {
+  for (const segment of metadata) {
+    const name = `segment-${segment.segmentId}.cast`;
+    if (!fs.existsSync(path.join(directory, name))) continue;
     const lines = readBoundedFile(path.join(directory, name)).toString('utf8').split('\n').filter(Boolean);
     for (const line of lines.slice(1)) {
       let event;

@@ -27,6 +27,7 @@ import {
 } from './manage-engine.mjs';
 import { SupportControlClient } from './support-control-client.mjs';
 import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
+import { supportErrorPayload } from './support-api-errors.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -385,9 +386,8 @@ async function readSupportJsonBody(req) {
 }
 
 function supportErrorResponse(res, error) {
-  const status = Number(error?.status) || 502;
-  const code = /^[a-z0-9_]{1,64}$/.test(String(error?.code || '')) ? error.code : 'support_unavailable';
-  jsonResponse(res, status, { code, error: error?.message || 'Remote support operation failed.' });
+  const result = supportErrorPayload(error);
+  jsonResponse(res, result.status, result.body);
 }
 
 async function readPodAccessJson(req) {
@@ -668,7 +668,7 @@ const manageKube = {
   },
   listSupportPods: async () => {
     const result = await runKubectlJson("get pods -n alga-appliance-support -l alga.nineminds.com/support-session -o json");
-    return (result.ok ? result.value?.items : []).map((pod) => ({ sessionId: pod.metadata?.labels?.['alga.nineminds.com/support-session'] })).filter((item) => item.sessionId),
+    return (result.ok ? result.value?.items : []).map((pod) => ({ sessionId: pod.metadata?.labels?.['alga.nineminds.com/support-session'] })).filter((item) => item.sessionId);
   },
   apply: async (manifest) => {
     const tmp = path.join(os.tmpdir(), `alga-manage-${process.pid}-${Date.now()}.json`);

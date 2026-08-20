@@ -77,6 +77,8 @@ test('duration validation and pod contract are strict', () => {
   assert.equal(pod.spec.containers[0].env.some((entry) => entry.name.includes('CREDENTIAL')), false);
   assert.equal(pod.spec.containers[0].ports, undefined);
   assert.equal(pod.spec.volumes.find((volume) => volume.name === 'reconnect-token').emptyDir.medium, 'Memory');
+  assert.equal(pod.spec.containers[0].env.find((entry) => entry.name === 'SUPPORT_RECORDING_OWNER_UID').value, '10001');
+  assert.equal(pod.spec.containers[0].env.find((entry) => entry.name === 'SUPPORT_RECORDING_OWNER_GID').value, '10001');
 });
 
 test('create is durable, readiness-gated, one-active, and revoke wins locally', async () => {
@@ -142,6 +144,15 @@ test('central authority URLs and expiry cannot exceed the requested or absolute 
   const service = manager(tmp, { central });
   await assert.rejects(() => service.create({ durationHours: 1 }), (error) => error.code === 'central_invalid_response');
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+  assert.equal(central.calls.some((call) => call[0] === 'abandon'), true);
+});
+
+test('readiness requires both live agent and recorder signals', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-readiness-'));
+  let now = Date.now();
+  const service = manager(tmp, { now: () => now, waitForReadiness: async () => { now += 61 * 1000; return { ready: true }; } });
+  const descriptor = { sessionId: SESSION_ID, relayUrl: 'wss://relay.example', expiresAt: new Date(now + 3600000).toISOString() };
+  await assert.rejects(() => service._provision(descriptor, 'connector-token-123456', IMAGE), (error) => error.code === 'provisioning_timeout');
 });
 
 test('extension recreates the pod deadline and startup resume uses the persisted image digest', async () => {
@@ -173,5 +184,19 @@ test('startup reconciliation expires stale state and prunes only closed recordin
   now += 2 * 60 * 60 * 1000;
   const result = await service.reconcileStartup();
   assert.equal(result.state, 'expired');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+});
+
+test('runtime reconciliation retries closing cleanup without restart', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-runtime-reconcile-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  let failCleanup = true;
+  kube.delete = async (kind, name, namespace) => { if (failCleanup && kind === 'pod') throw new Error('temporary cleanup failure'); return { ok: true }; };
+  const service = manager(tmp, { central, kube, reconciliationIntervalMs: 10 });
+  await service.create({ durationHours: 1 });
+  await assert.rejects(() => service.revoke(SESSION_ID), (error) => error.code === 'cleanup_failure');
+  failCleanup = false;
+  await new Promise((resolve) => setTimeout(resolve, 35));
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
 });

@@ -102,6 +102,8 @@ export function buildSupportPod({ session, supportAgentImage, nowMs = Date.now()
           // RecordingSegment appends the session ID. Pass the history parent,
           // while the hostPath mount remains session-scoped.
           { name: 'SUPPORT_RECORDING_DIR', value: `/host${SUPPORT_RECORDING_ROOT}` },
+          { name: 'SUPPORT_RECORDING_OWNER_UID', value: '10001' },
+          { name: 'SUPPORT_RECORDING_OWNER_GID', value: '10001' },
           { name: 'SUPPORT_EXPIRES_AT', value: session.expiresAt },
           { name: 'SUPPORT_RESUMED', value: session.connectorState === 'resuming' ? '1' : '0' },
         ],

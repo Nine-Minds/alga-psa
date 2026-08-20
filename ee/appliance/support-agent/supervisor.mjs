@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import WebSocket from 'ws';
-import { RecordingSegment, recordingDirectory, writeAtomicJson } from '../host-service/support-recordings.mjs';
+import { listRecordingMetadata, RecordingSegment, recordingDirectory, SUPPORT_RECORDING_OWNER_GID, SUPPORT_RECORDING_OWNER_UID, writeAtomicJson } from '../host-service/support-recordings.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -31,29 +31,36 @@ function writeReconnectToken(file, token) {
 }
 
 function readInitialToken(connectorFile, reconnectFile) {
-  if (fs.existsSync(connectorFile)) return boundedToken(connectorFile, true);
+  // The memory-backed token is the only restart-safe authority. The projected
+  // Secret can remain visible after the host has consumed/deleted it.
   if (fs.existsSync(reconnectFile)) return boundedToken(reconnectFile, false);
+  if (fs.existsSync(connectorFile)) return boundedToken(connectorFile, true);
   throw new Error('No support connector or reconnect token is available.');
 }
 
-function existingBytes(recordingDir, sessionId) {
+function existingRecordingState(recordingDir, sessionId) {
   const directory = recordingDirectory(recordingDir, sessionId);
-  if (!fs.existsSync(directory)) return 0;
-  return fs.readdirSync(directory).filter((name) => /^segment-[0-9a-f-]+\.cast$/i.test(name)).reduce((sum, name) => {
+  if (!fs.existsSync(directory)) return { bytes: 0, previousDigest: null };
+  const bytes = fs.readdirSync(directory).filter((name) => /^segment-[0-9a-f-]+\.cast$/i.test(name)).reduce((sum, name) => {
     const stat = fs.statSync(path.join(directory, name));
     if (!stat.isFile() || stat.size > 100 * 1024 * 1024 || sum + stat.size > 100 * 1024 * 1024) throw new Error('The local recording limit was already exceeded.');
     return sum + stat.size;
   }, 0);
+  const metadata = listRecordingMetadata(recordingDir, sessionId).sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
+  return { bytes, previousDigest: metadata.at(-1)?.digest || null };
 }
 
-export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, reconnectTokenFile, recordingDir, expiresAt, resumed = false, WebSocketImpl = WebSocket, ptySpawn = null, now = () => Date.now(), detachedGraceMs = DETACHED_GRACE_MS, reconnectDelayMs = 1000, idleTimeoutMs = IDLE_TIMEOUT_MS } = {}) {
+export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, reconnectTokenFile, recordingDir, expiresAt, resumed = false, WebSocketImpl = WebSocket, ptySpawn = null, now = () => Date.now(), detachedGraceMs = DETACHED_GRACE_MS, reconnectDelayMs = 1000, idleTimeoutMs = IDLE_TIMEOUT_MS, recordingOwnerUid = SUPPORT_RECORDING_OWNER_UID, recordingOwnerGid = SUPPORT_RECORDING_OWNER_GID } = {}) {
   if (!sessionId || !relayUrl || !Number.isFinite(expiresAt)) throw new Error('Support agent configuration is incomplete.');
-  const quota = { bytes: existingBytes(recordingDir, sessionId), limit: 100 * 1024 * 1024 };
+  const existing = existingRecordingState(recordingDir, sessionId);
+  const quota = { bytes: existing.bytes, limit: 100 * 1024 * 1024 };
   let socket = null; let child = null; let recorder = null; let detachedTimer = null; let idleTimer = null; let reconnectTimer = null;
-  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let lastFinalized = null;
+  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null;
+  const pendingFinalized = new Map();
+  const finalizedSegments = new Map();
 
   function frame(message) {
-    const result = { version: SUPPORT_PROTOCOL_VERSION, seq: ++outgoingSeq, ...message };
+    const result = { ...message, version: SUPPORT_PROTOCOL_VERSION, seq: ++outgoingSeq };
     if (Buffer.byteLength(JSON.stringify(result)) > MAX_FRAME_BYTES) throw new Error('Support control frame exceeds the bounded size.');
     return result;
   }
@@ -62,32 +69,60 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (socket.bufferedAmount > MAX_BUFFERED_BYTES) throw new Error('Support relay backpressure limit exceeded.');
     socket.send(JSON.stringify(frame(message))); return true;
   }
+  function sendControl(message, { failOnBackpressure = false } = {}) {
+    try { return send(message); } catch (error) {
+      if (failOnBackpressure && error?.message === 'Support relay backpressure limit exceeded.') failClosed('relay-backpressure');
+      throw error;
+    }
+  }
+  function flushPending() {
+    for (const checkpoint of pendingFinalized.values()) {
+      if (!checkpoint.checkpointSent && checkpoint.checkpointFrame && sendControl(checkpoint.checkpointFrame, { failOnBackpressure: true })) checkpoint.checkpointSent = true;
+    }
+    for (const pending of pendingFinalized.values()) {
+      if (!pending.finalizeSent && pending.finalizeFrame && sendControl(pending.finalizeFrame, { failOnBackpressure: true })) pending.finalizeSent = true;
+    }
+  }
   function checkpoint(force = false) {
     if (!recorder || (!force && recorder.bytes - lastCheckpointBytes < 64 * 1024)) return;
     lastCheckpointBytes = recorder.bytes;
-    try { send({ type: 'recording-checkpoint', segmentId: recorder.segmentId, bytes: recorder.bytes, digest: recorder.digest.copy().digest('hex') }); } catch {}
+    const frame = { type: 'recording-checkpoint', segmentId: recorder.segmentId, bytes: recorder.bytes, digest: recorder.digest.copy().digest('hex') };
+    const pending = pendingFinalized.get(recorder.segmentId) || { segmentId: recorder.segmentId, checkpointFrame: null, finalizeFrame: null, checkpointSent: false, finalizeSent: false };
+    pending.checkpointFrame = frame; pendingFinalized.set(recorder.segmentId, pending);
+    try { if (sendControl(frame, { failOnBackpressure: true })) pending.checkpointSent = true; } catch { /* queued for reconnect unless backpressure closed the session */ }
   }
   function finalizeRecorder() {
-    if (!recorder || recorder.closed) return lastFinalized;
-    const metadata = recorder.finalize(); lastFinalized = metadata; recorder = null; lastCheckpointBytes = 0;
-    try { send({ type: 'recording-finalize', segmentId: metadata.segmentId, bytes: metadata.bytes, digest: metadata.digest, closedAt: metadata.closedAt }); } catch {}
+    if (!recorder || recorder.closed) return null;
+    const metadata = recorder.finalize({ previousDigest });
+    previousDigest = metadata.digest;
+    finalizedSegments.set(metadata.segmentId, metadata);
+    const pending = pendingFinalized.get(metadata.segmentId) || { segmentId: metadata.segmentId, checkpointFrame: null, finalizeFrame: null, checkpointSent: false, finalizeSent: false };
+    pending.finalizeFrame = { type: 'recording-finalize', segmentId: metadata.segmentId, bytes: metadata.bytes, digest: metadata.digest, previousDigest: metadata.previousDigest, closedAt: metadata.closedAt };
+    pendingFinalized.set(metadata.segmentId, pending);
+    recorder = null; lastCheckpointBytes = 0;
+    try { if (sendControl(pending.finalizeFrame, { failOnBackpressure: true })) pending.finalizeSent = true; } catch {}
     return metadata;
   }
-  function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(() => stop('idle-timeout'), idleTimeoutMs); idleTimer.unref?.(); }
+  function clearIdle() { clearTimeout(idleTimer); idleTimer = null; }
+  function resetIdle() {
+    if (!child || closed) return clearIdle();
+    clearIdle(); idleTimer = setTimeout(() => closeShell('idle-timeout'), idleTimeoutMs); idleTimer.unref?.();
+  }
   function record(type, data = {}) { if (!recorder) throw new Error('Recorder is not ready.'); return recorder.append(type, data); }
   function onOutput(data, stream) {
     if (!recorder) return;
     try {
       const encoded = Buffer.from(data, 'utf8').toString('base64');
       record('output', { ...(stream ? { stream } : {}), encoding: 'base64', data: encoded }); checkpoint();
-      try { send({ type: 'output', ...(stream ? { stream } : {}), data: encoded }); } catch {}
+      try { sendControl({ type: 'output', ...(stream ? { stream } : {}), data: encoded }, { failOnBackpressure: true }); }
+      catch (error) { if (error?.message !== 'Support relay backpressure limit exceeded.') failClosed('relay-send-failure'); }
       resetIdle();
     } catch { stop('recording-output-failure'); }
   }
   function launchShell(width = 120, height = 40) {
     if (child || closed || now() >= expiresAt) return false;
     if (![width, height].every((value) => Number.isInteger(value) && value >= 1 && value <= 1000)) throw new Error('Invalid terminal size.');
-    recorder = new RecordingSegment({ root: recordingDir, sessionId, width, height, quota });
+    recorder = new RecordingSegment({ root: recordingDir, sessionId, width, height, quota, ownerUid: recordingOwnerUid, ownerGid: recordingOwnerGid });
     if (resumed) record('reboot', { marker: 'control-plane-resume' });
     record('marker', { marker: 'shell-start' });
     const spawn = ptySpawn || require('node-pty').spawn;
@@ -95,14 +130,20 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     child.onData((data) => onOutput(data));
     child.onExit(({ exitCode, signal }) => {
       try { if (recorder) { record('exit', { code: exitCode, signal }); finalizeRecorder(); } } catch { stop('recording-exit-failure'); }
-      child = null; try { send({ type: 'exit', code: exitCode, signal }); } catch {} resetIdle();
+      child = null; clearIdle(); try { send({ type: 'exit', code: exitCode, signal }); } catch {}
     });
     resetIdle(); return true;
   }
+  function closeShell(reason) {
+    clearIdle();
+    const current = child;
+    child = null;
+    try { if (recorder) { record('stop', { reason }); finalizeRecorder(); } } catch { /* finalization is best effort; the session remains reconnectable */ }
+    try { current?.kill('SIGHUP'); } catch {}
+    try { send({ type: 'shell-closed', reason }); } catch {}
+  }
   function stop(reason) {
-    if (closed) return; closed = true; clearTimeout(detachedTimer); clearTimeout(idleTimer); clearTimeout(reconnectTimer);
-    try { if (recorder) { record('stop', { reason }); finalizeRecorder(); } } catch {}
-    try { child?.kill('SIGHUP'); } catch {} child = null; try { socket?.close(1000, String(reason).slice(0, 120)); } catch {}
+    if (closed) return; closed = true; stopReason = reason; clearTimeout(detachedTimer); clearTimeout(reconnectTimer); closeShell(reason); try { socket?.close(1000, String(reason).slice(0, 120)); } catch {}
   }
   function failClosed(reason) { try { send({ type: 'error', reason }); } catch {} stop(reason); }
   function scheduleReconnect() {
@@ -117,12 +158,14 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     socket.on('message', (raw) => {
       if (closed || raw.length > MAX_FRAME_BYTES) return failClosed('oversized-frame');
       let message; try { message = JSON.parse(raw.toString('utf8')); } catch { return failClosed('invalid-control-frame'); }
-      if (message.version !== SUPPORT_PROTOCOL_VERSION || (Number.isInteger(message.seq) && message.seq <= incomingSeq)) return failClosed('out-of-order-frame');
-      if (Number.isInteger(message.seq)) incomingSeq = message.seq;
+      if (message.version !== SUPPORT_PROTOCOL_VERSION) return failClosed('invalid-frame-version');
+      if (!Number.isSafeInteger(message.seq)) return failClosed('invalid-frame-sequence');
+      if (message.seq <= incomingSeq) return failClosed('out-of-order-frame');
+      incomingSeq = message.seq;
       try {
         if (message.type === 'ready') {
           if (message.reconnectToken) { relayToken = message.reconnectToken; writeReconnectToken(reconnectTokenFile, relayToken); }
-          clearTimeout(detachedTimer); detachedTimer = null; send({ type: child ? 'reattached' : 'recorder-ready', sessionId });
+          clearTimeout(detachedTimer); detachedTimer = null; send({ type: child ? 'reattached' : 'recorder-ready', sessionId }); flushPending();
         } else if (message.type === 'attach' || message.type === 'reattach') {
           const attached = launchShell(Number(message.width) || 120, Number(message.height) || 40); send({ type: attached ? 'attached' : 'shell-unavailable' });
         } else if (message.type === 'input') {
@@ -134,23 +177,25 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
           if (![width, height].every((value) => Number.isInteger(value) && value >= 1 && value <= 1000)) throw new Error('Invalid terminal size.');
           record('resize', { width, height }); child?.resize(width, height); checkpoint(); resetIdle();
         } else if (message.type === 'recording-receipt') {
-          if (!lastFinalized || message.segmentId !== lastFinalized.segmentId) throw new Error('Recording receipt does not match a finalized segment.');
-          writeAtomicJson(path.join(recordingDirectory(recordingDir, sessionId), `receipt-${message.segmentId}.json`), { schema: 1, sessionId, segmentId: message.segmentId, bytes: message.bytes, digest: message.digest, closedAt: message.closedAt, receipt: message });
+          const finalized = finalizedSegments.get(message.segmentId);
+          if (!finalized || finalized.bytes !== message.bytes || finalized.digest !== message.digest || finalized.closedAt !== message.closedAt) throw new Error('Recording receipt does not match a finalized segment.');
+          writeAtomicJson(path.join(recordingDirectory(recordingDir, sessionId), `receipt-${message.segmentId}.json`), { schema: 1, sessionId, segmentId: message.segmentId, bytes: message.bytes, digest: message.digest, closedAt: message.closedAt, previousDigest: finalized.previousDigest, receipt: message }, { ownerUid: recordingOwnerUid, ownerGid: recordingOwnerGid });
+          pendingFinalized.delete(message.segmentId);
         } else if (message.type === 'close') stop(message.reason || 'relay-closed');
       } catch { failClosed('recording-input-failure'); }
     });
     socket.on('close', () => {
       if (closed) return; clearTimeout(detachedTimer);
-      if (child) { detachedTimer = setTimeout(() => { try { child?.kill('SIGHUP'); } catch {} child = null; try { finalizeRecorder(); } catch {} }, detachedGraceMs); detachedTimer.unref?.(); }
+      if (child) { detachedTimer = setTimeout(() => closeShell('operator-detached-timeout'), detachedGraceMs); detachedTimer.unref?.(); }
       scheduleReconnect();
     });
     socket.on('error', () => { if (!closed) scheduleReconnect(); });
   }
-  return { start() { connect(readInitialToken(connectorTokenFile, reconnectTokenFile)); setTimeout(() => stop('session-expired'), Math.max(1, expiresAt - now())).unref?.(); }, stop, launchShell, getState: () => ({ closed, hasChild: Boolean(child), hasRecorder: Boolean(recorder), relayToken, quotaBytes: quota.bytes }) };
+  return { start() { connect(readInitialToken(connectorTokenFile, reconnectTokenFile)); setTimeout(() => stop('session-expired'), Math.max(1, expiresAt - now())).unref?.(); }, stop, launchShell, getState: () => ({ closed, hasChild: Boolean(child), hasRecorder: Boolean(recorder), relayToken, quotaBytes: quota.bytes, stopReason }) };
 }
 
 const sessionId = String(process.env.SUPPORT_SESSION_ID || '');
 if (sessionId && process.env.SUPPORT_RELAY_URL) {
-  const agent = createSupportAgent({ sessionId, relayUrl: String(process.env.SUPPORT_RELAY_URL), connectorTokenFile: process.env.SUPPORT_CONNECTOR_TOKEN_FILE || '/run/support-connector/connector-token', reconnectTokenFile: process.env.SUPPORT_RECONNECT_TOKEN_FILE || '/run/support-reconnect/token', recordingDir: process.env.SUPPORT_RECORDING_DIR || '/host/var/lib/alga-appliance/support-sessions/history', expiresAt: Date.parse(process.env.SUPPORT_EXPIRES_AT || ''), resumed: process.env.SUPPORT_RESUMED === '1' });
+  const agent = createSupportAgent({ sessionId, relayUrl: String(process.env.SUPPORT_RELAY_URL), connectorTokenFile: process.env.SUPPORT_CONNECTOR_TOKEN_FILE || '/run/support-connector/connector-token', reconnectTokenFile: process.env.SUPPORT_RECONNECT_TOKEN_FILE || '/run/support-reconnect/token', recordingDir: process.env.SUPPORT_RECORDING_DIR || '/host/var/lib/alga-appliance/support-sessions/history', expiresAt: Date.parse(process.env.SUPPORT_EXPIRES_AT || ''), resumed: process.env.SUPPORT_RESUMED === '1', recordingOwnerUid: Number(process.env.SUPPORT_RECORDING_OWNER_UID || SUPPORT_RECORDING_OWNER_UID), recordingOwnerGid: Number(process.env.SUPPORT_RECORDING_OWNER_GID || SUPPORT_RECORDING_OWNER_GID) });
   process.on('SIGTERM', () => agent.stop('agent-terminated')); process.on('SIGINT', () => agent.stop('agent-interrupted')); agent.start();
 }

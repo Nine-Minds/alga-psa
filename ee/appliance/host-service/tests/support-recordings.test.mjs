@@ -45,3 +45,22 @@ test('recording quota is shared across every segment in a session and playback d
   assert.match(playback.text, /first output/);
   assert.equal(MAX_RECORDING_BYTES, 100 * 1024 * 1024);
 });
+
+test('recording ownership and chained playback preserve secure modes and chronology', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-recording-order-'));
+  const first = new RecordingSegment({ root, sessionId: SESSION_ID, now: () => new Date(1000) });
+  first.append('output', { data: 'first\n' });
+  const firstMetadata = first.finalize();
+  const second = new RecordingSegment({ root, sessionId: SESSION_ID, now: () => new Date(2000) });
+  second.append('output', { data: 'second\n' });
+  const secondMetadata = second.finalize({ previousDigest: firstMetadata.digest });
+  const directory = recordingDirectory(root, SESSION_ID);
+  assert.equal(fs.statSync(directory).mode & 0o777, 0o700);
+  const segmentStat = fs.statSync(path.join(directory, `segment-${firstMetadata.segmentId}.cast`));
+  assert.equal(segmentStat.mode & 0o777, 0o600);
+  assert.equal(segmentStat.uid, process.getuid());
+  assert.equal(segmentStat.gid, process.getgid());
+  assert.equal(secondMetadata.previousDigest, firstMetadata.digest);
+  const playback = recordingPlayback(root, SESSION_ID);
+  assert.equal(playback.text, 'first\nsecond\n');
+});
