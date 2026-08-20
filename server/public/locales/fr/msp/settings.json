@@ -1353,7 +1353,7 @@
       "previewAlt": "Aperçu du thème personnalisé",
       "seededFrom": "Ces couleurs partent du thème {{pair}} : modifiez seulement celles qui vous importent, les gammes complètes suivent.",
       "contrastTitle": "Ces couleurs sont trop proches pour être lisibles. Corrigez-les avant d’enregistrer :",
-      "contrastIssue": "{{foreground}} sur {{background}} n’atteint que {{ratio}}:1 alors que {{required}}:1 est le minimum. {{hint}}",
+      "contrastIssue": "{{foreground}} risque d’être difficile à lire sur {{background}}. {{hint}}",
       "tokens": {
         "background": "Arrière-plan de la page",
         "card": "Surface de carte",

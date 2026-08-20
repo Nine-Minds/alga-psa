@@ -102,6 +102,7 @@ describe('Copy portal link placement', () => {
   it('is offered on the client portal branding screen', () => {
     const settings = sourceOf('src/components/settings/general/ClientPortalSettings.tsx');
     expect(settings).toContain("import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton'");
+    expect(settings).toContain('headerAction={advancedAppearanceEnabled ? (');
     expect(settings).toContain('<CopyClientPortalLinkButton id="copy-client-portal-link-branding-button" />');
   });
 

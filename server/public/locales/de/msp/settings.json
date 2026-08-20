@@ -1353,7 +1353,7 @@
       "previewAlt": "Vorschau des eigenen Designs",
       "seededFrom": "Diese Farben starten beim Design {{pair}} – ändern Sie nur die wenigen, die Sie brauchen, die vollen Farbskalen folgen automatisch.",
       "contrastTitle": "Diese Farben liegen zu nah beieinander und sind schlecht lesbar. Bitte vor dem Speichern korrigieren:",
-      "contrastIssue": "{{foreground}} auf {{background}} erreicht nur {{ratio}}:1, mindestens nötig sind {{required}}:1. {{hint}}",
+      "contrastIssue": "{{foreground}} ist auf {{background}} möglicherweise schwer lesbar. {{hint}}",
       "tokens": {
         "background": "Seitenhintergrund",
         "card": "Kartenfläche",

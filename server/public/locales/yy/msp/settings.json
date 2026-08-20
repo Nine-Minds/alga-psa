@@ -1353,7 +1353,7 @@
       "previewAlt": "55555",
       "seededFrom": "55555 {{pair}} 55555",
       "contrastTitle": "55555",
-      "contrastIssue": "55555 {{foreground}} 55555 {{background}} 55555 {{ratio}} 55555 {{required}} 55555 {{hint}} 55555",
+      "contrastIssue": "55555 {{foreground}} 55555 {{background}} 55555 {{hint}} 55555",
       "tokens": {
         "background": "55555",
         "card": "55555",

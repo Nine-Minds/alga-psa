@@ -95,11 +95,11 @@ describe('generateBrandingStyles portal theme opt-in', () => {
     ).toBe('');
   });
 
-  it('still paints the Enterprise MSP shell, which has its own switch', () => {
-    const branded = generateBrandingStyles({ ...baseBranding, portalFollowsTheme: true }, { surface: 'msp' });
-
-    expect(branded).toBe(generateBrandingStyles(baseBranding, { surface: 'msp' }));
-    expect(branded).toContain('--color-primary-500');
+  it('never leaks client-portal accents into the Enterprise MSP shell', () => {
+    expect(generateBrandingStyles(baseBranding, { surface: 'msp' })).toBe('');
+    expect(
+      generateBrandingStyles({ ...baseBranding, portalFollowsTheme: true }, { surface: 'msp' }),
+    ).toBe('');
   });
 });
 

@@ -1314,11 +1314,11 @@
       },
       "ocean": {
         "label": "Ocean",
-        "description": "A navy side panel with cool blues over crisp, slightly cooled surfaces."
+        "description": "Deep navy and ink-blue surfaces with crisp royal-blue accents."
       },
       "sky": {
         "label": "Sky",
-        "description": "A lighter, airier blue with an indigo secondary."
+        "description": "Bright sky blue and cyan over airy, aqua-tinted surfaces."
       },
       "forest": {
         "label": "Forest",
@@ -1334,7 +1334,7 @@
       },
       "vice": {
         "label": "Vice",
-        "description": "Neon pink and cyan over a Miami-night purple."
+        "description": "Neon teal, violet, cyan, coral, and pink over a Miami-night purple."
       },
       "highContrast": {
         "label": "High contrast",
@@ -1353,7 +1353,7 @@
       "previewAlt": "Custom theme preview",
       "seededFrom": "These colors start from the {{pair}} theme — change the few you care about and the full scales follow.",
       "contrastTitle": "These colors are too close together to read. Fix them before saving:",
-      "contrastIssue": "{{foreground}} on {{background}} is only {{ratio}}:1, and {{required}}:1 is the minimum. {{hint}}",
+      "contrastIssue": "{{foreground}} may be hard to read on {{background}}. {{hint}}",
       "tokens": {
         "background": "Page background",
         "card": "Card surface",
@@ -1409,7 +1409,7 @@
       },
       "colors": {
         "label": "Enable MSP UI customization",
-        "help": "Off by default. When enabled and applied, the MSP app uses the shared logo and your primary and secondary brand colors."
+        "help": "Off by default. When enabled and applied, the MSP app uses the shared logo while its colors continue to come from the organization theme above."
       }
     },
     "messages": {

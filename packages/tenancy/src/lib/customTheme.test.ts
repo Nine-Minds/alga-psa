@@ -7,6 +7,7 @@ import {
   describeContrastIssue,
   findInvalidCustomThemeTokens,
   generateCustomThemeStyles,
+  hexToRgbTuple,
   validateCustomThemeContrast,
 } from './customTheme';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme } from './tenantTheme';
@@ -99,8 +100,10 @@ describe('custom theme validation', () => {
     expect(light.foreground).toBe('textPrimary');
     expect(light.background).toBe('background');
     expect(light.fix).toBe('darken');
-    expect(describeContrastIssue(light)).toContain('primary text on the page background');
-    expect(describeContrastIssue(light)).toContain('pick a darker primary text');
+    expect(describeContrastIssue(light)).toContain('primary text may be hard to read on the page background');
+    expect(describeContrastIssue(light)).toContain('darken primary text');
+    expect(describeContrastIssue(light)).not.toContain(`${light.ratio}:1`);
+    expect(describeContrastIssue(light)).not.toContain(`${light.required}:1`);
 
     const dark = issues.find((issue) => issue.mode === 'dark' && issue.pair === 'textPrimary/background')!;
     expect(dark.fix).toBe('lighten');
@@ -133,6 +136,40 @@ describe('custom theme presets', () => {
       expect(findInvalidCustomThemeTokens(preset.dark), pairId).toEqual([]);
       expect(validateCustomThemeContrast(preset), pairId).toEqual([]);
     });
+  });
+
+  it('keeps Ocean visibly navy and Sky visibly aquatic', () => {
+    const distance = (left: string, right: string) => {
+      const a = hexToRgbTuple(left)!;
+      const b = hexToRgbTuple(right)!;
+      return Math.hypot(...a.map((channel, index) => channel - b[index]));
+    };
+
+    expect(distance(CUSTOM_THEME_PRESETS.ocean.light.primary, CUSTOM_THEME_PRESETS.sky.light.primary))
+      .toBeGreaterThan(50);
+    expect(distance(CUSTOM_THEME_PRESETS.ocean.light.sidebarBg, CUSTOM_THEME_PRESETS.sky.light.sidebarBg))
+      .toBeGreaterThan(60);
+    expect(distance(CUSTOM_THEME_PRESETS.ocean.dark.card, CUSTOM_THEME_PRESETS.sky.dark.card))
+      .toBeGreaterThan(20);
+  });
+
+  it('keeps Cappuccino secondary colors in the warm coffee family', () => {
+    (['light', 'dark'] as const).forEach((mode) => {
+      const [red, green, blue] = hexToRgbTuple(CUSTOM_THEME_PRESETS.cappuccino[mode].secondary)!;
+      expect(red, mode).toBeGreaterThan(green);
+      expect(green, mode).toBeGreaterThan(blue);
+    });
+    expect(CUSTOM_THEME_PRESETS.cappuccino.dark.secondary).toBe('#462f1e');
+  });
+
+  it('anchors Vice to its neon teal, violet, cyan, coral, and pink palette', () => {
+    const vice = CUSTOM_THEME_PRESETS.vice;
+    expect(vice.light.primary).toBe('#be00fe');
+    expect(vice.dark.primary).toBe('#be00fe');
+    expect(vice.light.secondary).toBe('#007f7f');
+    expect(vice.dark.secondary).toBe('#16e3f9');
+    expect(vice.light.accent).toBe('#fe5733');
+    expect(vice.dark.accent).toBe('#fe6dc6');
   });
 
   // Same rule the predefined pairs follow: the shell ground (border-100, what

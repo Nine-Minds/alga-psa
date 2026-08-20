@@ -1353,7 +1353,7 @@
       "previewAlt": "Voorbeeld van het eigen thema",
       "seededFrom": "Deze kleuren beginnen bij het thema {{pair}} — pas alleen aan wat u wilt, de volledige kleurenreeksen volgen.",
       "contrastTitle": "Deze kleuren liggen te dicht bij elkaar om leesbaar te zijn. Pas ze aan voordat u opslaat:",
-      "contrastIssue": "{{foreground}} op {{background}} haalt maar {{ratio}}:1, terwijl {{required}}:1 het minimum is. {{hint}}",
+      "contrastIssue": "{{foreground}} is mogelijk moeilijk leesbaar op {{background}}. {{hint}}",
       "tokens": {
         "background": "Paginaachtergrond",
         "card": "Kaartvlak",

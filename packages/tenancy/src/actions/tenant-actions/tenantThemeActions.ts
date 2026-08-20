@@ -83,7 +83,7 @@ export const updateTenantThemeAction = withAuth(
       const issues = validateCustomThemeContrast(rawCustom);
       if (issues.length) {
         const detail = issues.map(describeContrastIssue).join('; ');
-        throw new Error(`These colors are too close together to read: ${detail}`);
+        throw new Error(`Some theme text may be hard to read: ${detail}`);
       }
 
       customTheme = {

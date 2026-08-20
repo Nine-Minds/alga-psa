@@ -17,7 +17,7 @@ const DEV_HOSTS = new Set([
   '[::1]',
 ]);
 
-interface TenantPortalConfig {
+export interface TenantPortalConfig {
   branding: TenantBranding | null;
   locale: SupportedLocale | null;
   theme: TenantTheme;
@@ -140,6 +140,48 @@ const getTenantPortalConfigCached = unstable_cache(
   }
 );
 
+async function fetchTenantPortalConfigBySlug(slug: string): Promise<TenantPortalConfig> {
+  try {
+    const tenantId = await getTenantIdBySlug(slug.toLowerCase());
+    if (!tenantId) {
+      return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
+    }
+
+    const tenantSettings = await getTenantSettings(tenantId);
+    if (!tenantSettings?.settings) {
+      return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
+    }
+
+    return {
+      branding: scopeBrandingToEdition(
+        tenantSettings.settings.branding || null,
+        isEnterprise,
+      ),
+      locale: normalizeLocale(tenantSettings.settings.clientPortal?.defaultLocale)
+        ?? normalizeLocale(tenantSettings.settings.defaultLocale),
+      theme: isEnterprise
+        ? normalizeTenantTheme(tenantSettings.settings.theme)
+        : DEFAULT_TENANT_THEME,
+    };
+  } catch (error) {
+    console.error('[getTenantPortalConfigBySlug] Error fetching portal config:', error);
+    return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
+  }
+}
+
+const getTenantPortalConfigBySlugCached = unstable_cache(
+  fetchTenantPortalConfigBySlug,
+  ['tenant-portal-config-by-slug'],
+  {
+    revalidate: 300,
+    tags: ['tenant-portal-config'],
+  },
+);
+
+export async function getTenantPortalConfigBySlug(slug: string): Promise<TenantPortalConfig> {
+  return getTenantPortalConfigBySlugCached(slug);
+}
+
 export async function getTenantBrandingByDomain(domain: string): Promise<TenantBranding | null> {
   const config = await getTenantPortalConfigCached(domain);
   return config.branding;
@@ -147,6 +189,16 @@ export async function getTenantBrandingByDomain(domain: string): Promise<TenantB
 
 export async function getTenantThemeByDomain(domain: string): Promise<TenantTheme> {
   const config = await getTenantPortalConfigCached(domain);
+  return config.theme ?? DEFAULT_TENANT_THEME;
+}
+
+export async function getTenantBrandingBySlug(slug: string): Promise<TenantBranding | null> {
+  const config = await getTenantPortalConfigBySlugCached(slug);
+  return config.branding;
+}
+
+export async function getTenantThemeBySlug(slug: string): Promise<TenantTheme> {
+  const config = await getTenantPortalConfigBySlugCached(slug);
   return config.theme ?? DEFAULT_TENANT_THEME;
 }
 

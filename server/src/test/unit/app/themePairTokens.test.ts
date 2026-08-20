@@ -167,4 +167,16 @@ describe('theme pair token blocks', () => {
         expect(tokens['--color-background'], selector).not.toBe(tokens['--color-card']);
       });
   });
+
+  it('does not globally erase native data-table header borders', () => {
+    expect(css).not.toContain('thead tr th,');
+    expect(css).not.toContain('table th,');
+  });
+
+  it('inverts high-contrast switch surfaces between off and on', () => {
+    expect(css).toContain('html[data-theme-pair="high-contrast"] .switch-root {');
+    expect(css).toContain('box-shadow: inset 0 0 0 2px rgb(var(--color-border-200));');
+    expect(css).toContain('html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] {');
+    expect(css).toContain('html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] .switch-thumb {');
+  });
 });

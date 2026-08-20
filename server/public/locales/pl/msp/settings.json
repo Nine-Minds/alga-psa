@@ -1359,7 +1359,7 @@
       "previewAlt": "Podgląd motywu własnego",
       "seededFrom": "Te kolory wychodzą z motywu {{pair}} — zmień tylko te, na których Ci zależy, a pełne skale dostosują się same.",
       "contrastTitle": "Te kolory są zbyt podobne, aby dało się je odczytać. Popraw je przed zapisaniem:",
-      "contrastIssue": "{{foreground}} na {{background}} osiąga tylko {{ratio}}:1, a minimum to {{required}}:1. {{hint}}",
+      "contrastIssue": "{{foreground}} może być trudny do odczytania na tle {{background}}. {{hint}}",
       "tokens": {
         "background": "Tło strony",
         "card": "Powierzchnia karty",

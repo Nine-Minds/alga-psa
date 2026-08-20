@@ -300,6 +300,13 @@ html .radix-themes {
     color: rgb(var(--color-text-400)) !important;
 }
 
+/* The rail can remain dark while the page is using a light theme. Its search
+   hint must therefore use a rail token, not the page's placeholder token. */
+.app-sidebar-search-input::placeholder {
+    color: rgb(var(--color-sidebar-icon)) !important;
+    opacity: 0.85;
+}
+
 .extension-loading-overlay {
     position: absolute;
     inset: 0;
@@ -994,81 +1001,81 @@ html.dark[data-theme-pair="slate"] {
 }
 
 html.light[data-theme-pair="ocean"] {
-    --background: 247, 250, 253;
-    --color-background: 247 250 253;
+    --background: 245, 247, 251;
+    --color-background: 245 247 251;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
     --color-status-success: 22 163 74;
-    --color-status-success-foreground: 15 30 41;
+    --color-status-success-foreground: 16 24 40;
     --color-status-warning: 217 119 6;
-    --color-status-warning-foreground: 15 30 41;
+    --color-status-warning-foreground: 16 24 40;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 15 30 41;
+    --color-status-error-foreground: 16 24 40;
 
     /* BORDER COLOR */
-    --color-border-base: 147 167 186;
-    --color-border-50: 244 248 251;
-    --color-border-100: 234 241 247;
-    --color-border-200: 217 226 236;
-    --color-border-300: 194 208 222;
-    --color-border-400: 147 167 186;
-    --color-border-500: 92 114 133;
-    --color-border-600: 69 90 107;
-    --color-border-700: 51 70 86;
-    --color-border-800: 34 50 63;
-    --color-border-900: 15 30 41;
+    --color-border-base: 152 162 179;
+    --color-border-50: 238 242 248;
+    --color-border-100: 223 228 235;
+    --color-border-200: 208 213 221;
+    --color-border-300: 180 188 200;
+    --color-border-400: 152 162 179;
+    --color-border-500: 102 112 133;
+    --color-border-600: 52 64 84;
+    --color-border-700: 40 51 69;
+    --color-border-800: 28 37 55;
+    --color-border-900: 16 24 40;
 
     /* TEXT COLORS */
-    --color-text-base: 147 167 186;
-    --color-text-50: 244 248 251;
-    --color-text-100: 234 241 247;
-    --color-text-200: 217 226 236;
-    --color-text-300: 194 208 222;
-    --color-text-400: 147 167 186;
-    --color-text-500: 92 114 133;
-    --color-text-600: 69 90 107;
-    --color-text-700: 51 70 86;
-    --color-text-800: 34 50 63;
-    --color-text-900: 15 30 41;
+    --color-text-base: 152 162 179;
+    --color-text-50: 238 242 248;
+    --color-text-100: 223 228 235;
+    --color-text-200: 208 213 221;
+    --color-text-300: 180 188 200;
+    --color-text-400: 152 162 179;
+    --color-text-500: 102 112 133;
+    --color-text-600: 52 64 84;
+    --color-text-700: 40 51 69;
+    --color-text-800: 28 37 55;
+    --color-text-900: 16 24 40;
 
     --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 239 248 253;
-    --color-primary-100: 192 225 242;
-    --color-primary-200: 144 202 231;
-    --color-primary-300: 97 178 221;
-    --color-primary-400: 49 155 210;
-    --color-primary-500: 2 132 199;
-    --color-primary-600: 3 114 172;
-    --color-primary-700: 4 96 144;
-    --color-primary-800: 4 78 117;
-    --color-primary-900: 5 60 89;
+    --color-primary-50: 244 246 253;
+    --color-primary-100: 232 237 251;
+    --color-primary-200: 199 211 245;
+    --color-primary-300: 165 184 239;
+    --color-primary-400: 97 131 228;
+    --color-primary-500: 29 78 216;
+    --color-primary-600: 25 66 184;
+    --color-primary-700: 20 55 151;
+    --color-primary-800: 15 39 108;
+    --color-primary-900: 9 23 65;
 
     /* secondary */
-    --color-secondary-50: 239 252 250;
-    --color-secondary-100: 195 238 233;
-    --color-secondary-200: 151 225 216;
-    --color-secondary-300: 108 211 200;
-    --color-secondary-400: 64 198 183;
-    --color-secondary-500: 20 184 166;
-    --color-secondary-600: 18 161 145;
-    --color-secondary-700: 15 138 124;
-    --color-secondary-800: 13 114 103;
-    --color-secondary-900: 10 91 82;
+    --color-secondary-50: 243 248 248;
+    --color-secondary-100: 231 241 241;
+    --color-secondary-200: 195 221 219;
+    --color-secondary-300: 159 200 197;
+    --color-secondary-400: 87 159 154;
+    --color-secondary-500: 15 118 110;
+    --color-secondary-600: 13 100 94;
+    --color-secondary-700: 11 83 77;
+    --color-secondary-800: 8 59 55;
+    --color-secondary-900: 5 35 33;
 
     /* accent */
-    --color-accent-50: 255 248 235;
-    --color-accent-100: 253 230 190;
-    --color-accent-200: 251 212 145;
-    --color-accent-300: 249 194 101;
-    --color-accent-400: 247 176 56;
-    --color-accent-500: 245 158 11;
-    --color-accent-600: 214 138 10;
-    --color-accent-700: 184 119 8;
-    --color-accent-800: 153 99 7;
-    --color-accent-900: 122 79 5;
+    --color-accent-50: 253 248 243;
+    --color-accent-100: 251 241 230;
+    --color-accent-200: 246 221 193;
+    --color-accent-300: 240 201 155;
+    --color-accent-400: 228 160 81;
+    --color-accent-500: 217 119 6;
+    --color-accent-600: 184 101 5;
+    --color-accent-700: 152 83 4;
+    --color-accent-800: 109 60 3;
+    --color-accent-900: 65 36 2;
 
     --color-destructive: 220 38 38;
     --color-destructive-foreground: 153 27 27;
@@ -1077,37 +1084,37 @@ html.light[data-theme-pair="ocean"] {
     --color-alert-destructive-bg: 254 242 242;
     --color-alert-warning-bg: 255 251 235;
     --color-alert-success-bg: 240 253 244;
-    --color-alert-info-bg: 239 248 253;
+    --color-alert-info-bg: 244 246 253;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 244 248 251;
-    --color-table-hover: 231 243 251;
-    --color-table-selected: 213 233 247;
+    --color-table-row-alt: 238 242 248;
+    --color-table-hover: 219 227 247;
+    --color-table-selected: 202 213 244;
     --color-table-status-approved: 240 253 244;
     --color-table-status-warning: 255 242 221;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 16 47 82;
-    --color-sidebar-text: 226 236 246;
-    --color-sidebar-hover: 23 65 111;
-    --color-sidebar-icon: 138 164 187;
+    --color-sidebar-bg: 8 26 51;
+    --color-sidebar-text: 234 242 255;
+    --color-sidebar-hover: 16 47 87;
+    --color-sidebar-icon: 144 156 173;
 
     /* Header Colors */
     --color-header-bg: 255 255 255;
-    --color-header-text: 15 30 41;
-    --color-header-border: 217 226 236;
+    --color-header-text: 16 24 40;
+    --color-header-border: 208 213 221;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 22 55 93;
-    --color-submenu-text: 226 236 246;
-    --color-submenu-hover: 29 72 119;
-    --color-submenu-icon: 138 164 187;
+    --color-submenu-bg: 12 37 69;
+    --color-submenu-text: 234 242 255;
+    --color-submenu-hover: 21 59 104;
+    --color-submenu-icon: 144 156 173;
 }
 
 html.dark[data-theme-pair="ocean"] {
-    --background: 5, 8, 15;
-    --color-background: 5 8 15;
-    --color-card: 13 23 38;
+    --background: 4, 8, 20;
+    --color-background: 4 8 20;
+    --color-card: 11 19 36;
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
@@ -1118,68 +1125,68 @@ html.dark[data-theme-pair="ocean"] {
     --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
-    --color-border-base: 42 60 82;
-    --color-border-50: 7 13 22;
-    --color-border-100: 10 20 32;
-    --color-border-200: 28 43 61;
-    --color-border-300: 35 53 73;
-    --color-border-400: 42 60 82;
-    --color-border-500: 95 124 150;
-    --color-border-600: 138 164 187;
-    --color-border-700: 182 203 221;
-    --color-border-800: 208 224 238;
-    --color-border-900: 226 236 246;
+    --color-border-base: 51 68 95;
+    --color-border-50: 7 13 27;
+    --color-border-100: 9 16 31;
+    --color-border-200: 30 42 64;
+    --color-border-300: 41 55 80;
+    --color-border-400: 51 68 95;
+    --color-border-500: 132 148 173;
+    --color-border-600: 184 197 218;
+    --color-border-700: 202 212 230;
+    --color-border-800: 219 228 243;
+    --color-border-900: 237 243 255;
 
     /* TEXT COLORS */
-    --color-text-base: 42 60 82;
-    --color-text-50: 7 13 22;
-    --color-text-100: 10 20 32;
-    --color-text-200: 28 43 61;
-    --color-text-300: 35 53 73;
-    --color-text-400: 42 60 82;
-    --color-text-500: 95 124 150;
-    --color-text-600: 138 164 187;
-    --color-text-700: 182 203 221;
-    --color-text-800: 208 224 238;
-    --color-text-900: 226 236 246;
+    --color-text-base: 51 68 95;
+    --color-text-50: 7 13 27;
+    --color-text-100: 9 16 31;
+    --color-text-200: 30 42 64;
+    --color-text-300: 41 55 80;
+    --color-text-400: 51 68 95;
+    --color-text-500: 132 148 173;
+    --color-text-600: 184 197 218;
+    --color-text-700: 202 212 230;
+    --color-text-800: 219 228 243;
+    --color-text-900: 237 243 255;
 
-    --color-switch-thumb: 200 217 232;
+    --color-switch-thumb: 219 228 243;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 11 32 51;
-    --color-primary-100: 9 52 81;
-    --color-primary-200: 7 72 110;
-    --color-primary-300: 6 92 140;
-    --color-primary-400: 4 112 169;
-    --color-primary-500: 2 132 199;
-    --color-primary-600: 48 157 213;
-    --color-primary-700: 94 181 226;
-    --color-primary-800: 140 206 240;
-    --color-primary-900: 186 230 253;
+    --color-primary-50: 18 39 74;
+    --color-primary-100: 30 65 123;
+    --color-primary-200: 41 91 172;
+    --color-primary-300: 50 111 209;
+    --color-primary-400: 118 168 249;
+    --color-primary-500: 59 130 246;
+    --color-primary-600: 177 205 251;
+    --color-primary-700: 206 224 253;
+    --color-primary-800: 235 243 254;
+    --color-primary-900: 245 249 255;
 
     /* secondary */
-    --color-secondary-50: 7 35 31;
-    --color-secondary-100: 10 65 58;
-    --color-secondary-200: 12 95 85;
-    --color-secondary-300: 15 124 112;
-    --color-secondary-400: 17 154 139;
-    --color-secondary-500: 20 184 166;
-    --color-secondary-600: 53 200 182;
-    --color-secondary-700: 87 215 197;
-    --color-secondary-800: 120 231 213;
-    --color-secondary-900: 153 246 228;
+    --color-secondary-50: 14 64 57;
+    --color-secondary-100: 23 106 96;
+    --color-secondary-200: 31 148 134;
+    --color-secondary-300: 38 180 162;
+    --color-secondary-400: 108 225 210;
+    --color-secondary-500: 45 212 191;
+    --color-secondary-600: 171 238 229;
+    --color-secondary-700: 203 244 239;
+    --color-secondary-800: 234 251 249;
+    --color-secondary-900: 245 253 252;
 
     /* accent */
-    --color-accent-50: 42 28 5;
-    --color-accent-100: 83 54 6;
-    --color-accent-200: 123 80 7;
-    --color-accent-300: 164 106 9;
-    --color-accent-400: 204 132 10;
+    --color-accent-50: 74 47 3;
+    --color-accent-100: 123 79 6;
+    --color-accent-200: 172 111 8;
+    --color-accent-300: 208 134 9;
+    --color-accent-400: 248 187 84;
     --color-accent-500: 245 158 11;
-    --color-accent-600: 247 176 43;
-    --color-accent-700: 249 194 75;
-    --color-accent-800: 251 212 106;
-    --color-accent-900: 253 230 138;
+    --color-accent-600: 251 216 157;
+    --color-accent-700: 253 231 194;
+    --color-accent-800: 254 245 231;
+    --color-accent-900: 255 250 243;
 
     --color-destructive: 239 68 68;
     --color-destructive-foreground: 254 202 202;
@@ -1188,109 +1195,109 @@ html.dark[data-theme-pair="ocean"] {
     --color-alert-destructive-bg: 51 25 26;
     --color-alert-warning-bg: 51 40 7;
     --color-alert-success-bg: 11 42 32;
-    --color-alert-info-bg: 11 32 51;
+    --color-alert-info-bg: 18 39 74;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 10 20 32;
-    --color-table-hover: 16 36 54;
-    --color-table-selected: 21 49 72;
+    --color-table-row-alt: 7 13 27;
+    --color-table-hover: 11 23 47;
+    --color-table-selected: 15 32 65;
     --color-table-status-approved: 10 36 25;
     --color-table-status-warning: 46 36 16;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 15 37 64;
-    --color-sidebar-text: 226 236 246;
-    --color-sidebar-hover: 22 58 95;
-    --color-sidebar-icon: 138 164 187;
+    --color-sidebar-bg: 6 21 43;
+    --color-sidebar-text: 237 243 255;
+    --color-sidebar-hover: 16 43 79;
+    --color-sidebar-icon: 145 154 170;
 
     /* Header Colors */
-    --color-header-bg: 13 23 38;
-    --color-header-text: 226 236 246;
-    --color-header-border: 28 43 61;
+    --color-header-bg: 11 19 36;
+    --color-header-text: 237 243 255;
+    --color-header-border: 30 42 64;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 26 58 94;
-    --color-submenu-text: 226 236 246;
-    --color-submenu-hover: 34 73 111;
-    --color-submenu-icon: 138 164 187;
+    --color-submenu-bg: 12 36 67;
+    --color-submenu-text: 237 243 255;
+    --color-submenu-hover: 20 56 95;
+    --color-submenu-icon: 145 154 170;
 }
 
 html.light[data-theme-pair="sky"] {
-    --background: 247, 251, 255;
-    --color-background: 247 251 255;
+    --background: 243, 251, 255;
+    --color-background: 243 251 255;
     --color-card: 255 255 255;
 
     /* STATUS COLORS */
     --color-status-success: 22 163 74;
-    --color-status-success-foreground: 14 34 51;
+    --color-status-success-foreground: 8 47 73;
     --color-status-warning: 217 119 6;
-    --color-status-warning-foreground: 14 34 51;
+    --color-status-warning-foreground: 8 47 73;
     --color-status-error: 220 38 38;
-    --color-status-error-foreground: 14 34 51;
+    --color-status-error-foreground: 8 47 73;
 
     /* BORDER COLOR */
-    --color-border-base: 157 190 223;
-    --color-border-50: 239 246 253;
-    --color-border-100: 227 238 251;
-    --color-border-200: 211 228 246;
-    --color-border-300: 185 210 236;
-    --color-border-400: 157 190 223;
-    --color-border-500: 95 127 156;
-    --color-border-600: 70 97 123;
-    --color-border-700: 43 66 87;
-    --color-border-800: 28 47 64;
-    --color-border-900: 14 34 51;
+    --color-border-base: 125 195 232;
+    --color-border-50: 233 247 255;
+    --color-border-100: 216 240 252;
+    --color-border-200: 199 232 248;
+    --color-border-300: 162 214 240;
+    --color-border-400: 125 195 232;
+    --color-border-500: 84 117 138;
+    --color-border-600: 54 95 120;
+    --color-border-700: 39 79 104;
+    --color-border-800: 23 63 89;
+    --color-border-900: 8 47 73;
 
     /* TEXT COLORS */
-    --color-text-base: 157 190 223;
-    --color-text-50: 239 246 253;
-    --color-text-100: 227 238 251;
-    --color-text-200: 211 228 246;
-    --color-text-300: 185 210 236;
-    --color-text-400: 157 190 223;
-    --color-text-500: 95 127 156;
-    --color-text-600: 70 97 123;
-    --color-text-700: 43 66 87;
-    --color-text-800: 28 47 64;
-    --color-text-900: 14 34 51;
+    --color-text-base: 125 195 232;
+    --color-text-50: 233 247 255;
+    --color-text-100: 216 240 252;
+    --color-text-200: 199 232 248;
+    --color-text-300: 162 214 240;
+    --color-text-400: 125 195 232;
+    --color-text-500: 84 117 138;
+    --color-text-600: 54 95 120;
+    --color-text-700: 39 79 104;
+    --color-text-800: 23 63 89;
+    --color-text-900: 8 47 73;
 
     --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 240 249 252;
-    --color-primary-100: 195 229 244;
-    --color-primary-200: 149 209 236;
-    --color-primary-300: 104 189 228;
-    --color-primary-400: 58 169 220;
-    --color-primary-500: 13 149 212;
-    --color-primary-600: 11 129 183;
-    --color-primary-700: 10 108 154;
-    --color-primary-800: 8 88 124;
-    --color-primary-900: 6 67 95;
+    --color-primary-50: 242 249 252;
+    --color-primary-100: 230 243 249;
+    --color-primary-200: 192 224 241;
+    --color-primary-300: 154 206 233;
+    --color-primary-400: 78 169 216;
+    --color-primary-500: 2 132 199;
+    --color-primary-600: 2 112 169;
+    --color-primary-700: 1 92 139;
+    --color-primary-800: 1 66 100;
+    --color-primary-900: 1 40 60;
 
     /* secondary */
-    --color-secondary-50: 246 246 254;
-    --color-secondary-100: 217 217 251;
-    --color-secondary-200: 187 188 249;
-    --color-secondary-300: 158 160 246;
-    --color-secondary-400: 128 131 244;
-    --color-secondary-500: 99 102 241;
-    --color-secondary-600: 86 88 208;
-    --color-secondary-700: 72 74 175;
-    --color-secondary-800: 59 60 141;
-    --color-secondary-900: 45 46 108;
+    --color-secondary-50: 243 250 251;
+    --color-secondary-100: 230 244 247;
+    --color-secondary-200: 193 228 236;
+    --color-secondary-300: 156 211 224;
+    --color-secondary-400: 82 178 201;
+    --color-secondary-500: 8 145 178;
+    --color-secondary-600: 7 123 151;
+    --color-secondary-700: 6 102 125;
+    --color-secondary-800: 4 73 89;
+    --color-secondary-900: 2 44 53;
 
     /* accent */
-    --color-accent-50: 254 249 240;
-    --color-accent-100: 252 231 194;
-    --color-accent-200: 250 213 148;
-    --color-accent-300: 249 194 103;
-    --color-accent-400: 247 176 57;
-    --color-accent-500: 245 158 11;
-    --color-accent-600: 211 136 10;
-    --color-accent-700: 178 115 8;
-    --color-accent-800: 144 93 7;
-    --color-accent-900: 110 71 5;
+    --color-accent-50: 254 247 243;
+    --color-accent-100: 253 238 231;
+    --color-accent-200: 250 213 194;
+    --color-accent-300: 247 188 158;
+    --color-accent-400: 240 138 85;
+    --color-accent-500: 234 88 12;
+    --color-accent-600: 199 75 10;
+    --color-accent-700: 164 62 8;
+    --color-accent-800: 117 44 6;
+    --color-accent-900: 70 26 4;
 
     --color-destructive: 220 38 38;
     --color-destructive-foreground: 153 27 27;
@@ -1299,37 +1306,37 @@ html.light[data-theme-pair="sky"] {
     --color-alert-destructive-bg: 254 242 242;
     --color-alert-warning-bg: 255 251 235;
     --color-alert-success-bg: 240 253 244;
-    --color-alert-info-bg: 238 248 254;
+    --color-alert-info-bg: 242 249 252;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 239 246 253;
-    --color-table-hover: 230 244 253;
-    --color-table-selected: 207 233 251;
+    --color-table-row-alt: 233 247 255;
+    --color-table-hover: 214 237 248;
+    --color-table-selected: 195 227 244;
     --color-table-status-approved: 240 253 244;
     --color-table-status-warning: 255 242 221;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 30 58 95;
-    --color-sidebar-text: 230 241 251;
-    --color-sidebar-hover: 42 79 125;
-    --color-sidebar-icon: 168 196 222;
+    --color-sidebar-bg: 12 74 110;
+    --color-sidebar-text: 236 254 255;
+    --color-sidebar-hover: 7 89 133;
+    --color-sidebar-icon: 146 182 197;
 
     /* Header Colors */
     --color-header-bg: 255 255 255;
-    --color-header-text: 14 34 51;
-    --color-header-border: 211 228 246;
+    --color-header-text: 8 47 73;
+    --color-header-border: 199 232 248;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 36 70 111;
-    --color-submenu-text: 230 241 251;
-    --color-submenu-hover: 47 87 135;
-    --color-submenu-icon: 168 196 222;
+    --color-submenu-bg: 11 94 136;
+    --color-submenu-text: 236 254 255;
+    --color-submenu-hover: 8 118 165;
+    --color-submenu-icon: 146 182 197;
 }
 
 html.dark[data-theme-pair="sky"] {
-    --background: 10, 20, 32;
-    --color-background: 10 20 32;
-    --color-card: 22 39 60;
+    --background: 6, 20, 28;
+    --color-background: 6 20 28;
+    --color-card: 12 37 51;
 
     /* STATUS COLORS */
     --color-status-success: 16 185 129;
@@ -1340,68 +1347,68 @@ html.dark[data-theme-pair="sky"] {
     --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
-    --color-border-base: 57 84 112;
-    --color-border-50: 13 26 41;
-    --color-border-100: 17 36 56;
-    --color-border-200: 36 55 79;
-    --color-border-300: 46 69 95;
-    --color-border-400: 57 84 112;
-    --color-border-500: 126 154 180;
-    --color-border-600: 169 195 218;
-    --color-border-700: 203 220 236;
-    --color-border-800: 220 235 247;
-    --color-border-900: 230 241 251;
+    --color-border-base: 37 103 124;
+    --color-border-50: 8 27 37;
+    --color-border-100: 10 32 44;
+    --color-border-200: 23 66 82;
+    --color-border-300: 30 85 103;
+    --color-border-400: 37 103 124;
+    --color-border-500: 120 170 189;
+    --color-border-600: 169 214 229;
+    --color-border-700: 190 226 238;
+    --color-border-800: 211 239 246;
+    --color-border-900: 232 251 255;
 
     /* TEXT COLORS */
-    --color-text-base: 57 84 112;
-    --color-text-50: 13 26 41;
-    --color-text-100: 17 36 56;
-    --color-text-200: 36 55 79;
-    --color-text-300: 46 69 95;
-    --color-text-400: 57 84 112;
-    --color-text-500: 126 154 180;
-    --color-text-600: 169 195 218;
-    --color-text-700: 203 220 236;
-    --color-text-800: 220 235 247;
-    --color-text-900: 230 241 251;
+    --color-text-base: 37 103 124;
+    --color-text-50: 8 27 37;
+    --color-text-100: 10 32 44;
+    --color-text-200: 23 66 82;
+    --color-text-300: 30 85 103;
+    --color-text-400: 37 103 124;
+    --color-text-500: 120 170 189;
+    --color-text-600: 169 214 229;
+    --color-text-700: 190 226 238;
+    --color-text-800: 211 239 246;
+    --color-text-900: 232 251 255;
 
-    --color-switch-thumb: 220 235 247;
+    --color-switch-thumb: 211 239 246;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 3 30 42;
-    --color-primary-100: 5 54 76;
-    --color-primary-200: 7 78 110;
-    --color-primary-300: 9 101 144;
-    --color-primary-400: 11 125 178;
-    --color-primary-500: 13 149 212;
-    --color-primary-600: 46 164 218;
-    --color-primary-700: 80 178 224;
-    --color-primary-800: 113 193 230;
-    --color-primary-900: 146 207 236;
+    --color-primary-50: 1 40 60;
+    --color-primary-100: 1 66 100;
+    --color-primary-200: 1 92 139;
+    --color-primary-300: 2 112 169;
+    --color-primary-400: 78 169 216;
+    --color-primary-500: 2 132 199;
+    --color-primary-600: 154 206 233;
+    --color-primary-700: 192 224 241;
+    --color-primary-800: 230 243 249;
+    --color-primary-900: 242 249 252;
 
     /* secondary */
-    --color-secondary-50: 20 20 48;
-    --color-secondary-100: 36 36 87;
-    --color-secondary-200: 52 53 125;
-    --color-secondary-300: 67 69 164;
-    --color-secondary-400: 83 86 202;
-    --color-secondary-500: 99 102 241;
-    --color-secondary-600: 121 123 243;
-    --color-secondary-700: 142 144 245;
-    --color-secondary-800: 164 165 247;
-    --color-secondary-900: 185 186 249;
+    --color-secondary-50: 10 63 71;
+    --color-secondary-100: 17 106 119;
+    --color-secondary-200: 24 148 167;
+    --color-secondary-300: 29 179 202;
+    --color-secondary-400: 100 224 243;
+    --color-secondary-500: 34 211 238;
+    --color-secondary-600: 167 237 248;
+    --color-secondary-700: 200 244 251;
+    --color-secondary-800: 233 251 253;
+    --color-secondary-900: 244 253 254;
 
     /* accent */
-    --color-accent-50: 49 32 2;
-    --color-accent-100: 88 57 4;
-    --color-accent-200: 127 82 6;
-    --color-accent-300: 167 108 7;
-    --color-accent-400: 206 133 9;
-    --color-accent-500: 245 158 11;
-    --color-accent-600: 247 171 45;
-    --color-accent-700: 248 185 78;
-    --color-accent-800: 250 198 112;
-    --color-accent-900: 251 211 145;
+    --color-accent-50: 75 44 18;
+    --color-accent-100: 126 73 30;
+    --color-accent-200: 176 102 42;
+    --color-accent-300: 213 124 51;
+    --color-accent-400: 252 179 119;
+    --color-accent-500: 251 146 60;
+    --color-accent-600: 253 211 177;
+    --color-accent-700: 254 228 206;
+    --color-accent-800: 255 244 236;
+    --color-accent-900: 255 250 245;
 
     --color-destructive: 239 68 68;
     --color-destructive-foreground: 254 202 202;
@@ -1410,31 +1417,31 @@ html.dark[data-theme-pair="sky"] {
     --color-alert-destructive-bg: 51 25 26;
     --color-alert-warning-bg: 51 40 7;
     --color-alert-success-bg: 11 42 32;
-    --color-alert-info-bg: 12 43 67;
+    --color-alert-info-bg: 1 40 60;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 13 26 41;
-    --color-table-hover: 20 48 74;
-    --color-table-selected: 27 62 94;
+    --color-table-row-alt: 8 27 37;
+    --color-table-hover: 6 33 49;
+    --color-table-selected: 5 42 62;
     --color-table-status-approved: 10 36 25;
     --color-table-status-warning: 46 36 16;
 
     /* Sidebar Colors */
-    --color-sidebar-bg: 22 39 60;
-    --color-sidebar-text: 230 241 251;
-    --color-sidebar-hover: 34 54 79;
-    --color-sidebar-icon: 169 195 218;
+    --color-sidebar-bg: 8 47 73;
+    --color-sidebar-text: 236 254 255;
+    --color-sidebar-hover: 12 74 110;
+    --color-sidebar-icon: 145 171 182;
 
     /* Header Colors */
-    --color-header-bg: 22 39 60;
-    --color-header-text: 230 241 251;
-    --color-header-border: 36 55 79;
+    --color-header-bg: 12 37 51;
+    --color-header-text: 232 251 255;
+    --color-header-border: 23 66 82;
 
     /* SubMenu Colors */
-    --color-submenu-bg: 32 58 85;
-    --color-submenu-text: 230 241 251;
-    --color-submenu-hover: 42 74 107;
-    --color-submenu-icon: 169 195 218;
+    --color-submenu-bg: 12 74 110;
+    --color-submenu-text: 236 254 255;
+    --color-submenu-hover: 7 89 133;
+    --color-submenu-icon: 145 171 182;
 }
 
 html.light[data-theme-pair="forest"] {
@@ -2205,16 +2212,16 @@ html.light[data-theme-pair="cappuccino"] {
     --color-primary-900: 58 38 24;
 
     /* secondary */
-    --color-secondary-50: 231 241 238;
-    --color-secondary-100: 199 217 213;
-    --color-secondary-200: 167 193 187;
-    --color-secondary-300: 135 168 162;
-    --color-secondary-400: 103 144 136;
-    --color-secondary-500: 71 120 111;
-    --color-secondary-600: 60 102 95;
-    --color-secondary-700: 50 85 78;
-    --color-secondary-800: 40 68 62;
-    --color-secondary-900: 29 50 46;
+    --color-secondary-50: 249 245 241;
+    --color-secondary-100: 240 228 218;
+    --color-secondary-200: 220 194 174;
+    --color-secondary-300: 191 152 122;
+    --color-secondary-400: 145 100 67;
+    --color-secondary-500: 107 68 43;
+    --color-secondary-600: 91 58 37;
+    --color-secondary-700: 75 48 30;
+    --color-secondary-800: 54 34 22;
+    --color-secondary-900: 32 20 13;
 
     /* accent */
     --color-accent-50: 253 243 229;
@@ -2316,16 +2323,16 @@ html.dark[data-theme-pair="cappuccino"] {
     --color-primary-900: 240 200 155;
 
     /* secondary */
-    --color-secondary-50: 15 42 38;
-    --color-secondary-100: 28 61 56;
-    --color-secondary-200: 41 81 74;
-    --color-secondary-300: 53 100 92;
-    --color-secondary-400: 66 120 110;
-    --color-secondary-500: 79 139 128;
-    --color-secondary-600: 105 160 150;
-    --color-secondary-700: 131 180 171;
-    --color-secondary-800: 157 201 192;
-    --color-secondary-900: 183 222 214;
+    --color-secondary-50: 29 19 12;
+    --color-secondary-100: 38 25 16;
+    --color-secondary-200: 48 32 20;
+    --color-secondary-300: 59 39 25;
+    --color-secondary-400: 65 43 27;
+    --color-secondary-500: 70 47 30;
+    --color-secondary-600: 98 75 58;
+    --color-secondary-700: 128 107 90;
+    --color-secondary-800: 166 149 134;
+    --color-secondary-900: 211 201 191;
 
     /* accent */
     --color-accent-50: 58 36 8;
@@ -2415,40 +2422,40 @@ html.light[data-theme-pair="vice"] {
     --color-switch-thumb: 255 255 255;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 253 234 246;
-    --color-primary-100: 242 192 222;
-    --color-primary-200: 230 150 198;
-    --color-primary-300: 219 108 175;
-    --color-primary-400: 207 66 151;
-    --color-primary-500: 196 24 127;
-    --color-primary-600: 166 20 107;
-    --color-primary-700: 135 16 88;
-    --color-primary-800: 104 13 68;
-    --color-primary-900: 74 9 48;
+    --color-primary-50: 252 239 255;
+    --color-primary-100: 249 204 255;
+    --color-primary-200: 239 153 255;
+    --color-primary-300: 229 102 255;
+    --color-primary-400: 210 51 254;
+    --color-primary-500: 190 0 254;
+    --color-primary-600: 162 0 216;
+    --color-primary-700: 133 0 178;
+    --color-primary-800: 95 0 127;
+    --color-primary-900: 57 0 76;
 
     /* secondary */
-    --color-secondary-50: 230 248 252;
-    --color-secondary-100: 186 227 237;
-    --color-secondary-200: 141 207 222;
-    --color-secondary-300: 97 186 208;
-    --color-secondary-400: 52 166 193;
-    --color-secondary-500: 8 145 178;
-    --color-secondary-600: 7 123 151;
-    --color-secondary-700: 6 100 124;
-    --color-secondary-800: 6 78 96;
-    --color-secondary-900: 5 56 69;
+    --color-secondary-50: 239 249 249;
+    --color-secondary-100: 204 230 230;
+    --color-secondary-200: 153 204 204;
+    --color-secondary-300: 102 178 178;
+    --color-secondary-400: 51 153 153;
+    --color-secondary-500: 0 127 127;
+    --color-secondary-600: 0 108 108;
+    --color-secondary-700: 0 89 89;
+    --color-secondary-800: 0 64 64;
+    --color-secondary-900: 0 38 38;
 
     /* accent */
-    --color-accent-50: 255 242 229;
-    --color-accent-100: 251 211 186;
-    --color-accent-200: 247 180 142;
-    --color-accent-300: 242 150 99;
-    --color-accent-400: 238 119 55;
-    --color-accent-500: 234 88 12;
-    --color-accent-600: 198 74 12;
-    --color-accent-700: 163 61 11;
-    --color-accent-800: 128 48 10;
-    --color-accent-900: 92 34 10;
+    --color-accent-50: 255 247 245;
+    --color-accent-100: 255 238 235;
+    --color-accent-200: 255 213 204;
+    --color-accent-300: 254 180 163;
+    --color-accent-400: 254 137 112;
+    --color-accent-500: 254 87 51;
+    --color-accent-600: 216 74 43;
+    --color-accent-700: 178 61 36;
+    --color-accent-800: 127 44 26;
+    --color-accent-900: 76 26 15;
 
     --color-destructive: 220 38 38;
     --color-destructive-foreground: 153 27 27;
@@ -2457,12 +2464,12 @@ html.light[data-theme-pair="vice"] {
     --color-alert-destructive-bg: 254 242 242;
     --color-alert-warning-bg: 255 244 236;
     --color-alert-success-bg: 238 250 248;
-    --color-alert-info-bg: 253 234 246;
+    --color-alert-info-bg: 252 239 255;
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 253 245 250;
-    --color-table-hover: 253 234 246;
-    --color-table-selected: 249 211 236;
+    --color-table-hover: 252 239 255;
+    --color-table-selected: 249 204 255;
     --color-table-status-approved: 238 250 248;
     --color-table-status-warning: 255 232 214;
 
@@ -2498,13 +2505,13 @@ html.dark[data-theme-pair="vice"] {
     --color-status-error-foreground: 13 2 33;
 
     /* BORDER COLOR */
-    --color-border-base: 91 43 168;
+    --color-border-base: 138 44 131;
     --color-border-50: 20 4 48;
     --color-border-100: 26 6 64;
-    --color-border-200: 52 23 107;
-    --color-border-300: 69 32 136;
-    --color-border-400: 91 43 168;
-    --color-border-500: 180 140 203;
+    --color-border-200: 84 35 77;
+    --color-border-300: 110 39 103;
+    --color-border-400: 138 44 131;
+    --color-border-500: 197 138 170;
     --color-border-600: 220 188 230;
     --color-border-700: 239 214 242;
     --color-border-800: 248 231 249;
@@ -2517,7 +2524,7 @@ html.dark[data-theme-pair="vice"] {
     --color-text-200: 52 23 107;
     --color-text-300: 69 32 136;
     --color-text-400: 91 43 168;
-    --color-text-500: 180 140 203;
+    --color-text-500: 197 138 170;
     --color-text-600: 220 188 230;
     --color-text-700: 239 214 242;
     --color-text-800: 248 231 249;
@@ -2526,40 +2533,40 @@ html.dark[data-theme-pair="vice"] {
     --color-switch-thumb: 248 231 249;
 
     /* MAIN COLORS — primary */
-    --color-primary-50: 48 10 44;
-    --color-primary-100: 83 14 63;
-    --color-primary-200: 118 18 82;
-    --color-primary-300: 154 23 101;
-    --color-primary-400: 189 27 120;
-    --color-primary-500: 224 31 139;
-    --color-primary-600: 232 75 163;
-    --color-primary-700: 240 120 188;
-    --color-primary-800: 247 164 212;
-    --color-primary-900: 255 208 236;
+    --color-primary-50: 57 0 76;
+    --color-primary-100: 95 0 127;
+    --color-primary-200: 133 0 178;
+    --color-primary-300: 162 0 216;
+    --color-primary-400: 181 0 241;
+    --color-primary-500: 190 0 254;
+    --color-primary-600: 203 51 254;
+    --color-primary-700: 216 102 255;
+    --color-primary-800: 229 153 255;
+    --color-primary-900: 242 204 255;
 
     /* secondary */
-    --color-secondary-50: 6 51 61;
-    --color-secondary-100: 12 83 96;
-    --color-secondary-200: 17 115 132;
-    --color-secondary-300: 23 147 167;
-    --color-secondary-400: 28 179 203;
-    --color-secondary-500: 34 211 238;
-    --color-secondary-600: 77 220 242;
-    --color-secondary-700: 120 229 246;
-    --color-secondary-800: 163 238 249;
-    --color-secondary-900: 206 247 253;
+    --color-secondary-50: 7 68 75;
+    --color-secondary-100: 11 114 125;
+    --color-secondary-200: 15 159 174;
+    --color-secondary-300: 19 193 212;
+    --color-secondary-400: 21 216 237;
+    --color-secondary-500: 22 227 249;
+    --color-secondary-600: 69 233 250;
+    --color-secondary-700: 115 239 251;
+    --color-secondary-800: 162 244 252;
+    --color-secondary-900: 208 250 254;
 
     /* accent */
-    --color-accent-50: 61 42 8;
-    --color-accent-100: 100 74 24;
-    --color-accent-200: 139 105 40;
-    --color-accent-300: 177 137 55;
-    --color-accent-400: 216 168 71;
-    --color-accent-500: 255 200 87;
-    --color-accent-600: 255 210 116;
-    --color-accent-700: 255 220 146;
-    --color-accent-800: 255 230 175;
-    --color-accent-900: 255 240 204;
+    --color-accent-50: 76 33 59;
+    --color-accent-100: 127 55 99;
+    --color-accent-200: 178 76 139;
+    --color-accent-300: 216 93 168;
+    --color-accent-400: 238 102 186;
+    --color-accent-500: 254 109 198;
+    --color-accent-600: 254 138 209;
+    --color-accent-700: 254 167 221;
+    --color-accent-800: 255 196 232;
+    --color-accent-900: 255 226 244;
 
     --color-destructive: 251 69 112;
     --color-destructive-foreground: 255 214 225;
@@ -2568,7 +2575,7 @@ html.dark[data-theme-pair="vice"] {
     --color-alert-destructive-bg: 58 16 32;
     --color-alert-warning-bg: 61 42 8;
     --color-alert-success-bg: 13 58 42;
-    --color-alert-info-bg: 48 10 44;
+    --color-alert-info-bg: 57 0 76;
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 26 6 64;
@@ -2753,9 +2760,6 @@ html[data-theme-pair="high-contrast"] .auth-page-surface {
     border-color: transparent !important;
   }
 
-  thead tr,
-  thead tr th,
-  table th,
   .rt-TableHeader,
   .rt-TableRow,
   .rt-TableColumnHeaderCell {
@@ -2818,6 +2822,28 @@ html[data-theme-pair="high-contrast"] .auth-page-surface {
 
 .switch-root[data-state="checked"] .switch-thumb {
   transform: translateX(17px);
+}
+
+/* High contrast needs more than two neighboring gray track colors to convey
+   state. Invert the track and thumb as the switch moves, so on/off remains
+   unambiguous in both the light and dark variants. */
+html[data-theme-pair="high-contrast"] .switch-root {
+  background-color: rgb(var(--color-card));
+  border: none;
+  box-shadow: inset 0 0 0 2px rgb(var(--color-border-200));
+}
+
+html[data-theme-pair="high-contrast"] .switch-root .switch-thumb {
+  background-color: rgb(var(--color-text-900));
+  box-shadow: none;
+}
+
+html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] {
+  background-color: rgb(var(--color-text-900));
+}
+
+html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] .switch-thumb {
+  background-color: rgb(var(--color-card));
 }
 
 /* Label styles */

@@ -1353,7 +1353,7 @@
       "previewAlt": "Anteprima del tema personalizzato",
       "seededFrom": "Questi colori partono dal tema {{pair}}: modifica solo quelli che ti interessano e le scale complete si adeguano.",
       "contrastTitle": "Questi colori sono troppo vicini per essere leggibili. Correggili prima di salvare:",
-      "contrastIssue": "{{foreground}} su {{background}} raggiunge solo {{ratio}}:1, mentre il minimo è {{required}}:1. {{hint}}",
+      "contrastIssue": "{{foreground}} potrebbe essere difficile da leggere su {{background}}. {{hint}}",
       "tokens": {
         "background": "Sfondo della pagina",
         "card": "Superficie della scheda",

@@ -1353,7 +1353,7 @@
       "previewAlt": "Vista previa del tema personalizado",
       "seededFrom": "Estos colores parten del tema {{pair}}: cambie solo los que le interesen y las escalas completas se ajustan solas.",
       "contrastTitle": "Estos colores están demasiado juntos para leerse. Corríjalos antes de guardar:",
-      "contrastIssue": "{{foreground}} sobre {{background}} solo alcanza {{ratio}}:1 y el mínimo es {{required}}:1. {{hint}}",
+      "contrastIssue": "{{foreground}} puede ser difícil de leer sobre {{background}}. {{hint}}",
       "tokens": {
         "background": "Fondo de página",
         "card": "Superficie de tarjeta",

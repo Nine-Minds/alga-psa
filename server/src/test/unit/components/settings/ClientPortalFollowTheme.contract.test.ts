@@ -32,6 +32,9 @@ describe('client portal follows the organization theme', () => {
     expect(settingsSource).toContain("useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false })");
     expect(settingsSource).toContain('isEEAvailable && releaseV15Flag.enabled');
     expect(settingsSource).toMatch(
+      /<ClientPortalDomainSettings\s+headerAction=\{advancedAppearanceEnabled \? \(\s*<CopyClientPortalLinkButton/,
+    );
+    expect(settingsSource).not.toMatch(
       /advancedAppearanceEnabled && \(\s*<div className="flex justify-end">\s*<CopyClientPortalLinkButton/,
     );
     expect(settingsSource).not.toContain('clientPortal.branding.help.companyLogoMsp');
@@ -54,8 +57,8 @@ describe('client portal follows the organization theme', () => {
   });
 
   it('keeps the Enterprise MSP shell on its own white-label switch', () => {
-    expect(layoutSource).toContain("generateBrandingStyles(branding, { surface: 'msp' })");
-    expect(layoutSource).toContain('theme.mspWhiteLabel');
+    expect(layoutSource).not.toContain('getTenantBrandingByTenantId');
+    expect(layoutSource).not.toContain("surface: 'msp'");
   });
 
   it('translates the switch in every MSP locale', () => {

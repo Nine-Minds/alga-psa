@@ -401,13 +401,11 @@ const ClientPortalSettings = () => {
 
   return (
     <div className="space-y-6">
-      {advancedAppearanceEnabled && (
-        <div className="flex justify-end">
+      <ClientPortalDomainSettings
+        headerAction={advancedAppearanceEnabled ? (
           <CopyClientPortalLinkButton id="copy-client-portal-link-branding-button" />
-        </div>
-      )}
-
-      <ClientPortalDomainSettings />
+        ) : undefined}
+      />
 
       <Card>
         <CardHeader>

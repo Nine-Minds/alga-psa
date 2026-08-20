@@ -8,7 +8,7 @@ import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
 import { getCurrentTenant } from '@alga-psa/tenancy/actions/coreTenantActions';
 import {
   getTenantBrandingByDomain,
-  getTenantBrandingByTenantId,
+  getTenantPortalConfigBySlug,
   getTenantThemeByDomain,
 } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
 import { getTenantThemeByTenantId } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
@@ -134,17 +134,29 @@ export default async function RootLayout({
   const pathname = headersList.get('x-pathname')
     || headersList.get('x-middleware-pathname')
     || '';
+  const portalDomain = headersList.get('x-client-portal-domain') || host;
+  const portalTenantSlug = headersList.get('x-client-portal-tenant-slug');
 
   // Determine if we're on a client portal page
-  const isClientPortal = pathname.includes('/client-portal') || pathname.includes('/auth/client-portal');
+  const isClientPortal = pathname.includes('/client-portal')
+    || pathname.includes('/auth/client-portal')
+    || headersList.get('x-client-portal-theme-context') === '1';
 
   const tenant = await getCurrentTenant();
 
   let brandingStyles = '';
+  let anonymousPortalTheme = DEFAULT_TENANT_THEME;
   if (isClientPortal) {
-    const branding = await getTenantBrandingByDomain(host);
+    const portalConfig = portalTenantSlug
+      ? await getTenantPortalConfigBySlug(portalTenantSlug)
+      : {
+          branding: await getTenantBrandingByDomain(portalDomain),
+          theme: await getTenantThemeByDomain(portalDomain),
+        };
     // Use precomputed styles if available, otherwise generate them
-    brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
+    brandingStyles = portalConfig.branding?.computedStyles
+      || generateBrandingStyles(portalConfig.branding);
+    anonymousPortalTheme = portalConfig.theme;
   }
 
   // The theme pair is tenant-wide, so it has to resolve on every surface: from
@@ -154,23 +166,13 @@ export default async function RootLayout({
     ? tenant
       ? await getTenantThemeByTenantId(tenant)
       : isClientPortal
-        ? await getTenantThemeByDomain(host)
+        ? anonymousPortalTheme
         : DEFAULT_TENANT_THEME
     : DEFAULT_TENANT_THEME;
 
   const customThemeStyles = theme.pairId === 'custom' && theme.customTheme
     ? theme.customTheme.computedStyles || generateCustomThemeStyles(theme.customTheme)
     : '';
-
-  // Enterprise white-label: the MSP shell wears the tenant's brand colors too,
-  // but only once an admin has opted in — an existing portal-only branding
-  // configuration must not repaint the staff-facing app on its own.
-  if (!isClientPortal && tenant && isEnterprise && theme.mspWhiteLabel) {
-    const branding = await getTenantBrandingByTenantId(tenant);
-    // The cached computedStyles belong to the portal (and are empty once the
-    // portal opts into the theme), so the MSP shell builds its own copy.
-    brandingStyles = generateBrandingStyles(branding, { surface: 'msp' });
-  }
 
   // Drives screen-reader pronunciation, browser translation prompts and CSS
   // `:lang()` — it has to follow the resolved locale, not a hardcoded 'en'.

@@ -1353,7 +1353,7 @@
       "previewAlt": "11111",
       "seededFrom": "11111 {{pair}} 11111",
       "contrastTitle": "11111",
-      "contrastIssue": "11111 {{foreground}} 11111 {{background}} 11111 {{ratio}} 11111 {{required}} 11111 {{hint}} 11111",
+      "contrastIssue": "11111 {{foreground}} 11111 {{background}} 11111 {{hint}} 11111",
       "tokens": {
         "background": "11111",
         "card": "11111",

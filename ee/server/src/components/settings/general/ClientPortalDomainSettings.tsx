@@ -36,6 +36,10 @@ interface StatusBadgeConfig {
   variant: BadgeVariant;
 }
 
+interface ClientPortalDomainSettingsProps {
+  headerAction?: React.ReactNode;
+}
+
 type PortalDomainActionError = ActionMessageError | ActionPermissionError;
 
 const STATUS_BADGE_VARIANTS: Record<PortalDomainStatus, BadgeVariant> = {
@@ -100,7 +104,7 @@ function isPortalDomainActionError(value: unknown): value is PortalDomainActionE
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-const ClientPortalDomainSettings = () => {
+const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettingsProps) => {
   const { t } = useTranslation('msp/settings');
   const getStatusBadge = useStatusBadge();
   const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);
@@ -281,16 +285,21 @@ const ClientPortalDomainSettings = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          <span className="flex flex-wrap items-center gap-2">
-            <AtSign className="h-5 w-5" />
-            {t('clientPortal.domain.title')}
-            <Badge variant={badge.variant}>{badge.label}</Badge>
-          </span>
-        </CardTitle>
-        <CardDescription>
-          {t('clientPortal.domain.description')}
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle>
+              <span className="flex flex-wrap items-center gap-2">
+                <AtSign className="h-5 w-5" />
+                {t('clientPortal.domain.title')}
+                <Badge variant={badge.variant}>{badge.label}</Badge>
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {t('clientPortal.domain.description')}
+            </CardDescription>
+          </div>
+          {headerAction && <div className="shrink-0">{headerAction}</div>}
+        </div>
       </CardHeader>
       <CardContent>
         {portalError && (

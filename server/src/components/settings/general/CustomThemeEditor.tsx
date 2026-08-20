@@ -170,11 +170,9 @@ export function CustomThemeEditor({
               <li key={`${issue.mode}-${issue.pair}`}>
                 {t('appearance.custom.contrastIssue', {
                   defaultValue:
-                    '{{foreground}} on {{background}} is only {{ratio}}:1, and {{required}}:1 is the minimum. {{hint}}',
+                    '{{foreground}} may be hard to read on {{background}}. {{hint}}',
                   foreground: colorName(issue.foreground),
                   background: colorName(issue.background),
-                  ratio: issue.ratio,
-                  required: issue.required,
                   hint: issue.fix === 'lighten'
                     ? t('appearance.custom.contrastHints.lighten', {
                         defaultValue: 'Pick a lighter {{foreground}} or a darker {{background}}.',

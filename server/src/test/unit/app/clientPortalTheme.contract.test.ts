@@ -5,6 +5,15 @@ import { describe, expect, it } from 'vitest';
 const LAYOUT = path.resolve(__dirname, '../../../app/layout.tsx');
 const layout = fs.readFileSync(LAYOUT, 'utf8');
 
+const MIDDLEWARE = path.resolve(__dirname, '../../../middleware.ts');
+const middleware = fs.readFileSync(MIDDLEWARE, 'utf8');
+
+const PORTAL_CONFIG = path.resolve(
+  __dirname,
+  '../../../../../packages/tenancy/src/actions/tenant-actions/getTenantBrandingByDomain.ts',
+);
+const portalConfig = fs.readFileSync(PORTAL_CONFIG, 'utf8');
+
 const PORTAL_SIDEBAR = path.resolve(
   __dirname,
   '../../../../../packages/client-portal/src/components/layout/ClientPortalSidebar.tsx',
@@ -33,10 +42,14 @@ describe('client portal theming contract', () => {
     expect(layout).toContain("pathname.includes('/auth/client-portal')");
   });
 
-  it('resolves the tenant theme pair for signed-out portal visitors by host', () => {
-    // Portal sign-in and password-reset screens have no session, so the pair has
-    // to come from the same vanity-domain lookup branding already uses.
-    expect(layout).toContain('getTenantThemeByDomain(host)');
+  it('resolves signed-out portal themes after canonical redirects and slug links', () => {
+    expect(middleware).toContain("requestHeaders.set('x-client-portal-domain'");
+    expect(middleware).toContain("requestHeaders.set('x-client-portal-tenant-slug'");
+    expect(layout).toContain("headersList.get('x-client-portal-domain') || host");
+    expect(layout).toContain("headersList.get('x-client-portal-tenant-slug')");
+    expect(layout).toContain('getTenantPortalConfigBySlug(portalTenantSlug)');
+    expect(layout).toContain('getTenantThemeByDomain(portalDomain)');
+    expect(portalConfig).toContain('getTenantIdBySlug(slug.toLowerCase())');
     expect(layout).toContain('data-theme-pair={theme.pairId}');
   });
 
@@ -47,8 +60,9 @@ describe('client portal theming contract', () => {
     );
   });
 
-  it('keeps branding accents portal-only until an EE tenant opts into white-label', () => {
-    expect(layout).toContain('if (!isClientPortal && tenant && isEnterprise && theme.mspWhiteLabel)');
+  it('keeps client-portal branding accents out of the MSP shell', () => {
+    expect(layout).not.toContain('getTenantBrandingByTenantId');
+    expect(layout).not.toContain("surface: 'msp'");
   });
 
   it('gives the portal side panel the hook the tint CSS is scoped to', () => {

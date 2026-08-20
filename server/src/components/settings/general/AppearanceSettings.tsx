@@ -502,7 +502,7 @@ const AppearanceSettings = () => {
                 <p className="text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.colors.help', {
                     defaultValue:
-                      'Off by default. When enabled and applied, the MSP app uses the shared logo and your primary and secondary brand colors.',
+                      'Off by default. When enabled and applied, the MSP app uses the shared logo while its colors continue to come from the organization theme above.',
                   })}
                 </p>
               </div>

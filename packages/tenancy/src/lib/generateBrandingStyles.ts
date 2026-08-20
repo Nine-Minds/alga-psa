@@ -231,14 +231,16 @@ const sidebarOverrides = (shades: Record<number, string>): string => `
  * Each color is applied independently — if only one is set, the other falls
  * back to the globals.css palette rather than a hardcoded default.
  *
- * `surface: 'msp'` is the Enterprise white-label shell, which has its own
- * switch — only the portal honors `portalFollowsTheme`.
+ * Client-portal branding colors never paint the MSP shell. The MSP app gets its
+ * colors from the organization theme; its white-label switch only permits the
+ * shared tenant logo/name. Keep the `msp` option as a defensive no-op so an
+ * accidental caller cannot leak portal colors into staff-facing UI.
  */
 export function generateBrandingStyles(
   branding: TenantBranding | null,
   options: { surface?: 'portal' | 'msp' } = {},
 ): string {
-  if (branding?.portalFollowsTheme && options.surface !== 'msp') {
+  if (options.surface === 'msp' || branding?.portalFollowsTheme) {
     return '';
   }
 
