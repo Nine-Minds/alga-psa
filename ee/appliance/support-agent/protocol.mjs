@@ -1,5 +1,6 @@
 export const SUPPORT_PROTOCOL_VERSION = 1;
 export const MAX_FRAME_BYTES = 64 * 1024;
+const CONTROL_FRAME_TYPES = new Set(['ready', 'attach', 'reattach', 'detach', 'resize', 'signal', 'heartbeat', 'recording-receipt', 'close']);
 
 const TERMINAL_HEADER_BYTES = 10;
 const TERMINAL_FRAME_TYPES = Object.freeze({
@@ -51,7 +52,7 @@ export function decodeControlFrame(value) {
   try { message = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('Support control frame is invalid JSON.'); }
   if (!message || message.version !== SUPPORT_PROTOCOL_VERSION) throw new Error('Support control frame version is invalid.');
   if (!Number.isSafeInteger(message.seq) || message.seq < 1) throw new Error('Support control frame sequence is invalid.');
-  if (typeof message.type !== 'string' || !message.type) throw new Error('Support control frame envelope is invalid.');
+  if (typeof message.type !== 'string' || !CONTROL_FRAME_TYPES.has(message.type)) throw new Error('Support control frame type is invalid.');
   return message;
 }
 

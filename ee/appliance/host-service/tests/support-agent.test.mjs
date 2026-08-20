@@ -22,9 +22,10 @@ class MockSocket extends EventEmitter {
   close() { this.readyState = 3; this.emit('close'); }
 }
 
-function fakePtyFactory() {
+function fakePtyFactory(command, args, options) {
   const pty = { writes: [], sizes: [], onData(handler) { this.data = handler; }, onExit(handler) { this.exit = handler; }, write(value) { this.writes.push(value); }, resize(width, height) { this.sizes.push([width, height]); }, kill() { this.killed = true; }, emitOutput(value) { this.data?.(value); }, emitExit() { this.exit?.({ exitCode: 0, signal: 0 }); } };
   fakePtyFactory.last = pty;
+  fakePtyFactory.lastSpawn = { command, args, options };
   return pty;
 }
 
@@ -42,6 +43,8 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready', reconnectToken: 'new-memory-token-1234' })));
   socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach', width: 100, height: 30 })));
   const pty = fakePtyFactory.last;
+  assert.equal(fakePtyFactory.lastSpawn.command, 'nsenter');
+  assert.deepEqual(fakePtyFactory.lastSpawn.args.slice(-4), ['/usr/bin/chroot', '/proc/1/root', '/bin/bash', '-l']);
   pty.emitOutput('output while attached');
   const output = socket.sent.find((item) => Buffer.isBuffer(item));
   assert.equal(decodeTerminalFrame(output).data.toString('utf8'), 'output while attached');
@@ -206,6 +209,26 @@ test('container restart recovers unreceipted finalized segments from local metad
   assert.equal(listRecordingMetadata(root, SESSION_ID).find((item) => item.segmentId === metadata.segmentId)?.receipt?.keyId, 'test-key');
   assert.equal(agent.getState().pendingFinalized, 0);
   agent.stop('test');
+});
+
+test('agent refuses to open a shell when a prior segment lacks durable finalized metadata', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-orphaned-segment-'));
+  const segment = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  segment.append('output', { data: 'orphaned output' });
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-orphaned-1234\n', { mode: 0o600 });
+  assert.throws(() => createSupportAgent({
+    sessionId: SESSION_ID,
+    relayUrl: 'wss://relay.example/session',
+    connectorTokenFile: path.join(root, 'missing'),
+    reconnectTokenFile: reconnect,
+    recordingDir: root,
+    expiresAt: Date.now() + 3600000,
+    WebSocketImpl: MockSocket,
+    ptySpawn: fakePtyFactory,
+    recordingOwnerUid: process.getuid(),
+    recordingOwnerGid: process.getgid(),
+  }), /not durably finalized/);
 });
 
 test('fresh connector readiness requires a durable reconnect token', () => {

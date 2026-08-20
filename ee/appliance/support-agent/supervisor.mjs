@@ -46,6 +46,11 @@ function existingRecordingState(recordingDir, sessionId) {
     return sum + stat.size;
   }, 0);
   const metadata = listRecordingMetadata(recordingDir, sessionId).sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
+  const metadataIds = new Set(metadata.map((item) => item.segmentId));
+  for (const name of fs.readdirSync(directory).filter((item) => /^segment-[0-9a-f-]+\.cast$/i.test(item))) {
+    const segmentId = name.slice('segment-'.length, -'.cast'.length);
+    if (!metadataIds.has(segmentId)) throw new Error('A previous recording segment was not durably finalized.');
+  }
   return { bytes, previousDigest: metadata.at(-1)?.digest || null, metadata };
 }
 
@@ -151,7 +156,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (pendingResumeMarker) { record('reboot', { marker: 'control-plane-resume' }); pendingResumeMarker = false; }
     record('marker', { marker: 'shell-start' });
     const spawn = ptySpawn || require('node-pty').spawn;
-    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '--', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
+    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '--', '/usr/bin/chroot', '/proc/1/root', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
     child.onData((data) => onOutput(data));
     child.onExit(({ exitCode, signal }) => {
       try { if (recorder) { record('exit', { code: exitCode, signal }); finalizeRecorder(); } } catch { stop('recording-exit-failure'); }

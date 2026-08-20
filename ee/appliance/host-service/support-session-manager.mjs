@@ -30,6 +30,11 @@ export function normalizeSupportDuration(value) {
   return hours;
 }
 
+export function nextSupportDuration(value) {
+  const current = normalizeSupportDuration(value);
+  return SUPPORT_DURATIONS[SUPPORT_DURATIONS.indexOf(current) + 1] || null;
+}
+
 export function supportCapability({ license = {}, centralConfigured = false, supportAgentImage = null } = {}) {
   const edition = String(license.edition || '').toLowerCase();
   if (!['pro', 'premium'].includes(edition)) return { eligible: false, reason: 'pro_required', edition: license.edition || null, connected: false, centralConfigured, supportAgentAvailable: Boolean(supportAgentImage) };
@@ -167,6 +172,19 @@ export class SupportSessionManager {
     let changed = false;
     const next = { ...active };
     const centralState = String(central?.state || '');
+    if (central?.durationHours !== undefined) {
+      const durationHours = normalizeSupportDuration(central.durationHours);
+      if (next.durationHours !== durationHours) { next.durationHours = durationHours; changed = true; }
+    }
+    if (central?.expiresAt !== undefined) {
+      const expiresAt = Date.parse(central.expiresAt);
+      const activatedAt = Date.parse(next.activatedAt);
+      if (!Number.isFinite(expiresAt) || expiresAt <= activatedAt || expiresAt > activatedAt + next.durationHours * 3600000 || expiresAt > activatedAt + SUPPORT_MAX_HOURS * 3600000) {
+        throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid expiry.', 502);
+      }
+      const normalizedExpiry = new Date(expiresAt).toISOString();
+      if (next.expiresAt !== normalizedExpiry) { next.expiresAt = normalizedExpiry; changed = true; }
+    }
     if (['ready', 'redeemed', 'connected', 'disconnected'].includes(centralState) && next.state !== centralState) {
       next.state = centralState;
       changed = true;
@@ -251,7 +269,11 @@ export class SupportSessionManager {
       if (result?.ready === true && result?.recorderReady === true) { ready = true; break; }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    if (!ready) throw new SupportSessionError('provisioning_timeout', 'Support recording and relay readiness were not reached.', 504);
+    if (!ready) {
+      try { await cleanupSupportResources(this.kube, descriptor.sessionId); }
+      catch { throw new SupportSessionError('cleanup_failure', 'Support resources could not be safely removed; retry is required.', 502); }
+      throw new SupportSessionError('provisioning_timeout', 'Support recording and relay readiness were not reached.', 504);
+    }
     try {
       const result = await this.kube.delete('secret', `support-${descriptor.sessionId}-connector`, SUPPORT_NAMESPACE);
       if (result?.ok === false && result.status !== 404) throw new SupportSessionError('cleanup_failure', 'The connector secret could not be removed after readiness.', 502);
@@ -285,6 +307,17 @@ export class SupportSessionManager {
     } catch (error) {
       atomicJson(this._closePendingPath(descriptor.sessionId), { schema: SUPPORT_STATE_SCHEMA, sessionId: descriptor.sessionId, applianceToken: descriptor.applianceToken, reason, createdAt: new Date(this.now()).toISOString() });
       return false;
+    }
+  }
+
+  async _closeAfterCentralFailure(descriptor, reason, terminalState = 'failed') {
+    try {
+      const closed = await this._closeLocal(descriptor, reason, terminalState);
+      await this._requestCentralClose(descriptor, reason);
+      return { ok: true, state: closed.state };
+    } catch (error) {
+      await this._requestCentralClose(descriptor, reason);
+      return { ok: false, state: 'closing', reason: errorCode(error) };
     }
   }
 
@@ -353,7 +386,7 @@ export class SupportSessionManager {
       const active = this._readActive();
       if (!active || active.sessionId !== sessionId) throw new SupportSessionError('not_found', 'Support session was not found.', 404);
       if (['revoked', 'expired', 'failed'].includes(active.state)) throw new SupportSessionError('closed', 'Support session is already closed.', 409);
-      if (duration <= active.durationHours || Date.parse(active.activatedAt) + duration * 3600000 <= this.now() || duration > SUPPORT_MAX_HOURS) throw new SupportSessionError('invalid_duration', 'Support can only move forward along the one-, four-, eight-hour ladder.', 400);
+      if (duration !== nextSupportDuration(active.durationHours) || Date.parse(active.activatedAt) + duration * 3600000 <= this.now() || duration > SUPPORT_MAX_HOURS) throw new SupportSessionError('invalid_duration', 'Support can only move forward along the one-, four-, eight-hour ladder.', 400);
       let result;
       try { result = await this.central.extend(sessionId, active.applianceToken, duration); } catch (error) { throw new SupportSessionError(errorCode(error), 'Central support service rejected the extension.', error?.status || 503); }
       const expiresAt = Date.parse(result?.expiresAt || '');
@@ -408,12 +441,27 @@ export class SupportSessionManager {
     }
     pruneRecordings(this.recordingRoot, { nowMs: this.now(), retentionMs: LOCAL_RETENTION_MS, activeSessionIds: [active.sessionId] });
     if (active.state === 'closing' || active.cleanupPending) {
-      try { await this._closeLocal(active, active.lastStopReason || 'cleanup-retry', active.lastStopReason === 'local-revoked' ? 'revoked' : 'failed'); }
-      finally { await this._requestCentralClose(active, active.lastStopReason || 'cleanup-retry'); }
+      try {
+        await this._closeLocal(active, active.lastStopReason || 'cleanup-retry', active.lastStopReason === 'local-revoked' ? 'revoked' : 'failed');
+      } catch (error) {
+        await this._requestCentralClose(active, active.lastStopReason || 'cleanup-retry');
+        return { ok: false, state: 'closing', reason: errorCode(error) };
+      }
+      await this._requestCentralClose(active, active.lastStopReason || 'cleanup-retry');
       return { ok: true, state: 'closed' };
     }
-    if (Date.parse(active.expiresAt) <= this.now()) { try { await this._closeLocal(active, 'local-expired', 'expired'); } finally { await this._requestCentralClose(active, 'local-expired'); } return { ok: true, state: 'expired' }; }
-    if (fs.existsSync(path.join(this.revokedDir, `${active.sessionId}.json`))) { try { await this._closeLocal(active, 'revoked-tombstone', 'revoked'); } finally { await this._requestCentralClose(active, 'revoked-tombstone'); } return { ok: true, state: 'revoked' }; }
+    if (Date.parse(active.expiresAt) <= this.now()) {
+      try { await this._closeLocal(active, 'local-expired', 'expired'); }
+      catch (error) { await this._requestCentralClose(active, 'local-expired'); return { ok: false, state: 'closing', reason: errorCode(error) }; }
+      await this._requestCentralClose(active, 'local-expired');
+      return { ok: true, state: 'expired' };
+    }
+    if (fs.existsSync(path.join(this.revokedDir, `${active.sessionId}.json`))) {
+      try { await this._closeLocal(active, 'revoked-tombstone', 'revoked'); }
+      catch (error) { await this._requestCentralClose(active, 'revoked-tombstone'); return { ok: false, state: 'closing', reason: errorCode(error) }; }
+      await this._requestCentralClose(active, 'revoked-tombstone');
+      return { ok: true, state: 'revoked' };
+    }
     if (active.state === 'pending_ack') {
       try { await this.central.abandon(active.sessionId, active.applianceToken); } catch { /* pending acknowledgement is the only abandonable state */ }
       await this._closeLocal(active, 'unacknowledged-startup-state', 'failed');
@@ -424,6 +472,12 @@ export class SupportSessionManager {
       if (central?.state === 'revoked' || central?.state === 'expired' || central?.terminal) { await this._closeLocal(active, `central-${central.state || 'closed'}`, central.state === 'revoked' ? 'revoked' : 'expired'); return { ok: true, state: 'closed' }; }
       if (!central?.active && active.state !== 'pending_ack') { await this._closeLocal(active, 'central-rejected', 'failed'); return { ok: true, state: 'failed' }; }
       active = this._applyCentralStatus(active, central);
+      if (Date.parse(active.expiresAt) <= this.now()) {
+        try { await this._closeLocal(active, 'central-expired', 'expired'); }
+        catch (error) { await this._requestCentralClose(active, 'central-expired'); return { ok: false, state: 'closing', reason: errorCode(error) }; }
+        await this._requestCentralClose(active, 'central-expired');
+        return { ok: true, state: 'expired' };
+      }
       this._scheduleExpiry(active);
       if (active.state === 'provisioning' || active.state === 'reconnecting' || (typeof this.kube.getPod === 'function' && !(await this._getPodStatus(active.sessionId)))) {
         if (active.state === 'provisioning' || active.state === 'reconnecting') {
@@ -438,6 +492,10 @@ export class SupportSessionManager {
       }
       return { ok: true, state: active.state };
     } catch (error) {
+      if (['central_rejected', 'central_invalid_response', 'not_eligible', 'expired_resume_grant', 'revoked_resume_grant'].includes(errorCode(error))) {
+        const terminalState = errorCode(error) === 'revoked_resume_grant' ? 'revoked' : errorCode(error) === 'expired_resume_grant' ? 'expired' : 'failed';
+        return this._closeAfterCentralFailure(active, `central-${errorCode(error)}`, terminalState);
+      }
       // A central outage must not turn an already authorized, unexpired local
       // window into new authority. Keep the descriptor for bounded retry, but
       // never create a pod without a successful resume exchange.

@@ -26,4 +26,5 @@ test('control protocol requires the version, sequence, and named type envelope',
   assert.deepEqual(decodeControlFrame(encoded), { type: 'heartbeat', at: '2026-08-20T00:00:00.000Z', version: SUPPORT_PROTOCOL_VERSION, seq: 7 });
   assert.throws(() => decodeControlFrame(Buffer.from(JSON.stringify({ version: SUPPORT_PROTOCOL_VERSION, type: 'ready' }))), /sequence/);
   assert.throws(() => decodeControlFrame(Buffer.from(JSON.stringify({ version: 99, seq: 1, type: 'ready' }))), /version/);
+  assert.throws(() => decodeControlFrame(Buffer.from(JSON.stringify({ version: SUPPORT_PROTOCOL_VERSION, seq: 1, type: 'unknown-control' }))), /type/);
 });

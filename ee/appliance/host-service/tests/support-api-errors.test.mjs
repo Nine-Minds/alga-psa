@@ -9,3 +9,16 @@ test('support API errors expose only approved redacted messages', () => {
   assert.equal(unknown.body.code, 'support_unavailable');
   assert.equal(unknown.body.error.includes('/private/path'), false);
 });
+
+test('support API preserves approved policy and recording error codes without details', () => {
+  for (const code of [
+    'pro_required', 'connected_appliance_required', 'central_service_unavailable',
+    'control_plane_update_required', 'support_image_unavailable', 'expired_resume_grant',
+    'recording_io_failure',
+  ]) {
+    const result = supportErrorPayload({ code, status: 412, message: 'secret=/private/token' });
+    assert.equal(result.body.code, code);
+    assert.equal(result.body.error.includes('secret'), false);
+    assert.equal(result.body.error.includes('/private/token'), false);
+  }
+});

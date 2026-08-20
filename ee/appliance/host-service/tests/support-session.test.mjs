@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SupportSessionError, SupportSessionManager, normalizeSupportDuration, supportCapability } from '../support-session-manager.mjs';
+import { SupportSessionError, SupportSessionManager, normalizeSupportDuration, nextSupportDuration, supportCapability } from '../support-session-manager.mjs';
 import { buildSupportConnectorSecret, buildSupportPod, isValidSupportAgentImage, SUPPORT_NAMESPACE } from '../support-kubernetes.mjs';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
@@ -62,6 +62,9 @@ test('capability distinguishes Pro connectivity, central readiness, and immutabl
 
 test('duration validation and pod contract are strict', () => {
   assert.equal(normalizeSupportDuration('4'), 4);
+  assert.equal(nextSupportDuration(1), 4);
+  assert.equal(nextSupportDuration(4), 8);
+  assert.equal(nextSupportDuration(8), null);
   assert.throws(() => normalizeSupportDuration(2), (error) => error instanceof SupportSessionError && error.code === 'invalid_duration');
   assert.equal(isValidSupportAgentImage(IMAGE), true);
   assert.equal(isValidSupportAgentImage('ghcr.io/nine-minds/alga-appliance-support-agent:latest'), false);
@@ -94,6 +97,7 @@ test('create is durable, readiness-gated, one-active, and revoke wins locally', 
   assert.equal(stored.shareCode, 'ABCDE-FGHJK');
   assert.equal(stored.credential, undefined);
   await assert.rejects(() => service.create({ durationHours: 4 }), (error) => error.code === 'already_active');
+  await assert.rejects(() => service.extend(SESSION_ID, 8), (error) => error.code === 'invalid_duration');
   const extended = await service.extend(SESSION_ID, 4);
   assert.equal(extended.durationHours, 4);
   const closed = await service.revoke(SESSION_ID);
@@ -153,6 +157,53 @@ test('readiness requires both live agent and recorder signals', async () => {
   const service = manager(tmp, { now: () => now, waitForReadiness: async () => { now += 61 * 1000; return { ready: true }; } });
   const descriptor = { sessionId: SESSION_ID, relayUrl: 'wss://relay.example', expiresAt: new Date(now + 3600000).toISOString() };
   await assert.rejects(() => service._provision(descriptor, 'connector-token-123456', IMAGE), (error) => error.code === 'provisioning_timeout');
+  assert.equal(service.kube.calls.filter((call) => call[0] === 'delete').length >= 2, true);
+});
+
+test('central expiry is authoritative over a locally altered future expiry', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-central-expiry-'));
+  const central = fakeCentral();
+  const service = manager(tmp, { central });
+  await service.create({ durationHours: 1 });
+  const activeFile = path.join(tmp, 'support-sessions', 'active.json');
+  const active = JSON.parse(fs.readFileSync(activeFile, 'utf8'));
+  const centralExpiry = active.expiresAt;
+  active.durationHours = 8;
+  active.expiresAt = new Date(Date.parse(active.activatedAt) + 7 * 3600000).toISOString();
+  fs.writeFileSync(activeFile, `${JSON.stringify(active)}\n`, { mode: 0o600 });
+  central.getSession = async () => ({ active: true, state: 'ready', durationHours: 1, applianceReady: true, recorderReady: true, expiresAt: centralExpiry });
+  const result = await service.reconcileStartup();
+  assert.equal(result.ok, true);
+  const reconciled = JSON.parse(fs.readFileSync(activeFile, 'utf8'));
+  assert.equal(reconciled.durationHours, 1);
+  assert.equal(reconciled.expiresAt, centralExpiry);
+});
+
+test('startup cleanup failure preserves closing state for retry instead of throwing', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-startup-cleanup-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  const service = manager(tmp, { central, kube });
+  await service.create({ durationHours: 1 });
+  const activeFile = path.join(tmp, 'support-sessions', 'active.json');
+  const active = JSON.parse(fs.readFileSync(activeFile, 'utf8'));
+  active.state = 'closing'; active.cleanupPending = true; active.lastStopReason = 'local-revoked';
+  fs.writeFileSync(activeFile, `${JSON.stringify(active)}\n`, { mode: 0o600 });
+  kube.delete = async (kind) => { if (kind === 'pod') throw new Error('cleanup unavailable'); return { ok: true }; };
+  const result = await service.reconcileStartup();
+  assert.deepEqual(result, { ok: false, state: 'closing', reason: 'cleanup_failure' });
+  assert.equal(fs.existsSync(activeFile), true);
+});
+
+test('central policy rejection closes the local session instead of preserving authority', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-central-rejection-'));
+  const central = fakeCentral();
+  const service = manager(tmp, { central });
+  await service.create({ durationHours: 1 });
+  central.getSession = async () => { throw Object.assign(new Error('policy denied'), { code: 'central_rejected', status: 403 }); };
+  const result = await service.reconcileStartup();
+  assert.deepEqual(result, { ok: true, state: 'failed' });
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
 });
 
 test('extension recreates the pod deadline and startup resume uses the persisted image digest', async () => {
