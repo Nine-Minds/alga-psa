@@ -1091,6 +1091,7 @@ export async function finalizeInvoiceWithKnex(
         invoice_id: invoiceId,
         tenant
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {

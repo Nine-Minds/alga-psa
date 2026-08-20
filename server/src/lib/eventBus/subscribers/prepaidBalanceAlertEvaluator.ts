@@ -76,6 +76,9 @@ interface OpenAlert {
   credit_currency_code: string | null;
   bucket_percent: number | string | null;
   bucket_usage_id: string | null;
+  episode: number | string;
+  resolved_at: string | Date | null;
+  resolution_reason: string | null;
 }
 
 interface CurrentBucketSubject extends BucketObservationInput {
@@ -186,10 +189,11 @@ async function findBucketAlertByIdentity(
   db: ReturnType<typeof tenantDb>,
   bucketUsageId: string,
   percent: number
-): Promise<(OpenAlert & { resolved_at: string | Date | null }) | null> {
+): Promise<OpenAlert | null> {
   return (await db.table('prepaid_balance_alerts')
-    .where({ dedupe_key: bucketDedupeKey(bucketUsageId, percent) })
-    .first()) as (OpenAlert & { resolved_at: string | Date | null }) | null;
+    .where({ bucket_usage_id: bucketUsageId, bucket_percent: percent })
+    .orderBy('episode', 'desc')
+    .first()) as OpenAlert | null;
 }
 
 async function resolveStaleBuckets(
@@ -432,6 +436,36 @@ async function evaluateClientBuckets(
       const usedPercent = bucketUsedPercent({ ...subject, configuredPercent: percent });
       const existingIdentity = await findBucketAlertByIdentity(db, subject.usage_id, percent);
       if (existingIdentity) {
+        if (existingIdentity.resolved_at && existingIdentity.resolution_reason === RESOLUTION_REASON_RECOVERED) {
+          const episode = Number(existingIdentity.episode) + 1;
+          await db.table('prepaid_balance_alerts')
+            .insert({
+              tenant: tenantId,
+              alert_id: randomUUID(),
+              client_id: client.client_id,
+              alert_type: 'bucket',
+              dedupe_key: bucketDedupeKey(subject.usage_id, percent, episode),
+              episode,
+              bucket_percent: percent,
+              observed_value: subject.minutesUsed,
+              observed_capacity: capacity,
+              bucket_usage_id: subject.usage_id,
+              service_catalog_id: subject.service_catalog_id,
+              contract_line_id: subject.contract_line_id,
+              period_start: subject.period_start,
+              period_end: subject.period_end,
+              payload: JSON.stringify({
+                minutesUsed: subject.minutesUsed,
+                capacity,
+                usedPercent,
+                percent,
+                periodStart: subject.period_start,
+                periodEnd: subject.period_end,
+              }),
+            });
+          summary.bucketAlertsOpened += 1;
+          continue;
+        }
         // Reuse the same logical alert when a policy returns to a percentage
         // already seen in this usage period. This preserves the approved
         // (usage period, configured percentage) identity and prevents a

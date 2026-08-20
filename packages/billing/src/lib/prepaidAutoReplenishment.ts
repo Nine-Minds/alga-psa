@@ -69,6 +69,7 @@ export interface CreatePrepaidReplenishmentInvoiceInput {
   serviceId?: string | null;
   serviceName?: string | null;
   hourlyRate?: number | null;
+  bucketUsageId?: string | null;
 }
 
 /**
@@ -141,6 +142,7 @@ export async function createPrepaidReplenishmentInvoice(
     // service that triggered the alert. Human purchases may remain unscoped,
     // but top-ups must not silently become cross-service labor credit.
     scopeServiceIds: [serviceId],
+    replenishmentBucketUsageId: input.bucketUsageId ?? null,
     notes: 'Automatic prepaid balance replenishment',
   });
   return { invoiceId: created.invoiceId, invoiceNumber };

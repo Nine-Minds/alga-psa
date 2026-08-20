@@ -623,7 +623,7 @@ export async function getAvailableHourBlockMinutesForSubjects(
     .where(function (this: Knex.QueryBuilder) {
       this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
     })
-    .select('hb.block_id', 'hb.remaining_minutes')
+    .select('hb.block_id', 'hb.remaining_minutes', 'hb.replenishment_bucket_usage_id')
     .orderBy('hb.block_id', 'asc');
   if (blocks.length === 0) return result;
 
@@ -641,10 +641,14 @@ export async function getAvailableHourBlockMinutesForSubjects(
   const orderedSubjects = [...subjects].sort((a, b) => a.key.localeCompare(b.key));
   for (const block of blocks) {
     const scopedServices = scopeMap.get(block.block_id) ?? [];
-    const owner = orderedSubjects.find((subject) =>
+    const attributedOwner = block.replenishment_bucket_usage_id
+      ? orderedSubjects.find((subject) => subject.key === block.replenishment_bucket_usage_id)
+      : undefined;
+    const owner = attributedOwner ?? orderedSubjects.find((subject) =>
       scopedServices.length === 0 || scopedServices.includes(subject.serviceId),
     );
     if (!owner) continue;
+    if (scopedServices.length > 0 && !scopedServices.includes(owner.serviceId)) continue;
     result.set(owner.key, (result.get(owner.key) ?? 0) + Number(block.remaining_minutes));
   }
   return result;

@@ -16,6 +16,7 @@ type AlertRow = {
   credit_currency_code: string | null;
   service_catalog_id: string | null;
   contract_line_id: string | null;
+  bucket_usage_id: string | null;
   replenishment_attempt_count?: number | null;
 };
 
@@ -89,6 +90,31 @@ function contractTerminatingWithinHorizon(contract: ContractPolicyRow, horizonDa
   return date >= today && date <= horizon;
 }
 
+async function clientTerminatingWithinHorizon(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  horizonDays: number,
+): Promise<boolean> {
+  const today = new Date().toISOString().slice(0, 10);
+  const db = tenantDb(trx, tenant);
+  const query = db.table('client_contracts as cc')
+    .select('cc.end_date', 'cc.renewal_mode', 'cc.decision_due_date')
+    .where({ 'cc.client_id': clientId, 'cc.is_active': true })
+    .where((builder) => builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', today))
+    .where((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', today));
+  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  query.where({ 'c.is_active': true, 'c.status': 'active' });
+  const contracts = await query as ContractPolicyRow[];
+
+  // Credit is a client-wide balance and cannot be assigned to one contract.
+  // Treat the client as churning only when every active contract is inside the
+  // horizon; one continuing contract is enough to keep the client policy live.
+  return contracts.length > 0 && contracts.every((contract) =>
+    contractTerminatingWithinHorizon(contract, horizonDays),
+  );
+}
+
 async function processAlert(
   knex: Knex,
   tenant: string,
@@ -136,7 +162,12 @@ async function processAlert(
     }
 
     const horizonDays = Number(contract?.prepaid_replenishment_horizon_days ?? settings?.prepaid_replenishment_horizon_days ?? 30);
-    if (contract && contractTerminatingWithinHorizon(contract, horizonDays)) {
+    const terminating = contract
+      ? contractTerminatingWithinHorizon(contract, horizonDays)
+      : alert.alert_type === 'credit'
+        ? await clientTerminatingWithinHorizon(trx, tenant, alert.client_id, horizonDays)
+        : false;
+    if (terminating) {
       await db.table('prepaid_balance_alerts')
         .where({ alert_id: alert.alert_id })
         .update({
@@ -180,9 +211,10 @@ async function processAlert(
       subject: alert.alert_type,
       amount,
       currencyCode: alert.credit_currency_code ?? client.default_currency_code ?? 'USD',
-        serviceId: alert.service_catalog_id,
-        serviceName,
-        hourlyRate,
+      serviceId: alert.service_catalog_id,
+      serviceName,
+      hourlyRate,
+      bucketUsageId: alert.bucket_usage_id,
     });
     invoiceId = created.invoiceId;
     autoIssue = tier === 'auto_issue';

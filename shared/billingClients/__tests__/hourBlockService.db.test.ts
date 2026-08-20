@@ -756,6 +756,9 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
       const scopedA = uuidv4();
       const scopedB = uuidv4();
       const expired = uuidv4();
+      const subjectA = uuidv4();
+      const subjectB = uuidv4();
+      const subjectC = uuidv4();
       await insertBlock(db, tenant, clientId, serviceA, unscoped, null);
       await insertBlock(db, tenant, clientId, serviceA, scopedA, null);
       await insertBlock(db, tenant, clientId, serviceB, scopedB, null);
@@ -765,20 +768,25 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
         { tenant, block_id: scopedB, service_id: serviceB },
         { tenant, block_id: expired, service_id: serviceA },
       ]);
-
-      const minutes = await getAvailableHourBlockMinutesForSubjects(db, tenant, clientId, [
-        { key: 'subject-a', serviceId: serviceA },
-        { key: 'subject-b', serviceId: serviceA },
-        { key: 'subject-c', serviceId: serviceB },
+      await Promise.all([
+        db('hour_blocks').where({ tenant, block_id: unscoped }).update({ replenishment_bucket_usage_id: subjectB }),
+        db('hour_blocks').where({ tenant, block_id: scopedA }).update({ replenishment_bucket_usage_id: subjectA }),
+        db('hour_blocks').where({ tenant, block_id: scopedB }).update({ replenishment_bucket_usage_id: subjectC }),
       ]);
 
-      // The unscoped block is eligible for both same-service subjects, but is
-      // assigned to only one deterministic subject. The service-A scoped
-      // block goes to A, service-B's scoped block cannot go to either A/B,
+      const minutes = await getAvailableHourBlockMinutesForSubjects(db, tenant, clientId, [
+        { key: subjectA, serviceId: serviceA },
+        { key: subjectB, serviceId: serviceA },
+        { key: subjectC, serviceId: serviceB },
+      ]);
+
+      // The replenishment block is attributed to the exact bucket that caused
+      // its invoice even though another same-service subject sorts first. The
+      // ordinary service-A and service-B scoped blocks remain single-counted,
       // and the expired block is excluded by the tenant-local date.
-      expect(minutes.get('subject-a')).toBe(1200);
-      expect(minutes.get('subject-b')).toBe(0);
-      expect(minutes.get('subject-c')).toBe(600);
+      expect(minutes.get(subjectA)).toBe(600);
+      expect(minutes.get(subjectB)).toBe(600);
+      expect(minutes.get(subjectC)).toBe(600);
       expect([...minutes.values()].reduce((sum, value) => sum + value, 0)).toBe(1800);
     } finally {
       vi.useRealTimers();

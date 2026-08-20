@@ -180,6 +180,7 @@ export interface CreateHourBlockPurchaseInvoiceInternalInput {
   taxSource: unknown;
   invoiceNumber: string;
   createdBy: string | null;
+  replenishmentBucketUsageId?: string | null;
 }
 
 /**
@@ -207,6 +208,7 @@ export async function createHourBlockPurchaseInvoiceInternal(
     taxSource,
     invoiceNumber,
     createdBy,
+    replenishmentBucketUsageId,
   } = input;
   const sessionLike = { user: { id: createdBy } };
   const invoiceId = uuidv4();
@@ -271,6 +273,7 @@ export async function createHourBlockPurchaseInvoiceInternal(
     expiration_date: toCalendarDateString(expirationDate),
     source_invoice_id: invoiceId,
     source_invoice_charge_id: purchaseLine.item_id,
+    replenishment_bucket_usage_id: replenishmentBucketUsageId ?? null,
     source_type: 'purchase',
     created_by: createdBy,
     notes: notes?.trim() || null,
