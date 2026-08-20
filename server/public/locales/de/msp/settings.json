@@ -1780,6 +1780,47 @@
         "6": "Samstag",
         "7": "Sonntag"
       }
+    },
+    "periods": {
+      "title": "Zeiträume",
+      "description": "Zeiträume für die Zeiterfassung anzeigen und verwalten",
+      "loading": "Zeiträume werden geladen ...",
+      "create": "Neuen Zeitraum erstellen",
+      "openMenu": "Menü öffnen",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Enddatum",
+        "actions": "Aktionen"
+      },
+      "form": {
+        "createTitle": "Neuen Zeitraum erstellen",
+        "editTitle": "Zeitraum bearbeiten",
+        "suggestion": "Basierend auf Ihren Einstellungen wird der nächste Zeitraum vorgeschlagen.",
+        "frequency": "Häufigkeit: alle {{value}} × {{unit}}",
+        "overrideDates": "Vorgeschlagene Daten überschreiben",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Startdatum auswählen",
+        "noEndDate": "Kein Enddatum",
+        "endDate": "Enddatum",
+        "endDatePlaceholder": "Enddatum auswählen",
+        "deletePeriod": "Zeitraum löschen",
+        "confirmDeleteTitle": "Löschen bestätigen",
+        "confirmDeleteBody": "Möchten Sie diesen Zeitraum wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "checkSettingsLink": "Bitte prüfen Sie Ihre Abrechnungszeitraum-Einstellungen."
+      },
+      "errors": {
+        "load": "Die Zeiträume konnten nicht geladen werden.",
+        "suggest": "Es konnte kein neuer Zeitraum vorgeschlagen werden",
+        "noSettings": "Keine Abrechnungszeitraum-Einstellungen vorhanden. Es kann kein neuer Zeitraum erstellt werden.",
+        "settingsRequired": "Ohne Einstellungen kann kein Zeitraum verwaltet werden.",
+        "startDateRequired": "Es muss ein Startdatum angegeben werden.",
+        "startBeforeEnd": "Das Startdatum muss vor dem Enddatum liegen.",
+        "overlap": "Der Zeitraum überschneidet sich mit einem bestehenden Zeitraum.",
+        "overlapRetry": "Dieser Zeitraum überschneidet sich mit einem bestehenden. Bitte wählen Sie andere Daten.",
+        "create": "Der Zeitraum konnte nicht erstellt werden.",
+        "delete": "Der Zeitraum konnte nicht gelöscht werden",
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten."
+      }
     }
   },
   "billing": {

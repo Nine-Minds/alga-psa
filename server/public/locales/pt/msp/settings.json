@@ -1780,6 +1780,47 @@
         "6": "sábado",
         "7": "domingo"
       }
+    },
+    "periods": {
+      "title": "Períodos",
+      "description": "Visualize e gerencie os períodos de lançamento de horas usados no controle de tempo",
+      "loading": "Carregando períodos...",
+      "create": "Criar novo período",
+      "openMenu": "Abrir menu",
+      "columns": {
+        "startDate": "Data de início",
+        "endDate": "Data de término",
+        "actions": "Ações"
+      },
+      "form": {
+        "createTitle": "Criar novo período",
+        "editTitle": "Editar período",
+        "suggestion": "Com base nas suas configurações, o próximo período é sugerido.",
+        "frequency": "Frequência: a cada {{value}} × {{unit}}",
+        "overrideDates": "Substituir as datas sugeridas",
+        "startDate": "Data de início",
+        "startDatePlaceholder": "Selecione a data de início",
+        "noEndDate": "Sem data de término",
+        "endDate": "Data de término",
+        "endDatePlaceholder": "Selecione a data de término",
+        "deletePeriod": "Excluir período",
+        "confirmDeleteTitle": "Confirmar exclusão",
+        "confirmDeleteBody": "Tem certeza de que deseja excluir este período? Esta ação não pode ser desfeita.",
+        "checkSettingsLink": "Verifique suas configurações de período."
+      },
+      "errors": {
+        "load": "Não foi possível carregar os períodos.",
+        "suggest": "Não foi possível sugerir um novo período",
+        "noSettings": "Nenhuma configuração de período disponível. Não é possível criar um novo período.",
+        "settingsRequired": "Não é possível gerenciar o período sem configurações.",
+        "startDateRequired": "É necessário informar uma data de início.",
+        "startBeforeEnd": "A data de início deve ser anterior à data de término.",
+        "overlap": "O período se sobrepõe a um período existente.",
+        "overlapRetry": "Este período se sobrepõe a outro existente. Escolha datas diferentes.",
+        "create": "Não foi possível criar o período.",
+        "delete": "Não foi possível excluir o período",
+        "unexpected": "Ocorreu um erro inesperado."
+      }
     }
   },
   "billing": {

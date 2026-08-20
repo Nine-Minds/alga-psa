@@ -1780,6 +1780,47 @@
         "6": "zaterdag",
         "7": "zondag"
       }
+    },
+    "periods": {
+      "title": "Perioden",
+      "description": "Perioden voor tijdregistratie bekijken en beheren",
+      "loading": "Perioden laden...",
+      "create": "Nieuwe periode maken",
+      "openMenu": "Menu openen",
+      "columns": {
+        "startDate": "Startdatum",
+        "endDate": "Einddatum",
+        "actions": "Acties"
+      },
+      "form": {
+        "createTitle": "Nieuwe periode maken",
+        "editTitle": "Periode bewerken",
+        "suggestion": "Op basis van uw instellingen wordt de volgende periode voorgesteld.",
+        "frequency": "Frequentie: elke {{value}} × {{unit}}",
+        "overrideDates": "Voorgestelde datums overschrijven",
+        "startDate": "Startdatum",
+        "startDatePlaceholder": "Startdatum selecteren",
+        "noEndDate": "Geen einddatum",
+        "endDate": "Einddatum",
+        "endDatePlaceholder": "Einddatum selecteren",
+        "deletePeriod": "Periode verwijderen",
+        "confirmDeleteTitle": "Verwijderen bevestigen",
+        "confirmDeleteBody": "Weet u zeker dat u deze periode wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "checkSettingsLink": "Controleer uw periode-instellingen."
+      },
+      "errors": {
+        "load": "De perioden konden niet worden geladen.",
+        "suggest": "Er kon geen nieuwe periode worden voorgesteld",
+        "noSettings": "Geen periode-instellingen beschikbaar. Er kan geen nieuwe periode worden gemaakt.",
+        "settingsRequired": "Zonder instellingen kan geen periode worden beheerd.",
+        "startDateRequired": "Er moet een startdatum worden opgegeven.",
+        "startBeforeEnd": "De startdatum moet vóór de einddatum liggen.",
+        "overlap": "De periode overlapt met een bestaande periode.",
+        "overlapRetry": "Deze periode overlapt met een bestaande. Kies andere datums.",
+        "create": "De periode kon niet worden gemaakt.",
+        "delete": "De periode kon niet worden verwijderd",
+        "unexpected": "Er is een onverwachte fout opgetreden."
+      }
     }
   },
   "billing": {

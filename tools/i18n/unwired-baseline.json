@@ -50,8 +50,6 @@
     "packages/product-extensions/ee/ExtensionIframe.tsx",
     "packages/projects/src/components/KanbanZoomControl.tsx",
     "packages/scheduling/src/components/settings/time-entry/TimeEntrySettings.tsx",
-    "packages/scheduling/src/components/settings/time-entry/TimePeriodForm.tsx",
-    "packages/scheduling/src/components/settings/time-entry/TimePeriodList.tsx",
     "packages/scheduling/src/components/shared/SchedulingProjectTaskDetails.tsx",
     "packages/scheduling/src/components/shared/SchedulingTicketDetails.tsx",
     "packages/scheduling/src/components/time-management/time-entry/TimeEntryList.tsx",

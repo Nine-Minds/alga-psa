@@ -1780,6 +1780,47 @@
         "6": "Saturday",
         "7": "Sunday"
       }
+    },
+    "periods": {
+      "title": "Time Periods",
+      "description": "View and manage time entry periods for time tracking",
+      "loading": "Loading time periods...",
+      "create": "Create New Time Period",
+      "openMenu": "Open menu",
+      "columns": {
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "actions": "Actions"
+      },
+      "form": {
+        "createTitle": "Create New Time Period",
+        "editTitle": "Edit Time Period",
+        "suggestion": "Based on your settings, the next time period is suggested.",
+        "frequency": "Frequency: every {{value}} × {{unit}}",
+        "overrideDates": "Override suggested dates",
+        "startDate": "Start Date",
+        "startDatePlaceholder": "Select start date",
+        "noEndDate": "No End Date",
+        "endDate": "End Date",
+        "endDatePlaceholder": "Select end date",
+        "deletePeriod": "Delete Period",
+        "confirmDeleteTitle": "Confirm Delete",
+        "confirmDeleteBody": "Are you sure you want to delete this time period? This action cannot be undone.",
+        "checkSettingsLink": "Please check your time period settings."
+      },
+      "errors": {
+        "load": "Failed to load time periods.",
+        "suggest": "Failed to suggest a new time period",
+        "noSettings": "No time period settings available. Unable to create a new time period.",
+        "settingsRequired": "Cannot manage time period without settings.",
+        "startDateRequired": "Start date must be provided.",
+        "startBeforeEnd": "Start date must be before end date.",
+        "overlap": "The time period overlaps with an existing period.",
+        "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
+        "create": "Failed to create time period.",
+        "delete": "Failed to delete time period",
+        "unexpected": "An unexpected error occurred."
+      }
     }
   },
   "billing": {

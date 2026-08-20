@@ -1786,6 +1786,47 @@
         "6": "sobota",
         "7": "niedziela"
       }
+    },
+    "periods": {
+      "title": "Okresy",
+      "description": "Przeglądaj okresy wpisów czasu używane do rejestrowania czasu i zarządzaj nimi",
+      "loading": "Wczytywanie okresów...",
+      "create": "Utwórz nowy okres",
+      "openMenu": "Otwórz menu",
+      "columns": {
+        "startDate": "Data początkowa",
+        "endDate": "Data końcowa",
+        "actions": "Akcje"
+      },
+      "form": {
+        "createTitle": "Utwórz nowy okres",
+        "editTitle": "Edytuj okres",
+        "suggestion": "Na podstawie ustawień proponowany jest kolejny okres.",
+        "frequency": "Częstotliwość: co {{value}} × {{unit}}",
+        "overrideDates": "Zastąp proponowane daty",
+        "startDate": "Data początkowa",
+        "startDatePlaceholder": "Wybierz datę początkową",
+        "noEndDate": "Bez daty końcowej",
+        "endDate": "Data końcowa",
+        "endDatePlaceholder": "Wybierz datę końcową",
+        "deletePeriod": "Usuń okres",
+        "confirmDeleteTitle": "Potwierdź usunięcie",
+        "confirmDeleteBody": "Czy na pewno chcesz usunąć ten okres? Tej operacji nie można cofnąć.",
+        "checkSettingsLink": "Sprawdź ustawienia okresów rozliczeniowych."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać okresów.",
+        "suggest": "Nie udało się zaproponować nowego okresu",
+        "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
+        "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
+        "startDateRequired": "Należy podać datę początkową.",
+        "startBeforeEnd": "Data początkowa musi być wcześniejsza niż data końcowa.",
+        "overlap": "Okres nakłada się na istniejący okres.",
+        "overlapRetry": "Ten okres nakłada się na istniejący. Wybierz inne daty.",
+        "create": "Nie udało się utworzyć okresu.",
+        "delete": "Nie udało się usunąć okresu",
+        "unexpected": "Wystąpił nieoczekiwany błąd."
+      }
     }
   },
   "billing": {

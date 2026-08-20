@@ -1780,6 +1780,47 @@
         "6": "sábado",
         "7": "domingo"
       }
+    },
+    "periods": {
+      "title": "Períodos de tiempo",
+      "description": "Consulte y gestione los períodos de entrada de tiempo para el seguimiento de horas",
+      "loading": "Cargando períodos de tiempo...",
+      "create": "Crear nuevo período de tiempo",
+      "openMenu": "Abrir menú",
+      "columns": {
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin",
+        "actions": "Acciones"
+      },
+      "form": {
+        "createTitle": "Crear nuevo período de tiempo",
+        "editTitle": "Editar período de tiempo",
+        "suggestion": "Según su configuración, se sugiere el siguiente período de tiempo.",
+        "frequency": "Frecuencia: cada {{value}} × {{unit}}",
+        "overrideDates": "Reemplazar las fechas sugeridas",
+        "startDate": "Fecha de inicio",
+        "startDatePlaceholder": "Seleccione la fecha de inicio",
+        "noEndDate": "Sin fecha de fin",
+        "endDate": "Fecha de fin",
+        "endDatePlaceholder": "Seleccione la fecha de fin",
+        "deletePeriod": "Eliminar período",
+        "confirmDeleteTitle": "Confirmar eliminación",
+        "confirmDeleteBody": "¿Seguro que desea eliminar este período de tiempo? Esta acción no se puede deshacer.",
+        "checkSettingsLink": "Revise su configuración de períodos de tiempo."
+      },
+      "errors": {
+        "load": "No se pudieron cargar los períodos de tiempo.",
+        "suggest": "No se pudo sugerir un nuevo período de tiempo",
+        "noSettings": "No hay configuración de períodos de tiempo disponible. No se puede crear un nuevo período.",
+        "settingsRequired": "No se puede gestionar el período de tiempo sin configuración.",
+        "startDateRequired": "Debe indicar una fecha de inicio.",
+        "startBeforeEnd": "La fecha de inicio debe ser anterior a la fecha de fin.",
+        "overlap": "El período de tiempo se solapa con un período existente.",
+        "overlapRetry": "Este período de tiempo se solapa con otro existente. Elija fechas diferentes.",
+        "create": "No se pudo crear el período de tiempo.",
+        "delete": "No se pudo eliminar el período de tiempo",
+        "unexpected": "Se produjo un error inesperado."
+      }
     }
   },
   "billing": {

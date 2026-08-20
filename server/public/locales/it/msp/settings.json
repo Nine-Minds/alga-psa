@@ -1780,6 +1780,47 @@
         "6": "sabato",
         "7": "domenica"
       }
+    },
+    "periods": {
+      "title": "Periodi",
+      "description": "Visualizza e gestisci i periodi di inserimento ore per il monitoraggio del tempo",
+      "loading": "Caricamento dei periodi...",
+      "create": "Crea nuovo periodo",
+      "openMenu": "Apri menu",
+      "columns": {
+        "startDate": "Data di inizio",
+        "endDate": "Data di fine",
+        "actions": "Azioni"
+      },
+      "form": {
+        "createTitle": "Crea nuovo periodo",
+        "editTitle": "Modifica periodo",
+        "suggestion": "In base alle tue impostazioni viene suggerito il periodo successivo.",
+        "frequency": "Frequenza: ogni {{value}} × {{unit}}",
+        "overrideDates": "Sostituisci le date suggerite",
+        "startDate": "Data di inizio",
+        "startDatePlaceholder": "Seleziona la data di inizio",
+        "noEndDate": "Nessuna data di fine",
+        "endDate": "Data di fine",
+        "endDatePlaceholder": "Seleziona la data di fine",
+        "deletePeriod": "Elimina periodo",
+        "confirmDeleteTitle": "Conferma eliminazione",
+        "confirmDeleteBody": "Vuoi davvero eliminare questo periodo? L’operazione non può essere annullata.",
+        "checkSettingsLink": "Controlla le impostazioni dei periodi."
+      },
+      "errors": {
+        "load": "Impossibile caricare i periodi.",
+        "suggest": "Impossibile suggerire un nuovo periodo",
+        "noSettings": "Nessuna impostazione dei periodi disponibile. Impossibile creare un nuovo periodo.",
+        "settingsRequired": "Impossibile gestire un periodo senza impostazioni.",
+        "startDateRequired": "È necessario indicare una data di inizio.",
+        "startBeforeEnd": "La data di inizio deve precedere la data di fine.",
+        "overlap": "Il periodo si sovrappone a un periodo esistente.",
+        "overlapRetry": "Questo periodo si sovrappone a uno esistente. Scegli date diverse.",
+        "create": "Impossibile creare il periodo.",
+        "delete": "Impossibile eliminare il periodo",
+        "unexpected": "Si è verificato un errore imprevisto."
+      }
     }
   },
   "billing": {

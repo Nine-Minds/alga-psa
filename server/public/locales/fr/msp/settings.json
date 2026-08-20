@@ -1780,6 +1780,47 @@
         "6": "samedi",
         "7": "dimanche"
       }
+    },
+    "periods": {
+      "title": "Périodes",
+      "description": "Consulter et gérer les périodes d’entrée de temps pour le suivi des heures",
+      "loading": "Chargement des périodes...",
+      "create": "Créer une période",
+      "openMenu": "Ouvrir le menu",
+      "columns": {
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "actions": "Actions"
+      },
+      "form": {
+        "createTitle": "Créer une période",
+        "editTitle": "Modifier la période",
+        "suggestion": "D’après vos paramètres, la prochaine période est suggérée.",
+        "frequency": "Fréquence : tous les {{value}} × {{unit}}",
+        "overrideDates": "Remplacer les dates suggérées",
+        "startDate": "Date de début",
+        "startDatePlaceholder": "Sélectionner la date de début",
+        "noEndDate": "Aucune date de fin",
+        "endDate": "Date de fin",
+        "endDatePlaceholder": "Sélectionner la date de fin",
+        "deletePeriod": "Supprimer la période",
+        "confirmDeleteTitle": "Confirmer la suppression",
+        "confirmDeleteBody": "Voulez-vous vraiment supprimer cette période ? Cette action est irréversible.",
+        "checkSettingsLink": "Veuillez vérifier vos paramètres de période."
+      },
+      "errors": {
+        "load": "Impossible de charger les périodes.",
+        "suggest": "Impossible de suggérer une nouvelle période",
+        "noSettings": "Aucun paramètre de période disponible. Impossible de créer une nouvelle période.",
+        "settingsRequired": "Impossible de gérer une période sans paramètres.",
+        "startDateRequired": "Une date de début doit être indiquée.",
+        "startBeforeEnd": "La date de début doit précéder la date de fin.",
+        "overlap": "La période chevauche une période existante.",
+        "overlapRetry": "Cette période en chevauche une autre. Veuillez choisir d’autres dates.",
+        "create": "Impossible de créer la période.",
+        "delete": "Impossible de supprimer la période",
+        "unexpected": "Une erreur inattendue s’est produite."
+      }
     }
   },
   "billing": {

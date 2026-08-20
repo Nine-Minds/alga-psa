@@ -14,6 +14,7 @@ import { toPlainDate } from '@alga-psa/core';
 import { TimePeriodSuggester } from '../../../lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const isTimePeriodActionError = (
     value: unknown
@@ -48,6 +49,7 @@ interface TimePeriodFormProps {
 }
 
 const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
+    const { t } = useTranslation(['msp/settings', 'common']);
     const {
         isOpen,
         onClose,
@@ -63,20 +65,24 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         startDate: Temporal.PlainDate | null;
         endDate: Temporal.PlainDate | null;
         error: string | null;
+        // The "no settings yet" branch shows an extra link. Carried as a code because the
+        // message it used to be compared against stops being that sentence once translated.
+        errorCode: 'NO_SETTINGS' | null;
     }
 
     // Define the initial form state
     const initialFormState: FormState = {
         startDate: null,
         endDate: null,
-        error: null
+        error: null,
+        errorCode: null
     };
 
     // Define action types
     type FormAction =
         | { type: 'INITIALIZE_EDIT_MODE', payload: { selectedPeriod: ITimePeriodView } }
         | { type: 'INITIALIZE_CREATE_MODE', payload: { settings: ITimePeriodSettings[], existingTimePeriods: ITimePeriodView[] } }
-        | { type: 'SET_ERROR', payload: string | null }
+        | { type: 'SET_ERROR', payload: { message: string | null; code?: 'NO_SETTINGS' } }
         | { type: 'SET_START_DATE', payload: Temporal.PlainDate | null }
         | { type: 'SET_END_DATE', payload: Temporal.PlainDate | null }
         | { type: 'RESET' };
@@ -89,7 +95,8 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 return {
                     startDate: toPlainDate(period.start_date),
                     endDate: period.end_date ? toPlainDate(period.end_date) : null,
-                    error: null
+                    error: null,
+                    errorCode: null
                 };
             case 'INITIALIZE_CREATE_MODE':
                 const { settings, existingTimePeriods } = action.payload;
@@ -109,7 +116,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 if (!suggestion.success || !suggestion.data) {
                     return {
                         ...initialFormState,
-                        error: suggestion.error || 'Failed to suggest a new time period'
+                        error: suggestion.error || t('timeEntry.periods.errors.suggest')
                     };
                 }
 
@@ -118,12 +125,14 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 return {
                     startDate: toPlainDate(suggestedStart),
                     endDate: suggestedEnd ? toPlainDate(suggestedEnd) : null,
-                    error: null
+                    error: null,
+                    errorCode: null
                 };
             case 'SET_ERROR':
                 return {
                     ...state,
-                    error: action.payload
+                    error: action.payload.message,
+                    errorCode: action.payload.code ?? null
                 };
             case 'SET_START_DATE':
                 return {
@@ -144,7 +153,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
 
     // Use the reducer
     const [formState, dispatch] = useReducer(formReducer, initialFormState);
-    const { startDate, endDate, error } = formState;
+    const { startDate, endDate, error, errorCode } = formState;
 
     // Additional state that doesn't need to be part of the reducer
     const [override, setOverride] = useState<boolean>(false);
@@ -167,7 +176,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             dispatch({ type: 'RESET' });
             dispatch({
                 type: 'SET_ERROR',
-                payload: 'No time period settings available. Unable to create a new time period.'
+                payload: { message: t('timeEntry.periods.errors.noSettings'), code: 'NO_SETTINGS' }
             });
         }
     }, [mode, selectedPeriod, settings, existingTimePeriods]);
@@ -197,7 +206,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         if (!settings) {
             dispatch({
                 type: 'SET_ERROR',
-                payload: 'Cannot manage time period without settings.'
+                payload: { message: t('timeEntry.periods.errors.settingsRequired') }
             });
             return;
         }
@@ -207,7 +216,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             if (!startDate) {
                 dispatch({
                     type: 'SET_ERROR',
-                    payload: 'Start date must be provided.'
+                    payload: { message: t('timeEntry.periods.errors.startDateRequired') }
                 });
                 return;
             }
@@ -215,7 +224,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             if (endDate && Temporal.PlainDate.compare(startDate, endDate) >= 0) {
                 dispatch({
                     type: 'SET_ERROR',
-                    payload: 'Start date must be before end date.'
+                    payload: { message: t('timeEntry.periods.errors.startBeforeEnd') }
                 });
                 return;
             }
@@ -247,7 +256,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             if (overlappingPeriod) {
                 dispatch({
                     type: 'SET_ERROR',
-                    payload: 'The time period overlaps with an existing period.'
+                    payload: { message: t('timeEntry.periods.errors.overlap') }
                 });
                 return;
             }
@@ -262,7 +271,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 if (isTimePeriodActionError(modelPeriod)) {
                     dispatch({
                         type: 'SET_ERROR',
-                        payload: getErrorMessage(modelPeriod)
+                        payload: { message: getErrorMessage(modelPeriod) }
                     });
                     return;
                 }
@@ -281,7 +290,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 if (isTimePeriodActionError(modelPeriod)) {
                     dispatch({
                         type: 'SET_ERROR',
-                        payload: getErrorMessage(modelPeriod)
+                        payload: { message: getErrorMessage(modelPeriod) }
                     });
                     return;
                 }
@@ -300,18 +309,18 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 if (err.message === 'The new time period overlaps with an existing period.') {
                     dispatch({
                         type: 'SET_ERROR',
-                        payload: 'This time period overlaps with an existing one. Please choose different dates.'
+                        payload: { message: t('timeEntry.periods.errors.overlapRetry') }
                     });
                 } else {
                     dispatch({
                         type: 'SET_ERROR',
-                        payload: err.message || 'Failed to create time period.'
+                        payload: { message: err.message || t('timeEntry.periods.errors.create') }
                     });
                 }
             } else {
                 dispatch({
                     type: 'SET_ERROR',
-                    payload: 'An unexpected error occurred.'
+                    payload: { message: t('timeEntry.periods.errors.unexpected') }
                 });
             }
         }
@@ -325,22 +334,22 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     variant="destructive"
                     onClick={() => setShowDeleteConfirm(true)}
                 >
-                    Delete Period
+                    {t('timeEntry.periods.form.deletePeriod')}
                 </Button>
             ) : <div />}
             <div className="flex ml-auto space-x-2">
                 <Button id="close-button" variant="outline" onClick={onClose}>
-                    Cancel
+                    {t('common:actions.cancel')}
                 </Button>
                 <Button id="submit-button" onClick={handleSubmit}>
-                    {mode === 'create' ? 'Create' : 'Save'}
+                    {mode === 'create' ? t('common:actions.create') : t('common:actions.save')}
                 </Button>
             </div>
         </div>
     ) : (
         <div className="flex justify-end">
             <Button id="settings-close-button" variant="outline" onClick={onClose}>
-                Close
+                {t('common:actions.close')}
             </Button>
         </div>
     );
@@ -352,7 +361,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(false)}
             >
-                Cancel
+                {t('common:actions.cancel')}
             </Button>
             <Button
                 id="confirm-delete-button"
@@ -364,7 +373,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             if (isTimePeriodActionError(result)) {
                                 dispatch({
                                     type: 'SET_ERROR',
-                                    payload: getErrorMessage(result)
+                                    payload: { message: getErrorMessage(result) }
                                 });
                                 setShowDeleteConfirm(false);
                                 return;
@@ -376,12 +385,12 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     } catch (err) {
                         dispatch({
                             type: 'SET_ERROR',
-                            payload: err instanceof Error ? err.message : 'Failed to delete time period'
+                            payload: { message: err instanceof Error ? err.message : t('timeEntry.periods.errors.delete') }
                         });
                     }
                 }}
             >
-                Delete
+                {t('common:actions.delete')}
             </Button>
         </div>
     );
@@ -390,20 +399,19 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={mode === 'create' ? "Create New Time Period" : "Edit Time Period"}
+            title={mode === 'create' ? t('timeEntry.periods.form.createTitle') : t('timeEntry.periods.form.editTitle')}
             footer={mainFooter}
         >
             <div className="p-4">
                 {error && (
                     <div className="text-red-600 mb-2">
                         {error}
-                        {error === 'No time period settings available. Unable to create a new time period.' && (
+                        {errorCode === 'NO_SETTINGS' && (
                             <>
-                                {' '} Please{' '}
+                                {' '}
                                 <Link href="/msp/settings?tab=time-entry" className="underline text-blue-600 hover:text-blue-800">
-                                    check your time period settings
+                                    {t('timeEntry.periods.form.checkSettingsLink')}
                                 </Link>
-                                .
                             </>
                         )}
                     </div>
@@ -412,35 +420,38 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                     <>
                         {mode === 'create' && (
                             <div className="mb-4">
-                                <p>Based on your settings, the next time period is suggested.</p>
+                                <p>{t('timeEntry.periods.form.suggestion')}</p>
                                 {settings[0] && (
                                     <p>
-                                        Frequency: {settings[0].frequency} {settings[0].frequency_unit}(s)
+                                        {t('timeEntry.periods.form.frequency', {
+                                            value: settings[0].frequency,
+                                            unit: t(`timeEntry.timePeriods.units.${settings[0].frequency_unit}`)
+                                        })}
                                     </p>
                                 )}
                             </div>
                         )}
                         <div className="mb-4">
                             <Checkbox
-                                label="Override suggested dates"
+                                label={t('timeEntry.periods.form.overrideDates')}
                                 checked={override}
                                 onChange={(e) => setOverride(e.target.checked)}
                             />
                         </div>
                         <div className="mb-4">
-                            <Label htmlFor="time-period-start-date-picker">Start Date</Label>
+                            <Label htmlFor="time-period-start-date-picker">{t('timeEntry.periods.form.startDate')}</Label>
                             <DatePicker
                                 id="time-period-start-date-picker"
                                 value={plainDateToDate(startDate)}
                                 onChange={handleStartDateChange}
                                 disabled={!override}
-                                placeholder="Select start date"
+                                placeholder={t('timeEntry.periods.form.startDatePlaceholder')}
                             />
                         </div>
                         <div className="mb-4">
                             <div className="mb-2">
                                 <Checkbox
-                                    label="No End Date"
+                                    label={t('timeEntry.periods.form.noEndDate')}
                                     checked={noEndDate}
                                     onChange={(e) => {
                                         setNoEndDate(e.target.checked);
@@ -452,13 +463,13 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                             </div>
                             {!noEndDate && (
                                 <>
-                                    <Label htmlFor="time-period-end-date-picker">End Date</Label>
+                                    <Label htmlFor="time-period-end-date-picker">{t('timeEntry.periods.form.endDate')}</Label>
                                     <DatePicker
                                         id="time-period-end-date-picker"
                                         value={plainDateToDate(endDate)}
                                         onChange={handleEndDateChange}
                                         disabled={!override}
-                                        placeholder="Select end date"
+                                        placeholder={t('timeEntry.periods.form.endDatePlaceholder')}
                                     />
                                 </>
                             )}
@@ -468,11 +479,11 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                         <Dialog
                             isOpen={showDeleteConfirm}
                             onClose={() => setShowDeleteConfirm(false)}
-                            title="Confirm Delete"
+                            title={t('timeEntry.periods.form.confirmDeleteTitle')}
                             footer={deleteFooter}
                         >
                             <div className="p-4">
-                                <p className="mb-4">Are you sure you want to delete this time period? This action cannot be undone.</p>
+                                <p className="mb-4">{t('timeEntry.periods.form.confirmDeleteBody')}</p>
                             </div>
                         </Dialog>
                     </>

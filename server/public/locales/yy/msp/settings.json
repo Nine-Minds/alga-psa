@@ -1780,6 +1780,47 @@
         "6": "55555",
         "7": "55555"
       }
+    },
+    "periods": {
+      "title": "55555",
+      "description": "55555",
+      "loading": "55555",
+      "create": "55555",
+      "openMenu": "55555",
+      "columns": {
+        "startDate": "55555",
+        "endDate": "55555",
+        "actions": "55555"
+      },
+      "form": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "suggestion": "55555",
+        "frequency": "55555 {{value}} 55555 {{unit}} 55555",
+        "overrideDates": "55555",
+        "startDate": "55555",
+        "startDatePlaceholder": "55555",
+        "noEndDate": "55555",
+        "endDate": "55555",
+        "endDatePlaceholder": "55555",
+        "deletePeriod": "55555",
+        "confirmDeleteTitle": "55555",
+        "confirmDeleteBody": "55555",
+        "checkSettingsLink": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "suggest": "55555",
+        "noSettings": "55555",
+        "settingsRequired": "55555",
+        "startDateRequired": "55555",
+        "startBeforeEnd": "55555",
+        "overlap": "55555",
+        "overlapRetry": "55555",
+        "create": "55555",
+        "delete": "55555",
+        "unexpected": "55555"
+      }
     }
   },
   "billing": {
