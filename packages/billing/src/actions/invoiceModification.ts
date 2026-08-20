@@ -2068,11 +2068,6 @@ export const hardDeleteInvoice = withAuth(async (
     }
     deletedClientId = invoice.client_id ?? undefined;
 
-    // Clear the episode lock before deleting the invoice. The replenishment
-    // FK is intentionally restrictive, so this also makes hard deletion
-    // valid while allowing the next scan to replenish again.
-    await clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId);
-
     const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
       trx,
       tenant,
@@ -2089,6 +2084,12 @@ export const hardDeleteInvoice = withAuth(async (
         `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
       );
     }
+
+    // Clear the episode lock before deleting the invoice. The replenishment
+    // FK is intentionally restrictive, so this also makes hard deletion
+    // valid while allowing the next scan to replenish again. Keep this after
+    // deletion guards so a rejected delete does not mutate alert state.
+    await clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId);
 
     await rollbackProjectDepositCreditsForInvoice(
       trx,

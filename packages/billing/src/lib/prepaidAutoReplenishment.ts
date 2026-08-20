@@ -6,6 +6,11 @@ import { createHourBlockPurchaseInvoiceInternal } from '../actions/hourBlockActi
 
 export type PrepaidReplenishmentSubject = 'credit' | 'bucket';
 
+function nowForUpdate(knex: Knex | Knex.Transaction): unknown {
+  const candidate = (knex as Knex & { fn?: { now?: () => unknown } }).fn?.now;
+  return typeof candidate === 'function' ? candidate.call((knex as Knex & { fn?: unknown }).fn) : new Date();
+}
+
 /**
  * Release the episode-level replenishment lock when its invoice is no longer
  * open. The alert can remain below threshold and be acted on again by the
@@ -27,7 +32,7 @@ export async function clearPrepaidReplenishmentForInvoice(
       replenishment_bucket_minutes: null,
       replenishment_attempted_at: null,
       replenishment_error: null,
-      updated_at: knex.fn.now(),
+      updated_at: nowForUpdate(knex),
     });
 }
 
@@ -50,7 +55,7 @@ export async function suppressPrepaidReplenishmentForVoidedInvoice(
     .update({
       replenishment_status: 'skipped',
       replenishment_error: 'Replenishment invoice was voided',
-      updated_at: knex.fn.now(),
+      updated_at: nowForUpdate(knex),
     });
 }
 
