@@ -33,8 +33,8 @@ function writeReconnectToken(file, token) {
 function readInitialToken(connectorFile, reconnectFile) {
   // The memory-backed token is the only restart-safe authority. The projected
   // Secret can remain visible after the host has consumed/deleted it.
-  if (fs.existsSync(reconnectFile)) return boundedToken(reconnectFile, false);
-  if (fs.existsSync(connectorFile)) return boundedToken(connectorFile, true);
+  if (fs.existsSync(reconnectFile)) return { token: boundedToken(reconnectFile, false), reconnect: true };
+  if (fs.existsSync(connectorFile)) return { token: boundedToken(connectorFile, true), reconnect: false };
   throw new Error('No support connector or reconnect token is available.');
 }
 
@@ -47,7 +47,7 @@ function existingRecordingState(recordingDir, sessionId) {
     return sum + stat.size;
   }, 0);
   const metadata = listRecordingMetadata(recordingDir, sessionId).sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
-  return { bytes, previousDigest: metadata.at(-1)?.digest || null };
+  return { bytes, previousDigest: metadata.at(-1)?.digest || null, metadata };
 }
 
 export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, reconnectTokenFile, recordingDir, expiresAt, resumed = false, WebSocketImpl = WebSocket, ptySpawn = null, now = () => Date.now(), detachedGraceMs = DETACHED_GRACE_MS, reconnectDelayMs = 1000, idleTimeoutMs = IDLE_TIMEOUT_MS, recordingOwnerUid = SUPPORT_RECORDING_OWNER_UID, recordingOwnerGid = SUPPORT_RECORDING_OWNER_GID } = {}) {
@@ -58,6 +58,24 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
   let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null;
   const pendingFinalized = new Map();
   const finalizedSegments = new Map();
+
+  for (const metadata of existing.metadata || []) {
+    finalizedSegments.set(metadata.segmentId, metadata);
+    if (!metadata.receipt) {
+      pendingFinalized.set(metadata.segmentId, {
+        segmentId: metadata.segmentId,
+        checkpointFrame: null,
+        finalizeFrame: {
+          type: 'recording-finalize',
+          segmentId: metadata.segmentId,
+          bytes: metadata.bytes,
+          digest: metadata.digest,
+          previousDigest: metadata.previousDigest || null,
+          closedAt: metadata.closedAt,
+        },
+      });
+    }
+  }
 
   function frame(message) {
     const result = { ...message, version: SUPPORT_PROTOCOL_VERSION, seq: ++outgoingSeq };
@@ -76,31 +94,32 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     }
   }
   function flushPending() {
-    for (const checkpoint of pendingFinalized.values()) {
-      if (!checkpoint.checkpointSent && checkpoint.checkpointFrame && sendControl(checkpoint.checkpointFrame, { failOnBackpressure: true })) checkpoint.checkpointSent = true;
-    }
+    // Receipt is the acknowledgement. Re-send the latest checkpoint and final
+    // metadata on every authenticated connection until that receipt arrives;
+    // a successful socket.send alone does not prove the central side committed it.
+    for (const checkpoint of pendingFinalized.values()) if (checkpoint.checkpointFrame) sendControl(checkpoint.checkpointFrame, { failOnBackpressure: true });
     for (const pending of pendingFinalized.values()) {
-      if (!pending.finalizeSent && pending.finalizeFrame && sendControl(pending.finalizeFrame, { failOnBackpressure: true })) pending.finalizeSent = true;
+      if (pending.finalizeFrame) sendControl(pending.finalizeFrame, { failOnBackpressure: true });
     }
   }
   function checkpoint(force = false) {
     if (!recorder || (!force && recorder.bytes - lastCheckpointBytes < 64 * 1024)) return;
     lastCheckpointBytes = recorder.bytes;
     const frame = { type: 'recording-checkpoint', segmentId: recorder.segmentId, bytes: recorder.bytes, digest: recorder.digest.copy().digest('hex') };
-    const pending = pendingFinalized.get(recorder.segmentId) || { segmentId: recorder.segmentId, checkpointFrame: null, finalizeFrame: null, checkpointSent: false, finalizeSent: false };
+    const pending = pendingFinalized.get(recorder.segmentId) || { segmentId: recorder.segmentId, checkpointFrame: null, finalizeFrame: null };
     pending.checkpointFrame = frame; pendingFinalized.set(recorder.segmentId, pending);
-    try { if (sendControl(frame, { failOnBackpressure: true })) pending.checkpointSent = true; } catch { /* queued for reconnect unless backpressure closed the session */ }
+    try { sendControl(frame, { failOnBackpressure: true }); } catch { /* queued for reconnect unless backpressure closed the session */ }
   }
   function finalizeRecorder() {
     if (!recorder || recorder.closed) return null;
     const metadata = recorder.finalize({ previousDigest });
     previousDigest = metadata.digest;
     finalizedSegments.set(metadata.segmentId, metadata);
-    const pending = pendingFinalized.get(metadata.segmentId) || { segmentId: metadata.segmentId, checkpointFrame: null, finalizeFrame: null, checkpointSent: false, finalizeSent: false };
+    const pending = pendingFinalized.get(metadata.segmentId) || { segmentId: metadata.segmentId, checkpointFrame: null, finalizeFrame: null };
     pending.finalizeFrame = { type: 'recording-finalize', segmentId: metadata.segmentId, bytes: metadata.bytes, digest: metadata.digest, previousDigest: metadata.previousDigest, closedAt: metadata.closedAt };
     pendingFinalized.set(metadata.segmentId, pending);
     recorder = null; lastCheckpointBytes = 0;
-    try { if (sendControl(pending.finalizeFrame, { failOnBackpressure: true })) pending.finalizeSent = true; } catch {}
+    try { sendControl(pending.finalizeFrame, { failOnBackpressure: true }); } catch {}
     return metadata;
   }
   function clearIdle() { clearTimeout(idleTimer); idleTimer = null; }
@@ -138,8 +157,10 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     clearIdle();
     const current = child;
     child = null;
-    try { if (recorder) { record('stop', { reason }); finalizeRecorder(); } } catch { /* finalization is best effort; the session remains reconnectable */ }
+    let recordingFailure = false;
+    try { if (recorder) { record('stop', { reason }); finalizeRecorder(); } } catch { recordingFailure = true; recorder = null; }
     try { current?.kill('SIGHUP'); } catch {}
+    if (recordingFailure && !closed) return failClosed('recording-finalization-failure');
     try { send({ type: 'shell-closed', reason }); } catch {}
   }
   function stop(reason) {
@@ -164,7 +185,11 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
       incomingSeq = message.seq;
       try {
         if (message.type === 'ready') {
-          if (message.reconnectToken) { relayToken = message.reconnectToken; writeReconnectToken(reconnectTokenFile, relayToken); }
+          if (message.reconnectToken !== undefined) {
+            try { writeReconnectToken(reconnectTokenFile, message.reconnectToken); relayToken = message.reconnectToken; }
+            catch { return failClosed('invalid-reconnect-token'); }
+          }
+          if (!relayToken) return failClosed('missing-reconnect-token');
           clearTimeout(detachedTimer); detachedTimer = null; send({ type: child ? 'reattached' : 'recorder-ready', sessionId }); flushPending();
         } else if (message.type === 'attach' || message.type === 'reattach') {
           const attached = launchShell(Number(message.width) || 120, Number(message.height) || 40); send({ type: attached ? 'attached' : 'shell-unavailable' });
@@ -191,7 +216,17 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     });
     socket.on('error', () => { if (!closed) scheduleReconnect(); });
   }
-  return { start() { connect(readInitialToken(connectorTokenFile, reconnectTokenFile)); setTimeout(() => stop('session-expired'), Math.max(1, expiresAt - now())).unref?.(); }, stop, launchShell, getState: () => ({ closed, hasChild: Boolean(child), hasRecorder: Boolean(recorder), relayToken, quotaBytes: quota.bytes, stopReason }) };
+  return {
+    start() {
+      const initial = readInitialToken(connectorTokenFile, reconnectTokenFile);
+      if (initial.reconnect) relayToken = initial.token;
+      connect(initial.token);
+      setTimeout(() => stop('session-expired'), Math.max(1, expiresAt - now())).unref?.();
+    },
+    stop,
+    launchShell,
+    getState: () => ({ closed, hasChild: Boolean(child), hasRecorder: Boolean(recorder), relayToken, quotaBytes: quota.bytes, stopReason, pendingFinalized: pendingFinalized.size }),
+  };
 }
 
 const sessionId = String(process.env.SUPPORT_SESSION_ID || '');

@@ -5,7 +5,7 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSupportAgent } from '../../support-agent/supervisor.mjs';
-import { listRecordingMetadata, recordingDirectory } from '../support-recordings.mjs';
+import { listRecordingMetadata, RecordingSegment, recordingDirectory } from '../support-recordings.mjs';
 
 const SESSION_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -129,4 +129,98 @@ test('finalized segments queue across disconnect and resend in digest-chain orde
   assert.equal(finalizes.length, 2);
   assert.equal(finalizes[1].segmentId !== finalizes[0].segmentId, true);
   agent.stop('test');
+});
+
+test('an unacknowledged finalize is resent after reconnect until its receipt arrives', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-finalize-retry-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-finalize-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, reconnectDelayMs: 10, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const firstSocket = MockSocket.last; firstSocket.readyState = MockSocket.OPEN; firstSocket.emit('open');
+  firstSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  firstSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  fakePtyFactory.last.emitExit();
+  const firstFinalize = firstSocket.sent.find((frame) => frame.type === 'recording-finalize');
+  assert.ok(firstFinalize);
+
+  firstSocket.readyState = 3; firstSocket.emit('close');
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  const secondSocket = MockSocket.last; secondSocket.readyState = MockSocket.OPEN; secondSocket.emit('open');
+  assert.notEqual(secondSocket, firstSocket);
+  secondSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  assert.equal(secondSocket.sent.some((frame) => frame.type === 'recording-finalize' && frame.segmentId === firstFinalize.segmentId), true);
+  agent.stop('test');
+});
+
+test('container restart recovers unreceipted finalized segments from local metadata', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-finalize-recovery-'));
+  const segment = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  segment.append('output', { data: 'persisted before restart' });
+  const metadata = segment.finalize();
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-recovery-1234\n', { mode: 0o600 });
+
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  assert.equal(socket.sent.some((frame) => frame.type === 'recording-finalize' && frame.segmentId === metadata.segmentId), true);
+  socket.emit('message', Buffer.from(JSON.stringify({
+    version: 1,
+    seq: 2,
+    type: 'recording-receipt',
+    segmentId: metadata.segmentId,
+    bytes: metadata.bytes,
+    digest: metadata.digest,
+    closedAt: metadata.closedAt,
+    keyId: 'test-key',
+    signature: 'test-signature',
+  })));
+  assert.equal(listRecordingMetadata(root, SESSION_ID).find((item) => item.segmentId === metadata.segmentId)?.receipt?.keyId, 'test-key');
+  assert.equal(agent.getState().pendingFinalized, 0);
+  agent.stop('test');
+});
+
+test('fresh connector readiness requires a durable reconnect token', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-missing-reconnect-'));
+  const connector = path.join(root, 'connector-token');
+  fs.writeFileSync(connector, 'one-use-connector-token-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: connector, reconnectTokenFile: path.join(root, 'missing-reconnect'), recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  assert.equal(agent.getState().closed, true);
+  assert.equal(agent.getState().stopReason, 'missing-reconnect-token');
+
+  const validRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-valid-reconnect-'));
+  const validConnector = path.join(validRoot, 'connector-token');
+  const validReconnect = path.join(validRoot, 'reconnect-token');
+  fs.writeFileSync(validConnector, 'one-use-valid-connector-1234\n', { mode: 0o600 });
+  const valid = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: validConnector, reconnectTokenFile: validReconnect, recordingDir: validRoot, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  valid.start();
+  const validSocket = MockSocket.last; validSocket.readyState = MockSocket.OPEN; validSocket.emit('open');
+  validSocket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready', reconnectToken: 'durable-reconnect-token-1234' })));
+  assert.equal(valid.getState().closed, false);
+  assert.equal(fs.readFileSync(validReconnect, 'utf8').trim(), 'durable-reconnect-token-1234');
+  assert.equal(validSocket.sent.some((frame) => frame.type === 'recorder-ready'), true);
+  valid.stop('test');
+});
+
+test('recording finalization failure closes the connector and prevents another shell', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-finalize-failure-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-finalize-failure-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, idleTimeoutMs: 20, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  const directory = recordingDirectory(root, SESSION_ID);
+  fs.rmSync(directory, { recursive: true, force: true });
+  fs.writeFileSync(directory, 'blocks recording writes');
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(agent.getState().closed, true);
+  assert.equal(agent.getState().stopReason, 'recording-finalization-failure');
+  assert.equal(agent.launchShell(), false);
 });
