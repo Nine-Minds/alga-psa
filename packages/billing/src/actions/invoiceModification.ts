@@ -25,7 +25,7 @@ import {
   buildCreditNoteVoidedPayload,
 } from '@alga-psa/workflow-streams';
 
-import { validateInvoiceFinalization } from './taxSourceActions';
+import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
@@ -89,7 +89,7 @@ export async function activateHourBlocksForFinalizedInvoice(
   invoiceId: string,
   knex: Knex | Knex.Transaction,
   tenant: string,
-  userId: string
+  userId: string | null
 ): Promise<void> {
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Row-lock the pending blocks (canonical block_id order — the same order
@@ -209,7 +209,7 @@ async function voidPendingBlockAtFinalization(
   trx: Knex.Transaction,
   tenant: string,
   blockId: string,
-  userId: string,
+  userId: string | null,
   now: string,
   reason: string,
   metadata: Record<string, unknown>,
@@ -569,7 +569,7 @@ type ProjectDepositCreditEvent = {
   creditNoteId: string;
   clientId: string;
   createdAt: string;
-  createdByUserId: string;
+  createdByUserId: string | null;
   amount: number;
   currency: string;
   projectId: string;
@@ -579,7 +579,7 @@ async function issueProjectDepositCreditsForInvoice(
   knex: Knex,
   tenant: string,
   invoice: any,
-  userId: string,
+  userId: string | null,
 ): Promise<ProjectDepositCreditEvent[]> {
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const projectDeposit = await tenantScopedTable(
@@ -1032,7 +1032,8 @@ export async function finalizeInvoiceWithKnex(
   invoiceId: string,
   knex: Knex,
   tenant: string,
-  userId: string
+  userId: string | null,
+  options: { skipAutoApply?: boolean } = {},
 ): Promise<void> {
   let invoice: any;
   let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
@@ -1040,7 +1041,7 @@ export async function finalizeInvoiceWithKnex(
     creditNoteId: string;
     clientId: string;
     createdAt: string;
-    createdByUserId: string;
+    createdByUserId: string | null;
     amount: number;
     currency: string;
     sourceDocumentKind: 'prepayment_invoice' | 'negative_invoice';
@@ -1053,7 +1054,9 @@ export async function finalizeInvoiceWithKnex(
   } | null = null;
 
   // Validate tax source before finalization
-  const taxValidation = await validateInvoiceFinalization(invoiceId);
+  const taxValidation = userId === null
+    ? await validateInvoiceFinalizationInternal(knex, tenant, invoiceId)
+    : await validateInvoiceFinalization(invoiceId);
   if (isActionMessageError(taxValidation) || isActionPermissionError(taxValidation)) {
     throw expectedInvoiceActionError(getErrorMessage(taxValidation));
   }
@@ -1306,7 +1309,7 @@ export async function finalizeInvoiceWithKnex(
     console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
   }
   // For regular invoices, check if there's available credit to apply
-  else if (invoice && invoice.client_id) {
+  else if (invoice && invoice.client_id && !options.skipAutoApply) {
     // Auto-apply is a policy-controlled *automatic* path only: with the toggle
     // off, the invoice finalizes with credit_applied 0 and manual application
     // (UI / REST) stays available. Eligibility + ordering are enforced inside
@@ -1395,7 +1398,7 @@ export async function finalizeInvoiceWithKnex(
       payload: buildCreditNoteCreatedPayload({
         creditNoteId: createdCreditNote.creditNoteId,
         clientId: createdCreditNote.clientId,
-        createdByUserId: createdCreditNote.createdByUserId,
+        createdByUserId: createdCreditNote.createdByUserId ?? undefined,
         createdAt: createdCreditNote.createdAt,
         amount: createdCreditNote.amount,
         currency: createdCreditNote.currency,
@@ -1411,7 +1414,9 @@ export async function finalizeInvoiceWithKnex(
       ctx: {
         tenantId: tenant,
         occurredAt: createdCreditNote.createdAt,
-        actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+        actor: createdCreditNote.createdByUserId
+          ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
+          : { actorType: 'SYSTEM' },
       },
       idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
     });
@@ -1423,7 +1428,7 @@ export async function finalizeInvoiceWithKnex(
       payload: buildCreditNoteCreatedPayload({
         creditNoteId: event.creditNoteId,
         clientId: event.clientId,
-        createdByUserId: event.createdByUserId,
+        createdByUserId: event.createdByUserId ?? undefined,
         createdAt: event.createdAt,
         amount: event.amount,
         currency: event.currency,
@@ -1438,7 +1443,9 @@ export async function finalizeInvoiceWithKnex(
       ctx: {
         tenantId: tenant,
         occurredAt: event.createdAt,
-        actor: { actorType: 'USER', actorUserId: event.createdByUserId },
+        actor: event.createdByUserId
+          ? { actorType: 'USER', actorUserId: event.createdByUserId }
+          : { actorType: 'SYSTEM' },
       },
       idempotencyKey: `credit_note_created:${event.creditNoteId}`,
     });

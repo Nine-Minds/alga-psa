@@ -64,6 +64,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
       prepaidCreditAlertCurrencyCode: null,
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'EUR',
     });
     updateSettingsMock.mockResolvedValue({ success: true });
@@ -111,6 +112,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: 'EUR',
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -144,6 +149,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: 80,
         notifyClientOnPrepaidAlert: true,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -209,6 +218,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -219,6 +232,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
       prepaidCreditAlertCurrencyCode: 'JPY',
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'USD',
     });
     render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="USD" />);

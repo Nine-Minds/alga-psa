@@ -10,8 +10,10 @@
 
 export const CREDIT_LOW_BALANCE_TEMPLATE = 'prepaid-credit-low-balance';
 export const BUCKET_THRESHOLD_REACHED_TEMPLATE = 'prepaid-bucket-threshold-reached';
+export const PREPAID_REPLENISHMENT_TEMPLATE = 'prepaid-replenishment-created';
 export const CREDIT_LOW_BALANCE_SUBTYPE = 'prepaid-credit-low-balance';
 export const BUCKET_THRESHOLD_REACHED_SUBTYPE = 'prepaid-bucket-threshold-reached';
+export const PREPAID_REPLENISHMENT_SUBTYPE = 'prepaid-replenishment-created';
 
 function baseUrl(): string {
   return (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
@@ -42,6 +44,30 @@ export interface BucketAlertTemplateValues {
   periodStart: string;
   periodEnd: string;
   link: string;
+}
+
+export interface PrepaidReplenishmentTemplateValues {
+  invoiceNumber: string;
+  invoiceStatus: string;
+  action: string;
+  link: string;
+}
+
+export function buildPrepaidReplenishmentContext(
+  clientName: string,
+  values: PrepaidReplenishmentTemplateValues,
+): Record<string, unknown> {
+  return {
+    client: { name: clientName },
+    replenishment: values,
+  };
+}
+
+export function buildInternalPrepaidReplenishmentContext(
+  clientName: string,
+  values: PrepaidReplenishmentTemplateValues,
+): Record<string, unknown> {
+  return { clientName, ...values };
 }
 
 /** Handlebars context for the credit email/internal template. */

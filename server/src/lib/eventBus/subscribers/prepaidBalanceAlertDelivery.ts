@@ -45,9 +45,13 @@ import {
   BUCKET_THRESHOLD_REACHED_TEMPLATE,
   CREDIT_LOW_BALANCE_SUBTYPE,
   CREDIT_LOW_BALANCE_TEMPLATE,
+  PREPAID_REPLENISHMENT_SUBTYPE,
+  PREPAID_REPLENISHMENT_TEMPLATE,
   buildBucketAlertContext,
   buildCreditAlertContext,
   buildInternalAlertContext,
+  buildPrepaidReplenishmentContext,
+  buildInternalPrepaidReplenishmentContext,
   clientAlertLink,
   managerAlertLink,
 } from '../../notifications/prepaidBalanceAlertTemplates';
@@ -90,6 +94,9 @@ interface AlertForDelivery {
   period_start: string | Date | null;
   period_end: string | Date | null;
   notify_client_on_prepaid_alert: boolean;
+  replenishment_status: string | null;
+  replenishment_invoice_number: string | null;
+  replenishment_invoice_status: string | null;
   account_manager_id: string | null;
   billing_email: string | null;
   billing_contact_id: string | null;
@@ -159,6 +166,9 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
       'a.period_start',
       'a.period_end',
       'cbs.notify_client_on_prepaid_alert',
+      'a.replenishment_status',
+      'ri.invoice_number as replenishment_invoice_number',
+      'ri.status as replenishment_invoice_status',
       'cl.account_manager_id',
       'cl.billing_email',
       'cl.billing_contact_id',
@@ -166,6 +176,7 @@ async function loadOpenAlerts(knex: Knex, tenantId: string): Promise<AlertForDel
     );
   db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id');
   db.tenantJoin(query, 'client_billing_settings as cbs', 'a.client_id', 'cbs.client_id', { type: 'left' });
+  db.tenantJoin(query, 'invoices as ri', 'a.replenishment_invoice_id', 'ri.invoice_id', { type: 'left' });
   query
     .where('a.tenant', tenantId)
     .whereNull('a.resolved_at');
@@ -435,6 +446,9 @@ async function claimDeliveries(
         'a.observed_capacity',
         'a.period_start',
         'a.period_end',
+        'a.replenishment_status',
+        trx.raw('(SELECT i.invoice_number FROM invoices AS i WHERE i.tenant = a.tenant AND i.invoice_id = a.replenishment_invoice_id) AS replenishment_invoice_number'),
+        trx.raw('(SELECT i.status FROM invoices AS i WHERE i.tenant = a.tenant AND i.invoice_id = a.replenishment_invoice_id) AS replenishment_invoice_status'),
         'cl.account_manager_id',
         'cl.billing_email',
         'cl.billing_contact_id',
@@ -540,6 +554,9 @@ async function claimDeliveries(
           observed_capacity: row.observed_capacity as number | string | null,
           period_start: row.period_start as string | Date | null,
           period_end: row.period_end as string | Date | null,
+          replenishment_status: row.replenishment_status as string | null,
+          replenishment_invoice_number: row.replenishment_invoice_number as string | null,
+          replenishment_invoice_status: row.replenishment_invoice_status as string | null,
           notify_client_on_prepaid_alert: true,
           account_manager_id: row.account_manager_id as string | null,
           billing_email: row.billing_email as string | null,
@@ -764,7 +781,13 @@ async function resolveEmailRoles(
   };
 }
 
-function subtypeAndTemplateFor(alertType: 'credit' | 'bucket'): { subtypeName: string; templateName: string } {
+function subtypeAndTemplateFor(
+  alertType: 'credit' | 'bucket',
+  hasReplenishment: boolean,
+): { subtypeName: string; templateName: string } {
+  if (hasReplenishment) {
+    return { subtypeName: PREPAID_REPLENISHMENT_SUBTYPE, templateName: PREPAID_REPLENISHMENT_TEMPLATE };
+  }
   if (alertType === 'credit') {
     return { subtypeName: CREDIT_LOW_BALANCE_SUBTYPE, templateName: CREDIT_LOW_BALANCE_TEMPLATE };
   }
@@ -794,6 +817,19 @@ async function buildEmailContext(
   locale: string,
   link: string
 ): Promise<Record<string, unknown>> {
+  if (alert.replenishment_status && alert.replenishment_invoice_number) {
+    const action = alert.replenishment_status === 'issued'
+      ? 'issued'
+      : alert.replenishment_status === 'failed'
+        ? 'failed'
+        : 'created as a draft';
+    return buildPrepaidReplenishmentContext(alert.client_name, {
+      invoiceNumber: alert.replenishment_invoice_number,
+      invoiceStatus: alert.replenishment_invoice_status ?? alert.replenishment_status,
+      action,
+      link,
+    });
+  }
   const currency = alert.credit_currency_code || alert.default_currency_code || 'USD';
   if (alert.alert_type === 'credit') {
     const available = Number(alert.observed_value) || 0;
@@ -830,6 +866,19 @@ function buildInternalAlertContextForDelivery(
   locale: string,
   link: string
 ): Record<string, unknown> {
+  if (alert.replenishment_status && alert.replenishment_invoice_number) {
+    const action = alert.replenishment_status === 'issued'
+      ? 'issued'
+      : alert.replenishment_status === 'failed'
+        ? 'failed'
+        : 'created as a draft';
+    return buildInternalPrepaidReplenishmentContext(alert.client_name, {
+      invoiceNumber: alert.replenishment_invoice_number,
+      invoiceStatus: alert.replenishment_invoice_status ?? alert.replenishment_status,
+      action,
+      link,
+    });
+  }
   const currency = alert.credit_currency_code || alert.default_currency_code || 'USD';
   if (alert.alert_type === 'credit') {
     const available = Number(alert.observed_value) || 0;
@@ -863,7 +912,10 @@ async function processDelivery(
   summary: DeliverySummary
 ): Promise<void> {
   const db = tenantDb(knex, tenantId);
-  const { subtypeName, templateName } = subtypeAndTemplateFor(delivery.alert.alert_type);
+  const hasReplenishment = Boolean(
+    delivery.alert.replenishment_status && delivery.alert.replenishment_invoice_number,
+  );
+  const { subtypeName, templateName } = subtypeAndTemplateFor(delivery.alert.alert_type, hasReplenishment);
 
   const markSkipped = async () => {
     const updated = await db.table('prepaid_balance_alert_deliveries')

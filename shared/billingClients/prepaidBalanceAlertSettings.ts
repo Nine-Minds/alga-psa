@@ -11,6 +11,9 @@ import { tenantDb } from '@alga-psa/db';
 
 export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
 
+export const PREPAID_REPLENISHMENT_TIERS = ['notify', 'draft', 'auto_issue'] as const;
+export type PrepaidReplenishmentTier = typeof PREPAID_REPLENISHMENT_TIERS[number];
+
 export const prepaidBalanceAlertSettingsInputSchema = z
   .object({
     clientId: z.string().min(1),
@@ -21,6 +24,12 @@ export const prepaidBalanceAlertSettingsInputSchema = z
       .nullable(),
     bucketUsageAlertPercent: z.number().int().min(1).max(100).nullable(),
     notifyClientOnPrepaidAlert: z.boolean(),
+    prepaidReplenishmentTier: z.enum(PREPAID_REPLENISHMENT_TIERS).default('draft'),
+    /** Minor units for credit replenishment. */
+    prepaidCreditReplenishmentAmount: z.number().int().positive().nullable().default(null),
+    /** Minutes for bucket/hour replenishment. */
+    prepaidBucketReplenishmentMinutes: z.number().int().positive().nullable().default(null),
+    prepaidReplenishmentHorizonDays: z.number().int().min(0).max(3650).default(30),
   })
   // The credit amount and currency are either both present or both null; a
   // mismatched pair must be rejected by validation, not the DB constraint.
@@ -41,6 +50,10 @@ export interface PrepaidBalanceAlertSettings {
   prepaidCreditAlertCurrencyCode: string | null;
   bucketUsageAlertPercent: number | null;
   notifyClientOnPrepaidAlert: boolean;
+  prepaidReplenishmentTier: PrepaidReplenishmentTier;
+  prepaidCreditReplenishmentAmount: number | null;
+  prepaidBucketReplenishmentMinutes: number | null;
+  prepaidReplenishmentHorizonDays: number;
 }
 
 /** Read result: the persisted policy plus the client default currency when no policy exists. */
@@ -76,6 +89,17 @@ export async function getPrepaidBalanceAlertSettingsDb(
         ? Number(settings.bucket_usage_alert_percent)
         : null,
     notifyClientOnPrepaidAlert: Boolean(settings?.notify_client_on_prepaid_alert),
+    prepaidReplenishmentTier: PREPAID_REPLENISHMENT_TIERS.includes(settings?.prepaid_replenishment_tier)
+      ? settings.prepaid_replenishment_tier
+      : 'draft',
+    prepaidCreditReplenishmentAmount:
+      settings?.prepaid_credit_replenishment_amount != null ? Number(settings.prepaid_credit_replenishment_amount) : null,
+    prepaidBucketReplenishmentMinutes:
+      settings?.prepaid_bucket_replenishment_minutes != null ? Number(settings.prepaid_bucket_replenishment_minutes) : null,
+    prepaidReplenishmentHorizonDays:
+      settings?.prepaid_replenishment_horizon_days != null
+        ? Number(settings.prepaid_replenishment_horizon_days)
+        : 30,
   };
   if (client?.default_currency_code) {
     result.defaultCurrencyCode = client.default_currency_code;
@@ -84,7 +108,7 @@ export async function getPrepaidBalanceAlertSettingsDb(
 }
 
 /**
- * Persist only the four prepaid-alert policy columns. This deliberately does
+ * Persist only the prepaid-alert policy and replenishment columns. This deliberately does
  * not route through the broad null-delete behavior of updateClientBillingSettings:
  * unrelated billing settings are never touched. Disabling both alert types
  * forces client opt-in off.
@@ -95,12 +119,24 @@ export async function updatePrepaidBalanceAlertSettingsDb(
   input: PrepaidBalanceAlertSettingsInput
 ): Promise<void> {
   const parsed = prepaidBalanceAlertSettingsInputSchema.parse(input);
-  const { clientId, prepaidCreditAlertThreshold, prepaidCreditAlertCurrencyCode, bucketUsageAlertPercent } = parsed;
+  const {
+    clientId,
+    prepaidCreditAlertThreshold,
+    prepaidCreditAlertCurrencyCode,
+    bucketUsageAlertPercent,
+    prepaidReplenishmentTier,
+    prepaidCreditReplenishmentAmount,
+    prepaidBucketReplenishmentMinutes,
+    prepaidReplenishmentHorizonDays,
+  } = parsed;
   const bothDisabled =
     prepaidCreditAlertThreshold === null &&
     prepaidCreditAlertCurrencyCode === null &&
     bucketUsageAlertPercent === null;
   const notifyClientOnPrepaidAlert = bothDisabled ? false : parsed.notifyClientOnPrepaidAlert;
+  const effectiveReplenishmentTier = bothDisabled ? 'notify' : prepaidReplenishmentTier;
+  const effectiveCreditReplenishmentAmount = bothDisabled ? null : prepaidCreditReplenishmentAmount;
+  const effectiveBucketReplenishmentMinutes = bothDisabled ? null : prepaidBucketReplenishmentMinutes;
 
   const run = async (trx: Knex.Transaction): Promise<void> => {
     const db = tenantDb(trx, tenant);
@@ -119,6 +155,10 @@ export async function updatePrepaidBalanceAlertSettingsDb(
         prepaid_credit_alert_currency_code: prepaidCreditAlertCurrencyCode,
         bucket_usage_alert_percent: bucketUsageAlertPercent,
         notify_client_on_prepaid_alert: notifyClientOnPrepaidAlert,
+        prepaid_replenishment_tier: effectiveReplenishmentTier,
+        prepaid_credit_replenishment_amount: effectiveCreditReplenishmentAmount,
+        prepaid_bucket_replenishment_minutes: effectiveBucketReplenishmentMinutes,
+        prepaid_replenishment_horizon_days: prepaidReplenishmentHorizonDays,
         created_at: trx.fn.now(),
         updated_at: trx.fn.now(),
       })
@@ -128,6 +168,10 @@ export async function updatePrepaidBalanceAlertSettingsDb(
         prepaid_credit_alert_currency_code: prepaidCreditAlertCurrencyCode,
         bucket_usage_alert_percent: bucketUsageAlertPercent,
         notify_client_on_prepaid_alert: notifyClientOnPrepaidAlert,
+        prepaid_replenishment_tier: effectiveReplenishmentTier,
+        prepaid_credit_replenishment_amount: effectiveCreditReplenishmentAmount,
+        prepaid_bucket_replenishment_minutes: effectiveBucketReplenishmentMinutes,
+        prepaid_replenishment_horizon_days: prepaidReplenishmentHorizonDays,
         updated_at: trx.fn.now(),
       });
   };
