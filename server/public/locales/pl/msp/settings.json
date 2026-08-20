@@ -1817,6 +1817,7 @@
       "errors": {
         "load": "Nie udało się wczytać okresów.",
         "suggest": "Nie udało się zaproponować nowego okresu",
+        "noApplicableSettings": "Nie znaleziono odpowiednich ustawień okresów rozliczeniowych.",
         "noSettings": "Brak dostępnych ustawień okresów rozliczeniowych. Nie można utworzyć nowego okresu.",
         "settingsRequired": "Bez ustawień nie można zarządzać okresem.",
         "startDateRequired": "Należy podać datę początkową.",

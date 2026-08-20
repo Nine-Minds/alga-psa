@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "Impossibile caricare i periodi.",
         "suggest": "Impossibile suggerire un nuovo periodo",
+        "noApplicableSettings": "Nessuna impostazione dei periodi applicabile trovata.",
         "noSettings": "Nessuna impostazione dei periodi disponibile. Impossibile creare un nuovo periodo.",
         "settingsRequired": "Impossibile gestire un periodo senza impostazioni.",
         "startDateRequired": "È necessario indicare una data di inizio.",

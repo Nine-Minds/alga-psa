@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "11111",
         "suggest": "11111",
+        "noApplicableSettings": "11111",
         "noSettings": "11111",
         "settingsRequired": "11111",
         "startDateRequired": "11111",

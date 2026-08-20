@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "Failed to load time periods.",
         "suggest": "Failed to suggest a new time period",
+        "noApplicableSettings": "No applicable time period settings found.",
         "noSettings": "No time period settings available. Unable to create a new time period.",
         "settingsRequired": "Cannot manage time period without settings.",
         "startDateRequired": "Start date must be provided.",

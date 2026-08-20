@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "No se pudieron cargar los períodos de tiempo.",
         "suggest": "No se pudo sugerir un nuevo período de tiempo",
+        "noApplicableSettings": "No se encontró ninguna configuración de períodos de tiempo aplicable.",
         "noSettings": "No hay configuración de períodos de tiempo disponible. No se puede crear un nuevo período.",
         "settingsRequired": "No se puede gestionar el período de tiempo sin configuración.",
         "startDateRequired": "Debe indicar una fecha de inicio.",

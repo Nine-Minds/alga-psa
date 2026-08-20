@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "Die Zeiträume konnten nicht geladen werden.",
         "suggest": "Es konnte kein neuer Zeitraum vorgeschlagen werden",
+        "noApplicableSettings": "Keine passenden Abrechnungszeitraum-Einstellungen gefunden.",
         "noSettings": "Keine Abrechnungszeitraum-Einstellungen vorhanden. Es kann kein neuer Zeitraum erstellt werden.",
         "settingsRequired": "Ohne Einstellungen kann kein Zeitraum verwaltet werden.",
         "startDateRequired": "Es muss ein Startdatum angegeben werden.",

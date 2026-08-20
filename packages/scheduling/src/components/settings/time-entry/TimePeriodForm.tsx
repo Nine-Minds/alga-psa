@@ -116,7 +116,12 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 if (!suggestion.success || !suggestion.data) {
                     return {
                         ...initialFormState,
-                        error: suggestion.error || t('timeEntry.periods.errors.suggest')
+                        // The suggester is a pure library, so it names its failure with a key
+                        // rather than trusting the sentence to survive translation.
+                        error: suggestion.errorKey
+                            ? t(suggestion.errorKey)
+                            : suggestion.error || t('timeEntry.periods.errors.suggest'),
+                        errorCode: suggestion.errorKey ? 'NO_SETTINGS' : null
                     };
                 }
 

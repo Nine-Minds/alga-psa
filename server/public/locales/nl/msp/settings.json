@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "De perioden konden niet worden geladen.",
         "suggest": "Er kon geen nieuwe periode worden voorgesteld",
+        "noApplicableSettings": "Geen toepasbare periode-instellingen gevonden.",
         "noSettings": "Geen periode-instellingen beschikbaar. Er kan geen nieuwe periode worden gemaakt.",
         "settingsRequired": "Zonder instellingen kan geen periode worden beheerd.",
         "startDateRequired": "Er moet een startdatum worden opgegeven.",

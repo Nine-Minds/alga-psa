@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "Não foi possível carregar os períodos.",
         "suggest": "Não foi possível sugerir um novo período",
+        "noApplicableSettings": "Nenhuma configuração de período aplicável foi encontrada.",
         "noSettings": "Nenhuma configuração de período disponível. Não é possível criar um novo período.",
         "settingsRequired": "Não é possível gerenciar o período sem configurações.",
         "startDateRequired": "É necessário informar uma data de início.",

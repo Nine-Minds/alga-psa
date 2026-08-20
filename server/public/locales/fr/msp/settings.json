@@ -1811,6 +1811,7 @@
       "errors": {
         "load": "Impossible de charger les périodes.",
         "suggest": "Impossible de suggérer une nouvelle période",
+        "noApplicableSettings": "Aucun paramètre de période applicable n’a été trouvé.",
         "noSettings": "Aucun paramètre de période disponible. Impossible de créer une nouvelle période.",
         "settingsRequired": "Impossible de gérer une période sans paramètres.",
         "startDateRequired": "Une date de début doit être indiquée.",
