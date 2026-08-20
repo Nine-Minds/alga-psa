@@ -38,11 +38,13 @@ export interface BucketObservationInput {
   totalMinutes: number;
   rolledOverMinutes: number;
   configuredPercent: number;
+  /** Settled additive hour-block minutes applicable to this bucket/service. */
+  additionalMinutes?: number;
 }
 
 /** Capacity is base allowance plus rollover. */
 export function bucketCapacity(input: BucketObservationInput): number {
-  return input.totalMinutes + input.rolledOverMinutes;
+  return input.totalMinutes + input.rolledOverMinutes + (input.additionalMinutes ?? 0);
 }
 
 /**

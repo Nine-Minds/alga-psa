@@ -36,6 +36,7 @@ import {
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
+import { settlePrepaidReplenishmentInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
@@ -686,7 +687,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const newStatus = updateData.status ? String(updateData.status) : previousStatus;
 
       if (newStatus === 'paid') {
-        await clearPrepaidReplenishmentForInvoice(trx, context.tenant, id);
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, id);
       }
 
       const previousDueDate = toIsoDateString(existing.due_date);
@@ -1247,7 +1248,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         });
 
       if (newStatus === 'paid') {
-        await clearPrepaidReplenishmentForInvoice(trx, context.tenant, data.invoice_id);
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
       }
 
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
@@ -1403,7 +1404,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           });
 
         if (newStatus === 'paid') {
-          await clearPrepaidReplenishmentForInvoice(trx, context.tenant, data.invoice_id);
+          await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
         }
 
         // Calculate remaining balance after credit application

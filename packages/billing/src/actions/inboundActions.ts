@@ -3,7 +3,7 @@ import type { InvoiceStatus } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
-import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
+import { settlePrepaidReplenishmentInvoice } from './invoiceModification';
 
 interface MarkInvoicePaidByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
@@ -131,6 +131,12 @@ async function updateMappedInvoice(
     }
 
     if (current.status === input.status) {
+      if (input.status === 'paid') {
+        // Replayed mapped updates are also settlement opportunities when an
+        // earlier callback committed the invoice status but not the derived
+        // replenishment entitlement/lock transition.
+        await settlePrepaidReplenishmentInvoice(trx, tenant, lookup.algaEntityId);
+      }
       return current;
     }
 
@@ -147,7 +153,7 @@ async function updateMappedInvoice(
       .returning<{ invoice_id: string; status: string }[]>(['invoice_id', 'status']);
 
     if (input.status === 'paid') {
-      await clearPrepaidReplenishmentForInvoice(trx, tenant, lookup.algaEntityId);
+      await settlePrepaidReplenishmentInvoice(trx, tenant, lookup.algaEntityId);
     }
 
     return updated ?? null;

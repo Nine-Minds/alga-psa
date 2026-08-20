@@ -46,6 +46,8 @@ vi.mock('../../lib/billingHelpers', () => ({
   updateClientContractLineSettingsAsync: (...args: unknown[]) => updateContractLineSettingsMock(...args),
   getPrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => getPrepaidSettingsMock(...args),
   updatePrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => updatePrepaidSettingsMock(...args),
+  getPrepaidReplenishmentContractOverridesAsync: async () => [],
+  updatePrepaidReplenishmentContractOverrideAsync: async () => ({ success: true }),
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({

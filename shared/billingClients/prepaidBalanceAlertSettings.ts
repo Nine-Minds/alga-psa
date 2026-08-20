@@ -61,6 +61,16 @@ export interface PrepaidBalanceAlertSettingsWithDefault extends PrepaidBalanceAl
   defaultCurrencyCode?: string;
 }
 
+export interface PrepaidReplenishmentContractOverride {
+  clientContractId: string;
+  contractId: string;
+  contractName: string;
+  prepaidReplenishmentTier: PrepaidReplenishmentTier | null;
+  prepaidCreditReplenishmentAmount: number | null;
+  prepaidBucketReplenishmentMinutes: number | null;
+  prepaidReplenishmentHorizonDays: number | null;
+}
+
 export async function getPrepaidBalanceAlertSettingsDb(
   conn: Knex | Knex.Transaction,
   tenant: string,
@@ -181,4 +191,83 @@ export async function updatePrepaidBalanceAlertSettingsDb(
     return;
   }
   await (conn as Knex).transaction((trx) => run(trx));
+}
+
+export async function getPrepaidReplenishmentContractOverridesDb(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+): Promise<PrepaidReplenishmentContractOverride[]> {
+  const db = tenantDb(conn, tenant);
+  const query = db.table('client_contracts as cc')
+    .select(
+      'cc.client_contract_id',
+      'cc.contract_id',
+      'c.contract_name',
+      'cc.prepaid_replenishment_tier',
+      'cc.prepaid_credit_replenishment_amount',
+      'cc.prepaid_bucket_replenishment_minutes',
+      'cc.prepaid_replenishment_horizon_days',
+    )
+    .where({ 'cc.client_id': clientId });
+  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  return (await query.orderBy('c.contract_name', 'asc')).map((row) => ({
+    clientContractId: row.client_contract_id,
+    contractId: row.contract_id,
+    contractName: row.contract_name,
+    prepaidReplenishmentTier: PREPAID_REPLENISHMENT_TIERS.includes(row.prepaid_replenishment_tier)
+      ? row.prepaid_replenishment_tier
+      : null,
+    prepaidCreditReplenishmentAmount: row.prepaid_credit_replenishment_amount == null
+      ? null : Number(row.prepaid_credit_replenishment_amount),
+    prepaidBucketReplenishmentMinutes: row.prepaid_bucket_replenishment_minutes == null
+      ? null : Number(row.prepaid_bucket_replenishment_minutes),
+    prepaidReplenishmentHorizonDays: row.prepaid_replenishment_horizon_days == null
+      ? null : Number(row.prepaid_replenishment_horizon_days),
+  }));
+}
+
+export async function updatePrepaidReplenishmentContractOverrideDb(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  input: {
+    clientId: string;
+    clientContractId: string;
+    prepaidReplenishmentTier: PrepaidReplenishmentTier | null;
+    prepaidCreditReplenishmentAmount: number | null;
+    prepaidBucketReplenishmentMinutes: number | null;
+    prepaidReplenishmentHorizonDays: number | null;
+  },
+): Promise<void> {
+  const tier = input.prepaidReplenishmentTier;
+  if (tier !== null && !PREPAID_REPLENISHMENT_TIERS.includes(tier)) throw new Error('Invalid replenishment tier');
+  for (const [name, value] of [
+    ['credit', input.prepaidCreditReplenishmentAmount],
+    ['minutes', input.prepaidBucketReplenishmentMinutes],
+  ] as const) {
+    if (value !== null && (!Number.isSafeInteger(value) || value <= 0)) throw new Error(`Invalid replenishment ${name}`);
+  }
+  if (input.prepaidReplenishmentHorizonDays !== null &&
+      (!Number.isInteger(input.prepaidReplenishmentHorizonDays) || input.prepaidReplenishmentHorizonDays < 0 || input.prepaidReplenishmentHorizonDays > 3650)) {
+    throw new Error('Invalid replenishment horizon');
+  }
+
+  const run = async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+    const contract = await db.table('client_contracts')
+      .where({ client_contract_id: input.clientContractId, client_id: input.clientId })
+      .first('client_contract_id');
+    if (!contract) throw new Error('Client contract not found');
+    await db.table('client_contracts')
+      .where({ client_contract_id: input.clientContractId, client_id: input.clientId })
+      .update({
+        prepaid_replenishment_tier: tier,
+        prepaid_credit_replenishment_amount: tier === null ? null : input.prepaidCreditReplenishmentAmount,
+        prepaid_bucket_replenishment_minutes: tier === null ? null : input.prepaidBucketReplenishmentMinutes,
+        prepaid_replenishment_horizon_days: tier === null ? null : input.prepaidReplenishmentHorizonDays,
+        updated_at: trx.fn.now(),
+      });
+  };
+  if (typeof (conn as Knex.Transaction).commit === 'function') return run(conn as Knex.Transaction);
+  await (conn as Knex).transaction(run);
 }

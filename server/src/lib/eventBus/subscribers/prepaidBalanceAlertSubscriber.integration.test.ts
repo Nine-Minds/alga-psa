@@ -10,7 +10,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 import { tenantDb } from '@alga-psa/db';
-import { registerFeatureFlagChecker } from '@alga-psa/core';
+import { registerFeatureFlagChecker, registerJobEnqueuer } from '@alga-psa/core';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
 import { currentUserRef } from '../../../../test-utils/authModuleMock';
 import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
@@ -41,6 +41,7 @@ const sendEmailMock = sendEventEmail as unknown as ReturnType<typeof vi.fn>;
 
 let db: Knex;
 let flagEnabled = true;
+const enqueueJobMock = vi.fn(async (..._args: unknown[]) => ({ jobId: randomUUID(), scheduledJobId: randomUUID() }));
 
 function scanEvent(tenantId: string, clientId?: string): unknown {
   return {
@@ -366,6 +367,7 @@ beforeAll(async () => {
   wireLocalTestDbEnv();
   db = await createTestDbConnection();
   registerFeatureFlagChecker(async () => flagEnabled);
+  registerJobEnqueuer((jobName, data) => enqueueJobMock(jobName, data));
 }, 300_000);
 
 afterAll(async () => {
@@ -381,6 +383,8 @@ beforeEach(() => {
   flagEnabled = true;
   sendEmailMock.mockReset();
   sendEmailMock.mockResolvedValue(undefined);
+  enqueueJobMock.mockReset();
+  enqueueJobMock.mockResolvedValue({ jobId: randomUUID(), scheduledJobId: randomUUID() });
 });
 
 describe('prepaid balance alert scan (DB-backed)', () => {
@@ -1783,6 +1787,54 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       expect(alert.replenishment_status).toBe('skipped');
     });
 
+    it('applies a contract replenishment override without changing the client default', async () => {
+      const tenantId = await createTenant('replenishment-contract-override');
+      createdTenants.push(tenantId);
+      const clientId = await createClient(tenantId);
+      await createBillingSettings(tenantId, clientId, {
+        replenishmentTier: 'draft',
+        creditReplenishmentAmount: 5000,
+      });
+      const contractId = randomUUID();
+      const clientContractId = randomUUID();
+      await db('contracts').insert({
+        tenant: tenantId,
+        contract_id: contractId,
+        contract_name: 'Override Contract',
+        billing_frequency: 'monthly',
+        status: 'active',
+        is_active: true,
+        is_template: false,
+        currency_code: 'USD',
+        is_system_managed_default: false,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      await db('client_contracts').insert({
+        tenant: tenantId,
+        client_contract_id: clientContractId,
+        client_id: clientId,
+        contract_id: contractId,
+        start_date: '2026-01-01',
+        status: 'pending',
+        is_active: true,
+        renewal_mode: 'none',
+        notice_period_days: 30,
+        use_tenant_renewal_defaults: false,
+        prepaid_replenishment_tier: 'notify',
+        prepaid_credit_replenishment_amount: null,
+        prepaid_bucket_replenishment_minutes: null,
+        prepaid_replenishment_horizon_days: null,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      await createOpenCreditAlert(tenantId, clientId);
+
+      const summary = await replenishOpenPrepaidBalanceAlerts(db, tenantId, clientId);
+      expect(summary).toMatchObject({ considered: 1, unchanged: 1, created: 0 });
+      expect(await invoiceCount(tenantId, clientId)).toBe(0);
+    });
+
     it('uses end_date for non-renewing contracts and decision_due_date for renewing contracts', async () => {
       const tenantId = await createTenant('replenishment-renewal-modes');
       createdTenants.push(tenantId);
@@ -1837,7 +1889,7 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       expect(autoRenewingSummary).toMatchObject({ created: 0, skipped: 1 });
     });
 
-    it('keeps draft invoices pending and finalizes auto-issue invoices', async () => {
+    it('keeps draft and auto-issued invoices pending until payment', async () => {
       const draftTenant = await createTenant('replenishment-draft');
       const autoTenant = await createTenant('replenishment-auto');
       createdTenants.push(draftTenant, autoTenant);
@@ -1859,7 +1911,34 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       const autoInvoice = await tenantDb(db, autoTenant).table('invoices').where({ tenant: autoTenant, client_id: autoClient }).first();
       expect(autoInvoice.status).toBe('sent');
       const autoAlert = await tenantDb(db, autoTenant).table('prepaid_balance_alerts').where({ tenant: autoTenant }).first();
-      expect(autoAlert.replenishment_status).toBe('issued');
+      expect(autoAlert.replenishment_status).toBe('pending');
+      expect(await tenantDb(db, autoTenant).table('credit_tracking').where({ tenant: autoTenant, client_id: autoClient }).first()).toBeUndefined();
+    });
+
+    it('isolates an invoice/delivery failure and continues the tenant scan', async () => {
+      const tenantId = await createTenant('replenishment-failure-isolation');
+      createdTenants.push(tenantId);
+      const failedClient = await createClient(tenantId);
+      const healthyClient = await createClient(tenantId);
+      await createBillingSettings(tenantId, failedClient, { replenishmentTier: 'auto_issue', creditReplenishmentAmount: 5000 });
+      await createBillingSettings(tenantId, healthyClient, { replenishmentTier: 'auto_issue', creditReplenishmentAmount: 5000 });
+      await createOpenCreditAlert(tenantId, failedClient);
+      await createOpenCreditAlert(tenantId, healthyClient);
+      enqueueJobMock
+        .mockRejectedValueOnce(new Error('invoice delivery queue unavailable'))
+        .mockResolvedValue({ jobId: randomUUID(), scheduledJobId: randomUUID() });
+
+      const summary = await replenishOpenPrepaidBalanceAlerts(db, tenantId);
+      expect(summary).toMatchObject({ considered: 2, failed: 1, created: 1 });
+      const alertRows = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+        .where({ tenant: tenantId }).select('replenishment_status', 'replenishment_attempt_count', 'replenishment_error');
+      expect(alertRows.filter((row) => row.replenishment_status === 'failed')).toHaveLength(1);
+      expect(alertRows.filter((row) => row.replenishment_status === 'pending')).toHaveLength(1);
+      expect(alertRows.find((row) => row.replenishment_status === 'failed')).toMatchObject({
+        replenishment_attempt_count: 1,
+        replenishment_error: expect.stringContaining('delivery queue unavailable'),
+      });
+      expect((await invoiceCount(tenantId, failedClient)) + (await invoiceCount(tenantId, healthyClient))).toBe(2);
     });
 
     it('clears a linked pending invoice state and allows a later scan to replenish again', async () => {
@@ -1925,16 +2004,19 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       expect(await invoiceCount(tenantId, clientId)).toBe(1);
     });
 
-    it('clears the lock when an external payment settles the top-up and permits a later scan', async () => {
+    it('evaluates, replenishes, settles, and evaluates again without duplicating the top-up', async () => {
       const tenantId = await createTenant('replenishment-payment');
       createdTenants.push(tenantId);
       const clientId = await createClient(tenantId);
       await createBillingSettings(tenantId, clientId, {
         replenishmentTier: 'auto_issue',
+        threshold: 5000,
+        currency: 'USD',
         creditReplenishmentAmount: 5000,
       });
-      await createOpenCreditAlert(tenantId, clientId);
+      await createCredit(tenantId, clientId, { amount: 100 });
 
+      await evaluatePrepaidBalanceAlertsForTenant(db, tenantId, clientId);
       await replenishOpenPrepaidBalanceAlerts(db, tenantId, clientId);
       const invoice = await tenantDb(db, tenantId).table('invoices')
         .where({ tenant: tenantId, client_id: clientId }).first();
@@ -1951,9 +2033,10 @@ describe('prepaid balance alert scan (DB-backed)', () => {
       expect(cleared.replenishment_status).toBeNull();
       expect(cleared.replenishment_invoice_id).toBeNull();
 
+      await evaluatePrepaidBalanceAlertsForTenant(db, tenantId, clientId);
       const second = await replenishOpenPrepaidBalanceAlerts(db, tenantId, clientId);
-      expect(second).toMatchObject({ created: 1 });
-      expect(await invoiceCount(tenantId, clientId)).toBe(2);
+      expect(second).toMatchObject({ considered: 0, created: 0 });
+      expect(await invoiceCount(tenantId, clientId)).toBe(1);
     });
 
     it('clears the lock before hard deletion so the RESTRICT foreign key permits deletion', async () => {

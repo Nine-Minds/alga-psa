@@ -20,17 +20,17 @@ describe('prepaid replenishment pending-state lifecycle wiring', () => {
     const inboundSource = source('packages/billing/src/actions/inboundActions.ts');
     expect(modificationSource).toContain('clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId)');
     expect(invoiceServiceSource).toContain('clearPrepaidReplenishmentForInvoice(trx, context.tenant, id)');
-    expect(inboundSource).toContain('clearPrepaidReplenishmentForInvoice(trx, tenant, lookup.algaEntityId)');
+    expect(inboundSource).toContain('settlePrepaidReplenishmentInvoice(trx, tenant, lookup.algaEntityId)');
   });
 
-  it('clears the pending state when manual or external payment settles the invoice', () => {
+  it('settles entitlements and clears the pending state when payment settles the invoice', () => {
     const invoiceServiceSource = source('server/src/lib/api/services/InvoiceService.ts');
     const externalPaymentSource = source('packages/billing/src/services/accountingSync/recordExternalPayment.ts');
     expect(invoiceServiceSource).toContain("if (newStatus === 'paid')");
-    expect(invoiceServiceSource).toContain('clearPrepaidReplenishmentForInvoice(trx, context.tenant, data.invoice_id)');
-    expect(invoiceServiceSource).toContain('clearPrepaidReplenishmentForInvoice(trx, context.tenant, id)');
+    expect(invoiceServiceSource).toContain('settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id)');
+    expect(invoiceServiceSource).toContain('settlePrepaidReplenishmentInvoice(trx, context.tenant, id)');
     expect(externalPaymentSource).toContain("if (status === 'paid')");
-    expect(externalPaymentSource).toContain('clearPrepaidReplenishmentForInvoice(trx, tenantId, input.invoiceId)');
+    expect(externalPaymentSource).toContain('settlePrepaidReplenishmentInvoice(trx, tenantId, input.invoiceId)');
   });
 
   it('keeps hourly replenishment on the additive hour-block purchase core', () => {

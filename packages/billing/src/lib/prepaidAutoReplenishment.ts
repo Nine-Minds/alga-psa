@@ -31,6 +31,7 @@ export async function clearPrepaidReplenishmentForInvoice(
       replenishment_credit_amount: null,
       replenishment_bucket_minutes: null,
       replenishment_attempted_at: null,
+      replenishment_attempt_count: 0,
       replenishment_error: null,
       updated_at: nowForUpdate(knex),
     });

@@ -83,6 +83,7 @@ interface CurrentBucketSubject extends BucketObservationInput {
   period_end: string | Date;
   service_catalog_id: string;
   contract_line_id: string;
+  client_contract_id: string;
 }
 
 function emptySummary(): EvaluatorSummary {
@@ -221,7 +222,8 @@ async function resolveCurrentBucketSubjects(
       'bu.period_start',
       'bu.period_end',
       'bu.service_catalog_id',
-      'bu.contract_line_id'
+      'bu.contract_line_id',
+      'cc.client_contract_id'
     );
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
@@ -257,9 +259,17 @@ async function resolveCurrentBucketSubjects(
     period_end: string | Date;
     service_catalog_id: string;
     contract_line_id: string;
+    client_contract_id: string;
   }>;
 
-  return rows.map((row) => ({
+  return Promise.all(rows.map(async (row) => {
+    const blockMinutes = await db.table('hour_blocks')
+      .where({ client_id: clientId, service_id: row.service_catalog_id, status: 'active' })
+      .where('remaining_minutes', '>', 0)
+      .where((builder) => builder.whereNull('expiration_date').orWhere('expiration_date', '>=', todayISO))
+      .sum({ total: 'remaining_minutes' })
+      .first();
+    return {
     usage_id: row.usage_id,
     minutesUsed: Number(row.minutes_used) || 0,
     rolledOverMinutes: Number(row.rolled_over_minutes) || 0,
@@ -269,6 +279,9 @@ async function resolveCurrentBucketSubjects(
     period_end: row.period_end,
     service_catalog_id: row.service_catalog_id,
     contract_line_id: row.contract_line_id,
+    client_contract_id: row.client_contract_id,
+    additionalMinutes: Number(blockMinutes?.total ?? 0) || 0,
+    };
   }));
 }
 

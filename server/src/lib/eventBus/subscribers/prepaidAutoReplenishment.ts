@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { createPrepaidReplenishmentInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
 import { finalizeInvoiceWithKnex } from '@alga-psa/billing/actions/invoiceModification';
+import { enqueueImmediateJob } from '@alga-psa/core';
 
 type AlertRow = {
   alert_id: string;
@@ -14,6 +15,8 @@ type AlertRow = {
   replenishment_bucket_minutes: number | string | null;
   credit_currency_code: string | null;
   service_catalog_id: string | null;
+  contract_line_id: string | null;
+  replenishment_attempt_count?: number | null;
 };
 
 type ReplenishmentResult = 'created' | 'skipped' | 'unchanged' | 'failed';
@@ -22,6 +25,15 @@ type ContractHorizonRow = {
   end_date: string | Date | null;
   renewal_mode: string | null;
   decision_due_date: string | Date | null;
+};
+
+type ContractPolicyRow = ContractHorizonRow & {
+  client_contract_id: string;
+  contract_id: string;
+  prepaid_replenishment_tier: string | null;
+  prepaid_credit_replenishment_amount: number | string | null;
+  prepaid_bucket_replenishment_minutes: number | string | null;
+  prepaid_replenishment_horizon_days: number | string | null;
 };
 
 export interface PrepaidAutoReplenishmentSummary {
@@ -41,32 +53,45 @@ function isoDateDaysFromNow(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-async function hasContractTerminatingWithinHorizon(
+async function getAlertContract(
   trx: Knex.Transaction,
   tenant: string,
-  clientId: string,
-  horizonDays: number,
-): Promise<boolean> {
+  alert: AlertRow,
+): Promise<ContractPolicyRow | null> {
+  if (alert.alert_type === 'bucket' && !alert.contract_line_id) return null;
   const today = new Date().toISOString().slice(0, 10);
-  const horizon = isoDateDaysFromNow(horizonDays);
   const db = tenantDb(trx, tenant);
   const query = db.table('client_contracts as cc')
-    .select('cc.end_date', 'cc.renewal_mode', 'cc.decision_due_date')
-    .where({ 'cc.client_id': clientId, 'cc.is_active': true })
+    .select(
+      'cc.client_contract_id', 'cc.contract_id', 'cc.end_date', 'cc.renewal_mode', 'cc.decision_due_date',
+      'cc.prepaid_replenishment_tier', 'cc.prepaid_credit_replenishment_amount',
+      'cc.prepaid_bucket_replenishment_minutes', 'cc.prepaid_replenishment_horizon_days',
+    )
+    .where({ 'cc.client_id': alert.client_id, 'cc.is_active': true })
     .where((builder) => builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', today))
     .where((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', today));
+  if (alert.alert_type === 'bucket') {
+    db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'cc.contract_id');
+    query.where('cl.contract_line_id', alert.contract_line_id);
+  }
   db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
   query.where({ 'c.is_active': true, 'c.status': 'active' });
+  const rows = await query as ContractPolicyRow[];
+  // Credit alerts are client-scoped by the detector and have no contract
+  // line identity. Only a single active contract is an unambiguous owner;
+  // multiple unrelated contracts must not suppress the client wholesale.
+  return alert.alert_type === 'bucket' ? (rows[0] ?? null) : (rows.length === 1 ? rows[0] : null);
+}
 
-  const contracts = await query as ContractHorizonRow[];
-  return contracts.some((contract) => {
-    const decisionDate = contract.renewal_mode === 'none'
-      ? contract.end_date
-      : contract.decision_due_date ?? contract.end_date;
-    if (!decisionDate) return false;
-    const date = new Date(decisionDate).toISOString().slice(0, 10);
-    return date >= today && date <= horizon;
-  });
+function contractTerminatingWithinHorizon(contract: ContractPolicyRow, horizonDays: number): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  const horizon = isoDateDaysFromNow(horizonDays);
+  const decisionDate = contract.renewal_mode === 'none'
+    ? contract.end_date
+    : contract.decision_due_date ?? contract.end_date;
+  if (!decisionDate) return false;
+  const date = new Date(decisionDate).toISOString().slice(0, 10);
+  return date >= today && date <= horizon;
 }
 
 async function processAlert(
@@ -93,10 +118,20 @@ async function processAlert(
         'prepaid_bucket_replenishment_minutes',
         'prepaid_replenishment_horizon_days',
       );
-    const tier = settings?.prepaid_replenishment_tier ?? 'draft';
+    const contract = await getAlertContract(trx, tenant, alert);
+    if (alert.alert_type === 'bucket' && !contract) {
+      await db.table('prepaid_balance_alerts').where({ alert_id: alert.alert_id }).update({
+        replenishment_status: 'skipped',
+        replenishment_attempted_at: trx.fn.now(),
+        replenishment_error: 'Bucket alert is not linked to an active client contract',
+        updated_at: trx.fn.now(),
+      });
+      return 'skipped' as const;
+    }
+    const tier = contract?.prepaid_replenishment_tier ?? settings?.prepaid_replenishment_tier ?? 'draft';
     const amount = Number(alert.alert_type === 'credit'
-      ? settings?.prepaid_credit_replenishment_amount
-      : settings?.prepaid_bucket_replenishment_minutes);
+      ? (contract?.prepaid_credit_replenishment_amount ?? settings?.prepaid_credit_replenishment_amount)
+      : (contract?.prepaid_bucket_replenishment_minutes ?? settings?.prepaid_bucket_replenishment_minutes));
     if (tier === 'notify' || !Number.isSafeInteger(amount) || amount <= 0) {
       return 'unchanged' as const;
     }
@@ -105,12 +140,8 @@ async function processAlert(
       return 'unchanged' as const;
     }
 
-    if (await hasContractTerminatingWithinHorizon(
-      trx,
-      tenant,
-      alert.client_id,
-      Number(settings?.prepaid_replenishment_horizon_days ?? 30),
-    )) {
+    const horizonDays = Number(contract?.prepaid_replenishment_horizon_days ?? settings?.prepaid_replenishment_horizon_days ?? 30);
+    if (contract && contractTerminatingWithinHorizon(contract, horizonDays)) {
       await db.table('prepaid_balance_alerts')
         .where({ alert_id: alert.alert_id })
         .update({
@@ -154,9 +185,9 @@ async function processAlert(
       subject: alert.alert_type,
       amount,
       currencyCode: alert.credit_currency_code ?? client.default_currency_code ?? 'USD',
-      serviceId: alert.service_catalog_id,
-      serviceName,
-      hourlyRate,
+        serviceId: alert.service_catalog_id,
+        serviceName,
+        hourlyRate,
     });
     invoiceId = created.invoiceId;
     autoIssue = tier === 'auto_issue';
@@ -169,6 +200,7 @@ async function processAlert(
           ? { replenishment_credit_amount: amount, replenishment_bucket_minutes: null }
           : { replenishment_credit_amount: null, replenishment_bucket_minutes: amount }),
         replenishment_attempted_at: trx.fn.now(),
+        replenishment_attempt_count: 0,
         replenishment_error: null,
         updated_at: trx.fn.now(),
       });
@@ -179,15 +211,26 @@ async function processAlert(
     try {
       // System finalization uses the same invoice lifecycle but does not draw
       // down existing credit against the replenishment invoice itself.
-      await finalizeInvoiceWithKnex(invoiceId, knex, tenant, null, { skipAutoApply: true });
-      await tenantDb(knex, tenant).table('prepaid_balance_alerts')
-        .where({ alert_id: alertId, replenishment_invoice_id: invoiceId })
-        .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+      await finalizeInvoiceWithKnex(invoiceId, knex, tenant, null, {
+        skipAutoApply: true,
+        deferPrepaidActivation: true,
+      });
+      await enqueueImmediateJob('invoice_email', {
+        invoiceIds: [invoiceId],
+        tenantId: tenant,
+        user_id: 'system',
+        steps: [
+          { stepName: `PDF Generation for replenishment invoice ${invoiceId}`, type: 'pdf_generation', metadata: { invoiceId, tenantId: tenant } },
+          { stepName: `Email Sending for replenishment invoice ${invoiceId}`, type: 'email_sending', metadata: { invoiceId, tenantId: tenant } },
+        ],
+        metadata: { user_id: 'system', invoice_count: 1, tenantId: tenant },
+      });
     } catch (error) {
       await tenantDb(knex, tenant).table('prepaid_balance_alerts')
         .where({ alert_id: alertId, replenishment_invoice_id: invoiceId })
         .update({
           replenishment_status: 'failed',
+          replenishment_attempt_count: knex.raw('LEAST(COALESCE(replenishment_attempt_count, 0) + 1, 100)'),
           replenishment_error: String(error instanceof Error ? error.message : error).slice(0, 1000),
           updated_at: knex.fn.now(),
         });
@@ -221,7 +264,26 @@ export async function replenishOpenPrepaidBalanceAlerts(
     failed: 0,
   };
   for (const alert of alerts) {
-    const outcome = await processAlert(knex, tenant, alert.alert_id);
+    let outcome: { result: ReplenishmentResult; autoIssue: boolean };
+    try {
+      outcome = await processAlert(knex, tenant, alert.alert_id);
+    } catch (error) {
+      // A single malformed policy, invoice insert, or delivery enqueue must
+      // not abort the tenant scan. Failed rows have no invoice lock and are
+      // retryable on the next scan; the bounded attempt/error fields make the
+      // failure observable without creating duplicates.
+      await tenantDb(knex, tenant).table('prepaid_balance_alerts')
+        .where({ alert_id: alert.alert_id, resolved_at: null })
+        .update({
+          replenishment_status: 'failed',
+          replenishment_attempted_at: knex.fn.now(),
+          replenishment_attempt_count: knex.raw('LEAST(COALESCE(replenishment_attempt_count, 0) + 1, 100)'),
+          replenishment_error: String(error instanceof Error ? error.message : error).slice(0, 1000),
+          updated_at: knex.fn.now(),
+        });
+      summary.failed += 1;
+      continue;
+    }
     summary[outcome.result] += 1;
     if (outcome.result === 'created' && outcome.autoIssue) summary.autoIssued += 1;
   }

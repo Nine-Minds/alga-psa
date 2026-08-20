@@ -1034,7 +1034,7 @@ export async function finalizeInvoiceWithKnex(
   knex: Knex,
   tenant: string,
   userId: string | null,
-  options: { skipAutoApply?: boolean } = {},
+  options: { skipAutoApply?: boolean; deferPrepaidActivation?: boolean } = {},
 ): Promise<void> {
   let invoice: any;
   let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
@@ -1132,7 +1132,9 @@ export async function finalizeInvoiceWithKnex(
     // Mirrors unfinalize/draft-delete, whose hour-block hooks also run inside
     // the caller's trx (29.8.18 mitigation round 3: pre-fix this ran as a
     // separate transaction after the invoice was already finalized).
-    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    if (!options.deferPrepaidActivation) {
+      await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    }
 
     // Record audit log
     // await auditLog(
@@ -1154,7 +1156,7 @@ export async function finalizeInvoiceWithKnex(
   // Prepayments and negative invoices use explicit financial-document classification.
   const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
 
-  if (invoice && invoiceCreditHandlingKind === 'prepayment') {
+  if (invoice && invoiceCreditHandlingKind === 'prepayment' && !options.deferPrepaidActivation) {
     // Prepayment credit is issued here, at finalization — a draft prepayment
     // grants nothing. The invoice carries the chosen expiration date from
     // creation; absent one, the client/default billing settings decide.
@@ -1454,6 +1456,92 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
+}
+
+/**
+ * Settle a replenishment invoice exactly once. Replenishment invoices may be
+ * issued/sent while their entitlements remain pending; payment is the only
+ * event that activates the linked credit or hour block. The invoice row is
+ * locked before the entitlement rows and the alert lock is cleared in the
+ * same transaction, so concurrent payment/status callbacks cannot mint twice.
+ */
+export async function settlePrepaidReplenishmentInvoice(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string | null = null,
+): Promise<void> {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantScopedTable(trx, tenant, 'prepaid_balance_alerts');
+    const alert = await db.where({ replenishment_invoice_id: invoiceId }).forUpdate().first();
+    if (!alert) return;
+
+    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .forUpdate()
+      .first();
+    if (!invoice || invoice.status !== 'paid') return;
+
+    const handlingKind = classifyInvoiceCreditHandling(invoice);
+    if (handlingKind === 'prepayment') {
+      const alreadyIssued = await tenantScopedTable(trx, tenant, 'transactions')
+        .where({ invoice_id: invoiceId, type: 'credit_issuance' })
+        .first('transaction_id');
+      if (!alreadyIssued) {
+        const now = new Date().toISOString();
+        const creditAmount = Number(invoice.subtotal);
+        const currencyCode = String(invoice.currency_code ?? 'USD');
+        const expirationDate = invoice.credit_expiration_date
+          ? new Date(invoice.credit_expiration_date).toISOString()
+          : await resolveCreditExpirationDate(trx, tenant, invoice.client_id);
+        const lastTransaction = await tenantScopedTable(trx, tenant, 'transactions')
+          .where({ client_id: invoice.client_id })
+          .orderBy('created_at', 'desc')
+          .first();
+        const transactionId = uuidv4();
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
+          transaction_id: transactionId,
+          client_id: invoice.client_id,
+          invoice_id: invoiceId,
+          amount: creditAmount,
+          type: 'credit_issuance',
+          status: 'completed',
+          description: 'Credit issued from paid replenishment invoice',
+          created_at: now,
+          balance_after: (Number(lastTransaction?.balance_after) || 0) + creditAmount,
+          tenant,
+          expiration_date: expirationDate,
+          currency_code: currencyCode,
+        });
+        await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
+          credit_id: uuidv4(),
+          tenant,
+          client_id: invoice.client_id,
+          transaction_id: transactionId,
+          amount: creditAmount,
+          remaining_amount: creditAmount,
+          created_at: now,
+          expiration_date: expirationDate,
+          is_expired: false,
+          updated_at: now,
+          currency_code: currencyCode,
+        });
+      }
+    }
+
+    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ alert_id: alert.alert_id, replenishment_invoice_id: invoiceId })
+      .update({
+        replenishment_status: null,
+        replenishment_invoice_id: null,
+        replenishment_credit_amount: null,
+        replenishment_bucket_minutes: null,
+        replenishment_attempted_at: null,
+        replenishment_error: null,
+        updated_at: trx.fn.now(),
+      });
+  });
 }
 
 export const unfinalizeInvoice = withAuth(async (
