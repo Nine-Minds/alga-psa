@@ -86,7 +86,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
   function send(message) {
     if (!socket || socket.readyState !== WebSocketImpl.OPEN) return false;
     if (socket.bufferedAmount > MAX_BUFFERED_BYTES) throw new Error('Support relay backpressure limit exceeded.');
-    socket.send(encodeControlFrame(message, ++outgoingSeq)); return true;
+    socket.send(encodeControlFrame(message, ++outgoingSeq), { binary: false }); return true;
   }
   function sendTerminal(type, data) {
     if (!socket || socket.readyState !== WebSocketImpl.OPEN) return false;
