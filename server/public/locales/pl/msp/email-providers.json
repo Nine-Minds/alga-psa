@@ -1131,7 +1131,14 @@
       "aliasRequired": "Alias jest wymagany",
       "aliasTooLong": "Alias jest za długi",
       "clientRequired": "Klient jest wymagany",
-      "invalidSampleEmail": "Nieprawidłowy przykładowy e-mail"
+      "invalidSampleEmail": "Nieprawidłowy przykładowy e-mail",
+      "permissionDenied": "Nie masz uprawnień do zarządzania regułami poczty przychodzącej.",
+      "ticketDefaultsUnavailable": "Wskazany zestaw domyślnych ustawień zgłoszeń nie istnieje lub jest nieaktywny.",
+      "orderingMismatch": "Kolejność nie odpowiada bieżącemu zestawowi reguł.",
+      "clientNotFound": "Nie znaleziono klienta.",
+      "aliasAlreadyAssigned": "Alias „{{alias}}” jest już przypisany do klienta.",
+      "invalidRegex": "Nieprawidłowe wyrażenie regularne.",
+      "fallbackDestinationRequired": "Miejsce docelowe rezerwowe jest wymagane, gdy zachowanie bez dopasowania korzysta z takiego miejsca docelowego."
     },
     "inboundDefaults": {
       "duplicateShortName": "Konfiguracja o tej krótkiej nazwie już istnieje",

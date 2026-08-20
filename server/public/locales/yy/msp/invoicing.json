@@ -2038,7 +2038,11 @@
       "selectInvoicesPdf": "55555",
       "selectInvoicesEmail": "55555",
       "selectInvoices": "55555",
-      "emailNotConfigured": "55555"
+      "emailNotConfigured": "55555",
+      "schedulePdfFailed": "55555",
+      "scheduleEmailFailed": "55555",
+      "recipientFailed": "55555",
+      "sendFailed": "55555"
     },
     "template": {
       "selectStandard": "55555",

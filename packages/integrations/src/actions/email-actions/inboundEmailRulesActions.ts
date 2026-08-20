@@ -18,7 +18,9 @@ import type {
 } from '@alga-psa/shared/services/email/inboundEmailRules/types';
 import {
   actionError,
+  actionErrorFromValidationIssue,
   permissionError,
+  type ActionMessageErrorShape,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -58,19 +60,25 @@ type InboundEmailRulesActionError = ActionMessageError | ActionPermissionError;
 class ExpectedInboundEmailRuleError extends Error {
   constructor(
     message: string,
-    readonly kind: 'action' | 'permission' = 'action'
+    readonly kind: 'action' | 'permission' = 'action',
+    readonly messageKey?: string,
+    readonly messageParams?: Record<string, string | number>,
   ) {
     super(message);
     this.name = 'ExpectedInboundEmailRuleError';
   }
 }
 
-function throwInboundEmailRulePermissionError(message: string): never {
-  throw new ExpectedInboundEmailRuleError(message, 'permission');
+function throwInboundEmailRulePermissionError(message: string, messageKey: string): never {
+  throw new ExpectedInboundEmailRuleError(message, 'permission', messageKey);
 }
 
-function throwInboundEmailRuleActionError(message: string): never {
-  throw new ExpectedInboundEmailRuleError(message, 'action');
+function throwInboundEmailRuleActionError(
+  message: string,
+  messageKey: string,
+  messageParams?: Record<string, string | number>,
+): never {
+  throw new ExpectedInboundEmailRuleError(message, 'action', messageKey, messageParams);
 }
 
 function toInboundEmailRuleActionError(error: unknown): InboundEmailRulesActionError | null {
@@ -78,8 +86,8 @@ function toInboundEmailRuleActionError(error: unknown): InboundEmailRulesActionE
     return null;
   }
   return error.kind === 'permission'
-    ? permissionError(error.message)
-    : actionError(error.message);
+    ? permissionError(error.message, error.messageKey, error.messageParams)
+    : actionError(error.message, error.messageKey, error.messageParams);
 }
 
 async function assertEmailSettingsPermission(
@@ -88,7 +96,10 @@ async function assertEmailSettingsPermission(
 ): Promise<void> {
   const permitted = await hasPermission(user as any, 'system_settings', action);
   if (!permitted) {
-    throwInboundEmailRulePermissionError('Permission denied: Cannot manage inbound email rules');
+    throwInboundEmailRulePermissionError(
+      'Permission denied: Cannot manage inbound email rules',
+      'msp/email-providers:errors.inboundRules.permissionDenied',
+    );
   }
 }
 
@@ -96,8 +107,15 @@ function parseRuleInput(data: unknown): InboundEmailRuleInput {
   const result = inboundEmailRuleInputSchema.safeParse(data);
   if (!result.success) {
     const issue = result.error.issues[0];
-    const path = issue?.path?.length ? ` (${issue.path.join('.')})` : '';
-    throwInboundEmailRuleActionError(`Invalid rule: ${issue?.message ?? 'validation failed'}${path}`);
+    const validationError = actionErrorFromValidationIssue(issue ?? {
+      code: 'custom',
+      message: 'Invalid rule',
+    }) as unknown as ActionMessageErrorShape;
+    throwInboundEmailRuleActionError(
+      validationError.actionError,
+      validationError.messageKey ?? 'common:errors.validation.invalidValue',
+      validationError.messageParams,
+    );
   }
   return result.data;
 }
@@ -127,7 +145,10 @@ async function assertReferencedDefaultsExist(
   const found = new Set(rows.map((row: { id: string }) => row.id));
   for (const id of referencedIds) {
     if (!found.has(id)) {
-      throwInboundEmailRuleActionError('Referenced ticket defaults set does not exist or is inactive');
+      throwInboundEmailRuleActionError(
+        'Referenced ticket defaults set does not exist or is inactive',
+        'msp/email-providers:errors.inboundRules.ticketDefaultsUnavailable',
+      );
     }
   }
 }
@@ -227,7 +248,10 @@ export const updateInboundEmailRule = withAuth(async (
         .returning([...RULE_COLUMNS]);
 
       if (!row) {
-        throwInboundEmailRuleActionError('Inbound email rule not found');
+        throwInboundEmailRuleActionError(
+          'Inbound email rule not found',
+          'msp/email-providers:errors.inboundRules.notFound',
+        );
       }
       return row;
     });
@@ -304,7 +328,10 @@ export const reorderInboundEmailRules = withAuth(async (
       const existing = await db.table('inbound_email_rules').select('id');
       const existingIds = new Set(existing.map((row: { id: string }) => row.id));
       if (existingIds.size !== orderedIds.length || orderedIds.some((id) => !existingIds.has(id))) {
-        throwInboundEmailRuleActionError('Rule ordering payload does not match the current rule set');
+        throwInboundEmailRuleActionError(
+          'Rule ordering payload does not match the current rule set',
+          'msp/email-providers:errors.inboundRules.orderingMismatch',
+        );
       }
 
       for (let index = 0; index < orderedIds.length; index += 1) {
@@ -399,7 +426,10 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
         .where({ client_id: clientId })
         .first();
       if (!client) {
-        throwInboundEmailRuleActionError('Client not found');
+        throwInboundEmailRuleActionError(
+          'Client not found',
+          'msp/email-providers:errors.inboundRules.clientNotFound',
+        );
       }
 
       try {
@@ -411,7 +441,11 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
         });
       } catch (e: any) {
         if (String(e?.code ?? '') === '23505') {
-          throwInboundEmailRuleActionError(`Alias "${alias}" is already assigned to a client.`);
+          throwInboundEmailRuleActionError(
+            `Alias "${alias}" is already assigned to a client.`,
+            'msp/email-providers:errors.inboundRules.aliasAlreadyAssigned',
+            { alias },
+          );
         }
         throw e;
       }

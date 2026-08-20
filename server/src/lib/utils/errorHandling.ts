@@ -46,20 +46,17 @@ export function permissionError(message: string): ActionPermissionError {
  *
  * Returned payloads are classified by shape — their message is localized before it
  * reaches the client, so matching the English prose would quietly stop recognizing
- * them. Thrown `Error`s and bare strings keep the prefix check; those messages are
- * internal and untranslated.
+ * it. Thrown errors use an explicit code; bare strings are never discriminators.
  */
 export function isPermissionError(error: unknown): boolean {
   if (isActionPermissionError(error)) {
     return true;
   }
-  if (typeof error === 'string') {
-    return error.includes(PERMISSION_DENIED_PREFIX);
-  }
-  if (error instanceof Error) {
-    return error.message.includes(PERMISSION_DENIED_PREFIX);
-  }
-  return false;
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    (error as { code?: unknown }).code === 'PERMISSION_DENIED'
+  );
 }
 
 /**
@@ -162,5 +159,7 @@ export function formatPermissionError(action: string, resource?: string): string
 export function throwPermissionError(action: string, additionalInfo?: string): never {
   const baseMessage = `Permission denied: You don't have permission to ${action}`;
   const fullMessage = additionalInfo ? `${baseMessage}. ${additionalInfo}` : baseMessage;
-  throw new Error(fullMessage);
+  const error = new Error(fullMessage) as Error & { code: string };
+  error.code = 'PERMISSION_DENIED';
+  throw error;
 }

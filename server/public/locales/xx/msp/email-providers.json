@@ -1131,7 +1131,14 @@
       "aliasRequired": "11111",
       "aliasTooLong": "11111",
       "clientRequired": "11111",
-      "invalidSampleEmail": "11111"
+      "invalidSampleEmail": "11111",
+      "permissionDenied": "11111",
+      "ticketDefaultsUnavailable": "11111",
+      "orderingMismatch": "11111",
+      "clientNotFound": "11111",
+      "aliasAlreadyAssigned": "11111 {{alias}} 11111",
+      "invalidRegex": "11111",
+      "fallbackDestinationRequired": "11111"
     },
     "inboundDefaults": {
       "duplicateShortName": "11111",

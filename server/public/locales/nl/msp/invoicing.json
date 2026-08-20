@@ -2038,7 +2038,11 @@
       "selectInvoicesPdf": "Selecteer minstens één factuur om pdf’s te genereren.",
       "selectInvoicesEmail": "Selecteer minstens één factuur om te e-mailen.",
       "selectInvoices": "Selecteer minstens één factuur.",
-      "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u facturen verstuurt."
+      "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u facturen verstuurt.",
+      "schedulePdfFailed": "Het genereren van factuur-pdf’s kon niet worden gestart. Probeer het opnieuw.",
+      "scheduleEmailFailed": "Het e-mailen van facturen kon niet worden gestart. Probeer het opnieuw.",
+      "recipientFailed": "De ontvangergegevens voor deze factuur konden niet worden geladen.",
+      "sendFailed": "De factuur kon niet per e-mail worden verzonden. Probeer het opnieuw."
     },
     "template": {
       "selectStandard": "Selecteer een standaardfactuursjabloon voordat u opslaat.",

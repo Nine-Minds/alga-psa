@@ -1131,7 +1131,14 @@
       "aliasRequired": "O alias é obrigatório",
       "aliasTooLong": "O alias é muito longo",
       "clientRequired": "O cliente é obrigatório",
-      "invalidSampleEmail": "Email de exemplo inválido"
+      "invalidSampleEmail": "Email de exemplo inválido",
+      "permissionDenied": "Não tem permissão para gerir regras de email recebido.",
+      "ticketDefaultsUnavailable": "O conjunto de predefinições de tickets indicado não existe ou está inativo.",
+      "orderingMismatch": "A ordem não corresponde ao conjunto de regras atual.",
+      "clientNotFound": "Cliente não encontrado.",
+      "aliasAlreadyAssigned": "O alias \"{{alias}}\" já está atribuído a um cliente.",
+      "invalidRegex": "Expressão regular inválida.",
+      "fallbackDestinationRequired": "É necessário um destino alternativo quando o comportamento sem correspondência utiliza um destino alternativo."
     },
     "inboundDefaults": {
       "duplicateShortName": "Já existe uma configuração com este nome curto",

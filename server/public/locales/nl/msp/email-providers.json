@@ -1131,7 +1131,14 @@
       "aliasRequired": "Alias is verplicht",
       "aliasTooLong": "De alias is te lang",
       "clientRequired": "Klant is verplicht",
-      "invalidSampleEmail": "Ongeldige voorbeeld-e-mail"
+      "invalidSampleEmail": "Ongeldige voorbeeld-e-mail",
+      "permissionDenied": "U hebt geen toestemming om regels voor inkomende e-mail te beheren.",
+      "ticketDefaultsUnavailable": "De opgegeven standaardinstellingen voor tickets bestaan niet of zijn inactief.",
+      "orderingMismatch": "De volgorde komt niet overeen met de huidige regelset.",
+      "clientNotFound": "Klant niet gevonden.",
+      "aliasAlreadyAssigned": "De alias ‘{{alias}}’ is al aan een klant toegewezen.",
+      "invalidRegex": "Ongeldige reguliere expressie.",
+      "fallbackDestinationRequired": "Een terugvalbestemming is vereist wanneer voor niet-overeenkomende berichten een terugvalbestemming wordt gebruikt."
     },
     "inboundDefaults": {
       "duplicateShortName": "Er bestaat al een configuratie met deze korte naam",

@@ -32,6 +32,19 @@ scheduling 209, tickets 205, projects 196.
 
 Landed on `i18n/error_messages`:
 
+- **Reviewer follow-up — done.** Expected inbound-email-rule failures now carry
+  `messageKey` / `messageParams` through their typed mapper, and their Zod issues
+  retain stable validation metadata. The four known invoice-job fallback strings
+  now carry keys too, including the two nested result shapes that do not pass
+  through `withAuth`'s top-level payload rewrite. `ManagedEmailSettings` no longer
+  lets a caught English `err.message` override its translated fallback, and the
+  shared `isPermissionError` utilities now classify payload shape or an explicit
+  code rather than English prose. The ticket
+  Vitest tenant alias resolves to the real `packages/db/src/lib/tenant.ts`, with all
+  508 ticket tests passing. The unrelated client-validation heuristic changes and
+  `docs/DELETION_RULES.md` rewrite called out in review were reverted; the validator
+  translation seam remains intact.
+
 - **Category 6 — done.** `passwordValidation.ts` takes the translator (`common:auth.validation.password.*`,
   9 keys × 9 locales); wired at `UserManagement` ×2, the team-setup page, and `RegisterForm`.
   `completeUserInvitationSetup` returns the failing rule's key beside the English.

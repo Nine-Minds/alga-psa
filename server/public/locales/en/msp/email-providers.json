@@ -1131,7 +1131,14 @@
       "aliasRequired": "Alias is required",
       "aliasTooLong": "Alias is too long",
       "clientRequired": "Client is required",
-      "invalidSampleEmail": "Invalid sample email"
+      "invalidSampleEmail": "Invalid sample email",
+      "permissionDenied": "You do not have permission to manage inbound email rules.",
+      "ticketDefaultsUnavailable": "The referenced ticket defaults set does not exist or is inactive.",
+      "orderingMismatch": "The rule ordering does not match the current rule set.",
+      "clientNotFound": "Client not found.",
+      "aliasAlreadyAssigned": "Alias \"{{alias}}\" is already assigned to a client.",
+      "invalidRegex": "Invalid regular expression.",
+      "fallbackDestinationRequired": "A fallback destination is required when the non-match behavior uses a fallback destination."
     },
     "inboundDefaults": {
       "duplicateShortName": "A configuration with this short name already exists",

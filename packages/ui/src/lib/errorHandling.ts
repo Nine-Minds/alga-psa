@@ -256,20 +256,14 @@ export function actionErrorFromValidationIssue(issue: ActionValidationIssue): Ac
  * `.includes('Permission denied')` stopped being true the moment a user switched
  * to German, and it failed silently.
  *
- * Thrown `Error`s and bare strings have no shape to read, so the English prefix
- * stays as their only signal. Those messages are internal and are not translated.
+ * Thrown errors are recognized only through the explicit `CodedError` channel;
+ * bare strings are never treated as discriminators.
  */
 export function isPermissionError(error: unknown): boolean {
   if (isActionPermissionError(error)) {
     return true;
   }
-  if (typeof error === 'string') {
-    return error.includes(PERMISSION_DENIED_PREFIX);
-  }
-  if (error instanceof Error) {
-    return error.message.includes(PERMISSION_DENIED_PREFIX);
-  }
-  return false;
+  return errorCodeOf(error) === 'PERMISSION_DENIED';
 }
 
 /**
@@ -375,5 +369,5 @@ export function formatPermissionError(action: string, resource?: string): string
 export function throwPermissionError(action: string, additionalInfo?: string): never {
   const baseMessage = `Permission denied: You don't have permission to ${action}`;
   const fullMessage = additionalInfo ? `${baseMessage}. ${additionalInfo}` : baseMessage;
-  throw new Error(fullMessage);
+  throw new CodedError(fullMessage, 'PERMISSION_DENIED');
 }

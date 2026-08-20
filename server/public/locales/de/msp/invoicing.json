@@ -2038,7 +2038,11 @@
       "selectInvoicesPdf": "Wählen Sie mindestens eine Rechnung aus, um PDFs zu erzeugen.",
       "selectInvoicesEmail": "Wählen Sie mindestens eine Rechnung zum Versenden per E-Mail aus.",
       "selectInvoices": "Wählen Sie mindestens eine Rechnung aus.",
-      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Rechnungen versenden."
+      "emailNotConfigured": "E-Mail ist nicht konfiguriert. Bitte konfigurieren Sie die E-Mail-Einstellungen unter „Einstellungen“, bevor Sie Rechnungen versenden.",
+      "schedulePdfFailed": "Die PDF-Erstellung für Rechnungen konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "scheduleEmailFailed": "Der Versand der Rechnungs-E-Mails konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "recipientFailed": "Die Empfängerinformationen für diese Rechnung konnten nicht geladen werden.",
+      "sendFailed": "Die Rechnungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
     },
     "template": {
       "selectStandard": "Wählen Sie vor dem Speichern eine Standard-Rechnungsvorlage aus.",

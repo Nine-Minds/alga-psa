@@ -1131,7 +1131,14 @@
       "aliasRequired": "55555",
       "aliasTooLong": "55555",
       "clientRequired": "55555",
-      "invalidSampleEmail": "55555"
+      "invalidSampleEmail": "55555",
+      "permissionDenied": "55555",
+      "ticketDefaultsUnavailable": "55555",
+      "orderingMismatch": "55555",
+      "clientNotFound": "55555",
+      "aliasAlreadyAssigned": "55555 {{alias}} 55555",
+      "invalidRegex": "55555",
+      "fallbackDestinationRequired": "55555"
     },
     "inboundDefaults": {
       "duplicateShortName": "55555",

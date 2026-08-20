@@ -1131,7 +1131,14 @@
       "aliasRequired": "Der Alias ist erforderlich",
       "aliasTooLong": "Der Alias ist zu lang",
       "clientRequired": "Der Kunde ist erforderlich",
-      "invalidSampleEmail": "Ungültige Beispiel-E-Mail"
+      "invalidSampleEmail": "Ungültige Beispiel-E-Mail",
+      "permissionDenied": "Sie sind nicht berechtigt, Regeln für eingehende E-Mails zu verwalten.",
+      "ticketDefaultsUnavailable": "Die referenzierten Ticket-Standardeinstellungen sind nicht vorhanden oder inaktiv.",
+      "orderingMismatch": "Die Reihenfolge stimmt nicht mit dem aktuellen Regelsatz überein.",
+      "clientNotFound": "Kunde nicht gefunden.",
+      "aliasAlreadyAssigned": "Der Alias „{{alias}}“ ist bereits einem Kunden zugewiesen.",
+      "invalidRegex": "Ungültiger regulärer Ausdruck.",
+      "fallbackDestinationRequired": "Ein Ausweichziel ist erforderlich, wenn bei fehlender Übereinstimmung ein Ausweichziel verwendet wird."
     },
     "inboundDefaults": {
       "duplicateShortName": "Eine Konfiguration mit diesem Kurznamen existiert bereits",

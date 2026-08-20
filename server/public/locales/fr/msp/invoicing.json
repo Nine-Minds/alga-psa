@@ -2038,7 +2038,11 @@
       "selectInvoicesPdf": "Sélectionnez au moins une facture pour générer les PDF.",
       "selectInvoicesEmail": "Sélectionnez au moins une facture à envoyer par e-mail.",
       "selectInvoices": "Sélectionnez au moins une facture.",
-      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des factures."
+      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des factures.",
+      "schedulePdfFailed": "Impossible de lancer la génération des PDF des factures. Veuillez réessayer.",
+      "scheduleEmailFailed": "Impossible de lancer l’envoi des factures par e-mail. Veuillez réessayer.",
+      "recipientFailed": "Impossible de charger les informations du destinataire de cette facture.",
+      "sendFailed": "Impossible d’envoyer la facture par e-mail. Veuillez réessayer."
     },
     "template": {
       "selectStandard": "Sélectionnez un modèle de facture standard avant d’enregistrer.",

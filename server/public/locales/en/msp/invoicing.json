@@ -2038,7 +2038,11 @@
       "selectInvoicesPdf": "Select at least one invoice to generate PDFs.",
       "selectInvoicesEmail": "Select at least one invoice to email.",
       "selectInvoices": "Select at least one invoice.",
-      "emailNotConfigured": "Email is not configured. Please configure email settings in Settings before sending invoices."
+      "emailNotConfigured": "Email is not configured. Please configure email settings in Settings before sending invoices.",
+      "schedulePdfFailed": "Failed to start invoice PDF generation. Please try again.",
+      "scheduleEmailFailed": "Failed to start invoice email sending. Please try again.",
+      "recipientFailed": "Failed to load recipient information for this invoice.",
+      "sendFailed": "Failed to send invoice email. Please try again."
     },
     "template": {
       "selectStandard": "Select a standard invoice template before saving.",

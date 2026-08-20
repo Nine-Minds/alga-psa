@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { actionErrorFromValidationIssue } from './errorHandling';
+import {
+  CodedError,
+  actionErrorFromValidationIssue,
+  isPermissionError,
+} from './errorHandling';
 
 describe('actionErrorFromValidationIssue', () => {
   it('maps built-in issues by stable code instead of English prose', () => {
@@ -41,5 +45,14 @@ describe('actionErrorFromValidationIssue', () => {
       messageKey: 'common:errors.validation.invalidValue',
       messageParams: { field: 'slug' },
     });
+  });
+});
+
+describe('isPermissionError', () => {
+  it('uses payload shape or an explicit code, never English prose', () => {
+    expect(isPermissionError({ permissionError: 'Zugriff verweigert' })).toBe(true);
+    expect(isPermissionError(new CodedError('localized or internal copy', 'PERMISSION_DENIED'))).toBe(true);
+    expect(isPermissionError(new Error('Permission denied: English prose'))).toBe(false);
+    expect(isPermissionError('Permission denied: English prose')).toBe(false);
   });
 });

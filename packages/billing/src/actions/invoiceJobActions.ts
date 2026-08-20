@@ -105,7 +105,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_zip', jobData);
     if (!scheduledJobId) {
-      return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
+      return actionError(INVOICE_ZIP_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.schedulePdfFailed');
     }
     return { jobId };
   } catch (error) {
@@ -115,7 +115,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
       invoiceIds,
     });
 
-    return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
+    return actionError(INVOICE_ZIP_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.schedulePdfFailed');
   }
 });
 
@@ -185,7 +185,7 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
     if (!scheduledJobId) {
-      return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
+      return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.scheduleEmailFailed');
     }
 
     return { jobId };
@@ -199,7 +199,7 @@ export const scheduleInvoiceEmailAction = withAuth(async (
         clientName: d.clientName,
       })),
     });
-    return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
+    return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE, 'msp/invoicing:errors.jobs.scheduleEmailFailed');
   }
 });
 
@@ -223,7 +223,7 @@ export interface InvoiceEmailRecipientInfo {
 
 export interface GetInvoiceEmailRecipientsResult {
   recipients: InvoiceEmailRecipientInfo[];
-  errors: Array<{ invoiceId: string; error: string }>;
+  errors: Array<{ invoiceId: string; error: string; messageKey?: string }>;
 }
 
 export const getInvoiceEmailRecipientAction = withAuth(async (
@@ -241,7 +241,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   }
 
   const recipients: InvoiceEmailRecipientInfo[] = [];
-  const errors: Array<{ invoiceId: string; error: string }> = [];
+  const errors: Array<{ invoiceId: string; error: string; messageKey?: string }> = [];
 
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
@@ -316,7 +316,11 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         userId: user.user_id,
         invoiceId,
       });
-      errors.push({ invoiceId, error: INVOICE_EMAIL_RECIPIENT_FAILURE });
+      errors.push({
+        invoiceId,
+        error: INVOICE_EMAIL_RECIPIENT_FAILURE,
+        messageKey: 'msp/invoicing:errors.jobs.recipientFailed',
+      });
     }
   }
 
@@ -328,6 +332,7 @@ export interface SendInvoiceEmailResult {
   invoiceNumber: string;
   recipientEmail: string;
   error?: string;
+  messageKey?: string;
 }
 
 export interface SendInvoiceEmailsResult {
@@ -638,6 +643,7 @@ export const sendInvoiceEmailAction = withAuth(async (
         invoiceNumber: invoiceId,
         recipientEmail: '',
         error: INVOICE_EMAIL_SEND_FAILURE,
+        messageKey: 'msp/invoicing:errors.jobs.sendFailed',
       });
     } finally {
       if (tempPdfPath) {
