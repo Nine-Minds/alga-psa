@@ -38,7 +38,6 @@
     "packages/ee/src/components/settings/profile/ConnectSsoWrapper.tsx",
     "packages/ee/src/components/settings/security/SsoBulkAssignment.tsx",
     "packages/ee/src/components/workflow-run-studio/RunStudioShell.tsx",
-    "packages/integrations/src/components/settings/integrations/RmmAlertAutomationSettings.tsx",
     "packages/integrations/src/entra/components/ee/entry.tsx",
     "packages/integrations/src/entra/components/oss/entry.tsx",
     "packages/notifications/src/components/NotificationBell.tsx",

@@ -1998,6 +1998,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Alarmautomatisierung",
+        "description": "Konfigurieren Sie, wie eingehende RMM-Alarme verarbeitet, unterdrückt und in Tickets umgewandelt werden.",
+        "loading": "Einstellungen für die Alarmautomatisierung werden geladen…",
+        "actions": {
+          "addRule": "Regel hinzufügen",
+          "addWindow": "Fenster hinzufügen",
+          "cancel": "Abbrechen",
+          "confirm": "Bestätigen",
+          "deleteRule": "Regel löschen",
+          "deleteWindow": "Fenster löschen",
+          "editRule": "Regel bearbeiten",
+          "editWindow": "Fenster bearbeiten",
+          "moveDown": "Nach unten verschieben",
+          "moveUp": "Nach oben verschieben",
+          "savePolling": "Abfrageeinstellungen speichern",
+          "saveRule": "Regel speichern",
+          "saveWindow": "Fenster speichern",
+          "saving": "Wird gespeichert…"
+        },
+        "days": {
+          "sun": "So",
+          "mon": "Mo",
+          "tue": "Di",
+          "wed": "Mi",
+          "thu": "Do",
+          "fri": "Fr",
+          "sat": "Sa"
+        },
+        "dialogs": {
+          "addRule": "Alarmregel hinzufügen",
+          "addWindow": "Wartungsfenster hinzufügen",
+          "editRule": "Regel bearbeiten: {{name}}",
+          "editWindow": "Fenster bearbeiten: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Alarmregeln konnten nicht geladen werden",
+          "loadSettings": "Einstellungen für die Alarmautomatisierung konnten nicht geladen werden",
+          "unknown": "Unbekannter Fehler"
+        },
+        "fields": {
+          "active": "Aktiv",
+          "commaSeparated": "Durch Kommas getrennt",
+          "description": "Beschreibung",
+          "nameRequired": "Name *",
+          "optionalDescription": "Optionale Beschreibung",
+          "ruleName": "Regelname",
+          "windowName": "Fenstername"
+        },
+        "polling": {
+          "title": "Alarmabfrage",
+          "description": "Alga ruft regelmäßig aktive Alarme vom RMM ab, um Ereignisse zu erfassen, die ein Webhook verpasst hat. Konfigurieren Sie unten das Abfrageintervall.",
+          "enabled": "Abfrage aktiviert",
+          "interval": "Intervall (Minuten, 5–60)",
+          "intervalError": "Das Intervall muss zwischen 5 und 60 Minuten liegen.",
+          "lastPolled": "Zuletzt abgefragt: {{time}}"
+        },
+        "rules": {
+          "title": "Alarmregeln",
+          "description": "Regeln werden von oben nach unten ausgewertet. Die erste passende Regel wird angewendet. Eine Regel ohne Bedingungen gilt für alle Alarme.",
+          "empty": "Keine Regeln konfiguriert. Alarme werden ohne Automatisierung verarbeitet.",
+          "actions": "Aktionen",
+          "activityTypes": "Aktivitätstypen",
+          "activityTypesPlaceholder": "z. B. Festplatte, CPU (durch Kommas getrennt)",
+          "alertClasses": "Alarmklassen",
+          "assignToUser": "Benutzer zuweisen",
+          "autoResolve": "Ticket automatisch lösen, wenn der Alarm behoben ist",
+          "board": "Board",
+          "catchAllHelp": "Keine Bedingungen festgelegt — diese Regel gilt für alle eingehenden Alarme.",
+          "createTicket": "Ticket erstellen",
+          "defaultBoard": "Standard-Board",
+          "defaultClosedStatus": "Standardstatus für geschlossene Tickets",
+          "descriptionTemplate": "Vorlage für die Ticketbeschreibung",
+          "descriptionTemplatePlaceholder": "z. B. Alarm auf {{device}}: {{message}}",
+          "keywords": "Schlüsselwörter",
+          "mapFromSeverity": "Aus Schweregrad ableiten",
+          "matchConditions": "Abgleichbedingungen",
+          "messagePattern": "Nachrichtenmuster (regulärer Ausdruck)",
+          "messagePatternPlaceholder": "z. B. (?i)disk.*full",
+          "notifyUsers": "Benutzer benachrichtigen",
+          "organizationsFilter": "Organisationen (Filter)",
+          "placeholders": "Platzhalter",
+          "priorityOverride": "Priorität überschreiben",
+          "resetOnClose": "Alarm zurücksetzen, wenn das Ticket geschlossen wird",
+          "resolveStatus": "Lösungsstatus",
+          "severities": "Schweregrade",
+          "sourceTypes": "Quelltypen",
+          "titleTemplate": "Vorlage für den Tickettitel",
+          "titleTemplatePlaceholder": "z. B. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Nicht zugewiesen"
+        },
+        "schedule": {
+          "crossesMidnight": "Die Endzeit liegt vor der Startzeit — das Fenster reicht über Mitternacht.",
+          "days": "Tage",
+          "endTime": "Endzeit",
+          "endsAt": "Endet am",
+          "none": "Kein Zeitplan",
+          "oneOff": "Einmalig",
+          "startTime": "Startzeit",
+          "startsAt": "Beginnt am",
+          "timezone": "Zeitzone",
+          "type": "Zeitplantyp",
+          "weekly": "Wöchentlich {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Wöchentlich wiederkehrend"
+        },
+        "scope": {
+          "title": "Geltungsbereich",
+          "allClients": "Alle Kunden",
+          "allRmm": "Alle RMM-Systeme",
+          "allRmmHelp": "Das Fenster unterdrückt Alarme aus allen RMM-Integrationen.",
+          "clientOptional": "Kunde (optional — leer lassen für alle Kunden)",
+          "loadingClients": "Kunden werden geladen…",
+          "onlyThisIntegration": "Nur diese Integration",
+          "otherIntegration": "Andere Integration",
+          "thisIntegration": "Diese Integration",
+          "thisIntegrationHelp": "Das Fenster unterdrückt nur Alarme aus dieser Integration."
+        },
+        "severities": {
+          "critical": "Kritisch",
+          "major": "Schwerwiegend",
+          "moderate": "Mittel",
+          "minor": "Gering",
+          "none": "Keiner"
+        },
+        "summary": {
+          "autoResolve": "Automatisch lösen",
+          "createsTicket": "Erstellt ein Ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Löschen fehlgeschlagen",
+          "invalidInterval": "Ungültiges Intervall",
+          "namedItemSaved": "„{{name}}“ wurde gespeichert.",
+          "pollingSaved": "Abfrageeinstellungen gespeichert",
+          "reorderFailed": "Neusortierung fehlgeschlagen",
+          "ruleCreated": "Regel erstellt",
+          "ruleDeleted": "Regel gelöscht",
+          "ruleUpdated": "Regel aktualisiert",
+          "saveFailed": "Speichern fehlgeschlagen",
+          "updateFailed": "Aktualisierung fehlgeschlagen",
+          "windowCreated": "Fenster erstellt",
+          "windowDeleted": "Fenster gelöscht",
+          "windowUpdated": "Fenster aktualisiert"
+        },
+        "validation": {
+          "invalidRegex": "Ungültiger regulärer Ausdruck"
+        },
+        "windows": {
+          "title": "Wartungsfenster",
+          "description": "Alarme, die während eines aktiven Fensters eingehen, werden unterdrückt und erstellen keine Tickets.",
+          "empty": "Keine Wartungsfenster konfiguriert."
+        }
+      },
       "ninjaOne": {
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {

@@ -1998,6 +1998,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Automatyzacja alertów",
+        "description": "Skonfiguruj sposób przetwarzania i wyciszania przychodzących alertów RMM oraz tworzenia z nich zgłoszeń.",
+        "loading": "Wczytywanie ustawień automatyzacji alertów…",
+        "actions": {
+          "addRule": "Dodaj regułę",
+          "addWindow": "Dodaj okno",
+          "cancel": "Anuluj",
+          "confirm": "Potwierdź",
+          "deleteRule": "Usuń regułę",
+          "deleteWindow": "Usuń okno",
+          "editRule": "Edytuj regułę",
+          "editWindow": "Edytuj okno",
+          "moveDown": "Przenieś w dół",
+          "moveUp": "Przenieś w górę",
+          "savePolling": "Zapisz ustawienia odpytywania",
+          "saveRule": "Zapisz regułę",
+          "saveWindow": "Zapisz okno",
+          "saving": "Zapisywanie…"
+        },
+        "days": {
+          "sun": "Nd.",
+          "mon": "Pon.",
+          "tue": "Wt.",
+          "wed": "Śr.",
+          "thu": "Czw.",
+          "fri": "Pt.",
+          "sat": "Sob."
+        },
+        "dialogs": {
+          "addRule": "Dodaj regułę alertów",
+          "addWindow": "Dodaj okno konserwacyjne",
+          "editRule": "Edytuj regułę: {{name}}",
+          "editWindow": "Edytuj okno: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Nie udało się wczytać reguł alertów",
+          "loadSettings": "Nie udało się wczytać ustawień automatyzacji alertów",
+          "unknown": "Nieznany błąd"
+        },
+        "fields": {
+          "active": "Aktywne",
+          "commaSeparated": "Rozdzielone przecinkami",
+          "description": "Opis",
+          "nameRequired": "Nazwa *",
+          "optionalDescription": "Opis opcjonalny",
+          "ruleName": "Nazwa reguły",
+          "windowName": "Nazwa okna"
+        },
+        "polling": {
+          "title": "Odpytywanie o alerty",
+          "description": "Alga okresowo pobiera aktywne alerty z systemu RMM, aby wykryć zdarzenia pominięte przez webhook. Skonfiguruj poniżej interwał odpytywania.",
+          "enabled": "Odpytywanie włączone",
+          "interval": "Interwał (minuty, 5–60)",
+          "intervalError": "Interwał musi wynosić od 5 do 60 minut.",
+          "lastPolled": "Ostatnie odpytywanie: {{time}}"
+        },
+        "rules": {
+          "title": "Reguły alertów",
+          "description": "Reguły są sprawdzane od góry do dołu. Stosowana jest pierwsza pasująca reguła. Reguła bez warunków dotyczy wszystkich alertów.",
+          "empty": "Nie skonfigurowano reguł. Alerty będą przetwarzane bez automatyzacji.",
+          "actions": "Działania",
+          "activityTypes": "Typy aktywności",
+          "activityTypesPlaceholder": "np. dysk, procesor (rozdzielone przecinkami)",
+          "alertClasses": "Klasy alertów",
+          "assignToUser": "Przypisz do użytkownika",
+          "autoResolve": "Automatycznie rozwiąż zgłoszenie po ustąpieniu alertu",
+          "board": "Tablica",
+          "catchAllHelp": "Nie ustawiono warunków — ta reguła będzie dotyczyć wszystkich przychodzących alertów.",
+          "createTicket": "Utwórz zgłoszenie",
+          "defaultBoard": "Domyślna tablica",
+          "defaultClosedStatus": "Domyślny status zamknięcia",
+          "descriptionTemplate": "Szablon opisu zgłoszenia",
+          "descriptionTemplatePlaceholder": "np. alert na {{device}}: {{message}}",
+          "keywords": "Słowa kluczowe",
+          "mapFromSeverity": "Mapuj z poziomu ważności",
+          "matchConditions": "Warunki dopasowania",
+          "messagePattern": "Wzorzec wiadomości (wyrażenie regularne)",
+          "messagePatternPlaceholder": "np. (?i)disk.*full",
+          "notifyUsers": "Powiadom użytkowników",
+          "organizationsFilter": "Organizacje (filtr)",
+          "placeholders": "Symbole zastępcze",
+          "priorityOverride": "Nadpisanie priorytetu",
+          "resetOnClose": "Zresetuj alert po zamknięciu zgłoszenia",
+          "resolveStatus": "Status rozwiązania",
+          "severities": "Poziomy ważności",
+          "sourceTypes": "Typy źródeł",
+          "titleTemplate": "Szablon tytułu zgłoszenia",
+          "titleTemplatePlaceholder": "np. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Nieprzypisane"
+        },
+        "schedule": {
+          "crossesMidnight": "Czas zakończenia jest wcześniejszy niż czas rozpoczęcia — okno przechodzi przez północ.",
+          "days": "Dni",
+          "endTime": "Czas zakończenia",
+          "endsAt": "Koniec",
+          "none": "Brak harmonogramu",
+          "oneOff": "Jednorazowo",
+          "startTime": "Czas rozpoczęcia",
+          "startsAt": "Początek",
+          "timezone": "Strefa czasowa",
+          "type": "Typ harmonogramu",
+          "weekly": "Co tydzień: {{days}}, {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Cyklicznie co tydzień"
+        },
+        "scope": {
+          "title": "Zakres",
+          "allClients": "Wszyscy klienci",
+          "allRmm": "Wszystkie systemy RMM",
+          "allRmmHelp": "Okno wycisza alerty ze wszystkich integracji RMM.",
+          "clientOptional": "Klient (opcjonalnie — pozostaw puste dla wszystkich klientów)",
+          "loadingClients": "Wczytywanie klientów…",
+          "onlyThisIntegration": "Tylko ta integracja",
+          "otherIntegration": "Inna integracja",
+          "thisIntegration": "Ta integracja",
+          "thisIntegrationHelp": "Okno wycisza tylko alerty z tej integracji."
+        },
+        "severities": {
+          "critical": "Krytyczny",
+          "major": "Wysoki",
+          "moderate": "Średni",
+          "minor": "Niski",
+          "none": "Brak"
+        },
+        "summary": {
+          "autoResolve": "Automatyczne rozwiązanie",
+          "createsTicket": "Tworzy zgłoszenie"
+        },
+        "toasts": {
+          "deleteFailed": "Usuwanie nie powiodło się",
+          "invalidInterval": "Nieprawidłowy interwał",
+          "namedItemSaved": "Zapisano „{{name}}”.",
+          "pollingSaved": "Zapisano ustawienia odpytywania",
+          "reorderFailed": "Zmiana kolejności nie powiodła się",
+          "ruleCreated": "Utworzono regułę",
+          "ruleDeleted": "Usunięto regułę",
+          "ruleUpdated": "Zaktualizowano regułę",
+          "saveFailed": "Zapisywanie nie powiodło się",
+          "updateFailed": "Aktualizacja nie powiodła się",
+          "windowCreated": "Utworzono okno",
+          "windowDeleted": "Usunięto okno",
+          "windowUpdated": "Zaktualizowano okno"
+        },
+        "validation": {
+          "invalidRegex": "Nieprawidłowe wyrażenie regularne"
+        },
+        "windows": {
+          "title": "Okna konserwacyjne",
+          "description": "Alerty odebrane podczas aktywnego okna są wyciszane i nie powodują utworzenia zgłoszeń.",
+          "empty": "Nie skonfigurowano okien konserwacyjnych."
+        }
+      },
       "ninjaOne": {
         "loading": "Ładowanie ustawień integracji NinjaOne...",
         "card": {

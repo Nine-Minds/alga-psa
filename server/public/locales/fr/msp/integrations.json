@@ -1998,6 +1998,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Automatisation des alertes",
+        "description": "Configurer le traitement et la suppression des alertes RMM entrantes, ainsi que leur conversion en tickets.",
+        "loading": "Chargement des paramètres d’automatisation des alertes…",
+        "actions": {
+          "addRule": "Ajouter une règle",
+          "addWindow": "Ajouter une fenêtre",
+          "cancel": "Annuler",
+          "confirm": "Confirmer",
+          "deleteRule": "Supprimer la règle",
+          "deleteWindow": "Supprimer la fenêtre",
+          "editRule": "Modifier la règle",
+          "editWindow": "Modifier la fenêtre",
+          "moveDown": "Descendre",
+          "moveUp": "Monter",
+          "savePolling": "Enregistrer les paramètres d’interrogation",
+          "saveRule": "Enregistrer la règle",
+          "saveWindow": "Enregistrer la fenêtre",
+          "saving": "Enregistrement…"
+        },
+        "days": {
+          "sun": "Dim.",
+          "mon": "Lun.",
+          "tue": "Mar.",
+          "wed": "Mer.",
+          "thu": "Jeu.",
+          "fri": "Ven.",
+          "sat": "Sam."
+        },
+        "dialogs": {
+          "addRule": "Ajouter une règle d’alerte",
+          "addWindow": "Ajouter une fenêtre de maintenance",
+          "editRule": "Modifier la règle : {{name}}",
+          "editWindow": "Modifier la fenêtre : {{name}}"
+        },
+        "errors": {
+          "loadRules": "Impossible de charger les règles d’alerte",
+          "loadSettings": "Impossible de charger les paramètres d’automatisation des alertes",
+          "unknown": "Erreur inconnue"
+        },
+        "fields": {
+          "active": "Actif",
+          "commaSeparated": "Séparés par des virgules",
+          "description": "Description",
+          "nameRequired": "Nom *",
+          "optionalDescription": "Description facultative",
+          "ruleName": "Nom de la règle",
+          "windowName": "Nom de la fenêtre"
+        },
+        "polling": {
+          "title": "Interrogation des alertes",
+          "description": "Alga récupère régulièrement les alertes actives du RMM afin de détecter celles qu’un webhook aurait manquées. Configurer l’intervalle d’interrogation ci-dessous.",
+          "enabled": "Interrogation activée",
+          "interval": "Intervalle (minutes, 5 à 60)",
+          "intervalError": "L’intervalle doit être compris entre 5 et 60 minutes.",
+          "lastPolled": "Dernière interrogation : {{time}}"
+        },
+        "rules": {
+          "title": "Règles d’alerte",
+          "description": "Les règles sont évaluées de haut en bas. La première règle correspondante s’applique. Une règle sans condition s’applique à toutes les alertes.",
+          "empty": "Aucune règle configurée. Les alertes seront traitées sans automatisation.",
+          "actions": "Actions",
+          "activityTypes": "Types d’activité",
+          "activityTypesPlaceholder": "p. ex. disque, processeur (séparés par des virgules)",
+          "alertClasses": "Classes d’alerte",
+          "assignToUser": "Affecter à un utilisateur",
+          "autoResolve": "Résoudre automatiquement le ticket lorsque l’alerte disparaît",
+          "board": "Tableau de bord",
+          "catchAllHelp": "Aucune condition définie — cette règle s’appliquera à toutes les alertes entrantes.",
+          "createTicket": "Créer un ticket",
+          "defaultBoard": "Tableau de bord par défaut",
+          "defaultClosedStatus": "Statut fermé par défaut",
+          "descriptionTemplate": "Modèle de description du ticket",
+          "descriptionTemplatePlaceholder": "p. ex. alerte sur {{device}} : {{message}}",
+          "keywords": "Mots-clés",
+          "mapFromSeverity": "Déduire de la gravité",
+          "matchConditions": "Conditions de correspondance",
+          "messagePattern": "Motif du message (expression régulière)",
+          "messagePatternPlaceholder": "p. ex. (?i)disk.*full",
+          "notifyUsers": "Notifier les utilisateurs",
+          "organizationsFilter": "Organisations (filtre)",
+          "placeholders": "Variables de remplacement",
+          "priorityOverride": "Remplacement de la priorité",
+          "resetOnClose": "Réinitialiser l’alerte à la fermeture du ticket",
+          "resolveStatus": "Statut de résolution",
+          "severities": "Niveaux de gravité",
+          "sourceTypes": "Types de source",
+          "titleTemplate": "Modèle de titre du ticket",
+          "titleTemplatePlaceholder": "p. ex. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Non affecté"
+        },
+        "schedule": {
+          "crossesMidnight": "L’heure de fin précède l’heure de début — la fenêtre traverse minuit.",
+          "days": "Jours",
+          "endTime": "Heure de fin",
+          "endsAt": "Se termine le",
+          "none": "Aucune planification",
+          "oneOff": "Une seule fois",
+          "startTime": "Heure de début",
+          "startsAt": "Commence le",
+          "timezone": "Fuseau horaire",
+          "type": "Type de planification",
+          "weekly": "Chaque semaine : {{days}}, {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Récurrence hebdomadaire"
+        },
+        "scope": {
+          "title": "Portée",
+          "allClients": "Tous les clients",
+          "allRmm": "Tous les RMM",
+          "allRmmHelp": "La fenêtre supprime les alertes de toutes les intégrations RMM.",
+          "clientOptional": "Client (facultatif — laisser vide pour tous les clients)",
+          "loadingClients": "Chargement des clients…",
+          "onlyThisIntegration": "Uniquement cette intégration",
+          "otherIntegration": "Autre intégration",
+          "thisIntegration": "Cette intégration",
+          "thisIntegrationHelp": "La fenêtre supprime uniquement les alertes de cette intégration."
+        },
+        "severities": {
+          "critical": "Critique",
+          "major": "Majeure",
+          "moderate": "Modérée",
+          "minor": "Mineure",
+          "none": "Aucune"
+        },
+        "summary": {
+          "autoResolve": "Résolution automatique",
+          "createsTicket": "Crée un ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Échec de la suppression",
+          "invalidInterval": "Intervalle non valide",
+          "namedItemSaved": "« {{name}} » a été enregistré.",
+          "pollingSaved": "Paramètres d’interrogation enregistrés",
+          "reorderFailed": "Échec de la réorganisation",
+          "ruleCreated": "Règle créée",
+          "ruleDeleted": "Règle supprimée",
+          "ruleUpdated": "Règle mise à jour",
+          "saveFailed": "Échec de l’enregistrement",
+          "updateFailed": "Échec de la mise à jour",
+          "windowCreated": "Fenêtre créée",
+          "windowDeleted": "Fenêtre supprimée",
+          "windowUpdated": "Fenêtre mise à jour"
+        },
+        "validation": {
+          "invalidRegex": "Expression régulière non valide"
+        },
+        "windows": {
+          "title": "Fenêtres de maintenance",
+          "description": "Les alertes reçues pendant une fenêtre active sont supprimées et ne créent pas de tickets.",
+          "empty": "Aucune fenêtre de maintenance configurée."
+        }
+      },
       "ninjaOne": {
         "loading": "Chargement des paramètres d’intégration NinjaOne...",
         "card": {

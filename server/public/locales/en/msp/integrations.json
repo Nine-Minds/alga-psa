@@ -2021,6 +2021,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "Alert Automation",
+        "description": "Configure how incoming RMM alerts are processed, suppressed, and turned into tickets.",
+        "loading": "Loading alert automation settings…",
+        "actions": {
+          "addRule": "Add rule",
+          "addWindow": "Add window",
+          "cancel": "Cancel",
+          "confirm": "Confirm",
+          "deleteRule": "Delete rule",
+          "deleteWindow": "Delete window",
+          "editRule": "Edit rule",
+          "editWindow": "Edit window",
+          "moveDown": "Move down",
+          "moveUp": "Move up",
+          "savePolling": "Save polling settings",
+          "saveRule": "Save Rule",
+          "saveWindow": "Save Window",
+          "saving": "Saving…"
+        },
+        "days": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        },
+        "dialogs": {
+          "addRule": "Add alert rule",
+          "addWindow": "Add maintenance window",
+          "editRule": "Edit rule: {{name}}",
+          "editWindow": "Edit window: {{name}}"
+        },
+        "errors": {
+          "loadRules": "Failed to load alert rules",
+          "loadSettings": "Failed to load alert automation settings",
+          "unknown": "Unknown error"
+        },
+        "fields": {
+          "active": "Active",
+          "commaSeparated": "Comma-separated",
+          "description": "Description",
+          "nameRequired": "Name *",
+          "optionalDescription": "Optional description",
+          "ruleName": "Rule name",
+          "windowName": "Window name"
+        },
+        "polling": {
+          "title": "Alert Polling",
+          "description": "Alga periodically fetches active alerts from the RMM to catch anything a webhook missed. Configure the polling interval below.",
+          "enabled": "Polling enabled",
+          "interval": "Interval (minutes, 5–60)",
+          "intervalError": "Interval must be between 5 and 60 minutes.",
+          "lastPolled": "Last polled: {{time}}"
+        },
+        "rules": {
+          "title": "Alert Rules",
+          "description": "Rules are evaluated top-to-bottom. The first matching rule wins. A rule with no conditions is a catch-all.",
+          "empty": "No rules configured. Alerts will be processed without automation.",
+          "actions": "Actions",
+          "activityTypes": "Activity types",
+          "activityTypesPlaceholder": "e.g. disk, cpu (comma-separated)",
+          "alertClasses": "Alert classes",
+          "assignToUser": "Assign to user",
+          "autoResolve": "Auto-resolve ticket when alert clears",
+          "board": "Board",
+          "catchAllHelp": "No conditions set — this rule will match all incoming alerts (catch-all).",
+          "createTicket": "Create ticket",
+          "defaultBoard": "Default board",
+          "defaultClosedStatus": "Default closed status",
+          "descriptionTemplate": "Ticket description template",
+          "descriptionTemplatePlaceholder": "e.g. Alert on {{device}}: {{message}}",
+          "keywords": "Keywords",
+          "mapFromSeverity": "Map from severity",
+          "matchConditions": "Match conditions",
+          "messagePattern": "Message pattern (regex)",
+          "messagePatternPlaceholder": "e.g. (?i)disk.*full",
+          "notifyUsers": "Notify users",
+          "organizationsFilter": "Organizations (filter)",
+          "placeholders": "Placeholders",
+          "priorityOverride": "Priority override",
+          "resetOnClose": "Reset alert when ticket is closed",
+          "resolveStatus": "Resolve status",
+          "severities": "Severities",
+          "sourceTypes": "Source types",
+          "titleTemplate": "Ticket title template",
+          "titleTemplatePlaceholder": "e.g. [{{severity}}] {{device}} – {{message}}",
+          "unassigned": "Unassigned"
+        },
+        "schedule": {
+          "crossesMidnight": "End time is before start time — window crosses midnight.",
+          "days": "Days",
+          "endTime": "End time",
+          "endsAt": "Ends at",
+          "none": "No schedule",
+          "oneOff": "One-off",
+          "startTime": "Start time",
+          "startsAt": "Starts at",
+          "timezone": "Timezone",
+          "type": "Schedule type",
+          "weekly": "Weekly {{days}} {{startTime}}–{{endTime}}",
+          "weeklyRecurring": "Weekly recurring"
+        },
+        "scope": {
+          "title": "Scope",
+          "allClients": "All clients",
+          "allRmm": "All RMM",
+          "allRmmHelp": "Window suppresses alerts from all RMM integrations.",
+          "clientOptional": "Client (optional — all clients if blank)",
+          "loadingClients": "Loading clients…",
+          "onlyThisIntegration": "Only this integration",
+          "otherIntegration": "Other integration",
+          "thisIntegration": "This integration",
+          "thisIntegrationHelp": "Window only suppresses alerts from this integration."
+        },
+        "severities": {
+          "critical": "Critical",
+          "major": "Major",
+          "moderate": "Moderate",
+          "minor": "Minor",
+          "none": "None"
+        },
+        "summary": {
+          "autoResolve": "Auto-resolve",
+          "createsTicket": "Creates ticket"
+        },
+        "toasts": {
+          "deleteFailed": "Delete failed",
+          "invalidInterval": "Invalid interval",
+          "namedItemSaved": "\"{{name}}\" saved.",
+          "pollingSaved": "Polling settings saved",
+          "reorderFailed": "Reorder failed",
+          "ruleCreated": "Rule created",
+          "ruleDeleted": "Rule deleted",
+          "ruleUpdated": "Rule updated",
+          "saveFailed": "Save failed",
+          "updateFailed": "Update failed",
+          "windowCreated": "Window created",
+          "windowDeleted": "Window deleted",
+          "windowUpdated": "Window updated"
+        },
+        "validation": {
+          "invalidRegex": "Invalid regular expression"
+        },
+        "windows": {
+          "title": "Maintenance Windows",
+          "description": "Alerts arriving during an active window are suppressed and will not create tickets.",
+          "empty": "No maintenance windows configured."
+        }
+      },
       "ninjaOne": {
         "loading": "Loading NinjaOne integration settings...",
         "card": {

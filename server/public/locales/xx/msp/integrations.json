@@ -2021,6 +2021,158 @@
       }
     },
     "rmm": {
+      "alertAutomation": {
+        "title": "11111",
+        "description": "11111",
+        "loading": "11111",
+        "actions": {
+          "addRule": "11111",
+          "addWindow": "11111",
+          "cancel": "11111",
+          "confirm": "11111",
+          "deleteRule": "11111",
+          "deleteWindow": "11111",
+          "editRule": "11111",
+          "editWindow": "11111",
+          "moveDown": "11111",
+          "moveUp": "11111",
+          "savePolling": "11111",
+          "saveRule": "11111",
+          "saveWindow": "11111",
+          "saving": "11111"
+        },
+        "days": {
+          "sun": "11111",
+          "mon": "11111",
+          "tue": "11111",
+          "wed": "11111",
+          "thu": "11111",
+          "fri": "11111",
+          "sat": "11111"
+        },
+        "dialogs": {
+          "addRule": "11111",
+          "addWindow": "11111",
+          "editRule": "11111 {{name}} 11111",
+          "editWindow": "11111 {{name}} 11111"
+        },
+        "errors": {
+          "loadRules": "11111",
+          "loadSettings": "11111",
+          "unknown": "11111"
+        },
+        "fields": {
+          "active": "11111",
+          "commaSeparated": "11111",
+          "description": "11111",
+          "nameRequired": "11111",
+          "optionalDescription": "11111",
+          "ruleName": "11111",
+          "windowName": "11111"
+        },
+        "polling": {
+          "title": "11111",
+          "description": "11111",
+          "enabled": "11111",
+          "interval": "11111",
+          "intervalError": "11111",
+          "lastPolled": "11111 {{time}} 11111"
+        },
+        "rules": {
+          "title": "11111",
+          "description": "11111",
+          "empty": "11111",
+          "actions": "11111",
+          "activityTypes": "11111",
+          "activityTypesPlaceholder": "11111",
+          "alertClasses": "11111",
+          "assignToUser": "11111",
+          "autoResolve": "11111",
+          "board": "11111",
+          "catchAllHelp": "11111",
+          "createTicket": "11111",
+          "defaultBoard": "11111",
+          "defaultClosedStatus": "11111",
+          "descriptionTemplate": "11111",
+          "descriptionTemplatePlaceholder": "11111 {{device}} 11111 {{message}} 11111",
+          "keywords": "11111",
+          "mapFromSeverity": "11111",
+          "matchConditions": "11111",
+          "messagePattern": "11111",
+          "messagePatternPlaceholder": "11111",
+          "notifyUsers": "11111",
+          "organizationsFilter": "11111",
+          "placeholders": "11111",
+          "priorityOverride": "11111",
+          "resetOnClose": "11111",
+          "resolveStatus": "11111",
+          "severities": "11111",
+          "sourceTypes": "11111",
+          "titleTemplate": "11111",
+          "titleTemplatePlaceholder": "11111 {{severity}} 11111 {{device}} 11111 {{message}} 11111",
+          "unassigned": "11111"
+        },
+        "schedule": {
+          "crossesMidnight": "11111",
+          "days": "11111",
+          "endTime": "11111",
+          "endsAt": "11111",
+          "none": "11111",
+          "oneOff": "11111",
+          "startTime": "11111",
+          "startsAt": "11111",
+          "timezone": "11111",
+          "type": "11111",
+          "weekly": "11111 {{days}} 11111 {{startTime}} 11111 {{endTime}} 11111",
+          "weeklyRecurring": "11111"
+        },
+        "scope": {
+          "title": "11111",
+          "allClients": "11111",
+          "allRmm": "11111",
+          "allRmmHelp": "11111",
+          "clientOptional": "11111",
+          "loadingClients": "11111",
+          "onlyThisIntegration": "11111",
+          "otherIntegration": "11111",
+          "thisIntegration": "11111",
+          "thisIntegrationHelp": "11111"
+        },
+        "severities": {
+          "critical": "11111",
+          "major": "11111",
+          "moderate": "11111",
+          "minor": "11111",
+          "none": "11111"
+        },
+        "summary": {
+          "autoResolve": "11111",
+          "createsTicket": "11111"
+        },
+        "toasts": {
+          "deleteFailed": "11111",
+          "invalidInterval": "11111",
+          "namedItemSaved": "11111 {{name}} 11111",
+          "pollingSaved": "11111",
+          "reorderFailed": "11111",
+          "ruleCreated": "11111",
+          "ruleDeleted": "11111",
+          "ruleUpdated": "11111",
+          "saveFailed": "11111",
+          "updateFailed": "11111",
+          "windowCreated": "11111",
+          "windowDeleted": "11111",
+          "windowUpdated": "11111"
+        },
+        "validation": {
+          "invalidRegex": "11111"
+        },
+        "windows": {
+          "title": "11111",
+          "description": "11111",
+          "empty": "11111"
+        }
+      },
       "ninjaOne": {
         "loading": "11111",
         "card": {
