@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSupportAgent } from '../../support-agent/supervisor.mjs';
 import { decodeTerminalFrame, encodeTerminalFrame } from '../../support-agent/protocol.mjs';
-import { listRecordingMetadata, RecordingSegment, recordingDirectory } from '../support-recordings.mjs';
+import { listRecordingMetadata, RecordingSegment, recordingDirectory, recordingPlayback } from '../support-recordings.mjs';
 
 const SESSION_ID = '33333333-3333-4333-8333-333333333333';
 
@@ -249,4 +249,21 @@ test('recording finalization failure closes the connector and prevents another s
   assert.equal(agent.getState().closed, true);
   assert.equal(agent.getState().stopReason, 'recording-finalization-failure');
   assert.equal(agent.launchShell(), false);
+});
+
+test('a resumed pod records one reboot boundary, not one per later shell', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-resume-marker-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-resume-marker-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, resumed: true, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  fakePtyFactory.last.emitExit();
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 3, type: 'attach' })));
+  fakePtyFactory.last.emitExit();
+  agent.stop('test');
+  const playback = recordingPlayback(root, SESSION_ID);
+  assert.equal(playback.events.filter((event) => event.type === 'reboot').length, 1);
 });

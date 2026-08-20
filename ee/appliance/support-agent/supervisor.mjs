@@ -61,7 +61,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
   const existing = existingRecordingState(recordingDir, sessionId);
   const quota = { bytes: existing.bytes, limit: 100 * 1024 * 1024 };
   let socket = null; let child = null; let recorder = null; let detachedTimer = null; let idleTimer = null; let reconnectTimer = null;
-  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null; let reconnectAttempts = 0;
+  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null; let reconnectAttempts = 0; let pendingResumeMarker = resumed;
   const pendingFinalized = new Map();
   const finalizedSegments = new Map();
 
@@ -148,7 +148,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (child || closed || now() >= expiresAt) return false;
     if (![width, height].every((value) => Number.isInteger(value) && value >= 1 && value <= 1000)) throw new Error('Invalid terminal size.');
     recorder = new RecordingSegment({ root: recordingDir, sessionId, width, height, quota, ownerUid: recordingOwnerUid, ownerGid: recordingOwnerGid });
-    if (resumed) record('reboot', { marker: 'control-plane-resume' });
+    if (pendingResumeMarker) { record('reboot', { marker: 'control-plane-resume' }); pendingResumeMarker = false; }
     record('marker', { marker: 'shell-start' });
     const spawn = ptySpawn || require('node-pty').spawn;
     child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '--', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
