@@ -1034,7 +1034,12 @@ export async function finalizeInvoiceWithKnex(
   knex: Knex,
   tenant: string,
   userId: string | null,
-  options: { skipAutoApply?: boolean; deferPrepaidActivation?: boolean } = {},
+  options: {
+    skipAutoApply?: boolean;
+    /** System callers may suppress the issued-state write until delivery is queued. */
+    deferPrepaidActivation?: boolean;
+    markReplenishmentIssued?: boolean;
+  } = {},
 ): Promise<void> {
   let invoice: any;
   let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
@@ -1053,6 +1058,7 @@ export async function finalizeInvoiceWithKnex(
     sourceServicePeriodStart: string | null;
     sourceServicePeriodEnd: string | null;
   } | null = null;
+  let deferPrepaidActivation = options.deferPrepaidActivation === true;
 
   // Validate tax source before finalization
   const taxValidation = userId === null
@@ -1090,6 +1096,15 @@ export async function finalizeInvoiceWithKnex(
     if (!invoice) {
       throw expectedInvoiceActionError('Invoice not found');
     }
+
+    // Replenishment invoices are payment-gated regardless of whether they are
+    // finalized by the scan worker or by the ordinary manager finalize path.
+    // Lock order is invoice -> alert, matching settlement/payment callers.
+    const linkedReplenishment = await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId })
+      .forUpdate()
+      .first('alert_id');
+    deferPrepaidActivation = deferPrepaidActivation || Boolean(linkedReplenishment);
 
     if (invoice.finalized_at) {
       throw expectedInvoiceActionError('Invoice is already finalized');
@@ -1132,7 +1147,7 @@ export async function finalizeInvoiceWithKnex(
     // Mirrors unfinalize/draft-delete, whose hour-block hooks also run inside
     // the caller's trx (29.8.18 mitigation round 3: pre-fix this ran as a
     // separate transaction after the invoice was already finalized).
-    if (!options.deferPrepaidActivation) {
+    if (!deferPrepaidActivation) {
       await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
     }
 
@@ -1156,7 +1171,7 @@ export async function finalizeInvoiceWithKnex(
   // Prepayments and negative invoices use explicit financial-document classification.
   const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
 
-  if (invoice && invoiceCreditHandlingKind === 'prepayment' && !options.deferPrepaidActivation) {
+  if (invoice && invoiceCreditHandlingKind === 'prepayment' && !deferPrepaidActivation) {
     // Prepayment credit is issued here, at finalization — a draft prepayment
     // grants nothing. The invoice carries the chosen expiration date from
     // creation; absent one, the client/default billing settings decide.
@@ -1456,6 +1471,12 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
+
+  if (deferPrepaidActivation && options.markReplenishmentIssued !== false) {
+    await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+      .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+  }
 }
 
 /**
@@ -1472,15 +1493,20 @@ export async function settlePrepaidReplenishmentInvoice(
   userId: string | null = null,
 ): Promise<void> {
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantScopedTable(trx, tenant, 'prepaid_balance_alerts');
-    const alert = await db.where({ replenishment_invoice_id: invoiceId }).forUpdate().first();
-    if (!alert) return;
-
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .forUpdate()
       .first();
     if (!invoice || invoice.status !== 'paid') return;
+
+    // Always acquire invoice before alert. Payment callers commonly already
+    // hold the invoice lock; reversing this order creates an invoice/alert
+    // deadlock against finalization and other status transitions.
+    const alert = await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId })
+      .forUpdate()
+      .first();
+    if (!alert) return;
 
     const handlingKind = classifyInvoiceCreditHandling(invoice);
     if (handlingKind === 'prepayment') {

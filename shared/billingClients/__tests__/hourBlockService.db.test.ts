@@ -9,6 +9,7 @@ import {
   reconcileClientAllocations,
   isEntryEligibleForBlockBurn,
   getAvailableHourBlockMinutes,
+  getAvailableHourBlockMinutesForSubjects,
 } from '../hourBlockService';
 
 // DB-backed burn-engine tests. Run ONLY against an explicitly provided
@@ -733,6 +734,61 @@ describe.runIf(enabled)('hourBlockService DB integration', () => {
         await db('clients').where({ tenant }).delete();
         await db('tenants').where({ tenant }).delete();
       }
+      await db.destroy();
+    }
+  });
+
+  it('composes scoped and unscoped blocks once per bucket subject using tenant-local expiry', async () => {
+    const db = connect();
+    const tenant = uuidv4();
+    const clientId = uuidv4();
+    const originalTz = process.env.TZ;
+    try {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-08-20T12:00:00.000Z'));
+      assertTz('UTC', 0);
+      await db('tenants').insert({ tenant, client_name: 'HB Subject Composition', email: 'hb-subject@test.local', billing_source: 'test' });
+      await db('clients').insert({ tenant, client_id: clientId, client_name: 'HB Subject Composition Client' });
+      const { service_id: serviceA } = await insertService(db, tenant, 'Subject A', 1);
+      const { service_id: serviceB } = await insertService(db, tenant, 'Subject B', 2);
+
+      const unscoped = uuidv4();
+      const scopedA = uuidv4();
+      const scopedB = uuidv4();
+      const expired = uuidv4();
+      await insertBlock(db, tenant, clientId, serviceA, unscoped, null);
+      await insertBlock(db, tenant, clientId, serviceA, scopedA, null);
+      await insertBlock(db, tenant, clientId, serviceB, scopedB, null);
+      await insertBlock(db, tenant, clientId, serviceA, expired, '2026-08-19');
+      await db('hour_block_service_scopes').insert([
+        { tenant, block_id: scopedA, service_id: serviceA },
+        { tenant, block_id: scopedB, service_id: serviceB },
+        { tenant, block_id: expired, service_id: serviceA },
+      ]);
+
+      const minutes = await getAvailableHourBlockMinutesForSubjects(db, tenant, clientId, [
+        { key: 'subject-a', serviceId: serviceA },
+        { key: 'subject-b', serviceId: serviceA },
+        { key: 'subject-c', serviceId: serviceB },
+      ]);
+
+      // The unscoped block is eligible for both same-service subjects, but is
+      // assigned to only one deterministic subject. The service-A scoped
+      // block goes to A, service-B's scoped block cannot go to either A/B,
+      // and the expired block is excluded by the tenant-local date.
+      expect(minutes.get('subject-a')).toBe(1200);
+      expect(minutes.get('subject-b')).toBe(0);
+      expect(minutes.get('subject-c')).toBe(600);
+      expect([...minutes.values()].reduce((sum, value) => sum + value, 0)).toBe(1800);
+    } finally {
+      vi.useRealTimers();
+      process.env.TZ = originalTz;
+      await db('hour_block_service_scopes').where({ tenant }).delete();
+      await db('hour_blocks').where({ tenant }).delete();
+      await db('service_catalog').where({ tenant }).delete();
+      await db('service_types').where({ tenant }).delete();
+      await db('clients').where({ tenant }).delete();
+      await db('tenants').where({ tenant }).delete();
       await db.destroy();
     }
   });

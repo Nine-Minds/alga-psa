@@ -15,6 +15,7 @@ import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
+import { getAvailableHourBlockMinutesForSubjects } from '@alga-psa/shared/billingClients/hourBlockService';
 import {
   bucketCapacity,
   bucketDedupeKey,
@@ -262,14 +263,7 @@ async function resolveCurrentBucketSubjects(
     client_contract_id: string;
   }>;
 
-  return Promise.all(rows.map(async (row) => {
-    const blockMinutes = await db.table('hour_blocks')
-      .where({ client_id: clientId, service_id: row.service_catalog_id, status: 'active' })
-      .where('remaining_minutes', '>', 0)
-      .where((builder) => builder.whereNull('expiration_date').orWhere('expiration_date', '>=', todayISO))
-      .sum({ total: 'remaining_minutes' })
-      .first();
-    return {
+  const observations = rows.map((row) => ({
     usage_id: row.usage_id,
     minutesUsed: Number(row.minutes_used) || 0,
     rolledOverMinutes: Number(row.rolled_over_minutes) || 0,
@@ -280,8 +274,16 @@ async function resolveCurrentBucketSubjects(
     service_catalog_id: row.service_catalog_id,
     contract_line_id: row.contract_line_id,
     client_contract_id: row.client_contract_id,
-    additionalMinutes: Number(blockMinutes?.total ?? 0) || 0,
-    };
+  }));
+  const blockMinutes = await getAvailableHourBlockMinutesForSubjects(
+    trx,
+    tenantId,
+    clientId,
+    observations.map((subject) => ({ key: subject.usage_id, serviceId: subject.service_catalog_id })),
+  );
+  return observations.map((subject) => ({
+    ...subject,
+    additionalMinutes: blockMinutes.get(subject.usage_id) ?? 0,
   }));
 }
 
@@ -416,6 +418,14 @@ async function evaluateClientBuckets(
       }
 
       if (!reached) {
+        // A settled replenishment block is an entitlement-backed recovery,
+        // unlike ordinary usage oscillation within the same period. Resolve
+        // that episode so clearing its invoice lock cannot cause the next
+        // replenishment sweep to invoice the same top-up again.
+        if (open && (subject.additionalMinutes ?? 0) > 0 && !bucketPolicyChanged(Number(open.bucket_percent), percent)) {
+          await resolveAlert(db, open, RESOLUTION_REASON_RECOVERED);
+          summary.bucketAlertsResolved += 1;
+        }
         continue;
       }
 

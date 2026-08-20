@@ -137,6 +137,10 @@ export async function createPrepaidReplenishmentInvoice(
     taxSource: 'internal',
     invoiceNumber,
     createdBy: null,
+    // Automatic replenishment is deliberately consumable only by the bucket
+    // service that triggered the alert. Human purchases may remain unscoped,
+    // but top-ups must not silently become cross-service labor credit.
+    scopeServiceIds: [serviceId],
     notes: 'Automatic prepaid balance replenishment',
   });
   return { invoiceId: created.invoiceId, invoiceNumber };

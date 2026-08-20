@@ -58,7 +58,7 @@ async function getAlertContract(
   tenant: string,
   alert: AlertRow,
 ): Promise<ContractPolicyRow | null> {
-  if (alert.alert_type === 'bucket' && !alert.contract_line_id) return null;
+  if (alert.alert_type !== 'bucket' || !alert.contract_line_id) return null;
   const today = new Date().toISOString().slice(0, 10);
   const db = tenantDb(trx, tenant);
   const query = db.table('client_contracts as cc')
@@ -70,17 +70,12 @@ async function getAlertContract(
     .where({ 'cc.client_id': alert.client_id, 'cc.is_active': true })
     .where((builder) => builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', today))
     .where((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', today));
-  if (alert.alert_type === 'bucket') {
-    db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'cc.contract_id');
-    query.where('cl.contract_line_id', alert.contract_line_id);
-  }
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'cc.contract_id');
+  query.where('cl.contract_line_id', alert.contract_line_id);
   db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
   query.where({ 'c.is_active': true, 'c.status': 'active' });
   const rows = await query as ContractPolicyRow[];
-  // Credit alerts are client-scoped by the detector and have no contract
-  // line identity. Only a single active contract is an unambiguous owner;
-  // multiple unrelated contracts must not suppress the client wholesale.
-  return alert.alert_type === 'bucket' ? (rows[0] ?? null) : (rows.length === 1 ? rows[0] : null);
+  return rows[0] ?? null;
 }
 
 function contractTerminatingWithinHorizon(contract: ContractPolicyRow, horizonDays: number): boolean {
@@ -214,6 +209,7 @@ async function processAlert(
       await finalizeInvoiceWithKnex(invoiceId, knex, tenant, null, {
         skipAutoApply: true,
         deferPrepaidActivation: true,
+        markReplenishmentIssued: false,
       });
       await enqueueImmediateJob('invoice_email', {
         invoiceIds: [invoiceId],
@@ -225,6 +221,9 @@ async function processAlert(
         ],
         metadata: { user_id: 'system', invoice_count: 1, tenantId: tenant },
       });
+      await tenantDb(knex, tenant).table('prepaid_balance_alerts')
+        .where({ alert_id: alertId, replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+        .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
     } catch (error) {
       await tenantDb(knex, tenant).table('prepaid_balance_alerts')
         .where({ alert_id: alertId, replenishment_invoice_id: invoiceId })
