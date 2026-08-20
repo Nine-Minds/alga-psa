@@ -26,6 +26,9 @@
       "phoneNumber": {
         "label": "11111"
       },
+      "phoneExtension": {
+        "label": "11111"
+      },
       "timeZone": {
         "label": "11111"
       }

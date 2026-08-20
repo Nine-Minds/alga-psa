@@ -479,6 +479,7 @@
     "email": "55555",
     "emailPlaceholder": "55555",
     "phone": "55555",
+    "extension": "55555",
     "phonePlaceholder": "55555",
     "name": "55555",
     "creating": "55555",
@@ -1352,6 +1353,7 @@
         "notes": "55555",
         "notesHelper": "55555",
         "phone": "55555",
+        "extension": "55555",
         "phoneHelper": "55555",
         "placeholder": {
           "addressLine1": "55555",

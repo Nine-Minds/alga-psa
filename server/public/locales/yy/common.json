@@ -404,6 +404,42 @@
         "title": "55555",
         "description": "55555"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "55555",
+        "required": "55555",
+        "emojiOnly": "55555",
+        "tooShort": "55555",
+        "abbreviationOnly": "55555",
+        "repeatedCharacters": "55555",
+        "looksLikeUrl": "55555",
+        "noLettersOrNumbers": "55555"
+      },
+      "contactName": {
+        "structural": "55555",
+        "placeholder": "55555"
+      },
+      "email": {
+        "structural": "55555",
+        "required": "55555",
+        "disposableDomain": "55555 {{domain}} 55555",
+        "reservedDomain": "55555 {{domain}} 55555",
+        "internalDomain": "55555 {{domain}} 55555"
+      },
+      "url": {
+        "structural": "55555",
+        "ipAddress": "55555",
+        "internalHost": "55555 {{host}} 55555",
+        "reservedDomain": "55555 {{host}} 55555"
+      },
+      "phone": {
+        "structural": "55555",
+        "repeatedDigits": "55555",
+        "sequentialDigits": "55555",
+        "fictionalRange": "55555"
+      },
+      "dismissWarning": "55555"
     }
   },
   "commentThread": {

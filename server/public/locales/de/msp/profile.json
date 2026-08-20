@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Telefonnummer"
       },
+      "phoneExtension": {
+        "label": "Durchwahl"
+      },
       "timeZone": {
         "label": "Zeitzone"
       }

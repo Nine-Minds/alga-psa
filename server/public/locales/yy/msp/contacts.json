@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "55555",
+      "extension": "55555",
       "phoneType": "55555",
       "customPhoneType": "55555",
       "customTypePlaceholder": "55555",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "55555",
       "phoneRow": "55555 {{number}} 55555",
       "enterCompletePhoneNumber": "55555",
+      "includeCountryCallingCode": "55555",
       "enterCustomPhoneType": "55555",
       "customTypesUnique": "55555"
     },

@@ -84,7 +84,9 @@ interface LocationFormData {
   country_name: string;
   region_code: string | null;
   phone: string;
+  phone_extension: string;
   fax: string;
+  fax_extension: string;
   email: string;
   notes: string;
   is_billing_address: boolean;
@@ -292,7 +294,9 @@ const initialFormData: LocationFormData = {
   country_name: 'United States',
   region_code: null,
   phone: '',
+  phone_extension: '',
   fax: '',
+  fax_extension: '',
   email: '',
   notes: '',
   is_billing_address: false,
@@ -537,7 +541,9 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       country_name: location.country_name,
       region_code: location.region_code || null,
       phone: location.phone || '',
+      phone_extension: location.phone_extension || '',
       fax: location.fax || '',
+      fax_extension: location.fax_extension || '',
       email: location.email || '',
       notes: location.notes || '',
       is_billing_address: location.is_billing_address || false,
@@ -959,17 +965,17 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                   label={t('clients.locations.form.phone', 'Phone')}
                   value={formData.phone || ''}
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  extension={formData.phone_extension || ''}
+                  onExtensionChange={(value) => setFormData(prev => ({ ...prev, phone_extension: value }))}
+                  extensionLabel={t('clients.locations.form.extension', 'Extension')}
                   countryCode={formData.country_code}
-                  phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
-                  countries={countries}
-                  onCountryChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
                   allowExtensions={true}
                   data-automation-id="phone-input"
                 />
               </div>
               
-              <div {...emailFieldProps}>
-                <Label htmlFor="email-input">{t('clients.locations.form.email', 'Email')}</Label>
+              <div {...emailFieldProps} className="space-y-1">
+                <Label htmlFor="email-input" className="block">{t('clients.locations.form.email', 'Email')}</Label>
                 <Input
                   id="email-input"
                   type="email"

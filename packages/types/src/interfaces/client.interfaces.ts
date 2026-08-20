@@ -100,7 +100,11 @@ export interface IClientLocation extends TenantEntity {
   is_shipping_address?: boolean;
   is_default?: boolean;
   phone?: string;
+  /** Stored separately; never packed into phone. */
+  phone_extension?: string | null;
   fax?: string;
+  /** Stored separately; never packed into fax. */
+  fax_extension?: string | null;
   email?: string;
   notes?: string;
   is_active?: boolean;

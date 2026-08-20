@@ -71,6 +71,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -79,7 +80,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/component
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
-import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -89,6 +90,8 @@ import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -149,6 +152,7 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<{
     first_name: string[];
     last_name: string[];
@@ -271,10 +275,14 @@ const UserManagement = (): React.JSX.Element => {
         error = validateContactName(value);
         if (error) errors = [error];
         break;
-      case 'email':
-        error = validateEmailAddress(value);
+      case 'email': {
+        const result = translateFieldValidation(validateEmailAddressField(value), tValidation);
+        error = result.error;
         if (error) errors = [error];
+        // Plausibility only; never gates the invite.
+        setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
         break;
+      }
       default:
         errors = [];
     }
@@ -790,6 +798,7 @@ const fetchContacts = async (): Promise<void> => {
                 }}
                 className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
               />
+              <FieldWarnings warnings={fieldWarnings.email ?? []} />
               {fieldErrors.email.length > 0 && (
                 <div className="text-sm text-destructive mt-1">
                   {fieldErrors.email.map((error, idx) => (

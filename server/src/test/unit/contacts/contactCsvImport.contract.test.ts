@@ -175,6 +175,64 @@ describe('contact CSV import action contract', () => {
     });
   });
 
+  it('normalizes a CSV phone and stores its packed extension separately', async () => {
+    testState.trx = makeTrx({});
+    testState.createContactMock.mockImplementation(async (input: any) => ({
+      contact_name_id: 'contact-created',
+      ...input,
+    }));
+
+    const results = await importContactsFromCSV([{
+      full_name: 'Extension Contact',
+      email: 'extension@example.com',
+      phone_number: '+1 212 555 0100 ext. 500',
+    } as any], false);
+
+    expect(results[0]).toMatchObject({ success: true });
+    expect(testState.createContactMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone_numbers: [expect.objectContaining({
+          phone_number: '+12125550100',
+          extension: '500',
+        })],
+      }),
+      testState.tenant,
+      testState.trx,
+    );
+  });
+
+  it('rejects spreadsheet scientific notation without calling the model', async () => {
+    testState.trx = makeTrx({});
+
+    const results = await importContactsFromCSV([{
+      full_name: 'Scientific Contact',
+      email: 'scientific@example.com',
+      phone_number: '5.73007E+11',
+    } as any], false);
+
+    expect(results[0]).toMatchObject({
+      success: false,
+      message: expect.stringContaining('valid phone number'),
+    });
+    expect(testState.createContactMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a dial code without the leading plus sign', async () => {
+    testState.trx = makeTrx({});
+
+    const results = await importContactsFromCSV([{
+      full_name: 'Ambiguous Dial Code Contact',
+      email: 'ambiguous@example.com',
+      phone_number: '1 212 555 0100',
+    } as any], false);
+
+    expect(results[0]).toMatchObject({
+      success: false,
+      message: expect.stringContaining('starting with +'),
+    });
+    expect(testState.createContactMock).not.toHaveBeenCalled();
+  });
+
   it('T029: CSV import updates an existing contact with primary and additional email rows', async () => {
     const existingContact: IContact = {
       contact_name_id: 'contact-existing',

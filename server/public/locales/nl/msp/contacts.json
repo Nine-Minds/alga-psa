@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "Telefoonnummer",
+      "extension": "Toestelnummer",
       "phoneType": "Telefoontype",
       "customPhoneType": "Aangepast telefoontype",
       "customTypePlaceholder": "Selecteer of voer een aangepast telefoontype in",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Selecteer precies één standaard telefoonnummer.",
       "phoneRow": "Telefoon {{number}}",
       "enterCompletePhoneNumber": "Voer een volledig telefoonnummer in.",
+      "includeCountryCallingCode": "Voer de landcode in, beginnend met +.",
       "enterCustomPhoneType": "Voer een aangepast telefoontype in.",
       "customTypesUnique": "Labels van aangepaste telefoontypen moeten uniek zijn."
     },

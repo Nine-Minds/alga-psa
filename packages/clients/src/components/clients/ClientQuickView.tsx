@@ -1039,7 +1039,6 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
                 setAliasDraft={setAliasDraft}
                 isAliasBusy={isAliasBusy}
                 isSaving={isSaving}
-                t={t}
                 onFieldChange={handleFieldChange}
                 onDefaultContactChange={handleDefaultContactChange}
                 onAddInboundDomain={handleAddInboundDomain}

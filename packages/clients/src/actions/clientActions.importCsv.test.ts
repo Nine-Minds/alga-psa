@@ -140,15 +140,17 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     'address_line2', 'address_line3', 'city', 'state_province', 'postal_code',
     'country_code', 'country_name', 'region_code', 'is_billing_address',
     'is_shipping_address', 'is_default', 'phone', 'fax', 'email', 'notes',
-    'is_active', 'created_at', 'updated_at',
+    'phone_extension', 'fax_extension', 'is_active', 'created_at', 'updated_at',
   ]),
   default_billing_settings: new Set(['tenant', 'default_currency_code']),
+  countries: new Set(['code', 'name', 'is_active', 'created_at', 'updated_at']),
 };
 
 interface FakeState {
   clients: Record<string, any>[];
   client_locations: Record<string, any>[];
   default_billing_settings: Record<string, any>[];
+  countries: Record<string, any>[];
   updates: Array<{ table: string; data: Record<string, any> }>;
   failClientInsertNamed: string | null;
 }
@@ -178,7 +180,7 @@ function fakeConn(table: string) {
   if (!TABLE_COLUMNS[table]) {
     throw new Error(`Unexpected table ${table}`);
   }
-  const rows = () => state[table as 'clients' | 'client_locations' | 'default_billing_settings'];
+  const rows = () => state[table as 'clients' | 'client_locations' | 'default_billing_settings' | 'countries'];
   const matching = (criteria: Record<string, any>) =>
     rows().filter(row => Object.entries(criteria).every(([key, value]) => row[key] === value));
 
@@ -189,6 +191,9 @@ function fakeConn(table: string) {
           const match = matching(criteria)[0];
           return match ? { ...match } : undefined;
         },
+        select: async (...columns: string[]) => matching(criteria).map((row) =>
+          Object.fromEntries(columns.map((column) => [column, row[column]]))
+        ),
         update(data: Record<string, any>) {
           assertRealColumns(table, data);
           state.updates.push({ table, data: { ...data } });
@@ -277,6 +282,11 @@ describe('importClientsFromCSV', () => {
       clients: [],
       client_locations: [],
       default_billing_settings: [],
+      countries: [
+        { code: 'US', name: 'United States', is_active: true },
+        { code: 'CO', name: 'Colombia', is_active: true },
+        { code: 'GB', name: 'United Kingdom', is_active: true },
+      ],
       updates: [],
       failClientInsertNamed: null,
     };
@@ -321,10 +331,64 @@ describe('importClientsFromCSV', () => {
       location_name: 'Main Office',
       address_line1: '1201 Alaskan Way',
       city: 'Seattle',
-      phone: '(206) 555-0177',
+      phone: '+12065550177',
+      phone_extension: '',
+      country_code: 'US',
+      country_name: 'United States',
       email: 'frontdesk@harborviewdental.com',
       is_default: true,
     });
+  });
+
+  it('uses the CSV country to normalize a national phone number', async () => {
+    const results = await importClients([csvRow({
+      client_name: 'Bogota Support',
+      phone_number: '300 700 1234',
+      country: 'colombia',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    expect(state.client_locations[0]).toMatchObject({
+      phone: '+573007001234',
+      phone_extension: '',
+      country_code: 'CO',
+      country_name: 'Colombia',
+    });
+  });
+
+  it('moves a packed CSV extension into the extension column', async () => {
+    const results = await importClients([csvRow({
+      phone_number: '(206) 555-0177 ext. 400',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    expect(state.client_locations[0]).toMatchObject({
+      phone: '+12065550177',
+      phone_extension: '400',
+    });
+  });
+
+  it('rejects spreadsheet scientific notation instead of storing it', async () => {
+    const results = await importClients([csvRow({
+      client_name: 'Scientific Notation Co',
+      phone_number: '5.73007E+11',
+      country: 'Colombia',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: false });
+    expect(results[0].message).toContain('valid phone number');
+    expect(state.clients).toHaveLength(0);
+    expect(state.client_locations).toHaveLength(0);
+  });
+
+  it('rejects an unknown nonblank country instead of pairing it with US', async () => {
+    const results = await importClients([csvRow({
+      client_name: 'Unknown Country Co',
+      country: 'Wonderland',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: false, message: 'Unknown country: Wonderland' });
+    expect(state.clients).toHaveLength(0);
   });
 
   it('does not create a location when the row has no location data', async () => {

@@ -373,6 +373,42 @@
         "title": "Aún no hay ubicaciones",
         "description": "Haga clic en \"Agregar ubicación\" para comenzar"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Introduzca un nombre de cliente válido",
+        "required": "El nombre del cliente es obligatorio",
+        "emojiOnly": "Este nombre está formado únicamente por emojis.",
+        "tooShort": "Este nombre tiene un solo carácter, ¿es correcto?",
+        "abbreviationOnly": "Esto es solo una abreviatura mercantil, no un nombre.",
+        "repeatedCharacters": "Este nombre repite el mismo carácter varias veces.",
+        "looksLikeUrl": "Esto parece una dirección web más que un nombre.",
+        "noLettersOrNumbers": "Este nombre no contiene letras ni números."
+      },
+      "contactName": {
+        "structural": "Introduzca un nombre de contacto válido",
+        "placeholder": "Esto parece un marcador de posición más que una persona."
+      },
+      "email": {
+        "structural": "Introduzca una dirección de correo electrónico válida",
+        "required": "La dirección de correo electrónico es obligatoria",
+        "disposableDomain": "{{domain}} es un proveedor de buzones desechables.",
+        "reservedDomain": "{{domain}} está reservado para documentación y pruebas.",
+        "internalDomain": "{{domain}} solo se resuelve dentro de una red privada."
+      },
+      "url": {
+        "structural": "Introduzca una URL de sitio web válida (p. ej., apple.com)",
+        "ipAddress": "Esto es una dirección IP, no un nombre de dominio.",
+        "internalHost": "{{host}} solo se resuelve dentro de una red privada.",
+        "reservedDomain": "{{host}} está reservado para documentación y pruebas."
+      },
+      "phone": {
+        "structural": "Introduzca un número de teléfono válido",
+        "repeatedDigits": "Este número repite siempre el mismo dígito.",
+        "sequentialDigits": "Este número recorre el teclado de forma consecutiva.",
+        "fictionalRange": "Está en el rango 555-0100 reservado para la ficción."
+      },
+      "dismissWarning": "Descartar"
     }
   },
   "commentThread": {

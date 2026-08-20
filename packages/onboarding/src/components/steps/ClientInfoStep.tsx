@@ -3,6 +3,7 @@
 // Onboarding step: initial MSP + client identity capture.
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -10,7 +11,7 @@ import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress } from '@alga-psa/validation';
+import { translateFieldValidation, validateEmailAddressField } from '@alga-psa/validation';
 import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -26,11 +27,15 @@ interface ClientInfoStepProps extends StepProps {
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const { t } = useTranslation('msp/onboarding');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const { locale: currentLocale, setLocale } = useI18n();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Never gate onboarding.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [isLocaleChanging, setIsLocaleChanging] = useState(false);
   const [countries, setCountries] = useState<ICountry[]>([]);
 
@@ -440,8 +445,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             }
           }}
           onBlur={() => {
-            const error = validateEmailAddress(data.email || '');
-            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(error) }));
+            const result = translateFieldValidation(validateEmailAddressField(data.email || ''), tValidation);
+            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(result.error) }));
+            setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
           }}
           placeholder={t('clientInfoStep.fields.email.placeholder', {
             defaultValue: 'john@acmeit.com'
@@ -450,6 +456,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           disabled
           className={fieldErrors.email ? 'border-red-500' : ''}
         />
+        <FieldWarnings warnings={fieldWarnings.email ?? []} />
         {fieldErrors.email && (
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
         )}

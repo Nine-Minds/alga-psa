@@ -479,6 +479,7 @@
     "email": "11111",
     "emailPlaceholder": "11111",
     "phone": "11111",
+    "extension": "11111",
     "phonePlaceholder": "11111",
     "name": "11111",
     "creating": "11111",
@@ -1352,6 +1353,7 @@
         "notes": "11111",
         "notesHelper": "11111",
         "phone": "11111",
+        "extension": "11111",
         "phoneHelper": "11111",
         "placeholder": {
           "addressLine1": "11111",

@@ -208,6 +208,12 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
   default: ({ text }: { text: string }) => <div>{text}</div>,
 }));
 
+// Load the component once during module setup so a cold Vite transform is not
+// charged against the first test's behavioral timeout on busy CI runners.
+const { default: AutomaticInvoices } = await import(
+  '../src/components/billing-dashboard/AutomaticInvoices'
+);
+
 describe('AutomaticInvoices grouped parent rows', () => {
   afterEach(() => {
     cleanup();
@@ -305,8 +311,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('renders one parent group row for a shared client + invoice window instead of one top-level row per child (T001)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -320,8 +324,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('renders parent summary child count, aggregate amount, and invoice window (T002)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -334,8 +336,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('expands a parent row to reveal child candidate details (T003)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -354,8 +354,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -373,8 +371,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('shows PO incompatibility reason when child PO scope differs (T005)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].purchaseOrderScopeKey = 'po-2';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -392,8 +388,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('shows currency incompatibility reason when child currency differs (T006)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -411,8 +405,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('shows tax incompatibility reason when child tax source differs (T007)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].taxSource = 'inclusive';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -430,8 +422,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('shows export-shape incompatibility reason when child export shape differs (T008)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].exportShapeKey = 'shape-b';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
-
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -448,7 +438,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('selecting a combinable parent selects the full group target (T009)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const parentCheckbox = await waitFor(() => {
@@ -468,7 +457,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -486,7 +474,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('partial child selection drives parent indeterminate state (T011)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -505,7 +492,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('select all selects combinable groups by parent row (T012)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const [selectAll] = await screen.findAllByRole('checkbox');
@@ -519,7 +505,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('select all selects child rows for non-combinable groups (T013)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].taxSource = 'inclusive';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const [selectAll] = await screen.findAllByRole('checkbox');
@@ -547,7 +532,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
     mockDueWorkResponse.invoiceCandidates[0].canGenerate = false;
     mockDueWorkResponse.invoiceCandidates[0].members[1].canGenerate = false;
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const selectAll = await waitFor(() => {
@@ -584,7 +568,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const parentCheckbox = await waitFor(() => {
@@ -614,7 +597,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('previewing mixed child selection renders multi-invoice preview count (T016)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -638,7 +620,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   it('preview request uses exact selected child scope without unselected siblings (T017)', async () => {
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -688,7 +669,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     mockDueWorkResponse.invoiceCandidates[0].memberCount = 3;
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -711,7 +691,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
   it('keeps parent non-combinable when PO scope differs across child candidates (T026)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].purchaseOrderScopeKey = 'po-2';
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -729,7 +708,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
   it('legacy single-assignment/single-child groups still generate through the existing flow (T028/T029)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members = [mockDueWorkResponse.invoiceCandidates[0].members[0]];
     mockDueWorkResponse.invoiceCandidates[0].memberCount = 1;
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     const parentCheckbox = await waitFor(() => {
@@ -807,7 +785,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       page: 1,
       pageSize: 10,
     };
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await waitFor(() => {
@@ -918,7 +895,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -943,7 +919,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -975,7 +950,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -1007,7 +981,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     const { rerender } = render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -1039,7 +1012,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -1066,7 +1038,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(reload.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {
@@ -1102,7 +1073,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     try {
       render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
@@ -1136,7 +1106,6 @@ describe('AutomaticInvoices grouped parent rows', () => {
       .mockReturnValueOnce(initial.promise)
       .mockReturnValueOnce(denied.promise);
 
-    const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
     await act(async () => {

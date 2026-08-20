@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Endereço de email",
     "phone": "Telefone",
+    "extension": "Ramal",
     "phonePlaceholder": "Número de telefone",
     "name": "Nome",
     "creating": "Criando...",
@@ -1352,6 +1353,7 @@
         "notes": "Notas",
         "notesHelper": "Notas adicionais sobre este local",
         "phone": "Telefone",
+        "extension": "Ramal",
         "phoneHelper": "Número de telefone deste local",
         "placeholder": {
           "addressLine1": "Insira o endereço *",
