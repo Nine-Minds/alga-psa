@@ -117,13 +117,25 @@ export class SupportControlClient {
     }
   }
 
-  async createSession({ durationHours, credential, clientRequestId = crypto.randomUUID() }) {
+  async createSession({ durationHours, credential, clientRequestId = crypto.randomUUID() }, recoveryAttempt = 0) {
     if (typeof credential !== 'string' || credential.length < 16) throw new SupportControlError('central_rejected', 'Appliance credential is unavailable.', 503);
-    const response = await this.request('POST', '/v1/appliance/sessions', {
-      durationHours,
-      clientRequestId,
-      credential,
-    });
+    let response;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        response = await this.request('POST', '/v1/appliance/sessions', { durationHours, clientRequestId, credential });
+        break;
+      } catch (error) {
+        if (attempt === 0 && ['central_timeout', 'central_unavailable'].includes(error?.code)) continue;
+        throw error;
+      }
+    }
+    if (response?.replayed === true) {
+      const keys = Object.keys(response).sort();
+      if (!SESSION_ID_RE.test(String(response.sessionId || '')) || typeof response.state !== 'string' || keys.join(',') !== 'replayed,sessionId,state') throw new SupportControlError('central_invalid_response', 'Central replay response is invalid.', 502);
+      await this.abandonReplay(response.sessionId, credential, clientRequestId);
+      if (recoveryAttempt >= 1) throw new SupportControlError('central_unavailable', 'Remote support create recovery did not converge.', 503);
+      return this.createSession({ durationHours, credential, clientRequestId: crypto.randomUUID() }, recoveryAttempt + 1);
+    }
     try {
       return validateCreateResponse(response, { durationHours, nowMs: Date.now() });
     } catch (error) {
@@ -143,6 +155,10 @@ export class SupportControlClient {
 
   abandon(sessionId, applianceToken) {
     return this.request('DELETE', `/v1/appliance/sessions/${requireSessionId(sessionId)}`, {}, { applianceToken });
+  }
+
+  abandonReplay(sessionId, credential, clientRequestId) {
+    return this.request('DELETE', `/v1/appliance/sessions/${requireSessionId(sessionId)}`, { credential, clientRequestId });
   }
 
   getSession(sessionId, applianceToken) {
