@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const viewerStyles = readFileSync(
-  path.resolve(process.cwd(), 'src/editor/TicketDetails.module.css'),
+  path.resolve(__dirname, 'TicketDetails.module.css'),
   'utf8',
 );
 
