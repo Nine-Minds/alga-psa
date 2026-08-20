@@ -147,7 +147,7 @@ export function writeAtomicJson(file, value, { ownerUid = null, ownerGid = null 
 
 export function verifyRecordingReceipt(metadata, receipt, publicKey) {
   if (!metadata || !receipt || typeof publicKey !== 'string' || !publicKey.trim()) return { valid: false, reason: 'receipt_unavailable' };
-  if (metadata.sessionId !== receipt.sessionId || metadata.segmentId !== receipt.segmentId || metadata.bytes !== receipt.bytes || metadata.digest !== receipt.digest) {
+  if (metadata.sessionId !== receipt.sessionId || metadata.segmentId !== receipt.segmentId || metadata.bytes !== receipt.bytes || metadata.digest !== receipt.digest || metadata.closedAt !== receipt.closedAt) {
     return { valid: false, reason: 'receipt_mismatch' };
   }
   const signed = JSON.stringify({ sessionId: receipt.sessionId, segmentId: receipt.segmentId, bytes: receipt.bytes, digest: receipt.digest, closedAt: receipt.closedAt, keyId: receipt.keyId });
@@ -155,6 +155,19 @@ export function verifyRecordingReceipt(metadata, receipt, publicKey) {
     const valid = crypto.verify(null, Buffer.from(signed), publicKey, Buffer.from(String(receipt.signature || ''), 'base64url'));
     return { valid, reason: valid ? null : 'invalid_signature' };
   } catch { return { valid: false, reason: 'invalid_signature' }; }
+}
+
+export function verifyRecordingSegment(root, sessionId, metadata, publicKey) {
+  if (!metadata || metadata.sessionId !== sessionId || !validRecordingId(metadata.segmentId)) return { valid: false, digestValid: false, receiptValid: false, reason: 'metadata_invalid' };
+  const directory = recordingDirectory(root, sessionId);
+  const file = path.join(directory, `segment-${metadata.segmentId}.cast`);
+  let bytes;
+  try { bytes = readBoundedFile(file, MAX_RECORDING_BYTES); } catch { return { valid: false, digestValid: false, receiptValid: false, reason: 'segment_unavailable' }; }
+  const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+  const digestValid = bytes.length === metadata.bytes && digest === metadata.digest;
+  if (!digestValid) return { valid: false, digestValid: false, receiptValid: false, reason: 'segment_digest_mismatch', actualBytes: bytes.length, actualDigest: digest };
+  const receipt = verifyRecordingReceipt(metadata, metadata.receipt, publicKey);
+  return { valid: receipt.valid, digestValid: true, receiptValid: receipt.valid, reason: receipt.reason };
 }
 
 export function readBoundedFile(file, maxBytes = MAX_READ_BYTES) {
@@ -202,7 +215,7 @@ function chronologicalSegments(metadata) {
   }));
 }
 
-export function recordingPlayback(root, sessionId) {
+export function recordingPlayback(root, sessionId, { publicKey = null } = {}) {
   const directory = recordingDirectory(root, sessionId);
   const metadata = chronologicalSegments(listRecordingMetadata(root, sessionId));
   const events = [];
@@ -210,7 +223,8 @@ export function recordingPlayback(root, sessionId) {
   for (const segment of metadata) {
     const name = `segment-${segment.segmentId}.cast`;
     if (!fs.existsSync(path.join(directory, name))) continue;
-    const lines = readBoundedFile(path.join(directory, name)).toString('utf8').split('\n').filter(Boolean);
+    const content = readBoundedFile(path.join(directory, name));
+    const lines = content.toString('utf8').split('\n').filter(Boolean);
     for (const line of lines.slice(1)) {
       let event;
       try { event = JSON.parse(line); } catch { continue; }
@@ -219,7 +233,8 @@ export function recordingPlayback(root, sessionId) {
       events.push({ type: event.type, at: event.at, data: decoded, stream: event.stream, width: event.width, height: event.height, code: event.code, signal: event.signal, marker: event.marker });
     }
   }
-  return { sessionId, segments: metadata.map(({ sessionId: _sid, receipt, ...segment }) => segment), events, text: events.filter((event) => event.type === 'output').map((event) => event.data || '').join('') };
+  const segments = metadata.map(({ sessionId: _sid, receipt, ...segment }) => ({ ...segment, verification: verifyRecordingSegment(root, sessionId, { ...segment, sessionId, receipt }, publicKey) }));
+  return { sessionId, segments, verified: segments.length > 0 && segments.every((segment) => segment.verification.valid), events, text: events.filter((event) => event.type === 'output').map((event) => event.data || '').join('') };
 }
 
 export function pruneRecordings(root, { nowMs = Date.now(), retentionMs = LOCAL_RETENTION_MS, activeSessionIds = [] } = {}) {

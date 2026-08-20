@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_RECORDING_BYTES, RecordingError, RecordingSegment, listRecordingMetadata, pruneRecordings, recordingDirectory, recordingPlayback, recordingStats, verifyRecordingReceipt } from '../support-recordings.mjs';
+import { MAX_RECORDING_BYTES, RecordingError, RecordingSegment, listRecordingMetadata, pruneRecordings, recordingDirectory, recordingPlayback, recordingStats, verifyRecordingReceipt, verifyRecordingSegment, writeAtomicJson } from '../support-recordings.mjs';
 
 const SESSION_ID = '22222222-2222-4222-8222-222222222222';
 
@@ -63,4 +64,24 @@ test('recording ownership and chained playback preserve secure modes and chronol
   assert.equal(secondMetadata.previousDigest, firstMetadata.digest);
   const playback = recordingPlayback(root, SESSION_ID);
   assert.equal(playback.text, 'first\nsecond\n');
+});
+
+test('verification hashes the actual segment bytes before trusting a signed receipt', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-recording-integrity-'));
+  const segment = new RecordingSegment({ root, sessionId: SESSION_ID });
+  segment.append('output', { data: 'original output\n' });
+  const metadata = segment.finalize();
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const receipt = { sessionId: metadata.sessionId, segmentId: metadata.segmentId, bytes: metadata.bytes, digest: metadata.digest, closedAt: metadata.closedAt, keyId: 'test-key' };
+  const signed = JSON.stringify(receipt);
+  receipt.signature = crypto.sign(null, Buffer.from(signed), privateKey).toString('base64url');
+  const receipted = { ...metadata, receipt };
+  writeAtomicJson(path.join(recordingDirectory(root, SESSION_ID), `receipt-${metadata.segmentId}.json`), receipted);
+  const publicPem = publicKey.export({ type: 'spki', format: 'pem' });
+  assert.equal(verifyRecordingSegment(root, SESSION_ID, receipted, publicPem).valid, true);
+  fs.appendFileSync(path.join(recordingDirectory(root, SESSION_ID), `segment-${metadata.segmentId}.cast`), '{"tampered":true}\n');
+  const verification = verifyRecordingSegment(root, SESSION_ID, receipted, publicPem);
+  assert.equal(verification.valid, false);
+  assert.equal(verification.reason, 'segment_digest_mismatch');
+  assert.equal(recordingPlayback(root, SESSION_ID, { publicKey: publicPem }).verified, false);
 });

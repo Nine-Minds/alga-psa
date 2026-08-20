@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSupportAgent } from '../../support-agent/supervisor.mjs';
+import { decodeTerminalFrame, encodeTerminalFrame } from '../../support-agent/protocol.mjs';
 import { listRecordingMetadata, RecordingSegment, recordingDirectory } from '../support-recordings.mjs';
 
 const SESSION_ID = '33333333-3333-4333-8333-333333333333';
@@ -13,7 +14,11 @@ class MockSocket extends EventEmitter {
   static OPEN = 1;
   static last = null;
   constructor() { super(); this.readyState = 0; this.bufferedAmount = 0; this.sent = []; MockSocket.last = this; }
-  send(value) { this.sent.push(JSON.parse(value)); }
+  send(value) {
+    const bytes = Buffer.from(value);
+    try { this.sent.push(JSON.parse(bytes.toString('utf8'))); }
+    catch { this.sent.push(bytes); }
+  }
   close() { this.readyState = 3; this.emit('close'); }
 }
 
@@ -38,6 +43,8 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach', width: 100, height: 30 })));
   const pty = fakePtyFactory.last;
   pty.emitOutput('output while attached');
+  const output = socket.sent.find((item) => Buffer.isBuffer(item));
+  assert.equal(decodeTerminalFrame(output).data.toString('utf8'), 'output while attached');
   socket.readyState = 3;
   socket.emit('close');
   pty.emitOutput('output during relay loss');
@@ -58,6 +65,25 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   agent.stop('test');
   await new Promise((resolve) => setTimeout(resolve, 5));
   assert.equal(fs.existsSync(recordingDirectory(root, SESSION_ID)), true);
+});
+
+test('operator detach preserves the PTY for grace and binary input is recorded before delivery', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-detach-'));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-detach-1234\n', { mode: 0o600 });
+  const agent = createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, detachedGraceMs: 30, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() });
+  agent.start();
+  const socket = MockSocket.last; socket.readyState = MockSocket.OPEN; socket.emit('open');
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 1, type: 'ready' })));
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach' })));
+  socket.emit('message', encodeTerminalFrame({ type: 'input', seq: 3, data: Buffer.from('whoami\n') }), true);
+  assert.deepEqual(fakePtyFactory.last.writes, ['whoami\n']);
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 4, type: 'detach' })));
+  assert.equal(agent.getState().hasChild, true);
+  socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 5, type: 'reattach' })));
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  assert.equal(agent.getState().hasChild, true);
+  agent.stop('test');
 });
 
 test('support agent prefers the memory reconnect token when the projected connector file remains', () => {

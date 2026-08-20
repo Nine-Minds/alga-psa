@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanupSupportResources, buildSupportConnectorSecret, buildSupportPod, isValidSupportAgentImage, SUPPORT_NAMESPACE } from './support-kubernetes.mjs';
-import { LOCAL_RETENTION_MS, listRecordingMetadata, pruneRecordings, readBoundedFile, recordingDirectory, recordingPlayback, recordingStats, verifyRecordingReceipt, writeAtomicJson } from './support-recordings.mjs';
+import { LOCAL_RETENTION_MS, listRecordingMetadata, pruneRecordings, readBoundedFile, recordingDirectory, recordingPlayback, recordingStats, verifyRecordingSegment, writeAtomicJson } from './support-recordings.mjs';
 
 export const SUPPORT_DURATIONS = Object.freeze([1, 4, 8]);
 export const SUPPORT_MAX_HOURS = 8;
@@ -119,7 +119,8 @@ export class SupportSessionManager {
     this.reconciliationTimer = setInterval(() => {
       this._serialize(async () => {
         const active = this._readActive();
-        if (active && (active.state === 'closing' || active.cleanupPending || active.state === 'reconnecting')) await this.reconcileStartup();
+        if (active) await this.reconcileStartup();
+        else await this._retryPendingCentralCloses();
       }).catch(() => {});
     }, reconciliationIntervalMs);
     this.reconciliationTimer.unref?.();
@@ -160,6 +161,26 @@ export class SupportSessionManager {
     return { ...publicValue, shareCode: value.state === 'ready' && shareCode ? shareCode : null };
   }
 
+  _applyCentralStatus(active, central) {
+    let changed = false;
+    const next = { ...active };
+    const centralState = String(central?.state || '');
+    if (['ready', 'redeemed', 'connected', 'disconnected'].includes(centralState) && next.state !== centralState) {
+      next.state = centralState;
+      changed = true;
+    }
+    if (central?.operatorEmail || central?.operatorSubject) {
+      const operator = { subject: central.operatorSubject || null, email: central.operatorEmail || null, boundAt: central.redeemedAt || next.operator?.boundAt || null };
+      if (JSON.stringify(next.operator) !== JSON.stringify(operator)) { next.operator = operator; changed = true; }
+    }
+    if (next.shareCode && (central?.codeConsumed === true || central?.redeemedAt || next.operator || ['redeemed', 'connected', 'disconnected'].includes(centralState))) {
+      next.shareCode = null;
+      changed = true;
+    }
+    if (changed) this._writeActive(next);
+    return next;
+  }
+
   async _capability() {
     let license = {};
     try { license = await this.getLicense(); } catch { license = { status: 'unknown' }; }
@@ -177,12 +198,9 @@ export class SupportSessionManager {
         const central = await this.central.getSession(active.sessionId, active.applianceToken);
         if (central?.state === 'revoked' || central?.state === 'expired' || central?.terminal === true) {
           active = await this._closeLocal(active, central.state === 'revoked' ? 'central-revoked' : 'central-expired', central.state === 'revoked' ? 'revoked' : 'expired');
-        } else if (central?.operatorEmail || central?.operatorSubject) {
-          active.operator = { subject: central.operatorSubject || null, email: central.operatorEmail || null, boundAt: central.redeemedAt || active.operator?.boundAt || null };
-          active.state = central.state === 'connected' ? 'connected' : (active.state === 'ready' ? 'redeemed' : active.state);
-          active.shareCode = null;
+        } else {
+          active = this._applyCentralStatus(active, central);
           active.recording = recordingStats(this.recordingRoot, active.sessionId);
-          this._writeActive(active);
         }
       } catch { /* preserve the last local state during a transient central outage */ }
     }
@@ -209,9 +227,13 @@ export class SupportSessionManager {
   async _provision(descriptor, connectorToken, supportAgentImage) {
     const secret = buildSupportConnectorSecret({ sessionId: descriptor.sessionId, connectorToken });
     const pod = buildSupportPod({ session: descriptor, supportAgentImage, nowMs: this.now() });
-    await this.kube.apply(secret);
-    try { await this.kube.apply(pod); } catch (error) {
-      await cleanupSupportResources(this.kube, descriptor.sessionId);
+    try {
+      const secretResult = await this.kube.apply(secret);
+      if (secretResult?.ok === false) throw new Error('connector-secret-apply-failed');
+      const podResult = await this.kube.apply(pod);
+      if (podResult?.ok === false) throw new Error('support-pod-apply-failed');
+    } catch (error) {
+      try { await cleanupSupportResources(this.kube, descriptor.sessionId); } catch { /* preserve the original provisioning failure */ }
       throw new SupportSessionError('pod_failure', 'The support agent could not be started.', 502, errorCode(error));
     }
     const deadline = this.now() + SUPPORT_PROVISIONING_TIMEOUT_MS;
@@ -222,7 +244,13 @@ export class SupportSessionManager {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     if (!ready) throw new SupportSessionError('provisioning_timeout', 'Support recording and relay readiness were not reached.', 504);
-    try { await this.kube.delete('secret', `support-${descriptor.sessionId}-connector`, SUPPORT_NAMESPACE); } catch (error) { throw new SupportSessionError('cleanup_failure', 'The connector secret could not be removed after readiness.', 502, errorCode(error)); }
+    try {
+      const result = await this.kube.delete('secret', `support-${descriptor.sessionId}-connector`, SUPPORT_NAMESPACE);
+      if (result?.ok === false && result.status !== 404) throw new SupportSessionError('cleanup_failure', 'The connector secret could not be removed after readiness.', 502);
+    } catch (error) {
+      if (error instanceof SupportSessionError) throw error;
+      throw new SupportSessionError('cleanup_failure', 'The connector secret could not be removed after readiness.', 502, errorCode(error));
+    }
   }
 
   async _closeLocal(descriptor, reason, terminalState = 'failed') {
@@ -387,6 +415,7 @@ export class SupportSessionManager {
       const central = await this.central.getSession(active.sessionId, active.applianceToken);
       if (central?.state === 'revoked' || central?.state === 'expired' || central?.terminal) { await this._closeLocal(active, `central-${central.state || 'closed'}`, central.state === 'revoked' ? 'revoked' : 'expired'); return { ok: true, state: 'closed' }; }
       if (!central?.active && active.state !== 'pending_ack') { await this._closeLocal(active, 'central-rejected', 'failed'); return { ok: true, state: 'failed' }; }
+      active = this._applyCentralStatus(active, central);
       this._scheduleExpiry(active);
       if (active.state === 'provisioning' || active.state === 'reconnecting' || (typeof this.kube.getPod === 'function' && !(await this._getPodStatus(active.sessionId)))) {
         if (active.state === 'provisioning' || active.state === 'reconnecting') {
@@ -416,7 +445,7 @@ export class SupportSessionManager {
     const stats = recordingStats(this.recordingRoot, sessionId);
     const segments = listRecordingMetadata(this.recordingRoot, sessionId).map((segment) => ({
       ...segment,
-      verification: verifyRecordingReceipt(segment, segment.receipt, this.publicReceiptKey),
+      verification: verifyRecordingSegment(this.recordingRoot, sessionId, segment, this.publicReceiptKey),
     }));
     return { sessionId, bytes: stats.bytes, segments, verified: segments.length > 0 && segments.every((segment) => segment.verification.valid), active: Boolean(active && active.sessionId === sessionId) };
   }
@@ -425,7 +454,7 @@ export class SupportSessionManager {
     if (!validId(sessionId)) throw new SupportSessionError('invalid_session_id', 'Support session ID is invalid.', 400);
     const metadata = this.recordingMetadata(sessionId);
     if (metadata.active) throw new SupportSessionError('recording_active', 'Only finalized recordings can be reviewed.', 409);
-    return { ...recordingPlayback(this.recordingRoot, sessionId), verified: metadata.verified, bytes: metadata.bytes };
+    return { ...recordingPlayback(this.recordingRoot, sessionId, { publicKey: this.publicReceiptKey }), bytes: metadata.bytes };
   }
 
   readRecording(sessionId) {

@@ -3,11 +3,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import WebSocket from 'ws';
 import { listRecordingMetadata, RecordingSegment, recordingDirectory, SUPPORT_RECORDING_OWNER_GID, SUPPORT_RECORDING_OWNER_UID, writeAtomicJson } from '../host-service/support-recordings.mjs';
+import { decodeControlFrame, decodeTerminalFrame, encodeControlFrame, encodeTerminalFrame, MAX_FRAME_BYTES, SUPPORT_PROTOCOL_VERSION } from './protocol.mjs';
 
 const require = createRequire(import.meta.url);
 
-export const SUPPORT_PROTOCOL_VERSION = 1;
-export const MAX_FRAME_BYTES = 64 * 1024;
 export const MAX_BUFFERED_BYTES = 256 * 1024;
 export const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 export const DETACHED_GRACE_MS = 2 * 60 * 1000;
@@ -50,12 +49,19 @@ function existingRecordingState(recordingDir, sessionId) {
   return { bytes, previousDigest: metadata.at(-1)?.digest || null, metadata };
 }
 
+function protocolFailureReason(error, isBinary) {
+  const message = String(error?.message || '');
+  if (message.includes('sequence')) return 'invalid-frame-sequence';
+  if (message.includes('version')) return 'invalid-frame-version';
+  return isBinary ? 'invalid-terminal-frame' : 'invalid-control-frame';
+}
+
 export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, reconnectTokenFile, recordingDir, expiresAt, resumed = false, WebSocketImpl = WebSocket, ptySpawn = null, now = () => Date.now(), detachedGraceMs = DETACHED_GRACE_MS, reconnectDelayMs = 1000, idleTimeoutMs = IDLE_TIMEOUT_MS, recordingOwnerUid = SUPPORT_RECORDING_OWNER_UID, recordingOwnerGid = SUPPORT_RECORDING_OWNER_GID } = {}) {
   if (!sessionId || !relayUrl || !Number.isFinite(expiresAt)) throw new Error('Support agent configuration is incomplete.');
   const existing = existingRecordingState(recordingDir, sessionId);
   const quota = { bytes: existing.bytes, limit: 100 * 1024 * 1024 };
   let socket = null; let child = null; let recorder = null; let detachedTimer = null; let idleTimer = null; let reconnectTimer = null;
-  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null;
+  let relayToken = null; let closed = false; let outgoingSeq = 0; let incomingSeq = 0; let lastCheckpointBytes = 0; let previousDigest = existing.previousDigest; let stopReason = null; let reconnectAttempts = 0;
   const pendingFinalized = new Map();
   const finalizedSegments = new Map();
 
@@ -77,15 +83,15 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     }
   }
 
-  function frame(message) {
-    const result = { ...message, version: SUPPORT_PROTOCOL_VERSION, seq: ++outgoingSeq };
-    if (Buffer.byteLength(JSON.stringify(result)) > MAX_FRAME_BYTES) throw new Error('Support control frame exceeds the bounded size.');
-    return result;
-  }
   function send(message) {
     if (!socket || socket.readyState !== WebSocketImpl.OPEN) return false;
     if (socket.bufferedAmount > MAX_BUFFERED_BYTES) throw new Error('Support relay backpressure limit exceeded.');
-    socket.send(JSON.stringify(frame(message))); return true;
+    socket.send(encodeControlFrame(message, ++outgoingSeq)); return true;
+  }
+  function sendTerminal(type, data) {
+    if (!socket || socket.readyState !== WebSocketImpl.OPEN) return false;
+    if (socket.bufferedAmount > MAX_BUFFERED_BYTES) throw new Error('Support relay backpressure limit exceeded.');
+    socket.send(encodeTerminalFrame({ type, seq: ++outgoingSeq, data })); return true;
   }
   function sendControl(message, { failOnBackpressure = false } = {}) {
     try { return send(message); } catch (error) {
@@ -133,8 +139,8 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     try {
       const encoded = Buffer.from(data, 'utf8').toString('base64');
       record('output', { ...(stream ? { stream } : {}), encoding: 'base64', data: encoded }); checkpoint();
-      try { sendControl({ type: 'output', ...(stream ? { stream } : {}), data: encoded }, { failOnBackpressure: true }); }
-      catch (error) { if (error?.message !== 'Support relay backpressure limit exceeded.') failClosed('relay-send-failure'); }
+      try { sendTerminal('output', Buffer.from(data, 'utf8')); }
+      catch (error) { failClosed(error?.message === 'Support relay backpressure limit exceeded.' ? 'relay-backpressure' : 'relay-send-failure'); }
       resetIdle();
     } catch { stop('recording-output-failure'); }
   }
@@ -163,44 +169,64 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (recordingFailure && !closed) return failClosed('recording-finalization-failure');
     try { send({ type: 'shell-closed', reason }); } catch {}
   }
+  function beginDetachedGrace(reason = 'operator-detached') {
+    clearTimeout(detachedTimer);
+    if (!child) return;
+    try { record('reconnect', { marker: reason }); checkpoint(true); } catch { return failClosed('recording-detach-failure'); }
+    detachedTimer = setTimeout(() => closeShell('operator-detached-timeout'), detachedGraceMs);
+    detachedTimer.unref?.();
+  }
   function stop(reason) {
     if (closed) return; closed = true; stopReason = reason; clearTimeout(detachedTimer); clearTimeout(reconnectTimer); closeShell(reason); try { socket?.close(1000, String(reason).slice(0, 120)); } catch {}
   }
   function failClosed(reason) { try { send({ type: 'error', reason }); } catch {} stop(reason); }
   function scheduleReconnect() {
     clearTimeout(reconnectTimer); if (!relayToken || now() >= expiresAt || closed) return;
-    reconnectTimer = setTimeout(() => connect(relayToken), reconnectDelayMs); reconnectTimer.unref?.();
+    const delay = Math.min(30_000, reconnectDelayMs * 2 ** Math.min(reconnectAttempts++, 8));
+    reconnectTimer = setTimeout(() => connect(relayToken), delay); reconnectTimer.unref?.();
   }
   function connect(token) {
     if (closed || now() >= expiresAt) return;
     incomingSeq = 0;
-    socket = new WebSocketImpl(relayUrl, { maxPayload: MAX_FRAME_BYTES });
-    socket.on('open', () => { try { send({ role: 'appliance', sessionId, token }); } catch { failClosed('relay-auth-failure'); } });
-    socket.on('message', (raw) => {
-      if (closed || raw.length > MAX_FRAME_BYTES) return failClosed('oversized-frame');
-      let message; try { message = JSON.parse(raw.toString('utf8')); } catch { return failClosed('invalid-control-frame'); }
-      if (message.version !== SUPPORT_PROTOCOL_VERSION) return failClosed('invalid-frame-version');
-      if (!Number.isSafeInteger(message.seq)) return failClosed('invalid-frame-sequence');
+    const connection = new WebSocketImpl(relayUrl, { maxPayload: MAX_FRAME_BYTES });
+    socket = connection;
+    connection.on('open', () => { if (socket !== connection) return; try { send({ type: 'authenticate', role: 'appliance', sessionId, token }); } catch { failClosed('relay-auth-failure'); } });
+    connection.on('message', (raw, isBinary = false) => {
+      if (closed || socket !== connection || raw.length > MAX_FRAME_BYTES) return failClosed('oversized-frame');
+      let message;
+      try { message = isBinary ? decodeTerminalFrame(raw) : decodeControlFrame(raw); } catch (error) { return failClosed(protocolFailureReason(error, isBinary)); }
       if (message.seq <= incomingSeq) return failClosed('out-of-order-frame');
       incomingSeq = message.seq;
       try {
-        if (message.type === 'ready') {
+        if (isBinary) {
+          if (message.type !== 'input' || !child) throw new Error('Shell is not attached.');
+          record('input', { encoding: 'base64', data: message.data.toString('base64') });
+          child.write(message.data.toString('utf8')); checkpoint(); resetIdle();
+        } else if (message.type === 'ready') {
           if (message.reconnectToken !== undefined) {
             try { writeReconnectToken(reconnectTokenFile, message.reconnectToken); relayToken = message.reconnectToken; }
             catch { return failClosed('invalid-reconnect-token'); }
           }
           if (!relayToken) return failClosed('missing-reconnect-token');
-          clearTimeout(detachedTimer); detachedTimer = null; send({ type: child ? 'reattached' : 'recorder-ready', sessionId }); flushPending();
-        } else if (message.type === 'attach' || message.type === 'reattach') {
+          reconnectAttempts = 0;
+          if (child) { record('reconnect', { marker: 'relay-reattached' }); checkpoint(true); }
+          send({ type: child ? 'reattached' : 'recorder-ready', sessionId }); flushPending();
+        } else if (message.type === 'attach') {
           const attached = launchShell(Number(message.width) || 120, Number(message.height) || 40); send({ type: attached ? 'attached' : 'shell-unavailable' });
-        } else if (message.type === 'input') {
-          if (!child || typeof message.data !== 'string') throw new Error('Shell is not attached.');
-          const data = Buffer.from(message.data, 'base64'); if (!data.length || data.length > MAX_FRAME_BYTES) throw new Error('Input frame is too large.');
-          record('input', { encoding: 'base64', data: data.toString('base64') }); child.write(data.toString('utf8')); checkpoint(); resetIdle();
+        } else if (message.type === 'reattach') {
+          if (!child) { send({ type: 'shell-unavailable' }); }
+          else { clearTimeout(detachedTimer); detachedTimer = null; record('reconnect', { marker: 'operator-reattached' }); checkpoint(true); send({ type: 'reattached' }); resetIdle(); }
+        } else if (message.type === 'detach') {
+          beginDetachedGrace('operator-detached'); send({ type: 'detached' });
         } else if (message.type === 'resize') {
           const width = Number(message.width); const height = Number(message.height);
           if (![width, height].every((value) => Number.isInteger(value) && value >= 1 && value <= 1000)) throw new Error('Invalid terminal size.');
           record('resize', { width, height }); child?.resize(width, height); checkpoint(); resetIdle();
+        } else if (message.type === 'signal') {
+          if (!child || !['SIGINT', 'SIGTERM', 'SIGHUP'].includes(message.signal)) throw new Error('Invalid terminal signal.');
+          record('marker', { marker: 'signal', signal: message.signal }); child.kill(message.signal); checkpoint(); resetIdle();
+        } else if (message.type === 'heartbeat') {
+          send({ type: 'heartbeat', at: new Date(now()).toISOString() });
         } else if (message.type === 'recording-receipt') {
           const finalized = finalizedSegments.get(message.segmentId);
           if (!finalized || finalized.bytes !== message.bytes || finalized.digest !== message.digest || finalized.closedAt !== message.closedAt) throw new Error('Recording receipt does not match a finalized segment.');
@@ -209,12 +235,12 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
         } else if (message.type === 'close') stop(message.reason || 'relay-closed');
       } catch { failClosed('recording-input-failure'); }
     });
-    socket.on('close', () => {
-      if (closed) return; clearTimeout(detachedTimer);
-      if (child) { detachedTimer = setTimeout(() => closeShell('operator-detached-timeout'), detachedGraceMs); detachedTimer.unref?.(); }
+    connection.on('close', () => {
+      if (closed || socket !== connection) return;
+      beginDetachedGrace('relay-disconnected');
       scheduleReconnect();
     });
-    socket.on('error', () => { if (!closed) scheduleReconnect(); });
+    connection.on('error', () => { if (!closed && socket === connection) scheduleReconnect(); });
   }
   return {
     start() {

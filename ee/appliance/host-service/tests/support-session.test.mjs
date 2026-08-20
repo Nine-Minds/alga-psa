@@ -200,3 +200,32 @@ test('runtime reconciliation retries closing cleanup without restart', async () 
   await new Promise((resolve) => setTimeout(resolve, 35));
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
 });
+
+test('runtime reconciliation scrubs the plaintext code as soon as central reports redemption', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-redemption-'));
+  const central = fakeCentral();
+  const service = manager(tmp, { central });
+  await service.create({ durationHours: 1 });
+  central.getSession = async () => ({ active: true, state: 'redeemed', codeConsumed: true, operatorSubject: 'operator-1', operatorEmail: 'support@example.com', redeemedAt: new Date().toISOString() });
+  const result = await service.reconcileStartup();
+  assert.equal(result.state, 'redeemed');
+  const stored = JSON.parse(fs.readFileSync(path.join(tmp, 'support-sessions', 'active.json'), 'utf8'));
+  assert.equal(stored.shareCode, null);
+  assert.equal(stored.operator.email, 'support@example.com');
+});
+
+test('a connector Secret deletion result is checked and fails provisioning closed', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-secret-delete-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  let connectorDeleteAttempts = 0;
+  kube.delete = async (kind, name, namespace) => {
+    kube.calls.push(['delete', kind, name, namespace]);
+    if (kind === 'secret' && connectorDeleteAttempts++ === 0) return { ok: false, status: 500 };
+    return { ok: true };
+  };
+  const service = manager(tmp, { central, kube });
+  await assert.rejects(() => service.create({ durationHours: 1 }), (error) => error.code === 'cleanup_failure');
+  assert.equal(central.calls.some((call) => call[0] === 'revoke'), true);
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+});
