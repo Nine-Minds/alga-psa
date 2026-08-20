@@ -70,6 +70,43 @@ describe('localizeActionError', () => {
     expect(localized.permissionError).toBe('[msp/tickets] errors.readDenied');
   });
 
+  it('leaves a key-less { success: false, error } result untouched', async () => {
+    const payload = { success: false, error: 'Current password is incorrect' } as unknown;
+
+    await expect(localizeActionError(payload)).resolves.toBe(payload);
+    expect(mocks.getServerTranslation).not.toHaveBeenCalled();
+  });
+
+  it('translates a keyed { success: false, error } result and keeps its other fields', async () => {
+    const payload = {
+      success: false,
+      error: 'Current password is incorrect',
+      errorCode: 'CURRENT_PASSWORD_INCORRECT',
+      messageKey: 'common:errors.password.currentIncorrect',
+    } as unknown;
+
+    const localized = (await localizeActionError(payload)) as Record<string, unknown>;
+
+    expect(mocks.getServerTranslation).toHaveBeenCalledWith(undefined, 'common');
+    expect(localized.error).toBe('[common] errors.password.currentIncorrect');
+    expect(localized.success).toBe(false);
+    expect(localized.errorCode).toBe('CURRENT_PASSWORD_INCORRECT');
+    expect(localized.messageKey).toBe('common:errors.password.currentIncorrect');
+  });
+
+  it('leaves a successful result carrying an error field untouched', async () => {
+    // `success` must be literally false; a partial-success payload that reports a
+    // non-fatal `error` alongside its data is not this channel.
+    const payload = {
+      success: true,
+      error: 'One row was skipped',
+      messageKey: 'common:errors.password.currentIncorrect',
+    } as unknown;
+
+    await expect(localizeActionError(payload)).resolves.toBe(payload);
+    expect(mocks.getServerTranslation).not.toHaveBeenCalled();
+  });
+
   it('defaults to the common namespace when the key carries none', async () => {
     const payload = actionError('Not authenticated', 'errors.auth.notAuthenticated') as unknown;
 

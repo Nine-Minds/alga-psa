@@ -181,6 +181,14 @@
       "contactNotFound": "55555",
       "clientNotFound": "55555"
     },
+    "password": {
+      "currentIncorrect": "55555",
+      "changeFailed": "55555",
+      "differentTenant": "55555",
+      "internalStaffRequired": "55555",
+      "adminRequired": "55555",
+      "changeUserFailed": "55555"
+    },
     "permissions": {
       "tickets": {
         "read": "55555",

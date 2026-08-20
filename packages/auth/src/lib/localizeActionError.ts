@@ -16,6 +16,9 @@
  *
  * Outside a request scope (workflow workers, pg-boss jobs) `getServerTranslation` falls
  * back to the default locale rather than throwing, so the payload degrades to English.
+ *
+ * Three payload shapes are rewritten: `{ actionError }`, `{ permissionError }`, and the
+ * older `{ success: false, error }` channel most password/avatar actions still return.
  */
 
 import {
@@ -23,6 +26,7 @@ import {
   getActionErrorMessageParams,
   isActionMessageError,
   isActionPermissionError,
+  isActionResultError,
   type ActionMessageParams,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -71,6 +75,12 @@ export async function localizeActionError<T>(result: T): Promise<T> {
 
   if (isActionPermissionError(result)) {
     return { ...result, permissionError: await translate(messageKey, result.permissionError, messageParams) } as T;
+  }
+
+  // The `{ success: false, error }` channel. Same contract as above: keyless payloads
+  // never reach here, and the key survives so a re-wrap translates once.
+  if (isActionResultError(result)) {
+    return { ...result, error: await translate(messageKey, result.error, messageParams) } as T;
   }
 
   return result;

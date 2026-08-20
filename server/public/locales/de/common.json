@@ -150,6 +150,14 @@
       "contactNotFound": "Benutzer ist keinem Kontakt zugeordnet",
       "clientNotFound": "Kontakt ist keinem Unternehmen zugeordnet"
     },
+    "password": {
+      "currentIncorrect": "Das aktuelle Passwort ist falsch",
+      "changeFailed": "Das Passwort konnte nicht geändert werden",
+      "differentTenant": "Nicht berechtigt: Benutzer eines anderen Mandanten können nicht geändert werden",
+      "internalStaffRequired": "Nicht berechtigt: Es sind interne Mitarbeiterrechte erforderlich",
+      "adminRequired": "Nicht berechtigt: Es sind Administratorrechte erforderlich",
+      "changeUserFailed": "Das Passwort des Benutzers konnte nicht geändert werden"
+    },
     "permissions": {
       "tickets": {
         "read": "Unzureichende Berechtigungen zum Anzeigen von Tickets",

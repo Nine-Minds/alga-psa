@@ -150,6 +150,14 @@
       "contactNotFound": "Utilisateur non associé à un contact",
       "clientNotFound": "Contact non associé à une entreprise"
     },
+    "password": {
+      "currentIncorrect": "Le mot de passe actuel est incorrect",
+      "changeFailed": "Échec de la modification du mot de passe",
+      "differentTenant": "Non autorisé : impossible de modifier un utilisateur d'un autre locataire",
+      "internalStaffRequired": "Non autorisé : des privilèges de personnel interne sont requis",
+      "adminRequired": "Non autorisé : des privilèges d'administrateur sont requis",
+      "changeUserFailed": "Échec de la modification du mot de passe de l'utilisateur"
+    },
     "permissions": {
       "tickets": {
         "read": "Permissions insuffisantes pour afficher les tickets",

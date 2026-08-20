@@ -150,6 +150,14 @@
       "contactNotFound": "Utente non associato a un contatto",
       "clientNotFound": "Il contatto non è associato a un cliente"
     },
+    "password": {
+      "currentIncorrect": "La password attuale non è corretta",
+      "changeFailed": "Impossibile modificare la password",
+      "differentTenant": "Non autorizzato: non è possibile modificare un utente di un altro tenant",
+      "internalStaffRequired": "Non autorizzato: sono richiesti privilegi da personale interno",
+      "adminRequired": "Non autorizzato: sono richiesti privilegi di amministratore",
+      "changeUserFailed": "Impossibile modificare la password dell'utente"
+    },
     "permissions": {
       "tickets": {
         "read": "Permessi insufficienti per visualizzare i ticket",

@@ -87,6 +87,20 @@ export type ActionMessageErrorShape = {
 export type ActionMessageError = never;
 
 /**
+ * The *other* error channel: actions that report failure as `{ success: false, error }`
+ * rather than as an `actionError` payload. It predates `actionError` and is still the
+ * shape ~2,000 returns use, so it gets the same localization seam — attach `messageKey`
+ * and the boundary rewrites `error` in place on the way out of `withAuth`.
+ *
+ * Declared as a mixin rather than a constructor because these returns carry their own
+ * extra fields (`code`, `errorCode`, `message`, …) and are written as object literals.
+ */
+export type ActionResultMessageKey = {
+  readonly messageKey?: string;
+  readonly messageParams?: ActionMessageParams;
+};
+
+/**
  * What the type guards narrow to. Deliberately the *minimal* shapes: widening them
  * with the optional localization fields breaks negative narrowing for the ~30 modules
  * that declare their own `{ readonly actionError: string }` union member, and does so
@@ -94,6 +108,7 @@ export type ActionMessageError = never;
  */
 type ActionPermissionErrorMatch = { readonly permissionError: string };
 type ActionMessageErrorMatch = { readonly actionError: string };
+type ActionResultErrorMatch = { readonly success: false; readonly error: string };
 
 /**
  * Type guard: checks if a server action result is a permission error.
@@ -118,6 +133,22 @@ export function isActionMessageError(value: unknown): value is ActionMessageErro
     value !== null &&
     'actionError' in value &&
     typeof candidate.actionError === 'string'
+  );
+}
+
+/**
+ * Type guard: checks if a server action result is a `{ success: false, error }` failure.
+ *
+ * Narrower than it looks: `success` must be literally `false`, so a success payload
+ * that happens to carry an `error` field for another reason is not matched.
+ */
+export function isActionResultError(value: unknown): value is ActionResultErrorMatch {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    candidate.success === false &&
+    typeof candidate.error === 'string'
   );
 }
 

@@ -181,6 +181,14 @@
       "contactNotFound": "User not associated with a contact",
       "clientNotFound": "Contact not associated with a client"
     },
+    "password": {
+      "currentIncorrect": "Current password is incorrect",
+      "changeFailed": "Failed to change password",
+      "differentTenant": "Unauthorized: Cannot modify user from different tenant",
+      "internalStaffRequired": "Unauthorized: Internal staff privileges required",
+      "adminRequired": "Unauthorized: Admin privileges required",
+      "changeUserFailed": "Failed to change user password"
+    },
     "permissions": {
       "tickets": {
         "read": "Insufficient permissions to view tickets",

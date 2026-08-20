@@ -150,6 +150,14 @@
       "contactNotFound": "Gebruiker is niet gekoppeld aan een contact",
       "clientNotFound": "Contact is niet gekoppeld aan een bedrijf"
     },
+    "password": {
+      "currentIncorrect": "Het huidige wachtwoord is onjuist",
+      "changeFailed": "Wachtwoord wijzigen is mislukt",
+      "differentTenant": "Niet geautoriseerd: een gebruiker van een andere tenant kan niet worden gewijzigd",
+      "internalStaffRequired": "Niet geautoriseerd: rechten van interne medewerkers zijn vereist",
+      "adminRequired": "Niet geautoriseerd: beheerdersrechten zijn vereist",
+      "changeUserFailed": "Wachtwoord van gebruiker wijzigen is mislukt"
+    },
     "permissions": {
       "tickets": {
         "read": "Onvoldoende rechten om tickets te bekijken",

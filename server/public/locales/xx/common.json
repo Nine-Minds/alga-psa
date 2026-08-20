@@ -181,6 +181,14 @@
       "contactNotFound": "11111",
       "clientNotFound": "11111"
     },
+    "password": {
+      "currentIncorrect": "11111",
+      "changeFailed": "11111",
+      "differentTenant": "11111",
+      "internalStaffRequired": "11111",
+      "adminRequired": "11111",
+      "changeUserFailed": "11111"
+    },
     "permissions": {
       "tickets": {
         "read": "11111",

@@ -164,6 +164,14 @@
       "contactNotFound": "Użytkownik nie jest powiązany z kontaktem",
       "clientNotFound": "Kontakt nie jest powiązany z klientem"
     },
+    "password": {
+      "currentIncorrect": "Bieżące hasło jest nieprawidłowe",
+      "changeFailed": "Nie udało się zmienić hasła",
+      "differentTenant": "Brak uprawnień: nie można zmodyfikować użytkownika z innej organizacji",
+      "internalStaffRequired": "Brak uprawnień: wymagane są uprawnienia pracownika wewnętrznego",
+      "adminRequired": "Brak uprawnień: wymagane są uprawnienia administratora",
+      "changeUserFailed": "Nie udało się zmienić hasła użytkownika"
+    },
     "permissions": {
       "tickets": {
         "read": "Niewystarczające uprawnienia do przeglądania zgłoszeń",

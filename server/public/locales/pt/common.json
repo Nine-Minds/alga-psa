@@ -181,6 +181,14 @@
       "contactNotFound": "Usuário não associado a um contato",
       "clientNotFound": "Contato não associado a um cliente"
     },
+    "password": {
+      "currentIncorrect": "A senha atual está incorreta",
+      "changeFailed": "Não foi possível alterar a senha",
+      "differentTenant": "Não autorizado: não é possível modificar um usuário de outro inquilino",
+      "internalStaffRequired": "Não autorizado: são necessários privilégios de equipe interna",
+      "adminRequired": "Não autorizado: são necessários privilégios de administrador",
+      "changeUserFailed": "Não foi possível alterar a senha do usuário"
+    },
     "permissions": {
       "tickets": {
         "read": "Permissões insuficientes para visualizar tickets",
