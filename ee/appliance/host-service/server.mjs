@@ -1274,7 +1274,7 @@ const server = http.createServer(async (req, res) => {
     if (!requireAuth(req, res)) return;
     const method = (req.method || 'GET').toUpperCase();
     if (method !== 'GET' && !requireSameOrigin(req, res)) return;
-    const match = url.pathname.match(/^\/api\/support-sessions\/([^/]+)(?:\/(extend|revoke|recording|recording\/metadata))?$/);
+    const match = url.pathname.match(/^\/api\/support-sessions\/([^/]+)(?:\/(extend|revoke|recording|recording\/metadata|recording\/playback))?$/);
     try {
       if (url.pathname === '/api/support-sessions' && method === 'GET') {
         jsonResponse(res, 200, await supportSessionManager.snapshot({ refresh: true }));
@@ -1300,6 +1300,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (action === 'recording/metadata' && method === 'GET') {
         jsonResponse(res, 200, await supportSessionManager.recordingMetadata(sessionId));
+        return;
+      }
+      if (action === 'recording/playback' && method === 'GET') {
+        jsonResponse(res, 200, supportSessionManager.recordingPlayback(sessionId));
         return;
       }
       if (action === 'recording' && method === 'GET') {

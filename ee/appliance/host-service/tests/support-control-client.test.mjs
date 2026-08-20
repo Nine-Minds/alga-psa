@@ -30,3 +30,18 @@ test('central client fails closed on missing HTTPS service and malformed respons
   const unavailable = new SupportControlClient({ fetchImpl: async () => response({ code: 'not_ready', error: 'nope' }, 503) });
   await assert.rejects(() => unavailable.createSession({ durationHours: 4, credential: 'long-lived-appliance-credential' }), (error) => error.code === 'central_unavailable');
 });
+
+test('central client rejects non-TLS relay and an expiry beyond the requested ladder window', async () => {
+  const client = new SupportControlClient({ baseUrl: 'https://support.example', fetchImpl: async () => response({
+    sessionId: SESSION_ID,
+    shareCode: 'ABCDE-FGHJK',
+    connectorToken: 'connector-token-123456',
+    applianceToken: 'appliance-token-123456',
+    resumeGrant: 'resume-grant-123456',
+    statusUrl: 'https://support.example/status',
+    relayUrl: 'ws://relay.example/session',
+    activatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 9 * 3600000).toISOString(),
+  }) });
+  await assert.rejects(() => client.createSession({ durationHours: 4, credential: 'long-lived-appliance-credential' }), (error) => error.code === 'central_invalid_response');
+});

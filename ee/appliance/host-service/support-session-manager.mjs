@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanupSupportResources, buildSupportConnectorSecret, buildSupportPod, isValidSupportAgentImage, SUPPORT_NAMESPACE } from './support-kubernetes.mjs';
-import { LOCAL_RETENTION_MS, listRecordingMetadata, pruneRecordings, readBoundedFile, recordingDirectory, verifyRecordingReceipt, writeAtomicJson } from './support-recordings.mjs';
+import { LOCAL_RETENTION_MS, listRecordingMetadata, pruneRecordings, readBoundedFile, recordingDirectory, recordingPlayback, recordingStats, verifyRecordingReceipt, writeAtomicJson } from './support-recordings.mjs';
 
 export const SUPPORT_DURATIONS = Object.freeze([1, 4, 8]);
 export const SUPPORT_MAX_HOURS = 8;
@@ -46,8 +46,22 @@ function validateDescriptor(value) {
   if (!value || value.schema !== SUPPORT_STATE_SCHEMA || !validId(value.sessionId)) throw new SupportSessionError('invalid_state', 'Support state is missing or invalid.', 500);
   normalizeSupportDuration(value.durationHours);
   for (const field of ['createdAt', 'activatedAt', 'expiresAt']) iso(value[field], field);
-  if (!['pending_ack', 'provisioning', 'ready', 'redeemed', 'connected', 'disconnected', 'reconnecting', 'revoked', 'expired', 'failed'].includes(value.state)) throw new SupportSessionError('invalid_state', 'Support state contains an unknown lifecycle state.', 500);
-  if (value.shareCode !== undefined && value.shareCode !== null && (typeof value.shareCode !== 'string' || value.shareCode.length > 32)) throw new SupportSessionError('invalid_state', 'Support state contains an invalid share code.', 500);
+  if (!['pending_ack', 'provisioning', 'ready', 'redeemed', 'connected', 'disconnected', 'reconnecting', 'closing', 'revoked', 'expired', 'failed'].includes(value.state)) throw new SupportSessionError('invalid_state', 'Support state contains an unknown lifecycle state.', 500);
+  if (value.shareCode !== undefined && value.shareCode !== null && (typeof value.shareCode !== 'string' || !/^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$/.test(value.shareCode))) throw new SupportSessionError('invalid_state', 'Support state contains an invalid share code.', 500);
+  for (const field of ['statusUrl', 'relayUrl', 'applianceToken', 'resumeGrant', 'supportAgentImage']) {
+    if (value[field] !== undefined && value[field] !== null && (typeof value[field] !== 'string' || value[field].length === 0 || value[field].length > 4096)) throw new SupportSessionError('invalid_state', `Support state contains an invalid ${field}.`, 500);
+  }
+  if (value.applianceToken && value.applianceToken.length < 16) throw new SupportSessionError('invalid_state', 'Support state contains an invalid appliance token.', 500);
+  if (value.resumeGrant && value.resumeGrant.length < 16) throw new SupportSessionError('invalid_state', 'Support state contains an invalid resume grant.', 500);
+  if (value.recording && (!Number.isSafeInteger(value.recording.bytes) || value.recording.bytes < 0 || value.recording.bytes > 100 * 1024 * 1024 || !Array.isArray(value.recording.segments) || value.recording.segments.length > 256)) throw new SupportSessionError('invalid_state', 'Support state contains invalid recording metadata.', 500);
+  try {
+    const status = new URL(value.statusUrl);
+    const relay = new URL(value.relayUrl);
+    if (status.protocol !== 'https:' || relay.protocol !== 'wss:' || !status.hostname || !relay.hostname) throw new Error('url');
+  } catch { throw new SupportSessionError('invalid_state', 'Support state contains invalid central URLs.', 500); }
+  const activatedAt = Date.parse(value.activatedAt);
+  const expiresAt = Date.parse(value.expiresAt);
+  if (expiresAt <= activatedAt || expiresAt > activatedAt + value.durationHours * 3600000 || expiresAt > activatedAt + SUPPORT_MAX_HOURS * 3600000) throw new SupportSessionError('invalid_state', 'Support state contains an overlong support window.', 500);
   return value;
 }
 
@@ -87,6 +101,7 @@ export class SupportSessionManager {
     this.stateDir = path.resolve(stateDir);
     this.activeFile = path.join(this.stateDir, 'active.json');
     this.revokedDir = path.join(this.stateDir, 'revoked');
+    this.closePendingDir = path.join(this.stateDir, 'close-pending');
     this.historyDir = path.join(this.stateDir, 'history');
     this.recordingRoot = this.historyDir;
     this.central = central;
@@ -99,7 +114,7 @@ export class SupportSessionManager {
     this.publicReceiptKey = publicReceiptKey;
     this.mutation = Promise.resolve();
     this.expiryTimer = null;
-    secureDir(this.stateDir); secureDir(this.revokedDir); secureDir(this.historyDir);
+    secureDir(this.stateDir); secureDir(this.revokedDir); secureDir(this.closePendingDir); secureDir(this.historyDir);
     try {
       const existing = this._readActive();
       if (existing) this._scheduleExpiry(existing);
@@ -114,6 +129,7 @@ export class SupportSessionManager {
   _writeActive(value) { atomicJson(this.activeFile, validateDescriptor(value)); }
   _clearActive() { try { fs.unlinkSync(this.activeFile); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
   _historyPath(id) { if (!validId(id)) throw new SupportSessionError('invalid_session_id', 'Support session ID is invalid.', 400); return path.join(this.historyDir, id); }
+  _closePendingPath(id) { if (!validId(id)) throw new SupportSessionError('invalid_session_id', 'Support session ID is invalid.', 400); return path.join(this.closePendingDir, `${id}.json`); }
 
   _scheduleExpiry(descriptor) {
     clearTimeout(this.expiryTimer);
@@ -121,7 +137,9 @@ export class SupportSessionManager {
     this.expiryTimer = setTimeout(() => {
       this._serialize(async () => {
         const active = this._readActive();
-        if (active?.sessionId === descriptor.sessionId && Date.parse(active.expiresAt) <= this.now() && !['revoked', 'expired', 'failed'].includes(active.state)) await this._closeLocal(active, 'local-expired', 'expired');
+        if (active?.sessionId === descriptor.sessionId && Date.parse(active.expiresAt) <= this.now() && !['revoked', 'expired', 'failed'].includes(active.state)) {
+          try { await this._closeLocal(active, 'local-expired', 'expired'); } finally { await this._requestCentralClose(active, 'local-expired'); }
+        }
       }).catch(() => {});
     }, delay);
     this.expiryTimer.unref?.();
@@ -144,7 +162,8 @@ export class SupportSessionManager {
   async snapshot({ refresh = false } = {}) {
     const capability = await this._capability();
     let active = this._readActive();
-    if (refresh && active && ['pending_ack', 'provisioning', 'ready', 'redeemed', 'connected', 'disconnected', 'reconnecting'].includes(active.state)) {
+    await this._retryPendingCentralCloses();
+    if (refresh && active && ['pending_ack', 'provisioning', 'ready', 'redeemed', 'connected', 'disconnected', 'reconnecting', 'closing'].includes(active.state)) {
       try {
         const central = await this.central.getSession(active.sessionId, active.applianceToken);
         if (central?.state === 'revoked' || central?.state === 'expired' || central?.terminal === true) {
@@ -153,18 +172,23 @@ export class SupportSessionManager {
           active.operator = { subject: central.operatorSubject || null, email: central.operatorEmail || null, boundAt: central.redeemedAt || active.operator?.boundAt || null };
           active.state = central.state === 'connected' ? 'connected' : (active.state === 'ready' ? 'redeemed' : active.state);
           active.shareCode = null;
+          active.recording = recordingStats(this.recordingRoot, active.sessionId);
           this._writeActive(active);
         }
       } catch { /* preserve the last local state during a transient central outage */ }
     }
     const history = this._listHistory();
+    if (active) { active.recording = recordingStats(this.recordingRoot, active.sessionId); active.centralClosePending = fs.existsSync(this._closePendingPath(active.sessionId)); }
     return { capability: { ...capability, supportAgentImage: undefined }, active: this._publicDescriptor(active), history };
   }
 
   _listHistory() {
     if (!fs.existsSync(this.historyDir)) return [];
     return fs.readdirSync(this.historyDir).filter((id) => validId(id)).slice(0, 256).map((id) => {
-      try { return safeJsonRead(path.join(this.historyDir, id, 'metadata.json')); } catch { return null; }
+      try {
+        const metadata = safeJsonRead(path.join(this.historyDir, id, 'metadata.json'));
+        return metadata ? { ...metadata, recording: recordingStats(this.recordingRoot, id), centralClosePending: fs.existsSync(this._closePendingPath(id)) } : null;
+      } catch { return null; }
     }).filter(Boolean).sort((a, b) => String(b.closedAt || '').localeCompare(String(a.closedAt || '')));
   }
 
@@ -178,7 +202,7 @@ export class SupportSessionManager {
     const pod = buildSupportPod({ session: descriptor, supportAgentImage, nowMs: this.now() });
     await this.kube.apply(secret);
     try { await this.kube.apply(pod); } catch (error) {
-      try { await cleanupSupportResources(this.kube, descriptor.sessionId); } catch { /* original failure is more useful */ }
+      await cleanupSupportResources(this.kube, descriptor.sessionId);
       throw new SupportSessionError('pod_failure', 'The support agent could not be started.', 502, errorCode(error));
     }
     const deadline = this.now() + SUPPORT_PROVISIONING_TIMEOUT_MS;
@@ -193,14 +217,40 @@ export class SupportSessionManager {
   }
 
   async _closeLocal(descriptor, reason, terminalState = 'failed') {
-    const next = { ...descriptor, state: terminalState, lastStopReason: reason, closedAt: new Date(this.now()).toISOString(), shareCode: null };
+    const closing = { ...descriptor, state: 'closing', cleanupPending: true, lastStopReason: reason, shareCode: null };
+    this._writeActive(closing);
+    try { await cleanupSupportResources(this.kube, descriptor.sessionId); } catch (error) {
+      this._writeActive({ ...closing, cleanupError: errorCode(error) });
+      throw new SupportSessionError('cleanup_failure', 'Local support resources could not be removed; the support window remains active for retry.', 502);
+    }
+    const next = { ...closing, state: terminalState, cleanupPending: false, closedAt: new Date(this.now()).toISOString(), recording: recordingStats(this.recordingRoot, descriptor.sessionId) };
     secureDir(this._historyPath(descriptor.sessionId));
-    atomicJson(path.join(this._historyPath(descriptor.sessionId), 'metadata.json'), { schema: SUPPORT_STATE_SCHEMA, ...this._publicDescriptor(next), closedAt: next.closedAt, lastStopReason: reason, recording: next.recording || { bytes: 0, segments: [] } });
-    try { await cleanupSupportResources(this.kube, descriptor.sessionId); } catch { /* cleanup is retried by reconciliation */ }
+    atomicJson(path.join(this._historyPath(descriptor.sessionId), 'metadata.json'), { schema: SUPPORT_STATE_SCHEMA, ...this._publicDescriptor(next), closedAt: next.closedAt, lastStopReason: reason, recording: next.recording });
     clearTimeout(this.expiryTimer);
     this.expiryTimer = null;
     this._clearActive();
     return next;
+  }
+
+  async _requestCentralClose(descriptor, reason) {
+    try {
+      await this.central.revoke(descriptor.sessionId, descriptor.applianceToken);
+      try { fs.unlinkSync(this._closePendingPath(descriptor.sessionId)); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      return true;
+    } catch (error) {
+      atomicJson(this._closePendingPath(descriptor.sessionId), { schema: SUPPORT_STATE_SCHEMA, sessionId: descriptor.sessionId, applianceToken: descriptor.applianceToken, reason, createdAt: new Date(this.now()).toISOString() });
+      return false;
+    }
+  }
+
+  async _retryPendingCentralCloses() {
+    if (!fs.existsSync(this.closePendingDir)) return;
+    for (const name of fs.readdirSync(this.closePendingDir).filter((item) => /^[0-9a-f-]+\.json$/i.test(item)).slice(0, 256)) {
+      try {
+        const pending = safeJsonRead(path.join(this.closePendingDir, name));
+        if (pending?.sessionId && pending?.applianceToken && await this._requestCentralClose(pending, pending.reason || 'retry')) continue;
+      } catch { /* durable intent remains for the next reconciliation */ }
+    }
   }
 
   async create({ durationHours = 4 } = {}) {
@@ -214,10 +264,18 @@ export class SupportSessionManager {
       const clientRequestId = crypto.randomUUID();
       let central;
       try { central = await this.central.createSession({ durationHours: duration, credential: await this.getCredential(), clientRequestId }); } catch (error) { throw new SupportSessionError(errorCode(error), 'The central support service did not approve this window.', error?.status || 503); }
-      const descriptor = validateDescriptor({ schema: SUPPORT_STATE_SCHEMA, sessionId: central.sessionId, state: 'pending_ack', createdAt, activatedAt: central.activatedAt, expiresAt: central.expiresAt, durationHours: duration, statusUrl: central.statusUrl, relayUrl: central.relayUrl, applianceToken: central.applianceToken, resumeGrant: central.resumeGrant, connectorState: 'pending', operator: null, recording: { bytes: 0, segments: [] }, lastStopReason: null, shareCode: central.shareCode, supportAgentImage: image });
+      let descriptor;
+      try {
+        descriptor = validateDescriptor({ schema: SUPPORT_STATE_SCHEMA, sessionId: central.sessionId, state: 'pending_ack', createdAt, activatedAt: central.activatedAt, expiresAt: central.expiresAt, durationHours: duration, statusUrl: central.statusUrl, relayUrl: central.relayUrl, applianceToken: central.applianceToken, resumeGrant: central.resumeGrant, connectorState: 'pending', operator: null, recording: { bytes: 0, segments: [] }, lastStopReason: null, shareCode: central.shareCode, supportAgentImage: image });
+      } catch (error) {
+        if (error instanceof SupportSessionError && error.code === 'invalid_state') throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid session authority.', 502);
+        throw error;
+      }
       this._writeActive(descriptor);
+      let acknowledged = false;
       try {
         await this.central.acknowledge(descriptor.sessionId, descriptor.applianceToken);
+        acknowledged = true;
         descriptor.state = 'provisioning'; descriptor.connectorState = 'starting'; this._writeActive(descriptor);
         await this._provision(descriptor, central.connectorToken, image);
         descriptor.state = 'ready'; descriptor.connectorState = 'ready'; this._writeActive(descriptor);
@@ -225,7 +283,10 @@ export class SupportSessionManager {
         return this._publicDescriptor(descriptor);
       } catch (error) {
         descriptor.state = 'failed'; descriptor.lastStopReason = errorCode(error);
-        try { await this.central.abandon(descriptor.sessionId, descriptor.applianceToken); } catch { /* central cleanup is retried by the service */ }
+        if (acknowledged) await this._requestCentralClose(descriptor, errorCode(error));
+        else {
+          try { await this.central.abandon(descriptor.sessionId, descriptor.applianceToken); } catch { await this._requestCentralClose(descriptor, errorCode(error)); }
+        }
         await this._closeLocal(descriptor, errorCode(error), 'failed');
         if (error instanceof SupportSessionError) throw error;
         throw new SupportSessionError('provisioning_timeout', 'Support provisioning failed before readiness.', 504);
@@ -242,8 +303,18 @@ export class SupportSessionManager {
       if (duration <= active.durationHours || Date.parse(active.activatedAt) + duration * 3600000 <= this.now() || duration > SUPPORT_MAX_HOURS) throw new SupportSessionError('invalid_duration', 'Support can only move forward along the one-, four-, eight-hour ladder.', 400);
       let result;
       try { result = await this.central.extend(sessionId, active.applianceToken, duration); } catch (error) { throw new SupportSessionError(errorCode(error), 'Central support service rejected the extension.', error?.status || 503); }
-      if (typeof result?.expiresAt !== 'string' || !Number.isFinite(Date.parse(result.expiresAt))) throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid extension.', 502);
-      active.durationHours = duration; active.expiresAt = result.expiresAt;
+      const expiresAt = Date.parse(result?.expiresAt || '');
+      const activatedAt = Date.parse(active.activatedAt);
+      if (!Number.isFinite(expiresAt) || expiresAt <= this.now() || expiresAt > activatedAt + duration * 3600000 || expiresAt > activatedAt + SUPPORT_MAX_HOURS * 3600000) throw new SupportSessionError('central_invalid_response', 'Central support service returned an invalid extension.', 502);
+      active.durationHours = duration; active.expiresAt = new Date(expiresAt).toISOString();
+      // activeDeadlineSeconds is immutable on a Pod. Recreate it using the
+      // persisted image and a fresh connector exchange, so the old deadline
+      // cannot terminate an extended authority window.
+      active.state = 'reconnecting'; active.connectorState = 'resuming'; this._writeActive(active);
+      await cleanupSupportResources(this.kube, active.sessionId);
+      const resumed = await this.central.resume(active.sessionId, active.resumeGrant);
+      await this._provision(active, resumed.connectorToken, active.supportAgentImage);
+      active.state = active.operator ? 'redeemed' : 'ready'; active.connectorState = 'ready';
       this._writeActive(active);
       this._scheduleExpiry(active);
       return this._publicDescriptor(active);
@@ -255,13 +326,18 @@ export class SupportSessionManager {
       const active = this._readActive();
       if (!active || active.sessionId !== sessionId) throw new SupportSessionError('not_found', 'Support session was not found.', 404);
       atomicJson(path.join(this.revokedDir, `${sessionId}.json`), { schema: SUPPORT_STATE_SCHEMA, sessionId, revokedAt: new Date(this.now()).toISOString() });
-      const closed = await this._closeLocal(active, 'local-revoked', 'revoked');
-      try { await this.central.revoke(sessionId, active.applianceToken); } catch { /* local revocation is authoritative; retry central close on reconcile */ }
+      let closed;
+      try { closed = await this._closeLocal(active, 'local-revoked', 'revoked'); }
+      finally {
+        const centralClosed = await this._requestCentralClose(active, 'local-revoked');
+        if (closed && !centralClosed) closed.centralClosePending = true;
+      }
       return this._publicDescriptor(closed);
     });
   }
 
   async reconcileStartup() {
+    await this._retryPendingCentralCloses();
     let active;
     try { active = this._readActive(); } catch {
       if (typeof this.kube.listSupportPods === 'function') {
@@ -278,10 +354,15 @@ export class SupportSessionManager {
       return { ok: true, state: 'idle' };
     }
     pruneRecordings(this.recordingRoot, { nowMs: this.now(), retentionMs: LOCAL_RETENTION_MS, activeSessionIds: [active.sessionId] });
-    if (Date.parse(active.expiresAt) <= this.now()) { await this._closeLocal(active, 'local-expired', 'expired'); return { ok: true, state: 'expired' }; }
-    if (fs.existsSync(path.join(this.revokedDir, `${active.sessionId}.json`))) { await this._closeLocal(active, 'revoked-tombstone', 'revoked'); return { ok: true, state: 'revoked' }; }
+    if (active.state === 'closing' || active.cleanupPending) {
+      try { await this._closeLocal(active, active.lastStopReason || 'cleanup-retry', active.lastStopReason === 'local-revoked' ? 'revoked' : 'failed'); }
+      finally { await this._requestCentralClose(active, active.lastStopReason || 'cleanup-retry'); }
+      return { ok: true, state: 'closed' };
+    }
+    if (Date.parse(active.expiresAt) <= this.now()) { try { await this._closeLocal(active, 'local-expired', 'expired'); } finally { await this._requestCentralClose(active, 'local-expired'); } return { ok: true, state: 'expired' }; }
+    if (fs.existsSync(path.join(this.revokedDir, `${active.sessionId}.json`))) { try { await this._closeLocal(active, 'revoked-tombstone', 'revoked'); } finally { await this._requestCentralClose(active, 'revoked-tombstone'); } return { ok: true, state: 'revoked' }; }
     if (active.state === 'pending_ack') {
-      try { await this.central.abandon(active.sessionId, active.applianceToken); } catch { /* central expiry remains authoritative */ }
+      try { await this.central.abandon(active.sessionId, active.applianceToken); } catch { /* pending acknowledgement is the only abandonable state */ }
       await this._closeLocal(active, 'unacknowledged-startup-state', 'failed');
       return { ok: true, state: 'failed' };
     }
@@ -290,11 +371,12 @@ export class SupportSessionManager {
       if (central?.state === 'revoked' || central?.state === 'expired' || central?.terminal) { await this._closeLocal(active, `central-${central.state || 'closed'}`, central.state === 'revoked' ? 'revoked' : 'expired'); return { ok: true, state: 'closed' }; }
       if (!central?.active && active.state !== 'pending_ack') { await this._closeLocal(active, 'central-rejected', 'failed'); return { ok: true, state: 'failed' }; }
       this._scheduleExpiry(active);
-      if (active.state === 'provisioning' || (typeof this.kube.getPod === 'function' && !(await this._getPodStatus(active.sessionId)))) {
-        if (active.state === 'provisioning') {
+      if (active.state === 'provisioning' || active.state === 'reconnecting' || (typeof this.kube.getPod === 'function' && !(await this._getPodStatus(active.sessionId)))) {
+        if (active.state === 'provisioning' || active.state === 'reconnecting') {
           try { await cleanupSupportResources(this.kube, active.sessionId); } catch { return { ok: false, state: active.state, reason: 'cleanup_failure' }; }
         }
-        const image = await this.getSupportAgentImage();
+        const image = active.supportAgentImage;
+        if (!isValidSupportAgentImage(image)) return { ok: false, state: active.state, reason: 'persisted_support_image_invalid' };
         const resumed = await this.central.resume(active.sessionId, active.resumeGrant);
         active.state = 'reconnecting'; active.connectorState = 'resuming'; this._writeActive(active);
         await this._provision(active, resumed.connectorToken, image);
@@ -314,11 +396,19 @@ export class SupportSessionManager {
     const active = this._readActive();
     const history = safeJsonRead(path.join(this.historyDir, sessionId, 'metadata.json'));
     if (!history && (!active || active.sessionId !== sessionId)) throw new SupportSessionError('not_found', 'Recording was not found.', 404);
+    const stats = recordingStats(this.recordingRoot, sessionId);
     const segments = listRecordingMetadata(this.recordingRoot, sessionId).map((segment) => ({
       ...segment,
       verification: verifyRecordingReceipt(segment, segment.receipt, this.publicReceiptKey),
     }));
-    return { sessionId, segments, verified: segments.length > 0 && segments.every((segment) => segment.verification.valid), active: Boolean(active && active.sessionId === sessionId) };
+    return { sessionId, bytes: stats.bytes, segments, verified: segments.length > 0 && segments.every((segment) => segment.verification.valid), active: Boolean(active && active.sessionId === sessionId) };
+  }
+
+  recordingPlayback(sessionId) {
+    if (!validId(sessionId)) throw new SupportSessionError('invalid_session_id', 'Support session ID is invalid.', 400);
+    const metadata = this.recordingMetadata(sessionId);
+    if (metadata.active) throw new SupportSessionError('recording_active', 'Only finalized recordings can be reviewed.', 409);
+    return { ...recordingPlayback(this.recordingRoot, sessionId), verified: metadata.verified, bytes: metadata.bytes };
   }
 
   readRecording(sessionId) {

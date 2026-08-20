@@ -22,7 +22,7 @@ function fakeCentral() {
     async acknowledge(id) { calls.push(['ack', id]); return { ok: true }; },
     async abandon(id) { calls.push(['abandon', id]); return { ok: true }; },
     async getSession() { return { active: true, state: 'ready', applianceReady: true, recorderReady: true }; },
-    async extend(id, token, durationHours) { calls.push(['extend', durationHours]); return { expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString() }; },
+    async extend(id, token, durationHours) { calls.push(['extend', durationHours]); return { expiresAt: new Date(Date.now() + durationHours * 3600000 - 1000).toISOString() }; },
     async revoke(id) { calls.push(['revoke', id]); return { ok: true }; },
     async resume() { calls.push(['resume']); return { connectorToken: 'connector-token-123456' }; },
   };
@@ -101,7 +101,7 @@ test('create is durable, readiness-gated, one-active, and revoke wins locally', 
   assert.equal(kube.calls.some((call) => call[0] === 'delete' && call[1] === 'pod'), true);
 });
 
-test('provisioning failure abandons central session and removes local authority', async () => {
+test('acknowledged provisioning failure revokes central session and removes local authority', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-failure-'));
   const central = fakeCentral();
   const kube = fakeKube();
@@ -109,7 +109,60 @@ test('provisioning failure abandons central session and removes local authority'
   service._provision = async () => { throw new SupportSessionError('provisioning_timeout', 'not ready', 504); };
   await assert.rejects(() => service.create({ durationHours: 4 }), (error) => error.code === 'provisioning_timeout');
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
-  assert.equal(central.calls.some((call) => call[0] === 'abandon'), true);
+  assert.equal(central.calls.some((call) => call[0] === 'revoke'), true);
+});
+
+test('cleanup failure keeps active authority and central revoke remains retryable', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-cleanup-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  let failCleanup = true;
+  kube.delete = async (kind, name, namespace) => { kube.calls.push(['delete', kind, name, namespace]); if (failCleanup && kind === 'pod') throw new Error('pod deletion failed'); return { ok: true }; };
+  central.revoke = async (...args) => { central.calls.push(['revoke', ...args]); throw new Error('central unavailable'); };
+  const service = manager(tmp, { central, kube });
+  await service.create({ durationHours: 1 });
+  await assert.rejects(() => service.revoke(SESSION_ID), (error) => error.code === 'cleanup_failure');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), true);
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'close-pending', `${SESSION_ID}.json`)), true);
+  failCleanup = false;
+  central.revoke = async (...args) => { central.calls.push(['revoke-retry', ...args]); return { ok: true }; };
+  const result = await service.reconcileStartup();
+  assert.equal(result.state, 'closed');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'close-pending', `${SESSION_ID}.json`)), false);
+});
+
+test('central authority URLs and expiry cannot exceed the requested or absolute window', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-authority-'));
+  const central = fakeCentral();
+  central.createSession = async ({ durationHours }) => {
+    const activatedAt = new Date().toISOString();
+    return { sessionId: SESSION_ID, shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'http://support.example/status', relayUrl: 'ws://relay.example/session', activatedAt, expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString() };
+  };
+  const service = manager(tmp, { central });
+  await assert.rejects(() => service.create({ durationHours: 1 }), (error) => error.code === 'central_invalid_response');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+});
+
+test('extension recreates the pod deadline and startup resume uses the persisted image digest', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-extension-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  const service = manager(tmp, { central, kube });
+  await service.create({ durationHours: 1 });
+  await service.extend(SESSION_ID, 4);
+  const podApplies = kube.calls.filter((call) => call[0] === 'apply' && call[1]?.kind === 'Pod');
+  assert.equal(podApplies.at(-1)[1].spec.activeDeadlineSeconds > 3 * 3600, true);
+  const activeFile = path.join(tmp, 'support-sessions', 'active.json');
+  const active = JSON.parse(fs.readFileSync(activeFile, 'utf8'));
+  active.state = 'provisioning';
+  fs.writeFileSync(activeFile, `${JSON.stringify(active)}\n`, { mode: 0o600 });
+  kube.getPod = async () => null;
+  const resumed = manager(tmp, { central, kube, getSupportAgentImage: async () => `${IMAGE.replace(/a+$/, 'b'.repeat(64))}` });
+  const result = await resumed.reconcileStartup();
+  assert.equal(result.ok, true);
+  const resumedPod = kube.calls.filter((call) => call[0] === 'apply' && call[1]?.kind === 'Pod').at(-1)[1];
+  assert.equal(resumedPod.spec.containers[0].image, IMAGE);
 });
 
 test('startup reconciliation expires stale state and prunes only closed recordings', async () => {

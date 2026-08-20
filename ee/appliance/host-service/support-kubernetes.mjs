@@ -99,7 +99,9 @@ export function buildSupportPod({ session, supportAgentImage, nowMs = Date.now()
           { name: 'SUPPORT_RELAY_URL', value: String(session.relayUrl) },
           { name: 'SUPPORT_CONNECTOR_TOKEN_FILE', value: '/run/support-connector/connector-token' },
           { name: 'SUPPORT_RECONNECT_TOKEN_FILE', value: '/run/support-reconnect/token' },
-          { name: 'SUPPORT_RECORDING_DIR', value: `/host${recordingHostPath}` },
+          // RecordingSegment appends the session ID. Pass the history parent,
+          // while the hostPath mount remains session-scoped.
+          { name: 'SUPPORT_RECORDING_DIR', value: `/host${SUPPORT_RECORDING_ROOT}` },
           { name: 'SUPPORT_EXPIRES_AT', value: session.expiresAt },
           { name: 'SUPPORT_RESUMED', value: session.connectorState === 'resuming' ? '1' : '0' },
         ],

@@ -46,7 +46,7 @@ function appendFsync(file, bytes) {
 }
 
 export class RecordingSegment {
-  constructor({ root, sessionId, segmentId = crypto.randomUUID(), width = 120, height = 40, now = () => new Date() }) {
+  constructor({ root, sessionId, segmentId = crypto.randomUUID(), width = 120, height = 40, now = () => new Date(), quota = null }) {
     this.root = recordingDirectory(root, sessionId);
     this.sessionId = sessionId;
     this.segmentId = segmentId;
@@ -58,6 +58,9 @@ export class RecordingSegment {
     this.bytes = 0;
     this.sequence = 0;
     this.closed = false;
+    this.quota = quota || { bytes: 0, limit: MAX_RECORDING_BYTES };
+    if (!Number.isSafeInteger(this.quota.bytes) || this.quota.bytes < 0 || !Number.isSafeInteger(this.quota.limit || MAX_RECORDING_BYTES) || (this.quota.limit || MAX_RECORDING_BYTES) <= 0) throw new RecordingError('invalid_recording_quota', 'The recording quota is invalid.', 500);
+    this.quota.limit ||= MAX_RECORDING_BYTES;
     const header = {
       schema: RECORDING_SCHEMA_VERSION,
       version: 2,
@@ -73,10 +76,11 @@ export class RecordingSegment {
 
   _appendRaw(text) {
     const bytes = Buffer.from(text, 'utf8');
-    if (this.bytes + bytes.length > MAX_RECORDING_BYTES) throw new RecordingError('recording_full', 'The local recording limit was reached.', 507);
+    if (this.bytes + bytes.length > MAX_RECORDING_BYTES || this.quota.bytes + bytes.length > this.quota.limit) throw new RecordingError('recording_full', 'The local recording limit was reached.', 507);
     appendFsync(this.file, bytes);
     this.digest.update(bytes);
     this.bytes += bytes.length;
+    this.quota.bytes += bytes.length;
   }
 
   append(type, data = {}) {
@@ -85,7 +89,7 @@ export class RecordingSegment {
       throw new RecordingError('invalid_recording_event', 'Recording event type is invalid.', 400);
     }
     const event = { schema: RECORDING_SCHEMA_VERSION, seq: this.sequence++, type, at: this.now().toISOString(), ...data };
-    if (typeof event.data === 'string' && event.data.length > 0 && event.encoding !== 'base64') event.data = Buffer.from(event.data, 'utf8').toString('base64');
+    if (typeof event.data === 'string' && event.data.length > 0 && event.encoding !== 'base64') { event.data = Buffer.from(event.data, 'utf8').toString('base64'); event.encoding = 'base64'; }
     this._appendRaw(`${JSON.stringify(event)}\n`);
     return event;
   }
@@ -152,6 +156,39 @@ export function listRecordingMetadata(root, sessionId) {
   return fs.readdirSync(directory).filter((name) => /^receipt-[0-9a-f-]+\.json$/i.test(name)).sort().slice(0, 256).map((name) => {
     try { return JSON.parse(readBoundedFile(path.join(directory, name), 64 * 1024)); } catch { return null; }
   }).filter(Boolean);
+}
+
+export function recordingStats(root, sessionId) {
+  const directory = recordingDirectory(root, sessionId);
+  if (!fs.existsSync(directory)) return { bytes: 0, segments: [] };
+  const segments = listRecordingMetadata(root, sessionId);
+  const byId = new Map(segments.map((segment) => [segment.segmentId, segment]));
+  const files = fs.readdirSync(directory).filter((name) => /^segment-[0-9a-f-]+\.cast$/i.test(name)).slice(0, 256);
+  let bytes = 0;
+  for (const name of files) {
+    const stat = fs.statSync(path.join(directory, name));
+    if (!stat.isFile() || stat.size > MAX_RECORDING_BYTES || bytes + stat.size > MAX_RECORDING_BYTES) throw new RecordingError('recording_too_large', 'Recording exceeds the session recording limit.', 413);
+    bytes += stat.size;
+  }
+  return { bytes, segments: segments.map((segment) => ({ segmentId: segment.segmentId, bytes: segment.bytes, digest: segment.digest, closedAt: segment.closedAt, verification: segment.verification })) };
+}
+
+export function recordingPlayback(root, sessionId) {
+  const directory = recordingDirectory(root, sessionId);
+  const metadata = listRecordingMetadata(root, sessionId);
+  const events = [];
+  if (!fs.existsSync(directory)) return { sessionId, segments: [], events, text: '' };
+  for (const name of fs.readdirSync(directory).filter((item) => /^segment-[0-9a-f-]+\.cast$/i.test(item)).sort().slice(0, 256)) {
+    const lines = readBoundedFile(path.join(directory, name)).toString('utf8').split('\n').filter(Boolean);
+    for (const line of lines.slice(1)) {
+      let event;
+      try { event = JSON.parse(line); } catch { continue; }
+      if (!['input', 'output', 'resize', 'marker', 'reconnect', 'reboot', 'stop', 'exit'].includes(event.type)) continue;
+      const decoded = typeof event.data === 'string' && event.encoding === 'base64' ? Buffer.from(event.data, 'base64').toString('utf8') : undefined;
+      events.push({ type: event.type, at: event.at, data: decoded, stream: event.stream, width: event.width, height: event.height, code: event.code, signal: event.signal, marker: event.marker });
+    }
+  }
+  return { sessionId, segments: metadata.map(({ sessionId: _sid, receipt, ...segment }) => segment), events, text: events.filter((event) => event.type === 'output').map((event) => event.data || '').join('') };
 }
 
 export function pruneRecordings(root, { nowMs = Date.now(), retentionMs = LOCAL_RETENTION_MS, activeSessionIds = [] } = {}) {

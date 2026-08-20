@@ -3,6 +3,11 @@ import crypto from 'node:crypto';
 const MAX_RESPONSE_BYTES = 256 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SHARE_CODE_RE = /^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$/;
+const MAX_TOKEN_BYTES = 4096;
+const MAX_URL_LENGTH = 2048;
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const MAX_SUPPORT_HOURS = 8;
 
 export class SupportControlError extends Error {
   constructor(code, message, status = 502, details = undefined) {
@@ -23,8 +28,15 @@ function requireSessionId(value) {
 function requireHttpsUrl(value, name) {
   let url;
   try { url = new URL(String(value || '').trim()); } catch { throw new SupportControlError('central_unavailable', `${name} is not configured.`, 503); }
-  if (url.protocol !== 'https:') throw new SupportControlError('central_unavailable', `${name} must use HTTPS.`, 503);
+  if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.hash || String(value).length > MAX_URL_LENGTH) throw new SupportControlError('central_unavailable', `${name} must use HTTPS.`, 503);
   return url;
+}
+
+function requireDescriptorUrl(value, name, protocol) {
+  let url;
+  try { url = new URL(String(value || '').trim()); } catch { throw new SupportControlError('central_invalid_response', `Central response contains an invalid ${name}.`, 502); }
+  if (url.protocol !== protocol || !url.hostname || url.username || url.password || url.hash || String(value).length > MAX_URL_LENGTH) throw new SupportControlError('central_invalid_response', `Central response contains an invalid ${name}.`, 502);
+  return value;
 }
 
 function boundedJsonParse(text) {
@@ -42,7 +54,7 @@ function publicError(body, fallback) {
   return { code, message };
 }
 
-function validateCreateResponse(body) {
+function validateCreateResponse(body, { durationHours, nowMs = Date.now() } = {}) {
   const allowed = new Set(['sessionId', 'shareCode', 'connectorToken', 'applianceToken', 'resumeGrant', 'statusUrl', 'relayUrl', 'activatedAt', 'expiresAt']);
   if (Object.keys(body || {}).some((key) => !allowed.has(key))) throw new SupportControlError('central_invalid_response', 'Central response contains an unexpected field.', 502);
   for (const key of ['sessionId', 'shareCode', 'connectorToken', 'applianceToken', 'resumeGrant', 'statusUrl', 'relayUrl', 'activatedAt', 'expiresAt']) {
@@ -50,7 +62,14 @@ function validateCreateResponse(body) {
   }
   if (!SESSION_ID_RE.test(body.sessionId)) throw new SupportControlError('central_invalid_response', 'Central response contains an invalid session ID.', 502);
   if (!/^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$/.test(body.shareCode)) throw new SupportControlError('central_invalid_response', 'Central response contains an invalid share code.', 502);
-  for (const key of ['connectorToken', 'applianceToken', 'resumeGrant']) if (body[key].length > 4096) throw new SupportControlError('central_invalid_response', 'Central response contains an oversized token.', 502);
+  for (const key of ['connectorToken', 'applianceToken', 'resumeGrant']) if (Buffer.byteLength(body[key], 'utf8') > MAX_TOKEN_BYTES) throw new SupportControlError('central_invalid_response', 'Central response contains an oversized token.', 502);
+  requireDescriptorUrl(body.statusUrl, 'statusUrl', 'https:');
+  requireDescriptorUrl(body.relayUrl, 'relayUrl', 'wss:');
+  const activatedAt = Date.parse(body.activatedAt);
+  const expiresAt = Date.parse(body.expiresAt);
+  if (!Number.isFinite(activatedAt) || !Number.isFinite(expiresAt) || activatedAt > nowMs + MAX_CLOCK_SKEW_MS || expiresAt <= nowMs || expiresAt > activatedAt + Number(durationHours) * 3600000 || expiresAt > activatedAt + MAX_SUPPORT_HOURS * 3600000) {
+    throw new SupportControlError('central_invalid_response', 'Central response contains an invalid support window.', 502);
+  }
   return body;
 }
 
@@ -105,7 +124,7 @@ export class SupportControlClient {
       clientRequestId,
       credential,
     });
-    return validateCreateResponse(response);
+    return validateCreateResponse(response, { durationHours, nowMs: Date.now() });
   }
 
   acknowledge(sessionId, applianceToken) {
@@ -141,4 +160,4 @@ export class SupportControlClient {
   }
 }
 
-export const _private = { requireSessionId, requireHttpsUrl, boundedJsonParse };
+export const _private = { requireSessionId, requireHttpsUrl, requireDescriptorUrl, boundedJsonParse, validateCreateResponse, SHARE_CODE_RE };

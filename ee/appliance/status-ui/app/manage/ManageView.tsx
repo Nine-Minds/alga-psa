@@ -71,6 +71,7 @@ type ManageStatus = {
       operator?: { email?: string | null; subject?: string | null; boundAt?: string | null } | null;
       connectorState?: string | null;
       recording?: { bytes?: number; segments?: unknown[] };
+      centralClosePending?: boolean;
       lastStopReason?: string | null;
       shareCode?: string | null;
     } | null;
@@ -935,7 +936,14 @@ function SupportTab({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [recording, setRecording] = useState<{ sessionId: string; metadata: any; content?: string } | null>(null);
+  const [recording, setRecording] = useState<{ sessionId: string; metadata: any; playback?: any } | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    if (!support.active) return;
+    const next = ([1, 4, 8] as const).find((hours) => hours > support.active!.durationHours);
+    if (next) setDurationHours(next);
+  }, [support.active?.sessionId, support.active?.durationHours]);
 
   async function supportRequest(path: string, init: RequestInit = {}) {
     const response = await fetch(apiPath(path), { ...init, credentials: "same-origin", cache: "no-store" });
@@ -981,9 +989,9 @@ function SupportTab({
     setBusy(true); setError(null);
     try {
       const metadata = await supportRequest(`/api/support-sessions/${sessionId}/recording/metadata`);
-      const response = await fetch(apiPath(`/api/support-sessions/${sessionId}/recording`), { credentials: "same-origin", cache: "no-store" });
-      const content = response.ok ? await response.text() : undefined;
-      setRecording({ sessionId, metadata, content });
+      const response = await fetch(apiPath(`/api/support-sessions/${sessionId}/recording/playback`), { credentials: "same-origin", cache: "no-store" });
+      const playback = response.ok ? await response.json() : undefined;
+      setRecording({ sessionId, metadata, playback });
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
     finally { setBusy(false); }
   }
@@ -1042,10 +1050,11 @@ function SupportTab({
         <>
           <dl className={styles.kv}>
             <div><dt>Status</dt><dd><span className={`${styles.badge} ${active.state === "ready" ? styles.ready : styles.installing}`}>{active.state}</span></dd></div>
-            <div><dt>Window</dt><dd>{active.durationHours} hours, until {new Date(active.expiresAt).toLocaleString()}</dd></div>
+            <div><dt>Window</dt><dd>{active.durationHours} hours, until {new Date(active.expiresAt).toLocaleString()} ({Math.max(0, Math.ceil((new Date(active.expiresAt).getTime() - clock) / 60000))} minutes remaining)</dd></div>
             <div><dt>Operator</dt><dd>{active.operator?.email || "Not redeemed"}</dd></div>
-            <div><dt>Recording</dt><dd>{active.recording?.bytes || 0} bytes retained locally</dd></div>
+            <div><dt>Recording</dt><dd>{active.recording?.bytes || 0} bytes across {active.recording?.segments?.length || 0} segment(s)</dd></div>
           </dl>
+          {active.centralClosePending ? <p className={styles.alert}>Central revocation is pending retry; local access has been removed.</p> : null}
           {active.shareCode && active.state === "ready" ? (
             <div className={styles.manageResult}>
               <strong>One-time share code</strong>
@@ -1055,13 +1064,13 @@ function SupportTab({
             </div>
           ) : null}
           <div className={styles.toolbar}>
-            {active.state !== "ready" || active.durationHours >= 8 ? null : <>
+            {!["revoked", "expired", "failed", "closing"].includes(active.state) && active.durationHours < 8 ? <>
               <label htmlFor="manage-support-extension">Extend to</label>
               <select id="manage-support-extension" value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} disabled={busy}>
                 {([1, 4, 8] as const).filter((hours) => hours > active.durationHours).map((hours) => <option key={hours} value={hours}>{hours} hours</option>)}
               </select>
               <button id="manage-extend-support" type="button" disabled={busy} onClick={extendSupport}>Extend</button>
-            </>}
+            </> : null}
             <button id="manage-revoke-support" type="button" className={styles.actionButton} disabled={busy} onClick={revokeSupport}>Revoke access</button>
           </div>
         </>
@@ -1088,7 +1097,8 @@ function SupportTab({
         <div className={styles.event}>
           <strong>Recording review</strong>
           {recording.metadata.verified ? null : <p className={styles.alert}>Receipt verification is unavailable or incomplete. Do not treat this recording as verified.</p>}
-          <pre>{recording.content || "No finalized segment content is available."}</pre>
+          <div className={styles.event}><strong>Finalized terminal playback</strong><span>{recording.playback?.bytes || recording.metadata.bytes || 0} bytes · {recording.playback?.segments?.length || recording.metadata.segments?.length || 0} segments</span></div>
+          <pre>{recording.playback?.text || "No finalized terminal output is available."}</pre>
           <button id="manage-close-recording-review" type="button" onClick={() => setRecording(null)}>Close review</button>
         </div>
       ) : null}
