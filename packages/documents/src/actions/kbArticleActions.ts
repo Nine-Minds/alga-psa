@@ -1217,7 +1217,9 @@ export const getArticleImportStatus = withAuth(
 
     const imported = rows.filter((row) => row.status === 'imported').length;
     const failed = rows
-      .filter((row) => row.status === 'failed')
+      .filter(
+        (row) => row.status === 'failed' || (job?.status === 'failed' && row.status !== 'imported'),
+      )
       .map((row) => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
     const settled = imported + failed.length === rows.length && rows.length > 0;
 

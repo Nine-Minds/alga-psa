@@ -105,7 +105,7 @@ async function publishKbArticleCreated(
  * for authorization — this runs with whatever connection/tenant it is handed.
  */
 export async function createKbArticle(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   context: CreateKbArticleContext,
   input: CreateKbArticleInput,
 ): Promise<IKBArticleWithDocument> {

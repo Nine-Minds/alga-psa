@@ -109,7 +109,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // whole reason the import moved to a job.
   try {
     registerJobHandlerForActivities(KB_ARTICLE_IMPORT_JOB, async (jobId, data) => {
-      await kbArticleImportHandler(jobId, data as any);
+      return kbArticleImportHandler(jobId, data as any);
     });
   } catch (error) {
     logger.error('Failed to register KB article import handler', {

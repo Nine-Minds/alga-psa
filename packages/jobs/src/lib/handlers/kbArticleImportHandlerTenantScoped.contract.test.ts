@@ -7,6 +7,8 @@ const source = readFileSync(resolve(__dirname, 'kbArticleImportHandler.ts'), 'ut
 interface FakeRow extends Record<string, any> {}
 
 const tables: Record<string, FakeRow[]> = { kb_import_files: [], jobs: [] };
+const createdArticleIds: string[] = [];
+let failNextImportedUpdate = false;
 
 const matches = (row: FakeRow, filter: Record<string, any>): boolean =>
   Object.entries(filter).every(([key, value]) => row[key] === value);
@@ -18,10 +20,17 @@ const makeQuery = (table: string) => {
       filter = { ...filter, ...criteria };
       return query;
     },
+    forUpdate() {
+      return query;
+    },
     async first() {
       return tables[table].find((row) => matches(row, filter));
     },
     async update(values: Record<string, any>) {
+      if (table === 'kb_import_files' && values.status === 'imported' && failNextImportedUpdate) {
+        failNextImportedUpdate = false;
+        throw new Error('simulated staging update failure');
+      }
       const rows = tables[table].filter((row) => matches(row, filter));
       rows.forEach((row) => Object.assign(row, values));
       return rows.length;
@@ -30,12 +39,26 @@ const makeQuery = (table: string) => {
   return query;
 };
 
+const fakeKnex: any = {};
+fakeKnex.transaction = async (callback: (trx: unknown) => Promise<unknown>) => {
+  const articleCount = createdArticleIds.length;
+  try {
+    return await callback(fakeKnex);
+  } catch (error) {
+    createdArticleIds.splice(articleCount);
+    throw error;
+  }
+};
+
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async (tenantId: string) => ({ knex: {}, tenant: tenantId }),
+  createTenantKnex: async (tenantId: string) => ({ knex: fakeKnex, tenant: tenantId }),
   tenantDb: () => ({ table: (name: string) => makeQuery(name) }),
 }));
 
-const createKbArticleMock = vi.fn(async () => ({ article_id: 'article-1' }));
+const createKbArticleMock = vi.fn(async () => {
+  createdArticleIds.push('article-1');
+  return { article_id: 'article-1' };
+});
 
 vi.mock('@alga-psa/shared/models/kbArticleModel', () => ({
   createKbArticle: (...args: unknown[]) => createKbArticleMock(...(args as [])),
@@ -64,7 +87,8 @@ const stageFile = (overrides: Partial<FakeRow> = {}): FakeRow => {
 
 describe('kb-article-import handler tenant-scoped query contract', () => {
   it('routes every query root through the tenant facade', () => {
-    expect(source).toContain("tenantDb(knex, tenant)\n      .table('kb_import_files')");
+    expect(source).toContain("tenantDb(trx, tenant)\n          .table('kb_import_files')");
+    expect(source).toContain('tenantDb(knex, tenant)');
     expect(source).toContain("tenantDb(knex, tenant).table('jobs')");
     expect(source).not.toContain('knex.raw');
     expect(source).not.toContain('.where({ tenant,');
@@ -84,6 +108,14 @@ describe('kb-article-import handler tenant-scoped query contract', () => {
   it('exposes the canonical job name and a parse budget', () => {
     expect(KB_ARTICLE_IMPORT_JOB).toBe('kb-article-import');
     expect(source).toContain('maxDurationMs: KB_IMPORT_PARSE_BUDGET_MS');
+  });
+
+  it('atomically locks, creates, and consumes each staged row', () => {
+    expect(source).toContain('await knex.transaction(async (trx) =>');
+    expect(source).toContain("tenantDb(trx, tenant)\n          .table('kb_import_files')");
+    expect(source).toContain('.forUpdate()');
+    expect(source).toContain('createKbArticle(\n          trx,');
+    expect(source).toContain(".where({ import_file_id: fileId, status: 'pending' })");
   });
 
   it('registers every table it queries in the tenant table metadata', () => {
@@ -107,8 +139,13 @@ describe('kb-article-import handler execution', () => {
   beforeEach(() => {
     tables.kb_import_files = [];
     tables.jobs = [{ tenant: 'tenant-1', job_id: 'job-1', metadata: { user_id: 'user-1' } }];
+    createdArticleIds.length = 0;
+    failNextImportedUpdate = false;
     createKbArticleMock.mockClear();
-    createKbArticleMock.mockImplementation(async () => ({ article_id: 'article-1' }) as any);
+    createKbArticleMock.mockImplementation(async () => {
+      createdArticleIds.push('article-1');
+      return { article_id: 'article-1' } as any;
+    });
   });
 
   const run = (fileIds: string[]) =>
@@ -163,6 +200,18 @@ describe('kb-article-import handler execution', () => {
     // counts on the job row, or the dialog polls a batch that never settles.
     const metadata = JSON.parse(tables.jobs[0].metadata as string);
     expect(metadata.kbImport).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
+  });
+
+  it('rolls article creation back if consuming the staging row fails', async () => {
+    const row = stageFile();
+    failNextImportedUpdate = true;
+
+    const result = await run(['file-1']);
+
+    expect(result).toEqual({ total: 1, processed: 1, imported: 0, failed: 1 });
+    expect(createdArticleIds).toEqual([]);
+    expect(row.status).toBe('failed');
+    expect(row.error).toBe('Failed to import article');
   });
 
   it('maps user-facing failures onto the staged row', async () => {

@@ -120,71 +120,71 @@ export async function kbArticleImportHandler(
   };
 
   for (const fileId of fileIds) {
-    // Loaded one at a time: a batch of multi-megabyte files must not all sit
-    // in memory at once.
-    const row = (await tenantDb(knex, tenant)
-      .table('kb_import_files')
-      .where({ import_file_id: fileId })
-      .first()) as KbImportFileRow | undefined;
-
-    if (!row) {
-      logger.warn('[kbArticleImport] Staged import file not found', { fileId, tenant });
-      progress.processed += 1;
-      progress.failed += 1;
-      await updateJobProgress(knex, tenant, jobRecordId, progress);
-      continue;
-    }
-
-    if (row.status !== 'pending') {
-      // Already consumed by an earlier attempt.
-      progress.processed += 1;
-      if (row.status === 'imported') progress.imported += 1;
-      else progress.failed += 1;
-      await updateJobProgress(knex, tenant, jobRecordId, progress);
-      continue;
-    }
-
+    let outcome: 'imported' | 'failed';
     try {
-      const title = titleFromFilename(row.filename);
-      const blocks = fileContentToBlocks(row.filename, row.content ?? '', {
-        maxDurationMs: KB_IMPORT_PARSE_BUDGET_MS,
-      });
+      outcome = await knex.transaction(async (trx) => {
+        // The row lock and article/staging writes share one transaction. If a
+        // worker dies after article creation, PostgreSQL rolls both writes
+        // back; an overlapping Temporal retry then waits for the lock and can
+        // never create a second article for the same staged file.
+        const row = (await tenantDb(trx, tenant)
+          .table('kb_import_files')
+          .where({ import_file_id: fileId })
+          .forUpdate()
+          .first()) as KbImportFileRow | undefined;
 
-      const article = await createKbArticle(
-        knex,
-        { tenant, userId: data.userId },
-        {
-          title,
-          content: blocks,
-          articleType: (row.article_type as any) || 'reference',
-          audience: (row.audience as any) || 'internal',
-          categoryId: row.category_id || undefined,
-        },
-      );
+        if (!row) {
+          logger.warn('[kbArticleImport] Staged import file not found', { fileId, tenant });
+          return 'failed';
+        }
 
-      await tenantDb(knex, tenant)
-        .table('kb_import_files')
-        .where({ import_file_id: fileId })
-        .update({
-          status: 'imported',
-          article_id: article.article_id,
-          error: null,
-          content: null, // terminal rows keep the staging table lean
-          updated_at: new Date(),
+        if (row.status !== 'pending') {
+          return row.status === 'imported' ? 'imported' : 'failed';
+        }
+
+        const title = titleFromFilename(row.filename);
+        const blocks = fileContentToBlocks(row.filename, row.content ?? '', {
+          maxDurationMs: KB_IMPORT_PARSE_BUDGET_MS,
         });
 
-      progress.imported += 1;
+        const article = await createKbArticle(
+          trx,
+          { tenant, userId: data.userId },
+          {
+            title,
+            content: blocks,
+            articleType: (row.article_type as any) || 'reference',
+            audience: (row.audience as any) || 'internal',
+            categoryId: row.category_id || undefined,
+          },
+        );
+
+        await tenantDb(trx, tenant)
+          .table('kb_import_files')
+          .where({ import_file_id: fileId })
+          .update({
+            status: 'imported',
+            article_id: article.article_id,
+            error: null,
+            content: null, // terminal rows keep the staging table lean
+            updated_at: new Date(),
+          });
+
+        return 'imported';
+      });
     } catch (error) {
       logger.error('[kbArticleImport] Failed to import staged file', {
         fileId,
         tenant,
-        filename: row.filename,
         error: error instanceof Error ? error.message : String(error),
       });
 
-      await tenantDb(knex, tenant)
+      // A database error aborts the creation transaction, so record the
+      // per-file failure afterward. The pending predicate prevents a timed-out
+      // first attempt from overwriting a retry that has already imported it.
+      const updated = await tenantDb(knex, tenant)
         .table('kb_import_files')
-        .where({ import_file_id: fileId })
+        .where({ import_file_id: fileId, status: 'pending' })
         .update({
           status: 'failed',
           error: kbImportErrorMessage(error),
@@ -192,9 +192,19 @@ export async function kbArticleImportHandler(
           updated_at: new Date(),
         });
 
-      progress.failed += 1;
+      if (updated > 0) {
+        outcome = 'failed';
+      } else {
+        const settled = (await tenantDb(knex, tenant)
+          .table('kb_import_files')
+          .where({ import_file_id: fileId })
+          .first()) as KbImportFileRow | undefined;
+        outcome = settled?.status === 'imported' ? 'imported' : 'failed';
+      }
     }
 
+    if (outcome === 'imported') progress.imported += 1;
+    else progress.failed += 1;
     progress.processed += 1;
     await updateJobProgress(knex, tenant, jobRecordId, progress);
   }

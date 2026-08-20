@@ -173,6 +173,17 @@ describe('kbImportBlocks html fidelity', () => {
     ]);
     expect(table.rows[1].cells[2][0].styles).toEqual({ bold: true });
   });
+
+  it('preserves semantic containers around nested paragraphs', () => {
+    const nested = htmlToBlocks(
+      '<blockquote><p>Quoted text</p></blockquote><ol><li><p>First</p></li></ol>',
+    );
+
+    expect(nested).toEqual([
+      { type: 'blockquote', content: [{ type: 'text', text: 'Quoted text' }] },
+      { type: 'numberedListItem', content: [{ type: 'text', text: 'First' }] },
+    ]);
+  });
 });
 
 describe('kbImportBlocks entry points', () => {

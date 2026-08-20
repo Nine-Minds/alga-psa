@@ -327,6 +327,9 @@ class HtmlBlockWalker {
   private styles: InlineStyles = {};
   private readonly styleStack: InlineStyles[] = [];
   private readonly listStack: Array<'bulletListItem' | 'numberedListItem'> = [];
+  private readonly semanticBlockStack: Array<
+    'bulletListItem' | 'numberedListItem' | 'blockquote'
+  > = [];
   private readonly tableStack: HtmlTableState[] = [];
   private cell: InlineSegment[] | null = null;
   private skipDepth = 0;
@@ -373,11 +376,11 @@ class HtmlBlockWalker {
         return;
       case 'li':
         this.flushBlock();
-        this.blockType = this.listStack[this.listStack.length - 1] ?? 'bulletListItem';
+        this.semanticBlockStack.push(this.listStack[this.listStack.length - 1] ?? 'bulletListItem');
         return;
       case 'blockquote':
         this.flushBlock();
-        this.blockType = 'blockquote';
+        this.semanticBlockStack.push('blockquote');
         return;
       case 'table':
         this.flushBlock();
@@ -475,8 +478,12 @@ class HtmlBlockWalker {
         this.listStack.pop();
         return;
       case 'li':
+        this.flushBlock();
+        this.semanticBlockStack.pop();
+        return;
       case 'blockquote':
         this.flushBlock();
+        this.semanticBlockStack.pop();
         return;
       case 'th':
       case 'td':
@@ -564,7 +571,9 @@ class HtmlBlockWalker {
   private flushBlock(): void {
     const segments = trimSegments(this.segments);
     this.segments = [];
-    const blockType = this.blockType;
+    const blockType = this.blockType === 'paragraph'
+      ? (this.semanticBlockStack[this.semanticBlockStack.length - 1] ?? 'paragraph')
+      : this.blockType;
     const blockProps = this.blockProps;
     this.blockType = 'paragraph';
     this.blockProps = undefined;

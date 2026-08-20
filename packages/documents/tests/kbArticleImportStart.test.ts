@@ -247,8 +247,12 @@ describe('getArticleImportStatus', () => {
 
     const status = (await getArticleImportStatus('job-1')) as any;
 
-    expect(status.status).toBe('failed');
-    expect(status.imported).toBe(0);
+    expect(status).toEqual({
+      status: 'failed',
+      total: 1,
+      imported: 0,
+      failed: [{ filename: 'a.md', error: 'Failed to import article' }],
+    });
   });
 });
 
