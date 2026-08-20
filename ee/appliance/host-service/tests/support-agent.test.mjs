@@ -44,7 +44,7 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach', width: 100, height: 30 })));
   const pty = fakePtyFactory.last;
   assert.equal(fakePtyFactory.lastSpawn.command, 'nsenter');
-  assert.deepEqual(fakePtyFactory.lastSpawn.args.slice(-6), ['-n', '-r', '/proc/1/root', '--', '/bin/bash', '-l']);
+  assert.deepEqual(fakePtyFactory.lastSpawn.args, ['-t', '1', '-m', '-p', '-n', '--root=/proc/1/root', '--wdns=/', '--', '/bin/bash', '-l']);
   pty.emitOutput('output while attached');
   const output = socket.sent.find((item) => Buffer.isBuffer(item));
   assert.equal(decodeTerminalFrame(output).data.toString('utf8'), 'output while attached');

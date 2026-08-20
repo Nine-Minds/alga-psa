@@ -186,7 +186,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (pendingResumeMarker) { record('reboot', { marker: 'control-plane-resume' }); pendingResumeMarker = false; }
     record('marker', { marker: 'shell-start' });
     const spawn = ptySpawn || require('node-pty').spawn;
-    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '-r', '/proc/1/root', '--', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
+    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '--root=/proc/1/root', '--wdns=/', '--', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
     child.onData((data) => onOutput(data));
     child.onExit(({ exitCode, signal }) => {
       try { if (recorder) { record('exit', { code: exitCode, signal }); finalizeRecorder(); } } catch { stop('recording-exit-failure'); }
