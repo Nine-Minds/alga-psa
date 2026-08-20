@@ -59,6 +59,33 @@ async function distributionState(knex, tableName) {
   }
 }
 
+// A distributed table can retain pre-distribution rows in the coordinator's
+// physical heap. Citus-routed backfills cannot see those shadow rows, while a
+// coordinator ALTER ... SET NOT NULL scans them and fails. Constrain the live
+// shard data first, then synchronize the coordinator's column metadata. This
+// is the established repository pattern for this Citus condition.
+async function setNotNull(knex, tableName, columnName, distributed) {
+  if (distributed === true) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        ?,
+        $$ALTER TABLE %s ALTER COLUMN ${columnName} SET NOT NULL$$
+      )
+    `, [tableName]);
+
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = ?::regclass
+        AND attname = ?
+        AND attnotnull = false
+    `, [tableName, columnName]);
+    return;
+  }
+
+  await knex.raw(`ALTER TABLE ${tableName} ALTER COLUMN ${columnName} SET NOT NULL`);
+}
+
 async function backfillProfileColumn(knex, table, clientColumn = 'client_id') {
   await knex.raw(`
     UPDATE ${table} t
@@ -137,7 +164,12 @@ exports.up = async function up(knex) {
     });
   }
   await backfillProfileColumn(knex, CYCLES);
-  await knex.raw(`ALTER TABLE ${CYCLES} ALTER COLUMN billing_profile_id SET NOT NULL`);
+  await setNotNull(
+    knex,
+    CYCLES,
+    'billing_profile_id',
+    await distributionState(knex, CYCLES),
+  );
 
   // --- F092: one cycle per profile per period ---
   // Replaces the client-level uniqueness this table relied on. Without the
