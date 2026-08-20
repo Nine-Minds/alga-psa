@@ -93,6 +93,36 @@ async function distributionState(knex, tableName) {
   }
 }
 
+// Core PostgreSQL's ALTER ... SET NOT NULL scans the coordinator relation's
+// physical heap. Some Citus environments still have pre-distribution shadow
+// rows there; routed DML cannot see or backfill those rows, so the scan reports
+// NULLs even after every live shard row has been populated. Apply the
+// constraint to the shards and then synchronize coordinator metadata, matching
+// the established Citus pattern used by the work-date and client-type
+// migrations. Do not use truncate_local_data_after_distributing_table here:
+// its cascading TRUNCATE is unsafe unless the entire FK closure is distributed.
+async function setNotNull(knex, tableName, columnName, distributed) {
+  if (distributed === true) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        ?,
+        $$ALTER TABLE %s ALTER COLUMN ${columnName} SET NOT NULL$$
+      )
+    `, [tableName]);
+
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = ?::regclass
+        AND attname = ?
+        AND attnotnull = false
+    `, [tableName, columnName]);
+    return;
+  }
+
+  await knex.raw(`ALTER TABLE ${tableName} ALTER COLUMN ${columnName} SET NOT NULL`);
+}
+
 exports.up = async function up(knex) {
   for (const column of PROFILE_COLUMNS) {
     if (await hasColumn(knex, PROFILES, column.name)) continue;
@@ -182,7 +212,12 @@ exports.up = async function up(knex) {
   // FK below would reject anyway.
   await knex.raw(`DELETE FROM ${TAX_SETTINGS} WHERE billing_profile_id IS NULL`);
 
-  await knex.raw(`ALTER TABLE ${TAX_SETTINGS} ALTER COLUMN billing_profile_id SET NOT NULL`);
+  await setNotNull(
+    knex,
+    TAX_SETTINGS,
+    'billing_profile_id',
+    taxSettingsDistributed,
+  );
 
   // Re-key: the primary key becomes (tenant, client_id, billing_profile_id).
   // client_id stays in the key even though the profile implies it — it is the
