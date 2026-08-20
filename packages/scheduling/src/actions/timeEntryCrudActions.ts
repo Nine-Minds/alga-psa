@@ -788,38 +788,43 @@ export const saveTimeEntry = withAuth(async (
       // — otherwise the client loses block minutes AND pays the contract/
       // hourly rate until the nightly reconcile catches up.
       try {
-        const savedEntryId = resultingEntry?.entry_id;
-        if (entry_id && savedEntryId) {
-          // Update: reverse then re-allocate (clean FIFO, no delta).
-          await reverseTimeEntryAllocations(trx, tenant, savedEntryId);
-        }
-        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-          let blockClientId: string | null = null;
-          if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
-            blockClientId = await getClientIdForWorkItem(
-              trx,
-              tenant,
-              resultingEntry.work_item_id as string,
-              resultingEntry.work_item_type as string,
-            );
+        // A caught PostgreSQL error still leaves its transaction aborted. Use
+        // a nested transaction (SAVEPOINT) so a best-effort burn failure rolls
+        // back only the reverse/re-allocation work, not the time-entry save.
+        await trx.transaction(async (burnTrx) => {
+          const savedEntryId = resultingEntry?.entry_id;
+          if (entry_id && savedEntryId) {
+            // Update: reverse then re-allocate (clean FIFO, no delta).
+            await reverseTimeEntryAllocations(burnTrx, tenant, savedEntryId);
           }
-          if (blockClientId && !resultingEntry.contract_line_id) {
-            const burnEntry = {
-              entry_id: savedEntryId!,
-              service_id: resultingEntry.service_id,
-              billable_duration: resultingEntry.billable_duration,
-              contract_line_id: resultingEntry.contract_line_id,
-              work_item_id: resultingEntry.work_item_id,
-              work_item_type: resultingEntry.work_item_type,
-              work_date: resultingEntry.work_date,
-              start_time: resultingEntry.start_time,
-            };
-            const burned = await allocateTimeEntry(trx, tenant, blockClientId, burnEntry);
-            if (burned.length > 0) {
-              console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
+          if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+            let blockClientId: string | null = null;
+            if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
+              blockClientId = await getClientIdForWorkItem(
+                burnTrx,
+                tenant,
+                resultingEntry.work_item_id as string,
+                resultingEntry.work_item_type as string,
+              );
+            }
+            if (blockClientId && !resultingEntry.contract_line_id) {
+              const burnEntry = {
+                entry_id: savedEntryId!,
+                service_id: resultingEntry.service_id,
+                billable_duration: resultingEntry.billable_duration,
+                contract_line_id: resultingEntry.contract_line_id,
+                work_item_id: resultingEntry.work_item_id,
+                work_item_type: resultingEntry.work_item_type,
+                work_date: resultingEntry.work_date,
+                start_time: resultingEntry.start_time,
+              };
+              const burned = await allocateTimeEntry(burnTrx, tenant, blockClientId, burnEntry);
+              if (burned.length > 0) {
+                console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
+              }
             }
           }
-        }
+        });
       } catch (blockBurnError) {
         console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
       }
