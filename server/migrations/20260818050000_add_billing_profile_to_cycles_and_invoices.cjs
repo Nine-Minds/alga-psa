@@ -156,6 +156,74 @@ async function backfillProfileColumn(knex, table, clientColumn = 'client_id') {
   `);
 }
 
+// The legacy schema allowed duplicate period starts and retained deactivated
+// cycles as history. Preserve every row, but make the live state compatible
+// with the per-profile invariant by deactivating all but one active row in each
+// duplicate group. Prefer a cycle already referenced by an invoice so a billed
+// period remains the canonical active record; otherwise prefer the most
+// recently updated/created row. Queries and updates stay tenant-scoped and are
+// issued table-by-table so this also works when cycles and invoices have mixed
+// Citus distribution shapes.
+async function deactivateDuplicateActiveCycles(knex) {
+  const duplicateGroups = await knex(CYCLES)
+    .select('tenant', 'client_id', 'billing_profile_id', 'period_start_date')
+    .where({ is_active: true })
+    .groupBy('tenant', 'client_id', 'billing_profile_id', 'period_start_date')
+    .havingRaw('COUNT(*) > 1');
+
+  for (const group of duplicateGroups) {
+    const cycles = await knex(CYCLES)
+      .select('billing_cycle_id', 'created_at', 'updated_at')
+      .where({
+        tenant: group.tenant,
+        client_id: group.client_id,
+        billing_profile_id: group.billing_profile_id,
+        period_start_date: group.period_start_date,
+        is_active: true,
+      });
+
+    const cycleIds = cycles.map((cycle) => cycle.billing_cycle_id);
+    const invoiceLinks = await knex(INVOICES)
+      .distinct('billing_cycle_id')
+      .where({ tenant: group.tenant })
+      .whereIn('billing_cycle_id', cycleIds)
+      .whereNotNull('billing_cycle_id');
+    const invoicedCycleIds = new Set(invoiceLinks.map((row) => row.billing_cycle_id));
+
+    const timestamp = (value) => {
+      if (value == null) return Number.NEGATIVE_INFINITY;
+      const parsed = new Date(value).getTime();
+      return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+    };
+    cycles.sort((a, b) => {
+      const invoiceDifference = Number(invoicedCycleIds.has(b.billing_cycle_id))
+        - Number(invoicedCycleIds.has(a.billing_cycle_id));
+      if (invoiceDifference !== 0) return invoiceDifference;
+
+      const updatedDifference = timestamp(b.updated_at) - timestamp(a.updated_at);
+      if (updatedDifference !== 0) return updatedDifference;
+
+      const createdDifference = timestamp(b.created_at) - timestamp(a.created_at);
+      if (createdDifference !== 0) return createdDifference;
+
+      return String(a.billing_cycle_id).localeCompare(String(b.billing_cycle_id));
+    });
+
+    const duplicateIds = cycles.slice(1).map((cycle) => cycle.billing_cycle_id);
+    if (duplicateIds.length === 0) continue;
+
+    await knex(CYCLES)
+      .where({ tenant: group.tenant })
+      .whereIn('billing_cycle_id', duplicateIds)
+      .update({ is_active: false });
+
+    console.log(
+      `${CYCLES}: deactivated ${duplicateIds.length} duplicate active cycle(s) for ` +
+      `${group.tenant}/${group.client_id}/${group.billing_profile_id}/${group.period_start_date}`
+    );
+  }
+}
+
 exports.up = async function up(knex) {
   // --- F090/F091: client_billing_cycles ---
   if (!(await hasColumn(knex, CYCLES, 'billing_profile_id'))) {
@@ -171,13 +239,16 @@ exports.up = async function up(knex) {
     await distributionState(knex, CYCLES),
   );
 
-  // --- F092: one cycle per profile per period ---
-  // Replaces the client-level uniqueness this table relied on. Without the
-  // profile in the key, generating a second profile's cycle for the same month
-  // would look like a duplicate of the first.
+  // --- F092: one active cycle per profile per period ---
+  // Inactive legacy cycles remain as billing history and may share a period
+  // start. New/live cycles must be unique per profile so generating a second
+  // profile's cycle for the same month is allowed without permitting a second
+  // active cycle for that same profile.
+  await deactivateDuplicateActiveCycles(knex);
   await knex.raw(`
     CREATE UNIQUE INDEX IF NOT EXISTS client_billing_cycles_profile_period_unique
     ON ${CYCLES} (tenant, client_id, billing_profile_id, period_start_date)
+    WHERE is_active = true
   `);
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS idx_${CYCLES}_billing_profile
