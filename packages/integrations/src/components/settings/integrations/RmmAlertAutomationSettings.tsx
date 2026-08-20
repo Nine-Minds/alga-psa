@@ -23,7 +23,7 @@ import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Dialog } from "@alga-psa/ui/components/Dialog";
-import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useToast } from "@alga-psa/ui/hooks/use-toast";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import {
@@ -1116,14 +1116,7 @@ function WindowEditorDialog({
   );
 
   return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      className="max-w-xl"
-      footer={footer}
-      allowOverflow
-    >
+    <Dialog isOpen={isOpen} onClose={onClose} title={title} className="max-w-xl" footer={footer} allowOverflow>
       <div className="space-y-4">
         <div className="space-y-1">
           <Label htmlFor="win-name">

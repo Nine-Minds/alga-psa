@@ -2021,6 +2021,50 @@
       "installer": "Ładowanie instalatora..."
     }
   },
+  "policyManagement": {
+    "title": "Zarządzanie zasadami",
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+  },
+  "roleManagement": {
+    "title": "Zarządzanie rolami",
+    "description": "Twórz role i zarządzaj nimi na potrzeby dostępu MSP i portalu klienta",
+    "columns": {
+      "roleNameRequired": "Nazwa roli *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nazwa roli",
+      "roleNamePlaceholder": "Wprowadź nazwę roli",
+      "description": "Opis",
+      "descriptionPlaceholder": "Wprowadź opis roli"
+    },
+    "portal": {
+      "none": "Brak",
+      "access": "Dostęp do portalu",
+      "msp": "Portal MSP",
+      "client": "Portal klienta",
+      "mspShort": "MSP",
+      "clientShort": "Klient",
+      "required": "Rola musi mieć dostęp do co najmniej jednego portalu"
+    },
+    "actions": {
+      "addRole": "Dodaj rolę",
+      "createRole": "Utwórz rolę"
+    },
+    "createDialog": {
+      "title": "Utwórz nową rolę"
+    },
+    "deleteDialog": {
+      "entityFallback": "ta rola"
+    },
+    "adminDeleteDisabled": "Ról administratora nie można usuwać, ponieważ są rolami systemowymi",
+    "errors": {
+      "createFailed": "Nie udało się utworzyć roli",
+      "updateFailed": "Nie udało się zaktualizować roli",
+      "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
+      "deleteFailed": "Nie udało się usunąć roli"
+    }
+  },
   "security": {
     "title": "Ustawienia bezpieczeństwa",
     "tabs": {

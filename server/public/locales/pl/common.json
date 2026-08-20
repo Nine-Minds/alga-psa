@@ -199,6 +199,19 @@
     "notes": "Notatki"
   },
   "auth": {
+    "signOut": {
+      "title": "Wylogowanie",
+      "confirmation": "Czy na pewno chcesz się wylogować?",
+      "signingOut": "Wylogowywanie...",
+      "action": "Wyloguj się"
+    },
+    "twoFactor": {
+      "codeLabel": "Kod 2FA",
+      "verify": "Zweryfikuj",
+      "title": "To proste",
+      "instructions": "Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej.",
+      "digitsLeft": "Pozostało cyfr: {{count}}"
+    },
     "messages": {
       "handoffMissingToken": "Brak lub nieprawidłowy token przekazania logowania. Zaloguj się ponownie.",
       "handoffFinalizeFailed": "Nie mogliśmy zakończyć logowania. Spróbuj zalogować się ponownie.",

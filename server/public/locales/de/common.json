@@ -696,6 +696,19 @@
     "notes": "Notizen"
   },
   "auth": {
+    "signOut": {
+      "title": "Abmelden",
+      "confirmation": "Möchten Sie sich wirklich abmelden?",
+      "signingOut": "Abmeldung läuft...",
+      "action": "Abmelden"
+    },
+    "twoFactor": {
+      "codeLabel": "2FA-Code",
+      "verify": "Bestätigen",
+      "title": "Ganz einfach",
+      "instructions": "Geben Sie den sechsstelligen Code aus Ihrer Authenticator-App ein.",
+      "digitsLeft": "Noch {{count}} Stellen"
+    },
     "messages": {
       "handoffMissingToken": "Das Anmelde-Übergabe-Token fehlt oder ist ungültig. Bitte erneut anmelden.",
       "handoffFinalizeFailed": "Wir konnten Ihre Anmeldung nicht abschließen. Bitte erneut versuchen.",

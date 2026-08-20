@@ -216,6 +216,19 @@
     "notes": "Notas"
   },
   "auth": {
+    "signOut": {
+      "title": "Sair",
+      "confirmation": "Tem certeza de que deseja sair?",
+      "signingOut": "Saindo...",
+      "action": "Sair"
+    },
+    "twoFactor": {
+      "codeLabel": "Código 2FA",
+      "verify": "Verificar",
+      "title": "Muito fácil",
+      "instructions": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
+      "digitsLeft": "{{count}} dígitos restantes"
+    },
     "messages": {
       "handoffMissingToken": "O token de transferência de login está ausente ou é inválido. Faça login novamente.",
       "handoffFinalizeFailed": "Não foi possível finalizar seu login. Tente fazer login novamente.",

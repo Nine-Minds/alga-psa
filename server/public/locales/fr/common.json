@@ -696,6 +696,19 @@
     "notes": "Notes"
   },
   "auth": {
+    "signOut": {
+      "title": "Déconnexion",
+      "confirmation": "Voulez-vous vraiment vous déconnecter ?",
+      "signingOut": "Déconnexion en cours...",
+      "action": "Se déconnecter"
+    },
+    "twoFactor": {
+      "codeLabel": "Code 2FA",
+      "verify": "Vérifier",
+      "title": "Rien de plus simple",
+      "instructions": "Saisissez le code à 6 chiffres de votre application d’authentification.",
+      "digitsLeft": "{{count}} chiffres restants"
+    },
     "messages": {
       "handoffMissingToken": "Le jeton de transfert de connexion est manquant ou invalide. Veuillez vous reconnecter.",
       "handoffFinalizeFailed": "Nous n'avons pas pu finaliser votre connexion. Veuillez réessayer.",

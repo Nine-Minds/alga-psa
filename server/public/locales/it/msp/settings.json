@@ -2015,6 +2015,50 @@
       "installer": "Caricamento programma di installazione..."
     }
   },
+  "policyManagement": {
+    "title": "Gestione dei criteri",
+    "upgradeDescription": "La gestione dei criteri è una funzionalità Pro. Esegui l’upgrade per accedere ai controlli avanzati dei criteri."
+  },
+  "roleManagement": {
+    "title": "Gestisci ruoli",
+    "description": "Crea e gestisci i ruoli per l’accesso MSP e al portale clienti",
+    "columns": {
+      "roleNameRequired": "Nome ruolo *",
+      "portal": "Portale"
+    },
+    "fields": {
+      "roleName": "Nome ruolo",
+      "roleNamePlaceholder": "Inserisci il nome del ruolo",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "Inserisci la descrizione del ruolo"
+    },
+    "portal": {
+      "none": "Nessuno",
+      "access": "Accesso al portale",
+      "msp": "Portale MSP",
+      "client": "Portale clienti",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Un ruolo deve avere accesso ad almeno un portale"
+    },
+    "actions": {
+      "addRole": "Aggiungi ruolo",
+      "createRole": "Crea ruolo"
+    },
+    "createDialog": {
+      "title": "Crea nuovo ruolo"
+    },
+    "deleteDialog": {
+      "entityFallback": "questo ruolo"
+    },
+    "adminDeleteDisabled": "I ruoli di amministratore non possono essere eliminati perché sono ruoli di sistema",
+    "errors": {
+      "createFailed": "Impossibile creare il ruolo",
+      "updateFailed": "Impossibile aggiornare il ruolo",
+      "validateDeletionFailed": "Impossibile convalidare l’eliminazione. Riprova.",
+      "deleteFailed": "Impossibile eliminare il ruolo"
+    }
+  },
   "security": {
     "title": "Impostazioni di sicurezza",
     "tabs": {

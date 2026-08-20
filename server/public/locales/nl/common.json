@@ -696,6 +696,19 @@
     "notes": "Notities"
   },
   "auth": {
+    "signOut": {
+      "title": "Afmelden",
+      "confirmation": "Weet u zeker dat u zich wilt afmelden?",
+      "signingOut": "Bezig met afmelden...",
+      "action": "Afmelden"
+    },
+    "twoFactor": {
+      "codeLabel": "2FA-code",
+      "verify": "Verifiëren",
+      "title": "Heel eenvoudig",
+      "instructions": "Voer de 6-cijferige code uit uw authenticator-app in.",
+      "digitsLeft": "Nog {{count}} cijfers"
+    },
     "messages": {
       "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",
       "handoffFinalizeFailed": "We konden uw inloggen niet voltooien. Probeer opnieuw in te loggen.",

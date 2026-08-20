@@ -3,11 +3,13 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { AlertProps } from '@alga-psa/types';
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {
+    const { t } = useTranslation('common');
     const getAlertStyles = (): { bgColor: string; textColor: string; hoverColor: string; icon: React.JSX.Element } => {
         switch (type) {
           case 'error':
@@ -38,7 +40,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
               <button
                 onClick={onClose}
                 className="absolute top-2 right-2 text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded-full"
-                aria-label="Close"
+                aria-label={t('common.close')}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -53,7 +55,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
                 onClick={onClose}
                 className={`mt-4 px-4 py-1 text-sm font-medium text-white ${textColor} rounded-full ${hoverColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>

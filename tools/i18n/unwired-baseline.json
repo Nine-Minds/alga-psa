@@ -3,11 +3,6 @@
   "files": [
     "packages/assets/src/components/AssetInventoryProvenance.tsx",
     "packages/auth/src/actions/useRegister.tsx",
-    "packages/auth/src/components/Alert.tsx",
-    "packages/auth/src/components/SignOutDialog.tsx",
-    "packages/auth/src/components/TwoFA.tsx",
-    "packages/auth/src/components/settings/policy/PolicyManagement.tsx",
-    "packages/auth/src/components/settings/policy/RoleManagement.tsx",
     "packages/auth/src/lib/tokenizer.tsx",
     "packages/clients/src/actions/contact-actions/contactActions.tsx",
     "packages/clients/src/components/contacts/EntraContactBadge.tsx",

@@ -2015,6 +2015,50 @@
       "installer": "Chargement de l'installateur..."
     }
   },
+  "policyManagement": {
+    "title": "Gestion des stratégies",
+    "upgradeDescription": "La gestion des stratégies est une fonctionnalité Pro. Mettez votre offre à niveau pour accéder aux contrôles avancés des stratégies."
+  },
+  "roleManagement": {
+    "title": "Gérer les rôles",
+    "description": "Créez et gérez les rôles d’accès MSP et au portail client",
+    "columns": {
+      "roleNameRequired": "Nom du rôle *",
+      "portal": "Portail"
+    },
+    "fields": {
+      "roleName": "Nom du rôle",
+      "roleNamePlaceholder": "Saisissez le nom du rôle",
+      "description": "Description",
+      "descriptionPlaceholder": "Saisissez la description du rôle"
+    },
+    "portal": {
+      "none": "Aucun",
+      "access": "Accès au portail",
+      "msp": "Portail MSP",
+      "client": "Portail client",
+      "mspShort": "MSP",
+      "clientShort": "Client",
+      "required": "Un rôle doit avoir accès à au moins un portail"
+    },
+    "actions": {
+      "addRole": "Ajouter un rôle",
+      "createRole": "Créer le rôle"
+    },
+    "createDialog": {
+      "title": "Créer un rôle"
+    },
+    "deleteDialog": {
+      "entityFallback": "ce rôle"
+    },
+    "adminDeleteDisabled": "Les rôles d’administrateur ne peuvent pas être supprimés, car ce sont des rôles système",
+    "errors": {
+      "createFailed": "Impossible de créer le rôle",
+      "updateFailed": "Impossible de mettre à jour le rôle",
+      "validateDeletionFailed": "Impossible de valider la suppression. Veuillez réessayer.",
+      "deleteFailed": "Impossible de supprimer le rôle"
+    }
+  },
   "security": {
     "title": "Paramètres de sécurité",
     "tabs": {

@@ -185,6 +185,19 @@
     "notes": "Note"
   },
   "auth": {
+    "signOut": {
+      "title": "Disconnessione",
+      "confirmation": "Vuoi davvero uscire?",
+      "signingOut": "Disconnessione in corso...",
+      "action": "Esci"
+    },
+    "twoFactor": {
+      "codeLabel": "Codice 2FA",
+      "verify": "Verifica",
+      "title": "Facilissimo",
+      "instructions": "Inserisci il codice a 6 cifre dell’app di autenticazione.",
+      "digitsLeft": "{{count}} cifre rimanenti"
+    },
     "messages": {
       "handoffMissingToken": "Il token di trasferimento dell'accesso è mancante o non valido. Accedi di nuovo.",
       "handoffFinalizeFailed": "Non siamo riusciti a finalizzare il tuo accesso. Prova ad accedere di nuovo.",

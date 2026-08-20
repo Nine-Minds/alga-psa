@@ -216,6 +216,19 @@
     "notes": "Notes"
   },
   "auth": {
+    "signOut": {
+      "title": "Sign Out",
+      "confirmation": "Are you sure you want to sign out?",
+      "signingOut": "Signing out...",
+      "action": "Sign out"
+    },
+    "twoFactor": {
+      "codeLabel": "2FA Code",
+      "verify": "Verify",
+      "title": "Easy peasy",
+      "instructions": "Enter the 6-digit code from your two-factor authenticator app.",
+      "digitsLeft": "{{count}} digits left"
+    },
     "messages": {
       "handoffMissingToken": "The login handoff token is missing or invalid. Please sign in again.",
       "handoffFinalizeFailed": "We could not finalize your login. Please try signing in again.",

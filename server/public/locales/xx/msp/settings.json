@@ -2015,6 +2015,50 @@
       "installer": "11111"
     }
   },
+  "policyManagement": {
+    "title": "11111",
+    "upgradeDescription": "11111"
+  },
+  "roleManagement": {
+    "title": "11111",
+    "description": "11111",
+    "columns": {
+      "roleNameRequired": "11111",
+      "portal": "11111"
+    },
+    "fields": {
+      "roleName": "11111",
+      "roleNamePlaceholder": "11111",
+      "description": "11111",
+      "descriptionPlaceholder": "11111"
+    },
+    "portal": {
+      "none": "11111",
+      "access": "11111",
+      "msp": "11111",
+      "client": "11111",
+      "mspShort": "11111",
+      "clientShort": "11111",
+      "required": "11111"
+    },
+    "actions": {
+      "addRole": "11111",
+      "createRole": "11111"
+    },
+    "createDialog": {
+      "title": "11111"
+    },
+    "deleteDialog": {
+      "entityFallback": "11111"
+    },
+    "adminDeleteDisabled": "11111",
+    "errors": {
+      "createFailed": "11111",
+      "updateFailed": "11111",
+      "validateDeletionFailed": "11111",
+      "deleteFailed": "11111"
+    }
+  },
   "security": {
     "title": "11111",
     "tabs": {

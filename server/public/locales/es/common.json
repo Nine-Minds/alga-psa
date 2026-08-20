@@ -133,6 +133,19 @@
     "notes": "Notas"
   },
   "auth": {
+    "signOut": {
+      "title": "Cerrar sesión",
+      "confirmation": "¿Está seguro de que desea cerrar sesión?",
+      "signingOut": "Cerrando sesión...",
+      "action": "Cerrar sesión"
+    },
+    "twoFactor": {
+      "codeLabel": "Código 2FA",
+      "verify": "Verificar",
+      "title": "Muy fácil",
+      "instructions": "Ingrese el código de 6 dígitos de su aplicación de autenticación.",
+      "digitsLeft": "{{count}} dígitos restantes"
+    },
     "messages": {
       "handoffMissingToken": "El token de transferencia de sesión falta o no es válido. Inicie sesión nuevamente.",
       "handoffFinalizeFailed": "No pudimos finalizar su inicio de sesión. Intente iniciar sesión de nuevo.",

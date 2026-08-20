@@ -2015,6 +2015,50 @@
       "installer": "Installatieprogramma laden..."
     }
   },
+  "policyManagement": {
+    "title": "Beleidsbeheer",
+    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen."
+  },
+  "roleManagement": {
+    "title": "Rollen beheren",
+    "description": "Maak en beheer rollen voor toegang tot MSP en het klantenportaal",
+    "columns": {
+      "roleNameRequired": "Rolnaam *",
+      "portal": "Portaal"
+    },
+    "fields": {
+      "roleName": "Rolnaam",
+      "roleNamePlaceholder": "Voer de rolnaam in",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Voer de rolbeschrijving in"
+    },
+    "portal": {
+      "none": "Geen",
+      "access": "Portaaltoegang",
+      "msp": "MSP-portaal",
+      "client": "Klantenportaal",
+      "mspShort": "MSP",
+      "clientShort": "Klant",
+      "required": "Een rol moet toegang hebben tot ten minste één portaal"
+    },
+    "actions": {
+      "addRole": "Rol toevoegen",
+      "createRole": "Rol maken"
+    },
+    "createDialog": {
+      "title": "Nieuwe rol maken"
+    },
+    "deleteDialog": {
+      "entityFallback": "deze rol"
+    },
+    "adminDeleteDisabled": "Beheerdersrollen kunnen niet worden verwijderd omdat het systeemrollen zijn",
+    "errors": {
+      "createFailed": "Kan de rol niet maken",
+      "updateFailed": "Kan de rol niet bijwerken",
+      "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
+      "deleteFailed": "Kan de rol niet verwijderen"
+    }
+  },
   "security": {
     "title": "Beveiligingsinstellingen",
     "tabs": {

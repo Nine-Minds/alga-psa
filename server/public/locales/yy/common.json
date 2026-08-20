@@ -216,6 +216,19 @@
     "notes": "55555"
   },
   "auth": {
+    "signOut": {
+      "title": "55555",
+      "confirmation": "55555",
+      "signingOut": "55555",
+      "action": "55555"
+    },
+    "twoFactor": {
+      "codeLabel": "55555",
+      "verify": "55555",
+      "title": "55555",
+      "instructions": "55555",
+      "digitsLeft": "55555 {{count}} 55555"
+    },
     "messages": {
       "handoffMissingToken": "55555",
       "handoffFinalizeFailed": "55555",

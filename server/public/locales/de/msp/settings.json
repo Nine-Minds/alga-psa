@@ -2015,6 +2015,50 @@
       "installer": "Installationsprogramm wird geladen..."
     }
   },
+  "policyManagement": {
+    "title": "Richtlinienverwaltung",
+    "upgradeDescription": "Die Richtlinienverwaltung ist eine Pro-Funktion. Führen Sie ein Upgrade durch, um auf erweiterte Richtliniensteuerungen zuzugreifen."
+  },
+  "roleManagement": {
+    "title": "Rollen verwalten",
+    "description": "Erstellen und verwalten Sie Rollen für den Zugriff auf das MSP- und das Kundenportal",
+    "columns": {
+      "roleNameRequired": "Rollenname *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Rollenname",
+      "roleNamePlaceholder": "Rollennamen eingeben",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Rollenbeschreibung eingeben"
+    },
+    "portal": {
+      "none": "Keine",
+      "access": "Portalzugriff",
+      "msp": "MSP-Portal",
+      "client": "Kundenportal",
+      "mspShort": "MSP",
+      "clientShort": "Kunde",
+      "required": "Eine Rolle muss Zugriff auf mindestens ein Portal haben"
+    },
+    "actions": {
+      "addRole": "Rolle hinzufügen",
+      "createRole": "Rolle erstellen"
+    },
+    "createDialog": {
+      "title": "Neue Rolle erstellen"
+    },
+    "deleteDialog": {
+      "entityFallback": "diese Rolle"
+    },
+    "adminDeleteDisabled": "Administratorrollen können nicht gelöscht werden, da sie Systemrollen sind",
+    "errors": {
+      "createFailed": "Rolle konnte nicht erstellt werden",
+      "updateFailed": "Rolle konnte nicht aktualisiert werden",
+      "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
+      "deleteFailed": "Rolle konnte nicht gelöscht werden"
+    }
+  },
   "security": {
     "title": "Sicherheitseinstellungen",
     "tabs": {

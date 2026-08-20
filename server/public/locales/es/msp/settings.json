@@ -2015,6 +2015,50 @@
       "installer": "Cargando instalador..."
     }
   },
+  "policyManagement": {
+    "title": "Administración de políticas",
+    "upgradeDescription": "La administración de políticas es una función Pro. Actualice su plan para acceder a controles avanzados de políticas."
+  },
+  "roleManagement": {
+    "title": "Administrar roles",
+    "description": "Cree y administre roles para el acceso de MSP y del portal del cliente",
+    "columns": {
+      "roleNameRequired": "Nombre del rol *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nombre del rol",
+      "roleNamePlaceholder": "Ingrese el nombre del rol",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Ingrese la descripción del rol"
+    },
+    "portal": {
+      "none": "Ninguno",
+      "access": "Acceso al portal",
+      "msp": "Portal de MSP",
+      "client": "Portal del cliente",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Un rol debe tener acceso al menos a un portal"
+    },
+    "actions": {
+      "addRole": "Agregar rol",
+      "createRole": "Crear rol"
+    },
+    "createDialog": {
+      "title": "Crear nuevo rol"
+    },
+    "deleteDialog": {
+      "entityFallback": "este rol"
+    },
+    "adminDeleteDisabled": "Los roles de administrador no se pueden eliminar porque son roles del sistema",
+    "errors": {
+      "createFailed": "No se pudo crear el rol",
+      "updateFailed": "No se pudo actualizar el rol",
+      "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
+      "deleteFailed": "No se pudo eliminar el rol"
+    }
+  },
   "security": {
     "title": "Configuración de seguridad",
     "tabs": {

@@ -2015,6 +2015,50 @@
       "installer": "Carregando instalador..."
     }
   },
+  "policyManagement": {
+    "title": "Gerenciamento de políticas",
+    "upgradeDescription": "O gerenciamento de políticas é um recurso Pro. Faça upgrade para acessar controles avançados de políticas."
+  },
+  "roleManagement": {
+    "title": "Gerenciar funções",
+    "description": "Crie e gerencie funções para acesso MSP e ao portal do cliente",
+    "columns": {
+      "roleNameRequired": "Nome da função *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Nome da função",
+      "roleNamePlaceholder": "Digite o nome da função",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Digite a descrição da função"
+    },
+    "portal": {
+      "none": "Nenhum",
+      "access": "Acesso ao portal",
+      "msp": "Portal MSP",
+      "client": "Portal do cliente",
+      "mspShort": "MSP",
+      "clientShort": "Cliente",
+      "required": "Uma função deve ter acesso a pelo menos um portal"
+    },
+    "actions": {
+      "addRole": "Adicionar função",
+      "createRole": "Criar função"
+    },
+    "createDialog": {
+      "title": "Criar nova função"
+    },
+    "deleteDialog": {
+      "entityFallback": "esta função"
+    },
+    "adminDeleteDisabled": "As funções de administrador não podem ser excluídas porque são funções do sistema",
+    "errors": {
+      "createFailed": "Falha ao criar a função",
+      "updateFailed": "Falha ao atualizar a função",
+      "validateDeletionFailed": "Falha ao validar a exclusão. Tente novamente.",
+      "deleteFailed": "Falha ao excluir a função"
+    }
+  },
   "security": {
     "title": "Configurações de segurança",
     "tabs": {

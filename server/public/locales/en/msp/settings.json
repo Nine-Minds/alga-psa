@@ -2015,6 +2015,50 @@
       "installer": "Loading installer..."
     }
   },
+  "policyManagement": {
+    "title": "Policy Management",
+    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls."
+  },
+  "roleManagement": {
+    "title": "Manage Roles",
+    "description": "Create and manage roles for MSP and Client Portal access",
+    "columns": {
+      "roleNameRequired": "Role Name *",
+      "portal": "Portal"
+    },
+    "fields": {
+      "roleName": "Role Name",
+      "roleNamePlaceholder": "Enter role name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter role description"
+    },
+    "portal": {
+      "none": "None",
+      "access": "Portal Access",
+      "msp": "MSP Portal",
+      "client": "Client Portal",
+      "mspShort": "MSP",
+      "clientShort": "Client",
+      "required": "A role must have access to at least one portal"
+    },
+    "actions": {
+      "addRole": "Add Role",
+      "createRole": "Create Role"
+    },
+    "createDialog": {
+      "title": "Create New Role"
+    },
+    "deleteDialog": {
+      "entityFallback": "this role"
+    },
+    "adminDeleteDisabled": "Admin roles cannot be deleted because they are system roles",
+    "errors": {
+      "createFailed": "Failed to create role",
+      "updateFailed": "Failed to update role",
+      "validateDeletionFailed": "Failed to validate deletion. Please try again.",
+      "deleteFailed": "Failed to delete role"
+    }
+  },
   "security": {
     "title": "Security Settings",
     "tabs": {
