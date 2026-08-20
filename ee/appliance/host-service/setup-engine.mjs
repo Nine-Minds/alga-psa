@@ -259,6 +259,7 @@ const OCI_MANIFEST_ACCEPT = [
 ].join(', ');
 
 const RELEASE_MANIFEST_SCHEMA = 'alga.appliance.release/v1';
+const SUPPORT_AGENT_IMAGE_RE = /^ghcr\.io\/nine-minds\/alga-appliance-support-agent@sha256:[a-f0-9]{64}$/;
 
 // ghcr and Docker-style registries hand out an anonymous pull token for public
 // repositories via the token endpoint advertised in the 401 challenge.
@@ -348,12 +349,19 @@ export function validateReleaseManifest(manifest) {
   if (!config || !String(config.repository || '').trim() || !String(config.digest || '').trim()) {
     throw new Error('Release manifest is missing config.repository/config.digest (the flux base OCI bundle).');
   }
+  const supportAgent = manifest.supportAgent === undefined || manifest.supportAgent === null
+    ? null
+    : String(manifest.supportAgent).trim();
+  if (supportAgent && !SUPPORT_AGENT_IMAGE_RE.test(supportAgent)) {
+    throw new Error('Release manifest supportAgent must be the digest-pinned Nine Minds support-agent image.');
+  }
   return {
     schema: RELEASE_MANIFEST_SCHEMA,
     version,
     valuesProfile: String(manifest.valuesProfile || 'single-node').trim() || 'single-node',
     images,
     controlPlane: manifest.controlPlane ? String(manifest.controlPlane).trim() : null,
+    supportAgent,
     config: {
       repository: String(config.repository).trim(),
       tag: config.tag ? String(config.tag).trim() : version,
@@ -987,7 +995,8 @@ export async function resolveChannelMetadata(inputs, options = {}) {
       selectedReleaseVersion: success.releaseVersion,
       registryHost,
       repository: resolved.repository,
-      manifestDigest: resolved.manifestDigest
+      manifestDigest: resolved.manifestDigest,
+      supportAgent: manifest.supportAgent || null
     },
     updatedAt: nowIso()
   }, stateFile, options);
@@ -1158,7 +1167,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     licenseSeedCmd,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
-    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=registryHost=${shellQuote(releaseSelection.registryHost || DEFAULT_REGISTRY_HOST)} --from-literal=repository=${shellQuote(releaseSelection.repository || DEFAULT_RELEASE_REPOSITORY)} --from-literal=manifestDigest=${shellQuote(releaseSelection.manifestDigest || '')} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(manifest.version)} --from-literal=registryHost=${shellQuote(releaseSelection.registryHost || DEFAULT_REGISTRY_HOST)} --from-literal=repository=${shellQuote(releaseSelection.repository || DEFAULT_RELEASE_REPOSITORY)} --from-literal=manifestDigest=${shellQuote(releaseSelection.manifestDigest || '')} --from-literal=algaCoreTag=${shellQuote(manifest.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(manifest.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(manifest.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(manifest.images?.temporalWorker || '')} --from-literal=controlPlaneTag=${shellQuote(manifest.controlPlane || '')} --from-literal=supportAgent=${shellQuote(manifest.supportAgent || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
   ];
 
   for (const command of commands) {
@@ -1303,6 +1312,7 @@ export function applyReleaseSelectionConfiguration(inputs, releaseSelection, opt
     registryHost: releaseSelection.registryHost || DEFAULT_REGISTRY_HOST,
     repository: releaseSelection.repository,
     manifestDigest: releaseSelection.manifestDigest,
+    supportAgent: releaseSelection.manifest?.supportAgent || releaseSelection.supportAgent || null,
     runtime: {
       appHostname: inputs.appHostname,
       dnsMode: inputs.dnsMode,

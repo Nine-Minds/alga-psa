@@ -19,11 +19,14 @@ import { createUpdateCoordinator } from './update-controller.mjs';
 import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS } from './update-ownership.mjs';
 import {
   collectManageStatus,
+  readLicenseStatus,
   applyLicense,
   redeemClaimCode,
   applyAppUrl,
   requestControlPlaneUpgrade,
 } from './manage-engine.mjs';
+import { SupportControlClient } from './support-control-client.mjs';
+import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -364,6 +367,29 @@ async function readJsonBody(req) {
   return Object.fromEntries(new URLSearchParams(body));
 }
 
+async function readSupportJsonBody(req) {
+  const declaredLength = Number(req.headers['content-length'] || 0);
+  if (declaredLength > 16 * 1024) throw new SupportSessionError('request_too_large', 'Support request body is too large.', 413);
+  const body = await new Promise((resolve, reject) => {
+    let data = '';
+    let bytes = 0;
+    req.on('data', (chunk) => {
+      bytes += chunk.length;
+      if (bytes > 16 * 1024) { req.resume(); reject(new SupportSessionError('request_too_large', 'Support request body is too large.', 413)); }
+      else data += chunk.toString('utf8');
+    });
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
+  });
+  try { return JSON.parse(body || '{}'); } catch { throw new SupportSessionError('invalid_json', 'Support request body must be valid JSON.', 400); }
+}
+
+function supportErrorResponse(res, error) {
+  const status = Number(error?.status) || 502;
+  const code = /^[a-z0-9_]{1,64}$/.test(String(error?.code || '')) ? error.code : 'support_unavailable';
+  jsonResponse(res, status, { code, error: error?.message || 'Remote support operation failed.' });
+}
+
 async function readPodAccessJson(req) {
   const declaredLength = Number(req.headers['content-length'] || 0);
   if (declaredLength > 16 * 1024) {
@@ -635,6 +661,15 @@ const manageKube = {
   json: (args) => runKubectlJson(args),
   run: (args, options = {}) => runQueuedKubectl(kubectlCommand(args), options),
   quote: (value) => shellQuote(value),
+  delete: async (kind, name, namespace) => runQueuedKubectl(kubectlCommand(`delete ${shellQuote(kind)} ${shellQuote(name)} -n ${shellQuote(namespace)} --ignore-not-found=true`)),
+  getPod: async (namespace, name) => {
+    const result = await runKubectlJson(`get pod ${shellQuote(name)} -n ${shellQuote(namespace)}`);
+    return result.ok ? result.value : null;
+  },
+  listSupportPods: async () => {
+    const result = await runKubectlJson("get pods -n alga-appliance-support -l alga.nineminds.com/support-session -o json");
+    return (result.ok ? result.value?.items : []).map((pod) => ({ sessionId: pod.metadata?.labels?.['alga.nineminds.com/support-session'] })).filter((item) => item.sessionId),
+  },
   apply: async (manifest) => {
     const tmp = path.join(os.tmpdir(), `alga-manage-${process.pid}-${Date.now()}.json`);
     try {
@@ -697,6 +732,54 @@ function resolveControlPlaneRef(channel) {
     });
   });
 }
+
+function readJsonFileForSupport(file) {
+  try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null; } catch { return null; }
+}
+
+function decodeSupportSecretField(value) {
+  if (typeof value !== 'string' || !value) return '';
+  try { return Buffer.from(value, 'base64').toString('utf8'); } catch { return ''; }
+}
+
+async function readSupportApplianceCredential() {
+  const result = await manageKube.json('get secret appliance-license-seed -n msp');
+  const encoded = result?.ok ? result.value?.data?.APPLIANCE_CREDENTIAL : null;
+  const credential = decodeSupportSecretField(encoded);
+  if (credential.length < 16) throw new Error('Appliance support credential is unavailable.');
+  return credential;
+}
+
+let supportControlClient;
+try {
+  supportControlClient = new SupportControlClient();
+} catch {
+  // A malformed deployment setting must disable Support Mode, not prevent the
+  // authenticated appliance management UI from starting.
+  supportControlClient = new SupportControlClient({ baseUrl: undefined });
+}
+const supportSessionManager = new SupportSessionManager({
+  central: supportControlClient,
+  kube: manageKube,
+  getLicense: () => readLicenseStatus({ kube: manageKube, namespace: 'msp', secretName: 'appliance-license-seed' }),
+  getCredential: readSupportApplianceCredential,
+  getSupportAgentImage: async () => {
+    const selection = readJsonFileForSupport(releaseSelectionFile) || {};
+    const resolved = await resolveReleaseManifestCached(selection.selectedChannel || 'stable', {
+      registryHost: selection.registryHost,
+      releaseRepository: selection.repository,
+    });
+    return resolved?.manifest?.supportAgent || null;
+  },
+  waitForReadiness: async ({ session }) => {
+    try {
+      const central = await supportControlClient.getSession(session.sessionId, session.applianceToken);
+      return { ready: central?.applianceReady === true && central?.recorderReady === true, recorderReady: central?.recorderReady === true };
+    } catch { return { ready: false, recorderReady: false }; }
+  },
+});
+
+await supportSessionManager.reconcileStartup();
 
 function validKubeName(value) {
   return typeof value === 'string' && /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value);
@@ -1187,6 +1270,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/support-sessions' || url.pathname.startsWith('/api/support-sessions/')) {
+    if (!requireAuth(req, res)) return;
+    const method = (req.method || 'GET').toUpperCase();
+    if (method !== 'GET' && !requireSameOrigin(req, res)) return;
+    const match = url.pathname.match(/^\/api\/support-sessions\/([^/]+)(?:\/(extend|revoke|recording|recording\/metadata))?$/);
+    try {
+      if (url.pathname === '/api/support-sessions' && method === 'GET') {
+        jsonResponse(res, 200, await supportSessionManager.snapshot({ refresh: true }));
+        return;
+      }
+      if (url.pathname === '/api/support-sessions' && method === 'POST') {
+        const payload = await readSupportJsonBody(req);
+        const result = await supportSessionManager.create({ durationHours: payload?.durationHours });
+        jsonResponse(res, 201, { ok: true, session: result });
+        return;
+      }
+      if (!match) { jsonResponse(res, 404, { code: 'not_found', error: 'Support route was not found.' }); return; }
+      const sessionId = match[1];
+      const action = match[2] || '';
+      if (action === 'extend' && method === 'POST') {
+        const payload = await readSupportJsonBody(req);
+        jsonResponse(res, 200, { ok: true, session: await supportSessionManager.extend(sessionId, payload?.durationHours) });
+        return;
+      }
+      if (action === 'revoke' && method === 'POST') {
+        jsonResponse(res, 200, { ok: true, session: await supportSessionManager.revoke(sessionId) });
+        return;
+      }
+      if (action === 'recording/metadata' && method === 'GET') {
+        jsonResponse(res, 200, await supportSessionManager.recordingMetadata(sessionId));
+        return;
+      }
+      if (action === 'recording' && method === 'GET') {
+        const content = supportSessionManager.readRecording(sessionId);
+        res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8', 'content-disposition': `attachment; filename="support-${sessionId}.cast"`, 'cache-control': 'no-store' });
+        res.end(content);
+        return;
+      }
+      if (action === 'recording' && method === 'DELETE') {
+        jsonResponse(res, 200, await supportSessionManager.deleteRecording(sessionId));
+        return;
+      }
+      jsonResponse(res, 405, { code: 'method_not_allowed', error: 'Method not allowed for this support route.' });
+    } catch (error) {
+      supportErrorResponse(res, error);
+    }
+    return;
+  }
+
   if (url.pathname === '/api/recover') {
     if (!requireAuth(req, res)) return;
     if ((req.method || 'GET').toUpperCase() !== 'POST') {
@@ -1236,6 +1368,15 @@ const server = http.createServer(async (req, res) => {
       };
     } catch {
       status.adminPasswordReset = { available: false, email: null };
+    }
+    try {
+      status.support = await supportSessionManager.snapshot({ refresh: true });
+    } catch {
+      status.support = {
+        capability: { eligible: false, reason: 'central_service_unavailable', connected: false, centralConfigured: supportControlClient.configured, supportAgentAvailable: false },
+        active: null,
+        history: [],
+      };
     }
     jsonResponse(res, 200, status);
     return;

@@ -1,0 +1,124 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SupportSessionError, SupportSessionManager, normalizeSupportDuration, supportCapability } from '../support-session-manager.mjs';
+import { buildSupportConnectorSecret, buildSupportPod, isValidSupportAgentImage, SUPPORT_NAMESPACE } from '../support-kubernetes.mjs';
+
+const SESSION_ID = '11111111-1111-4111-8111-111111111111';
+const IMAGE = `ghcr.io/nine-minds/alga-appliance-support-agent@sha256:${'a'.repeat(64)}`;
+
+function fakeCentral() {
+  const calls = [];
+  return {
+    configured: true,
+    calls,
+    async createSession({ durationHours }) {
+      calls.push(['create', durationHours]);
+      const activatedAt = new Date().toISOString();
+      return { sessionId: SESSION_ID, shareCode: 'ABCDE-FGHJK', connectorToken: 'connector-token-123456', applianceToken: 'appliance-token-123456', resumeGrant: 'resume-grant-123456', statusUrl: 'https://support.example/v1/appliance/sessions/1', relayUrl: 'wss://relay.example/v1/sessions/1', activatedAt, expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString() };
+    },
+    async acknowledge(id) { calls.push(['ack', id]); return { ok: true }; },
+    async abandon(id) { calls.push(['abandon', id]); return { ok: true }; },
+    async getSession() { return { active: true, state: 'ready', applianceReady: true, recorderReady: true }; },
+    async extend(id, token, durationHours) { calls.push(['extend', durationHours]); return { expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString() }; },
+    async revoke(id) { calls.push(['revoke', id]); return { ok: true }; },
+    async resume() { calls.push(['resume']); return { connectorToken: 'connector-token-123456' }; },
+  };
+}
+
+function fakeKube() {
+  const calls = [];
+  return {
+    calls,
+    async apply(value) { calls.push(['apply', value]); return { ok: true }; },
+    async delete(kind, name, namespace) { calls.push(['delete', kind, name, namespace]); return { ok: true }; },
+    async getPod() { return { metadata: { name: `support-${SESSION_ID}` } }; },
+    async listSupportPods() { return []; },
+  };
+}
+
+function manager(tmp, overrides = {}) {
+  return new SupportSessionManager({
+    stateDir: path.join(tmp, 'support-sessions'),
+    central: fakeCentral(),
+    kube: fakeKube(),
+    getLicense: async () => ({ edition: 'pro', status: 'active', source: 'live' }),
+    getCredential: async () => 'long-lived-appliance-credential',
+    getSupportAgentImage: async () => IMAGE,
+    waitForReadiness: async () => ({ ready: true, recorderReady: true }),
+    ...overrides,
+  });
+}
+
+test('capability distinguishes Pro connectivity, central readiness, and immutable image', () => {
+  assert.equal(supportCapability({ license: { edition: 'essentials' }, centralConfigured: true, supportAgentImage: IMAGE }).reason, 'pro_required');
+  assert.equal(supportCapability({ license: { edition: 'pro', status: 'active', source: 'seed-fallback' }, centralConfigured: true, supportAgentImage: IMAGE }).reason, 'connected_appliance_required');
+  assert.equal(supportCapability({ license: { edition: 'pro', status: 'active', source: 'live' }, centralConfigured: false, supportAgentImage: IMAGE }).reason, 'central_service_unavailable');
+  assert.equal(supportCapability({ license: { edition: 'pro', status: 'active', source: 'live' }, centralConfigured: true, supportAgentImage: null }).reason, 'control_plane_update_required');
+  assert.equal(supportCapability({ license: { edition: 'pro', status: 'active', source: 'live' }, centralConfigured: true, supportAgentImage: IMAGE }).eligible, true);
+});
+
+test('duration validation and pod contract are strict', () => {
+  assert.equal(normalizeSupportDuration('4'), 4);
+  assert.throws(() => normalizeSupportDuration(2), (error) => error instanceof SupportSessionError && error.code === 'invalid_duration');
+  assert.equal(isValidSupportAgentImage(IMAGE), true);
+  assert.equal(isValidSupportAgentImage('ghcr.io/nine-minds/alga-appliance-support-agent:latest'), false);
+  assert.equal(isValidSupportAgentImage(`ghcr.io/nine-minds/alga-appliance-support-agent@sha256:${'a'.repeat(63)}`), false);
+  const session = { sessionId: SESSION_ID, relayUrl: 'wss://relay.example', expiresAt: new Date(Date.now() + 3600000).toISOString() };
+  const secret = buildSupportConnectorSecret({ sessionId: SESSION_ID, connectorToken: 'connector-token-123456' });
+  const pod = buildSupportPod({ session, supportAgentImage: IMAGE });
+  assert.equal(secret.metadata.namespace, SUPPORT_NAMESPACE);
+  assert.equal(pod.spec.automountServiceAccountToken, false);
+  assert.equal(pod.spec.hostPID, true);
+  assert.equal(pod.spec.containers[0].securityContext.privileged, true);
+  assert.equal(pod.spec.containers[0].imagePullPolicy, 'IfNotPresent');
+  assert.equal(pod.spec.containers[0].env.some((entry) => entry.name.includes('CREDENTIAL')), false);
+  assert.equal(pod.spec.containers[0].ports, undefined);
+  assert.equal(pod.spec.volumes.find((volume) => volume.name === 'reconnect-token').emptyDir.medium, 'Memory');
+});
+
+test('create is durable, readiness-gated, one-active, and revoke wins locally', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  const service = manager(tmp, { central, kube });
+  const created = await service.create({ durationHours: 1 });
+  assert.equal(created.state, 'ready');
+  assert.equal(created.shareCode, 'ABCDE-FGHJK');
+  const stored = JSON.parse(fs.readFileSync(path.join(tmp, 'support-sessions', 'active.json'), 'utf8'));
+  assert.equal(stored.applianceToken, 'appliance-token-123456');
+  assert.equal(stored.shareCode, 'ABCDE-FGHJK');
+  assert.equal(stored.credential, undefined);
+  await assert.rejects(() => service.create({ durationHours: 4 }), (error) => error.code === 'already_active');
+  const extended = await service.extend(SESSION_ID, 4);
+  assert.equal(extended.durationHours, 4);
+  const closed = await service.revoke(SESSION_ID);
+  assert.equal(closed.state, 'revoked');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'revoked', `${SESSION_ID}.json`)), true);
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+  assert.equal(kube.calls.some((call) => call[0] === 'delete' && call[1] === 'pod'), true);
+});
+
+test('provisioning failure abandons central session and removes local authority', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-failure-'));
+  const central = fakeCentral();
+  const kube = fakeKube();
+  const service = manager(tmp, { central, kube, waitForReadiness: async () => ({ ready: false, recorderReady: false }) });
+  service._provision = async () => { throw new SupportSessionError('provisioning_timeout', 'not ready', 504); };
+  await assert.rejects(() => service.create({ durationHours: 4 }), (error) => error.code === 'provisioning_timeout');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+  assert.equal(central.calls.some((call) => call[0] === 'abandon'), true);
+});
+
+test('startup reconciliation expires stale state and prunes only closed recordings', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-reconcile-'));
+  let now = Date.now();
+  const service = manager(tmp, { now: () => now });
+  await service.create({ durationHours: 1 });
+  now += 2 * 60 * 60 * 1000;
+  const result = await service.reconcileStartup();
+  assert.equal(result.state, 'expired');
+  assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
+});

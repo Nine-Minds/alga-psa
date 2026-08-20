@@ -4,6 +4,8 @@ This directory owns the AlgaPSA self-hosted appliance runtime assets.
 
 Supported customer appliance path for v1 is Ubuntu Server 24.04 LTS with the host setup/status service on port `8080`. The older local release tree and script-driven bootstrap/upgrade process have been removed from this repository.
 
+Remote support behavior and its fail-closed external dependencies are documented in [docs/appliance/remote-support.md](../docs/appliance/remote-support.md).
+
 For user-facing appliance installation and operation guides, start with:
 
 - `ee/docs/appliance/README.md`
