@@ -1265,6 +1265,17 @@
     "unnamedUser": "Użytkownik bez nazwy",
     "unnamedTeam": "Zespół bez nazwy"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Wybierz rodzaj usługi...",
+    "newNamePlaceholder": "Nazwa nowego rodzaju usługi...",
+    "addNew": "Dodaj nowy rodzaj usługi",
+    "deleteTitle": "Usuń rodzaj usługi",
+    "deleteConfirm": "Czy na pewno chcesz usunąć ten rodzaj usługi? Tej operacji nie można cofnąć.",
+    "errors": {
+      "delete": "Nie można usunąć tego rodzaju usługi. Mogą go używać istniejące usługi.",
+      "create": "Nie udało się utworzyć rodzaju usługi. Spróbuj ponownie."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filtruj według tagów...",
     "filter": "Filtruj",

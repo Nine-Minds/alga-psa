@@ -127,6 +127,17 @@
     "unnamedUser": "Unnamed User",
     "unnamedTeam": "Unnamed Team"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Select service type...",
+    "newNamePlaceholder": "New service type name...",
+    "addNew": "Add new service type",
+    "deleteTitle": "Delete Service Type",
+    "deleteConfirm": "Are you sure you want to delete this service type? This cannot be undone.",
+    "errors": {
+      "delete": "Cannot delete this service type. It may be in use by existing services.",
+      "create": "Failed to create service type. Please try again."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filter by tags...",
     "filter": "Filter",

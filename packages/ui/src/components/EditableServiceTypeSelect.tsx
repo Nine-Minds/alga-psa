@@ -8,6 +8,7 @@ import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import * as Select from '@radix-ui/react-select';
 import { ChevronDown } from 'lucide-react';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { useTranslation } from '../lib/i18n/client';
 
 interface ServiceType {
   id: string;
@@ -36,10 +37,12 @@ export function EditableServiceTypeSelect({
   onUpdateType,
   onDeleteType,
   className = '',
-  placeholder = 'Select service type...',
+  placeholder,
   disabled = false,
   label,
 }: EditableServiceTypeSelectProps) {
+  const { t } = useTranslation('common');
+  const resolvedPlaceholder = placeholder ?? t('serviceTypeSelect.placeholder');
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -108,7 +111,7 @@ export function EditableServiceTypeSelect({
       setPendingDeleteId(null);
     } catch (error) {
       console.error('Error deleting service type:', error);
-      setDeleteError('Cannot delete this service type. It may be in use by existing services.');
+      setDeleteError(t('serviceTypeSelect.errors.delete'));
     } finally {
       setIsDeleting(false);
     }
@@ -137,7 +140,7 @@ export function EditableServiceTypeSelect({
       setNewTypeName('');
     } catch (error) {
       console.error('Error creating service type:', error);
-      setCreateError('Failed to create service type. Please try again.');
+      setCreateError(t('serviceTypeSelect.errors.create'));
     } finally {
       setIsSaving(false);
     }
@@ -179,8 +182,8 @@ export function EditableServiceTypeSelect({
           className="inline-flex items-center justify-between w-full px-3 py-2 text-sm bg-card border border-[rgb(var(--color-border-300))] rounded-md shadow-sm hover:bg-muted focus:outline-none disabled:bg-muted disabled:cursor-not-allowed"
           disabled={disabled}
         >
-          <Select.Value placeholder={placeholder}>
-            {selectedType?.name || placeholder}
+          <Select.Value placeholder={resolvedPlaceholder}>
+            {selectedType?.name || resolvedPlaceholder}
           </Select.Value>
           <Select.Icon>
             <ChevronDown className="h-4 w-4" />
@@ -292,7 +295,7 @@ export function EditableServiceTypeSelect({
                     }}
                     onKeyDown={(e) => handleKeyDown(e, 'add')}
                     className="flex-1 h-8 text-sm"
-                    placeholder="New service type name..."
+                    placeholder={t('serviceTypeSelect.newNamePlaceholder')}
                     autoFocus
                     disabled={isSaving}
                   />
@@ -332,7 +335,7 @@ export function EditableServiceTypeSelect({
                   disabled={isSaving}
                 >
                   <Plus className="h-4 w-4" />
-                  Add new service type
+                  {t('serviceTypeSelect.addNew')}
                 </button>
               )}
             </div>
@@ -345,13 +348,10 @@ export function EditableServiceTypeSelect({
         isOpen={pendingDeleteId !== null}
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        title="Delete Service Type"
-        message={
-          deleteError ??
-          'Are you sure you want to delete this service type? This cannot be undone.'
-        }
-        confirmLabel={deleteError ? 'Close' : 'Delete'}
-        cancelLabel="Cancel"
+        title={t('serviceTypeSelect.deleteTitle')}
+        message={deleteError ?? t('serviceTypeSelect.deleteConfirm')}
+        confirmLabel={deleteError ? t('actions.close') : t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
         isConfirming={isDeleting}
       />
     </div>

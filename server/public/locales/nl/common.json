@@ -1235,6 +1235,17 @@
     "unnamedUser": "Naamloze gebruiker",
     "unnamedTeam": "Naamloos team"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Servicetype selecteren...",
+    "newNamePlaceholder": "Naam van het nieuwe servicetype...",
+    "addNew": "Nieuw servicetype toevoegen",
+    "deleteTitle": "Servicetype verwijderen",
+    "deleteConfirm": "Weet u zeker dat u dit servicetype wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "errors": {
+      "delete": "Dit servicetype kan niet worden verwijderd. Het wordt mogelijk gebruikt door bestaande services.",
+      "create": "Het servicetype kon niet worden gemaakt. Probeer het opnieuw."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filter op tags...",
     "filter": "Filteren",

@@ -1235,6 +1235,17 @@
     "unnamedUser": "Unbenannter Benutzer",
     "unnamedTeam": "Unbenanntes Team"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Servicetyp auswählen ...",
+    "newNamePlaceholder": "Name des neuen Servicetyps ...",
+    "addNew": "Neuen Servicetyp hinzufügen",
+    "deleteTitle": "Servicetyp löschen",
+    "deleteConfirm": "Möchten Sie diesen Servicetyp wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    "errors": {
+      "delete": "Dieser Servicetyp kann nicht gelöscht werden. Möglicherweise wird er von bestehenden Diensten verwendet.",
+      "create": "Der Servicetyp konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+    }
+  },
   "tagFilter": {
     "placeholder": "Nach Tags filtern...",
     "filter": "Filter",

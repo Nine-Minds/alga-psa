@@ -127,6 +127,17 @@
     "unnamedUser": "11111",
     "unnamedTeam": "11111"
   },
+  "serviceTypeSelect": {
+    "placeholder": "11111",
+    "newNamePlaceholder": "11111",
+    "addNew": "11111",
+    "deleteTitle": "11111",
+    "deleteConfirm": "11111",
+    "errors": {
+      "delete": "11111",
+      "create": "11111"
+    }
+  },
   "tagFilter": {
     "placeholder": "11111",
     "filter": "11111",

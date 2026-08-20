@@ -83,7 +83,6 @@
     "packages/ui/src/components/Dialog.tsx",
     "packages/ui/src/components/Drawer.tsx",
     "packages/ui/src/components/EditableField.tsx",
-    "packages/ui/src/components/EditableServiceTypeSelect.tsx",
     "packages/ui/src/components/EditableText.tsx",
     "packages/ui/src/components/EntityAvatar.tsx",
     "packages/ui/src/components/GenericDialog.tsx",

@@ -127,6 +127,17 @@
     "unnamedUser": "Usuário sem nome",
     "unnamedTeam": "Equipe sem nome"
   },
+  "serviceTypeSelect": {
+    "placeholder": "Selecione um tipo de serviço...",
+    "newNamePlaceholder": "Nome do novo tipo de serviço...",
+    "addNew": "Adicionar novo tipo de serviço",
+    "deleteTitle": "Excluir tipo de serviço",
+    "deleteConfirm": "Tem certeza de que deseja excluir este tipo de serviço? Esta ação não pode ser desfeita.",
+    "errors": {
+      "delete": "Não é possível excluir este tipo de serviço. Ele pode estar em uso por serviços existentes.",
+      "create": "Não foi possível criar o tipo de serviço. Tente novamente."
+    }
+  },
   "tagFilter": {
     "placeholder": "Filtrar por tags...",
     "filter": "Filtro",
