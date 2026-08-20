@@ -29,7 +29,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
-import { FieldWarnings } from '@alga-psa/ui/components/Input';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
@@ -948,15 +948,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     extension={locationData.phone_extension || ''}
                     onExtensionChange={(value) => handleLocationChange('phone_extension', value)}
                     extensionLabel={t('quickAddClient.extension', { defaultValue: 'Extension' })}
-                    warnings={fieldWarnings.location_phone}
                     countryCode={locationData.country_code}
-                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
-                    countries={countries}
-                    onCountryChange={(countryCode) => handleCountryChange(countryCode, countries.find(c => c.code === countryCode)?.name || '')}
                     allowExtensions={true}
                     disabled={isSubmitting}
                     data-automation-id="client-location-phone"
                   />
+                  <FieldWarnings warnings={fieldWarnings.location_phone ?? []} />
                   {fieldErrors.location_phone && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.location_phone}</p>
                   )}

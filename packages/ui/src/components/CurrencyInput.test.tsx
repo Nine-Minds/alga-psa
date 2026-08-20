@@ -13,10 +13,6 @@ let mockLocale: string | null = 'en';
 
 vi.mock('../lib/i18n/client', () => ({
   useOptionalI18n: () => (mockLocale ? { locale: mockLocale } : null),
-  // Input renders the field-warning slot, which labels its dismiss control.
-  useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? '',
-  }),
 }));
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({

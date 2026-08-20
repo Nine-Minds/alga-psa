@@ -321,7 +321,7 @@ export function validatePhoneNumberField(phone: string): FieldValidation {
   return buildFieldValidation(
     parsed.success ? parsed.data : trimmed,
     error ? message(`${K}.phone.structural`, error) : null,
-    advisePhoneNumber(trimmed)
+    error ? [] : advisePhoneNumber(trimmed)
   );
 }
 

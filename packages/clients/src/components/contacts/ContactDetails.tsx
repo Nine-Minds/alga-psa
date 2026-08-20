@@ -14,6 +14,7 @@ import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/c
 import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -141,12 +142,12 @@ const TextDetailItem: React.FC<{
         value={localValue}
         onChange={handleChange}
         onBlur={handleBlur}
-        warnings={warnings}
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
           error ? 'border-red-500' : 'border-gray-200'
         }`}
         data-automation-id={automationId}
       />
+      <FieldWarnings warnings={warnings} />
       {error && (
         <div className="text-red-500 text-xs mt-1">{error}</div>
       )}

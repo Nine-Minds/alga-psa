@@ -3,6 +3,7 @@
 // Onboarding step: initial MSP + client identity capture.
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -454,8 +455,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           required
           disabled
           className={fieldErrors.email ? 'border-red-500' : ''}
-          warnings={fieldWarnings.email}
         />
+        <FieldWarnings warnings={fieldWarnings.email ?? []} />
         {fieldErrors.email && (
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
         )}

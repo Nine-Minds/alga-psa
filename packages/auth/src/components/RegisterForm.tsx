@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
+import { Button, FieldWarnings, Input, Label, Alert, AlertDescription } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
 import { usePostHog } from 'posthog-js/react';
 import { translateFieldValidation, validateEmailAddressField, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
@@ -211,7 +211,6 @@ export default function RegisterForm() {
               });
             }}
             disabled={isLoading}
-            warnings={fieldWarnings.email}
             className={`mt-1 ${
               hasAttemptedSubmit && (!email.trim() || emailStatus === 'invalid') ? 'border-red-500' : ''
             }`}
@@ -224,6 +223,7 @@ export default function RegisterForm() {
             </div>
           )}
         </div>
+        <FieldWarnings warnings={fieldWarnings.email ?? []} />
         <div id="email-status" className="text-sm mt-1">
           {emailStatus === 'checking' && (
             <p className="text-gray-500">Checking email...</p>

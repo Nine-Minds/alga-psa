@@ -9,6 +9,7 @@ import { translateFieldValidation, validateAnnualRevenue, validateClientNameFiel
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -120,13 +121,13 @@ const TextDetailItem: React.FC<{
           }
         }}
         onBlur={handleBlur}
-        warnings={warnings.length > 0 ? warnings : externalWarnings}
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
           error
             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
             : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
         }`}
       />
+      <FieldWarnings warnings={warnings.length > 0 ? warnings : externalWarnings ?? []} />
       {error && (
         <Text size="1" className="text-red-600 mt-1">{error}</Text>
       )}

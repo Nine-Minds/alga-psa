@@ -71,6 +71,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -796,8 +797,8 @@ const fetchContacts = async (): Promise<void> => {
                   validateField('email', newUser.email);
                 }}
                 className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
-                warnings={fieldWarnings.email}
               />
+              <FieldWarnings warnings={fieldWarnings.email ?? []} />
               {fieldErrors.email.length > 0 && (
                 <div className="text-sm text-destructive mt-1">
                   {fieldErrors.email.map((error, idx) => (

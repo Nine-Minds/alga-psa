@@ -67,6 +67,9 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/FieldWarnings', () => ({
   FieldWarnings: ({ warnings }: { warnings: string[] }) =>
     warnings.length > 0 ? <div data-testid="field-warnings">{warnings.join('|')}</div> : null,
 }));

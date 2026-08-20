@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Label } from '@alga-psa/ui/components/Label';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
@@ -465,25 +466,27 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
-        <PhoneInput
-          id={`${id}-phone-${index}`}
-          label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
-            defaultValue: 'Phone',
-          })}
-          value={row.phone_number ?? ''}
-          onChange={(value) => onChange({ phone_number: value })}
-          extension={row.extension ?? ''}
-          onExtensionChange={(value) => onChange({ extension: value })}
-          extensionLabel={t('contactPhoneNumbersEditor.fields.extension', {
-            defaultValue: 'Extension',
-          })}
-          warnings={phoneWarnings}
-          onBlur={onBlur}
-          allowExtensions={true}
-          disabled={disabled}
-          className="w-full"
-          data-automation-id={`${id}-phone-${index}`}
-        />
+        <div>
+          <PhoneInput
+            id={`${id}-phone-${index}`}
+            label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
+              defaultValue: 'Phone',
+            })}
+            value={row.phone_number ?? ''}
+            onChange={(value) => onChange({ phone_number: value })}
+            extension={row.extension ?? ''}
+            onExtensionChange={(value) => onChange({ extension: value })}
+            extensionLabel={t('contactPhoneNumbersEditor.fields.extension', {
+              defaultValue: 'Extension',
+            })}
+            onBlur={onBlur}
+            allowExtensions={true}
+            disabled={disabled}
+            className="w-full"
+            data-automation-id={`${id}-phone-${index}`}
+          />
+          <FieldWarnings warnings={phoneWarnings} />
+        </div>
         <div className="space-y-1">
           <Label
             htmlFor={`${id}-type-${index}`}

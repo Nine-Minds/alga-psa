@@ -962,16 +962,13 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                   onExtensionChange={(value) => setFormData(prev => ({ ...prev, phone_extension: value }))}
                   extensionLabel={t('clients.locations.form.extension', 'Extension')}
                   countryCode={formData.country_code}
-                  phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
-                  countries={countries}
-                  onCountryChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
                   allowExtensions={true}
                   data-automation-id="phone-input"
                 />
               </div>
               
-              <div {...emailFieldProps}>
-                <Label htmlFor="email-input">{t('clients.locations.form.email', 'Email')}</Label>
+              <div {...emailFieldProps} className="space-y-1">
+                <Label htmlFor="email-input" className="block">{t('clients.locations.form.email', 'Email')}</Label>
                 <Input
                   id="email-input"
                   type="email"

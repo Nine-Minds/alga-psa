@@ -24,7 +24,7 @@ import {
   translateFieldValidation,
   type FieldValidation
 } from '@alga-psa/validation';
-import { FieldWarnings } from '@alga-psa/ui/components/Input';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';

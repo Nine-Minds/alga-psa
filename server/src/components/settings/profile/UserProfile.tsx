@@ -6,11 +6,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
@@ -108,8 +108,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
   // Use SWR hook for avatar - automatically syncs with Header
   const { avatarUrl } = useUserAvatar(user?.user_id, user?.tenant);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [countries, setCountries] = useState<ICountry[]>([]);
-  const [countryCode, setCountryCode] = useState('US');
   const [notificationView, setNotificationView] = useState<NotificationView>('internal');
   const [language, setLanguage] = useState<SupportedLocale | null>(null);
   const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale | undefined>(undefined);
@@ -170,10 +168,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setPhone(currentUser.phone || '');
         setPhoneExtension(currentUser.phone_extension || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-        // Load countries for phone input
-        const countriesData = await getAllCountries();
-        setCountries(countriesData);
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -458,8 +452,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
                 }}
                 className={fieldErrors.email ? 'border-destructive' : ''}
-                warnings={fieldWarnings.email}
               />
+              <FieldWarnings warnings={fieldWarnings.email ?? []} />
               {fieldErrors.email && (
                 <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>
               )}
@@ -472,7 +466,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 extension={phoneExtension}
                 onExtensionChange={setPhoneExtension}
                 extensionLabel={t('profile.fields.phoneExtension.label')}
-                warnings={fieldWarnings.phone}
                 onChange={(value) => {
                   setPhone(value);
                   // Clear error when user starts typing
@@ -487,13 +480,11 @@ export default function UserProfile({ userId }: UserProfileProps) {
                     setFieldWarnings(prev => ({ ...prev, phone: result.warnings }));
                   }
                 }}
-                countryCode={countryCode}
-                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
-                countries={countries}
-                onCountryChange={setCountryCode}
+                countryCode="US"
                 allowExtensions={true}
                 data-automation-id="profile-phone"
               />
+              <FieldWarnings warnings={fieldWarnings.phone ?? []} />
               {fieldErrors.phone && (
                 <p className="text-sm text-destructive mt-1">{fieldErrors.phone}</p>
               )}

@@ -226,6 +226,13 @@ describe('Client Form Validation', () => {
       );
     });
 
+    it('does not show plausibility warnings alongside a structural error', () => {
+      const result = validatePhoneNumberField('+111111111111111');
+
+      expect(result.error).toBe('Please enter a valid phone number');
+      expect(result.warnings).toEqual([]);
+    });
+
     it('normalizes to E.164 and splits a packed extension', () => {
       const result = validatePhoneNumberField('+1 (555) 234-5678 ext. 42');
       expect(result.value).toBe('+15552345678');
