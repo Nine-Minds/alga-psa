@@ -779,6 +779,8 @@
         "sections": {
           "general": "11111",
           "generalHelp": "11111",
+          "appearance": "11111",
+          "appearanceHelp": "11111",
           "assignment": "11111",
           "assignmentHelp": "11111",
           "inbound": "11111",
@@ -799,6 +801,22 @@
         "allSaved": "11111",
         "reopenBadge": "11111",
         "required": "11111"
+      },
+      "appearance": {
+        "pinLabel": "11111",
+        "pinHelp": "11111",
+        "savedView": "11111",
+        "inheritsTenant": "11111",
+        "openBoard": "11111",
+        "resetToTenant": "11111",
+        "arrangeNote": "11111",
+        "preview": "11111",
+        "summary": {
+          "openOnly": "11111",
+          "columns": "11111 {{columns}} 11111",
+          "density": "11111 {{level}} 11111",
+          "sortedBy": "11111 {{field}} 11111"
+        }
       },
       "empty": "11111",
       "searchPlaceholder": "11111"

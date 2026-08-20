@@ -497,7 +497,31 @@
     },
     "exportSelectedAction": "Esporta selezionati ({{count}})",
     "exportAction": "Esporta CSV",
-    "importAction": "Importa CSV"
+    "importAction": "Importa CSV",
+    "boardTabs": {
+      "all": "Tutti i ticket"
+    },
+    "boardHeader": {
+      "open": "Aperti",
+      "overdue": "Scaduti",
+      "slaBreach": "Mancato rispetto SLA",
+      "unassigned": "Non assegnato",
+      "managedBy": "Gestita da",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Visualizzazione",
+      "columns": "Colonne",
+      "density": "Densità",
+      "saveBoardDefault": "Salva come visualizzazione predefinita di questa bacheca",
+      "saveTenantDefault": "Salva come visualizzazione predefinita per tutti",
+      "resetToTenant": "Reimposta al valore predefinito del tenant",
+      "unsavedChanges": "Questa visualizzazione differisce dal valore predefinito salvato",
+      "saved": "Visualizzazione predefinita salvata",
+      "saveFailed": "Impossibile salvare la visualizzazione predefinita",
+      "reset": "Reimposta al valore predefinito del tenant",
+      "resetFailed": "Impossibile reimpostare la visualizzazione"
+    }
   },
   "bulk": {
     "bundleTickets": "Raggruppa ticket",

@@ -779,6 +779,8 @@
         "sections": {
           "general": "Allgemein",
           "generalHelp": "Name, Beschreibung, Sichtbarkeit und Standard",
+          "appearance": "Darstellung & Standardwerte",
+          "appearanceHelp": "Tab-Anheftung und die Standard-Listenansicht des Boards",
           "assignment": "Zuweisung & SLA",
           "assignmentHelp": "Standard-Routing, SLA und Board-Manager",
           "inbound": "E-Mail & eingehende Antworten",
@@ -799,6 +801,22 @@
         "allSaved": "Alle Änderungen gespeichert",
         "reopenBadge": "erneut öffnen",
         "required": "Erforderlich"
+      },
+      "appearance": {
+        "pinLabel": "An den Ticket-Bildschirm anheften",
+        "pinHelp": "Angeheftete Boards erhalten einen festen Tab auf dem Ticket-Bildschirm. Nicht angeheftete Boards bleiben über „Alle Tickets“ und den Board-Filter erreichbar.",
+        "savedView": "Gespeicherte Ansicht",
+        "inheritsTenant": "Übernimmt die Mandantenstandards",
+        "openBoard": "Dieses Board öffnen",
+        "resetToTenant": "Auf Mandantenstandard zurücksetzen",
+        "arrangeNote": "Richten Sie die Ansicht dieses Boards direkt auf dem Board ein und speichern Sie sie anschließend über das Menü „Ansicht“.",
+        "preview": "Vorschau",
+        "summary": {
+          "openOnly": "Nur offene",
+          "columns": "{{columns}} Spalten",
+          "density": "Dichte {{level}}",
+          "sortedBy": "sortiert nach {{field}}"
+        }
       },
       "empty": "Keine Boards gefunden.",
       "searchPlaceholder": "Boards suchen…"

@@ -497,7 +497,31 @@
     },
     "exportSelectedAction": "Exportação selecionada ({{count}})",
     "exportAction": "Exportar CSV",
-    "importAction": "Importar CSV"
+    "importAction": "Importar CSV",
+    "boardTabs": {
+      "all": "Todos os tickets"
+    },
+    "boardHeader": {
+      "open": "Abertos",
+      "overdue": "Atrasados",
+      "slaBreach": "Descumprimento de SLA",
+      "unassigned": "Não atribuído",
+      "managedBy": "Gerenciado por",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Exibição",
+      "columns": "Colunas",
+      "density": "Densidade",
+      "saveBoardDefault": "Salvar como visualização padrão deste quadro",
+      "saveTenantDefault": "Salvar como visualização padrão para todos",
+      "resetToTenant": "Redefinir para o padrão do locatário",
+      "unsavedChanges": "Esta visualização difere do padrão salvo",
+      "saved": "Visualização padrão salva",
+      "saveFailed": "Falha ao salvar a visualização padrão",
+      "reset": "Redefinir para o padrão do locatário",
+      "resetFailed": "Falha ao redefinir a visualização"
+    }
   },
   "bulk": {
     "bundleTickets": "Pacote de tickets",

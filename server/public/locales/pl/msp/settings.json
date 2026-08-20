@@ -783,6 +783,8 @@
         "sections": {
           "general": "Ogólne",
           "generalHelp": "Nazwa, opis, widoczność i domyślność",
+          "appearance": "Wygląd i wartości domyślne",
+          "appearanceHelp": "Przypinanie karty i domyślny widok listy tablicy",
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
           "inbound": "E-mail i odpowiedzi przychodzące",
@@ -803,6 +805,22 @@
         "allSaved": "Wszystkie zmiany zapisane",
         "reopenBadge": "otwórz ponownie",
         "required": "Wymagane"
+      },
+      "appearance": {
+        "pinLabel": "Przypnij do ekranu zgłoszeń",
+        "pinHelp": "Przypięte tablice mają stałą kartę na ekranie zgłoszeń. Nieprzypięte tablice pozostają dostępne z widoku \"Wszystkie zgłoszenia\" oraz z filtra tablic.",
+        "savedView": "Zapisany widok",
+        "inheritsTenant": "Dziedziczy domyślne ustawienia organizacji",
+        "openBoard": "Otwórz tę tablicę",
+        "resetToTenant": "Przywróć domyślny widok organizacji",
+        "arrangeNote": "Ustaw widok tej tablicy bezpośrednio na tablicy, a następnie zapisz go w menu \"Widok\".",
+        "preview": "Podgląd",
+        "summary": {
+          "openOnly": "Tylko otwarte",
+          "columns": "{{columns}} kolumn",
+          "density": "gęstość {{level}}",
+          "sortedBy": "sortowanie według {{field}}"
+        }
       },
       "empty": "Nie znaleziono tablic.",
       "searchPlaceholder": "Szukaj tablic…"

@@ -779,6 +779,8 @@
         "sections": {
           "general": "General",
           "generalHelp": "Nombre, descripción, visibilidad y predeterminado",
+          "appearance": "Apariencia y valores predeterminados",
+          "appearanceHelp": "Anclaje de pestaña y vista de lista predeterminada del tablero",
           "assignment": "Asignación y SLA",
           "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
           "inbound": "Correo y respuestas entrantes",
@@ -799,6 +801,22 @@
         "allSaved": "Todos los cambios guardados",
         "reopenBadge": "reabrir",
         "required": "Obligatorio"
+      },
+      "appearance": {
+        "pinLabel": "Anclar a la pantalla de tickets",
+        "pinHelp": "Los tableros anclados tienen una pestaña fija en la pantalla de tickets. Los tableros sin anclar siguen siendo accesibles desde \"Todos los tickets\" y el filtro de tableros.",
+        "savedView": "Vista guardada",
+        "inheritsTenant": "Hereda los valores predeterminados del inquilino",
+        "openBoard": "Abrir este tablero",
+        "resetToTenant": "Restablecer al valor predeterminado del inquilino",
+        "arrangeNote": "Organice la vista de este tablero en el propio tablero y luego guárdela desde el menú \"Vista\".",
+        "preview": "Vista previa",
+        "summary": {
+          "openOnly": "Solo abiertos",
+          "columns": "{{columns}} columnas",
+          "density": "densidad {{level}}",
+          "sortedBy": "ordenado por {{field}}"
+        }
       },
       "empty": "No se encontraron tableros.",
       "searchPlaceholder": "Buscar tableros…"

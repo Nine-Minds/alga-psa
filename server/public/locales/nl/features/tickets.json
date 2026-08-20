@@ -497,7 +497,31 @@
     },
     "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
     "exportAction": "CSV exporteren",
-    "importAction": "CSV importeren"
+    "importAction": "CSV importeren",
+    "boardTabs": {
+      "all": "Alle tickets"
+    },
+    "boardHeader": {
+      "open": "Openstaand",
+      "overdue": "Te laat",
+      "slaBreach": "SLA-overschrijding",
+      "unassigned": "Niet toegewezen",
+      "managedBy": "Beheerd door",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Weergave",
+      "columns": "Kolommen",
+      "density": "Dichtheid",
+      "saveBoardDefault": "Opslaan als standaardweergave van dit bord",
+      "saveTenantDefault": "Opslaan als standaardweergave voor iedereen",
+      "resetToTenant": "Terugzetten naar de tenantstandaard",
+      "unsavedChanges": "Deze weergave wijkt af van de opgeslagen standaard",
+      "saved": "Standaardweergave opgeslagen",
+      "saveFailed": "Opslaan van de standaardweergave is mislukt",
+      "reset": "Terugzetten naar de tenantstandaard",
+      "resetFailed": "Terugzetten van de weergave is mislukt"
+    }
   },
   "bulk": {
     "bundleTickets": "Tickets bundelen",

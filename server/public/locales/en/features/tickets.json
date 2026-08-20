@@ -505,7 +505,31 @@
     },
     "exportSelectedAction": "Export selected ({{count}})",
     "exportAction": "Export CSV",
-    "importAction": "Import CSV"
+    "importAction": "Import CSV",
+    "boardTabs": {
+      "all": "All tickets"
+    },
+    "boardHeader": {
+      "open": "Open",
+      "overdue": "Overdue",
+      "slaBreach": "SLA breach",
+      "unassigned": "Unassigned",
+      "managedBy": "Managed by",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "View",
+      "columns": "Columns",
+      "density": "Density",
+      "saveBoardDefault": "Save as this board's default view",
+      "saveTenantDefault": "Save as the default view for everyone",
+      "resetToTenant": "Reset to tenant default",
+      "unsavedChanges": "This view differs from the saved default",
+      "saved": "Default view saved",
+      "saveFailed": "Failed to save the default view",
+      "reset": "Reset to tenant default",
+      "resetFailed": "Failed to reset the view"
+    }
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",
