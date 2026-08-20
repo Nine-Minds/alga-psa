@@ -304,7 +304,9 @@ const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   useActionPolling(fetchMetrics, { intervalMs: 15000 });
 
   const activeJobs = metrics?.active ?? 0;
-  const failedJobs = metrics?.failed ?? 0;
+  // The dot is labelled "Failed last 24h", so it must use the time-bounded
+  // count — the all-time `failed` would keep it amber forever.
+  const failedJobs = metrics?.failedLast24h ?? 0;
   const hasAttention = failedJobs > 0;
 
   return (
