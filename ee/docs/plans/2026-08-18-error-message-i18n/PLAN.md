@@ -1,7 +1,9 @@
 # Error-message i18n — remediation plan
 
-Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19.
-Categories 1, 2, 3, 4 and 6 are done; category 5 is a 143-file ratchet.
+Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19, and again
+2026-08-20 after a browser walk found the category the first inventory missed.
+Categories 1, 2, 3, 4 and 6 are done; category 5 is a 143-file ratchet; **category 7 — the
+`{ success: false, error }` channel — is newly opened, mechanism landed, one path migrated.**
 
 ## Context
 
@@ -460,6 +462,56 @@ Closes the gaps left by the current diff. Half a day.
   `result.error || t('…')`, which is a category-4 site, not a category-3 one. The only `Record<string, string>`
   left nearby is `TeamsIntegrationSettings`'s wizard-step map, and that is keyed by step id, not by prose.
 
+## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
+
+**Found 2026-08-20 by a browser walk, not by the inventory.** On a German `/msp/profile`, submitting two
+matching strong new passwords with the wrong current password rendered "Current password is incorrect" in
+English while the weak-password check one line above it rendered
+"Das Passwort erfüllt nicht alle Anforderungen". Both halves of the form were "done": category 6 had wired
+the client-side validator, category 1 had wired the boundary. The error still came out English because
+`changeOwnPassword` returns `{ success: false, error }`, and `localizeActionError` only knew the
+`{ actionError }` and `{ permissionError }` shapes.
+
+This is the plan's own blind spot, and it is worth naming precisely: **the first inventory counted
+`actionError(` / `permissionError(` call sites, so the older channel was never in the 1,443.** Measured now:
+
+| Signal | Count |
+|---|---|
+| `success: false` returns (non-test) | 2,007 |
+| …of those, carrying an English error literal | 1,132 across 254 files |
+| Top areas | ee 417, integrations 275, server 110, users 63, billing 50, client-portal 48, scheduling 40 |
+
+**The mechanism is landed and needs no further design.** `localizeActionError` now rewrites a third payload
+shape on exactly the same contract as the other two — no-op without a `messageKey`, key kept after
+translating so a re-wrap translates once, `success` must be literally `false` so a partial-success payload
+reporting a non-fatal `error` is not touched. `isActionResultError` in `packages/ui/src/lib/errorHandling.ts`
+is the guard; `ActionResultMessageKey` is the mixin an action spreads into its declared result type, because
+these returns are object literals carrying their own `code` / `errorCode` / `message` fields and a
+constructor would fight them.
+
+Migrated so far: the password-change family (`changeOwnPassword`, `adminChangeUserPassword`), six keys in
+`common:errors.password`, verified in a browser at `de` and `xx`. The rest is per-package work in the same
+shape as category 1 step 3, and the same conventions apply — especially convention 2 (an action that
+flattens the payload to a bare string loses the key) and convention 8 (a `||` fallback hides a keyable
+branch, as in `{ error: uploadResult.message || 'Failed to upload avatar.' }`).
+
+Two traps specific to this channel:
+
+1. **A pinned `toEqual` is not proof.** Every password test passed while the German run came back English,
+   because the English fallback is still correct English. The contract test added with the fix
+   (`passwordChangeLocalization.contract.test.ts`) instead asserts that the number of `messageKey:` lines in
+   the action equals the number of `success: false` returns, and that every key it names resolves in all
+   eight real packs. That shape is worth copying per package: it fails when a *new* failure branch is added
+   without a key, which is the way this regresses.
+2. **`handleError(err, fallback)` discards the localized message.** `packages/ui/src/lib/errorHandling.ts`
+   does `toast.error(fallbackMessage || message)` — the caller's English fallback wins over the server's
+   translated text, at **532 of 776 call sites**. So keying an action whose client renders through
+   `handleError` with a fallback changes nothing on screen; `EntityImageUpload` (the profile avatar) is the
+   reachable example. The permission branch above it uses `message`, so permission errors do get through.
+   Fixing the precedence is a repo-wide behaviour change — it would start showing server prose where a
+   deliberate generic sentence is shown today — so it is filed here rather than done in passing. Do it as its
+   own step: prefer `message` when the payload carried a `messageKey`, keep the fallback otherwise.
+
 ## Sequencing
 
 1. ~~Category 6 — finish what is in flight.~~ Done.
@@ -470,6 +522,10 @@ Closes the gaps left by the current diff. Half a day.
    itself, as predicted: the `actionError`-origin toasts translate at the boundary with no edit.
 5. ~~Category 2 — attach keys to user-visible Zod issues and map them structurally.~~ Done.
 6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 143 to go.
+7. Category 7 — the `{ success: false, error }` channel. Mechanism landed and the password path migrated;
+   the remaining ~1,132 literals are per-package work, ee and integrations first by volume, but ordered by
+   user exposure the same way category 1 was. Check `handleError`'s fallback precedence before keying a
+   package whose components render through it — otherwise the keys are correct and invisible.
 
 `I18N_ENFORCE=true` is already set, so there is no flip to schedule — instead, every step above must leave
 `npm run test:i18n` green, all 7 locales included, before it merges.
