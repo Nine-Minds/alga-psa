@@ -2,7 +2,8 @@
 
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { revalidateTag } from 'next/cache';
-import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
+import { generateBrandingStyles, scopeBrandingToEdition } from '../../lib/generateBrandingStyles';
+import { isEnterprise } from '@alga-psa/core/features';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -69,7 +70,9 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
   const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
-  const portalFollowsTheme = branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme;
+  const portalFollowsTheme = isEnterprise
+    ? branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme
+    : false;
 
   // Precompute CSS styles for performance
   const computedStyles = generateBrandingStyles({
@@ -143,11 +146,11 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
     return null;
   }
 
-  return {
+  return scopeBrandingToEdition({
     ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  };
+  }, isEnterprise);
 });
 
 /**
@@ -163,9 +166,9 @@ export async function getTenantBrandingByIdAction(tenantId: string): Promise<Ten
     return null;
   }
 
-  return {
+  return scopeBrandingToEdition({
     ...tenantSettings.settings.branding,
     supportEmail: tenantSettings.settings.supportEmail ?? '',
     supportPhone: tenantSettings.settings.supportPhone ?? '',
-  };
+  }, isEnterprise);
 }

@@ -20,6 +20,10 @@ const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
 export async function getTenantThemeByTenantId(tenantId: string): Promise<TenantTheme> {
+  if (!isEnterprise) {
+    return DEFAULT_TENANT_THEME;
+  }
+
   try {
     const knex = await getConnection(tenantId);
     const record = await tenantSettingsQuery(knex, tenantId).first();
@@ -43,6 +47,10 @@ export const updateTenantThemeAction = withAuth(
   async (user: IUserWithRoles, { tenant }: AuthContext, theme: TenantTheme) => {
     if (user.user_type !== 'internal') {
       throw new Error('Only internal users can update the tenant theme');
+    }
+
+    if (!isEnterprise) {
+      throw new Error('Tenant themes require an Enterprise license');
     }
 
     if (!isThemePairId(theme?.pairId)) {

@@ -46,12 +46,10 @@ describe('updateTenantThemeAction edition gating', () => {
     insert.mockClear();
   });
 
-  it('lets any edition switch between the predefined pairs', async () => {
+  it('rejects predefined theme pairs on Community', async () => {
     const action = await loadAction(false);
-    await expect(action({ pairId: 'ocean' })).resolves.toEqual({ success: true });
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ settings: expect.objectContaining({ theme: { pairId: 'ocean' } }) }),
-    );
+    await expect(action({ pairId: 'ocean' })).rejects.toThrow(/Enterprise license/);
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('rejects a custom theme on Community', async () => {

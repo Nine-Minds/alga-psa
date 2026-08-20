@@ -129,11 +129,9 @@ html .radix-themes {
     --color-background: var(--alga-color-background);
 }
 
-/* The ground the app shell paints behind the cards. Light keeps the neutral
-   step the shell always wore; dark drops to the pair's page background so cards
-   lift off it the way the product mock on nineminds.com pitches them. One class
-   for the shell, the scroll body and <main>, so the pt-2/px-3 gutter between the
-   side menu and the content never shows a different color than the panel. */
+/* The ground the app shell paints behind the cards. Both modes use the pair's
+   muted neutral step: cards still lift off it, while the pt-2/px-3 gutter around
+   the content reads as part of the shell instead of a near-black gap. */
 .app-shell-ground {
     background-color: rgb(var(--color-app-ground));
 }
@@ -401,8 +399,8 @@ html.dark {
     --background: 12, 10, 24;
     --color-background: 12 10 24;    /* #0c0a18 — site --background */
     --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
-    /* Shell ground: the page itself, so cards read as the lightest large surface. */
-    --color-app-ground: var(--color-background);
+    /* Shell ground: the muted surface one step below the card. */
+    --color-app-ground: var(--color-border-100);
     /* Loading placeholders, one step above the card so they read without glaring. */
     --color-skeleton: var(--color-border-300);
     --color-skeleton-strong: var(--color-border-400);

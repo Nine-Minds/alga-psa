@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateBrandingStyles } from './generateBrandingStyles';
+import { generateBrandingStyles, scopeBrandingToEdition } from './generateBrandingStyles';
 import type { TenantBranding } from '../actions/tenant-actions/tenantBrandingActions';
 
 const baseBranding: TenantBranding = {
@@ -100,5 +100,35 @@ describe('generateBrandingStyles portal theme opt-in', () => {
 
     expect(branded).toBe(generateBrandingStyles(baseBranding, { surface: 'msp' }));
     expect(branded).toContain('--color-primary-500');
+  });
+});
+
+describe('scopeBrandingToEdition', () => {
+  it('preserves Enterprise theme-follow branding unchanged', () => {
+    const branding = { ...baseBranding, portalFollowsTheme: true };
+
+    expect(scopeBrandingToEdition(branding, true)).toBe(branding);
+  });
+
+  it('keeps CE sidebar branding but removes organization-theme access', () => {
+    const branding: TenantBranding = {
+      ...baseBranding,
+      logoDarkUrl: '/dark-logo.png',
+      portalSidebarStyle: 'custom',
+      portalSidebarColor: '#123456',
+      portalFollowsTheme: true,
+      computedStyles: '',
+    };
+
+    const scoped = scopeBrandingToEdition(branding, false);
+
+    expect(scoped).toMatchObject({
+      logoDarkUrl: '/dark-logo.png',
+      portalSidebarStyle: 'custom',
+      portalSidebarColor: '#123456',
+      portalFollowsTheme: false,
+    });
+    expect(scoped?.computedStyles).toContain('--color-sidebar-bg');
+    expect(scoped?.computedStyles).toContain('--color-primary-500');
   });
 });

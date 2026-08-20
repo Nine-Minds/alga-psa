@@ -4,6 +4,8 @@ import { getConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
 import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
+import { isEnterprise } from '@alga-psa/core/features';
+import { scopeBrandingToEdition } from '../../lib/generateBrandingStyles';
 import { DEFAULT_TENANT_THEME, normalizeTenantTheme, type TenantTheme } from '../../lib/tenantTheme';
 import type { Knex } from 'knex';
 
@@ -104,7 +106,10 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
       return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
     }
 
-    const branding: TenantBranding | null = tenantSettings.settings.branding || null;
+    const branding = scopeBrandingToEdition(
+      tenantSettings.settings.branding || null,
+      isEnterprise,
+    );
 
     const locale = normalizeLocale(tenantSettings.settings.clientPortal?.defaultLocale)
       ?? normalizeLocale(tenantSettings.settings.defaultLocale);
@@ -112,7 +117,9 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
     return {
       branding,
       locale,
-      theme: normalizeTenantTheme(tenantSettings.settings.theme),
+      theme: isEnterprise
+        ? normalizeTenantTheme(tenantSettings.settings.theme)
+        : DEFAULT_TENANT_THEME,
     };
   } catch (error) {
     console.error('Error fetching tenant portal config by domain:', error);
@@ -191,7 +198,7 @@ export async function getTenantBrandingByTenantId(tenantId: string): Promise<Ten
       return null;
     }
 
-    return tenantSettings.settings.branding || null;
+    return scopeBrandingToEdition(tenantSettings.settings.branding || null, isEnterprise);
   } catch (error) {
     console.error('[getTenantBrandingByTenantId] Error fetching branding:', error);
     return null;

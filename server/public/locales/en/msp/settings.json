@@ -1401,15 +1401,15 @@
     },
     "whiteLabel": {
       "title": "White-label the MSP app",
-      "description": "Upload your logo once. It replaces the Alga mark in the MSP side menu, and the client portal uses the same images.",
-      "logoHelp": "The MSP side menu is dark in both themes, so it uses the dark-background logo when you provide one and falls back to the main logo otherwise.",
+      "description": "The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.",
+      "logoHelp": "When enabled, the always-dark MSP side menu uses the dark-background logo and falls back to the main logo. Portal uploads alone never change the MSP app.",
       "fields": {
         "logo": "Logo",
         "logoDark": "Logo for dark backgrounds"
       },
       "colors": {
-        "label": "Use your brand colors in the MSP app",
-        "help": "Off by default. When on, your primary and secondary colors replace the theme accents for MSP users, the way they already do in the client portal."
+        "label": "Enable MSP UI customization",
+        "help": "Off by default. When enabled and applied, the MSP app uses the shared logo and your primary and secondary brand colors."
       }
     },
     "messages": {

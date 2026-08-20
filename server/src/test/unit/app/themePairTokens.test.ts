@@ -147,12 +147,11 @@ describe('theme pair token blocks', () => {
     expect(tokensOf('html.light')['--color-sidebar-bg']).toBe('12 17 29');
   });
 
-  // The shell, the scrolling body and <main> all paint the same ground, so the
-  // pt-2/px-3 gutter between the side menu and the content can never show a
-  // different color than the panel it frames.
+  // The shell, the scrolling body and <main> all paint the same muted surface,
+  // so the pt-2/px-3 gutter never falls through to the near-black page ground.
   it('gives the app shell one ground token in both modes', () => {
     expect(tokensOf('html.light')['--color-app-ground']).toBe('var(--color-border-100)');
-    expect(tokensOf('html.dark')['--color-app-ground']).toBe('var(--color-background)');
+    expect(tokensOf('html.dark')['--color-app-ground']).toBe('var(--color-border-100)');
     expect(css).toContain('.app-shell-ground {\n    background-color: rgb(var(--color-app-ground));');
     expect(css).toMatch(/\.dark main \{\s*background-color: rgb\(var\(--color-app-ground\)\);/);
   });

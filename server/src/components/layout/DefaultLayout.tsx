@@ -418,7 +418,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   return (
     <MspClientTagsProvider>
     <DrawerProvider>
-      <div className="flex h-screen overflow-hidden app-shell-ground">
+      <div className="fixed inset-0 flex overflow-hidden app-shell-ground">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}

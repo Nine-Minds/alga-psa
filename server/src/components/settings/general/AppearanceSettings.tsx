@@ -444,7 +444,7 @@ const AppearanceSettings = () => {
             <CardDescription>
               {t('appearance.whiteLabel.description', {
                 defaultValue:
-                  'Upload your logo once. It replaces the Alga mark in the MSP side menu, and the client portal uses the same images.',
+                  'The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.',
               })}
             </CardDescription>
           </CardHeader>
@@ -454,7 +454,7 @@ const AppearanceSettings = () => {
                 <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.logoHelp', {
                     defaultValue:
-                      'The MSP side menu is dark in both themes, so it uses the dark-background logo when you provide one and falls back to the main logo otherwise.',
+                      'When enabled, the always-dark MSP side menu uses the dark-background logo and falls back to the main logo. Portal uploads alone never change the MSP app.',
                   })}
                 </p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -496,13 +496,13 @@ const AppearanceSettings = () => {
               <div>
                 <p className="text-sm font-medium">
                   {t('appearance.whiteLabel.colors.label', {
-                    defaultValue: 'Use your brand colors in the MSP app',
+                    defaultValue: 'Enable MSP UI customization',
                   })}
                 </p>
                 <p className="text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.colors.help', {
                     defaultValue:
-                      'Off by default. When on, your primary and secondary colors replace the theme accents for MSP users, the way they already do in the client portal.',
+                      'Off by default. When enabled and applied, the MSP app uses the shared logo and your primary and secondary brand colors.',
                   })}
                 </p>
               </div>
@@ -512,7 +512,7 @@ const AppearanceSettings = () => {
                 disabled={loading || saving}
                 onCheckedChange={(checked) => setDraft((current) => ({ ...current, mspWhiteLabel: checked }))}
                 aria-label={t('appearance.whiteLabel.colors.label', {
-                  defaultValue: 'Use your brand colors in the MSP app',
+                  defaultValue: 'Enable MSP UI customization',
                 })}
               />
             </div>

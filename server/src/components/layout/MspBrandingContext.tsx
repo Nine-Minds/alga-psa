@@ -11,8 +11,8 @@ export const useMspBranding = () => useContext(MspBrandingContext);
 
 /**
  * Carries the Enterprise white-label logo down to the MSP shell. The server
- * layout only fills it when the tenant uploaded one, so an unset context is
- * exactly the stock chrome.
+ * layout only fills it after the dedicated MSP opt-in is enabled, so client
+ * portal uploads alone leave this context empty and preserve the stock chrome.
  */
 export function MspBrandingProvider({
   children,

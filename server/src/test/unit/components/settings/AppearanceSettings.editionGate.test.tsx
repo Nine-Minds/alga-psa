@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -47,11 +47,14 @@ async function renderAppearance(edition: string) {
   );
   render(<AppearanceSettings />);
   // The pair picker always renders, EE or not.
-  await waitFor(() => expect(screen.getByText('Alga')).toBeTruthy());
+  await waitFor(() => expect(
+    document.querySelector('[data-automation-id="theme-pair-alga"]'),
+  ).toBeTruthy());
 }
 
 describe('AppearanceSettings edition gate', () => {
   afterEach(() => {
+    cleanup();
     vi.unstubAllEnvs();
     vi.resetModules();
   });
@@ -61,10 +64,9 @@ describe('AppearanceSettings edition gate', () => {
 
     expect(screen.getByText(CUSTOM_THEME_HEADING)).toBeTruthy();
     expect(screen.getByText(WHITE_LABEL_HEADING)).toBeTruthy();
-    // Both logo slots, and no wording that implies a switch has to be found
-    // first: the upload is what puts the mark in the MSP side menu.
+    // Both shared logo slots are available here, but the MSP opt-in is explicit.
     expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(2);
-    expect(screen.getByText('Use your brand colors in the MSP app')).toBeTruthy();
+    expect(screen.getByText('Enable MSP UI customization')).toBeTruthy();
   });
 
   it('hides both Enterprise sections in Community and keeps the pair picker', async () => {

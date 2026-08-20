@@ -65,7 +65,7 @@ export default function AlgaDeskMspShell({
       <MspDocumentsCrossFeatureProvider>
         <AlgaDeskClientCrossFeatureProvider>
           <MspClientTagsProvider>
-      <div className="flex h-screen overflow-hidden app-shell-ground" data-product-shell="algadesk">
+      <div className="fixed inset-0 flex overflow-hidden app-shell-ground" data-product-shell="algadesk">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}

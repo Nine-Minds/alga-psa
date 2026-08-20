@@ -8,6 +8,14 @@ const settingsSource = fs.readFileSync(
 );
 
 const layoutSource = fs.readFileSync(path.resolve(process.cwd(), 'src/app/layout.tsx'), 'utf8');
+const appearancePageSource = fs.readFileSync(
+  path.resolve(process.cwd(), 'src/app/msp/settings/appearance/page.tsx'),
+  'utf8',
+);
+const sidebarSource = fs.readFileSync(
+  path.resolve(process.cwd(), 'src/components/layout/SidebarWithFeatureFlags.tsx'),
+  'utf8',
+);
 
 describe('client portal follows the organization theme', () => {
   it('defaults existing tenants to their own portal branding', () => {
@@ -20,16 +28,34 @@ describe('client portal follows the organization theme', () => {
     expect(settingsSource).toContain('data-automation-id="client-portal-follow-theme-switch"');
   });
 
-  it('previews the theme colors while the portal follows the theme', () => {
-    expect(settingsSource).toContain(
-      "const themeColors = portalFollowsTheme ? themeTokens?.[isDark ? 'dark' : 'light'] : undefined",
+  it('keeps the advanced appearance UI behind Enterprise and the v1.5 release flag', () => {
+    expect(settingsSource).toContain("useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false })");
+    expect(settingsSource).toContain('isEEAvailable && releaseV15Flag.enabled');
+    expect(settingsSource).toMatch(
+      /advancedAppearanceEnabled && \(\s*<div className="flex justify-end">\s*<CopyClientPortalLinkButton/,
     );
+    expect(settingsSource).not.toContain('clientPortal.branding.help.companyLogoMsp');
+    expect(appearancePageSource).toContain("'release-v1-5-feature'");
+    expect(appearancePageSource).toContain('isEnterprise && await checkFeatureFlag');
+    expect(sidebarSource).toContain("useFeatureFlag('release-v1-5-feature', { defaultValue: false })");
+  });
+
+  it('keeps the CE logo variants and client-portal sidebar color available', () => {
+    expect(settingsSource).toContain("uploadTenantLogo(entityId, formData, 'dark')");
+    expect(settingsSource).toContain('id="client-portal-sidebar-style"');
+    expect(settingsSource).toContain('data-automation-id="client-portal-sidebar-color-picker"');
+  });
+
+  it('previews the theme colors while the portal follows the theme', () => {
+    expect(settingsSource).toContain('const themeColors = advancedAppearanceEnabled && portalFollowsTheme');
+    expect(settingsSource).toContain("themeTokens?.[isDark ? 'dark' : 'light']");
     expect(settingsSource).toContain('themeColors?.primary || primaryColor');
     expect(settingsSource).toContain('themeColors.sidebarBg');
   });
 
   it('keeps the Enterprise MSP shell on its own white-label switch', () => {
     expect(layoutSource).toContain("generateBrandingStyles(branding, { surface: 'msp' })");
+    expect(layoutSource).toContain('theme.mspWhiteLabel');
   });
 
   it('translates the switch in every MSP locale', () => {

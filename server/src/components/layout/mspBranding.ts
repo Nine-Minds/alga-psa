@@ -20,16 +20,15 @@ interface TenantLogoSource {
 }
 
 /**
- * Resolves the mark the MSP shell wears. An uploaded tenant logo replaces the
- * Alga avatar on Enterprise as soon as it exists — the same logo the client
- * portal already uses — so there is no second switch to find. Community
- * installs and tenants without a logo keep the stock chrome.
+ * Resolves the mark the MSP shell wears. Portal logo uploads are shared storage,
+ * not permission to customize the staff app: Enterprise tenants must explicitly
+ * enable MSP white-labeling before either logo can replace the stock Alga mark.
  */
 export function resolveMspBranding(
   branding: TenantLogoSource | null | undefined,
-  options: { isEnterprise: boolean },
+  options: { isEnterprise: boolean; mspWhiteLabel: boolean },
 ): MspBranding | null {
-  if (!options.isEnterprise || !branding) {
+  if (!options.isEnterprise || !options.mspWhiteLabel || !branding) {
     return null;
   }
 

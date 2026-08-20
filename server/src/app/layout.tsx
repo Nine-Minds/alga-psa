@@ -150,11 +150,13 @@ export default async function RootLayout({
   // The theme pair is tenant-wide, so it has to resolve on every surface: from
   // the session when someone is signed in, from the request host otherwise
   // (same vanity-domain lookup portal branding already uses).
-  const theme = tenant
-    ? await getTenantThemeByTenantId(tenant)
-    : isClientPortal
-      ? await getTenantThemeByDomain(host)
-      : DEFAULT_TENANT_THEME;
+  const theme = isEnterprise
+    ? tenant
+      ? await getTenantThemeByTenantId(tenant)
+      : isClientPortal
+        ? await getTenantThemeByDomain(host)
+        : DEFAULT_TENANT_THEME
+    : DEFAULT_TENANT_THEME;
 
   const customThemeStyles = theme.pairId === 'custom' && theme.customTheme
     ? theme.customTheme.computedStyles || generateCustomThemeStyles(theme.customTheme)

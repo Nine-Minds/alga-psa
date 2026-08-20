@@ -117,6 +117,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
+  const releaseV15Flag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
+  const releaseV15Enabled =
+    typeof releaseV15Flag === 'boolean' ? releaseV15Flag : releaseV15Flag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
@@ -200,13 +203,21 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
-    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
+    const releaseSections = editionSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) => item.href !== '/msp/settings/appearance' || releaseV15Enabled,
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+    const productSections = filterMenuSectionsByProduct(productCode, releaseSections);
 
     return filterNavigationSectionsBySelfHost(
       productSections,
       selfHostMode,
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, releaseV15Enabled, selfHostMode]);
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByEdition(billingNavigationSections, edition),

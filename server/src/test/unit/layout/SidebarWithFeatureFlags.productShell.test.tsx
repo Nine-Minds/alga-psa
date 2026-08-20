@@ -151,7 +151,35 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(mainNames).not.toContain('Workflows');
     expect(mainNames).not.toContain('Extensions');
     expect(settingsNames).not.toContain('Extensions');
+    expect(settingsNames).not.toContain('Appearance');
     expect(latestProps.extensionsSectionsOverride).toEqual([]);
+  });
+
+  it('shows Appearance only for Enterprise when the v1.5 release flag is enabled', async () => {
+    useFeatureFlag.mockImplementation((flag: string) => flag === 'release-v1-5-feature');
+
+    const { unmount } = render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
+      expect(names).toContain('Appearance');
+    });
+
+    unmount();
+    sidebarPropsSpy.mockClear();
+    useFeatureFlag.mockReturnValue(false);
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
+      expect(names).not.toContain('Appearance');
+    });
   });
 
   it('recursively keeps CE-visible children and still applies feature access', () => {

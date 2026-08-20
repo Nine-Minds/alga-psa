@@ -1464,8 +1464,9 @@ const Clients: React.FC = () => {
           />
         </div>
 
+        <div className="flex flex-col rounded-lg bg-card p-4 shadow-sm">
         {/* Filter row */}
-        <div className="flex items-center mb-4 gap-4">
+        <div className="flex items-center mb-3 gap-4">
             <SearchInput
               value={searchInput}
               onChange={handleSearchInputChange}
@@ -1555,7 +1556,7 @@ const Clients: React.FC = () => {
         </div>
 
       {/* Delete */}
-      <div className="flex items-center gap-8 mb-6 ms-4">
+      <div className="flex items-center gap-8 mb-2 ms-4">
         <div className="[&>div]:flex [&>div]:items-center">
           <Checkbox
             id="select-all-clients"
@@ -1668,6 +1669,7 @@ const Clients: React.FC = () => {
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
       />
+        </div>
 
       {/* Multi-delete confirmation dialog */}
       <Dialog

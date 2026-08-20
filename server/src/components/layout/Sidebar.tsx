@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { useTheme } from 'next-themes';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { getAppVersion } from '@alga-psa/core';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
@@ -65,13 +64,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
-  const { resolvedTheme } = useTheme();
   const mspBranding = useMspBranding();
   // The rail is dark in both themes, but a tenant that uploaded a dark-surface
   // variant means it for exactly this kind of surface.
-  const tenantLogoUrl = resolvedTheme === 'dark'
-    ? mspBranding.logoDarkUrl || mspBranding.logoUrl
-    : mspBranding.logoUrl;
+  const tenantLogoUrl = mspBranding.logoDarkUrl || mspBranding.logoUrl;
+  const [failedTenantLogoUrl, setFailedTenantLogoUrl] = useState<string | null>(null);
   const brandDisplayName = mspBranding.displayName || appDisplayName;
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -293,14 +290,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        {tenantLogoUrl ? (
+        {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
           <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element -- tenant uploads are served
-                from the document route, which next/image cannot optimize without a loader. */}
             <img
               src={tenantLogoUrl}
               alt={brandDisplayName}
               className="w-full h-full object-contain"
+              onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
             />
           </div>
         ) : (

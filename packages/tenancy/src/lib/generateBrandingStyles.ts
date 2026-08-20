@@ -1,5 +1,29 @@
 import type { TenantBranding } from '@alga-psa/tenancy/actions';
 
+/**
+ * Keep Community branding limited to portal branding controls. Recompute the
+ * cached CSS so a previously stored Enterprise-only `portalFollowsTheme` value
+ * cannot keep affecting a CE tenant after an edition change.
+ */
+export function scopeBrandingToEdition(
+  branding: TenantBranding | null,
+  enterprise: boolean,
+): TenantBranding | null {
+  if (!branding || enterprise) {
+    return branding;
+  }
+
+  const scopedBranding: TenantBranding = {
+    ...branding,
+    portalFollowsTheme: false,
+  };
+
+  return {
+    ...scopedBranding,
+    computedStyles: generateBrandingStyles(scopedBranding),
+  };
+}
+
 // Helper function to convert hex to RGB
 const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
