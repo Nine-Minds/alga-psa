@@ -13,6 +13,10 @@ import {
 } from './prepaidBalanceAlertDelivery';
 import { replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
 import { createPrepaidReplenishmentInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
+import {
+  buildPrepaidReplenishmentContext,
+  buildInternalPrepaidReplenishmentContext,
+} from '../../notifications/prepaidBalanceAlertTemplates';
 
 vi.mock('../../notifications/sendEventEmail', () => ({
   sendEventEmail: vi.fn(async () => undefined),
@@ -1711,7 +1715,7 @@ describe('prepaid balance alert scan (DB-backed)', () => {
         call[0].template === 'prepaid-replenishment-created'
       );
       expect(replenishmentEmail).toBeDefined();
-      expect(replenishmentEmail[0].context.replenishment.invoiceNumber).toBe(draftInvoice.invoice_number);
+      expect(replenishmentEmail?.[0].context.replenishment.invoiceNumber).toBe(draftInvoice.invoice_number);
       const internal = await tenantDb(db, tenantId).table('internal_notifications')
         .where({ tenant: tenantId, user_id: managerId }).orderBy('created_at', 'desc').first();
       expect(internal.template_name).toBe('prepaid-replenishment-created');
@@ -1806,6 +1810,59 @@ describe('prepaid balance alert scan (DB-backed)', () => {
         amount: 60,
         currencyCode: 'USD',
       })).rejects.toThrow('requires a service');
+    });
+
+    it('keeps the low-balance notice for the client billing recipient', async () => {
+      const tenantId = await createTenant('replenishment-client-route');
+      createdTenants.push(tenantId);
+      // No account manager: the only deliverable email role is the opted-in
+      // client billing recipient.
+      const clientId = await createClient(tenantId, { billing_email: 'client-billing@example.com' });
+      await createBillingSettings(tenantId, clientId, {
+        threshold: 5000,
+        currency: 'USD',
+        notifyClient: true,
+        replenishmentTier: 'draft',
+        creditReplenishmentAmount: 5000,
+      });
+      await createCredit(tenantId, clientId, { amount: 100 });
+
+      await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId, clientId));
+
+      const alert = await tenantDb(db, tenantId).table('prepaid_balance_alerts')
+        .where({ tenant: tenantId, client_id: clientId }).first();
+      // The replenishment did happen — the client simply must not be told
+      // about the draft top-up invoice it produced.
+      expect(alert.replenishment_status).toBe('pending');
+      expect(await invoiceCount(tenantId, clientId)).toBe(1);
+
+      const sends = sendEmailMock.mock.calls.map((call) => call[0]);
+      expect(sends).toHaveLength(1);
+      expect(sends[0].to).toBe('client-billing@example.com');
+      expect(sends[0].template).toBe('prepaid-credit-low-balance');
+      expect(sends[0].context.replenishment).toBeUndefined();
+    });
+
+    it('translates the replenishment fragments instead of interpolating English', () => {
+      const values = { invoiceNumber: 'INV-1042', outcome: 'drafted' as const, link: 'https://example.test' };
+      const de = buildPrepaidReplenishmentContext('Fixture', values, 'de') as {
+        replenishment: { statusLabel: string; actionPhrase: string };
+      };
+      expect(de.replenishment.actionPhrase).toBe('wurde als Entwurf erstellt');
+      expect(de.replenishment.statusLabel).toBe('als Entwurf');
+
+      const fr = buildInternalPrepaidReplenishmentContext('Fixture', { ...values, outcome: 'issued' }, 'fr-CA') as {
+        actionPhrase: string;
+      };
+      expect(fr.actionPhrase).toBe('a été émise automatiquement');
+
+      // An unseeded locale falls back to English rather than rendering blanks.
+      const fallback = buildPrepaidReplenishmentContext('Fixture', { ...values, outcome: 'failed' }, 'ja') as {
+        replenishment: { actionPhrase: string };
+      };
+      expect(fallback.replenishment.actionPhrase).toBe(
+        'was created as a draft, but automatic issuing failed'
+      );
     });
   });
 });

@@ -244,17 +244,17 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     if (replenishmentTier !== 'notify') {
       if (creditEnabled && (!/^\d+$/.test(creditReplenishmentAmount.trim()) || Number(creditReplenishmentAmount) <= 0)) {
         errors.credit = t('clientPrepaidBalanceAlertSettings.replenishmentAmountError', {
-          defaultValue: 'Enter a positive whole-number credit replenishment amount',
+          defaultValue: 'Enter a positive whole-number credit top-up amount',
         });
       }
       if (bucketEnabled && (!/^\d+$/.test(bucketReplenishmentMinutes.trim()) || Number(bucketReplenishmentMinutes) <= 0)) {
         errors.bucket = t('clientPrepaidBalanceAlertSettings.replenishmentMinutesError', {
-          defaultValue: 'Enter a positive whole-number bucket replenishment in minutes',
+          defaultValue: 'Enter a positive whole number of minutes',
         });
       }
       if (!/^\d+$/.test(replenishmentHorizonDays.trim()) || Number(replenishmentHorizonDays) > 3650) {
         errors.bucket = t('clientPrepaidBalanceAlertSettings.replenishmentHorizonError', {
-          defaultValue: 'Enter a horizon from 0 to 3650 days',
+          defaultValue: 'Enter a number of days from 0 to 3650',
         });
       }
     }
@@ -493,8 +493,8 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                 onValueChange={(value) => setReplenishmentTier(value as ReplenishmentTier)}
                 options={[
                   { value: 'notify', label: t('clientPrepaidBalanceAlertSettings.replenishmentNotifyOnly', { defaultValue: 'Notify only' }) },
-                  { value: 'draft', label: t('clientPrepaidBalanceAlertSettings.replenishmentDraft', { defaultValue: 'Create draft and notify' }) },
-                  { value: 'auto_issue', label: t('clientPrepaidBalanceAlertSettings.replenishmentAutoIssue', { defaultValue: 'Automatically issue' }) },
+                  { value: 'draft', label: t('clientPrepaidBalanceAlertSettings.replenishmentDraft', { defaultValue: 'Draft a top-up invoice and notify' }) },
+                  { value: 'auto_issue', label: t('clientPrepaidBalanceAlertSettings.replenishmentAutoIssue', { defaultValue: 'Draft and issue a top-up invoice' }) },
                 ]}
               />
               {replenishmentTier !== 'notify' && (
@@ -502,7 +502,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                   {creditEnabled && (
                     <div className="space-y-2">
                     <Label htmlFor="prepaid-replenishment-amount">
-                      {t('clientPrepaidBalanceAlertSettings.replenishmentAmount', { defaultValue: 'Credit replenishment amount (minor units)' })}
+                      {t('clientPrepaidBalanceAlertSettings.replenishmentAmount', { defaultValue: 'Credit top-up amount (minor units)' })}
                     </Label>
                     <Input
                       id="prepaid-replenishment-amount"
@@ -515,7 +515,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                     />
                     <p className="text-sm text-muted-foreground">
                       {t('clientPrepaidBalanceAlertSettings.replenishmentAmountHelp', {
-                        defaultValue: 'Used only for credit alerts. Bucket replenishment has its own minutes field.',
+                        defaultValue: 'Applies to credit alerts. Bucket alerts use the minutes below.',
                       })}
                     </p>
                     </div>
@@ -523,7 +523,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                   {bucketEnabled && (
                     <div className="space-y-2">
                       <Label htmlFor="prepaid-bucket-replenishment-minutes">
-                        {t('clientPrepaidBalanceAlertSettings.replenishmentMinutes', { defaultValue: 'Bucket replenishment minutes' })}
+                        {t('clientPrepaidBalanceAlertSettings.replenishmentMinutes', { defaultValue: 'Bucket top-up minutes' })}
                       </Label>
                       <Input
                         id="prepaid-bucket-replenishment-minutes"
@@ -538,7 +538,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="prepaid-replenishment-horizon">
-                      {t('clientPrepaidBalanceAlertSettings.replenishmentHorizon', { defaultValue: 'Do not replenish within this contract horizon (days)' })}
+                      {t('clientPrepaidBalanceAlertSettings.replenishmentHorizon', { defaultValue: 'Skip top-ups within this many days of contract end' })}
                     </Label>
                     <Input
                       id="prepaid-replenishment-horizon"
