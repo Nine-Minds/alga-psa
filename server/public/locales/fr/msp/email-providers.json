@@ -159,7 +159,8 @@
       "resyncMailbox": "Resynchroniser la boîte aux lettres",
       "pause": "Suspendre les e-mails entrants",
       "resume": "Reprendre les e-mails entrants",
-      "delete": "Supprimer le fournisseur"
+      "delete": "Supprimer le fournisseur",
+      "runGmailDiagnostics": "Exécuter les diagnostics de distribution Gmail"
     },
     "feedback": {
       "paused": "E-mails entrants suspendus.",
@@ -213,6 +214,14 @@
       "title": "Aucun fournisseur de messagerie configuré",
       "description": "Ajoutez un fournisseur de messagerie pour commencer à recevoir et à traiter les e-mails entrants sous forme de tickets.",
       "action": "Ajouter un fournisseur de messagerie"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail n'envoie plus de nouveaux messages ici",
+      "expiredDescription": "La surveillance Gmail de {{mailbox}} a expiré, Google a donc cessé de publier des notifications. Aucun message n'est perdu — ils restent dans la boîte. Actualisez Pub/Sub et regardez pour rétablir la distribution.",
+      "missingTitle": "La distribution push Gmail n’est pas enregistrée",
+      "missingDescription": "Aucune surveillance Gmail n'est enregistrée pour {{mailbox}}, aucun e-mail entrant n'arrivera donc. Actualisez Pub/Sub et regardez pour en enregistrer une.",
+      "expiringTitle": "La distribution push Gmail expire dans moins d’un jour",
+      "expiringDescription": "Une surveillance Gmail dure sept jours. Actualisez Pub/Sub et regardez avant son expiration, sinon les e-mails entrants cesseront sans autre avertissement."
     }
   },
   "forms": {

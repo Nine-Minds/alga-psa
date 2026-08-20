@@ -314,6 +314,42 @@
         "title": "Noch keine Standorte hinzugefügt",
         "description": "Klicke auf \"Standort hinzufügen\", um zu beginnen"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Bitte geben Sie einen gültigen Kundennamen ein",
+        "required": "Kundenname ist erforderlich",
+        "emojiOnly": "Dieser Name besteht ausschließlich aus Emojis.",
+        "tooShort": "Dieser Name besteht aus einem einzigen Zeichen — ist das korrekt?",
+        "abbreviationOnly": "Das ist nur eine Rechtsformabkürzung, kein Name.",
+        "repeatedCharacters": "In diesem Namen wiederholt sich dasselbe Zeichen mehrfach.",
+        "looksLikeUrl": "Das sieht eher nach einer Webadresse als nach einem Namen aus.",
+        "noLettersOrNumbers": "Dieser Name enthält weder Buchstaben noch Ziffern."
+      },
+      "contactName": {
+        "structural": "Bitte geben Sie einen gültigen Kontaktnamen ein",
+        "placeholder": "Das sieht eher nach einem Platzhalter als nach einer Person aus."
+      },
+      "email": {
+        "structural": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+        "required": "E-Mail-Adresse ist erforderlich",
+        "disposableDomain": "{{domain}} ist ein Anbieter von Wegwerf-Postfächern.",
+        "reservedDomain": "{{domain}} ist für Dokumentation und Tests reserviert.",
+        "internalDomain": "{{domain}} ist nur innerhalb eines privaten Netzwerks auflösbar."
+      },
+      "url": {
+        "structural": "Bitte geben Sie eine gültige Website-URL ein (z. B. apple.com)",
+        "ipAddress": "Das ist eine IP-Adresse und kein Domainname.",
+        "internalHost": "{{host}} ist nur innerhalb eines privaten Netzwerks auflösbar.",
+        "reservedDomain": "{{host}} ist für Dokumentation und Tests reserviert."
+      },
+      "phone": {
+        "structural": "Bitte geben Sie eine gültige Telefonnummer ein",
+        "repeatedDigits": "Diese Nummer besteht aus derselben Ziffer.",
+        "sequentialDigits": "Diese Nummer läuft gerade auf- oder absteigend durch.",
+        "fictionalRange": "Das liegt im Bereich 555-0100, der für Fiktion reserviert ist."
+      },
+      "dismissWarning": "Ausblenden"
     }
   },
   "commentThread": {

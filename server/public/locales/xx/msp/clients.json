@@ -479,6 +479,7 @@
     "email": "11111",
     "emailPlaceholder": "11111",
     "phone": "11111",
+    "extension": "11111",
     "phonePlaceholder": "11111",
     "name": "11111",
     "creating": "11111",
@@ -731,7 +732,10 @@
     "deactivateError": "11111",
     "updateError": "11111",
     "createContract": "11111",
-    "quickAdd": "11111"
+    "quickAdd": "11111",
+    "billingProfile": "11111",
+    "billingProfileUnassigned": "11111",
+    "billingProfileUpdated": "11111"
   },
   "clientContractDialog": {
     "assignTitle": "11111",
@@ -1349,6 +1353,7 @@
         "notes": "11111",
         "notesHelper": "11111",
         "phone": "11111",
+        "extension": "11111",
         "phoneHelper": "11111",
         "placeholder": {
           "addressLine1": "11111",
@@ -1366,7 +1371,10 @@
         "stateProvince": "11111",
         "stateProvinceHelper": "11111",
         "taxRegion": "11111",
-        "taxRegionHelper": "11111"
+        "taxRegionHelper": "11111",
+        "defaultBillingProfile": "11111",
+        "defaultBillingProfileNone": "11111",
+        "defaultBillingProfileHelper": "11111"
       },
       "listTitle": "11111",
       "loading": "11111",
@@ -1601,6 +1609,54 @@
       "notFound": "11111",
       "loadFailed": "11111"
     }
+  },
+  "clientBillingProfiles": {
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111",
+    "defaultBadge": "11111",
+    "rename": "11111",
+    "makeDefault": "11111",
+    "archive": "11111",
+    "delete": "11111",
+    "restore": "11111",
+    "archivedHeading": "11111",
+    "addLabel": "11111",
+    "addPlaceholder": "11111",
+    "addButton": "11111",
+    "created": "11111 {{name}} 11111",
+    "renamed": "11111",
+    "madeDefault": "11111 {{name}} 11111",
+    "archived": "11111 {{name}} 11111",
+    "deleted": "11111 {{name}} 11111",
+    "restored": "11111 {{name}} 11111",
+    "settings": "11111"
+  },
+  "portalBillingProfileAccess": {
+    "label": "11111",
+    "restrictedHint": "11111",
+    "allHint": "11111",
+    "save": "11111",
+    "saved": "11111",
+    "emptyWarning": "11111"
+  },
+  "clientBillingProfileSettings": {
+    "saved": "11111",
+    "inherited": "11111 {{value}} 11111",
+    "notSet": "11111",
+    "billsSeparately": "11111",
+    "billsSeparatelyHint": "11111",
+    "billToName": "11111",
+    "billingEmail": "11111",
+    "poNumber": "11111",
+    "taxIdNumber": "11111",
+    "taxExemptionCertificate": "11111",
+    "invoiceDeliveryMethod": "11111",
+    "billingCycle": "11111",
+    "paymentTerms": "11111",
+    "taxExempt": "11111",
+    "taxExemptInherited": "11111 {{value}} 11111",
+    "regionNote": "11111"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "11111",

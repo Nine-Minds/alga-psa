@@ -121,6 +121,7 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.users',
       'settings.tabs.teams',
       'settings.tabs.language',
+      'settings.tabs.appearance',
       'settings.tabs.clientPortal',
       'settings.tabs.license',
       'settings.tabs.ticketing',

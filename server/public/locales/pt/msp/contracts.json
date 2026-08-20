@@ -471,6 +471,12 @@
       "createCustom": "Criar personalizado",
       "expandLine": "Expandir linha de contrato"
     },
+    "billingProfile": {
+      "hint": "Os encargos desta linha são faturados neste perfil, substituindo o contrato.",
+      "label": "Perfil de faturamento",
+      "none": "Usar o perfil do contrato",
+      "updated": "Perfil de faturamento atualizado"
+    },
     "bucket": {
       "billingPeriod": "Período de cobrança: {{period}}",
       "defaultUnit": "unidade",

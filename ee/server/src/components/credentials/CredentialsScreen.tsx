@@ -3,7 +3,7 @@
 /**
  * Credentials vault list screen (EE-only, Pro tier).
  *
- * Gating: `release-v1.5-feature` flag, EE edition (implicit — this module is
+ * Gating: `release-v1-5-feature` flag, EE edition (implicit — this module is
  * only reachable from EE via the `@enterprise` alias), and `getCredentialsContext`
  * (tier). Off ⇒ renders nothing, so the nav-less flag-off state is preserved.
  *
@@ -125,7 +125,7 @@ function ListChrome({
 
 export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   const entityScoped = Boolean(entityType && entityId);

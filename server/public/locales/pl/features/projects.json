@@ -1824,6 +1824,12 @@
       "approved": "Zatwierdzono: {{amount}}",
       "ready": "Gotowe: {{amount}}",
       "total": "Łącznie: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profil rozliczeniowy",
+      "none": "Użyj domyślnego profilu klienta",
+      "hint": "Opłaty za czas i harmonogram w tym projekcie są rozliczane na tym profilu, o ile nie przejmie ich umowa.",
+      "updated": "Zaktualizowano profil rozliczeniowy"
     }
   },
   "taskTypes": {

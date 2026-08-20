@@ -30,7 +30,7 @@ import {
  */
 export function PrepaidHoursCard() {
   const { t } = useTranslation('features/billing');
-  const { enabled: widgetEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: widgetEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [buckets, setBuckets] = useState<ClientBucketUsageResult[] | null>(null);

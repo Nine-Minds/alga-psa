@@ -20,7 +20,9 @@ describe('contract line disambiguation deterministic overlay precedence (schedul
     expect(resolution).toEqual({
       selectedContractLineId: 'line-explicit',
       decision: 'explicit',
+      reason: 'single_candidate',
       overlayCount: 0,
+      candidateCount: 1,
     });
   });
 
@@ -34,7 +36,9 @@ describe('contract line disambiguation deterministic overlay precedence (schedul
     expect(deterministicFallback).toEqual({
       selectedContractLineId: 'line-overlay',
       decision: 'default',
+      reason: 'bucket_overlay',
       overlayCount: 1,
+      candidateCount: 2,
     });
 
     const ambiguousFallback = resolveDeterministicContractLineSelection([
@@ -45,7 +49,35 @@ describe('contract line disambiguation deterministic overlay precedence (schedul
     expect(ambiguousFallback).toEqual({
       selectedContractLineId: null,
       decision: 'ambiguous_or_unresolved',
+      reason: 'ambiguous',
       overlayCount: 2,
+      candidateCount: 2,
     });
+  });
+
+  // T047 (scheduling copy) — the narrowing has to hold at time-entry create,
+  // which is where a technician's entry actually gets its contract line.
+  it('T047: narrows a multi-candidate field by the work item billing profile', async () => {
+    const { resolveDeterministicContractLineSelection } = await import('../src/lib/contractLineDisambiguation.shared');
+
+    expect(
+      resolveDeterministicContractLineSelection(
+        [
+          { client_contract_line_id: 'line-a', contract_billing_profile_id: 'profile-a' } as any,
+          { client_contract_line_id: 'line-b', contract_billing_profile_id: 'profile-b' } as any,
+        ],
+        { billingProfileId: 'profile-b' },
+      ),
+    ).toMatchObject({ selectedContractLineId: 'line-b', reason: 'billing_profile' });
+
+    expect(
+      resolveDeterministicContractLineSelection(
+        [
+          { client_contract_line_id: 'line-a', contract_billing_profile_id: 'profile-a' } as any,
+          { client_contract_line_id: 'line-b', contract_billing_profile_id: 'profile-a' } as any,
+        ],
+        { billingProfileId: 'profile-a' },
+      ),
+    ).toMatchObject({ selectedContractLineId: null, reason: 'ambiguous' });
   });
 });

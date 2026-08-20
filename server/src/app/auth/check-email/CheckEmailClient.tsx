@@ -43,17 +43,28 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
     router.push(portal === 'client' ? appendPortalDomain(signinHref, portalDomain) : signinHref);
   };
 
-  const bgGradient = branding && portal === 'client'
-    ? 'bg-gradient-to-br from-[rgb(var(--color-primary-50))] to-[rgb(var(--color-secondary-100))] dark:from-[rgb(var(--color-primary-950))] dark:to-[rgb(var(--color-secondary-950))]'
-    : portal === 'client'
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950'
-    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950';
-
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>
+    <div className="min-h-screen flex items-center justify-center p-4 auth-page-surface">
       <div className="w-full max-w-md">
         <div className="bg-card rounded-lg shadow-lg p-8">
-          {branding?.logoUrl && (
+          {branding?.logoUrl && branding?.logoDarkUrl ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
+                width={60}
+                height={60}
+                className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain dark:hidden"
+              />
+              <img
+                src={branding.logoDarkUrl}
+                alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
+                width={60}
+                height={60}
+                className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain hidden dark:block"
+              />
+            </>
+          ) : branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.clientName || t('auth.checkEmail.logoAlt', 'Client logo')}
@@ -61,7 +72,7 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
               height={60}
               className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain"
             />
-          )}
+          ) : null}
 
           {/* Title */}
           <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">

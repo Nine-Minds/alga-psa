@@ -248,12 +248,18 @@ async function selectEligibleBlocks(
       this.whereNotExists(function (this: Knex.QueryBuilder) {
         this.select('*')
           .from('hour_block_service_scopes as s')
+          // Keep every distributed relation independently pinned to the
+          // tenant's shard. Citus does not infer single-shard routing for the
+          // full NOT EXISTS/EXISTS OR expression from the correlation alone,
+          // and consequently rejects the outer FOR UPDATE.
+          .where('s.tenant', tenant)
           .whereRaw('s.tenant = hb.tenant')
           .whereRaw('s.block_id = hb.block_id');
       });
       this.orWhereExists(function (this: Knex.QueryBuilder) {
         this.select('*')
           .from('hour_block_service_scopes as s2')
+          .where('s2.tenant', tenant)
           .whereRaw('s2.tenant = hb.tenant')
           .whereRaw('s2.block_id = hb.block_id')
           .where('s2.service_id', entry.service_id ?? '');

@@ -9,7 +9,7 @@ import type { Knex } from 'knex';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 
-export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
+export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 export const PREPAID_REPLENISHMENT_TIERS = ['notify', 'draft', 'auto_issue'] as const;
 export type PrepaidReplenishmentTier = typeof PREPAID_REPLENISHMENT_TIERS[number];

@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Kan de planner niet openen",
     "loadCommentsFailed": "Opmerkingen laden mislukt",
     "updateTicketFailed": "Ticket bijwerken mislukt",
-    "errorWithMessage": "Fout: {{message}}"
+    "errorWithMessage": "Fout: {{message}}",
+    "billingProfileUpdated": "Facturatieprofiel bijgewerkt",
+    "updateBillingProfileFailed": "Bijwerken van facturatieprofiel mislukt"
   },
   "conversation": {
     "comments": "Reacties",
@@ -495,7 +497,31 @@
     },
     "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
     "exportAction": "CSV exporteren",
-    "importAction": "CSV importeren"
+    "importAction": "CSV importeren",
+    "boardTabs": {
+      "all": "Alle tickets"
+    },
+    "boardHeader": {
+      "open": "Openstaand",
+      "overdue": "Te laat",
+      "slaBreach": "SLA-overschrijding",
+      "unassigned": "Niet toegewezen",
+      "managedBy": "Beheerd door",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Weergave",
+      "columns": "Kolommen",
+      "density": "Dichtheid",
+      "saveBoardDefault": "Opslaan als standaardweergave van dit bord",
+      "saveTenantDefault": "Opslaan als standaardweergave voor iedereen",
+      "resetToTenant": "Terugzetten naar de tenantstandaard",
+      "unsavedChanges": "Deze weergave wijkt af van de opgeslagen standaard",
+      "saved": "Standaardweergave opgeslagen",
+      "saveFailed": "Opslaan van de standaardweergave is mislukt",
+      "reset": "Terugzetten naar de tenantstandaard",
+      "resetFailed": "Terugzetten van de weergave is mislukt"
+    }
   },
   "bulk": {
     "bundleTickets": "Tickets bundelen",
@@ -955,7 +981,10 @@
       "selective": "Selecteer individuele leden om te behouden/verwijderen"
     },
     "noTeamMembersOnTicket": "Geen teamleden gevonden op dit ticket.",
-    "unnamedUser": "Naamloze gebruiker"
+    "unnamedUser": "Naamloze gebruiker",
+    "billingProfile": "Facturatieprofiel",
+    "billingProfileUnassigned": "Standaardprofiel gebruiken",
+    "billingProfileHint": "Wordt alleen gebruikt als geen enkel contract dit werk aan een profiel toewijst."
   },
   "settings": {
     "categories": {

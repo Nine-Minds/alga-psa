@@ -12,7 +12,7 @@
 - (2026-08-15) Account-manager routing is mandatory when an active manager can be resolved; client billing-recipient email is separately opt-in and defaults off.
 - (2026-08-15) A credit alert is one below-threshold episode, rearmed only after recovery to equality or above. A bucket alert is one `bucket_usage` period/configured-percent pair.
 - (2026-08-15) Persist logical alerts separately from delivery attempts. Internal delivery is transactionally idempotent; email uses a stable leased delivery row and bounded retries with documented at-least-once semantics.
-- (2026-08-15) `release-v1.5-feature` gates the whole feature independently at UI, settings action, and scan-subscriber boundaries; unavailable flag infrastructure fails closed.
+- (2026-08-15) `release-v1-5-feature` gates the whole feature independently at UI, settings action, and scan-subscriber boundaries; unavailable flag infrastructure fails closed.
 
 ## Discoveries / Constraints
 

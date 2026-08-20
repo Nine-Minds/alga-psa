@@ -111,7 +111,7 @@ function InternalNotificationCategoriesContent({
   const { t } = useTranslation('msp/settings');
   // Priority configuration is gated behind the v1.5 release flag. With the flag
   // off this component renders exactly as before (switches only).
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   // Current state (what's displayed)
   const [categories, setCategories] = useState(initialCategories);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, InternalNotificationSubtype[]>>({});

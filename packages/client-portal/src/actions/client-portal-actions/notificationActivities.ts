@@ -55,7 +55,7 @@ export const fetchNotificationActivities = withAuth(async (
   filters: ActivityFilters = {},
 ): Promise<NotificationActivity[]> => {
   const { knex } = await createTenantKnex();
-  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1.5-feature', {
+  const priorityFeatureEnabled = await isFeatureFlagEnabled('release-v1-5-feature', {
     tenantId: tenant,
     userId: user.user_id,
   });

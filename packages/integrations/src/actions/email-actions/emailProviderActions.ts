@@ -18,6 +18,9 @@ import { configureGmailProvider, type ConfigureGmailProviderResult } from './con
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import { gmailSubscriptionName, gmailTopicName } from '../../utils/email/gmailPubSub';
+import { runGmailDeliveryDiagnostics } from '../../services/email/GmailDiagnosticsService';
+import type { GmailDiagnosticsReport } from '@alga-psa/shared/interfaces/gmail-diagnostics.interfaces';
 import {
   actionError,
   type ActionMessageError,
@@ -184,24 +187,6 @@ export interface EmailProviderSetupResult {
   setupWarnings?: string[];
 }
 
-
-/**
- * Generate standardized Pub/Sub topic and subscription names for a tenant
- */
-async function generatePubSubNames(tenantId: string) {
-  // Use ngrok URL in development if available
-  const secretProvider = await getSecretProviderInstance();
-  const baseUrl = await secretProvider.getAppSecret('NGROK_URL') || 
-                  await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL') || 
-                  await secretProvider.getAppSecret('NEXTAUTH_URL') ||
-                  'http://localhost:3000';
-  
-  return {
-    topicName: `gmail-notifications-${tenantId}`,
-    subscriptionName: `gmail-webhook-${tenantId}`,
-    webhookUrl: `${baseUrl}/api/email/webhooks/google`
-  };
-}
 
 /**
  * Shared column list for provider queries
@@ -520,6 +505,9 @@ async function persistGoogleConfig(
     throwExpectedEmailProviderError('Google Cloud project ID is not configured for this tenant. Configure Google settings first.');
   }
 
+  // LEVERAGE: pattern base-url-resolution — fourth site deriving a public base
+  // URL from env-or-app-secret; the Gmail Pub/Sub path now owns one in
+  // utils/email/gmailPubSub, but OAuth redirect URIs still hand-roll it.
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
     (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
@@ -527,10 +515,15 @@ async function persistGoogleConfig(
     (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
     'http://localhost:3000';
   const effectiveRedirectUri = `${baseUrl}/api/auth/google/callback`;
-  
-  // Generate standardized Pub/Sub names
-  const pubsubNames = await generatePubSubNames(tenant);
-  
+
+  // Topic and subscription names only depend on the tenant. Resolving the push
+  // base URL is left to configureGmailProvider, which is the step that has to
+  // fail loudly when the instance is not publicly reachable.
+  const pubsubNames = {
+    topicName: gmailTopicName(tenant),
+    subscriptionName: gmailSubscriptionName(tenant),
+  };
+
   // Prepare config payload
   const labelFiltersArray = config.label_filters || [];
   const configPayload = {
@@ -785,11 +778,12 @@ export const getEmailProviders = withAuth(async (
             'token_expires_at',
             'history_id',
             'watch_expiration',
+            'last_push_received_at',
             'created_at',
             'updated_at'
           )
           .first();
-        
+
         if (googleConfig) {
           googleConfig.label_filters = googleConfig.label_filters || [];
           provider.googleConfig = googleConfig;
@@ -1652,6 +1646,59 @@ export const retryMicrosoftSubscriptionRenewal = withAuth(async (
     return {
       success: false,
       message: microsoft365ActionErrorMessage(error, 'Microsoft subscription renewal failed. Please try again.'),
+    };
+  }
+});
+
+/**
+ * Check whether inbound Gmail delivery is actually working for a provider.
+ *
+ * Deliberately reports state it has just read from Google rather than state the
+ * database claims: a provider row can say "connected" while every push is being
+ * rejected for a mismatched audience.
+ */
+export const runGmailDiagnostics = withAuth(async (
+  user,
+  { tenant },
+  providerId: string
+): Promise<{ success: boolean; report?: GmailDiagnosticsReport; error?: string }> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
+
+    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
+    if (!permitted) {
+      return { success: false, error: 'Permission denied: Cannot run Gmail diagnostics' };
+    }
+
+    const provider = await db.table('email_providers')
+      .where({ id: providerId })
+      .first();
+
+    if (!provider) {
+      return { success: false, error: 'Provider not found' };
+    }
+
+    if (provider.provider_type !== 'google') {
+      return { success: false, error: 'Diagnostics are only available for Gmail providers' };
+    }
+
+    const googleConfig = await db.table('google_email_provider_config')
+      .where({ email_provider_id: providerId })
+      .first();
+
+    const report = await runGmailDeliveryDiagnostics({
+      tenant,
+      provider: { id: provider.id, mailbox: provider.mailbox },
+      googleConfig: googleConfig || null,
+    });
+
+    return { success: true, report };
+  } catch (error: any) {
+    console.error('Gmail diagnostics failed:', error);
+    return {
+      success: false,
+      error: error?.message ? String(error.message) : 'Failed to run Gmail diagnostics. Please try again.',
     };
   }
 });

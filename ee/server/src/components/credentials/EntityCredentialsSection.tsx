@@ -25,7 +25,7 @@
  * // expansion, decision 2).
  *
  * The ENTIRE section — chrome included — is gated on the
- * `release-v1.5-feature` flag: flag off renders nothing. Below-Pro tenants get
+ * `release-v1-5-feature` flag: flag off renders nothing. Below-Pro tenants get
  * a one-line upgrade teaser instead of the vault (the nav item and client tab
  * are hidden for them, so this is where they learn the feature exists); the
  * full FeatureUpgradeNotice stays on the global screen.
@@ -325,7 +325,7 @@ export function EntityCredentialsSection({
   titleKey = 'credentials.section.title',
 }: EntityCredentialsSectionProps) {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
   const { hasFeature } = useTier();
   const isBento = useContentCardVariant() === 'bento';

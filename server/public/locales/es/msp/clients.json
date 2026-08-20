@@ -479,6 +479,7 @@
     "email": "Correo electrónico",
     "emailPlaceholder": "Dirección de correo electrónico",
     "phone": "Teléfono",
+    "extension": "Extensión",
     "phonePlaceholder": "Número de teléfono",
     "name": "Nombre",
     "creating": "Creando...",
@@ -731,7 +732,10 @@
     "deactivateError": "No se pudo desactivar el contrato",
     "updateError": "No se pudo actualizar el contrato",
     "createContract": "Crear contrato",
-    "quickAdd": "Agregar rápido"
+    "quickAdd": "Agregar rápido",
+    "billingProfile": "Perfil de facturación",
+    "billingProfileUnassigned": "Sin asignar",
+    "billingProfileUpdated": "Perfil de facturación actualizado"
   },
   "clientContractDialog": {
     "assignTitle": "Asignar contrato al cliente",
@@ -1349,6 +1353,7 @@
         "notes": "Notas",
         "notesHelper": "Notas adicionales sobre esta ubicación",
         "phone": "Teléfono",
+        "extension": "Extensión",
         "phoneHelper": "Número de teléfono de esta ubicación",
         "placeholder": {
           "addressLine1": "Introduzca la dirección *",
@@ -1366,7 +1371,10 @@
         "stateProvince": "Estado/Provincia",
         "stateProvinceHelper": "Nombre del estado o provincia",
         "taxRegion": "Región fiscal",
-        "taxRegionHelper": "Seleccione la región fiscal aplicable"
+        "taxRegionHelper": "Seleccione la región fiscal aplicable",
+        "defaultBillingProfile": "Perfil de facturación predeterminado",
+        "defaultBillingProfileNone": "Ninguno",
+        "defaultBillingProfileHelper": "Los tickets nuevos en esta ubicación comienzan con este perfil de facturación. Siempre se puede cambiar en el ticket."
       },
       "listTitle": "Ubicaciones",
       "loading": "Cargando ubicaciones...",
@@ -1601,6 +1609,54 @@
       "notFound": "Contacto no encontrado.",
       "loadFailed": "No se pudo cargar el contacto."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Perfiles de facturación",
+    "description": "Facture sedes, entidades o instalaciones por separado dentro de este cliente. Los cargos se atribuyen a un perfil a través del contrato, la línea de contrato o el elemento de trabajo del que provienen; lo que no esté asignado recae en el perfil predeterminado.",
+    "loading": "Cargando perfiles de facturación…",
+    "defaultBadge": "Predeterminado",
+    "rename": "Cambiar nombre",
+    "makeDefault": "Establecer como predeterminado",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "restore": "Restaurar",
+    "archivedHeading": "Archivados",
+    "addLabel": "Añadir un perfil de facturación",
+    "addPlaceholder": "p. ej. Planta Norte",
+    "addButton": "Añadir perfil",
+    "created": "Perfil de facturación «{{name}}» creado",
+    "renamed": "Perfil de facturación renombrado",
+    "madeDefault": "«{{name}}» es ahora el perfil de facturación predeterminado",
+    "archived": "«{{name}}» archivado",
+    "deleted": "«{{name}}» eliminado",
+    "restored": "«{{name}}» restaurado",
+    "settings": "Configuración de facturación"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmentos de facturación",
+    "restrictedHint": "Este usuario solo ve los segmentos seleccionados abajo.",
+    "allHint": "Este usuario ve todos los segmentos de facturación, incluidos los añadidos después.",
+    "save": "Guardar acceso a segmentos",
+    "saved": "Acceso a segmentos del portal actualizado",
+    "emptyWarning": "Seleccione al menos un segmento, o desactive la restricción para mostrarlos todos."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Configuración del perfil de facturación guardada",
+    "inherited": "Heredado: {{value}}",
+    "notSet": "Sin definir",
+    "billsSeparately": "Factura por separado",
+    "billsSeparatelyHint": "Generar una factura aparte para este perfil, con su propio destinatario, método de pago y saldo.",
+    "billToName": "Nombre de facturación",
+    "billingEmail": "Correo de facturación",
+    "poNumber": "Número de OC",
+    "taxIdNumber": "NIF/CIF",
+    "taxExemptionCertificate": "Certificado de exención fiscal",
+    "invoiceDeliveryMethod": "Método de envío de facturas",
+    "billingCycle": "Ciclo de facturación",
+    "paymentTerms": "Condiciones de pago",
+    "taxExempt": "Exento de impuestos",
+    "taxExemptInherited": "Heredado del cliente ({{value}})",
+    "regionNote": "La región fiscal no se define aquí. Sigue el lugar de entrega: el servicio, luego la ubicación de la línea de contrato y luego el valor por defecto del cliente."
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo prepagado",

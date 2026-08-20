@@ -228,7 +228,7 @@ export function ClientPortalSidebar({
             sideOffset={5}
           >
             {item.label}
-            <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+            <Tooltip.Arrow style={{ fill: 'rgb(var(--color-submenu-bg))' }} />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
@@ -285,6 +285,8 @@ export function ClientPortalSidebar({
 
   const visibleSections = sections.filter((s) => s.items.length > 0);
   const brandLabel = branding?.clientName || (isAlgaDeskPortal ? 'AlgaDesk' : 'AlgaPSA');
+  // The side panel is dark in both themes, so it prefers the dark-surface logo.
+  const sidebarLogoUrl = branding?.logoDarkUrl || branding?.logoUrl;
   const transitionClass = transitionsEnabled
     ? 'transition-all duration-300 ease-in-out'
     : '';
@@ -306,11 +308,11 @@ export function ClientPortalSidebar({
           aria-label={t('sidebar.goToDashboard', 'Go to dashboard')}
           id="client-portal-logo-home-link"
         >
-          {branding?.logoUrl ? (
+          {sidebarLogoUrl ? (
             <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
               {/* Logo URL is arbitrary tenant input; <img> avoids next/image domain allowlist. */}
               <img
-                src={branding.logoUrl}
+                src={sidebarLogoUrl}
                 alt={branding.clientName || 'Client Logo'}
                 className="w-full h-full object-contain"
               />

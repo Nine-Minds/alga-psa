@@ -17,6 +17,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 // P0 journey (docs: journey-first testing pivot): the rendering leg the money
 // journeys stop short of — a finalized invoice goes through the REAL renderer
@@ -216,7 +217,7 @@ describe('journey: invoice render → stored PDF', () => {
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
     const januaryCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,

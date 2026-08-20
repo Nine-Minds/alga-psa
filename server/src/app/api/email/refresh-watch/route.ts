@@ -72,9 +72,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
+      // configureGmailProvider builds its errors for the administrator; a
+      // generic replacement here would hide the one sentence that says which
+      // permission or URL is wrong.
       return NextResponse.json({
         success: false,
-        error: 'Gmail provider refresh failed. Check Pub/Sub and Gmail watch configuration, then try again.',
+        error: result.error || 'Gmail provider refresh failed. Check Pub/Sub and Gmail watch configuration, then try again.',
+        pubsubConfigured: result.pubsubConfigured,
+        watchRegistered: result.watchRegistered,
         warnings: result.warnings
       }, { status: 409 });
     }

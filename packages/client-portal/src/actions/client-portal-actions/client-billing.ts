@@ -37,6 +37,7 @@ import {
   getClientIdFromPortalUser as getClientIdFromUser,
   hasClientBillingReadPermission as hasBillingPermission,
 } from './clientBillingPermissions';
+import { selectJobArtifactFileId } from './jobArtifact';
 
 export type ClientBillingActionError =
   | { readonly actionError: string }
@@ -841,17 +842,24 @@ export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Prom
 });
 
 /**
- * Download invoice PDF response
+ * Download invoice PDF response.
+ *
+ * Exactly one of `fileId` / `pdfData` is set on success: a file id when the
+ * client already has a published document to fetch, raw bytes when the PDF had
+ * to be rendered for this download. See downloadClientInvoicePdf for why a
+ * fresh render is never handed back as a file id.
  */
 export interface DownloadPdfResult {
   success: boolean;
   fileId?: string;
+  pdfData?: number[];
+  invoiceNumber?: string;
   error?: string;
 }
 
 /**
- * Download invoice PDF - returns the stored PDF when one exists, otherwise
- * schedules generation, waits for completion, and returns the file ID.
+ * Download invoice PDF - serves the published document when one exists,
+ * otherwise renders the invoice and returns the bytes directly.
  */
 export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<DownloadPdfResult>> => {
   const knex = await getConnection(tenant);
@@ -890,30 +898,55 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       return { success: true, fileId: storedDoc.file_id };
     }
 
-    // No stored PDF yet — generate and file one directly, same as the quote
-    // path. The zip job exists for MSP bulk export and resolves its acting
-    // user from the request session, which a background job does not have.
+    // No published PDF yet — render one and hand back the bytes.
+    //
+    // Deliberately NOT a file id: generateAndStore files invoice documents with
+    // is_client_visible = false (they become visible when the invoice is sent),
+    // and the documents download route denies a portal user any document that is
+    // not client-visible unless they happen to own it. A brand new document is
+    // owned by whoever rendered it, but a refresh of an MSP-filed one keeps the
+    // MSP's created_by — so returning the file id would work or 404 depending on
+    // whether the MSP had rendered the invoice first. Bytes are unconditional.
+    //
+    // The alternative — publishing the render as client-visible — was rejected:
+    // it would put an unsent invoice's document into the client's Documents list
+    // as a side effect of clicking Download, changing MSP-side send semantics.
     const invoice = await tenantDb(knex, tenant).table('invoices')
       .where({ invoice_id: invoiceId })
       .first<{ invoice_number?: string | null } | undefined>('invoice_number');
+    const invoiceNumber = invoice?.invoice_number ?? invoiceId;
 
-    const { createPDFGenerationService } = await import('@alga-psa/billing/services');
-    const pdfService = createPDFGenerationService(tenant);
-    const fileRecord = await pdfService.generateAndStore({
+    const { getStoredInvoicePdf } = await import('@alga-psa/billing/services');
+    const pdfBuffer = await getStoredInvoicePdf({
+      tenant,
       invoiceId,
-      invoiceNumber: invoice?.invoice_number ?? undefined,
-      version: 1,
+      invoiceNumber,
       userId: user.user_id,
+      logLabel: '[downloadClientInvoicePdf]',
     });
 
-    return { success: true, fileId: fileRecord.file_id };
+    return {
+      success: true,
+      pdfData: Array.from(pdfBuffer),
+      invoiceNumber,
+    };
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {
       return expected;
     }
-    console.error('Error downloading invoice PDF:', error);
-    throw error;
+    // Next.js redacts thrown server-action messages in production, so throwing
+    // here lands every failure on the UI's generic "Failed to download PDF"
+    // toast and tells the operator nothing. Return a typed error instead, and
+    // log the real one with enough context to find it.
+    console.error(
+      `[downloadClientInvoicePdf] Invoice PDF download failed (tenant=${tenant} ` +
+        `invoice=${invoiceId} user=${user.user_id}):`,
+      error
+    );
+    return actionError(
+      'The invoice PDF could not be generated. Please try again, and contact support if the problem continues.'
+    );
   }
 });
 
@@ -1006,22 +1039,16 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
     status = 'failed';
   }
 
-  // If completed, get the file_id from job details
+  // If completed, get the file_id from job details. Ordered by completion time
+  // (detail_id only to break ties deterministically) so the deliverable — the
+  // last artifact the job produced — wins over the intermediates before it.
   let fileId: string | undefined;
   if (status === 'completed') {
     const details = await scopedDb.table('job_details')
       .where({ job_id: jobId })
-      .select('metadata');
-    // Look for file_id in the metadata of completed steps
-    for (const detail of details) {
-      const metadata = (typeof detail.metadata === 'string'
-        ? JSON.parse(detail.metadata)
-        : detail.metadata) as Record<string, unknown> | undefined;
-      if (metadata?.file_id && typeof metadata.file_id === 'string') {
-        fileId = metadata.file_id;
-        break;
-      }
-    }
+      .orderBy([{ column: 'processed_at', order: 'asc' }, { column: 'detail_id', order: 'asc' }])
+      .select('step_name', 'status', 'metadata');
+    fileId = selectJobArtifactFileId(details);
   }
 
   // If failed, get error message

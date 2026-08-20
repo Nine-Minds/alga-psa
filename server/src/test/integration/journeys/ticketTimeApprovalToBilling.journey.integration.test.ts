@@ -14,6 +14,7 @@ import {
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
 } from '../../../../test-utils/billingTestHelpers';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 // P0 journey (docs: journey-first testing pivot): the thinnest-covered money
 // path — a tech logs time against a ticket, the timesheet goes through real
@@ -179,7 +180,7 @@ describe('journey: ticket → time → approval → billing', () => {
     });
 
     const januaryCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: januaryCycleId,
       tenant: tenantId,
       client_id: clientId,

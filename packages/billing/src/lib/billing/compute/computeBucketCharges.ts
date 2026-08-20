@@ -5,7 +5,12 @@ import type {
   IClientContractLine,
   ISO8601String,
 } from "@alga-psa/types";
-import type { ChargeComputeClient, ChargeComputeTaxPorts } from "./types";
+import type {
+  ChargeComputeClient,
+  ChargeComputeTaxPorts,
+  ChargeProfileAssignments,
+} from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * A persisted bucket_usage row, or its in-memory simulator equivalent.
@@ -126,6 +131,11 @@ export interface BucketChargeComputeInputs {
   config: BucketServiceComputeConfig;
   usageRecords: BucketUsageComputeRow[];
   contractCurrency: string;
+  /**
+   * bucket_usage carries no segment-bearing field, so bucket charges stop at
+   * the contract step of the resolution chain (F027, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
   /**
    * Per-service weighted contributions, keyed per usage-record period. When
    * supplied, each period's overage charge is attributed to the services that
@@ -281,7 +291,9 @@ export function computeBucketCharges(
     config,
     usageRecords,
     contractCurrency,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
   const isUsageBucket =
     clientContractLine.contract_line_type === "Usage" ||
     config.billing_method === "usage";
@@ -392,7 +404,14 @@ export function computeBucketCharges(
 
       let taxAmount = 0;
       let taxRate = 0;
-      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      // Exemption is per billing profile (F131): one invoice can carry both
+      // exempt and non-exempt lines when a client holds several legal entities.
+      // Passing no profile yields the client-level answer.
+      if (
+        !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+        isTaxable &&
+        effectiveTaxRegion
+      ) {
         try {
           const taxResult = taxPorts.calculateTax(
             client.client_id,
@@ -401,6 +420,7 @@ export function computeBucketCharges(
             effectiveTaxRegion,
             true,
             clientContractLine.currency_code || "USD",
+            resolvedProfile?.billingProfileId ?? null,
           );
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
@@ -448,6 +468,8 @@ export function computeBucketCharges(
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,
         location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
       });
 
       const displayDivisor = isUsageBucket ? 1 : 60;

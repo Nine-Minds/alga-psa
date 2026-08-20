@@ -8,17 +8,25 @@ import type { Knex } from 'knex';
 export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 /**
+ * Logo variant. 'default' is the light-surface logo every existing row carries;
+ * 'dark' is the optional logo used on dark surfaces.
+ */
+export type EntityLogoVariant = 'default' | 'dark';
+
+/**
  * Retrieves the image URL for an entity (user avatar, contact avatar, client logo).
  *
  * @param entityType The type of entity ('user', 'contact', or 'client')
  * @param entityId The ID of the entity
  * @param tenant The tenant context
+ * @param logoVariant Which logo variant to read (defaults to the light logo)
  * @returns A promise resolving to the image URL string, or null if no image is found
  */
 export async function getEntityImageUrl(
   entityType: EntityType,
   entityId: string,
-  tenant: string
+  tenant: string,
+  logoVariant: EntityLogoVariant = 'default'
 ): Promise<string | null> {
   try {
     const { knex } = await createTenantKnex(tenant);
@@ -34,7 +42,9 @@ export async function getEntityImageUrl(
           entity_type: entityType
         });
 
-      query = query.andWhere('is_entity_logo', true);
+      query = query
+        .andWhere('is_entity_logo', true)
+        .andWhere('entity_logo_variant', logoVariant);
 
       const association = await query.first();
 
@@ -142,7 +152,8 @@ export async function getTeamAvatarUrl(
 export async function getEntityImageUrlsBatch(
   entityType: EntityType,
   entityIds: string[],
-  tenant: string
+  tenant: string,
+  logoVariant: EntityLogoVariant = 'default'
 ): Promise<Map<string, string | null>> {
   const result = new Map<string, string | null>();
 
@@ -163,7 +174,8 @@ export async function getEntityImageUrlsBatch(
       .whereIn('entity_id', entityIds)
       .andWhere({
         entity_type: entityType,
-        is_entity_logo: true
+        is_entity_logo: true,
+        entity_logo_variant: logoVariant
       }) as Array<{ entity_id: string; document_id: string }>;
 
     if (associations.length === 0) {

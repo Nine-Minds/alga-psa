@@ -80,7 +80,7 @@ export function ClientPortalExtensionsNav({ sidebarOpen, isFirstSection = false 
             sideOffset={5}
           >
             {item.label}
-            <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+            <Tooltip.Arrow style={{ fill: 'rgb(var(--color-submenu-bg))' }} />
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>

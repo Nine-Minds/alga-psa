@@ -1798,6 +1798,12 @@
       "approved": "55555 {{amount}} 55555",
       "ready": "55555 {{amount}} 55555",
       "total": "55555 {{amount}} 55555"
+    },
+    "billingProfile": {
+      "label": "55555",
+      "none": "55555",
+      "hint": "55555",
+      "updated": "55555"
     }
   },
   "taskTypes": {

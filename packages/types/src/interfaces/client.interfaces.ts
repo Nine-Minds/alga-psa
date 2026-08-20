@@ -91,10 +91,20 @@ export interface IClientLocation extends TenantEntity {
   country_name: string;
   region_code?: string | null;
   is_billing_address?: boolean;
+  /**
+   * Billing profile new tickets at this location start with (F046). A location
+   * is not the segment — one location can carry several profiles — so this only
+   * seeds a soft default; attribution is still decided by the resolution chain.
+   */
+  default_billing_profile_id?: string | null;
   is_shipping_address?: boolean;
   is_default?: boolean;
   phone?: string;
+  /** Stored separately; never packed into phone. */
+  phone_extension?: string | null;
   fax?: string;
+  /** Stored separately; never packed into fax. */
+  fax_extension?: string | null;
   email?: string;
   notes?: string;
   is_active?: boolean;

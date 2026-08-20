@@ -78,7 +78,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950">
+    <div className="min-h-screen auth-page-surface">
       <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}

@@ -54,7 +54,7 @@ function bucket(overrides: Partial<ClientBucketUsageResult> = {}): ClientBucketU
   };
 }
 
-describe('BucketUsageChart remaining-first meter (release-v1.5-feature)', () => {
+describe('BucketUsageChart remaining-first meter (release-v1-5-feature)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagState.enabled = false;

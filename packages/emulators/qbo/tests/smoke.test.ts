@@ -154,6 +154,132 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(((await missing.json()) as any).Fault.Error[0].code).toBe('610');
   });
 
+  // The customer bug: an Automated Sales Tax company carries a large,
+  // auto-generated tax-code table, so the mapping catalog was truncated at
+  // QBO's 100-row default and any code past it printed its bare backend Id.
+  // This drives the whole readable-label + paging + AST path over the wire.
+  it('serves a large AST tax-code catalog with readable labels, pages past 100, and computes AST tax', async () => {
+    // Self-contained: own client + freshly minted token, so this test does not
+    // depend on the OAuth test's ordering or the clock advances later tests make.
+    await controlPost('/control/qbo/seed/client', { clientId: 'tax-app', clientSecret: 'tax-secret' });
+    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'tax-app' })).result;
+    const taxAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+
+    // A real California jurisdiction group: three rate components summing to 9%.
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-state', name: 'CA State', ratePercent: 6.25 });
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-county', name: 'Santa Clara County', ratePercent: 1 });
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-district', name: 'SC District', ratePercent: 1.75 });
+    await controlPost('/control/qbo/seed/tax-code', {
+      id: 'CA-GROUP',
+      name: 'California Sales Tax',
+      description: 'CA state + Santa Clara county + district',
+      taxRateIds: ['r-state', 'r-county', 'r-district'],
+    });
+
+    // The auto-generated bulk an AST file carries: 120 codes push the catalog
+    // well past the 100-row page the old single-shot query stopped at.
+    for (let index = 1; index <= 120; index += 1) {
+      await controlPost('/control/qbo/seed/tax-code', {
+        id: `AUTO-${index}`,
+        name: `Auto-generated Tax ${index}`,
+        taxRateIds: ['r-state'],
+      });
+    }
+    // The pseudo codes that only exist under AST, returned with no Active field.
+    await controlPost('/control/qbo/seed/tax-code', { id: 'TAX', name: 'TAX', pseudo: true });
+    await controlPost('/control/qbo/seed/tax-code', { id: 'NON', name: 'NON', pseudo: true });
+
+    // --- Fix (a): paging + readable labels, exactly as the mapping UI reads them.
+    const pageQuery = (start: number, max: number) =>
+      encodeURIComponent(`SELECT * FROM TaxCode STARTPOSITION ${start} MAXRESULTS ${max}`);
+    const firstPage = (await (await fetch(api(`/query?query=${pageQuery(1, 100)}`), { headers: taxAuthed })).json()) as any;
+    const secondPage = (await (await fetch(api(`/query?query=${pageQuery(101, 100)}`), { headers: taxAuthed })).json()) as any;
+    const page1 = firstPage.QueryResponse.TaxCode as any[];
+    const page2 = secondPage.QueryResponse.TaxCode as any[];
+    // The 100-row default would have hidden 23 codes; paging recovers every one.
+    expect(page1).toHaveLength(100);
+    expect(page2).toHaveLength(23);
+
+    const all = [...page1, ...page2];
+    // No row is a bare Id — every code carries a human-readable Name.
+    for (const code of all) {
+      expect(typeof code.Name).toBe('string');
+      expect(code.Name.length).toBeGreaterThan(0);
+    }
+    const group = all.find((code) => code.Id === 'CA-GROUP');
+    expect(group.Name).toBe('California Sales Tax');
+    expect(group.Description).toContain('Santa Clara');
+    // The rate components (what enrichment turns into "9%") ride under the group.
+    expect(group.SalesTaxRateList.TaxRateDetail).toHaveLength(3);
+    // TAX/NON pseudo codes land on the far page; Intuit omits Active on them.
+    const pseudo = all.find((code) => code.Id === 'TAX');
+    expect(pseudo.Name).toBe('TAX');
+    expect(pseudo.Active).toBeUndefined();
+
+    // --- Fix (b): under AST, a TAX-marked line is taxed at the resolved rate.
+    await controlPost('/control/qbo/actions/configure', { automatedSalesTaxDefaultTaxCodeId: 'CA-GROUP' });
+    const astCustomer = (await controlPost('/control/qbo/seed/customer', { name: 'AST Buyer' })).result;
+
+    const taxedResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [
+          {
+            DetailType: 'SalesItemLineDetail',
+            Amount: 200,
+            SalesItemLineDetail: { ItemRef: { value: 'svc' }, TaxCodeRef: { value: 'TAX' } },
+          },
+        ],
+      }),
+    });
+    const taxed = ((await taxedResp.json()) as any).Invoice;
+    // 200 * (6.25 + 1 + 1.75)% = 18, split across the three jurisdiction lines.
+    expect(taxed.TxnTaxDetail.TotalTax).toBe(18);
+    expect(taxed.TxnTaxDetail.TaxLine.map((line: any) => line.Amount)).toEqual([12.5, 2, 3.5]);
+    expect(taxed.TotalAmt).toBe(218);
+
+    // A NON-marked line is exempt even while AST is on.
+    const exemptResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [
+          {
+            DetailType: 'SalesItemLineDetail',
+            Amount: 200,
+            SalesItemLineDetail: { ItemRef: { value: 'svc' }, TaxCodeRef: { value: 'NON' } },
+          },
+        ],
+      }),
+    });
+    expect(((await exemptResp.json()) as any).Invoice.TxnTaxDetail.TotalTax).toBe(0);
+
+    // --- Turning AST off returns to a plain file: invoices carry no tax detail.
+    await controlPost('/control/qbo/actions/configure', { automatedSalesTaxDefaultTaxCodeId: null });
+    const plainResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [{ DetailType: 'SalesItemLineDetail', Amount: 200, SalesItemLineDetail: { ItemRef: { value: 'svc' } } }],
+      }),
+    });
+    const plain = ((await plainResp.json()) as any).Invoice;
+    expect(plain.TxnTaxDetail).toBeUndefined();
+    expect(plain.TotalAmt).toBe(200);
+
+    // The augmentation's state views expose the seeded catalog to the harness.
+    const stateCodes = (await (await fetch(`${control}/control/qbo/state/tax-codes`)).json()) as any;
+    expect(stateCodes.result.length).toBe(123);
+    const stateRates = (await (await fetch(`${control}/control/qbo/state/tax-rates`)).json()) as any;
+    expect(stateRates.result.map((rate: any) => rate.Id)).toContain('r-district');
+
+    // Leave AST off so later tests see a clean company file.
+  });
+
   it('serves preferences, companyinfo, and the CDC envelope', async () => {
     const prefs = (await (
       await fetch(api(`/query?query=${encodeURIComponent('SELECT * FROM Preferences')}`), { headers: authed })

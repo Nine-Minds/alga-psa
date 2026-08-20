@@ -159,7 +159,8 @@
       "resyncMailbox": "Ressincronizar caixa de correio",
       "pause": "Pausar e-mails recebidos",
       "resume": "Retomar e-mails recebidos",
-      "delete": "Excluir provedor"
+      "delete": "Excluir provedor",
+      "runGmailDiagnostics": "Executar o diagnóstico de entrega do Gmail"
     },
     "feedback": {
       "paused": "E-mails recebidos pausados.",
@@ -213,6 +214,14 @@
       "title": "Nenhum provedor de e-mail configurado",
       "description": "Adicione um provedor de e-mail para começar a receber e processar e-mails recebidos como tickets.",
       "action": "Adicionar provedor de e-mail"
+    },
+    "gmailWatch": {
+      "expiredTitle": "O Gmail não envia mais mensagens novas para cá",
+      "expiredDescription": "A observação do Gmail para {{mailbox}} expirou, então o Google parou de publicar notificações. As mensagens não são perdidas — elas permanecem na caixa de entrada. Use Atualizar Pub/Sub e assistir para retomar a entrega.",
+      "missingTitle": "A entrega push do Gmail não está registrada",
+      "missingDescription": "Nenhuma observação do Gmail está registrada para {{mailbox}}, então nenhuma mensagem recebida chegará. Use Atualizar Pub/Sub e assistir para registrar uma.",
+      "expiringTitle": "A entrega push do Gmail expira em menos de um dia",
+      "expiringDescription": "As observações do Gmail duram sete dias. Use Atualizar Pub/Sub e assistir antes que esta expire, ou as mensagens recebidas vão parar sem outro aviso."
     }
   },
   "forms": {

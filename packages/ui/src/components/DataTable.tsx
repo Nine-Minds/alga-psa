@@ -718,7 +718,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             className="border-collapse text-[13px]"
             style={{ minWidth: '100%', width: table.getTotalSize() }}
           >
-            <thead className="bg-[rgb(var(--color-border-50)/0.55)]">
+            <thead className="bg-[rgb(var(--color-table-row-alt))]">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {

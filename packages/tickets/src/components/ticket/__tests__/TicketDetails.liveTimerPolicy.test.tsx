@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 const findBoardByIdMock = vi.fn();
 const getTicketByIdMock = vi.fn();
@@ -393,6 +394,7 @@ describe('TicketDetails live timer board policy', () => {
   it('skips live timer auto-start when the initial board disables the live timer', async () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={{ ...baseTicket, board_id: 'board-disabled' }}
         initialBoard={disabledBoard}
       />
@@ -411,6 +413,7 @@ describe('TicketDetails live timer board policy', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
         onTicketUpdate={onTicketUpdateMock}
@@ -449,6 +452,7 @@ describe('TicketDetails live timer board policy', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
         onTicketUpdate={onTicketUpdateMock}
@@ -483,6 +487,7 @@ describe('TicketDetails live timer board policy', () => {
 
     const { rerender } = render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -499,6 +504,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -513,6 +519,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -531,6 +538,7 @@ describe('TicketDetails live timer board policy', () => {
 
     const { rerender } = render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />
@@ -545,6 +553,7 @@ describe('TicketDetails live timer board policy', () => {
 
     rerender(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket}
         initialBoard={enabledBoard}
       />

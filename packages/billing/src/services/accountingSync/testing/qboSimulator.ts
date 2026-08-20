@@ -22,6 +22,11 @@
  *   caller's header TotalAmt is ignored, like QBO itself does. An optional
  *   taxAdjustmentCents models Automated Sales Tax changing the total at
  *   create time.
+ * - Automated Sales Tax: with the automatedSalesTax option, invoices get a
+ *   TxnTaxDetail computed from per-line TaxCodeRefs against seeded TaxCode and
+ *   TaxRate entities. NON exempts a line; TAX and an *absent* code are both
+ *   taxable (Intuit's 2018 change), which is the trap an exporter that omits
+ *   the code for non-taxable lines falls into.
  * - Payments carry Line[].LinkedTxn allocations and reduce Invoice/CreditMemo
  *   balances; a zero-dollar payment linking CreditMemo → Invoice is the
  *   canonical credit application.
@@ -43,6 +48,16 @@ export interface QboSimulatorOptions {
   autoApplyCredits?: boolean;
   /** Cents "QBO" adds to each created invoice total (models AST recalculating tax). */
   taxAdjustmentCents?: number;
+  /**
+   * Turns on Automated Sales Tax behavior: created invoices get a TxnTaxDetail
+   * computed from each line's TaxCodeRef against the seeded TaxCode/TaxRate
+   * entities, exactly as Intuit does for a US AST company file.
+   *
+   * `defaultTaxCodeId` is the code AST picks for a line marked with the TAX
+   * pseudo code — the simulator's stand-in for Intuit resolving a jurisdiction
+   * from the transaction's addresses. Lines marked NON are not taxed.
+   */
+  automatedSalesTax?: { defaultTaxCodeId: string };
   /** Realm id reported in change sets. */
   realmId?: string;
 }
@@ -61,7 +76,7 @@ export class QboSimError extends Error {
   }
 }
 
-const SUPPORTED_ENTITIES = ['Customer', 'Invoice', 'CreditMemo', 'Payment', 'Item'] as const;
+const SUPPORTED_ENTITIES = ['Customer', 'Invoice', 'CreditMemo', 'Payment', 'Item', 'TaxCode', 'TaxRate'] as const;
 type SimEntityType = (typeof SUPPORTED_ENTITIES)[number];
 
 function toCents(amount: unknown): number {
@@ -79,7 +94,9 @@ export class QboSimulator {
     Invoice: new Map(),
     CreditMemo: new Map(),
     Payment: new Map(),
-    Item: new Map()
+    Item: new Map(),
+    TaxCode: new Map(),
+    TaxRate: new Map()
   };
 
   private journal: ChangeJournalEntry[] = [];
@@ -233,15 +250,82 @@ export class QboSimulator {
       .reduce((sum, line) => sum + toCents(line?.Amount), 0);
   }
 
+  /**
+   * Computes the tax an Automated Sales Tax company would apply, from the
+   * per-line TaxCodeRefs the exporter sent.
+   *
+   * Mirrors Intuit's stated behavior: a line marked NON is exempt, a line
+   * marked TAX is taxed at whatever jurisdiction AST resolves, and any other
+   * code is used as sent. A line with no TaxCodeRef at all is taxable — since
+   * Intuit's 2018 change an absent code means "taxable", not "exempt", which is
+   * the trap this simulator exists to catch.
+   */
+  private computeAutomatedSalesTax(lines: any[]): { totalCents: number; detail: any } | null {
+    const ast = this.options.automatedSalesTax;
+    if (!ast) return null;
+
+    const componentCentsByRateId = new Map<string, number>();
+    let totalCents = 0;
+
+    for (const line of lines) {
+      if (line?.DetailType !== 'SalesItemLineDetail') continue;
+      const requested = line?.SalesItemLineDetail?.TaxCodeRef?.value;
+      if (requested === 'NON') continue;
+
+      const codeId = !requested || requested === 'TAX' ? ast.defaultTaxCodeId : String(requested);
+      const taxCode = this.stores.TaxCode.get(codeId);
+      if (!taxCode) continue;
+
+      const lineCents = toCents(line?.Amount);
+      for (const detail of taxCode.SalesTaxRateList?.TaxRateDetail ?? []) {
+        const rateId = detail?.TaxRateRef?.value;
+        const rate = rateId ? this.stores.TaxRate.get(String(rateId)) : undefined;
+        if (!rate) continue;
+        const componentCents = Math.round((lineCents * Number(rate.RateValue)) / 100);
+        componentCentsByRateId.set(
+          String(rateId),
+          (componentCentsByRateId.get(String(rateId)) ?? 0) + componentCents
+        );
+        totalCents += componentCents;
+      }
+    }
+
+    const taxLines = Array.from(componentCentsByRateId.entries()).map(([rateId, cents]) => {
+      const rate = this.stores.TaxRate.get(rateId)!;
+      return {
+        DetailType: 'TaxLineDetail',
+        Amount: toAmount(cents),
+        TaxLineDetail: { TaxRateRef: { value: rateId, name: rate.Name }, TaxPercent: rate.RateValue },
+        TaxRateRef: { value: rateId, name: rate.Name },
+        TaxPercent: rate.RateValue
+      };
+    });
+
+    return {
+      totalCents,
+      detail: {
+        TotalTax: toAmount(totalCents),
+        // AST overwrites whatever transaction-level code was sent with its own.
+        TxnTaxCodeRef: { value: ast.defaultTaxCodeId },
+        TaxLine: taxLines
+      }
+    };
+  }
+
   private createTransactionDocument(type: 'Invoice' | 'CreditMemo', data: any): QboSimEntity {
     const lines = Array.isArray(data.Line) ? data.Line : [];
+    const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines) : null;
     // QBO computes the total from lines; the caller's TotalAmt is not trusted.
-    const totalCents = this.sumSalesLines(lines) + (type === 'Invoice' ? (this.options.taxAdjustmentCents ?? 0) : 0);
+    const totalCents =
+      this.sumSalesLines(lines) +
+      (type === 'Invoice' ? (this.options.taxAdjustmentCents ?? 0) : 0) +
+      (astTax?.totalCents ?? 0);
     const entity: QboSimEntity = {
       Id: this.allocateId(type),
       SyncToken: '0',
       ...data,
       Line: lines,
+      ...(astTax ? { TxnTaxDetail: astTax.detail } : {}),
       TotalAmt: toAmount(totalCents),
       Balance: toAmount(totalCents),
       TxnDate: data.TxnDate ?? this.now().slice(0, 10)
@@ -412,7 +496,32 @@ export class QboSimulator {
         .filter((item) => includeInactive || item.Active !== false);
       return rows.slice(startPosition - 1, startPosition - 1 + maxResults).map((item) => ({ ...item }));
     }
+    // Tax-code catalog. SELECT * because the nested SalesTaxRateList is the
+    // only place the rate components appear.
+    const taxCodePage = selectQuery.match(
+      /SELECT\s+\*\s+FROM\s+TaxCode\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)/i
+    );
+    if (taxCodePage) {
+      return this.page(Array.from(this.stores.TaxCode.values()), taxCodePage[1], taxCodePage[2]);
+    }
+
+    const taxRatePage = selectQuery.match(
+      /SELECT\s+Id,\s*RateValue\s+FROM\s+TaxRate\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)/i
+    );
+    if (taxRatePage) {
+      const rows = Array.from(this.stores.TaxRate.values()).map((rate) => ({
+        Id: rate.Id,
+        RateValue: rate.RateValue
+      }));
+      return this.page(rows, taxRatePage[1], taxRatePage[2]);
+    }
+
     throw new QboSimError('SIM_UNSUPPORTED', `QboSimulator does not model query: ${selectQuery}`);
+  }
+
+  private page<T>(rows: T[], startPosition: string, maxResults: string): T[] {
+    const start = Number(startPosition) - 1;
+    return rows.slice(start, start + Number(maxResults)).map((row) => ({ ...(row as any) }));
   }
 
   private fetchChanges(since: string) {
@@ -461,6 +570,70 @@ export class QboSimulator {
         }
       ]
     });
+  }
+
+  /**
+   * Seeds a TaxRate component. `ratePercent` is a percentage, matching QBO's
+   * RateValue (8 means 8%, not 800%).
+   */
+  seedTaxRate(params: { name: string; ratePercent: number; id?: string }): QboSimEntity {
+    const at = this.tick();
+    const entity: QboSimEntity = {
+      Id: params.id ?? this.allocateId('TaxRate'),
+      SyncToken: '0',
+      Name: params.name,
+      RateValue: params.ratePercent,
+      Active: true,
+      MetaData: { CreateTime: at, LastUpdatedTime: at }
+    };
+    this.stores.TaxRate.set(entity.Id, entity);
+    this.journalChange('TaxRate', entity.Id);
+    return entity;
+  }
+
+  /**
+   * Seeds a TaxCode. Pass `taxRateIds` to build the nested SalesTaxRateList a
+   * real tax group carries; omit it for the TAX/NON pseudo codes, which Intuit
+   * returns with no rate list and — notably — no Active field at all.
+   */
+  seedTaxCode(params: {
+    name: string;
+    id?: string;
+    description?: string;
+    taxRateIds?: string[];
+    /** Pseudo codes (TAX/NON) are returned without Active or SyncToken. */
+    pseudo?: boolean;
+    active?: boolean;
+  }): QboSimEntity {
+    const at = this.tick();
+    const id = params.id ?? this.allocateId('TaxCode');
+    const entity: QboSimEntity = params.pseudo
+      ? { Id: id, SyncToken: '0', Name: params.name, Taxable: params.name !== 'NON' }
+      : {
+          Id: id,
+          SyncToken: '0',
+          Name: params.name,
+          Description: params.description ?? params.name,
+          Active: params.active !== false,
+          Taxable: true,
+          TaxGroup: true,
+          SalesTaxRateList: {
+            TaxRateDetail: (params.taxRateIds ?? []).map((rateId, order) => ({
+              TaxTypeApplicable: 'TaxOnAmount',
+              TaxRateRef: { value: rateId, name: this.stores.TaxRate.get(rateId)?.Name },
+              TaxOrder: order
+            }))
+          },
+          MetaData: { CreateTime: at, LastUpdatedTime: at }
+        };
+    if (params.pseudo) {
+      // Intuit omits Active on the pseudo codes; keep the shape faithful so a
+      // consumer that filters on it is tested honestly.
+      delete entity.Active;
+    }
+    this.stores.TaxCode.set(entity.Id, entity);
+    this.journalChange('TaxCode', entity.Id);
+    return entity;
   }
 
   seedItem(params: {

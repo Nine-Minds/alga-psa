@@ -214,6 +214,8 @@ const contractLine = (
   custom_rate: customRate,
   enable_proration: false,
   location_id: 'loc-1',
+  billing_profile_id: null,
+  contract_billing_profile_id: null,
 });
 
 const servicePeriod = (contractLineId: string) => ({
@@ -366,8 +368,24 @@ describe('previewFixedChargeAmountsForInvoiceWindow batched load', () => {
         servicePeriod('line-dead'),
       ],
       client_locations: [{ tenant: TENANT, location_id: 'loc-1', region_code: 'US-NY' }],
+      client_billing_profiles: [
+        {
+          tenant: TENANT,
+          billing_profile_id: 'profile-default',
+          client_id: CLIENT_ID,
+          is_default: true,
+          is_system_managed_default: true,
+          is_active: true,
+          is_tax_exempt: false,
+        },
+      ],
       client_tax_settings: [
-        { tenant: TENANT, client_id: CLIENT_ID, is_reverse_charge_applicable: false },
+        {
+          tenant: TENANT,
+          client_id: CLIENT_ID,
+          billing_profile_id: 'profile-default',
+          is_reverse_charge_applicable: false,
+        },
       ],
       tax_rates: [],
     };

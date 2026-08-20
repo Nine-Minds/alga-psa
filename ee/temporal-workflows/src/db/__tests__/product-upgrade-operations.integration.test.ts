@@ -6,6 +6,7 @@ import type { Knex } from "knex";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { tenantDb } from "@alga-psa/db";
 import { destroyAdminConnection, getAdminConnection } from "@alga-psa/db/admin";
+import { ensureClientDefaultBillingProfile } from "@alga-psa/shared/billingClients/billingProfiles.js";
 import {
   createTestTenant,
   createTestUser,
@@ -90,6 +91,11 @@ const engineCleanupTables = [
   "sla_policies",
   "client_tax_rates",
   "client_tax_settings",
+  // The tax backfill provisions a default billing profile per client, and the
+  // profile→client FK is NO ACTION — delete profiles before the tenant
+  // rollback removes the clients, or that rollback fails (silently, by
+  // design) and leaves the fixture tenant behind.
+  "client_billing_profiles",
   "tax_components",
   "tax_rates",
   "tax_regions",
@@ -623,9 +629,17 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         client_id: configuredClientId,
         client_name: "Configured Client",
       });
+      // S7 keyed client_tax_settings to the billing profile; the pre-existing
+      // row this test guards must sit on the client's default profile.
+      const configuredProfileId = await ensureClientDefaultBillingProfile(
+        fixture.db,
+        fixture.tenantId,
+        configuredClientId,
+      );
       await db.table("client_tax_settings").insert({
         tenant: fixture.tenantId,
         client_id: configuredClientId,
+        billing_profile_id: configuredProfileId,
         is_reverse_charge_applicable: true,
       });
       const configuredBefore = await db
@@ -645,6 +659,17 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         .first();
       expect(createdSettings).toMatchObject({
         is_reverse_charge_applicable: false,
+      });
+      const defaultProfile = await db
+        .table("client_billing_profiles")
+        .where({
+          tenant: fixture.tenantId,
+          client_id: fixture.clientId,
+          is_default: true,
+        })
+        .first();
+      expect(createdSettings).toMatchObject({
+        billing_profile_id: defaultProfile.billing_profile_id,
       });
       const createdAssociation = await db
         .table("client_tax_rates")

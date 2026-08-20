@@ -132,6 +132,8 @@ export class AccountingMappingResolver {
     companyId: string;
     payload: NormalizedCompanyPayload;
     targetRealm?: string | null;
+    /** `billing_profile` for a sub-customer; defaults to `client` (F116). */
+    algaEntityType?: string;
   }): Promise<MappingResolution | null> {
     if (!this.companySyncService) {
       return null;
@@ -152,7 +154,8 @@ export class AccountingMappingResolver {
       adapterType,
       companyId: params.companyId,
       payload: params.payload,
-      targetRealm: params.targetRealm ?? null
+      targetRealm: params.targetRealm ?? null,
+      algaEntityType: params.algaEntityType
     });
 
     const mapping: MappingResolution = {
@@ -195,11 +198,16 @@ export class AccountingMappingResolver {
     adapterType: string;
     companyId: string;
     targetRealm?: string | null;
+    algaEntityType?: string;
   }): string {
     return [
       params.tenantId,
       params.adapterType,
       params.targetRealm ?? 'default',
+      // The entity type belongs in the key: a client and one of its profiles
+      // are different external customers, and sharing a cache slot would export
+      // a site's invoice against its parent.
+      params.algaEntityType ?? 'client',
       params.companyId
     ].join(':');
   }

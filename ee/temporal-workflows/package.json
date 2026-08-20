@@ -53,6 +53,7 @@
     "express": "^4.21.3",
     "js-yaml": "^4.1.0",
     "knex": "^3.0.0",
+    "mailparser": "^3.9.8",
     "node-vault": "^0.10.9",
     "parsimmon": "^1.18.1",
     "pg": "^8.12.0",

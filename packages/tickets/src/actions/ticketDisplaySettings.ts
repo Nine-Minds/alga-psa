@@ -4,12 +4,20 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
+import { resolveTicketColumnVisibility } from '../lib/ticketColumnCatalog';
+import type { TicketViewSettings } from '../lib/ticketViewSettings';
 
-export type TicketListSettings = {
-  columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
-  tagsInlineUnderTitle?: boolean;
-};
+/**
+ * The tenant layer of a ticket-list view is the *same document* a board stores.
+ *
+ * `list` widens from the two keys it used to hold (columnVisibility,
+ * tagsInlineUnderTitle) to the full TicketViewSettings — a pure type widening,
+ * because both keys already sat at exactly this path. No tenant JSON migration
+ * is needed: the type grows, stored data does not move. A board stores the same
+ * document *directly* in boards.list_view_settings rather than nested under
+ * `list`, because a board has no other display settings to nest beside it.
+ */
+export type TicketListSettings = TicketViewSettings;
 
 export type TicketingDisplaySettings = {
   dateTimeFormat?: string; // date-fns format string, e.g. 'MMM d, yyyy h:mm a'
@@ -39,6 +47,13 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
         // ticket-column catalog so this list can't drift from the renderer.
         columnVisibility: resolveTicketColumnVisibility(display?.list?.columnVisibility),
         tagsInlineUnderTitle: display?.list?.tagsInlineUnderTitle ?? true,
+        // Carried through unresolved: resolveTicketViewSettings layers the board
+        // document over this one and only then applies catalog/step defaults, so
+        // "the tenant did not express a density" must stay distinguishable here
+        // from "the tenant chose 50".
+        columnOrder: display?.list?.columnOrder,
+        densityLevel: display?.list?.densityLevel,
+        filters: display?.list?.filters,
       },
     };
   } catch (e) {
@@ -52,6 +67,20 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       },
     };
   }
+});
+
+/**
+ * Whether the caller may author default views (`ticket_settings:update`).
+ *
+ * Purely for hiding the save/reset items in the `View ▾` menu — the actions
+ * themselves are gated server-side, so this is presentation, not enforcement.
+ * A separate read rather than an inference from the settings payload, because
+ * "can see the display settings" and "can change them for everyone" are
+ * genuinely different questions.
+ */
+export const canManageTicketViewDefaults = withAuth(async (user, _ctx): Promise<boolean> => {
+  const { knex } = await createTenantKnex();
+  return hasPermission(user, 'ticket_settings', 'update', knex);
 });
 
 export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean } | ActionPermissionError> => {
@@ -69,14 +98,40 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
+
+  // `list` merges key-group-wise; everything else still replaces wholesale.
+  //
+  // This mattered the moment `list` widened from two keys to the full
+  // TicketViewSettings, because it now has two writers that own different
+  // subsets of it: Settings → Display authors columnVisibility +
+  // tagsInlineUnderTitle, while `View ▾` → "save as default" authors the whole
+  // document (columnOrder, densityLevel, filters included). Replacing `list`
+  // wholesale meant whichever screen saved last silently deleted the other's
+  // keys — save a tenant default view, then change anything in Display
+  // Settings, and the tenant's column order, density and filters were gone with
+  // no error and no way to tell. Before the widening both writers happened to
+  // send the same two keys, so replacement was lossless; it no longer is.
+  //
+  // A writer therefore replaces the groups it names and leaves the rest alone,
+  // which is the same group-level rule the board→tenant resolver already uses.
+  const mergedList = updated.list
+    ? { ...(currentDisplay.list || {}), ...updated.list }
+    : currentDisplay.list;
+
   const mergedDisplay = {
     ...currentDisplay,
     ...updated,
+    ...(mergedList ? { list: mergedList } : {}),
   };
 
   const rootSettings = (existingRow?.settings as any) || {};
   const ticketing = rootSettings.ticketing || {};
   const display = ticketing.display || {};
+  // Same group-level rule on the legacy nested copy, so the two paths cannot
+  // disagree about what a partial write means.
+  const mergedNestedList = updated.list
+    ? { ...(display.list || {}), ...updated.list }
+    : display.list;
   const mergedSettings = {
     ...rootSettings,
     ticketing: {
@@ -84,6 +139,7 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
       display: {
         ...display,
         ...updated,
+        ...(mergedNestedList ? { list: mergedNestedList } : {}),
       },
     },
   };

@@ -11,6 +11,7 @@ import { Knex } from 'knex';
 import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import type { CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -573,7 +574,15 @@ export const grantCredit = withAuth(async (
     clientId: string,
     amount: number,
     manualExpirationDate?: string,
-    description?: string
+    description?: string,
+    /**
+     * Which of the client's billing entities holds this credit (F108).
+     * Omitted for an unsegmented client, where it resolves to the only profile
+     * there is. Once a client is segmented, issuing to the wrong profile means
+     * the credit cannot pay the invoice it was meant for — so this is asked
+     * explicitly rather than guessed from the invoice that prompted it.
+     */
+    billingProfileId?: string
 ): Promise<ICreditTracking | CreditActionError> => {
     return withCreditActionErrors(async () => {
     if (!await hasPermission(user, 'credit', 'create')) {
@@ -598,6 +607,12 @@ export const grantCredit = withAuth(async (
         }
 
         const clientCurrency = client.default_currency_code || 'USD';
+        const creditBillingProfileId = await resolvePaymentBillingProfileId(
+            trx,
+            tenant,
+            clientId,
+            billingProfileId ?? null
+        );
         const expirationDate = await resolveCreditExpirationDate(trx, tenant, clientId, manualExpirationDate);
 
         const currentBalance = await tenantScopedTable(trx, tenant, 'transactions')
@@ -611,6 +626,7 @@ export const grantCredit = withAuth(async (
         await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: transactionId,
             client_id: clientId,
+            billing_profile_id: creditBillingProfileId,
             amount,
             type: 'credit_issuance',
             status: 'completed',
@@ -628,6 +644,7 @@ export const grantCredit = withAuth(async (
                 credit_id: creditId,
                 tenant,
                 client_id: clientId,
+                billing_profile_id: creditBillingProfileId,
                 transaction_id: transactionId,
                 amount,
                 remaining_amount: amount,
@@ -684,7 +701,13 @@ export const createPrepaymentInvoice = withAuth(async (
     { tenant },
     clientId: string,
     amount: number,
-    manualExpirationDate?: string
+    manualExpirationDate?: string,
+    /**
+     * Which entity is prepaying (F096). Omitted for an unsegmented client,
+     * where it resolves to the only profile there is. The credit this invoice
+     * issues inherits the same profile, so it can pay that entity's invoices.
+     */
+    billingProfileId?: string
 ): Promise<IInvoice | CreditActionError> => {
     return withCreditActionErrors(async () => {
     // Check permission for credit creation
@@ -727,6 +750,7 @@ export const createPrepaymentInvoice = withAuth(async (
             amount,
             await generateInvoiceNumber(),
             expirationDate,
+            billingProfileId,
         );
     });
 
@@ -743,14 +767,22 @@ export async function createPrepaymentInvoiceInternal(
     amount: number,
     invoiceNumber: string,
     manualExpirationDate?: string,
+    billingProfileId?: string,
 ): Promise<IInvoice> {
     if (!Number.isFinite(amount) || amount <= 0) {
         throw new Error('Prepayment amount must be greater than zero');
     }
     const now = new Date().toISOString();
+    const prepaymentProfileId = await resolvePaymentBillingProfileId(
+        trx,
+        tenant,
+        clientId,
+        billingProfileId ?? null,
+    );
     const [createdInvoice] = await tenantScopedTable(trx, tenant, 'invoices')
         .insert({
             client_id: clientId,
+            billing_profile_id: prepaymentProfileId,
             tenant,
             invoice_date: now,
             due_date: now,
@@ -842,7 +874,7 @@ export async function applyCreditToInvoiceInternal(
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'currency_code', 'project_id')
+            .select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')
             .forUpdate()
             .first();
 
@@ -851,6 +883,13 @@ export async function applyCreditToInvoiceInternal(
         }
 
         const invoiceCurrency = invoice.currency_code || 'USD';
+        // Credit application is constrained to the invoice's own billing
+        // profile (F111, decision D7). Sibling profiles are separately billed
+        // entities with different owners and different cards — a credit issued
+        // to one silently paying another's invoice is a real AR defect, not a
+        // convenience. Pre-profile invoices carry no profile and fall back to
+        // the client-wide pool, which is what they have always drawn on.
+        const invoiceBillingProfileId = (invoice.billing_profile_id as string | null) ?? null;
         
         // Credit already applied to this invoice. Read the canonical
         // `credit_applied` column rather than summing `credit_allocations`:
@@ -936,7 +975,7 @@ export async function applyCreditToInvoiceInternal(
         // that feeds the transaction's `balance_after` is also read only
         // after this lock is held (see below).
         const now = new Date().toISOString();
-        let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
+        const creditEntriesQuery = tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
@@ -947,7 +986,18 @@ export async function applyCreditToInvoiceInternal(
                 this.whereNull('expiration_date')
                     .orWhere('expiration_date', '>', now);
             })
-            .where('remaining_amount', '>', 0)
+            .where('remaining_amount', '>', 0);
+        if (invoiceBillingProfileId) {
+            creditEntriesQuery.where(function () {
+                this.where('billing_profile_id', invoiceBillingProfileId)
+                    // Credit issued before profiles existed belongs to the
+                    // client as a whole and stays spendable on any of its
+                    // invoices — narrowing it would strand money a client
+                    // already holds. Everything issued since carries a profile.
+                    .orWhereNull('billing_profile_id');
+            });
+        }
+        let creditEntries = await creditEntriesQuery
             .orderBy(creditOrderBy)
             .forUpdate();
 
@@ -981,8 +1031,10 @@ export async function applyCreditToInvoiceInternal(
         // statement takes a fresh snapshot once the lock wait ends, so it
         // reflects every committed draw-down; it runs before this
         // application's own decrements, so `availableCredit -
-        // totalAppliedAmount` is the true post-application balance.
-        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
+        // totalAppliedAmount` is the true post-application balance. Scoped to
+        // the invoice's billing profile (F111/D7): sibling profiles' credit
+        // never counts toward this profile's balance.
+        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency, invoiceBillingProfileId);
 
         const invoiceProjectId = invoice.project_id ?? null;
         if (invoiceProjectId) {
@@ -1111,6 +1163,7 @@ export async function applyCreditToInvoiceInternal(
         const [creditTransaction] = await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: uuidv4(),
             client_id: clientId,
+            billing_profile_id: invoiceBillingProfileId,
             invoice_id: invoiceId,
             amount: -totalAppliedAmount,
             type: 'credit_application',
@@ -1129,6 +1182,9 @@ export async function applyCreditToInvoiceInternal(
             allocation_id: allocationId,
             transaction_id: creditTransaction.transaction_id,
             invoice_id: invoiceId,
+            // The profile whose credit paid, which by the constraint above is
+            // also the profile the invoice belongs to (F109).
+            billing_profile_id: invoiceBillingProfileId,
             amount: totalAppliedAmount,
             created_at: now,
             tenant

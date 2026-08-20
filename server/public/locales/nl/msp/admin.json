@@ -628,5 +628,35 @@
       "error": "Fout",
       "metadata": "Metagegevens"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Gmail-bezorgingsdiagnose",
+    "description": "Controleert het Pub/Sub-onderwerp, de machtigingen ervan, het push-eindpunt en de bijbehorende doelgroep, de Gmail-watch en wanneer er voor het laatst een push is binnengekomen.",
+    "labels": {
+      "provider": "Aanbieder:",
+      "mailbox": "Postvak:",
+      "overall": "Algemeen:",
+      "recommendations": "Aanbevelingen",
+      "error": "Fout"
+    },
+    "audienceMismatch": {
+      "title": "De push-doelgroep komt niet overeen met deze instantie",
+      "expected": "Verwacht:",
+      "actual": "Google gebruikt:"
+    },
+    "actions": {
+      "copySupportBundle": "Ondersteuningsbundel kopiëren",
+      "copied": "Gekopieerd"
+    },
+    "states": {
+      "running": "Diagnostiek wordt uitgevoerd...",
+      "diagnosticsFailed": "Diagnostiek mislukt"
+    },
+    "statuses": {
+      "pass": "Geslaagd",
+      "warn": "Waarschuwing",
+      "fail": "Mislukt",
+      "skip": "Overgeslagen"
+    }
   }
 }

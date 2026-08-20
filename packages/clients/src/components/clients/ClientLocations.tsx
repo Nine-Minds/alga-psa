@@ -24,6 +24,8 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { getClientBillingProfiles } from '../../actions/clientBillingProfileActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -82,12 +84,15 @@ interface LocationFormData {
   country_name: string;
   region_code: string | null;
   phone: string;
+  phone_extension: string;
   fax: string;
+  fax_extension: string;
   email: string;
   notes: string;
   is_billing_address: boolean;
   is_shipping_address: boolean;
   is_default: boolean;
+  default_billing_profile_id: string | null;
 }
 
 interface LocationCardProps {
@@ -289,13 +294,18 @@ const initialFormData: LocationFormData = {
   country_name: 'United States',
   region_code: null,
   phone: '',
+  phone_extension: '',
   fax: '',
+  fax_extension: '',
   email: '',
   notes: '',
   is_billing_address: false,
   is_shipping_address: false,
-  is_default: false
+  is_default: false,
+  default_billing_profile_id: null
 };
+
+const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
 export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
@@ -531,10 +541,13 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       country_name: location.country_name,
       region_code: location.region_code || null,
       phone: location.phone || '',
+      phone_extension: location.phone_extension || '',
       fax: location.fax || '',
+      fax_extension: location.fax_extension || '',
       email: location.email || '',
       notes: location.notes || '',
       is_billing_address: location.is_billing_address || false,
+      default_billing_profile_id: location.default_billing_profile_id ?? null,
       is_shipping_address: location.is_shipping_address || false,
       is_default: location.is_default || false
     });
@@ -952,17 +965,17 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                   label={t('clients.locations.form.phone', 'Phone')}
                   value={formData.phone || ''}
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  extension={formData.phone_extension || ''}
+                  onExtensionChange={(value) => setFormData(prev => ({ ...prev, phone_extension: value }))}
+                  extensionLabel={t('clients.locations.form.extension', 'Extension')}
                   countryCode={formData.country_code}
-                  phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
-                  countries={countries}
-                  onCountryChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
                   allowExtensions={true}
                   data-automation-id="phone-input"
                 />
               </div>
               
-              <div {...emailFieldProps}>
-                <Label htmlFor="email-input">{t('clients.locations.form.email', 'Email')}</Label>
+              <div {...emailFieldProps} className="space-y-1">
+                <Label htmlFor="email-input" className="block">{t('clients.locations.form.email', 'Email')}</Label>
                 <Input
                   id="email-input"
                   type="email"
@@ -1027,6 +1040,29 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                 <Label htmlFor="is-shipping-address-switch">{t('clients.locations.form.shippingAddress', 'Shipping Address')}</Label>
               </div>
             </div>
+
+            {/*
+              Default billing profile for work at this site (F046). Locations and
+              profiles are independent layers that point at each other — a
+              location is not the segment, it only suggests one — so this seeds a
+              new ticket's profile rather than deciding attribution itself.
+              Renders nothing while the client holds a single profile.
+            */}
+            <BillingProfilePicker
+              id="location-default-billing-profile"
+              clientId={clientId}
+              loadProfiles={loadClientBillingProfiles}
+              value={formData.default_billing_profile_id ?? null}
+              onChange={(billingProfileId) =>
+                setFormData(prev => ({ ...prev, default_billing_profile_id: billingProfileId }))
+              }
+              label={t('clients.locations.form.defaultBillingProfile', 'Default billing profile')}
+              unassignedLabel={t('clients.locations.form.defaultBillingProfileNone', 'None')}
+              hint={t(
+                'clients.locations.form.defaultBillingProfileHelper',
+                'New tickets at this location start with this billing profile. It can always be changed on the ticket.',
+              )}
+            />
             
           </form>
         </DialogContent>

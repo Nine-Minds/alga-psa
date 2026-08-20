@@ -43,6 +43,9 @@ describe('Live Xero export integration', () => {
         'invoice_charges',
         'invoices',
         'service_catalog',
+        // Billing profiles reference clients (NO ACTION); the app layer
+        // provisions one per client created through it, so clear them first.
+        'client_billing_profiles',
         'clients'
       ]
     });
@@ -59,6 +62,7 @@ describe('Live Xero export integration', () => {
     await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();
     await ctx.db('service_catalog').where({ tenant: ctx.tenantId }).del();
+    await ctx.db('client_billing_profiles').where({ tenant: ctx.tenantId }).del();
     await ctx.db('clients').where({ tenant: ctx.tenantId }).del();
 
     const financeUser = createMockUser('internal', {

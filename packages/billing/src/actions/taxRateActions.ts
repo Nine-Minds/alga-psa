@@ -14,6 +14,8 @@ import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/
 import {
   actionError,
   permissionError,
+  isActionMessageError,
+  isActionPermissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -41,6 +43,11 @@ function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
         return actionError('Tax rate ID is required for updates.');
       case 'Tax rate not found':
         return actionError('Tax rate not found.');
+      // Thrown by deleteTaxRate's in-transaction guards; intentionally
+      // user-visible, so keep the wording rather than degrading to the
+      // generic delete fallback.
+      case 'Tax rate not found or already deleted.':
+        return actionError('Tax rate not found or already deleted.');
     }
   }
 
@@ -252,11 +259,37 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
     };
   } catch (error: any) {
     console.error('Error processing tax rate deletion:', error);
+
+    // Never echo error.message to the client: raw Postgres/Knex failures here
+    // carry the interpolated SQL statement, which DeleteEntityDialog renders
+    // verbatim. Only messages this action recognises are user-visible.
+    const expected: unknown = taxRateActionErrorFrom(error);
+    if (isActionPermissionError(expected)) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message: expected.permissionError,
+        dependencies: [],
+        alternatives: []
+      };
+    }
+    if (isActionMessageError(expected)) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: expected.actionError,
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     return {
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error?.message || 'Failed to process tax rate deletion request.',
+      message: 'Failed to delete tax rate. Please refresh and try again.',
       dependencies: [],
       alternatives: []
     };

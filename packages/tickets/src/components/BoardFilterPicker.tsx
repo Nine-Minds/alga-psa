@@ -8,7 +8,8 @@ import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export const NO_BOARD_VALUE = 'no-board';
+export { NO_BOARD_VALUE } from '../lib/boardFilterValues';
+import { NO_BOARD_VALUE } from '../lib/boardFilterValues';
 
 interface BoardFilterPickerProps {
   id?: string;

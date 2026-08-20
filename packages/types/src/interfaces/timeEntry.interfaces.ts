@@ -2,6 +2,7 @@ import { IUser } from './auth.interfaces';
 import { WorkItemType, IWorkItem } from './workItem.interfaces';
 import { TenantEntity } from '.';
 import type { DateValue, ISO8601String } from '../lib/temporal';
+import type { ContractLineSelectionReason, ContractLineSource } from './billing.interfaces';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 export type TimeEntryChangeRequestState = 'unresolved' | 'handled';
@@ -56,6 +57,16 @@ export interface ITimeEntry extends TenantEntity  {
   service_name?: string | null;
   tax_region?: string;
   contract_line_id?: string | null;
+  /**
+   * How the contract line was chosen. Recorded so an entry can explain itself
+   * — including when no line could be chosen at all.
+   */
+  contract_line_source?: ContractLineSource | null;
+  /**
+   * Why no contract line could be chosen, when none was. `no_match` means no
+   * contract covers the service; anything else means one does.
+   */
+  contract_line_unresolved_reason?: ContractLineSelectionReason | null;
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
   change_requests?: ITimeEntryChangeRequest[];

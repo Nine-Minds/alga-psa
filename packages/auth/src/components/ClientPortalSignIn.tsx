@@ -15,6 +15,7 @@ type TenantBranding = {
   primaryColor: string;
   secondaryColor: string;
   logoUrl?: string | null;
+  logoDarkUrl?: string | null;
   clientName?: string | null;
 };
 
@@ -155,7 +156,7 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
   // Generate gradient based on branding colors or use defaults
   const gradientStyle = useMemo(() => {
     if (!branding?.primaryColor || !branding?.secondaryColor) {
-      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
+      return 'auth-page-surface';
     }
 
     // Create CSS gradient from hex colors with opacity
@@ -171,7 +172,7 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
       };
     }
 
-    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
+    return 'auth-page-surface';
   }, [branding]);
 
   // Use branded colors for accents
@@ -197,7 +198,24 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-center">
         <div className="flex items-center">
-          {branding?.logoUrl ? (
+          {branding?.logoUrl && branding?.logoDarkUrl ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.clientName || 'Client Logo'}
+                width={50}
+                height={50}
+                className="rounded-full mr-4 object-contain dark:hidden"
+              />
+              <img
+                src={branding.logoDarkUrl}
+                alt={branding.clientName || 'Client Logo'}
+                width={50}
+                height={50}
+                className="rounded-full mr-4 object-contain hidden dark:block"
+              />
+            </>
+          ) : branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.clientName || 'Client Logo'}
@@ -229,7 +247,20 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
         <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center items-center">
           <div className="max-w-lg">
             <div className="bg-card rounded-full p-8 mb-8 mx-auto w-48 h-48 flex items-center justify-center shadow-lg">
-              {branding?.logoUrl ? (
+              {branding?.logoUrl && branding?.logoDarkUrl ? (
+                <>
+                  <img
+                    src={branding.logoUrl}
+                    alt={branding.clientName || 'Client Logo'}
+                    className="w-24 h-24 object-contain dark:hidden"
+                  />
+                  <img
+                    src={branding.logoDarkUrl}
+                    alt={branding.clientName || 'Client Logo'}
+                    className="w-24 h-24 object-contain hidden dark:block"
+                  />
+                </>
+              ) : branding?.logoUrl ? (
                 <img
                   src={branding.logoUrl}
                   alt={branding.clientName || 'Client Logo'}

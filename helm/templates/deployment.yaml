@@ -106,6 +106,10 @@ spec:
           hostPath:
             path: {{ .Values.sharedTenantSecrets.hostPath }}
             type: DirectoryOrCreate
+        {{- else if .Values.tenantSecrets.persistence.enabled }}
+        - name: tenant-secrets
+          persistentVolumeClaim:
+            claimName: {{ .Values.tenantSecrets.persistence.existingClaim | default (printf "%s-tenant-secrets" (include "sebastian.fullname" .)) }}
         {{- end }}
       {{- if or .Values.setup.runMigrations .Values.setup.runSeeds }}
       initContainers:
@@ -955,6 +959,9 @@ spec:
           {{- if .Values.sharedTenantSecrets.enabled }}
           - name: SECRET_FS_BASE_PATH
             value: "{{ .Values.sharedTenantSecrets.mountPath }}"
+          {{- else if .Values.tenantSecrets.persistence.enabled }}
+          - name: SECRET_FS_BASE_PATH
+            value: "{{ .Values.tenantSecrets.mountPath }}"
           {{- end }}
           {{- if .Values.secrets_provider.envPrefix }}
           - name: SECRET_ENV_PREFIX
@@ -987,7 +994,7 @@ spec:
             value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
           {{- end }}
           {{- end }}
-          {{- if or (and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled)) .Values.sharedTenantSecrets.enabled }}
+          {{- if or (and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled)) .Values.sharedTenantSecrets.enabled .Values.tenantSecrets.persistence.enabled }}
           volumeMounts:
             {{- if and .Values.server.persistence.enabled (not .Values.config.storage.providers.s3.enabled) }}
             - name: storage-volume
@@ -996,6 +1003,9 @@ spec:
             {{- if .Values.sharedTenantSecrets.enabled }}
             - name: shared-tenant-secrets
               mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+            {{- else if .Values.tenantSecrets.persistence.enabled }}
+            - name: tenant-secrets
+              mountPath: {{ .Values.tenantSecrets.mountPath }}
             {{- end }}
           {{- end }}
           ports:

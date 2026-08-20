@@ -15,14 +15,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Deferred-revenue / prepaid liability report. Gated behind the
- * `release-v1.5-feature` feature flag and the `reports.read` permission for
+ * `release-v1-5-feature` feature flag and the `reports.read` permission for
  * internal users; flag off (or no permission) yields a 404 so nothing about
  * the existing UI changes.
  */
 export default async function DeferredRevenueReportPage() {
   const currentUser = await getCurrentUser();
   const [flagEnabled, canReadReports] = await Promise.all([
-    checkFeatureFlag('release-v1.5-feature'),
+    checkFeatureFlag('release-v1-5-feature'),
     currentUser ? hasPermission(currentUser, 'reports', 'read') : Promise.resolve(false),
   ]);
 

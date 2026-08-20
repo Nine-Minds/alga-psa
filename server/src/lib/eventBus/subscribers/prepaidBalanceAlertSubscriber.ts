@@ -4,7 +4,7 @@
  * Handles PREPAID_BALANCE_ALERT_SCAN_REQUESTED published by the daily 09:00 UTC
  * maintenance handler. This subscriber is the only layer allowed to evaluate
  * the feature flag, query ledgers, resolve recipients, or invoke
- * notifications. It fails closed: while `release-v1.5-feature` is disabled or
+ * notifications. It fails closed: while `release-v1-5-feature` is disabled or
  * its checker is unavailable, the scan performs no alert/delivery/notification
  * writes.
  */
@@ -18,7 +18,7 @@ import { evaluatePrepaidBalanceAlertsForTenant } from './prepaidBalanceAlertEval
 import { planAndDrainDeliveriesForTenant } from './prepaidBalanceAlertDelivery';
 import { replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
 
-export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
+export const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 let isRegistered = false;
 

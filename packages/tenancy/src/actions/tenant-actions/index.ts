@@ -5,4 +5,5 @@ export * from './tenantLocaleActions';
 export * from './tenantMspLocaleActions';
 export * from './tenantClientPortalLocaleActions';
 export * from './tenantLogoActions';
+export * from './tenantThemeActions';
 export type * from './portalDomain.types';

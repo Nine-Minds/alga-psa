@@ -2,7 +2,7 @@
 /**
  * ContractWizard bucket-authoring submission exclusivity (behavioral).
  *
- * The release-v1.5-feature flag must select exactly one submission path:
+ * The release-v1-5-feature flag must select exactly one submission path:
  *   - flag OFF: the legacy per-service bucket_overlay payload is submitted and
  *     `bucket_pools` is never present on the payload;
  *   - flag ON: the pool payload is submitted and no conflicting legacy

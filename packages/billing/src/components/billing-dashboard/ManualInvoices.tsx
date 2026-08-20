@@ -1044,7 +1044,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 <Alert id="manual-invoice-no-billing-email-warning" variant="warning">
                   <AlertDescription>
                     {t('manualInvoices.warnings.noBillingEmail', {
-                      defaultValue: 'This client has no billing email. Set an email address on the client\'s billing location before generating the invoice.',
+                      defaultValue: 'This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice.',
                     })}
                   </AlertDescription>
                 </Alert>

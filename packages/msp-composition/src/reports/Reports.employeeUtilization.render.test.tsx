@@ -42,7 +42,7 @@ vi.mock('@alga-psa/reporting/actions/helpdeskReportActions', () => ({
 }));
 
 // The reports catalog gates the deferred-revenue card behind the
-// `release-v1.5-feature` flag (defaultValue: false). Stub the hook so the
+// `release-v1-5-feature` flag (defaultValue: false). Stub the hook so the
 // catalog renders deterministically without a SessionProvider/PostHog.
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
   useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),

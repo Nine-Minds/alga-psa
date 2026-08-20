@@ -91,7 +91,12 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     expect(schedulingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
     expect(schedulingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
     expect(usageActionsSource).toContain('determineDefaultContractLine');
-    expect(timeEntryCrudActionsSource).toContain('determineDefaultContractLine');
+    // Time entries route through `resolveContractLineSelection`, the same
+    // disambiguation module with the same system-managed exclusion, which
+    // additionally reports *why* it could not pick a line. Both entry points
+    // still go through that module and nowhere else.
+    expect(timeEntryCrudActionsSource).toContain('resolveContractLineSelection');
+    expect(timeEntryCrudActionsSource).toContain("from '../lib/contractLineDisambiguation'");
   });
 
   it('F073/F074: contract line and pricing schedule UI surfaces become read-only with attribution-only guidance', () => {

@@ -96,11 +96,79 @@
 
 /* Force text breaking for extremely long strings */
 .forceTextBreak {
+    /* Ticket comments and descriptions are commonly wrapped in Tailwind's
+       `prose` class. Replace its fixed Slate palette at the viewer boundary so
+       Markdown headings, table headers, bold text, quotes, and code follow the
+       active tenant theme just like ordinary BlockNote paragraphs do. */
+    --tw-prose-body: rgb(var(--color-text-800));
+    --tw-prose-headings: rgb(var(--color-text-900));
+    --tw-prose-lead: rgb(var(--color-text-700));
+    --tw-prose-links: rgb(var(--badge-info-text));
+    --tw-prose-bold: rgb(var(--color-text-900));
+    --tw-prose-counters: rgb(var(--color-text-600));
+    --tw-prose-bullets: rgb(var(--color-text-500));
+    --tw-prose-hr: rgb(var(--color-border-300));
+    --tw-prose-quotes: rgb(var(--color-text-800));
+    --tw-prose-quote-borders: rgb(var(--color-border-300));
+    --tw-prose-captions: rgb(var(--color-text-600));
+    --tw-prose-code: rgb(var(--color-text-900));
+    --tw-prose-pre-code: rgb(var(--color-text-800));
+    --tw-prose-pre-bg: rgb(var(--color-border-100));
+    --tw-prose-th-borders: rgb(var(--color-border-300));
+    --tw-prose-td-borders: rgb(var(--color-border-200));
+    color: rgb(var(--color-text-800));
     overflow-wrap: break-word !important;
     word-break: break-word !important;
     white-space: pre-wrap !important;
     max-width: 100% !important;
     min-width: 0 !important;
+}
+
+.forceTextBreak :global(.bn-container),
+.forceTextBreak :global(.bn-container[data-color-scheme="light"]),
+.forceTextBreak :global(.bn-container[data-color-scheme="dark"]) {
+    --bn-colors-editor-text: rgb(var(--color-text-800));
+    --bn-colors-editor-background: transparent;
+    --bn-colors-border: rgb(var(--color-border-200));
+    --bn-colors-side-menu: rgb(var(--color-text-500));
+}
+
+.forceTextBreak :global(.bn-editor),
+.forceTextBreak :global(.ProseMirror) {
+    color: rgb(var(--color-text-800));
+}
+
+.forceTextBreak :global(.bn-editor) [data-content-type="table"] th,
+.forceTextBreak :global(.bn-editor) [data-content-type="table"] td {
+    border-color: rgb(var(--color-border-300));
+    color: rgb(var(--color-text-800));
+}
+
+.forceTextBreak :global(.bn-editor) [data-content-type="table"] th {
+    background-color: rgb(var(--color-table-row-alt));
+    color: rgb(var(--color-text-900));
+}
+
+.forceTextBreak [data-content-type="quote"] blockquote {
+    border-left-color: rgb(var(--color-border-300));
+    color: rgb(var(--color-text-700));
+}
+
+.forceTextBreak [data-content-type="divider"] hr {
+    border-top-color: rgb(var(--color-border-300));
+}
+
+.forceTextBreak :global(.bn-block-content)[data-content-type="codeBlock"] {
+    background-color: rgb(var(--color-border-100));
+    border: 1px solid rgb(var(--color-border-200));
+    color: rgb(var(--color-text-900));
+}
+
+.forceTextBreak :global(.bn-inline-content) code {
+    background-color: rgb(var(--color-border-100));
+    border-radius: 0.25rem;
+    color: rgb(var(--color-text-900));
+    padding: 0.1rem 0.25rem;
 }
 
 .forceTextBreak .ProseMirror {

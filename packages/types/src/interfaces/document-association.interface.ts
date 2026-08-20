@@ -2,6 +2,9 @@ import { TenantEntity } from ".";
 
 export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order';
 
+/** Light ('default') vs dark logo slot for entity logos. */
+export type EntityLogoVariant = 'default' | 'dark';
+
 export interface IDocumentAssociation extends TenantEntity {
     association_id: string;
     document_id: string;
@@ -11,6 +14,7 @@ export interface IDocumentAssociation extends TenantEntity {
     notes?: string;
     created_by?: string;
     is_entity_logo?: boolean;
+    entity_logo_variant?: EntityLogoVariant;
 }
 
 export interface IDocumentAssociationInput {
@@ -20,6 +24,7 @@ export interface IDocumentAssociationInput {
     tenant: string;
     notes?: string;
     is_entity_logo?: boolean;
+    entity_logo_variant?: EntityLogoVariant;
 }
 
 // Asset-specific document associations

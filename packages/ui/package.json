@@ -134,6 +134,7 @@
     "react-day-picker": "^9.5.0",
     "react-hot-toast": "^2.5.1",
     "react-i18next": "^15.7.3",
+    "react-phone-number-input": "^3.4.17",
     "socket.io-client": "^4.7.5",
     "tailwind-merge": "^2.6.0",
     "tinycolor2": "^1.6.0"

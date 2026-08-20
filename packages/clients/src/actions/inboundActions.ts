@@ -7,6 +7,7 @@ import {
   buildClientStatusChangedPayload,
 } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 
@@ -173,6 +174,10 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
             updated_at: new Date().toISOString(),
           })
           .returning('*');
+
+        await ensureClientDefaultBillingProfile(trx, ctx.tenant, created.client_id, {
+          clientName: created.client_name,
+        });
 
         await ensureDefaultContractForClientIfBillingConfigured(trx, {
           tenant: ctx.tenant,

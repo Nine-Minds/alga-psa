@@ -14,7 +14,20 @@ RUN apk add --no-cache \
     ghostscript \
     curl \
     nano \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
     ffmpeg
+
+# Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
+# Puppeteer's bundled Chrome is glibc-linked and cannot run on Alpine, so
+# without this every PDF render fails at browser launch.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 

@@ -6,7 +6,8 @@
     "invoices": "Faturas",
     "overview": "Visão geral",
     "quotes": "Cotações",
-    "usageMetrics": "Métricas de uso"
+    "usageMetrics": "Métricas de uso",
+    "segments": "Por segmento"
   },
   "currentContractLine": "Linha de contrato atual",
   "nextInvoice": "Próxima fatura",

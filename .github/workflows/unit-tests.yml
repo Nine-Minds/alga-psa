@@ -60,9 +60,10 @@ jobs:
         run: npm ci
 
       # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
-      # assert on source layout; it isn't on the runner by default.
+      # assert on source layout; it isn't on the runner by default. Installed
+      # from its GitHub release, not apt — see the composite action for why.
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        uses: ./.github/actions/install-ripgrep
 
       # Build the shared infra libraries' dist before testing. Most package
       # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
@@ -134,6 +135,11 @@ jobs:
   coverage-report:
     name: Server unit suite + coverage
     runs-on: ubuntu-latest
+    # Backstop like the sibling unit-tests job: without this the 6h runner
+    # default applies, and a hung apt mirror in "Install ripgrep" once stalled
+    # this job for ~6h before it was cancelled. An hour comfortably covers the
+    # full server suite while still catching a hang 6x sooner.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -144,9 +150,11 @@ jobs:
         run: npm install -g npm@11
       - name: Install dependencies
         run: npm ci
-      # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      # A few contract tests shell out to ripgrep; it isn't on the runner by
+      # default. Installed from its GitHub release, not apt (the apt mirror hang
+      # here once stalled this job for ~6h). See the composite action for why.
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        uses: ./.github/actions/install-ripgrep
       # Package suites that real-import @alga-psa/* through native Node
       # resolution (onboarding seeds are .cjs) need the dists on disk; same
       # project set the nx job builds.

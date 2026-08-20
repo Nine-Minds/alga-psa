@@ -7,6 +7,16 @@ import { ISO8601String } from '../../types/types.d';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import * as clientActions from '@alga-psa/clients/actions';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 const billingEngineSource = readFileSync(
   new URL('../../../../packages/billing/src/lib/billing/billingEngine.ts', import.meta.url),
   'utf8',
@@ -1097,6 +1107,8 @@ describe('BillingEngine', () => {
         }),
         getLocationTaxRegionCode: () => null,
         getClientDefaultTaxRegionCode: () => 'US-CA',
+        // Tax exemption is profile-scoped with a client fallback (D9).
+        isTaxExemptForProfile: () => false,
         calculateTax: calculateTaxSpy
       });
 
@@ -1135,7 +1147,10 @@ describe('BillingEngine', () => {
         '2023-01-31',
         'US-CA',
         true,
-        'USD'
+        'USD',
+        // The resolved billing profile — tax exemption is profile-scoped with a
+        // client fallback (D9); the region chain is untouched.
+        'unit-test-default-billing-profile'
       );
     });
 
@@ -1270,6 +1285,8 @@ describe('BillingEngine', () => {
         }),
         getLocationTaxRegionCode: () => null,
         getClientDefaultTaxRegionCode: () => 'US-CA',
+        // Tax exemption is profile-scoped with a client fallback (D9).
+        isTaxExemptForProfile: () => false,
         calculateTax: () => ({ taxRate: 8.25, taxAmount: 0 })
       });
 

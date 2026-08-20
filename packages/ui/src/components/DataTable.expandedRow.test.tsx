@@ -30,6 +30,12 @@ const COLUMNS: ColumnDefinition<Client>[] = [
 const bodyRows = () => Array.from(document.querySelectorAll('tbody tr'));
 
 describe('DataTable expandedRowRender', () => {
+  it('gives the header row a distinct themed surface', () => {
+    render(<DataTable id="t" data={CLIENTS} columns={COLUMNS} pagination={false} />);
+
+    expect(document.querySelector('thead')?.className).toContain('var(--color-table-row-alt)');
+  });
+
   it('renders nothing extra when no expansion is asked for', () => {
     render(<DataTable id="t" data={CLIENTS} columns={COLUMNS} pagination={false} />);
 

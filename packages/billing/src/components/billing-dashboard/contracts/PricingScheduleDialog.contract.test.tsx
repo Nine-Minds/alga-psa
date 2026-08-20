@@ -146,7 +146,7 @@ function submitForm() {
   fireEvent.submit(document.getElementById('pricing-schedule-form') as HTMLFormElement);
 }
 
-describe('PricingScheduleDialog contract-currency custom rate (release-v1.5-feature)', () => {
+describe('PricingScheduleDialog contract-currency custom rate (release-v1-5-feature)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagState.enabled = false;

@@ -673,6 +673,10 @@ async function issueProjectDepositCreditsForInvoice(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        // Credit that came out of an invoice belongs to the entity that
+        // invoice billed — anything else and the credit cannot pay the next
+        // invoice from the same entity (F108).
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoice.invoice_id,
         amount,
         type: 'credit_issuance',
@@ -694,6 +698,7 @@ async function issueProjectDepositCreditsForInvoice(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount,
         remaining_amount: amount,
@@ -1193,6 +1198,7 @@ export async function finalizeInvoiceWithKnex(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoiceId,
         amount: creditAmount,
         type: 'credit_issuance',
@@ -1210,6 +1216,7 @@ export async function finalizeInvoiceWithKnex(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount,
@@ -1258,6 +1265,7 @@ export async function finalizeInvoiceWithKnex(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoiceId,
         amount: creditAmount,
         type: 'credit_issuance_from_negative_invoice',
@@ -1276,6 +1284,7 @@ export async function finalizeInvoiceWithKnex(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
@@ -1954,6 +1963,9 @@ async function updateManualInvoiceItemsInternal(
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
+          // Step 1 of the resolution chain; persistManualInvoiceCharges falls
+          // through to the client default when unset (F033).
+          billing_profile_id: item.billing_profile_id ?? null,
         })),
         client,
         session,

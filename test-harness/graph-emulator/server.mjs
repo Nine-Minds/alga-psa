@@ -234,10 +234,21 @@ async function handler(req, res) {
   // key, so it is handled before the Graph access-token gate.
   if (handleCippApi(req, res, url, json)) return;
 
-  if (!url.pathname.startsWith('/v1.0/')) return json(res, 404, { error: 'not_found' });
+  const versionMatch = url.pathname.match(/^\/(v1\.0|beta)\//);
+  if (!versionMatch) return json(res, 404, { error: 'not_found' });
   const access = requireAccess(req, res);
   if (!access) return;
-  const graphPath = url.pathname.slice('/v1.0'.length);
+  const graphPath = url.pathname.slice(versionMatch[1].length + 1);
+  // Faithful to real Graph: managedTenants (Microsoft 365 Lighthouse) exists
+  // only on beta. Serving it on v1.0 here is what let the v1.0 bug ship.
+  if (versionMatch[1] === 'v1.0' && graphPath.startsWith('/tenantRelationships/managedTenants')) {
+    return json(res, 400, {
+      error: {
+        code: 'BadRequest',
+        message: "Resource not found for the segment 'managedTenants'.",
+      },
+    });
+  }
   const fault = injectedFault(`${req.method} ${graphPath}`);
   if (fault) return json(res, fault.status, fault.body);
 

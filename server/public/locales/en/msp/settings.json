@@ -9,6 +9,7 @@
   "tabs": {
     "general": "General",
     "experimentalFeatures": "Experimental Features",
+    "appearance": "Appearance",
     "clientPortal": "Client Portal",
     "users": "Users",
     "teams": "Teams",
@@ -779,6 +780,8 @@
         "sections": {
           "general": "General",
           "generalHelp": "Name, description, visibility and default",
+          "appearance": "Appearance & defaults",
+          "appearanceHelp": "Tab pinning and the board's default list view",
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
           "inbound": "Email & inbound replies",
@@ -799,6 +802,22 @@
         "allSaved": "All changes saved",
         "reopenBadge": "reopen",
         "required": "Required"
+      },
+      "appearance": {
+        "pinLabel": "Pin to the tickets screen",
+        "pinHelp": "Pinned boards get a permanent tab on the tickets screen. Unpinned boards stay reachable from All tickets and the board filter.",
+        "savedView": "Saved view",
+        "inheritsTenant": "Inherits tenant defaults",
+        "openBoard": "Open this board",
+        "resetToTenant": "Reset to tenant default",
+        "arrangeNote": "Arrange this board's view on the board itself, then save it from the View menu.",
+        "preview": "Preview",
+        "summary": {
+          "openOnly": "Open only",
+          "columns": "{{columns}} columns",
+          "density": "density {{level}}",
+          "sortedBy": "sorted by {{field}}"
+        }
       },
       "empty": "No boards found.",
       "searchPlaceholder": "Search boards…"
@@ -1109,25 +1128,42 @@
       "fields": {
         "companyName": "Company Name",
         "companyLogo": "Company Logo",
+        "companyLogoDark": "Logo for dark backgrounds",
         "colorPalette": "Color Palette",
         "primaryColor": "Primary Color",
         "secondaryColor": "Secondary Color",
         "supportEmail": "Support Email",
         "supportPhone": "Support Phone",
-        "heroGradient": "Dashboard hero gradient"
+        "heroGradient": "Dashboard hero gradient",
+        "sidebarStyle": "Side panel color",
+        "sidebarColor": "Custom side panel color",
+        "followTheme": "Use the organization theme in the portal"
       },
       "help": {
         "companyName": "This will be displayed in the client portal header",
+        "colorPalette": "These are accents on top of the organization theme: the primary color paints buttons, links and the welcome banner, the secondary color the banner’s second half and supporting accents, and the side panel picks up whichever you choose. Every other surface — page, cards, text, borders — comes from the theme under Settings → Appearance.",
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
+        "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
+        "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
         "supportPhone": "Optional. Shown alongside the support email in client-facing emails.",
-        "heroGradient": "Controls the welcome banner gradient on the client dashboard."
+        "heroGradient": "Controls the welcome banner gradient on the client dashboard.",
+        "sidebarStyle": "Tints the client portal side panel with your primary or secondary color.",
+        "sidebarColor": "Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable.",
+        "followTheme": "When on, the client portal uses the theme chosen under Settings → Appearance. When off, the colors below override it.",
+        "followThemeActive": "The colors below are kept but not applied while the portal follows the organization theme."
       },
       "heroGradient": {
         "primaryShades": "Primary color to primary shade",
         "primarySecondary": "Primary color to secondary color"
+      },
+      "sidebarStyle": {
+        "default": "Default (dark slate)",
+        "primary": "Primary color",
+        "secondary": "Secondary color",
+        "custom": "Custom color"
       },
       "preview": "Preview",
       "previewDarkMode": "Preview dark mode",
@@ -1281,6 +1317,130 @@
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
     "brandingUpdated": "Branding settings updated"
+  },
+  "appearance": {
+    "title": "Theme",
+    "description": "Pick the light/dark pair everyone in this organization sees, in both the MSP app and the client portal. Each person still chooses light, dark or system for themselves.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "The default look: clean white surfaces by day, purple-tinted by night."
+      },
+      "slate": {
+        "label": "Slate",
+        "description": "Neutral grays with the original blue-slate dark theme."
+      },
+      "ocean": {
+        "label": "Ocean",
+        "description": "Deep navy and ink-blue surfaces with crisp royal-blue accents."
+      },
+      "sky": {
+        "label": "Sky",
+        "description": "Bright sky blue and cyan over airy, aqua-tinted surfaces."
+      },
+      "forest": {
+        "label": "Forest",
+        "description": "Deep greens with a teal success color so status stays readable."
+      },
+      "sunset": {
+        "label": "Sunset",
+        "description": "Warm oranges and dusk pink over sand-tinted surfaces."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Coffee browns over cream, roasted espresso after dark."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neon teal, violet, cyan, coral, and pink over a Miami-night purple."
+      },
+      "highContrast": {
+        "label": "High contrast",
+        "description": "Black and white only, with emphasized borders. Just the status colors keep their hue."
+      },
+      "custom": {
+        "label": "Custom",
+        "description": "Your own colors, edited below."
+      }
+    },
+    "custom": {
+      "title": "Custom theme",
+      "description": "Build your own light and dark variants. The full color scales are derived from these core colors, and contrast is checked before the theme can be saved.",
+      "lightMode": "Light variant",
+      "darkMode": "Dark variant",
+      "previewAlt": "Custom theme preview",
+      "seededFrom": "These colors start from the {{pair}} theme — change the few you care about and the full scales follow.",
+      "contrastTitle": "These colors are too close together to read. Fix them before saving:",
+      "contrastIssue": "{{foreground}} may be hard to read on {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Page background",
+        "card": "Card surface",
+        "surface": "Raised surface",
+        "textPrimary": "Primary text",
+        "textSecondary": "Secondary text",
+        "textMuted": "Muted text",
+        "border": "Border",
+        "borderStrong": "Strong border",
+        "primary": "Primary color",
+        "secondary": "Secondary color",
+        "accent": "Accent color",
+        "sidebarBg": "Side panel background",
+        "sidebarText": "Side panel text",
+        "sidebarHover": "Side panel hover",
+        "headerBg": "Header background",
+        "buttonLabel": "White button labels"
+      },
+      "actions": {
+        "save": "Save and use custom theme",
+        "reset": "Reset to {{pair}} colors",
+        "resetDone": "Colors reset to the {{pair}} theme — save to apply",
+        "useSaved": "Use my saved colors",
+        "useSavedDone": "Your saved colors are back — save to apply"
+      },
+      "contrastHints": {
+        "lighten": "Pick a lighter {{foreground}} or a darker {{background}}.",
+        "darken": "Pick a darker {{foreground}} or a lighter {{background}}."
+      },
+      "mock": {
+        "caption": "Point at a color below to see which part of the app it paints.",
+        "showing": "Highlighted: {{token}}",
+        "nav": "Home",
+        "navActive": "Tickets",
+        "navMuted": "Reports",
+        "headerTitle": "Tickets",
+        "cardTitle": "Printer offline at the front desk",
+        "cardBody": "Assigned to Dana Reyes",
+        "cardMuted": "Updated 2 hours ago",
+        "primaryAction": "Save",
+        "secondaryAction": "Assign",
+        "ghostAction": "Cancel",
+        "surface": "Recent activity"
+      }
+    },
+    "whiteLabel": {
+      "title": "White-label the MSP app",
+      "description": "The logo slots are shared with the client portal, but they only affect the MSP app after MSP UI customization is enabled below.",
+      "logoHelp": "When enabled, the always-dark MSP side menu uses the dark-background logo and falls back to the main logo. Portal uploads alone never change the MSP app.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo for dark backgrounds"
+      },
+      "colors": {
+        "label": "Enable MSP UI customization",
+        "help": "Off by default. When enabled and applied, the MSP app uses the shared logo while its colors continue to come from the organization theme above."
+      }
+    },
+    "messages": {
+      "loadFailed": "Failed to load appearance settings",
+      "saved": "Appearance updated",
+      "saveFailed": "Failed to save appearance settings",
+      "discarded": "Preview discarded"
+    },
+    "unsaved": {
+      "notice": "You are previewing an unsaved theme. Everyone else keeps the saved one until you apply this.",
+      "save": "Apply to everyone",
+      "discard": "Discard"
+    }
   },
   "mspLanguage": {
     "title": "Organization Language",

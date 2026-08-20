@@ -33,6 +33,7 @@ const NO_TAX_PORTS: ChargeComputeTaxPorts = {
   getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
   getLocationTaxRegionCode: () => null,
   getClientDefaultTaxRegionCode: () => null,
+  isTaxExemptForProfile: () => false,
   calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
 } as unknown as ChargeComputeTaxPorts;
 
@@ -906,10 +907,19 @@ describe.skipIf(!ENABLED)('pool overage attributes per-service tax metadata by c
             description: 'Test rate B',
           },
         ]);
+        // Billing profiles: client_tax_settings is keyed per billing profile,
+        // so the fixture's client needs its default profile row and the tax
+        // settings seed references it.
+        const defaultProfileId = randomUUID();
+        await trx('client_billing_profiles').insert({
+          tenant, billing_profile_id: defaultProfileId, client_id: clientId,
+          name: 'Default', is_default: true, is_active: true,
+        });
         // Pre-seed client tax settings so the engine's tax load phase does not
         // try to provision defaults through a host-run createTenantKnex().
         await trx('client_tax_settings').insert({
-          tenant, client_id: clientId, is_reverse_charge_applicable: false,
+          tenant, client_id: clientId, billing_profile_id: defaultProfileId,
+          is_reverse_charge_applicable: false,
         });
 
         for (const [serviceId, tag, taxRateId] of [

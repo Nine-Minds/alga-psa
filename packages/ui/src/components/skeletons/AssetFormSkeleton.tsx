@@ -20,10 +20,10 @@ const AssetFormSkeleton = ({
             <Package className="h-8 w-8 text-gray-300" />
             <div>
               <CardTitle className="flex items-center">
-                <span className="block h-7 bg-gray-200 rounded w-40" />
+                <span className="block h-7 skeleton-fill rounded w-40" />
               </CardTitle>
               <CardDescription>
-                <span className="block h-4 bg-gray-200 rounded w-64 mt-1" />
+                <span className="block h-4 skeleton-fill rounded w-64 mt-1" />
               </CardDescription>
             </div>
           </div>
@@ -36,16 +36,16 @@ const AssetFormSkeleton = ({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                <span className="block h-6 bg-gray-200 rounded w-32" />
+                <span className="block h-6 skeleton-fill rounded w-32" />
               </CardTitle>
               <CardDescription>
-                <span className="block h-4 bg-gray-200 rounded w-48 mt-1" />
+                <span className="block h-4 skeleton-fill rounded w-48 mt-1" />
               </CardDescription>
             </div>
             <div className="flex space-x-2">
-              <div className="h-9 bg-gray-200 rounded w-20"></div>
+              <div className="h-9 skeleton-fill rounded w-20"></div>
               {isEdit && <div className="h-9 bg-red-200 rounded w-20"></div>}
-              <div className="h-9 bg-blue-200 rounded w-24"></div>
+              <div className="h-9 skeleton-fill-strong rounded w-24"></div>
             </div>
           </div>
         </CardHeader>
@@ -57,24 +57,24 @@ const AssetFormSkeleton = ({
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Tag className="h-4 w-4 text-gray-300" />
-                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                  <div className="h-4 skeleton-fill rounded w-20"></div>
                 </div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 skeleton-fill rounded w-24"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-16"></div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 skeleton-fill rounded w-16"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 skeleton-fill rounded w-20"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
             </div>
             
@@ -82,30 +82,30 @@ const AssetFormSkeleton = ({
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Building className="h-4 w-4 text-gray-300" />
-                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                  <div className="h-4 skeleton-fill rounded w-16"></div>
                 </div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-gray-300" />
-                  <div className="h-4 bg-gray-200 rounded w-18"></div>
+                  <div className="h-4 skeleton-fill rounded w-18"></div>
                 </div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-gray-300" />
-                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  <div className="h-4 skeleton-fill rounded w-24"></div>
                 </div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
               
               <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-16"></div>
-                <div className="h-9 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 skeleton-fill rounded w-16"></div>
+                <div className="h-9 skeleton-fill rounded w-full"></div>
               </div>
             </div>
           </div>
@@ -114,32 +114,32 @@ const AssetFormSkeleton = ({
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <FileText className="h-5 w-5 text-gray-300" />
-              <div className="h-5 bg-gray-200 rounded w-28"></div>
+              <div className="h-5 skeleton-fill rounded w-28"></div>
             </div>
-            <div className="h-24 bg-gray-200 rounded w-full"></div>
+            <div className="h-24 skeleton-fill rounded w-full"></div>
           </div>
           
           {/* Asset Categories and Tags */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
             <div className="space-y-3">
-              <div className="h-5 bg-gray-200 rounded w-20"></div>
+              <div className="h-5 skeleton-fill rounded w-20"></div>
               <div className="space-y-2">
                 {Array.from({ length: 3 }, (_, i) => (
                   <div key={i} className="flex items-center space-x-2 p-2 border rounded">
-                    <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                    <div className="h-4 bg-gray-200 rounded flex-1"></div>
-                    <div className="h-6 bg-gray-200 rounded w-6"></div>
+                    <div className="h-4 w-4 skeleton-fill rounded"></div>
+                    <div className="h-4 skeleton-fill rounded flex-1"></div>
+                    <div className="h-6 skeleton-fill rounded w-6"></div>
                   </div>
                 ))}
               </div>
             </div>
             
             <div className="space-y-3">
-              <div className="h-5 bg-gray-200 rounded w-24"></div>
+              <div className="h-5 skeleton-fill rounded w-24"></div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 4 }, (_, i) => (
                   <div key={i} className="h-6 bg-info/15 rounded-full px-3 py-1">
-                    <div className="h-3 bg-blue-200 rounded w-12"></div>
+                    <div className="h-3 skeleton-fill-strong rounded w-12"></div>
                   </div>
                 ))}
               </div>
@@ -149,20 +149,20 @@ const AssetFormSkeleton = ({
           {/* Asset Status and Warranty */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-16"></div>
+              <div className="h-4 skeleton-fill rounded w-16"></div>
               <div className="h-6 bg-success/15 rounded w-20 px-2 py-1">
-                <div className="h-3 bg-green-200 rounded w-12"></div>
+                <div className="h-3 skeleton-fill-strong rounded w-12"></div>
               </div>
             </div>
             
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-20"></div>
-              <div className="h-6 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 skeleton-fill rounded w-20"></div>
+              <div className="h-6 skeleton-fill rounded w-24"></div>
             </div>
             
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-18"></div>
-              <div className="h-6 bg-gray-200 rounded w-28"></div>
+              <div className="h-4 skeleton-fill rounded w-18"></div>
+              <div className="h-6 skeleton-fill rounded w-28"></div>
             </div>
           </div>
           

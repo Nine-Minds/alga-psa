@@ -7,6 +7,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -833,6 +834,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     )}
                   </div>
                 </div>
+
+                {/* Which billing segments this portal user may see (F126).
+                    Renders nothing for a client with a single profile. */}
+                <PortalBillingProfileAccess
+                  portalUserId={existingUser.user_id}
+                  clientId={contact.client_id}
+                  canEdit={currentUserPermissions.canUpdateRoles}
+                />
 
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (

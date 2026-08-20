@@ -11,13 +11,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Label } from '@alga-psa/ui/components/Label';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { validatePhoneNumber } from '@alga-psa/validation';
+import { isUnchangedFromStored, translateFieldValidation, validatePhoneNumber, validatePhoneNumberField } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -50,6 +51,7 @@ function normalizePhoneRowForDraft(
   return {
     contact_phone_number_id: row.contact_phone_number_id,
     phone_number: row.phone_number ?? '',
+    extension: row.extension ?? null,
     canonical_type: isCustomType ? null : row.canonical_type ?? 'work',
     custom_type: customType,
     is_default: Boolean(row.is_default),
@@ -77,6 +79,7 @@ export function normalizeDraftContactPhoneNumbers(
     return {
       contact_phone_number_id: row.contact_phone_number_id,
       phone_number,
+      extension: row.extension?.trim() || null,
       canonical_type,
       custom_type,
       is_default: index === normalizedDefaultIndex,
@@ -99,11 +102,19 @@ export function compactContactPhoneNumbers(
   return normalizeDraftContactPhoneNumbers(filteredRows);
 }
 
+/**
+ * Pass `existingRows` on an edit form: a stored number that comes back unchanged is
+ * grandfathered, so a contact recorded before the schema existed ("front desk",
+ * "call the tea table") stays editable on everything else. The default-selection and
+ * type rules still apply to every row — those are about the form, not the data.
+ */
 export function validateContactPhoneNumbers(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
+  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
+  options: { existingRows?: Array<ContactPhoneNumberInput | IContactPhoneNumber> } = {}
 ): string[] {
   const errors: string[] = [];
   const normalizedRows = normalizeDraftContactPhoneNumbers(rows);
+  const storedRows = options.existingRows ? normalizeDraftContactPhoneNumbers(options.existingRows) : [];
 
   if (normalizedRows.length === 0) {
     return [];
@@ -119,12 +130,23 @@ export function validateContactPhoneNumbers(
   normalizedRows.forEach((row, index) => {
     const rowLabel = `Phone ${index + 1}`;
 
-    if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
-      errors.push(`${rowLabel}: Enter a complete phone number.`);
-    } else {
-      const phoneError = validatePhoneNumber(row.phone_number);
-      if (phoneError) {
-        errors.push(`${rowLabel}: ${phoneError}`);
+    const stored = row.contact_phone_number_id
+      ? storedRows.find((candidate) => candidate.contact_phone_number_id === row.contact_phone_number_id)
+      : undefined;
+    const grandfathered = Boolean(
+      stored?.phone_number && isUnchangedFromStored(row.phone_number, stored.phone_number)
+    );
+
+    if (!grandfathered) {
+      if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
+        errors.push(`${rowLabel}: Enter a complete phone number.`);
+      } else {
+        const phoneError = validatePhoneNumber(row.phone_number);
+        if (phoneError) {
+          errors.push(`${rowLabel}: ${phoneError}`);
+        } else if (!row.phone_number.trim().startsWith('+')) {
+          errors.push(`${rowLabel}: Include the country calling code, starting with +.`);
+        }
       }
     }
 
@@ -176,6 +198,12 @@ export function translateContactPhoneValidationErrors(
       })}`;
     }
 
+    if (detail === 'Include the country calling code, starting with +.') {
+      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.includeCountryCallingCode', {
+        defaultValue: 'Include the country calling code, starting with +.'
+      })}`;
+    }
+
     if (detail === 'Enter a custom phone type.') {
       return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCustomPhoneType', {
         defaultValue: 'Enter a custom phone type.'
@@ -212,6 +240,7 @@ function buildEditablePhoneRows(
 function createEmptyPhoneRow(isDefault: boolean): EditablePhoneRow {
   return {
     phone_number: '',
+    extension: null,
     canonical_type: 'work',
     custom_type: null,
     is_default: isDefault,
@@ -241,27 +270,6 @@ export function moveContactPhoneRows(
     ...entry,
     display_order: rowIndex,
   }));
-}
-
-function inferCountryCode(phoneNumber: string, countries: ICountry[]): string {
-  const trimmedPhoneNumber = phoneNumber.trim();
-  if (!trimmedPhoneNumber.startsWith('+')) {
-    return 'US';
-  }
-
-  const matches = countries
-    .map((country) => ({
-      ...country,
-      normalized_phone_code: country.phone_code?.startsWith('+')
-        ? country.phone_code
-        : country.phone_code
-          ? `+${country.phone_code}`
-          : undefined,
-    }))
-    .filter((country) => country.normalized_phone_code && trimmedPhoneNumber.startsWith(country.normalized_phone_code))
-    .sort((a, b) => (b.normalized_phone_code?.length ?? 0) - (a.normalized_phone_code?.length ?? 0));
-
-  return matches[0]?.code ?? 'US';
 }
 
 function getRowKey(row: EditablePhoneRow, index: number): string {
@@ -296,7 +304,6 @@ interface ContactPhoneRowProps {
   id: string;
   index: number;
   row: EditablePhoneRow;
-  countries: ICountry[];
   customTypeSuggestions: string[];
   disabled?: boolean;
   canMoveUp: boolean;
@@ -315,7 +322,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   id,
   index,
   row,
-  countries,
   customTypeSuggestions,
   disabled = false,
   canMoveUp,
@@ -330,9 +336,14 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation('msp/contacts');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
-  const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
-  const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
+  // Plausibility only; the row still saves.
+  const phoneWarnings = useMemo(
+    () => translateFieldValidation(validatePhoneNumberField(row.phone_number ?? ''), tValidation).warnings,
+    [row.phone_number, tValidation]
+  );
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
   const phoneTypeOptions = useMemo(
     () => [
@@ -363,16 +374,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
     })),
     [customTypeSuggestions]
   );
-
-  useEffect(() => {
-    setCountryCode((current) => {
-      if (!row.phone_number?.trim()) {
-        return current;
-      }
-      const inferred = inferCountryCode(row.phone_number, countries);
-      return current === inferred ? current : inferred;
-    });
-  }, [countries, row.phone_number, rowKey]);
 
   return (
     <Card
@@ -465,23 +466,27 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
-        <PhoneInput
-          id={`${id}-phone-${index}`}
-          label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
-            defaultValue: 'Phone Number',
-          })}
-          value={row.phone_number ?? ''}
-          onChange={(value) => onChange({ phone_number: value })}
-          onBlur={onBlur}
-          countryCode={countryCode}
-          phoneCode={phoneCode}
-          countries={countries}
-          onCountryChange={setCountryCode}
-          allowExtensions={true}
-          disabled={disabled}
-          className="w-full"
-          data-automation-id={`${id}-phone-${index}`}
-        />
+        <div>
+          <PhoneInput
+            id={`${id}-phone-${index}`}
+            label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
+              defaultValue: 'Phone',
+            })}
+            value={row.phone_number ?? ''}
+            onChange={(value) => onChange({ phone_number: value })}
+            extension={row.extension ?? ''}
+            onExtensionChange={(value) => onChange({ extension: value })}
+            extensionLabel={t('contactPhoneNumbersEditor.fields.extension', {
+              defaultValue: 'Extension',
+            })}
+            onBlur={onBlur}
+            allowExtensions={true}
+            disabled={disabled}
+            className="w-full"
+            data-automation-id={`${id}-phone-${index}`}
+          />
+          <FieldWarnings warnings={phoneWarnings} />
+        </div>
         <div className="space-y-1">
           <Label
             htmlFor={`${id}-type-${index}`}
@@ -570,7 +575,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   id,
   value,
   onChange,
-  countries,
   customTypeSuggestions = [],
   disabled = false,
   errorMessages,
@@ -805,7 +809,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               id={id}
               index={index}
               row={row}
-              countries={countries}
               customTypeSuggestions={customTypeSuggestions}
               disabled={disabled}
               canMoveUp={index > 0}
