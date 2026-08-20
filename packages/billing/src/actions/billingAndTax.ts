@@ -874,8 +874,8 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
     }
 
     const windowsByClientId = new Map<string, BillingPeriodWindow[]>();
-    let earliestStart: ISO8601String | null = null;
-    let latestEnd: ISO8601String | null = null;
+    const periodStarts: ISO8601String[] = [];
+    const periodEnds: ISO8601String[] = [];
 
     for (const period of candidateBillingPeriods) {
         const start = normalizeDateOnly(period.period_start_date) as ISO8601String | null;
@@ -889,14 +889,20 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
         const windows = windowsByClientId.get(period.client_id) ?? [];
         windows.push({ period, startMs, endMs });
         windowsByClientId.set(period.client_id, windows);
-        earliestStart = earliestStart == null || start < earliestStart ? start : earliestStart;
-        latestEnd = latestEnd == null || end > latestEnd ? end : latestEnd;
+        periodStarts.push(start);
+        periodEnds.push(end);
     }
 
-    if (!earliestStart || !latestEnd || windowsByClientId.size === 0) {
+    if (periodStarts.length === 0 || periodEnds.length === 0 || windowsByClientId.size === 0) {
         return [];
     }
 
+    const earliestStart = periodStarts.reduce(
+        (earliest, start) => start < earliest ? start : earliest,
+    );
+    const latestEnd = periodEnds.reduce(
+        (latest, end) => end > latest ? end : latest,
+    );
     const clientIds = Array.from(windowsByClientId.keys());
     const db = tenantDb(trx, tenant);
     const potentialTimeEntriesQuery = db.table('time_entries');
