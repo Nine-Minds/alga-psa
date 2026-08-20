@@ -109,7 +109,7 @@ describe('Copy portal link placement', () => {
   it('keeps the user list on the same shared button', () => {
     const users = sourceOf('src/components/settings/general/UserManagement.tsx');
     expect(users).toContain("import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton'");
-    expect(users).toContain("{portalType === 'client' && <CopyClientPortalLinkButton />}");
+    expect(users).toContain('<CopyClientPortalLinkButton id="copy-client-portal-link-users-button" />');
     expect(users).not.toContain('getTenantPortalLoginLink');
   });
 });

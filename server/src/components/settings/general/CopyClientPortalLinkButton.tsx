@@ -32,7 +32,7 @@ export const CopyClientPortalLinkButton = ({
     try {
       setIsCopying(true);
       const linkResult = await getTenantPortalLoginLink();
-      if (!linkResult.success) {
+      if (linkResult.success === false) {
         toast.error(linkResult.error);
         return;
       }

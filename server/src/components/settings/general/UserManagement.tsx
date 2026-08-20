@@ -997,7 +997,9 @@ const fetchContacts = async (): Promise<void> => {
 
   const renderCreateUserActions = () => (
     <div className="flex items-center gap-3">
-      {portalType === 'client' && <CopyClientPortalLinkButton />}
+      {portalType === 'client' && (
+        <CopyClientPortalLinkButton id="copy-client-portal-link-users-button" />
+      )}
       {!showNewUserForm && (
         <div className="flex flex-col items-end gap-1">
           <Button
