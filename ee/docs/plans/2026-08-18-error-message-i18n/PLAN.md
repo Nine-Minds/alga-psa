@@ -4,13 +4,14 @@ Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19, an
 2026-08-20 after a browser walk found the category the first inventory missed.
 Categories 1, 2, 3, 4 and 6 are done; category 5 is a 143-file ratchet; **category 7 — the
 `{ success: false, error }` channel — is newly opened, mechanism landed, one path migrated.**
+Rebased onto main 2026-08-20; see "Rebase reconciliation" below for what main changed underfoot.
 
 ## Context
 
 The in-flight change on `fix/entra_direct_connect` made `packages/validation/src/lib/clientFormValidation.ts`
-translatable by giving every validator an optional `ValidationTranslator` argument that defaults to English,
-and added 81 `clients.validation.*` keys across all 10 locales. That pattern is correct **for a pure library
-with no request context**, and it is complete for that one file.
+translatable, and added `clients.validation.*` keys across all 10 locales. That pattern is correct **for a
+pure library with no request context**, and it is complete for that one file. (Main has since replaced the
+`ValidationTranslator` argument with the three-layer `FieldValidation` result — see "Rebase reconciliation".)
 
 It does not generalise. A repo-wide sweep (`node tools/i18n/find-untranslated-ui.cjs --json`, filtered to
 error-shaped prose) found **3,365 untranslated error literals across 533 files**. The dominant source is not
@@ -444,9 +445,9 @@ Closes the gaps left by the current diff. Half a day.
 
 - `packages/validation/src/lib/passwordValidation.ts` — 9 hardcoded messages (lines 65–110), same file family,
   not converted. Surfaced raw at `server/src/components/settings/general/UserManagement.tsx:573` and `:616`
-  (a component that already has `vt`) and returned from
-  `packages/users/src/actions/user-actions/userInvitationActions.ts:271`. Give it the same
-  `ValidationTranslator` parameter and add `common:…password.*` keys.
+  and returned from `packages/users/src/actions/user-actions/userInvitationActions.ts:271`. Give it a
+  translator parameter and add `common:auth.validation.password.*` keys. *(Done: it now takes the
+  `Translator` from `fieldValidation`, so a component's own `t` can be passed straight in.)*
 - Missed call sites: `packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx:125` (plus its
   hardcoded `"Phone N:"` / `"Enter a complete phone number."` prose);
   `packages/auth/src/components/RegisterForm.tsx:108` and `:198`;
@@ -461,6 +462,28 @@ Closes the gaps left by the current diff. Half a day.
 - ~~`MicrosoftEmailSetupDialog.tsx` carries an English→key lookup map~~ — the map is gone; the file now reads
   `result.error || t('…')`, which is a category-4 site, not a category-3 one. The only `Record<string, string>`
   left nearby is `TeamsIntegrationSettings`'s wizard-step map, and that is keyed by step id, not by prose.
+
+## Rebase reconciliation (2026-08-20)
+
+Rebasing onto main replayed 46 commits over 162 and found that two of this branch's early commits had
+already landed there — in an evolved form that supersedes them. The resolutions worth knowing:
+
+- **`clientFormValidation.ts` belongs to main now.** Main's `feat(validation): split structural rules from
+  plausibility` reorganised it into normalize → validate → advise behind a single Zod schema, with phone
+  parsing on libphonenumber-js. Messages travel as a `ValidationMessage` (key + English default + params)
+  inside a `FieldValidation`, resolved at the render site by `translateFieldValidation(result, tCommon)`.
+  This branch's 81-key `ValidationTranslator` scheme is gone; main's ~24 keys under `common:clients.validation.*`
+  are the live ones. Anything that still wants a one-string answer takes the i18next-shaped `Translator`.
+- **`validatePassword` follows suit.** It takes `Translator` rather than the retired `ValidationTranslator`,
+  so `UserManagement`, `RegisterForm` and the team-setup page pass their own `t` with no adapter.
+  `userInvitationActions` still captures the key rather than the text, because it runs without a session.
+- **The contact phone validator merged rather than picked a side.** Main's `existingRows` grandfathering (an
+  unchanged stored number does not block every other edit) and this branch's structured
+  `ContactPhoneValidationIssue` — which carries `rowIndex` as a number instead of re-parsing `"Phone 2: …"` —
+  are both kept, behind one `{ existingRows?, t? }` options object. `translateContactPhoneValidationErrors`,
+  which translated by matching English prose, is deleted.
+- **One new key.** Main added a `Tax rate not found or already deleted.` branch to `taxRateActions`; it is
+  keyed as `msp/billing-settings:errors.taxRate.notFoundOrAlreadyDeleted` and translated in all seven locales.
 
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
