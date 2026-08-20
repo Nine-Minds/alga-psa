@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
 import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
+import { clearPrepaidReplenishmentForInvoice } from '../../lib/prepaidAutoReplenishment';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -199,6 +200,10 @@ export async function recordExternalPayment(
 
     const paid = await sumPayments(trx, tenantId, input.invoiceId);
     const status = await applyStatus(trx, tenantId, invoice, paid);
+
+    if (status === 'paid') {
+      await clearPrepaidReplenishmentForInvoice(trx, tenantId, input.invoiceId);
+    }
 
     await insertTransaction(trx, tenantId, {
       clientId: invoice.client_id,

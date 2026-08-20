@@ -6,6 +6,54 @@ import { createHourBlockPurchaseInvoiceInternal } from '../actions/hourBlockActi
 
 export type PrepaidReplenishmentSubject = 'credit' | 'bucket';
 
+/**
+ * Release the episode-level replenishment lock when its invoice is no longer
+ * open. The alert can remain below threshold and be acted on again by the
+ * next scan, but an invoice that was paid, voided, or deleted must not keep
+ * the old invoice id attached forever.
+ */
+export async function clearPrepaidReplenishmentForInvoice(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<number> {
+  const db = tenantDb(knex, tenant);
+  return db.table('prepaid_balance_alerts')
+    .where({ replenishment_invoice_id: invoiceId })
+    .update({
+      replenishment_status: null,
+      replenishment_invoice_id: null,
+      replenishment_credit_amount: null,
+      replenishment_bucket_minutes: null,
+      replenishment_attempted_at: null,
+      replenishment_error: null,
+      updated_at: knex.fn.now(),
+    });
+}
+
+/**
+ * Keep a voided invoice attached to its open alert. Voiding is a terminal
+ * outcome for this replenishment episode, not a request to start over: the
+ * invoice row remains available and the next scan must stay suppressed while
+ * the balance is still below threshold. Hard deletion and settlement use the
+ * full clear above because those paths explicitly remove or complete the
+ * invoice lifecycle.
+ */
+export async function suppressPrepaidReplenishmentForVoidedInvoice(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<number> {
+  const db = tenantDb(knex, tenant);
+  return db.table('prepaid_balance_alerts')
+    .where({ replenishment_invoice_id: invoiceId })
+    .update({
+      replenishment_status: 'skipped',
+      replenishment_error: 'Replenishment invoice was voided',
+      updated_at: knex.fn.now(),
+    });
+}
+
 export interface CreatePrepaidReplenishmentInvoiceInput {
   tenant: string;
   clientId: string;

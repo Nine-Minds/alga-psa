@@ -3,6 +3,7 @@ import type { InvoiceStatus } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
+import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
 
 interface MarkInvoicePaidByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
@@ -144,6 +145,10 @@ async function updateMappedInvoice(
         updated_at: trx.fn.now(),
       })
       .returning<{ invoice_id: string; status: string }[]>(['invoice_id', 'status']);
+
+    if (input.status === 'paid') {
+      await clearPrepaidReplenishmentForInvoice(trx, tenant, lookup.algaEntityId);
+    }
 
     return updated ?? null;
   });

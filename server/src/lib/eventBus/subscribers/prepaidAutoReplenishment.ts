@@ -56,6 +56,7 @@ async function hasContractTerminatingWithinHorizon(
     .where((builder) => builder.whereNull('cc.start_date').orWhere('cc.start_date', '<=', today))
     .where((builder) => builder.whereNull('cc.end_date').orWhere('cc.end_date', '>=', today));
   db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  query.where({ 'c.is_active': true, 'c.status': 'active' });
 
   const contracts = await query as ContractHorizonRow[];
   return contracts.some((contract) => {

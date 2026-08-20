@@ -10,6 +10,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
+import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
 
 export type VoidInvoiceResult =
   | { success: true }
@@ -217,6 +218,11 @@ export const voidInvoice = withAuth(async (
     await tenantDb(trx, tenant).table('invoices')
       .where({ invoice_id: invoiceId })
       .update({ status: 'cancelled', updated_at: now });
+
+    // A void is terminal for this replenishment episode, but unlike deletion
+    // the invoice row survives. Keep the link and suppress future scans while
+    // the balance remains low; only settlement or explicit deletion re-arms.
+    await suppressPrepaidReplenishmentForVoidedInvoice(trx, tenant, invoiceId);
 
     // Write invoice_cancelled transaction
     await tenantDb(trx, tenant).table('transactions').insert({

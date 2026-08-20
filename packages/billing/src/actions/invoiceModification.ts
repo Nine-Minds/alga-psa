@@ -11,6 +11,7 @@ import { toISODate } from '@alga-psa/core';
 import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
+import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -2066,6 +2067,11 @@ export const hardDeleteInvoice = withAuth(async (
         return; // Exit if invoice doesn't exist
     }
     deletedClientId = invoice.client_id ?? undefined;
+
+    // Clear the episode lock before deleting the invoice. The replenishment
+    // FK is intentionally restrictive, so this also makes hard deletion
+    // valid while allowing the next scan to replenish again.
+    await clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId);
 
     const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
       trx,
