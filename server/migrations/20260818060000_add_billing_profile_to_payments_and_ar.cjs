@@ -73,6 +73,33 @@ async function distributionState(knex, tableName) {
   }
 }
 
+// A distributed table can retain pre-distribution rows in the coordinator's
+// physical heap. Routed DML and null checks only see live shard rows, but a
+// coordinator ALTER ... SET NOT NULL scans that stale heap too. Apply the
+// constraint directly to every shard and then synchronize coordinator
+// metadata, matching the repository's established Citus migration pattern.
+async function setNotNull(knex, tableName, columnName, distributed) {
+  if (distributed === true) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        ?,
+        $$ALTER TABLE %s ALTER COLUMN ${columnName} SET NOT NULL$$
+      )
+    `, [tableName]);
+
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = ?::regclass
+        AND attname = ?
+        AND attnotnull = false
+    `, [tableName, columnName]);
+    return;
+  }
+
+  await knex.raw(`ALTER TABLE ${tableName} ALTER COLUMN ${columnName} SET NOT NULL`);
+}
+
 async function backfillToDefaultProfile(knex, table, clientColumn) {
   await knex.raw(`
     UPDATE ${table} t
@@ -162,7 +189,12 @@ exports.up = async function up(knex) {
         `SELECT COUNT(*)::int AS count FROM ${table} WHERE billing_profile_id IS NULL`
       );
       if ((orphans.rows?.[0]?.count ?? 0) === 0) {
-        await knex.raw(`ALTER TABLE ${table} ALTER COLUMN billing_profile_id SET NOT NULL`);
+        await setNotNull(
+          knex,
+          table,
+          'billing_profile_id',
+          await distributionState(knex, table),
+        );
       } else {
         console.log(
           `${table}: ${orphans.rows[0].count} row(s) have no client; leaving billing_profile_id nullable`
