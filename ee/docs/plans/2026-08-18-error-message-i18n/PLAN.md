@@ -2,7 +2,7 @@
 
 Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19, and again
 2026-08-20 after a browser walk found the category the first inventory missed.
-Categories 1, 2, 3, 4 and 6 are done; category 5 is a 143-file ratchet; **category 7 — the
+Categories 1, 2, 3, 4 and 6 are done; category 5 is a 139-file ratchet; **category 7 — the
 `{ success: false, error }` channel — is newly opened, mechanism landed, one path migrated.**
 Rebased onto main 2026-08-20; see "Rebase reconciliation" below for what main changed underfoot.
 
@@ -143,10 +143,11 @@ Landed on `i18n/error_messages`:
      take a key: the keyed sentence and the un-keyable Zod message share one expression. Split the ternary so
      the fallback carries its key and the Zod message stays keyless until category 2 lands
      (`inboundWebhookActions`, `webhookActions`).
-- **Category 5 — 12 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
-  `ConflictResolutionDialog`, `StatusDialog`, `ColorPicker`, `RmmAlertAutomationSettings`, and the auth-owned
-  `Alert`, `SignOutDialog`, `TwoFA`, `PolicyManagement`, and `RoleManagement`), plus 3 stale baseline entries
-  dropped. Ratchet is at **143**. `IconPicker` remains last. The three shared files wired in the earlier pass
+- **Category 5 — 16 of 155 done** (`RegisterForm`, `TimePeriodSettings`, `TagEditForm`,
+  `ConflictResolutionDialog`, `StatusDialog`, `ColorPicker`, `RmmAlertAutomationSettings`, the auth-owned
+  `Alert`, `SignOutDialog`, `TwoFA`, `PolicyManagement` and `RoleManagement`, and — after the rebase —
+  `TimePeriodList`, `TimePeriodForm`, `TimeEntrySettings` and `EditableServiceTypeSelect`), plus 3 stale
+  baseline entries dropped. Ratchet is at **139**. `IconPicker` remains last. The three shared files wired in the earlier pass
   take their keys from `common`, because none belongs to one route's namespace — check
   `ROUTE_NAMESPACES` before reaching for a feature namespace, since `/msp/projects` does not load
   `msp/settings` and `StatusDialog` renders from both. Each hid a concatenation: `Conflict:` + a clause,
@@ -158,15 +159,15 @@ Landed on `i18n/error_messages`:
   `react-i18next` in a package that does not have it. Leave letterform samples like `"Aa"` alone: a key whose
   value is identical in every locale fails `audit.cjs`.
 
-Ratchet at time of writing: high-severity files **143** (from 155). Error-shaped literals **3,081 across 505
+Ratchet at time of writing: high-severity files **139** (from 155). Error-shaped literals **2,933 across 507
 files** (from 3,365 across 533). Note the literal number moves slowly by design —
 `actionError('English', 'key')` still contains the English, so a migrated call site keeps counting until the
 fallback is dropped. Judge category 1 by packages migrated, not by this number.
 
 `find-untranslated-ui.cjs --json` emits valid JSON again (the two-line JSX prop that used to break the
 `detail` string is gone), so the ratchet can be read machine-readably:
-`node -e` over `high[]` for the 143, and over `high[].findings[] ∪ partial[].findings[]` filtered on
-error-shaped prose for the 3,081.
+`node -e` over `high[]` for the 139, and over `high[].findings[] ∪ partial[].findings[]` filtered on
+error-shaped prose for the 2,933.
 
 Two checks worth keeping, because neither the gate nor `tsc` covers them:
 
@@ -544,7 +545,7 @@ Two traps specific to this channel:
 4. ~~Category 1 step 3 — migrate package by package.~~ Done, every package. Category 4 largely resolved
    itself, as predicted: the `actionError`-origin toasts translate at the boundary with no edit.
 5. ~~Category 2 — attach keys to user-visible Zod issues and map them structurally.~~ Done.
-6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 143 to go.
+6. Category 5 — continuous, independent of the rest. Delete baseline lines as files get wired; 139 to go.
 7. Category 7 — the `{ success: false, error }` channel. Mechanism landed and the password path migrated;
    the remaining ~1,132 literals are per-package work, ee and integrations first by volume, but ordered by
    user exposure the same way category 1 was. Check `handleError`'s fallback precedence before keying a
@@ -576,6 +577,14 @@ Manual QA: switch locale to `xx` and walk the migrated flow — every string sho
 trigger the error paths; that is the only way the pseudo-locale catches an error message. The dev app signs in
 with a seeded user whose `hashed_password` column is PBKDF2 `salt:hash` over `NEXTAUTH_SECRET + salt`
 (`shared/utils/encryption.ts`), so a local QA password is one `UPDATE users` away.
+
+Two things a browser walk in `xx` will report that are not defects. Every string reading `11111` is the
+pseudo-locale working — `scripts/generate-pseudo-locales.cjs` maps xx to that literal fill and yy to `55555`.
+And React "two children with the same key" warnings appear in `xx` only, because every option label in a list
+collapses to the same fill; they do not reproduce in a real locale. A cold route in the dev server can also
+take a minute to compile on first hit and look hung — `/msp/security-settings` settles in about two seconds
+once Turbopack has built it. Prefer German for a walk that has to distinguish translated from untranslated:
+untranslated English stands out, where in `xx` it just looks like a string the fill missed.
 
 Two checks worth running before calling a package done, because neither the gate nor the type-checker covers
 them:
