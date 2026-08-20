@@ -13,6 +13,7 @@ export const SUPPORT_RECONCILIATION_INTERVAL_MS = 15 * 1000;
 export const SUPPORT_STATE_SCHEMA = 1;
 const MAX_STATE_BYTES = 256 * 1024;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TERMINAL_SUPPORT_STATES = new Set(['revoked', 'expired', 'failed']);
 
 export class SupportSessionError extends Error {
   constructor(code, message, status = 400, details = undefined) {
@@ -60,6 +61,7 @@ function validateDescriptor(value) {
   if (value.applianceToken && value.applianceToken.length < 16) throw new SupportSessionError('invalid_state', 'Support state contains an invalid appliance token.', 500);
   if (value.resumeGrant && value.resumeGrant.length < 16) throw new SupportSessionError('invalid_state', 'Support state contains an invalid resume grant.', 500);
   if (value.recording && (!Number.isSafeInteger(value.recording.bytes) || value.recording.bytes < 0 || value.recording.bytes > 100 * 1024 * 1024 || !Array.isArray(value.recording.segments) || value.recording.segments.length > 256)) throw new SupportSessionError('invalid_state', 'Support state contains invalid recording metadata.', 500);
+  if (value.cleanupTerminalState !== undefined && !TERMINAL_SUPPORT_STATES.has(value.cleanupTerminalState)) throw new SupportSessionError('invalid_state', 'Support state contains an invalid cleanup terminal state.', 500);
   try {
     const status = new URL(value.statusUrl);
     const relay = new URL(value.relayUrl);
@@ -164,7 +166,7 @@ export class SupportSessionManager {
 
   _publicDescriptor(value) {
     if (!value) return null;
-    const { applianceToken, resumeGrant, shareCode, ...publicValue } = value;
+    const { applianceToken, resumeGrant, shareCode, cleanupTerminalState, ...publicValue } = value;
     return { ...publicValue, shareCode: value.state === 'ready' && shareCode ? shareCode : null };
   }
 
@@ -284,7 +286,8 @@ export class SupportSessionManager {
   }
 
   async _closeLocal(descriptor, reason, terminalState = 'failed') {
-    const closing = { ...descriptor, state: 'closing', cleanupPending: true, lastStopReason: reason, shareCode: null };
+    if (!TERMINAL_SUPPORT_STATES.has(terminalState)) throw new SupportSessionError('invalid_state', 'Support cleanup has an invalid terminal state.', 500);
+    const closing = { ...descriptor, state: 'closing', cleanupPending: true, cleanupTerminalState: terminalState, lastStopReason: reason, shareCode: null };
     this._writeActive(closing);
     try { await cleanupSupportResources(this.kube, descriptor.sessionId); } catch (error) {
       this._writeActive({ ...closing, cleanupError: errorCode(error) });
@@ -441,8 +444,9 @@ export class SupportSessionManager {
     }
     pruneRecordings(this.recordingRoot, { nowMs: this.now(), retentionMs: LOCAL_RETENTION_MS, activeSessionIds: [active.sessionId] });
     if (active.state === 'closing' || active.cleanupPending) {
+      const terminalState = active.cleanupTerminalState || (['local-revoked', 'central-revoked', 'revoked-tombstone'].includes(active.lastStopReason) ? 'revoked' : ['local-expired', 'central-expired', 'expired-resume-grant'].includes(active.lastStopReason) ? 'expired' : 'failed');
       try {
-        await this._closeLocal(active, active.lastStopReason || 'cleanup-retry', active.lastStopReason === 'local-revoked' ? 'revoked' : 'failed');
+        await this._closeLocal(active, active.lastStopReason || 'cleanup-retry', terminalState);
       } catch (error) {
         await this._requestCentralClose(active, active.lastStopReason || 'cleanup-retry');
         return { ok: false, state: 'closing', reason: errorCode(error) };

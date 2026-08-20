@@ -136,6 +136,8 @@ test('cleanup failure keeps active authority and central revoke remains retryabl
   assert.equal(result.state, 'closed');
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'active.json')), false);
   assert.equal(fs.existsSync(path.join(tmp, 'support-sessions', 'close-pending', `${SESSION_ID}.json`)), false);
+  const history = JSON.parse(fs.readFileSync(path.join(tmp, 'support-sessions', 'history', SESSION_ID, 'metadata.json'), 'utf8'));
+  assert.equal(history.state, 'revoked');
 });
 
 test('central authority URLs and expiry cannot exceed the requested or absolute window', async () => {
@@ -193,6 +195,29 @@ test('startup cleanup failure preserves closing state for retry instead of throw
   const result = await service.reconcileStartup();
   assert.deepEqual(result, { ok: false, state: 'closing', reason: 'cleanup_failure' });
   assert.equal(fs.existsSync(activeFile), true);
+});
+
+test('expiry cleanup failure preserves the intended expired state through retry', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'support-session-expiry-cleanup-'));
+  const kube = fakeKube();
+  let now = Date.now();
+  let failCleanup = true;
+  kube.delete = async (kind, name, namespace) => { if (failCleanup && kind === 'pod') throw new Error('cleanup unavailable'); return { ok: true }; };
+  const service = manager(tmp, { kube, now: () => now });
+  await service.create({ durationHours: 1 });
+  now += 2 * 60 * 60 * 1000;
+  const first = await service.reconcileStartup();
+  assert.deepEqual(first, { ok: false, state: 'closing', reason: 'cleanup_failure' });
+  const activeFile = path.join(tmp, 'support-sessions', 'active.json');
+  const closing = JSON.parse(fs.readFileSync(activeFile, 'utf8'));
+  assert.equal(closing.state, 'closing');
+  assert.equal(closing.cleanupTerminalState, 'expired');
+  failCleanup = false;
+  const second = await service.reconcileStartup();
+  assert.deepEqual(second, { ok: true, state: 'closed' });
+  const history = JSON.parse(fs.readFileSync(path.join(tmp, 'support-sessions', 'history', SESSION_ID, 'metadata.json'), 'utf8'));
+  assert.equal(history.state, 'expired');
+  assert.equal(history.lastStopReason, 'local-expired');
 });
 
 test('central policy rejection closes the local session instead of preserving authority', async () => {

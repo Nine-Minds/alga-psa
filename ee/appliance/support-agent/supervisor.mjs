@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import WebSocket from 'ws';
-import { listRecordingMetadata, RecordingSegment, recordingDirectory, SUPPORT_RECORDING_OWNER_GID, SUPPORT_RECORDING_OWNER_UID, writeAtomicJson } from '../host-service/support-recordings.mjs';
+import { listRecordingMetadata, MAX_RECORDING_BYTES, readBoundedFile, RecordingSegment, recordingDirectory, SUPPORT_RECORDING_OWNER_GID, SUPPORT_RECORDING_OWNER_UID, writeAtomicJson } from '../host-service/support-recordings.mjs';
 import { decodeControlFrame, decodeTerminalFrame, encodeControlFrame, encodeTerminalFrame, MAX_FRAME_BYTES, SUPPORT_PROTOCOL_VERSION } from './protocol.mjs';
 
 const require = createRequire(import.meta.url);
@@ -40,18 +41,47 @@ function readInitialToken(connectorFile, reconnectFile) {
 function existingRecordingState(recordingDir, sessionId) {
   const directory = recordingDirectory(recordingDir, sessionId);
   if (!fs.existsSync(directory)) return { bytes: 0, previousDigest: null };
-  const bytes = fs.readdirSync(directory).filter((name) => /^segment-[0-9a-f-]+\.cast$/i.test(name)).reduce((sum, name) => {
-    const stat = fs.statSync(path.join(directory, name));
-    if (!stat.isFile() || stat.size > 100 * 1024 * 1024 || sum + stat.size > 100 * 1024 * 1024) throw new Error('The local recording limit was already exceeded.');
-    return sum + stat.size;
-  }, 0);
-  const metadata = listRecordingMetadata(recordingDir, sessionId).sort((a, b) => String(a.closedAt).localeCompare(String(b.closedAt)));
-  const metadataIds = new Set(metadata.map((item) => item.segmentId));
-  for (const name of fs.readdirSync(directory).filter((item) => /^segment-[0-9a-f-]+\.cast$/i.test(item))) {
-    const segmentId = name.slice('segment-'.length, -'.cast'.length);
-    if (!metadataIds.has(segmentId)) throw new Error('A previous recording segment was not durably finalized.');
+  const castFiles = fs.readdirSync(directory).filter((name) => /^segment-[0-9a-f-]+\.cast$/i.test(name));
+  let metadata = listRecordingMetadata(recordingDir, sessionId);
+  if (castFiles.length !== metadata.length) throw new Error('A previous recording segment is missing its finalized metadata or cast file.');
+  const castById = new Map(castFiles.map((name) => [name.slice('segment-'.length, -'.cast'.length), name]));
+  const metadataById = new Map();
+  for (const item of metadata) {
+    if (item.sessionId !== sessionId || typeof item.segmentId !== 'string' || !/^[0-9a-f-]+$/i.test(item.segmentId) || metadataById.has(item.segmentId)) throw new Error('A previous recording segment has invalid finalized metadata.');
+    if (item.previousDigest !== null && (typeof item.previousDigest !== 'string' || !/^[a-f0-9]{64}$/i.test(item.previousDigest))) throw new Error('A previous recording segment has an invalid digest chain.');
+    if (typeof item.digest !== 'string' || !/^[a-f0-9]{64}$/i.test(item.digest)) throw new Error('A previous recording segment has invalid finalized metadata.');
+    metadataById.set(item.segmentId, item);
   }
-  return { bytes, previousDigest: metadata.at(-1)?.digest || null, metadata };
+  if ([...castById.keys()].some((segmentId) => !metadataById.has(segmentId)) || [...metadataById.keys()].some((segmentId) => !castById.has(segmentId))) {
+    throw new Error('A previous recording segment is missing its finalized metadata or cast file.');
+  }
+  const byPreviousDigest = new Map();
+  for (const item of metadata) {
+    const previous = item.previousDigest;
+    if (byPreviousDigest.has(previous)) throw new Error('A previous recording segment has an invalid digest chain.');
+    byPreviousDigest.set(previous, item);
+  }
+  const ordered = [];
+  let previousDigest = null;
+  while (byPreviousDigest.has(previousDigest)) {
+    const item = byPreviousDigest.get(previousDigest);
+    ordered.push(item);
+    previousDigest = item.digest;
+  }
+  if (ordered.length !== metadata.length) throw new Error('A previous recording segment has an invalid digest chain.');
+  metadata = ordered;
+  let bytes = 0;
+  previousDigest = null;
+  for (const item of metadata) {
+    const content = readBoundedFile(path.join(directory, castById.get(item.segmentId)), MAX_RECORDING_BYTES);
+    const digest = crypto.createHash('sha256').update(content).digest('hex');
+    if (!Number.isSafeInteger(item.bytes) || item.bytes !== content.length || typeof item.digest !== 'string' || item.digest !== digest) throw new Error('A previous recording segment does not match its finalized size or digest.');
+    if ((item.previousDigest || null) !== previousDigest) throw new Error('A previous recording segment does not form a valid digest chain.');
+    bytes += content.length;
+    if (bytes > MAX_RECORDING_BYTES) throw new Error('The local recording limit was already exceeded.');
+    previousDigest = item.digest;
+  }
+  return { bytes, previousDigest, metadata };
 }
 
 function protocolFailureReason(error, isBinary) {
@@ -156,7 +186,7 @@ export function createSupportAgent({ sessionId, relayUrl, connectorTokenFile, re
     if (pendingResumeMarker) { record('reboot', { marker: 'control-plane-resume' }); pendingResumeMarker = false; }
     record('marker', { marker: 'shell-start' });
     const spawn = ptySpawn || require('node-pty').spawn;
-    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '--', '/usr/bin/chroot', '/proc/1/root', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
+    child = spawn('nsenter', ['-t', '1', '-m', '-p', '-n', '-r', '/proc/1/root', '--', '/bin/bash', '-l'], { name: 'xterm-256color', cols: width, rows: height, cwd: '/', env: process.env });
     child.onData((data) => onOutput(data));
     child.onExit(({ exitCode, signal }) => {
       try { if (recorder) { record('exit', { code: exitCode, signal }); finalizeRecorder(); } } catch { stop('recording-exit-failure'); }

@@ -44,7 +44,7 @@ test('support agent resumes from memory token, preserves PTY across relay loss, 
   socket.emit('message', Buffer.from(JSON.stringify({ version: 1, seq: 2, type: 'attach', width: 100, height: 30 })));
   const pty = fakePtyFactory.last;
   assert.equal(fakePtyFactory.lastSpawn.command, 'nsenter');
-  assert.deepEqual(fakePtyFactory.lastSpawn.args.slice(-4), ['/usr/bin/chroot', '/proc/1/root', '/bin/bash', '-l']);
+  assert.deepEqual(fakePtyFactory.lastSpawn.args.slice(-6), ['-n', '-r', '/proc/1/root', '--', '/bin/bash', '-l']);
   pty.emitOutput('output while attached');
   const output = socket.sent.find((item) => Buffer.isBuffer(item));
   assert.equal(decodeTerminalFrame(output).data.toString('utf8'), 'output while attached');
@@ -228,7 +228,41 @@ test('agent refuses to open a shell when a prior segment lacks durable finalized
     ptySpawn: fakePtyFactory,
     recordingOwnerUid: process.getuid(),
     recordingOwnerGid: process.getgid(),
-  }), /not durably finalized/);
+  }), /missing its finalized metadata or cast file/);
+});
+
+test('agent refuses recovery when finalized metadata has no matching cast file', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-missing-cast-'));
+  const segment = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  const metadata = segment.finalize();
+  fs.rmSync(path.join(recordingDirectory(root, SESSION_ID), `segment-${metadata.segmentId}.cast`));
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-missing-cast-1234\n', { mode: 0o600 });
+  assert.throws(() => createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() }), /missing its finalized metadata or cast file/);
+});
+
+test('agent refuses recovery when finalized cast bytes or digest are corrupted', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-corrupt-cast-'));
+  const segment = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  const metadata = segment.finalize();
+  fs.appendFileSync(path.join(recordingDirectory(root, SESSION_ID), `segment-${metadata.segmentId}.cast`), 'tampered\n');
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-corrupt-cast-1234\n', { mode: 0o600 });
+  assert.throws(() => createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() }), /does not match its finalized size or digest/);
+});
+
+test('agent refuses recovery when finalized metadata breaks the digest chain', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'support-agent-broken-chain-'));
+  const first = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  const firstMetadata = first.finalize();
+  const second = new RecordingSegment({ root, sessionId: SESSION_ID, ownerUid: process.getuid(), ownerGid: process.getgid() });
+  const secondMetadata = second.finalize({ previousDigest: firstMetadata.digest });
+  const metadataFile = path.join(recordingDirectory(root, SESSION_ID), `receipt-${secondMetadata.segmentId}.json`);
+  const tamperedMetadata = { ...secondMetadata, previousDigest: 'b'.repeat(64) };
+  fs.writeFileSync(metadataFile, `${JSON.stringify(tamperedMetadata)}\n`, { mode: 0o600 });
+  const reconnect = path.join(root, 'reconnect-token');
+  fs.writeFileSync(reconnect, 'memory-token-broken-chain-1234\n', { mode: 0o600 });
+  assert.throws(() => createSupportAgent({ sessionId: SESSION_ID, relayUrl: 'wss://relay.example/session', connectorTokenFile: path.join(root, 'missing'), reconnectTokenFile: reconnect, recordingDir: root, expiresAt: Date.now() + 3600000, WebSocketImpl: MockSocket, ptySpawn: fakePtyFactory, recordingOwnerUid: process.getuid(), recordingOwnerGid: process.getgid() }), /invalid digest chain/);
 });
 
 test('fresh connector readiness requires a durable reconnect token', () => {
