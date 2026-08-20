@@ -20,6 +20,12 @@ export {
   type StoredPdfResult,
 } from './pdfGenerationService';
 export {
+  getStoredInvoicePdf,
+  InvoicePdfDeliveryError,
+  type InvoicePdfDeliveryStage,
+  type InvoicePdfDeliveryOptions,
+} from './invoicePdfDeliveryService';
+export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,

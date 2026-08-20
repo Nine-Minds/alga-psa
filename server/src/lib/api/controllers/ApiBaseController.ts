@@ -29,6 +29,7 @@ import {
   NotFoundError,
   ValidationError,
   ConflictError,
+  assertInternalApiUser,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -84,12 +85,11 @@ export abstract class ApiBaseController {
       throw new UnauthorizedError('Invalid API key');
     }
 
-    // Get user within tenant context
+    // Get user within tenant context. The internal-user assertion is the
+    // context-construction defense: a permissively mocked validator cannot
+    // admit a client user into a user-key API context.
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    if (!user) {
-      throw new UnauthorizedError('User not found');
-    }
+    assertInternalApiUser(user);
 
     // Create extended request with context
     const apiRequest = req as AuthenticatedApiRequest;

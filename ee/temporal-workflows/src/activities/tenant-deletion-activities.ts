@@ -127,6 +127,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
+  // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
+  // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
+  // clients, so the whole group has to precede time tracking below.
+  'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
+  'hour_blocks',
+
   // Time tracking
   'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
   'user_cost_rates',
@@ -275,11 +281,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
+  // Low-balance alert ledgers: deliveries FK to alerts, alerts FK to clients,
+  // so deliveries delete before alerts and both before client_billing_settings.
+  'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
   'credit_allocations', 'credit_tracking',
-  'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
+  // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
+  // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
+  'contract_line_bucket_services', 'contract_line_buckets',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
@@ -296,6 +308,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
   'contract_template_line_defaults',
+  'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
@@ -347,6 +360,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
   // Document associations must come before documents
   'document_associations',
+
+  // Credentials (entity passwords): associations and access grants reference
+  // credentials with CASCADE, so they must be deleted before credentials.
+  // credentials itself references clients (client_id) and users (created_by),
+  // so it must be deleted before both (clients at LEVEL 4, users LAST).
+  'credential_associations', 'credential_access_grants', 'credentials',
 
   // Assets must come after asset details
   'asset_maintenance_schedules', 'assets',
@@ -465,6 +484,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'client_portal_visibility_groups',
   'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
   'user_invitations', // no DB FK (role_id is unenforced, for CitusDB compatibility); order is advisory
+  // Billing profiles (billing-profiles S1). Referenced by client_contracts,
+  // contract_lines, client_locations, tickets, projects and invoice_charges
+  // (all deleted above), and references clients — so it must go after all of
+  // those and before clients. The portal access grants reference profiles, so
+  // they go first (S12).
+  'client_portal_user_billing_profiles',
+  'client_billing_profiles',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)

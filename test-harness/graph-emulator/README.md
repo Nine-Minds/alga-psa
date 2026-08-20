@@ -21,6 +21,7 @@ Point the Alga server at it with:
 ```bash
 MICROSOFT_LOGIN_BASE_URL=http://127.0.0.1:4010
 MICROSOFT_GRAPH_BASE_URL=http://127.0.0.1:4010/v1.0
+MICROSOFT_GRAPH_BETA_BASE_URL=http://127.0.0.1:4010/beta
 ```
 
 `npm test` starts isolated emulators and verifies the OAuth client pin, message
@@ -45,7 +46,7 @@ either way and produce the same clients and contacts:
 
 | Method | What it calls |
 | --- | --- |
-| Direct | `GET /v1.0/tenantRelationships/managedTenants/tenants`, `…/users?$filter=tenantId eq '…'` |
+| Direct | `GET /beta/tenantRelationships/managedTenants/tenants`, `…/users?$filter=tenantId eq '…'` (beta-only, as on real Graph — v1.0 answers 400) |
 | Direct, self-tenant smoke | `GET /v1.0/organization`, `GET /v1.0/users` |
 | CIPP | `GET /api/listtenants`, `GET /api/listusers?tenantId=…` |
 

@@ -7,6 +7,12 @@ import { withAuth } from '@alga-psa/auth';
 import { getCurrencySymbol } from '@alga-psa/core';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { actionError, type ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  clearDefaultPaymentMethod,
+  listPaymentMethods,
+  resolvePaymentBillingProfileId,
+} from '@alga-psa/shared/billingClients/billingProfilePayments';
+import { getPermittedBillingProfileIds } from './client-portal-actions/clientBillingProfileAccess';
 
 export type ClientPortalAccountActionError = ActionMessageError;
 
@@ -84,6 +90,13 @@ export interface PaymentMethod {
   expMonth?: string;
   expYear?: string;
   isDefault: boolean;
+  /**
+   * The billing profile this card pays for (F105). A client with one profile
+   * has one value here and no reason to look at it; a segmented client needs it
+   * to tell one site's card from another's.
+   */
+  billingProfileId: string;
+  billingProfileName: string | null;
 }
 
 export interface Service {
@@ -342,29 +355,48 @@ export const updateClientProfile = withAuth(async (user, { tenant }, profile: IC
   return { success: true };
 });
 
-export const getPaymentMethods = withAuth(async (user, { tenant }): Promise<PaymentMethod[] | ClientPortalAccountActionError> => {
+export const getPaymentMethods = withAuth(async (
+  user,
+  { tenant },
+  billingProfileId?: string,
+): Promise<PaymentMethod[] | ClientPortalAccountActionError> => {
   const { knex } = await createTenantKnex();
 
   const clientId = await getClientIdFromUser(knex, user, tenant);
   if (!clientId) return noClientForUserError();
 
   const methods = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('payment_methods')
-      .where({
-        client_id: clientId,
-        is_deleted: false
-      })
-      .orderBy('is_default', 'desc')
-      .select('*');
+    const rows = await listPaymentMethods(trx, tenant, clientId, billingProfileId ?? null);
+
+    // A portal user restricted to some of their client's segments must not see
+    // the cards belonging to the segments they were not given (F127). Filtering
+    // here rather than in the browser is the difference between a restriction
+    // and a suggestion.
+    const permitted = await getPermittedBillingProfileIds(trx, tenant, user, clientId);
+    const visible = permitted
+      ? rows.filter((row) => permitted.has(row.billing_profile_id))
+      : rows;
+    if (visible.length === 0) return [];
+
+    const profiles = await tenantDb(trx, tenant)
+      .table('client_billing_profiles')
+      .whereIn('billing_profile_id', visible.map((row) => row.billing_profile_id))
+      .select('billing_profile_id', 'name');
+    const nameById = new Map<string, string>(
+      profiles.map((profile: any) => [profile.billing_profile_id, profile.name]),
+    );
+    return visible.map((row) => ({ ...row, profileName: nameById.get(row.billing_profile_id) ?? null }));
   });
 
   return methods.map((method): PaymentMethod => ({
     id: method.payment_method_id,
-    type: method.type,
-    last4: method.last4,
-    expMonth: method.exp_month,
-    expYear: method.exp_year,
-    isDefault: method.is_default
+    type: method.type as PaymentMethod['type'],
+    last4: method.last4 ?? '',
+    expMonth: method.exp_month ?? undefined,
+    expYear: method.exp_year ?? undefined,
+    isDefault: method.is_default,
+    billingProfileId: method.billing_profile_id,
+    billingProfileName: method.profileName
   }));
 });
 
@@ -372,6 +404,7 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
   type: PaymentMethod['type'];
   token: string;
   setDefault: boolean;
+  billingProfileId?: string;
 }): Promise<{ success: boolean } | ClientPortalAccountActionError> => {
   const { knex } = await createTenantKnex();
 
@@ -380,14 +413,23 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
 
   // Start a transaction
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // If this is set as default, unset any existing default
+    const billingProfileId = await resolvePaymentBillingProfileId(
+      trx,
+      tenant,
+      clientId,
+      data.billingProfileId ?? null,
+    );
+
+    const permitted = await getPermittedBillingProfileIds(trx, tenant, user, clientId);
+    if (permitted && !permitted.has(billingProfileId)) {
+      throw new Error('You do not have access to that billing profile.');
+    }
+
+    // If this is set as default, unset the existing default *for this profile*.
+    // Clearing the whole client here would strip a sibling entity of its
+    // default card as a side effect of someone else adding theirs (F104).
     if (data.setDefault) {
-      await tenantDb(trx, tenant).table('payment_methods')
-        .where({
-          client_id: clientId,
-          is_deleted: false
-        })
-        .update({ is_default: false });
+      await clearDefaultPaymentMethod(trx, tenant, clientId, billingProfileId);
     }
 
     // Process the payment token and get card/bank details
@@ -398,6 +440,7 @@ export const addPaymentMethod = withAuth(async (user, { tenant }, data: {
     return await tenantDb(trx, tenant).table('payment_methods').insert({
       client_id: clientId,
       tenant,
+      billing_profile_id: billingProfileId,
       type: data.type,
       last4: paymentDetails.last4,
       exp_month: paymentDetails.expMonth,
@@ -438,13 +481,24 @@ export const setDefaultPaymentMethod = withAuth(async (user, { tenant }, id: str
   if (!clientId) return noClientForUserError();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Unset any existing default
-    await tenantDb(trx, tenant).table('payment_methods')
+    const method = await tenantDb(trx, tenant).table('payment_methods')
       .where({
+        payment_method_id: id,
         client_id: clientId,
         is_deleted: false
       })
-      .update({ is_default: false });
+      .first('billing_profile_id');
+    if (!method) {
+      throw new Error('Payment method not found.');
+    }
+
+    const permitted = await getPermittedBillingProfileIds(trx, tenant, user, clientId);
+    if (permitted && !permitted.has(method.billing_profile_id)) {
+      throw new Error('You do not have access to that billing profile.');
+    }
+
+    // Default is one per profile, so only this profile's cards are cleared.
+    await clearDefaultPaymentMethod(trx, tenant, clientId, method.billing_profile_id);
 
     // Set the new default
     return await tenantDb(trx, tenant).table('payment_methods')
@@ -563,13 +617,15 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
     scopedDb.tenantJoin(servicesQuery, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
     scopedDb.tenantJoin(servicesQuery, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
     // Removed old join to bucket_plans
-    scopedDb.tenantJoin(servicesQuery, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
+    // Weighted-burn pool: a service shows bucket info when it is a member of a
+    // line pool (or the line has a catch-all pool).
+    scopedDb.tenantJoin(servicesQuery, 'contract_line_bucket_services as pbs', 'ps.contract_line_id', 'pbs.contract_line_id', {
       type: 'left',
       on: (join) => {
-        join.andOn('ps.service_id', '=', 'psc.service_id');
+        join.andOn('pbs.service_id', '=', 'ps.service_id');
       },
     });
-    scopedDb.tenantJoin(servicesQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id', { type: 'left' });
+    scopedDb.tenantJoin(servicesQuery, 'contract_line_buckets as clb', 'pbs.bucket_id', 'clb.bucket_id', { type: 'left' });
 
     return await servicesQuery
       .where({
@@ -598,10 +654,10 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period as bucket_period', // Removed old bucket field
-        'psc.config_id', // Added config_id
-        'psbc.total_minutes as psbc_total_minutes', // Added new bucket field
-        'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
-        'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
+        'pbs.bucket_id as config_id', // Added pool id
+        'clb.total_minutes as psbc_total_minutes', // Added new bucket field
+        'clb.overage_rate as psbc_overage_rate', // Added new bucket field
+        'clb.allow_rollover as psbc_allow_rollover', // Added new bucket field
         trx.raw("'active' as status"),
         'cc.start_date',
         'cc.end_date'
@@ -622,10 +678,10 @@ export const getActiveServices = withAuth(async (user, { tenant }): Promise<Serv
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period', // Removed old bucket field
-        'psc.config_id', // Added config_id
-        'psbc.total_minutes', // Added new bucket field
-        'psbc.overage_rate', // Added new bucket field
-        'psbc.allow_rollover', // Added new bucket field
+        'pbs.bucket_id', // Added pool id
+        'clb.total_minutes', // Added new bucket field
+        'clb.overage_rate', // Added new bucket field
+        'clb.allow_rollover', // Added new bucket field
         'cc.start_date',
         'cc.end_date'
       );

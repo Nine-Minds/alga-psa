@@ -863,6 +863,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.po_required',
       'cc.po_number',
       'cc.po_amount',
+      'cc.credit_drawdown_opt_out',
       'cc.renewal_ticket_board_id',
       'cc.renewal_ticket_status_id',
       'co.status as contract_status',
@@ -944,6 +945,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         po_required: Boolean(row.po_required),
         po_number: row.po_number,
         po_amount: row.po_amount,
+        credit_drawdown_opt_out: row.credit_drawdown_opt_out === true ? true : (row.credit_drawdown_opt_out === false ? false : null),
         tenant: row.tenant,
       };
     });

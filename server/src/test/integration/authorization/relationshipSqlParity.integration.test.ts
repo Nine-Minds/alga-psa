@@ -8,6 +8,7 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
   compileResourceReadAuthorizationSql,
+  resolveDefaultBuiltinRelationshipRules,
   type AuthorizationRecord,
   type AuthorizationSubject,
   type BundleNarrowingRule,
@@ -91,11 +92,23 @@ const clientSubject: AuthorizationSubject = {
   clientId: C1,
 };
 
+// A client subject that could not resolve a client scope (fail-closed default).
+const clientSubjectMissingClientId: AuthorizationSubject = {
+  tenant: TENANT,
+  userId: U1,
+  userType: 'client',
+  teamIds: [],
+  managedUserIds: [],
+  portfolioClientIds: [],
+  clientId: null,
+};
+
 interface Scenario {
   name: string;
   subject: AuthorizationSubject;
   selectedBoardIds?: string[];
   bundleRules: BundleNarrowingRule[];
+  useDefaultBuiltinRules?: boolean;
 }
 
 const rule = (overrides: Partial<BundleNarrowingRule> & { id: string }): BundleNarrowingRule => ({
@@ -127,6 +140,24 @@ const SCENARIOS: Scenario[] = [
     selectedBoardIds: [B1],
     bundleRules: [],
   },
+  {
+    name: 'client default builtin: same_client resolves to client-a only',
+    subject: clientSubject,
+    bundleRules: [],
+    useDefaultBuiltinRules: true,
+  },
+  {
+    name: 'client default builtin: different-client record denied',
+    subject: { ...clientSubject, clientId: C2 },
+    bundleRules: [],
+    useDefaultBuiltinRules: true,
+  },
+  {
+    name: 'client default builtin: missing subject clientId denies everything',
+    subject: clientSubjectMissingClientId,
+    bundleRules: [],
+    useDefaultBuiltinRules: true,
+  },
 ];
 
 function toRecord(row: TicketRow): AuthorizationRecord {
@@ -144,8 +175,14 @@ function toRecord(row: TicketRow): AuthorizationRecord {
 }
 
 async function jsKernelAllowedIds(scenario: Scenario): Promise<Set<string>> {
-  const builtinRules: RelationshipRule[] =
-    scenario.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+  const builtinRules: RelationshipRule[] = scenario.useDefaultBuiltinRules
+    ? resolveDefaultBuiltinRelationshipRules({
+        subject: scenario.subject,
+        resource: { type: 'ticket', action: 'read' },
+      })
+    : scenario.selectedBoardIds === undefined
+      ? []
+      : [{ template: 'selected_boards' }];
   const kernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({ relationshipRules: builtinRules }),
     bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => scenario.bundleRules }),
@@ -191,8 +228,14 @@ function sqlAdapter(connection: Knex): RelationshipSqlAdapter {
 }
 
 async function sqlAllowedIds(connection: Knex, scenario: Scenario): Promise<Set<string> | null> {
-  const builtinRules: RelationshipRule[] =
-    scenario.selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' }];
+  const builtinRules: RelationshipRule[] = scenario.useDefaultBuiltinRules
+    ? resolveDefaultBuiltinRelationshipRules({
+        subject: scenario.subject,
+        resource: { type: 'ticket', action: 'read' },
+      })
+    : scenario.selectedBoardIds === undefined
+      ? []
+      : [{ template: 'selected_boards' }];
   const query = connection('relsql_tickets as t').where('t.tenant', TENANT);
   const result = compileResourceReadAuthorizationSql(query, {
     resourceType: 'ticket',

@@ -26,6 +26,9 @@
       "phoneNumber": {
         "label": "Número de telefone"
       },
+      "phoneExtension": {
+        "label": "Ramal"
+      },
       "timeZone": {
         "label": "Fuso horário"
       }

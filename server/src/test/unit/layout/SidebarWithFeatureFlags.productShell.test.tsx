@@ -155,17 +155,22 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(latestProps.extensionsSectionsOverride).toEqual([]);
   });
 
-  it('shows Appearance only for Enterprise when the v1.5 release flag is enabled', async () => {
+  it('shows Appearance and Passwords only when the v1.5 release flag is enabled', async () => {
     useFeatureFlag.mockImplementation((flag: string) => flag === 'release-v1-5-feature');
 
     const { unmount } = render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
     await waitFor(() => {
       const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string }> }>;
         settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
       };
-      const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
-      expect(names).toContain('Appearance');
+      const menuNames = latestProps.menuSections.flatMap((section) => section.items.map((item) => item.name));
+      const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+        section.items.map((item) => item.name),
+      );
+      expect(menuNames).toContain('Passwords');
+      expect(settingsNames).toContain('Appearance');
     });
 
     unmount();
@@ -175,10 +180,15 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
 
     await waitFor(() => {
       const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string }> }>;
         settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
       };
-      const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
-      expect(names).not.toContain('Appearance');
+      const menuNames = latestProps.menuSections.flatMap((section) => section.items.map((item) => item.name));
+      const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+        section.items.map((item) => item.name),
+      );
+      expect(menuNames).not.toContain('Passwords');
+      expect(settingsNames).not.toContain('Appearance');
     });
   });
 

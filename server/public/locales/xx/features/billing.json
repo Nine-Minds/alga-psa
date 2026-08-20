@@ -2,9 +2,12 @@
   "title": "11111",
   "overview": "11111",
   "tabs": {
-    "overview": "11111",
+    "hoursByService": "11111",
     "invoices": "11111",
-    "quotes": "11111"
+    "overview": "11111",
+    "quotes": "11111",
+    "usageMetrics": "11111",
+    "segments": "11111"
   },
   "currentContractLine": "11111",
   "nextInvoice": "11111",
@@ -171,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "11111"
+    },
+    "detail": {
+      "accept": "11111",
+      "acceptHint": "11111",
+      "acceptHintOptional": "11111",
+      "acceptQuote": "11111",
+      "acceptedBanner": "11111",
+      "acceptedBannerOptional": "11111",
+      "backToQuotes": "11111",
+      "cancel": "11111",
+      "columns": {
+        "amount": "11111",
+        "description": "11111",
+        "qty": "11111",
+        "rate": "11111"
+      },
+      "confirmAccept": "11111",
+      "confirmAcceptOptional": "11111",
+      "confirmReject": "11111",
+      "discounts": "11111",
+      "downloadFailed": "11111",
+      "downloadFailedRetry": "11111",
+      "downloadPdf": "11111",
+      "downloading": "11111",
+      "exclude": "11111",
+      "excluded": "11111",
+      "fallbackTitle": "11111 {{id}} 11111",
+      "include": "11111",
+      "included": "11111",
+      "lineItems": "11111",
+      "loading": "11111",
+      "notFound": "11111",
+      "notes": "11111",
+      "optional": "11111",
+      "optionalLockedHint": "11111",
+      "optionalToggleHint": "11111",
+      "poNumber": "11111",
+      "quoteDate": "11111",
+      "readyToRespond": "11111",
+      "reject": "11111",
+      "rejectCommentRequired": "11111",
+      "rejectPlaceholder": "11111",
+      "rejectPrompt": "11111",
+      "rejectQuote": "11111",
+      "rejectedBanner": "11111",
+      "rejectedBannerWithReason": "11111 {{reason}} 11111",
+      "savingSelections": "11111",
+      "scopeOfWork": "11111",
+      "submitting": "11111",
+      "subtotal": "11111",
+      "tax": "11111",
+      "termsAndConditions": "11111",
+      "total": "11111",
+      "validUntil": "11111"
     }
   },
   "quoteForm": {
@@ -376,5 +433,14 @@
   "dashboard": {
     "prepaidHours": "11111",
     "viewBilling": "11111"
+  },
+  "hourBlocks": {
+    "title": "11111",
+    "blockLabel": "11111 {{service}} 11111",
+    "expiringSoon": "11111 {{days}} 11111",
+    "hoursLeft": "11111 {{hours}} 11111",
+    "expires": "11111 {{date}} 11111",
+    "recentBurn": "11111",
+    "timeEntry": "11111"
   }
 }

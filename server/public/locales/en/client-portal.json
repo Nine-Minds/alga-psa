@@ -426,7 +426,8 @@
       "recentInvoicesTitle": "Recent Invoices",
       "billingHistoryTitle": "Billing History",
       "labels": {
-        "defaultTag": "(Default)"
+        "defaultTag": "(Default)",
+        "paysFor": "Pays for {{profile}}"
       },
       "actions": {
         "setDefault": "Set Default",
@@ -440,7 +441,8 @@
         "expiryMonth": "Month",
         "expiryYear": "Year",
         "cvv": "CVV",
-        "setAsDefault": "Set as default payment method"
+        "setAsDefault": "Set as default payment method",
+        "billingProfile": "Pays for"
       },
       "history": {
         "period": "Period",
@@ -893,6 +895,15 @@
         "backToBilling": "Back to Billing",
         "viewInvoice": "View Invoice"
       }
+    },
+    "segments": {
+      "allSegments": "Whole organisation",
+      "organizationTotalLabel": "Total across your organisation",
+      "periodLabel": "{{start}} to {{end}}",
+      "selectorLabel": "Show",
+      "empty": "No billed charges in this period.",
+      "chargesTitle": "Charges in this segment",
+      "noCharges": "No charges in this period."
     }
   },
   "assets": {

@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "Échec de l'ouverture du planificateur",
     "loadCommentsFailed": "Échec du chargement des commentaires",
     "updateTicketFailed": "Échec de la mise à jour du ticket",
-    "errorWithMessage": "Erreur : {{message}}"
+    "errorWithMessage": "Erreur : {{message}}",
+    "billingProfileUpdated": "Profil de facturation mis à jour",
+    "updateBillingProfileFailed": "Échec de la mise à jour du profil de facturation"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -495,7 +497,31 @@
     },
     "exportSelectedAction": "Exporter la sélection ({{count}})",
     "exportAction": "Exporter CSV",
-    "importAction": "Importer CSV"
+    "importAction": "Importer CSV",
+    "boardTabs": {
+      "all": "Tous les tickets"
+    },
+    "boardHeader": {
+      "open": "Ouverts",
+      "overdue": "En retard",
+      "slaBreach": "Dépassement de SLA",
+      "unassigned": "Non attribué",
+      "managedBy": "Géré par",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Affichage",
+      "columns": "Colonnes",
+      "density": "Densité",
+      "saveBoardDefault": "Enregistrer comme vue par défaut de ce tableau",
+      "saveTenantDefault": "Enregistrer comme vue par défaut pour tout le monde",
+      "resetToTenant": "Réinitialiser à la valeur par défaut du locataire",
+      "unsavedChanges": "Cette vue diffère de la valeur par défaut enregistrée",
+      "saved": "Vue par défaut enregistrée",
+      "saveFailed": "Échec de l'enregistrement de la vue par défaut",
+      "reset": "Réinitialiser à la valeur par défaut du locataire",
+      "resetFailed": "Échec de la réinitialisation de la vue"
+    }
   },
   "bulk": {
     "bundleTickets": "Regrouper les tickets",
@@ -955,7 +981,10 @@
       "selective": "Sélectionnez des membres individuels à conserver/supprimer"
     },
     "noTeamMembersOnTicket": "Aucun membre de l'équipe trouvé sur ce ticket.",
-    "unnamedUser": "Utilisateur anonyme"
+    "unnamedUser": "Utilisateur anonyme",
+    "billingProfile": "Profil de facturation",
+    "billingProfileUnassigned": "Utiliser le profil par défaut",
+    "billingProfileHint": "Utilisé uniquement lorsqu'aucun contrat n'attribue ce travail à un profil."
   },
   "settings": {
     "categories": {

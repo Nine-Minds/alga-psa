@@ -49,6 +49,8 @@ const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
 
 // Always load the overview tab eagerly as it's the default tab
 import BillingOverviewTab from './BillingOverviewTab';
+import { getPortalBillingProfiles } from '../../actions/client-portal-actions/client-billing-segments';
+import BillingSegmentsTab from './BillingSegmentsTab';
 
 // Lazy load other tabs
 const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
@@ -104,6 +106,20 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = true;
 const DEFAULT_BILLING_TAB = 'overview';
+// Single source of truth for every billing tab id the URL `?tab=` param may
+// select. Keep this in sync with the tabs assembled in the `tabs` memo below —
+// a tab that renders but is missing here is unreachable, because the URL-sync
+// effect resets any unrecognised value back to DEFAULT_BILLING_TAB. (A tab that
+// is conditionally hidden, e.g. `segments` at segmentCount <= 1, is still safe
+// to list: CustomTabs falls back gracefully when the selected id isn't present.)
+const BILLING_TAB_IDS = [
+  'overview',
+  'invoices',
+  'quotes',
+  'segments',
+  'hours-by-service',
+  'usage-metrics',
+] as const;
 const isBillingActionError = (
   value: unknown
 ): value is { readonly actionError: string } | { readonly permissionError: string } =>
@@ -117,7 +133,7 @@ export default function BillingOverview() {
 
   // Determine initial tab from URL parameter
   const initialTab = useMemo(() => {
-    if (tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)) {
+    if (tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)) {
       return tabParam;
     }
     return DEFAULT_BILLING_TAB;
@@ -153,6 +169,9 @@ export default function BillingOverview() {
   const [isUsageMetricsLoading, setIsUsageMetricsLoading] = useState(false);
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
+  // Segment count drives the D6 invisibility rule on the portal (F072/F077): a
+  // client with one billing profile sees exactly the portal it saw before.
+  const [segmentCount, setSegmentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -171,7 +190,7 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)
+    const targetTab = tabParam && (BILLING_TAB_IDS as readonly string[]).includes(tabParam)
       ? tabParam
       : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
@@ -251,6 +270,18 @@ export default function BillingOverview() {
           console.error('User does not have access to invoices:', error);
           setHasInvoiceAccess(false);
         }
+
+        // How many billing profiles this viewer may see. Zero or one means the
+        // client is not segmented (or this user is restricted to one segment),
+        // and no segment UI is offered at all.
+        try {
+          const segments = await getPortalBillingProfiles();
+          if (isMounted) {
+            setSegmentCount(Array.isArray(segments) ? segments.length : 0);
+          }
+        } catch {
+          if (isMounted) setSegmentCount(0);
+        }
         
         // Load enhanced bucket usage data
         setIsBucketUsageLoading(true);
@@ -305,7 +336,9 @@ export default function BillingOverview() {
     let isMounted = true;
     
     const loadHoursByService = async () => {
-      if (currentTab === 'Hours by Service') {
+      // Compare against the tab id: currentTab carries ids, and the display
+      // label is translated so it can never be a stable comparison key.
+      if (currentTab === 'hours-by-service') {
         setIsHoursLoading(true);
         try {
           const data = await getClientHoursByService({
@@ -339,7 +372,7 @@ export default function BillingOverview() {
     let isMounted = true;
     
     const loadUsageMetrics = async () => {
-      if (currentTab === 'Usage Metrics') {
+      if (currentTab === 'usage-metrics') {
         setIsUsageMetricsLoading(true);
         try {
           const data = await getClientUsageMetrics({
@@ -497,11 +530,26 @@ export default function BillingOverview() {
       });
     }
 
+    // Segments tab — only once the client actually has more than one billing
+    // profile. One profile means one segment, and a breakdown of one row is
+    // not information (F077).
+    if (hasInvoiceAccess && segmentCount > 1) {
+      tabsArray.push({
+        id: 'segments',
+        label: t('tabs.segments', { defaultValue: 'By segment' }),
+        content: (
+          <div id="segments-tab">
+            <BillingSegmentsTab formatCurrency={formatCurrency} formatDate={formatDate} />
+          </div>
+        ),
+      });
+    }
+
     if (SHOW_USAGE_FEATURES) {
       // Add Hours by Service tab
       tabsArray.push({
         id: 'hours-by-service',
-        label: 'Hours by Service',
+        label: t('tabs.hoursByService', 'Hours by Service'),
         content: (
           <div id="hours-service-tab">
             <HoursByServiceTab
@@ -517,7 +565,7 @@ export default function BillingOverview() {
       // Add Usage Metrics tab
       tabsArray.push({
         id: 'usage-metrics',
-        label: 'Usage Metrics',
+        label: t('tabs.usageMetrics', 'Usage Metrics'),
         content: (
           <div id="usage-metrics-tab">
             <UsageMetricsTab
@@ -543,6 +591,7 @@ export default function BillingOverview() {
     isBucketHistoryLoading,
     isLoading,
     hasInvoiceAccess,
+    segmentCount,
     currentPage,
     hoursByService,
     isHoursLoading,

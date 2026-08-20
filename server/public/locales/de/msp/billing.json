@@ -22,7 +22,8 @@
     "success": "Erfolg",
     "update": "Aktualisieren",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "export": "Exportieren"
   },
   "dashboard": {
     "title": "Abrechnung",
@@ -499,5 +500,75 @@
     "unknownValue": "Unbekannter Wert",
     "noDataForList": "Keine Daten für Liste: {{name}}",
     "uncategorized": "Nicht kategorisiert"
+  },
+  "spendByProfile": {
+    "title": "Ausgaben nach Abrechnungsprofil",
+    "description": "Was jeder Standort bzw. jede Einheit dieses Kunden im Zeitraum gekostet hat. Öffnen Sie eine Zeile, um die Buchungen hinter der Zahl zu sehen.",
+    "from": "Von",
+    "to": "Bis",
+    "comparePrevious": "Mit Vorperiode vergleichen",
+    "defaultBadge": "Standard",
+    "empty": "Keine finalisierten Buchungen für diesen Kunden im gewählten Zeitraum.",
+    "drillDownTitle": "Buchungen hinter dieser Zahl",
+    "drillDownEmpty": "Keine Buchungen gefunden.",
+    "priorPeriod": "zuvor {{amount}}",
+    "unattributedHint": "Weder Vertrag noch Vertragsposition oder Arbeitselement haben diese Buchungen beansprucht, daher wurden sie dem Standardprofil zugeordnet.",
+    "columns": {
+      "profile": "Abrechnungsprofil",
+      "charges": "Buchungen",
+      "net": "Netto",
+      "tax": "Steuer",
+      "total": "Gesamt",
+      "unattributed": "Auf Standard zurückgefallen",
+      "priorTotal": "Gesamt Vorperiode",
+      "change": "Veränderung"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "{{profile}} berechnet, weil dieses Profil direkt für diese Buchung gewählt wurde.",
+      "contractLine": "{{profile}} berechnet, weil die Vertragsposition diesem Profil zugeordnet ist.",
+      "contractLineNamed": "{{profile}} berechnet, weil die Vertragsposition „{{line}}“ diesem Profil zugeordnet ist.",
+      "contract": "{{profile}} berechnet, weil der Vertrag diesem Profil zugeordnet ist.",
+      "contractNamed": "{{profile}} berechnet, weil der Vertrag „{{contract}}“ diesem Profil zugeordnet ist.",
+      "workItem": "{{profile}} berechnet, weil das Ticket oder Projekt diesem Profil zugeordnet ist; keine Vertragszuordnung greift.",
+      "workItemNamed": "{{profile}} berechnet, weil „{{workItem}}“ diesem Profil zugeordnet ist; keine Vertragszuordnung greift.",
+      "clientDefault": "{{profile}} berechnet, weil nichts anderes diese Buchung beansprucht hat – sie fiel auf das Standardprofil des Kunden zurück.",
+      "unknown": "Für diese Buchung ist keine Zuordnung erfasst."
+    },
+    "line": {
+      "explicit": "{{line}} wurde für diesen Eintrag manuell gewählt.",
+      "autoUniqueService": "{{line}} war die einzige Vertragsposition, die diese Leistung abdeckt.",
+      "autoBucketOverlay": "Mehrere Vertragspositionen deckten diese Leistung ab; nur {{line}} hatte ein Kontingent.",
+      "autoBillingProfile": "Mehrere Vertragspositionen deckten diese Leistung ab; {{line}} wurde gewählt, weil sie zum Abrechnungsprofil des Arbeitselements gehört.",
+      "reconciled": "{{line}} wurde diesem Eintrag bei der Rechnungserstellung zugeordnet.",
+      "unresolved": "Für diesen Eintrag konnte keine Vertragsposition gewählt werden.",
+      "unknown": "Wie diese Vertragsposition gewählt wurde, ist nicht erfasst."
+    },
+    "limitation": {
+      "contractGranular": "Für diese Buchungsart gibt es keinen Einzelnachweis, daher lässt sie sich nur bis zum Vertrag zuordnen – nicht zum konkreten Standort oder zur konkreten Arbeit."
+    }
+  },
+  "unresolvedReview": {
+    "title": "Positionen ohne Vertragsposition",
+    "description": "Diese Positionen sind noch keiner Vertragsposition zugeordnet und würden daher zum Katalogpreis abgerechnet.",
+    "catalogPricingCaveat": "Katalogpreise ignorieren den Vertragspreis, Rundung, Mindestabrechnungszeit, Überstunden und jede Preisstaffel.",
+    "ambiguousBlocked": "{{count}} Position(en) sind durch einen Vertrag abgedeckt, passten aber zu mehr als einer Vertragsposition. Sie werden erst abgerechnet, wenn Sie eine Position zuweisen oder Katalogpreise dafür wählen.",
+    "unknownService": "Unbekannte Leistung",
+    "timeEntry": "Zeiteintrag · {{minutes}} Min.",
+    "usageRecord": "Verbrauchseintrag · {{quantity}}",
+    "assignLine": "Vertragsposition zuweisen",
+    "assigned": "Zugewiesen – diese Position wird zu Vertragspreisen abgerechnet.",
+    "useCatalogPricing": "Katalogpreis verwenden",
+    "undoCatalogPricing": "Rückgängig",
+    "catalogPricingChosen": "Katalogpreis gewählt",
+    "catalogPricingAccepted": "Katalogpreis für diese Position gewählt.",
+    "catalogPricingRevoked": "Katalogpreis zurückgenommen.",
+    "uncoveredExplanation": "Kein Vertrag deckt diese Leistung ab, daher ist der Katalogpreis der einzige verfügbare Preis. Sie wird unverändert abgerechnet.",
+    "ambiguousExplanation": "Ein Vertrag deckt diese Leistung ab, es gibt also einen ausgehandelten Preis. Wählen Sie die zugehörige Vertragsposition.",
+    "reason": {
+      "uncovered": "Durch keinen Vertrag abgedeckt",
+      "ambiguous": "Mehr als eine Vertragsposition passt"
+    }
   }
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChevronDown } from 'lucide-react';
-import { useCollapsiblePreference } from '@alga-psa/ui/hooks';
+import { useCollapsiblePreference, useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -14,6 +14,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
+import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
 import { TaxSourceSettings } from '../tax/TaxSourceSettings';
@@ -122,6 +123,9 @@ const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
+  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
+    defaultValue: false,
+  });
 
   const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'tax', 'payments'];
 
@@ -210,6 +214,22 @@ const BillingSettings: React.FC = () => {
               <CreditExpirationSettings />
             </CardContent>
           </Card>
+
+          {creditDrawdownEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('general.creditDrawdown.title', { defaultValue: 'Credit Draw-Down' })}</CardTitle>
+                <CardDescription>
+                  {t('general.creditDrawdown.description', {
+                    defaultValue: 'Control when client credits are applied to invoices and how they are consumed.'
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CreditDrawdownSettings />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

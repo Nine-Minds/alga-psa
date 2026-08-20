@@ -21,6 +21,7 @@ export async function listClientPortalMenuItemsForTenant(): Promise<ClientPortal
     .join('extension_version as ev', 'ev.id', 'ti.version_id')
     .join('extension_registry as er', 'er.id', 'ti.registry_id')
     .where('ti.is_enabled', true)
+    .where('ti.status', 'enabled')
     .whereNotNull('ev.ui')
     .andWhereRaw("(ev.ui::jsonb #> '{hooks,clientPortalMenu,label}') is not null")
     .andWhereRaw("(ev.ui::jsonb #>> '{hooks,clientPortalMenu,label}') <> ''")

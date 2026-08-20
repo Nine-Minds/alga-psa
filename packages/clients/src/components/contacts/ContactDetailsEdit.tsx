@@ -195,7 +195,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       }
 
       const currentPhoneErrors = translateContactPhoneValidationErrors(
-        validateContactPhoneNumbers(contact.phone_numbers),
+        validateContactPhoneNumbers(contact.phone_numbers, { existingRows: initialContact.phone_numbers }),
         t
       );
       setPhoneValidationErrors(currentPhoneErrors);

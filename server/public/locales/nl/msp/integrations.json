@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft heeft u aangemeld maar toegang tot uw lijst met beheerde tenants geweigerd. Een globale beheerder moet beheerderstoestemming verlenen voor de gevraagde machtigingen. Er is niets opgeslagen — probeer het opnieuw zodra de toestemming is verleend.",
             "expired": "De verbindingspoging is verlopen voordat deze was voltooid. Er is niets opgeslagen — start de verbinding opnieuw.",
             "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
-            "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
+            "validationFailed": "Microsoft heeft u aangemeld, maar de lijst met beheerde tenants kon niet worden gelezen; er is niets opgeslagen. Uw machtigingen zijn geaccepteerd — meestal is de partnertenant niet aangesloten op Microsoft 365 Lighthouse of zijn er geen actieve GDAP-relaties.",
+            "tokenRejected": "Microsoft heeft het toegangstoken van de verbinding geweigerd; er is niets opgeslagen. Start de verbinding opnieuw."
           },
           "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
-              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
+              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
+              "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
             }
           },
           "directReassurance": "U ziet de toestemmingsvraag voordat er iets wordt verleend.",
@@ -1858,6 +1860,7 @@
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
@@ -1879,9 +1882,21 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Plak de Intuit app-inloggegevens die voor deze tenant zijn geregistreerd, of laat leeg om de QuickBooks-app op toepassingsniveau te gebruiken als die is geconfigureerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
-        "tenantOauthTitle": "Tenant-eigen OAuth-app",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Via welke Intuit-app deze tenant verbinding maakt. Secrets worden na opslaan nooit teruggestuurd naar de browser.",
+        "tenantOauthTitle": "Intuit-app-gegevens",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "De Automated Sales Tax-modus staat uit. Alga blijft de belasting voor dit bedrijf berekenen.",
+          "enabledMessage": "QuickBooks berekent vanaf nu de omzetbelasting voor gedelegeerde facturen van dit bedrijf.",
+          "hint": "Zet dit aan wanneer dit QuickBooks-bedrijf Automated Sales Tax gebruikt. Intuit belast geëxporteerde facturen dan op basis van het klantadres en de belasting komt terug naar Alga.",
+          "label": "QuickBooks berekent de omzetbelasting"
+        },
+        "credentialSource": {
+          "app": "Deze omgeving biedt een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Vul de velden hieronder alleen in als deze tenant een eigen Intuit-app moet gebruiken.",
+          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
+          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
+        },
+        "setupGuideLink": "QuickBooks-installatiegids"
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -1970,6 +1985,15 @@
         "errors": {
           "previewFailed": "Importvoorbeeld laden mislukt.",
           "executeFailed": "De import is mislukt."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identificatie {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — niet belastbaar",
+          "taxable": "TAX — belastbaar (Automated Sales Tax bepaalt het tarief)"
         }
       }
     },
@@ -2521,6 +2545,29 @@
           "updateMapping": "Kan koppeling niet bijwerken",
           "updateContact": "Kan standaardcontact niet bijwerken",
           "updateAutoSync": "Kan instelling voor automatisch synchroniseren niet bijwerken"
+        }
+      },
+      "deviceSync": {
+        "title": "Geplande apparaatsynchronisatie",
+        "description": "Werk deze apparaatinventaris volgens een schema bij in plaats van te wachten tot iemand een volledige synchronisatie uitvoert. Elke uitvoering roept de API van de provider aan en bij sommige providers leest ook een incrementele uitvoering de volledige apparaatlijst, waardoor een korter interval evenredig meer API-aanroepen kost.",
+        "enabledLabel": "Apparaten volgens een schema synchroniseren",
+        "intervalLabel": "Uitvoeren elke (minuten)",
+        "intervalHelp": "Kies tussen {{min}} en {{max}} minuten. Een korter interval houdt de apparaatgegevens actueler en roept de API van de provider vaker aan.",
+        "intervalInvalid": "Voer een geheel aantal minuten tussen {{min}} en {{max}} in.",
+        "lastScheduledRun": "Laatste geplande uitvoering: {{time}}",
+        "lastScheduledRunNever": "De geplande synchronisatie is nog niet uitgevoerd.",
+        "lastAnySync": "Laatste synchronisatie van welke aard dan ook, inclusief handmatige volledige synchronisaties: {{time}}",
+        "lastAnySyncNever": "Er is nog geen enkele apparaatsynchronisatie uitgevoerd.",
+        "lastSyncError": "De laatste synchronisatie is mislukt: {{error}}",
+        "actions": {
+          "save": "Synchronisatieschema opslaan",
+          "saving": "Opslaan..."
+        },
+        "success": {
+          "saved": "Schema voor apparaatsynchronisatie opgeslagen. De planner past het binnen enkele minuten toe."
+        },
+        "errors": {
+          "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
         }
       }
     },

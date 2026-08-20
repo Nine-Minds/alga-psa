@@ -33,6 +33,7 @@ import TicketInfo from "./TicketInfo";
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
+import { TicketCredentialsSection } from "./TicketCredentialsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
@@ -550,10 +551,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
 
-    // Grid | Entry layout toggle (per-user preference). Entry is the default
-    // and renders the existing layout untouched.
+    // Grid | Entry layout toggle (per-user preference). Grid is the default;
+    // a stored 'entry' preference keeps the existing layout untouched.
     const [layoutMode, setLayoutMode] = useState<TicketDetailLayout>(
-        bootstrap?.layoutPreference?.layout ?? 'entry',
+        bootstrap?.layoutPreference?.layout ?? 'grid',
     );
     const [timelinePrefOrder, setTimelinePrefOrder] = useState<'asc' | 'desc'>(
         bootstrap?.layoutPreference?.timelineOrder ?? 'asc',
@@ -2805,6 +2806,26 @@ const handleClose = () => {
         }
     };
 
+    const handleBillingProfileChange = async (newBillingProfileId: string | null) => {
+        try {
+            const result = await updateTicket(ticket.ticket_id!, {
+                billing_profile_id: newBillingProfileId
+            });
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                billing_profile_id: newBillingProfileId
+            }));
+
+            toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
+        } catch (error) {
+            handleTicketActionError(error, t('messages.updateBillingProfileFailed', 'Failed to update billing profile'));
+        }
+    };
+
     const handleDeleteRequest = (conversation: IComment) => {
         // Only allow users to delete their own comments
         if (userId === conversation.user_id) {
@@ -3887,6 +3908,11 @@ const handleClose = () => {
                             />
                         </Suspense>
 
+                        <TicketCredentialsSection
+                            ticketId={ticket.ticket_id || ''}
+                            clientId={ticket.client_id ?? null}
+                        />
+
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
@@ -3928,6 +3954,7 @@ const handleClose = () => {
                                 onChangeContact={handleContactChange}
                                 onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
+                                onChangeBillingProfile={handleBillingProfileChange}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}

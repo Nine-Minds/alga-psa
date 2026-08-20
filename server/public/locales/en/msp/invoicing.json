@@ -343,7 +343,7 @@
       "refresh": "An error occurred while refreshing invoice data.",
       "updateFailed": "Error updating invoice",
       "generateFailed": "Error generating invoice",
-      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set an email address on the client's billing location, then try again.",
+      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.",
       "CLIENT_NOT_FOUND": "The selected client could not be found. Refresh and try again.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} could not be found. Refresh and try again.",
       "INVALID_QUANTITY": "Quantity must be greater than zero.",
@@ -357,7 +357,7 @@
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
     },
     "warnings": {
-      "noBillingEmail": "This client has no billing email. Set an email address on the client's billing location before generating the invoice."
+      "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
     },
     "errorFallback": {
       "title": "Something went wrong",
@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Template Boundary"
+      "templateBoundary": "Template Boundary",
+      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead."
     },
     "dragOverlay": {
       "component": "Component"

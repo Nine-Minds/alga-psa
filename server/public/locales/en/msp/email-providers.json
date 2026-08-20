@@ -159,7 +159,8 @@
       "resyncMailbox": "Resync Mailbox",
       "pause": "Pause inbound email",
       "resume": "Resume inbound email",
-      "delete": "Delete Provider"
+      "delete": "Delete Provider",
+      "runGmailDiagnostics": "Run Gmail Delivery Diagnostics"
     },
     "feedback": {
       "paused": "Inbound email paused.",
@@ -167,6 +168,11 @@
       "pauseError": "Failed to change inbound email pause state."
     },
     "pausedHelp": "Messages received while this inbox is paused are not imported retroactively.",
+    "authFailure": {
+      "title": "Inbound email paused — reconnection required",
+      "description": "Inbound email for {{mailbox}} is paused because its credentials no longer work. Messages are not lost — they remain in the source mailbox and will be imported after you reconnect.",
+      "action": "Reconnect"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Last Sync",
@@ -208,6 +214,14 @@
       "title": "No Email Providers Configured",
       "description": "Add an email provider to start receiving and processing inbound emails as tickets.",
       "action": "Add Email Provider"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail is no longer sending new mail here",
+      "expiredDescription": "The Gmail watch for {{mailbox}} expired, so Google has stopped publishing notifications. Messages are not lost — they remain in the mailbox. Refresh Pub/Sub & Watch to resume delivery.",
+      "missingTitle": "Gmail push delivery is not registered",
+      "missingDescription": "No Gmail watch is registered for {{mailbox}}, so no inbound mail will arrive. Refresh Pub/Sub & Watch to register one.",
+      "expiringTitle": "Gmail push delivery expires within a day",
+      "expiringDescription": "Gmail watches last seven days. Refresh Pub/Sub & Watch before this one lapses, or inbound mail will stop without further notice."
     }
   },
   "forms": {
@@ -237,6 +251,9 @@
         "authorizing": "Authorizing...",
         "authorized": "Authorized",
         "authorizeAccess": "Authorize Access"
+      },
+      "messages": {
+        "setupIncomplete": "Provider saved but setup incomplete: {{error}}"
       }
     },
     "microsoft": {

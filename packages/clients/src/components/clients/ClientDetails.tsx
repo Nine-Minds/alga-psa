@@ -10,7 +10,7 @@ import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpe
 import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { validateClientName } from '@alga-psa/validation';
+import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -97,6 +97,8 @@ import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
 import { useHuduClientTab } from './useHuduClientTab';
+import { useCredentialsVaultTab } from './useCredentialsVaultTab';
+import { ClientCredentialsTab } from './ClientCredentialsTab';
 import { useClientEquipmentTab } from './useClientEquipmentTab';
 import { ClientEquipmentTab } from './ClientEquipmentTab';
 
@@ -234,7 +236,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -279,6 +283,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Surfaced beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
   const [isLoadingSlaPolicies, setIsLoadingSlaPolicies] = useState(false);
@@ -293,6 +299,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
+  const hourBlocksFlag = useFeatureFlag('release-v1-5-feature', {
+    defaultValue: false,
+  });
   const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
@@ -303,6 +312,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
+  // Credentials vault: EE + release-v1-5-feature + tier. When visible the
+  // unified Passwords tab replaces the Hudu-only one; when off, the legacy tab
+  // registration above is preserved exactly.
+  const credentialsVaultTab = useCredentialsVaultTab();
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();
 
@@ -956,9 +969,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'client_name') {
-        const error = validateClientName(value);
-        if (error) {
-          newErrors[field] = error;
+        const result = translateFieldValidation(validateClientNameField(value), tValidation);
+        // Warnings are informational only and must never gate the save.
+        setFieldWarnings(prev => ({ ...prev, client_name: result.warnings }));
+        // A name the user never touched is grandfathered: a legacy record that
+        // predates the schema stays editable on the fields they did change.
+        const nameChanged = value !== (client.client_name?.trim() || '');
+        if (result.error && nameChanged) {
+          newErrors[field] = result.error;
           hasValidationErrors = true;
         }
       }
@@ -1004,7 +1022,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [client.client_id]);
+  }, [client.client_id, client.client_name]);
 
   usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
 
@@ -1341,6 +1359,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           clientActiveContacts={clientActiveContacts}
           setDefaultContactOptions={setDefaultContactOptions}
           fieldErrors={fieldErrors}
+          fieldWarnings={fieldWarnings}
           hasAttemptedSubmit={hasAttemptedSubmit}
           slaPolicies={slaPolicies}
           isLoadingSlaPolicies={isLoadingSlaPolicies}
@@ -1360,7 +1379,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           setAliasDraft={setAliasDraft}
           isAliasBusy={isAliasBusy}
           isSaving={isSaving}
-          t={t}
           onFieldChange={handleFieldChange}
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
@@ -1437,8 +1455,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'billing-dashboard',
       label: t('clientDetails.billingDashboard', { defaultValue: 'Billing Dashboard' }),
       content: (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
+          {hourBlocksFlag.enabled && renderHourBlocksSection?.({
+            clientId: client.client_id,
+            currencyCode: client.default_currency_code ?? 'USD',
+          })}
         </div>
       )
     },
@@ -1642,7 +1664,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </div>
       )
     },
-    // EE-only Hudu tabs: registered only when EE + flag + connected + mapped (F070/F080).
+    // Hudu tab (F070): the general Hudu client tab (articles/assets mapping)
+    // is ALWAYS registered when EE + Hudu connected + this client mapped — it
+    // is independent of the credentials-vault flag. The release flag only
+    // swaps the password surface: the unified vault tab replaces the legacy
+    // Hudu-only Passwords tab, nothing else. Flag off ⇒ legacy pair as before.
     ...(huduClientTab.visible ? [{
       id: 'hudu',
       label: t('clientDetails.huduTab', { defaultValue: 'Hudu' }),
@@ -1651,7 +1677,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <HuduClientTab clientId={client.client_id} />
         </div>
       )
-    }, {
+    }] : []),
+    ...(credentialsVaultTab.visible ? [{
+      id: 'credentials',
+      label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <ClientCredentialsTab clientId={client.client_id} />
+        </div>
+      )
+    }] : huduClientTab.visible ? [{
       id: 'hudu-passwords',
       label: t('clientDetails.huduPasswordsTab', { defaultValue: 'Passwords' }),
       content: (
@@ -1677,6 +1712,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     surveySummary,
     hasAttemptedSubmit,
     fieldErrors,
+    fieldWarnings,
     handleSave,
     isSaving,
     setIsQuickAddTicketOpen,
@@ -1708,6 +1744,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter,
     interactions,
     huduClientTab.visible,
+    credentialsVaultTab.visible,
     clientEquipmentTab.visible
   ]);
 

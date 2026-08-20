@@ -2,9 +2,12 @@
   "title": "Rozliczenia",
   "overview": "Przegląd",
   "tabs": {
-    "overview": "Przegląd",
+    "hoursByService": "Godziny według usług",
     "invoices": "Faktury",
-    "quotes": "Oferty"
+    "overview": "Przegląd",
+    "quotes": "Oferty",
+    "usageMetrics": "Wskaźniki użycia",
+    "segments": "Wg segmentu"
   },
   "currentContractLine": "Aktualna linia umowy",
   "nextInvoice": "Następna faktura",
@@ -171,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Wyszukaj lub wpisz nazwę elementu niestandardowego..."
+    },
+    "detail": {
+      "accept": "Zaakceptuj",
+      "acceptHint": "Akceptując, potwierdzasz tę ofertę. Usługodawca podejmie dalsze kroki.",
+      "acceptHintOptional": "Akceptując, wysyłasz swój wybór pozycji opcjonalnych do weryfikacji przez usługodawcę.",
+      "acceptQuote": "Zaakceptuj ofertę",
+      "acceptedBanner": "Oferta zaakceptowana.",
+      "acceptedBannerOptional": "Oferta zaakceptowana. Wybrane pozycje opcjonalne zostały przekazane usługodawcy.",
+      "backToQuotes": "Powrót do ofert",
+      "cancel": "Anuluj",
+      "columns": {
+        "amount": "Kwota",
+        "description": "Opis",
+        "qty": "Ilość",
+        "rate": "Stawka"
+      },
+      "confirmAccept": "Zaakceptować tę ofertę? Usługodawca zostanie powiadomiony.",
+      "confirmAcceptOptional": "Zaakceptować tę ofertę z bieżącym wyborem pozycji opcjonalnych? Twoje wybory zostaną wysłane do weryfikacji przez usługodawcę.",
+      "confirmReject": "Odrzucić tę ofertę i wysłać komentarz do usługodawcy? Oferta może zostać poprawiona i wysłana ponownie.",
+      "discounts": "Rabaty",
+      "downloadFailed": "Nie udało się pobrać pliku PDF.",
+      "downloadFailedRetry": "Nie udało się pobrać pliku PDF. Spróbuj ponownie.",
+      "downloadPdf": "Pobierz PDF",
+      "downloading": "Pobieranie...",
+      "exclude": "Pomiń",
+      "excluded": "Pominięta",
+      "fallbackTitle": "Oferta {{id}}",
+      "include": "Uwzględnij",
+      "included": "Uwzględniona",
+      "lineItems": "Pozycje",
+      "loading": "Wczytywanie oferty...",
+      "notFound": "Nie znaleziono oferty",
+      "notes": "Uwagi",
+      "optional": "Opcjonalne",
+      "optionalLockedHint": "Wybór pozycji opcjonalnych jest zablokowany, gdy oferta nie oczekuje już na Twoją odpowiedź.",
+      "optionalToggleHint": "Włączaj lub wyłączaj pozycje opcjonalne, aby zobaczyć preferowaną sumę oferty przed udzieleniem odpowiedzi.",
+      "poNumber": "Zamówienie zakupu nr",
+      "quoteDate": "Data oferty",
+      "readyToRespond": "Chcesz odpowiedzieć?",
+      "reject": "Odrzuć",
+      "rejectCommentRequired": "Dodaj krótki komentarz przed odrzuceniem tej oferty.",
+      "rejectPlaceholder": "Napisz, co należy zmienić",
+      "rejectPrompt": "Jeśli ta oferta Ci nie odpowiada, zostaw komentarz, aby usługodawca mógł ją poprawić.",
+      "rejectQuote": "Odrzuć ofertę",
+      "rejectedBanner": "Oferta odrzucona.",
+      "rejectedBannerWithReason": "Oferta odrzucona: {{reason}}",
+      "savingSelections": "Zapisywanie wyboru pozycji opcjonalnych...",
+      "scopeOfWork": "Zakres prac",
+      "submitting": "Wysyłanie...",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "termsAndConditions": "Warunki i postanowienia",
+      "total": "Razem",
+      "validUntil": "Ważne do"
     }
   },
   "enums": {
@@ -376,5 +433,14 @@
   "dashboard": {
     "prepaidHours": "Godziny przedpłacone",
     "viewBilling": "Przejdź do rozliczeń"
+  },
+  "hourBlocks": {
+    "title": "Przedpłacone pakiety godzin",
+    "blockLabel": "Pakiet {{service}}",
+    "expiringSoon": "Wygasa za {{days}} dni",
+    "hoursLeft": "Pozostało {{hours}} godz.",
+    "expires": "Wygasa {{date}}",
+    "recentBurn": "Ostatnie wykorzystanie",
+    "timeEntry": "Wpis czasu"
   }
 }

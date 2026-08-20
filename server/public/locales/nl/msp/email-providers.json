@@ -159,7 +159,8 @@
       "resyncMailbox": "Postbus opnieuw synchroniseren",
       "pause": "Inkomende e-mail pauzeren",
       "resume": "Inkomende e-mail hervatten",
-      "delete": "Aanbieder verwijderen"
+      "delete": "Aanbieder verwijderen",
+      "runGmailDiagnostics": "Gmail-bezorgingsdiagnose uitvoeren"
     },
     "feedback": {
       "paused": "Inkomende e-mail gepauzeerd.",
@@ -167,6 +168,11 @@
       "pauseError": "Kan de pauzestatus van inkomende e-mail niet wijzigen."
     },
     "pausedHelp": "Berichten die binnenkomen terwijl deze mailbox is gepauzeerd, worden niet met terugwerkende kracht geïmporteerd.",
+    "authFailure": {
+      "title": "Inkomende e-mail gepauzeerd — opnieuw verbinden vereist",
+      "description": "Inkomende e-mail voor {{mailbox}} is gepauzeerd omdat de inloggegevens niet meer werken. Berichten gaan niet verloren — ze blijven in de bronpostvak staan en worden geïmporteerd nadat u opnieuw verbinding hebt gemaakt.",
+      "action": "Opnieuw verbinden"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
@@ -208,6 +214,14 @@
       "title": "Geen e-mailproviders geconfigureerd",
       "description": "Voeg een e-mailprovider toe om inkomende e-mails als tickets te ontvangen en te verwerken.",
       "action": "E-mailprovider toevoegen"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail stuurt hier geen nieuwe e-mail meer heen",
+      "expiredDescription": "De Gmail-watch voor {{mailbox}} is verlopen, dus Google publiceert geen meldingen meer. Berichten gaan niet verloren — ze blijven in de mailbox. Gebruik Vernieuw Pub/Sub en kijk om de bezorging te hervatten.",
+      "missingTitle": "Gmail-pushbezorging is niet geregistreerd",
+      "missingDescription": "Er is geen Gmail-watch geregistreerd voor {{mailbox}}, dus er komt geen inkomende e-mail binnen. Gebruik Vernieuw Pub/Sub en kijk om er een te registreren.",
+      "expiringTitle": "Gmail-pushbezorging verloopt binnen een dag",
+      "expiringDescription": "Een Gmail-watch duurt zeven dagen. Gebruik Vernieuw Pub/Sub en kijk voordat deze verloopt, anders stopt inkomende e-mail zonder verdere melding."
     }
   },
   "forms": {
@@ -237,6 +251,9 @@
         "authorizing": "Autoriseren...",
         "authorized": "Geautoriseerd",
         "authorizeAccess": "Toegang autoriseren"
+      },
+      "messages": {
+        "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}"
       }
     },
     "microsoft": {

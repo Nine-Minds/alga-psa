@@ -10,6 +10,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -84,7 +86,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   onSave,
   onCancel,
 }) => {
-  const { t } = useTranslation('msp/invoicing');
+  const { t, i18n } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
   const typeLabel = useMemo(() => documentTypeLabel(documentType, t), [documentType, t]);
 
@@ -119,6 +121,11 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
+  // Standard templates carry translatable labels, so an author can see the
+  // document in the language each client will actually receive it in.
+  const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
+    () => normalizeLocale(i18n.language) ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale),
+  );
   const debouncedNodes = useDebouncedValue(designerNodes, 200);
 
   const generatedCodeViewSource = useMemo(() => {
@@ -183,7 +190,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       setPreviewError(null);
       try {
         const ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
-        const result = await runAuthoritativeTemplatePreview(documentType, ast);
+        const result = await runAuthoritativeTemplatePreview(documentType, ast, previewLocale);
         if (cancelled) return;
         if (isDocumentTemplateActionError(result)) {
           setPreviewHtml(null);
@@ -213,6 +220,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     editorTab,
     visualWorkspaceTab,
     previewNonce,
+    previewLocale,
     debouncedNodes,
     t,
   ]);
@@ -431,15 +439,23 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                         type: typeLabel,
                       })}
                     </p>
-                    <Button
-                      id="document-designer-preview-rerun-button"
-                      variant="outline"
-                      size="sm"
-                      disabled={previewLoading}
-                      onClick={() => setPreviewNonce((value) => value + 1)}
-                    >
-                      {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <PreviewLocaleSelect
+                        id="document-designer-preview-locale-select"
+                        value={previewLocale}
+                        onChange={setPreviewLocale}
+                        disabled={previewLoading}
+                      />
+                      <Button
+                        id="document-designer-preview-rerun-button"
+                        variant="outline"
+                        size="sm"
+                        disabled={previewLoading}
+                        onClick={() => setPreviewNonce((value) => value + 1)}
+                      >
+                        {t('designer.workspace.preview.rerun', { defaultValue: 'Re-run' })}
+                      </Button>
+                    </div>
                   </div>
                 </div>
 

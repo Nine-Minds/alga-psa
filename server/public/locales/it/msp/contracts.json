@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID contratto cliente: {{id}}",
+      "creditDrawdownOptOut": "Escludi dall'utilizzo del credito",
       "empty": "Questo contratto non è ancora assegnato a un cliente.",
       "endDate": "Data di fine",
       "endDateLabel": "Data di fine assegnazione",
@@ -469,6 +470,12 @@
       "collapseLine": "Comprimi linea contrattuale",
       "createCustom": "Crea personalizzata",
       "expandLine": "Espandi linea contrattuale"
+    },
+    "billingProfile": {
+      "hint": "Gli addebiti di questa riga vengono fatturati a questo profilo, prevalendo sul contratto.",
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo del contratto",
+      "updated": "Profilo di fatturazione aggiornato"
     },
     "bucket": {
       "billingPeriod": "Periodo di fatturazione: {{period}}",
@@ -826,6 +833,7 @@
         "editPricingSchedule": "Modifica pianificazione dei prezzi"
       },
       "validation": {
+        "currencySettingsLoading": "Le impostazioni della valuta sono ancora in caricamento; riprova tra un momento",
         "customRatePositive": "La tariffa personalizzata deve essere un numero positivo",
         "customRateRequired": "La tariffa personalizzata è obbligatoria quando non si utilizza la tariffa predefinita",
         "durationPositive": "La durata deve essere un numero positivo",
@@ -2322,5 +2330,47 @@
       "description": "Il simulatore di contratti è disponibile in AlgaPSA Pro.",
       "title": "Funzionalità Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Pacchetti ore",
+    "actions": {
+      "addPool": "Aggiungi pacchetto",
+      "create": "Crea pacchetto",
+      "cancel": "Annulla",
+      "remove": "Rimuovi",
+      "applyRule": "Applica regola fuori orario"
+    },
+    "loading": "Caricamento dei pacchetti ore…",
+    "empty": "Nessun pacchetto ore su questa linea. Aggiungi un pacchetto per includere ore prepagate.",
+    "labels": {
+      "catchAll": "Tutti i servizi di questa linea",
+      "pool": "Pacchetto ore",
+      "scopeCatchAll": "Copre tutti i servizi della linea (i servizi membri sostituiscono il moltiplicatore)",
+      "scopeMembers": "Solo servizi membri",
+      "totalHours": "Ore totali",
+      "overageRate": "Tariffa di superamento ($/ora)",
+      "rollover": "Consenti riporto",
+      "afterHours": "Moltiplicatore di consumo fuori orario",
+      "afterHoursMultiplier": "Moltiplicatore (es. 1,5)",
+      "schedule": "Pianificazione dell'orario lavorativo",
+      "default": "predefinita",
+      "members": "Servizi membri",
+      "multiplier": "×",
+      "noMembers": "Nessun servizio membro associato.",
+      "selectService": "Seleziona un servizio…",
+      "poolName": "Nome del pacchetto (facoltativo)",
+      "poolNamePlaceholder": "es. Ore standard",
+      "coversAll": "Copre tutti i servizi di questa linea"
+    },
+    "badges": {
+      "dormant": "nessun servizio associato — nulla viene consumato da questo pacchetto"
+    },
+    "errors": {
+      "catchAllExists": "Questa linea ha già un pacchetto generale."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Pacchetti ore per questa riga",
+    "empty": "Nessun pacchetto ore su questa riga. Aggiungere un pacchetto per includere ore prepagate."
   }
 }

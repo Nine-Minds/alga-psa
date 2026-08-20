@@ -37,7 +37,7 @@ import {
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { formatCurrency } from '@alga-psa/core';
+import { formatCurrency, formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -1524,10 +1524,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }),
       );
 
+      const overageAnalysisErrors: { [key: string]: string } = {};
       const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
-        if (!overage || overage.overage_cents <= 0) {
+        if (isReturnedActionError(overage)) {
+          // The action returns (not throws) expected errors; surface them instead of
+          // letting the error object masquerade as a successful analysis.
+          const clientName = result.period.clientName || result.period.executionIdentityKey;
+          overageAnalysisErrors[clientName] = getErrorMessage(overage);
+          continue;
+        }
+        if (!overage || !Number.isFinite(overage.overage_cents) || overage.overage_cents <= 0) {
           continue;
         }
 
@@ -1537,6 +1545,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
         };
+      }
+
+      if (Object.keys(overageAnalysisErrors).length > 0) {
+        setErrors(overageAnalysisErrors);
+        return;
       }
 
       const overageIds = Object.keys(overageByExecutionIdentityKey);
@@ -1602,11 +1615,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             t('automaticInvoices.dialogs.poOverage.skippedError', {
-              amount: formatCurrency(info.overageCents),
+              amount: formatCurrencyFromMinorUnits(info.overageCents),
               poLabel: formatPoLabel(info.poNumber),
               defaultValue:
                 `Skipped due to PO overage (${formatPoLabel(info.poNumber)}): `
-                + `over by ${formatCurrency(info.overageCents)}.`,
+                + `over by ${formatCurrencyFromMinorUnits(info.overageCents)}.`,
             });
         }
       }
@@ -1713,7 +1726,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     try {
       const overage = await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput);
-      if (overage && overage.overage_cents > 0) {
+      if (isReturnedActionError(overage)) {
+        setErrors({ preview: getErrorMessage(overage) });
+        return;
+      }
+      if (overage && Number.isFinite(overage.overage_cents) && overage.overage_cents > 0) {
         setPoOverageSingleConfirm({
           isOpen: true,
           billingCycleId: previewState.billingCycleId,
@@ -3191,8 +3208,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <li key={id}>
                   {t('automaticInvoices.dialogs.poOverage.batchItem', {
                     clientName: info.clientName,
-                    amount: formatCurrency(info.overageCents),
-                    defaultValue: `${info.clientName}: over by ${formatCurrency(info.overageCents)}`,
+                    amount: formatCurrencyFromMinorUnits(info.overageCents),
+                    defaultValue: `${info.clientName}: over by ${formatCurrencyFromMinorUnits(info.overageCents)}`,
                   })}
                   {info.poNumber ? ` (${formatPoLabel(info.poNumber)})` : ''}
                 </li>
@@ -3239,9 +3256,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="space-y-2">
             <p>
               {t('automaticInvoices.dialogs.poOverage.singleDescription', {
-                amount: formatCurrency(poOverageSingleConfirm.overageCents),
+                amount: formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents),
                 defaultValue:
-                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrency(poOverageSingleConfirm.overageCents)}.`,
+                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents)}.`,
               })}
             </p>
             {poOverageSingleConfirm.poNumber && (

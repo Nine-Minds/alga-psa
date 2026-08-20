@@ -33,6 +33,10 @@ The top section lists files that render JSX yet never import `useTranslation` or
 
 Know what it cannot see. Copy that reaches the UI from outside the scanned roots — `packages/*`, server actions, workflow templates, seeded database rows — is out of range, and a clean report is not evidence that a file is translated. It flags positions it understands (JSX text, props, object values, ternaries, fallbacks, returns, call arguments), so copy assembled at runtime or held in a shape it does not model passes silently. In the other direction, brand names and enum-like values (`'Google'`, `'Pro'`, keyboard key names) are the residual false positives; skim before filing work.
 
+## Customer document labels
+
+The `documents` namespace holds the chrome of the documents clients receive — invoices, quotes, sales order confirmations, packing slips and pick lists. Those strings are template content in `packages/billing`, not UI copy, so the hardcoded-English sweep cannot see them and the audits are the only gate that does. They render in the recipient's locale, and the glossaries carry the document-specific decisions (rate versus unit price, neutral tax wording, fulfillment and pick-list terms). See [`docs/billing/document-template-translation.md`](../../docs/billing/document-template-translation.md) before adding or re-wording one.
+
 Run all shared tests with:
 
 ```sh

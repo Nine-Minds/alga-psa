@@ -190,9 +190,24 @@ async function upsertClientTaxSettings(
     baseData.tax_rate_id = taxRateId;
   }
 
+  // Since S7 the table is keyed per billing profile, so the conflict target is
+  // (tenant, client_id, billing_profile_id). Fixtures seed the client's default
+  // profile's row, which is the one the pre-S7 schema held.
+  const conflictColumns = ['tenant', 'client_id'];
+  if ('billing_profile_id' in clientTaxSettingsColumnsCache) {
+    const defaultProfile = await tenantTable(context, 'client_billing_profiles')
+      .where({ client_id: clientId, is_default: true })
+      .first('billing_profile_id');
+    if (!defaultProfile) {
+      return;
+    }
+    baseData.billing_profile_id = defaultProfile.billing_profile_id;
+    conflictColumns.push('billing_profile_id');
+  }
+
   await tenantTable(context, 'client_tax_settings')
     .insert(baseData)
-    .onConflict(['tenant', 'client_id'])
+    .onConflict(conflictColumns)
     .merge(baseData);
 }
 
@@ -348,6 +363,8 @@ interface CreateBucketUsageOptions {
   contractLineId?: string;
   serviceId: string;
   clientId: string;
+  /** Pool id (bucket_id) under the weighted-burn model; used when the column exists. */
+  bucketId?: string;
   periodStart: string;
   periodEnd: string;
   minutesUsed: number;
@@ -1007,9 +1024,10 @@ export async function createFixedPlanAssignment(
   };
 }
 
-// Invoice generation refuses clients without a billing email
-// (validateClientBillingEmail), which is read off a billing-or-default
-// client_locations row. Clients created straight through createEntity have none.
+// Invoice generation refuses clients that resolve to no billing recipient
+// (validateClientBillingEmail: billing contact, then clients.billing_email, then a
+// billing-or-default client_locations email). Clients created straight through
+// createEntity satisfy none of those, so this seeds the location email.
 export async function ensureClientBillingEmail(
   context: TestContext,
   clientId?: string
@@ -1801,6 +1819,39 @@ export async function createBucketOverlayForPlan(
   // schema; only mirror the overlay into it on schema iterations that still
   // carry those tables.
   if (!(await context.db.schema.hasTable('client_contract_services'))) {
+    // Weighted-burn pool: seed the single-member 1x pool the scope-resolution
+    // rule resolves (the billing engine and bucket service read these tables).
+    const poolTablesExist = await context.db.schema.hasTable('contract_line_buckets');
+    if (poolTablesExist) {
+      await tenantTable(context, 'contract_line_buckets')
+        .insert({
+          tenant: context.tenantId,
+          bucket_id: configId,
+          contract_line_id: planId,
+          total_minutes: totalMinutes,
+          overage_rate: overageRateCents,
+          allow_rollover: allowRollover,
+          billing_period: billingPeriod,
+          covers_all_services: false,
+        })
+        .onConflict(['tenant', 'bucket_id'])
+        .merge({
+          total_minutes: totalMinutes,
+          overage_rate: overageRateCents,
+          allow_rollover: allowRollover,
+          billing_period: billingPeriod,
+        });
+      await tenantTable(context, 'contract_line_bucket_services')
+        .insert({
+          tenant: context.tenantId,
+          bucket_id: configId,
+          service_id: serviceId,
+          contract_line_id: planId,
+          burn_multiplier: 1,
+        })
+        .onConflict(['tenant', 'bucket_id', 'service_id'])
+        .merge({ burn_multiplier: 1 });
+    }
     return { configId, serviceId };
   }
 
@@ -1964,6 +2015,10 @@ export async function createBucketUsageRecord(
     record.service_catalog_id = options.serviceId;
   } else if (usageColumns.service_id) {
     record.service_id = options.serviceId;
+  }
+
+  if (usageColumns.bucket_id) {
+    record.bucket_id = options.bucketId;
   }
 
   const rolledOverColumn = usageColumns.rolled_over_minutes ? 'rolled_over_minutes' : usageColumns.rolled_over_hours ? 'rolled_over_hours' : null;

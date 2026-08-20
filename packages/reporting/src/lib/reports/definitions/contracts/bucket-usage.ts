@@ -39,26 +39,25 @@ export const contractBucketUsageReport: ReportDefinition = {
     {
       id: 'total_allocated_minutes',
       name: 'Total Allocated Minutes',
-      description: 'Sum of all allocated bucket minutes across active contracts',
+      description: 'Sum of all allocated bucket minutes across active bucket pools',
       type: 'sum',
       query: {
-        table: 'contract_line_service_bucket_config',
+        table: 'contract_line_buckets',
         joins: [
           {
             type: 'inner',
             table: 'contract_lines',
             on: [
-              { left: 'contract_line_service_bucket_config.contract_line_id', right: 'contract_lines.contract_line_id' },
-              { left: 'contract_line_service_bucket_config.tenant', right: 'contract_lines.tenant' }
+              { left: 'contract_line_buckets.contract_line_id', right: 'contract_lines.contract_line_id' },
+              { left: 'contract_line_buckets.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
-        fields: ['contract_line_service_bucket_config.total_minutes'],
+        fields: ['contract_line_buckets.total_minutes'],
         aggregation: 'sum',
         filters: [
-          { field: 'contract_line_service_bucket_config.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'contract_lines.is_active', operator: 'eq', value: true },
-          { field: 'contract_lines.contract_line_type', operator: 'eq', value: 'Bucket' }
+          { field: 'contract_line_buckets.tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: 'contract_lines.is_active', operator: 'eq', value: true }
         ]
       },
       formatting: {
@@ -71,25 +70,33 @@ export const contractBucketUsageReport: ReportDefinition = {
     {
       id: 'total_used_minutes',
       name: 'Total Used Minutes',
-      description: 'Sum of billable time entries against bucket contracts',
+      description: 'Sum of weighted bucket minutes used across active pools',
       type: 'sum',
       query: {
-        table: 'time_entries',
+        table: 'bucket_usage',
         joins: [
+          {
+            type: 'inner',
+            table: 'contract_line_buckets',
+            on: [
+              { left: 'bucket_usage.bucket_id', right: 'contract_line_buckets.bucket_id' },
+              { left: 'bucket_usage.tenant', right: 'contract_line_buckets.tenant' }
+            ]
+          },
           {
             type: 'inner',
             table: 'contract_lines',
             on: [
-              { left: 'time_entries.contract_line_id', right: 'contract_lines.contract_line_id' },
-              { left: 'time_entries.tenant', right: 'contract_lines.tenant' }
+              { left: 'contract_line_buckets.contract_line_id', right: 'contract_lines.contract_line_id' },
+              { left: 'contract_line_buckets.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
-        fields: ['time_entries.billable_duration'],
+        fields: ['bucket_usage.minutes_used'],
         aggregation: 'sum',
         filters: [
-          { field: 'time_entries.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'contract_lines.contract_line_type', operator: 'eq', value: 'Bucket' }
+          { field: 'bucket_usage.tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: 'contract_lines.is_active', operator: 'eq', value: true }
         ]
       },
       formatting: {
@@ -102,32 +109,32 @@ export const contractBucketUsageReport: ReportDefinition = {
     {
       id: 'overage_minutes',
       name: 'Total Overage Minutes',
-      description: 'Sum of billable minutes exceeding allocated buckets',
+      description: 'Sum of weighted minutes exceeding allocated buckets',
       type: 'sum',
       query: {
-        table: 'contract_line_service_bucket_config',
+        table: 'bucket_usage',
         joins: [
+          {
+            type: 'inner',
+            table: 'contract_line_buckets',
+            on: [
+              { left: 'bucket_usage.bucket_id', right: 'contract_line_buckets.bucket_id' },
+              { left: 'bucket_usage.tenant', right: 'contract_line_buckets.tenant' }
+            ]
+          },
           {
             type: 'inner',
             table: 'contract_lines',
             on: [
-              { left: 'contract_line_service_bucket_config.contract_line_id', right: 'contract_lines.contract_line_id' },
-              { left: 'contract_line_service_bucket_config.tenant', right: 'contract_lines.tenant' }
-            ]
-          },
-          {
-            type: 'left',
-            table: 'time_entries',
-            on: [
-              { left: 'contract_lines.contract_line_id', right: 'time_entries.contract_line_id' },
-              { left: 'contract_lines.tenant', right: 'time_entries.tenant' }
+              { left: 'contract_line_buckets.contract_line_id', right: 'contract_lines.contract_line_id' },
+              { left: 'contract_line_buckets.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
-        fields: ['GREATEST(0, COALESCE(SUM(time_entries.billable_duration), 0) - contract_line_service_bucket_config.total_minutes)'],
+        fields: ['bucket_usage.overage_minutes'],
         aggregation: 'sum',
         filters: [
-          { field: 'contract_line_service_bucket_config.tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: 'bucket_usage.tenant', operator: 'eq', value: '{{tenant}}' },
           { field: 'contract_lines.is_active', operator: 'eq', value: true }
         ]
       },
@@ -141,32 +148,33 @@ export const contractBucketUsageReport: ReportDefinition = {
     {
       id: 'contracts_in_overage',
       name: 'Contracts in Overage',
-      description: 'Count of bucket contracts currently in overage status',
+      description: 'Count of bucket pools currently in overage status',
       type: 'count',
       query: {
-        table: 'contract_line_service_bucket_config',
+        table: 'bucket_usage',
         joins: [
+          {
+            type: 'inner',
+            table: 'contract_line_buckets',
+            on: [
+              { left: 'bucket_usage.bucket_id', right: 'contract_line_buckets.bucket_id' },
+              { left: 'bucket_usage.tenant', right: 'contract_line_buckets.tenant' }
+            ]
+          },
           {
             type: 'inner',
             table: 'contract_lines',
             on: [
-              { left: 'contract_line_service_bucket_config.contract_line_id', right: 'contract_lines.contract_line_id' },
-              { left: 'contract_line_service_bucket_config.tenant', right: 'contract_lines.tenant' }
-            ]
-          },
-          {
-            type: 'left',
-            table: 'time_entries',
-            on: [
-              { left: 'contract_lines.contract_line_id', right: 'time_entries.contract_line_id' },
-              { left: 'contract_lines.tenant', right: 'time_entries.tenant' }
+              { left: 'contract_line_buckets.contract_line_id', right: 'contract_lines.contract_line_id' },
+              { left: 'contract_line_buckets.tenant', right: 'contract_lines.tenant' }
             ]
           }
         ],
         aggregation: 'count',
         filters: [
-          { field: 'contract_line_service_bucket_config.tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'contract_lines.is_active', operator: 'eq', value: true }
+          { field: 'bucket_usage.tenant', operator: 'eq', value: '{{tenant}}' },
+          { field: 'contract_lines.is_active', operator: 'eq', value: true },
+          { field: 'bucket_usage.overage_minutes', operator: 'gt', value: 0 }
         ]
       },
       formatting: {
@@ -179,6 +187,6 @@ export const contractBucketUsageReport: ReportDefinition = {
   caching: {
     ttl: 300, // 5 minutes
     key: 'contracts.bucket_usage.{{tenant}}',
-    invalidateOn: ['contract_lines.updated', 'time_entries.created', 'time_entries.updated']
+    invalidateOn: ['contract_lines.updated', 'contract_line_buckets.updated', 'bucket_usage.updated', 'time_entries.created', 'time_entries.updated']
   }
 };

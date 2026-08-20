@@ -21,7 +21,7 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
   // The legacy (flag-off) rendering was i18n-wired on main under the
   // client-portal namespace; the flag-on meter uses features/billing keys.
   const { t: tLegacy } = useTranslation('client-portal');
-  const { enabled: remainingFirstEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: remainingFirstEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const percentage = Math.round(bucketData.percentage_used);

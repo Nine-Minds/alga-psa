@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
+import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { formatISO, isSameDay, parseISO, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
@@ -535,6 +536,20 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           serviceId={entry.service_id}
           entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
           clientId={clientId}
+        />
+      )}
+
+      {/* How this entry's contract line was chosen (F066). Renders nothing when
+          the entry has no recorded provenance, which is every entry created
+          before this shipped. */}
+      {entry?.contract_line_source && (
+        <BillingAttributionInspector
+          contractLineSource={entry.contract_line_source}
+          contractLineName={
+            eligibleContractLines.find(
+              (line) => line.client_contract_line_id === entry.contract_line_id,
+            )?.contract_line_name ?? null
+          }
         />
       )}
 

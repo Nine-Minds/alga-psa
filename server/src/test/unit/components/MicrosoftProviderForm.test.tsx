@@ -236,6 +236,67 @@ describe('MicrosoftProviderForm', () => {
     });
   });
 
+  it('surfaces setupError in the form and does not report success when reconnect recovery fails', async () => {
+    // The reconnect save on an auth-paused provider: the action persisted the
+    // credentials but recovery was refused (bad client secret), so it returns
+    // setupError AND the still-paused provider. The form must keep the
+    // drawer open with the error shown and never call onSuccess — the parent
+    // renders the cleared/kept pause banner from the provider it gets on
+    // success only.
+    vi.mocked(emailProviderActions.updateEmailProvider).mockResolvedValueOnce({
+      provider: {
+        id: 'paused-1',
+        tenant: 'test-tenant-123',
+        providerType: 'microsoft',
+        providerName: 'Paused Mailbox',
+        mailbox: 'paused@client.com',
+        isActive: true,
+        status: 'error',
+        inboundPausedAt: '2026-08-16T00:00:00.000Z',
+        inboundPauseReason: 'auth_failure',
+        createdAt: '2026-08-15T00:00:00.000Z',
+        updatedAt: '2026-08-15T00:00:00.000Z',
+      },
+      setupError: 'Microsoft reconnection failed. Verify the client secret and try again.',
+    } as any);
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <MicrosoftProviderForm
+        {...defaultProps}
+        provider={{
+          id: 'paused-1',
+          tenant: 'test-tenant-123',
+          providerType: 'microsoft' as const,
+          providerName: 'Paused Mailbox',
+          mailbox: 'paused@client.com',
+          isActive: true,
+          status: 'error' as const,
+          inboundPausedAt: '2026-08-16T00:00:00.000Z',
+          inboundPauseReason: 'auth_failure' as const,
+          microsoftConfig: {
+            redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+            folder_filters: ['Inbox'],
+            auto_process_emails: true,
+            max_emails_per_sync: 50,
+          },
+          createdAt: '2026-08-15T00:00:00.000Z',
+          updatedAt: '2026-08-15T00:00:00.000Z',
+        } as any}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /update provider/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Provider saved but setup incomplete: Microsoft reconnection failed/)
+      ).toBeInTheDocument();
+    });
+
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
+
   it('enables Microsoft sign-in once an app is selected, without a setup banner', async () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 

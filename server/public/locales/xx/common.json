@@ -253,6 +253,7 @@
     "selectLanguage": "11111",
     "changeLanguage": "11111",
     "currentLanguage": "11111",
+    "previewLanguage": "11111",
     "preference": {
       "label": "11111",
       "helper": "11111",
@@ -403,6 +404,42 @@
         "title": "11111",
         "description": "11111"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "11111",
+        "required": "11111",
+        "emojiOnly": "11111",
+        "tooShort": "11111",
+        "abbreviationOnly": "11111",
+        "repeatedCharacters": "11111",
+        "looksLikeUrl": "11111",
+        "noLettersOrNumbers": "11111"
+      },
+      "contactName": {
+        "structural": "11111",
+        "placeholder": "11111"
+      },
+      "email": {
+        "structural": "11111",
+        "required": "11111",
+        "disposableDomain": "11111 {{domain}} 11111",
+        "reservedDomain": "11111 {{domain}} 11111",
+        "internalDomain": "11111 {{domain}} 11111"
+      },
+      "url": {
+        "structural": "11111",
+        "ipAddress": "11111",
+        "internalHost": "11111 {{host}} 11111",
+        "reservedDomain": "11111 {{host}} 11111"
+      },
+      "phone": {
+        "structural": "11111",
+        "repeatedDigits": "11111",
+        "sequentialDigits": "11111",
+        "fictionalRange": "11111"
+      },
+      "dismissWarning": "11111"
     }
   },
   "commentThread": {

@@ -97,7 +97,8 @@
       "sequences": "Séquences",
       "forms": "Formulaires",
       "channels": "Canaux"
-    }
+    },
+    "passwords": "Mots de passe"
   },
   "sidebar": {
     "backToMain": "Retour au principal",

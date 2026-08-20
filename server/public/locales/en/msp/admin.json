@@ -628,5 +628,35 @@
       "error": "Error",
       "metadata": "Metadata"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Gmail Delivery Diagnostics",
+    "description": "Checks the Pub/Sub topic, its permissions, the push endpoint and audience, the Gmail watch, and when a push last arrived.",
+    "labels": {
+      "provider": "Provider:",
+      "mailbox": "Mailbox:",
+      "overall": "Overall:",
+      "recommendations": "Recommendations",
+      "error": "Error"
+    },
+    "audienceMismatch": {
+      "title": "Push audience does not match this instance",
+      "expected": "Expected:",
+      "actual": "Google is using:"
+    },
+    "actions": {
+      "copySupportBundle": "Copy Support Bundle",
+      "copied": "Copied"
+    },
+    "states": {
+      "running": "Running diagnostics...",
+      "diagnosticsFailed": "Diagnostics failed"
+    },
+    "statuses": {
+      "pass": "Pass",
+      "warn": "Warn",
+      "fail": "Fail",
+      "skip": "Skip"
+    }
   }
 }

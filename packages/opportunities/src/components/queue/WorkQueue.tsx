@@ -88,7 +88,7 @@ export function WorkQueue({
       ) : null}
 
       {actionItems.length > 0 ? (
-        <div className="mb-4 flex justify-end" role="group" aria-label={t('opportunities.queue.viewLabel', 'Queue view')}>
+        <div className="mb-4 flex justify-end gap-1" role="group" aria-label={t('opportunities.queue.viewLabel', 'Queue view')}>
           <Button
             id="opportunities-queue-view-cards"
             size="xs"

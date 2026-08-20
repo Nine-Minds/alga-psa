@@ -5,12 +5,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
+import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -167,6 +170,31 @@ async function linkAndMarkSourceBillingRecord(params: {
       created_at: linkedAt,
     });
   }
+
+  // Prepaid hour block informational line: mark the fully-covered time entries
+  // invoiced and link invoice_time_entries rows so covered time does not linger
+  // forever as "unbilled". Partially covered entries are already marked by
+  // their hourly remainder charge. Best-effort per entry: an entry that is
+  // already invoiced (e.g. re-generated line) is simply skipped.
+  if (charge.type === 'hour_block') {
+    const coveredEntryIds = (charge as { coveredEntryIds?: string[] }).coveredEntryIds ?? [];
+    for (const entryId of coveredEntryIds) {
+      const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
+        .where({ entry_id: entryId, invoiced: false })
+        .update({ invoiced: true });
+
+      if (updatedCount === 1) {
+        await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
+          invoice_time_entry_id: uuidv4(),
+          invoice_id: invoiceId,
+          item_id: invoiceItemId,
+          entry_id: entryId,
+          tenant,
+          created_at: linkedAt,
+        });
+      }
+    }
+  }
 }
 
 function getRecurringChargeFamilyForInvoiceLinkage(
@@ -229,22 +257,26 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
 }
 
 /**
- * Gets the billing email for a client.
- * Checks billing location first (is_billing_address=true), then falls back to default location.
- * Returns null if no email is found.
+ * Gets the billing email for a client: the address an invoice for this client
+ * would actually be emailed to.
+ *
+ * Delegates to `resolveInvoiceBillingRecipient`, the shared resolver behind email
+ * preview, direct and scheduled delivery, and Stripe customer creation, so that
+ * "can this client be invoiced?" asks exactly the same question as "where does
+ * that invoice get sent?". Precedence is the resolver's: active billing contact,
+ * then clients.billing_email, then an active billing location, then an active
+ * default location.
+ *
+ * Returns null when no candidate carries a valid email.
  */
 export async function getClientBillingEmail(knex: Knex, tenant: string, clientId: string): Promise<string | null> {
-  const location = await tenantScopedTable(knex, tenant, 'client_locations')
-    .where('client_id', clientId)
-    .where(function() {
-      this.where('is_billing_address', true)
-          .orWhere('is_default', true);
-    })
-    .orderByRaw('is_billing_address DESC, is_default DESC')
-    .select('email')
-    .first();
+  const recipient = await resolveInvoiceBillingRecipient({
+    knexOrTrx: knex,
+    tenantId: tenant,
+    clientId,
+  });
 
-  return location?.email || null;
+  return recipient.recipientEmail || null;
 }
 
 export interface ValidationResult {
@@ -267,7 +299,7 @@ export async function validateClientBillingEmail(knex: Knex, tenant: string, cli
       code: 'NO_BILLING_EMAIL',
       params: { clientName },
       error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
-        `Please set an email address on the client's billing location before generating invoices.`
+        `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
     };
   }
   return { valid: true };
@@ -281,6 +313,13 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   applies_to_service_id?: string;
   discount_percentage?: number;
   location_id?: string | null;
+  /**
+   * Explicit billing profile for this manual item — step 1 of the resolution
+   * chain, and the only step a manual item can use, since it has no contract
+   * line or work item behind it. Callers that omit it fall through to the
+   * client default.
+   */
+  billing_profile_id?: string | null;
   /** Sales-order line this charge bills (reconciliation backlink — F047). */
   so_line_id?: string | null;
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
@@ -396,6 +435,20 @@ export async function persistManualInvoiceCharges(
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
 
+  // A manual item has no contract line and no work item behind it, so the
+  // resolution chain collapses to "explicit assignment, else client default"
+  // (F031). Resolved once — the client default is the same for every item.
+  const clientDefaultBillingProfileId = await getClientDefaultBillingProfileId(
+    tx,
+    tenant,
+    client.client_id
+  );
+  const resolveItemProfile = (requestItem: ManualInvoiceItemInput) =>
+    resolveChargeProfile({
+      explicitBillingProfileId: requestItem.billing_profile_id ?? null,
+      clientDefaultBillingProfileId
+    });
+
   // --- First Pass: Process non-discount manual items ---
   const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
@@ -459,6 +512,7 @@ export async function persistManualInvoiceCharges(
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
     const isCredit = !requestItem.is_discount && requestItem.rate < 0;
+    const itemProfile = resolveItemProfile(requestItem);
 
     const invoiceItem = {
       item_id: uuidv4(),
@@ -479,6 +533,8 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
+      billing_profile_id: itemProfile.billingProfileId,
+      billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,
       created_by: session.user.id,
       created_at: now,
@@ -551,6 +607,7 @@ export async function persistManualInvoiceCharges(
     }
     // --- End Determine Tax Region ---
 
+    const discountProfile = resolveItemProfile(requestItem);
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -572,6 +629,8 @@ export async function persistManualInvoiceCharges(
       applies_to_item_id: applicableItemId,
       applies_to_service_id: requestItem.applies_to_service_id, // Store original reference
       location_id: requestItem.location_id ?? null,
+      billing_profile_id: discountProfile.billingProfileId,
+      billing_profile_source: discountProfile.source,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -727,6 +786,8 @@ async function persistFixedInvoiceCharges(
         applies_to_service_id: null,
         client_contract_id: charge.client_contract_id ?? null,
         location_id: charge.location_id ?? null,
+        billing_profile_id: charge.billing_profile_id ?? null,
+        billing_profile_source: charge.billing_profile_source ?? null,
         created_by: session.user.id,
         created_at: now,
         tenant
@@ -814,6 +875,10 @@ async function persistFixedInvoiceCharges(
     let planTaxRegion: string | null = null;
     let planIsTaxable = false;
     let planLocationId: string | null = null;
+    // Every detail in a plan group comes from one contract line, so they share
+    // a resolved profile; the first non-null is the group's profile.
+    let planBillingProfileId: string | null = null;
+    let planBillingProfileSource: IBillingCharge['billing_profile_source'] = null;
 
     for (const detail of planEntry.details) {
       const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
@@ -829,6 +894,10 @@ async function persistFixedInvoiceCharges(
       }
       if (!planLocationId && detail.location_id) {
         planLocationId = detail.location_id;
+      }
+      if (!planBillingProfileId && detail.billing_profile_id) {
+        planBillingProfileId = detail.billing_profile_id;
+        planBillingProfileSource = detail.billing_profile_source ?? null;
       }
     }
 
@@ -853,6 +922,8 @@ async function persistFixedInvoiceCharges(
       is_taxable: planIsTaxable,
       client_contract_id: planEntry.consolidatedItem.client_contract_id ?? null,
       location_id: planLocationId,
+      billing_profile_id: planBillingProfileId,
+      billing_profile_source: planBillingProfileSource,
       created_by: session.user.id,
       created_at: now,
       updated_at: now,
@@ -1010,7 +1081,9 @@ export async function persistInvoiceCharges(
         ? `Product: ${charge.serviceName}`
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
-          : charge.serviceName;
+          : charge.type === 'hour_block'
+            ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} hrs consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} hrs remaining`
+            : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -1021,7 +1094,10 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
-      quantity: charge.quantity ?? 1,
+      quantity:
+        charge.type === 'hour_block'
+          ? (charge as IHourBlockCharge).hoursUsed
+          : (charge.quantity ?? 1),
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,
       tax_amount: charge.tax_amount || 0,
@@ -1037,6 +1113,8 @@ export async function persistInvoiceCharges(
       applies_to_service_id: null,
       client_contract_id: charge.client_contract_id ?? null,
       location_id: charge.location_id ?? null,
+      billing_profile_id: charge.billing_profile_id ?? null,
+      billing_profile_source: charge.billing_profile_source ?? null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -1044,8 +1122,13 @@ export async function persistInvoiceCharges(
     await tenantScopedTable(tx, tenant, 'invoice_charges').insert(invoiceItem);
 
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
+    // Detail rows carry a NOT NULL service_id FK, so a charge without a real
+    // service (e.g. a dormant pool's overage, whose identity lives on
+    // config_id) cannot persist a detail row — skip it rather than leak the
+    // pool's id into the service FK.
     const shouldPersistDetail =
       recurringChargeFamily !== null
+      && Boolean(charge.serviceId)
       && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
     const shouldLinkRecurringServicePeriod =

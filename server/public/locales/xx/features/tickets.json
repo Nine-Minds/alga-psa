@@ -308,7 +308,9 @@
     "closeFailed": "11111",
     "loadCommentsFailed": "11111",
     "updateTicketFailed": "11111",
-    "errorWithMessage": "11111 {{message}} 11111"
+    "errorWithMessage": "11111 {{message}} 11111",
+    "billingProfileUpdated": "11111",
+    "updateBillingProfileFailed": "11111"
   },
   "conversation": {
     "comments": "11111",
@@ -503,7 +505,31 @@
     },
     "exportSelectedAction": "11111 {{count}} 11111",
     "exportAction": "11111",
-    "importAction": "11111"
+    "importAction": "11111",
+    "boardTabs": {
+      "all": "11111"
+    },
+    "boardHeader": {
+      "open": "11111",
+      "overdue": "11111",
+      "slaBreach": "11111",
+      "unassigned": "11111",
+      "managedBy": "11111",
+      "sla": "11111"
+    },
+    "viewMenu": {
+      "label": "11111",
+      "columns": "11111",
+      "density": "11111",
+      "saveBoardDefault": "11111",
+      "saveTenantDefault": "11111",
+      "resetToTenant": "11111",
+      "unsavedChanges": "11111",
+      "saved": "11111",
+      "saveFailed": "11111",
+      "reset": "11111",
+      "resetFailed": "11111"
+    }
   },
   "bulk": {
     "bundleTickets": "11111",
@@ -963,7 +989,10 @@
       "selective": "11111"
     },
     "noTeamMembersOnTicket": "11111",
-    "unnamedUser": "11111"
+    "unnamedUser": "11111",
+    "billingProfile": "11111",
+    "billingProfileUnassigned": "11111",
+    "billingProfileHint": "11111"
   },
   "settings": {
     "categories": {

@@ -2,9 +2,12 @@
   "title": "Facturatie",
   "overview": "Overzicht",
   "tabs": {
-    "overview": "Overzicht",
+    "hoursByService": "Uren per dienst",
     "invoices": "Facturen",
-    "quotes": "Offertes"
+    "overview": "Overzicht",
+    "quotes": "Offertes",
+    "usageMetrics": "Gebruiksstatistieken",
+    "segments": "Per segment"
   },
   "currentContractLine": "Huidig abonnement",
   "nextInvoice": "Volgende factuur",
@@ -171,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Zoeken of aangepaste itemnaam typen..."
+    },
+    "detail": {
+      "accept": "Accepteren",
+      "acceptHint": "Door te accepteren bevestigt u deze offerte. Uw serviceprovider gaat hiermee verder.",
+      "acceptHintOptional": "Door te accepteren stuurt u uw selectie van optionele regels ter beoordeling naar uw serviceprovider.",
+      "acceptQuote": "Offerte accepteren",
+      "acceptedBanner": "Offerte geaccepteerd.",
+      "acceptedBannerOptional": "Offerte geaccepteerd. Uw geselecteerde optionele regels zijn gedeeld met uw serviceprovider.",
+      "backToQuotes": "Terug naar offertes",
+      "cancel": "Annuleren",
+      "columns": {
+        "amount": "Bedrag",
+        "description": "Omschrijving",
+        "qty": "Aantal",
+        "rate": "Tarief"
+      },
+      "confirmAccept": "Deze offerte accepteren? Uw serviceprovider wordt op de hoogte gebracht.",
+      "confirmAcceptOptional": "Deze offerte accepteren met uw huidige selectie van optionele regels? Uw keuzes worden ter beoordeling naar uw serviceprovider gestuurd.",
+      "confirmReject": "Deze offerte afwijzen en uw opmerking naar uw serviceprovider sturen? De offerte kan worden aangepast en opnieuw verzonden.",
+      "discounts": "Kortingen",
+      "downloadFailed": "PDF downloaden is mislukt.",
+      "downloadFailedRetry": "PDF downloaden is mislukt. Probeer het opnieuw.",
+      "downloadPdf": "PDF downloaden",
+      "downloading": "Downloaden...",
+      "exclude": "Uitsluiten",
+      "excluded": "Niet inbegrepen",
+      "fallbackTitle": "Offerte {{id}}",
+      "include": "Opnemen",
+      "included": "Inbegrepen",
+      "lineItems": "Regels",
+      "loading": "Offerte laden...",
+      "notFound": "Offerte niet gevonden",
+      "notes": "Notities",
+      "optional": "Optioneel",
+      "optionalLockedHint": "De selectie van optionele regels wordt vergrendeld zodra de offerte niet meer op uw reactie wacht.",
+      "optionalToggleHint": "Schakel optionele regels in of uit om uw gewenste offertetotaal te bekijken voordat u reageert.",
+      "poNumber": "Inkoopordernr.",
+      "quoteDate": "Offertedatum",
+      "readyToRespond": "Klaar om te reageren?",
+      "reject": "Afwijzen",
+      "rejectCommentRequired": "Voeg een korte opmerking toe voordat u deze offerte afwijst.",
+      "rejectPlaceholder": "Geef aan wat er moet veranderen",
+      "rejectPrompt": "Past deze offerte niet? Laat een opmerking achter zodat uw serviceprovider deze kan aanpassen.",
+      "rejectQuote": "Offerte afwijzen",
+      "rejectedBanner": "Offerte afgewezen.",
+      "rejectedBannerWithReason": "Offerte afgewezen: {{reason}}",
+      "savingSelections": "Selectie van optionele regels opslaan...",
+      "scopeOfWork": "Omvang van het werk",
+      "submitting": "Verzenden...",
+      "subtotal": "Subtotaal",
+      "tax": "Belasting",
+      "termsAndConditions": "Algemene voorwaarden",
+      "total": "Totaal",
+      "validUntil": "Geldig tot"
     }
   },
   "enums": {
@@ -376,5 +433,14 @@
   "dashboard": {
     "prepaidHours": "Vooruitbetaalde uren",
     "viewBilling": "Facturatie bekijken"
+  },
+  "hourBlocks": {
+    "title": "Vooruitbetaalde urenblokken",
+    "blockLabel": "{{service}}-blok",
+    "expiringSoon": "Vervalt over {{days}}d",
+    "hoursLeft": "Nog {{hours}}u",
+    "expires": "Vervalt op {{date}}",
+    "recentBurn": "Recent verbruik",
+    "timeEntry": "Tijdsvermelding"
   }
 }

@@ -12,6 +12,11 @@ import type {
   EmailIngressSkipReason,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { stageReadyInboundSource } from '@alga-psa/shared/services/email/inboundEmailProducer';
+import {
+  recordInboundSourceAccessSuccess,
+  recordInboundSourceAuthFailure,
+} from '@alga-psa/shared/services/email/inboundEmailAuthOutcomeRecorder';
+import { resolveImapSyncStartUid } from '@alga-psa/shared/services/email/imapSyncCursor';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -495,6 +500,25 @@ class ImapFolderListener {
     const prevError = this.provider.error_message;
     const db = await getAdminConnection();
     const scopedDb = tenantDb(db, this.provider.tenant);
+    if (status === 'error') {
+      // The failure may have just triggered the atomic auth-failure auto-pause,
+      // which wrote the curated reconnect-required message. Overwriting it with
+      // the raw connection error would bury the actionable instruction.
+      const current = await scopedDb.table('email_providers')
+        .where({ id: this.provider.id })
+        .first('inbound_paused_at', 'inbound_pause_reason') as
+        | { inbound_paused_at: string | null; inbound_pause_reason: string | null }
+        | undefined;
+      if (current?.inbound_paused_at && current.inbound_pause_reason === 'auth_failure') {
+        stateLog('provider_status_skip_auth_paused', {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          folder: this.folder,
+          listenerId: this.listenerId,
+        });
+        return;
+      }
+    }
     await scopedDb.table('email_providers')
       .where({ id: this.provider.id })
       .update({
@@ -533,6 +557,24 @@ class ImapFolderListener {
         last_sync_at: db.fn.now(),
         updated_at: db.fn.now(),
       });
+  }
+
+  /**
+   * Whether the provider is currently ingestion-paused (any pause reason, any
+   * triggering runtime). The listener checks this after connection failures so
+   * it never fights the pause with its own reconnect loop; the periodic
+   * provider refresh removes the worker entirely within one cycle.
+   */
+  private async isInboundPaused(): Promise<boolean> {
+    try {
+      const db = await getAdminConnection();
+      const row = await tenantDb(db, this.provider.tenant).table('email_providers')
+        .where({ id: this.provider.id })
+        .first('inbound_paused_at') as { inbound_paused_at: string | null } | undefined;
+      return Boolean(row?.inbound_paused_at);
+    } catch {
+      return false;
+    }
   }
 
   private resolveWebhookUrl(): string {
@@ -781,12 +823,9 @@ class ImapFolderListener {
       );
 
       // When we have no cursor (initial connect or after manual resync), start from the most recent window
-      // instead of replaying the entire mailbox from UID 1.
-      const startUid = this.folderState.last_uid
-        ? Number(this.folderState.last_uid) + 1
-        : mailbox?.uidNext && Number(mailbox.uidNext) > 1
-          ? Math.max(1, Number(mailbox.uidNext) - maxEmailsPerSync)
-          : 1;
+      // instead of replaying the entire mailbox from UID 1. A '0' cursor (auth-pause recovery
+      // resync) deliberately scans from UID 1 so the whole paused interval is covered.
+      const startUid = resolveImapSyncStartUid(this.folderState.last_uid, mailbox?.uidNext, maxEmailsPerSync);
 
       const range = `${startUid}:*`;
 
@@ -1119,6 +1158,14 @@ class ImapFolderListener {
           await this.persistServerCapabilities((this.client as any).capabilities);
         }
         await this.updateProviderStatus('connected', null);
+        // A successful mailbox login is a successful provider source access:
+        // reset the consecutive auth-failure counter (same semantics as the
+        // queue processor's source-fetch boundary). Best-effort, logged.
+        await recordInboundSourceAccessSuccess({
+          tenant: this.provider.tenant,
+          providerId: this.provider.id,
+          source: 'imap-email-service',
+        });
         await this.client.mailboxOpen(this.folder, { readOnly: true });
         await this.syncNewMessages(this.client);
         await this.idleLoop(this.client);
@@ -1138,6 +1185,32 @@ class ImapFolderListener {
           ...errorDetails,
         });
         await this.updateProviderStatus('error', errorDetails.message || 'IMAP connection error');
+        // Source-access auth accounting with the same semantics as the queue
+        // processor boundary: only strictly classified terminal credential
+        // failures (IMAP protocol auth rejection or OAuth token-endpoint
+        // invalid_client/invalid_grant) advance the counter; transient
+        // connection errors never count. The raw error is classified — it
+        // carries the structured flags/body the classifier reads.
+        await recordInboundSourceAuthFailure({
+          tenant: this.provider.tenant,
+          providerId: this.provider.id,
+          providerType: 'imap',
+          error,
+          source: 'imap-email-service',
+        });
+        // Honour the pause: once the provider is paused (by this loop crossing
+        // the threshold or by any other runtime), stop reconnecting instead of
+        // fighting the pause. The periodic provider refresh removes the worker.
+        if (await this.isInboundPaused()) {
+          stateLog('listener_stop_inbound_paused', {
+            providerId: this.provider.id,
+            tenant: this.provider.tenant,
+            folder: this.folder,
+            listenerId: this.listenerId,
+          });
+          this.running = false;
+          break;
+        }
         await this.persistFolderState({ last_seen_at: new Date().toISOString() });
         await this.delayWithBackoff();
       } finally {
@@ -1350,6 +1423,14 @@ export class EmailService {
     const rows = await providerRoot
       .where('ep.provider_type', 'imap')
       .andWhere('ep.is_active', true)
+      // Ingestion-paused providers (e.g. the automatic auth-failure pause) must
+      // not be polled or connected to: IMAP has no Graph/Gmail subscription to
+      // tear down, so this discovery gate IS the pause enforcement for IMAP.
+      // Existing workers are stopped within one refresh cycle via the
+      // active-id set below, and the auth-pause recovery path re-arms the
+      // cursors before the pause clears so the fresh worker rescans the
+      // paused interval.
+      .whereNull('ep.inbound_paused_at')
       .select(
         'ep.id',
         'ep.tenant',

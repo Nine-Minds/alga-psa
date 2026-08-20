@@ -153,7 +153,8 @@
       "previewPdf": "Visualizar PDF",
       "backToQuotes": "Voltar para cotações",
       "backToTemplates": "Voltar aos modelos de cotação",
-      "convertToSalesOrder": "Converter em pedido de venda"
+      "convertToSalesOrder": "Converter em pedido de venda",
+      "convert": "Converter em…"
     },
     "headings": {
       "editQuote": "Editar cotação",
@@ -587,20 +588,26 @@
     "sections": {
       "contractItems": "Itens do contrato",
       "conversionMode": "Modo de conversão",
-      "excludedItems": "Itens excluídos",
       "excludedFromConversion": "Excluído da conversão",
+      "excludedItems": "Itens excluídos",
       "invoiceItems": "Itens de fatura",
       "itemMappingPreview": "Visualização do mapeamento de itens",
+      "onSalesOrder": "No pedido de venda {{soNumber}}",
       "quoteTotal": "Cotação Total",
+      "salesOrderItems": "Linhas do pedido de venda",
       "statusAfterConversion": "Status após a conversão",
       "willBecomeContractLines": "Se tornarão linhas de contrato",
-      "willBecomeInvoiceCharges": "Se tornarão cobranças de fatura"
+      "willBecomeInvoiceCharges": "Se tornarão cobranças de fatura",
+      "willBecomeSalesOrderLines": "Virarão linhas do pedido de venda"
     },
     "empty": {
       "contractItems": "Nenhum item recorrente será convertido em contrato.",
-      "invoiceItems": "Nenhum item único será convertido em uma fatura."
+      "invoiceItems": "Nenhum item único será convertido em uma fatura.",
+      "invoiceItemsOnSalesOrder": "Todas as linhas avulsas estão no pedido de venda {{soNumber}} e serão faturadas a partir dele no atendimento.",
+      "salesOrderItems": "Nenhuma linha de produto passará para um pedido de venda."
     },
     "summary": {
+      "billedViaSalesOrder": "Faturado a partir do pedido de venda {{soNumber}} no atendimento",
       "converted": "Convertido",
       "discount": "Desconto",
       "fixed": "fixo",
@@ -628,10 +635,11 @@
       "title": "Erro"
     },
     "salesOrder": {
-      "successTitle": "Pedido de venda {{number}} criado",
-      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "existingNote": "Esta cotação já foi convertida no pedido de venda {{soNumber}}.",
+      "note": "As linhas de produto podem ser faturadas de duas formas: criando um pedido de venda para faturá-las no atendimento, ou faturando-as diretamente. Ao criar o pedido de venda, elas saem da conversão em fatura, assim nada é cobrado duas vezes.",
       "openSalesOrders": "Abrir pedidos de venda",
-      "note": "As linhas de produto avulsas passam para um pedido de venda em rascunho (faturado na entrega) e são excluídas de qualquer conversão em fatura de rascunho, para que nada seja cobrado em duplicidade."
+      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "successTitle": "Pedido de venda {{number}} criado"
     }
   },
   "quoteApproval": {

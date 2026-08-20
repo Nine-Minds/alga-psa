@@ -127,6 +127,7 @@ export async function POST(): Promise<Response> {
         message: probe.error,
         code: 'upstream_error',
         checkedAt: probe.checkedAt,
+        ...(probe.detail ? { details: { graph: probe.detail } } : {}),
       },
     });
     return new Response(

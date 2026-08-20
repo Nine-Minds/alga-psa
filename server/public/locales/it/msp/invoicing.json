@@ -343,7 +343,7 @@
       "refresh": "Si è verificato un errore durante l'aggiornamento dei dati della fattura.",
       "updateFailed": "Errore durante l'aggiornamento della fattura",
       "generateFailed": "Errore nella generazione della fattura",
-      "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione del cliente e riprova.",
+      "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita e riprova.",
       "CLIENT_NOT_FOUND": "Il cliente selezionato non è stato trovato. Aggiorna la pagina e riprova.",
       "SERVICE_NOT_FOUND": "Il servizio {{serviceId}} non è stato trovato. Aggiorna la pagina e riprova.",
       "INVALID_QUANTITY": "La quantità deve essere maggiore di zero.",
@@ -357,7 +357,7 @@
       "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione."
     },
     "warnings": {
-      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione prima di generare la fattura."
+      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
     },
     "errorFallback": {
       "title": "Qualcosa è andato storto",
@@ -1662,7 +1662,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Limite del modello"
+      "templateBoundary": "Limite del modello",
+      "translatableHint": "Tradotto automaticamente nella lingua del destinatario. Se modifichi il testo, verrà usato il tuo testo fisso."
     },
     "dragOverlay": {
       "component": "Componente"

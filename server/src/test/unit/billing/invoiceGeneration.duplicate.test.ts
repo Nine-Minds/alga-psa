@@ -3,6 +3,16 @@ import {
   buildClientCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string): string {
@@ -201,6 +211,17 @@ vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {},
 }));
 

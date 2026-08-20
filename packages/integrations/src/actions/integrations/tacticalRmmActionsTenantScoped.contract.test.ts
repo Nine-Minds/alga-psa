@@ -19,8 +19,17 @@ describe('Tactical RMM action tenant-scoped query contract', () => {
     const section = sectionBetween('export const getTacticalRmmSettings', 'export const syncTacticalRmmDevices');
 
     expect(source).toContain("import { createTenantKnex, tenantDb } from '@alga-psa/db';");
-    expect(source).toContain('function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder');
-    expect(source).toContain('tenantDb(conn, tenant).table(table)');
+    // The helper moved to lib/rmm/tacticalrmm/deviceSync.ts with the device
+    // sync engine, so the action imports it rather than declaring it. What the
+    // contract protects is unchanged: every root goes through it.
+    expect(source).toContain('tenantScopedTable,');
+    expect(source).toContain("} from '../../lib/rmm/tacticalrmm/deviceSync';");
+    const deviceSyncSource = readFileSync(
+      resolve(__dirname, '../../lib/rmm/tacticalrmm/deviceSync.ts'),
+      'utf8'
+    );
+    expect(deviceSyncSource).toContain('export function tenantScopedTable(');
+    expect(deviceSyncSource).toContain('return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder;');
     expect(source).not.toContain('createTenantScopedQuery');
 
     expect(section).toContain("tenantScopedTable(knex, 'rmm_integrations', tenant)");

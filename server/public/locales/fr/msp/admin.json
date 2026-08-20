@@ -628,5 +628,35 @@
       "error": "Erreur",
       "metadata": "Métadonnées"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnostics de distribution Gmail",
+    "description": "Vérifie le sujet Pub/Sub, ses autorisations, le point de terminaison push et son audience, la surveillance Gmail et la date de la dernière notification push reçue.",
+    "labels": {
+      "provider": "Fournisseur :",
+      "mailbox": "Boîte mail :",
+      "overall": "Global :",
+      "recommendations": "Recommandations",
+      "error": "Erreur"
+    },
+    "audienceMismatch": {
+      "title": "L'audience du push ne correspond pas à cette instance",
+      "expected": "Attendu :",
+      "actual": "Google utilise :"
+    },
+    "actions": {
+      "copySupportBundle": "Copier l'ensemble de support",
+      "copied": "Copié"
+    },
+    "states": {
+      "running": "Exécution des diagnostics...",
+      "diagnosticsFailed": "Échec des diagnostics"
+    },
+    "statuses": {
+      "pass": "Réussi",
+      "warn": "Avertissement",
+      "fail": "Échec",
+      "skip": "Ignoré"
+    }
   }
 }

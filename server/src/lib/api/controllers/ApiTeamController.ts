@@ -31,6 +31,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
+  assertInternalApiUser,
   ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -99,9 +100,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -201,9 +200,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -267,9 +264,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -341,9 +336,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -410,9 +403,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -491,9 +482,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract IDs from path
         const url = new URL(req.url);
@@ -565,9 +554,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -646,9 +633,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -727,9 +712,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -810,9 +793,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -879,9 +860,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -957,9 +936,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1026,9 +1003,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract permission ID from path
         const url = new URL(req.url);
@@ -1103,9 +1078,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1179,9 +1152,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1248,9 +1219,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1325,9 +1294,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
+        assertInternalApiUser(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);

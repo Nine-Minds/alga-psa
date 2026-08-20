@@ -10,7 +10,7 @@
 
 import { getInboundDurableMode } from './inboundEmailDurableStore';
 import { enqueueInboundEmailDurableJob } from './unifiedInboundEmailQueueV2';
-import { upsertIngress } from './inboundEmailDurableStore';
+import { reviveTerminalIngress, upsertIngress } from './inboundEmailDurableStore';
 import { buildIngressKey } from './inboundEmailIdentity';
 import { stageIngressFromReadySource } from './inboundEmailIngressStagingWorker';
 
@@ -49,6 +49,14 @@ export async function persistIngressPointer(params: {
   providerId: string;
   providerType: InboundProviderPointer['providerType'];
   pointer: InboundProviderPointer;
+  /**
+   * Auth-pause recovery only: when the deterministic ingress key already has a
+   * `terminal_failed` row (e.g. attempts burned against the dead credential),
+   * revive it to `received` with a fresh attempt budget so the explicit
+   * re-hand-off actually results in processing. A terminal row is not a
+   * durable hand-off.
+   */
+  reviveTerminal?: boolean;
 }): Promise<PersistIngressResult> {
   const mode = getInboundDurableMode();
   if (mode === 'off') {
@@ -90,6 +98,10 @@ export async function persistIngressPointer(params: {
       uid: params.pointer.uid ?? null,
     },
   });
+
+  if (params.reviveTerminal && ingress.status === 'terminal_failed') {
+    await reviveTerminalIngress(db, params.tenant, ingress.ingress_id);
+  }
 
   try {
     await enqueueInboundEmailDurableJob({

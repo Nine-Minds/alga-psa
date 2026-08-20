@@ -18,6 +18,19 @@ import {
   expiringCreditsNotificationHandler,
   ExpiringCreditsNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
+import {
+  PREPAID_BALANCE_ALERT_SCAN_JOB,
+  prepaidBalanceAlertScanHandler,
+  PrepaidBalanceAlertScanJobData,
+} from '@alga-psa/jobs/handlers/prepaidBalanceAlertScanHandler';
+import {
+  expiredHourBlocksHandler,
+  ExpiredHourBlocksJobData,
+} from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
+import {
+  expiringHourBlocksNotificationHandler,
+  ExpiringHourBlocksNotificationJobData,
+} from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
@@ -28,6 +41,10 @@ import {
   handleReconcileBucketUsage,
   ReconcileBucketUsageJobData,
 } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
+import {
+  handleReconcileHourBlockAllocations,
+  ReconcileHourBlockAllocationsJobData,
+} from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -75,10 +92,13 @@ import {
 import {
   rmmAlertReconciliationHandler,
   huntressIncidentPollHandler,
+  rmmDeviceSyncHandler,
   RmmAlertReconciliationJobData,
+  RmmDeviceSyncJobData,
   HuntressIncidentPollJobData,
   RMM_ALERT_RECONCILIATION_JOB,
   HUNTRESS_INCIDENT_POLL_JOB,
+  RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -251,6 +271,43 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // Prepaid balance alert scan handler (daily 09:00 UTC low-balance scan;
+  // server-free: publishes PREPAID_BALANCE_ALERT_SCAN_REQUESTED)
+  JobHandlerRegistry.register<PrepaidBalanceAlertScanJobData & BaseJobData>(
+    {
+      name: PREPAID_BALANCE_ALERT_SCAN_JOB,
+      handler: async (_jobId, data) => {
+        await prepaidBalanceAlertScanHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Expired hour blocks handler
+  JobHandlerRegistry.register<ExpiredHourBlocksJobData & BaseJobData>(
+    {
+      name: 'expired-hour-blocks',
+      handler: async (_jobId, data) => {
+        await expiredHourBlocksHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Expiring hour blocks notification handler
+  JobHandlerRegistry.register<ExpiringHourBlocksNotificationJobData & BaseJobData>(
+    {
+      name: 'expiring-hour-blocks-notification',
+      handler: async (_jobId, data) => {
+        await expiringHourBlocksNotificationHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   JobHandlerRegistry.register<ExpireQuotesJobData & BaseJobData>(
     {
       name: 'expire-quotes',
@@ -342,6 +399,18 @@ export async function registerAllJobHandlers(
       name: 'reconcile-bucket-usage',
       handler: async (jobId, data) => {
         await handleReconcileBucketUsage({ id: jobId, data } as Job<ReconcileBucketUsageJobData>);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  // Reconcile hour-block allocation handler
+  JobHandlerRegistry.register<ReconcileHourBlockAllocationsJobData & BaseJobData>(
+    {
+      name: 'reconcile-hour-block-allocations',
+      handler: async (jobId, data) => {
+        await handleReconcileHourBlockAllocations({ id: jobId, data } as Job<ReconcileHourBlockAllocationsJobData>);
       },
       retry: { maxAttempts: 3 },
     },
@@ -630,6 +699,20 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  JobHandlerRegistry.register<RmmDeviceSyncJobData & BaseJobData>(
+    {
+      name: RMM_DEVICE_SYNC_JOB,
+      handler: async (jobId, data) => {
+        await rmmDeviceSyncHandler(jobId, data);
+      },
+      retry: { maxAttempts: 3 },
+      // A device sync walks the provider's whole device list; give it more
+      // room than an alert poll, which only reads recent alerts.
+      timeoutMs: 1800000,
+    },
+    registerOpts
+  );
+
   JobHandlerRegistry.register<HuntressIncidentPollJobData & BaseJobData>(
     {
       name: HUNTRESS_INCIDENT_POLL_JOB,
@@ -704,6 +787,9 @@ export function getAvailableJobHandlers(): string[] {
     // Credits
     'expired-credits',
     'expiring-credits-notification',
+    PREPAID_BALANCE_ALERT_SCAN_JOB,
+    'expired-hour-blocks',
+    'expiring-hour-blocks-notification',
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',
@@ -713,6 +799,7 @@ export function getAvailableJobHandlers(): string[] {
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
+    'reconcile-hour-block-allocations',
     'process-renewal-queue',
     // Marketing
     MARKETING_FLIP_DUE_POSTS_JOB,

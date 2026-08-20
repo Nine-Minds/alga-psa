@@ -28,7 +28,10 @@ const formatCurrency = (value: number, currencyCode: string, locale?: string) =>
   }
 };
 
-const formatDate = (value: string) => {
+const formatDate = (value: string, locale?: string) => {
+  // Pin UTC so rendered dates don't depend on the server process timezone; the
+  // locale is the recipient's, so dates read the same language as the labels.
+  const dateLocale = locale || FALLBACK_LOCALE;
   const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnlyMatch) {
     const [, year, month, day] = dateOnlyMatch;
@@ -38,7 +41,7 @@ const formatDate = (value: string) => {
       parsedDateOnly.getUTCMonth() === Number(month) - 1 &&
       parsedDateOnly.getUTCDate() === Number(day);
     if (isValidDateOnly) {
-      return parsedDateOnly.toLocaleDateString('en-US', { timeZone: 'UTC' });
+      return parsedDateOnly.toLocaleDateString(dateLocale, { timeZone: 'UTC' });
     }
   }
 
@@ -46,8 +49,7 @@ const formatDate = (value: string) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  // Pin UTC so rendered dates don't depend on the server process timezone.
-  return parsed.toLocaleDateString('en-US', { timeZone: 'UTC' });
+  return parsed.toLocaleDateString(dateLocale, { timeZone: 'UTC' });
 };
 
 export const normalizeFieldFormat = (value: unknown): TemplateValueFormat => {
@@ -156,7 +158,7 @@ const formatPrimitiveValue = (
       return { text: null, multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(value), multiline: false };
+      return { text: formatDate(value, locale), multiline: false };
     }
     if (format === 'number') {
       const asNumber = Number(value);
@@ -178,7 +180,7 @@ const formatPrimitiveValue = (
       return { text: formatCurrency(value, currencyCode, locale), multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(String(value)), multiline: false };
+      return { text: formatDate(String(value), locale), multiline: false };
     }
     return { text: String(value), multiline: false };
   }

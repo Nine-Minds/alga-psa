@@ -31,6 +31,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   actionError,
   permissionError,
@@ -39,6 +40,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 import { normalizeClientType } from '../lib/normalizeClientType';
+import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
+import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -47,6 +50,26 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'annual_revenue',
 ]);
 type ClientUpdateActionError = ActionMessageError | ActionPermissionError;
+
+/** Carries a structural failure out of the transaction without rolling into a 500. */
+class ClientStructuralError extends Error {}
+
+/**
+ * Structural validation, applied on write only. Existing rows are grandfathered:
+ * pass `existing` on an update so a field that arrives unchanged is skipped rather
+ * than re-validated, and a legacy record stays editable on the fields the user did
+ * touch. Forms round-trip the whole record, so "submitted" alone is not enough.
+ */
+function applyClientStructuralSchema<T extends Record<string, any>>(
+  payload: T,
+  options: { partial?: boolean; existing?: Record<string, unknown> | null } = {}
+): StructuralResult<T> {
+  const result = parseSubmittedFields(clientCoreFieldsSchema, payload, options);
+  if (!result.success) {
+    return { ok: false, error: result.error ?? 'Invalid client data' };
+  }
+  return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -248,14 +271,16 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
   }
 
   const isClientPortalUpdate = isClientPortalUser(user);
-  const permittedUpdateData = isClientPortalUpdate
+  const sanitizedUpdateData = isClientPortalUpdate
     ? sanitizeClientPortalClientUpdate(updateData)
     : updateData;
+
+  let permittedUpdateData = sanitizedUpdateData;
 
   const { knex: db } = await createTenantKnex();
 
   try {
-    console.log('Updating client in database:', clientId, permittedUpdateData);
+    console.log('Updating client in database:', clientId, sanitizedUpdateData);
 
     const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
@@ -271,6 +296,14 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       if (!currentClient) {
         throw new Error('Client not found');
       }
+
+      // Structural rules apply to what the caller is actually changing. Anything
+      // that comes back identical to the stored value is grandfathered.
+      const structural = applyClientStructuralSchema(sanitizedUpdateData, { existing: currentClient });
+      if (isStructuralFailure(structural)) {
+        throw new ClientStructuralError(structural.error);
+      }
+      permittedUpdateData = structural.data;
 
       // Handle properties separately
       if (permittedUpdateData.properties) {
@@ -473,6 +506,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);
+    if (error instanceof ClientStructuralError) {
+      return actionError(error.message);
+    }
     const expected = updateClientExpectedErrorFrom(error, permittedUpdateData.client_name);
     if (expected) return expected;
     throw error;
@@ -501,6 +537,17 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       clientData.properties.website = clientData.url;
     }
 
+    // Validate after the website/url sync so a bad properties.website cannot reach
+    // the url column unchecked, and write the normalized values back to both.
+    const structural = applyClientStructuralSchema(clientData, { partial: false });
+    if (isStructuralFailure(structural)) {
+      return { success: false, error: structural.error };
+    }
+    Object.assign(clientData, structural.data);
+    if (clientData.properties?.website) {
+      clientData.properties.website = clientData.url ?? clientData.properties.website;
+    }
+
     // When no explicit currency is provided, adopt the tenant's configured default
     // (default_billing_settings.default_currency_code) instead of leaving it null and
     // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
@@ -520,6 +567,13 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
           updated_at: new Date().toISOString()
         })
         .returning('*');
+
+      // Every client must have exactly one default billing profile — it is the
+      // terminal step of charge attribution. Provisioned here so it carries the
+      // client's name from the start.
+      await ensureClientDefaultBillingProfile(trx, tenant, created.client_id, {
+        clientName: created.client_name,
+      });
 
       await ensureDefaultContractForClientIfBillingConfigured(trx, {
         tenant,
@@ -1191,6 +1245,18 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
       }
 
+      // Billing profiles go after everything that references them — tax
+      // settings, cycles, contracts, locations — and before the client itself.
+      // A restrict-mode FK means a missed reference surfaces here rather than
+      // leaving an orphan.
+      const deletedBillingProfiles = await tenantScopedTable(trx, 'client_billing_profiles', tenantId)
+        .where({ client_id: clientId })
+        .delete();
+
+      if (deletedBillingProfiles > 0) {
+        console.log(`Deleted ${deletedBillingProfiles} client billing profile records`);
+      }
+
       if (isEnterprise) {
         const deletedPaymentCustomers = await tenantScopedTable(trx, 'client_payment_customers', tenantId)
           .where({ client_id: clientId })
@@ -1385,13 +1451,14 @@ export async function generateClientCSVTemplate(): Promise<string> {
       tags: 'Tea, Party Planning, Whimsical',
       location_name: 'The Tea Party Table',
       email: 'hatter@teaparty.wonderland',
-      phone_number: '+1-555-TEA-TIME',
+      phone_number: '+1 212-555-0106',
+      phone_extension: '300',
       address_line1: '6 Impossible Things Lane',
       address_line2: 'Before Breakfast Suite',
       city: 'Wonderland',
       state_province: 'Fantasy',
       postal_code: 'WL001',
-      country: 'Wonderland'
+      country: 'United States'
     }
   ];
 
@@ -1405,6 +1472,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     'location_name',
     'email',
     'phone_number',
+    'phone_extension',
     'address_line1',
     'address_line2',
     'city',
@@ -1566,22 +1634,51 @@ export const importClientsFromCSV = withAuth(async (
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
 
+  type ImportCountry = { code: string; name: string };
+  const countries = await tenantScopedTable(db, 'countries', tenant)
+    .where({ is_active: true })
+    .select('code', 'name') as ImportCountry[];
+  const countriesByCode = new Map<string, ImportCountry>(
+    countries.map((country) => [country.code.toUpperCase(), country]),
+  );
+  const countriesByName = new Map<string, ImportCountry>(
+    countries.map((country) => [country.name.trim().toLowerCase(), country]),
+  );
+
+  const resolveRowCountry = (row: Record<string, any>): ImportCountry => {
+    const rawCode = String(row.country_code ?? '').trim();
+    const rawName = String(row.country ?? '').trim();
+    const country = (rawCode ? countriesByCode.get(rawCode.toUpperCase()) : undefined)
+      ?? (rawName ? countriesByName.get(rawName.toLowerCase()) : undefined)
+      ?? (!rawCode && !rawName ? countriesByCode.get('US') : undefined);
+
+    if (!country) {
+      throw new Error(`Unknown country: ${rawCode || rawName}`);
+    }
+
+    return country;
+  };
+
   const parseCsvBoolean = (value: unknown): boolean =>
     value === true || value === 'true' || value === 'Yes';
 
   const hasLocationData = (row: Record<string, any>): boolean =>
     Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
 
-  const locationFieldsFromRow = (row: Record<string, any>) => ({
+  const locationFieldsFromRow = (
+    row: Record<string, any>,
+    country: { code: string; name: string },
+  ) => ({
     location_name: row.location_name || 'Main Office',
     address_line1: row.address_line1 || '',
     address_line2: row.address_line2 || '',
     city: row.city || '',
     state_province: row.state_province || '',
     postal_code: row.postal_code || '',
-    country_code: 'US',
-    country_name: row.country || 'United States',
+    country_code: country.code,
+    country_name: country.name,
     phone: row.phone_number || '',
+    phone_extension: row.phone_extension || '',
     email: row.email || ''
   });
 
@@ -1592,6 +1689,47 @@ export const importClientsFromCSV = withAuth(async (
     try {
       if (!clientData.client_name) {
         throw new Error('Client name is required');
+      }
+
+      const rowCountry = resolveRowCountry(clientData);
+      const normalizedPhone = normalizePhone(clientData.phone_number, {
+        defaultCountry: rowCountry.code,
+        extension: clientData.phone_extension,
+      });
+      if (normalizedPhone.error) {
+        throw new Error(
+          normalizedPhone.error === 'extensionInvalid'
+            ? 'Please enter a valid phone extension'
+            : 'Please enter a valid phone number',
+        );
+      }
+      clientData.phone_number = normalizedPhone.value;
+      clientData.phone_extension = normalizedPhone.extension;
+
+      // Same structural authority as the server actions and the REST API, applied
+      // per row so one bad row cannot take the import down with it.
+      const rowStructural = parseSubmittedFields(clientCoreFieldsSchema, {
+        client_name: clientData.client_name,
+        url: clientData.website || clientData.url,
+        email: clientData.email,
+        phone_no: clientData.phone_number
+      });
+      if (!rowStructural.success) {
+        throw new Error(rowStructural.error ?? 'Invalid client data');
+      }
+
+      // Store the normalized values, not the raw CSV cells.
+      const normalizedRow = rowStructural.data ?? {};
+      clientData.client_name = normalizedRow.client_name ?? clientData.client_name;
+      if (normalizedRow.url !== undefined) {
+        clientData.url = normalizedRow.url;
+        clientData.website = normalizedRow.url;
+      }
+      if (normalizedRow.email !== undefined) {
+        clientData.email = normalizedRow.email;
+      }
+      if (normalizedRow.phone_no !== undefined) {
+        clientData.phone_number = normalizedRow.phone_no;
       }
 
       let savedClient: IClient | undefined;
@@ -1653,7 +1791,7 @@ export const importClientsFromCSV = withAuth(async (
               await tenantScopedTable(trx, 'client_locations', tenant)
                 .where({ location_id: defaultLocation.location_id })
                 .update({
-                  ...locationFieldsFromRow(clientData),
+                  ...locationFieldsFromRow(clientData, rowCountry),
                   updated_at: new Date().toISOString()
                 });
             } else {
@@ -1661,7 +1799,7 @@ export const importClientsFromCSV = withAuth(async (
                 location_id: trx.raw('gen_random_uuid()'),
                 client_id: existingClient.client_id,
                 tenant: tenant,
-                ...locationFieldsFromRow(clientData),
+                ...locationFieldsFromRow(clientData, rowCountry),
                 is_default: true,
                 is_billing_address: true,
                 is_shipping_address: true,
@@ -1715,12 +1853,16 @@ export const importClientsFromCSV = withAuth(async (
             .insert(clientToCreate)
             .returning('*');
 
+          await ensureClientDefaultBillingProfile(trx, tenant, savedClient!.client_id, {
+            clientName: savedClient!.client_name,
+          });
+
           if (hasLocationData(clientData)) {
             await tenantScopedTable(trx, 'client_locations', tenant).insert({
               location_id: trx.raw('gen_random_uuid()'),
               client_id: savedClient!.client_id,
               tenant: tenant,
-              ...locationFieldsFromRow(clientData),
+              ...locationFieldsFromRow(clientData, rowCountry),
               is_default: true,
               is_billing_address: true,
               is_shipping_address: true,

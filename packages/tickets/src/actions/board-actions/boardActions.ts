@@ -11,6 +11,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
+import { parseTicketViewSettings } from './boardViewSettingsSchema';
+import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
+import type { TicketViewSettings } from '../../lib/ticketViewSettings';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -184,18 +188,43 @@ export interface BoardListStats {
   statusCount: number;
   closeRulesEnabled: boolean;
   autoCloseRuleCount: number;
+  /** Board header health counts. All three are "open tickets that are also …". */
+  overdueTicketCount: number;
+  unassignedTicketCount: number;
+  slaBreachedTicketCount: number;
+  /** Carried here so the tab strip gets pinning and counts in one round trip. */
+  isPinned: boolean;
 }
 
 /**
- * Per-board aggregate metrics for the boards settings list (ticket load, status
- * count, automation). Tenant-scoped GROUP BYs co-locate on a single Citus shard.
- * Returns a map keyed by board_id; missing boards default to zeroes in the UI.
+ * Per-board aggregate metrics for the boards settings list and the board header
+ * (ticket load, health, status count, automation). Tenant-scoped GROUP BYs
+ * co-locate on a single Citus shard.
+ *
+ * The health counts cost no new query: overdue, unassigned and SLA breach are
+ * all derivable from columns already on `tickets`, so they are three more
+ * COUNT(*) FILTER aggregates on the GROUP BY that already runs. `sla_breached`
+ * deliberately reuses the same predicate as `slaStatusFilter: 'breached'` (see
+ * ticketSlaSql.ts) so the header count and the filter it invites you to click
+ * can never describe different sets.
+ *
+ * Every board in the tenant gets an entry, including boards with no tickets and
+ * no statuses. Previously `ensure()` ran only for boards that appeared in at
+ * least one of the four GROUP BYs, so a board with zero tickets but non-zero
+ * statuses rendered a `0` pill while a board with zero of both rendered none —
+ * two boards in identical states looking different. Seeding from the board list
+ * makes "0" mean zero everywhere.
  */
 export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Record<string, BoardListStats>> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const [ticketRows, statusRows, closeRuleRows, autoCloseRows] = await Promise.all([
+      const nowIso = new Date().toISOString();
+      const breachedSql = ticketSlaBreachedSql('t');
+      const breachedBindings = ticketSlaBreachedBindings(nowIso);
+
+      const [boardRows, ticketRows, statusRows, closeRuleRows, autoCloseRows] = await Promise.all([
+        tenantDb(trx, tenant).table('boards').select('board_id', 'is_pinned'),
         trx('tickets as t')
           .leftJoin('statuses as s', function () {
             this.on('t.status_id', 's.status_id').andOn('t.tenant', 's.tenant');
@@ -205,7 +234,18 @@ export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Rec
           .groupBy('t.board_id')
           .select('t.board_id')
           .select(trx.raw('COUNT(*)::int as total'))
-          .select(trx.raw('COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE)::int as open')),
+          .select(trx.raw('COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE)::int as open'))
+          .select(trx.raw(
+            `COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE AND t.due_date < ?)::int as overdue`,
+            [nowIso]
+          ))
+          .select(trx.raw(
+            'COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE AND t.assigned_to IS NULL)::int as unassigned'
+          ))
+          .select(trx.raw(
+            `COUNT(*) FILTER (WHERE s.is_closed IS NOT TRUE AND ${breachedSql})::int as sla_breached`,
+            breachedBindings
+          )),
         trx('statuses')
           .where({ tenant, status_type: 'ticket' })
           .whereNotNull('board_id')
@@ -225,15 +265,41 @@ export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Rec
       const stats: Record<string, BoardListStats> = {};
       const ensure = (boardId: string): BoardListStats => {
         if (!stats[boardId]) {
-          stats[boardId] = { ticketCount: 0, openTicketCount: 0, statusCount: 0, closeRulesEnabled: false, autoCloseRuleCount: 0 };
+          stats[boardId] = {
+            ticketCount: 0,
+            openTicketCount: 0,
+            statusCount: 0,
+            closeRulesEnabled: false,
+            autoCloseRuleCount: 0,
+            overdueTicketCount: 0,
+            unassignedTicketCount: 0,
+            slaBreachedTicketCount: 0,
+            isPinned: false,
+          };
         }
         return stats[boardId];
       };
 
-      for (const row of ticketRows as Array<{ board_id: string; total: number; open: number }>) {
+      // Seed every board first, so a count of zero is reported as zero rather
+      // than as "no entry" (which the UI cannot distinguish from "not loaded").
+      for (const row of boardRows as Array<{ board_id: string; is_pinned: boolean | null }>) {
+        ensure(row.board_id).isPinned = row.is_pinned === true;
+      }
+
+      for (const row of ticketRows as Array<{
+        board_id: string;
+        total: number;
+        open: number;
+        overdue: number;
+        unassigned: number;
+        sla_breached: number;
+      }>) {
         const entry = ensure(row.board_id);
         entry.ticketCount = Number(row.total) || 0;
         entry.openTicketCount = Number(row.open) || 0;
+        entry.overdueTicketCount = Number(row.overdue) || 0;
+        entry.unassignedTicketCount = Number(row.unassigned) || 0;
+        entry.slaBreachedTicketCount = Number(row.sla_breached) || 0;
       }
       for (const row of statusRows as Array<{ board_id: string; count: number }>) {
         ensure(row.board_id).statusCount = Number(row.count) || 0;
@@ -341,6 +407,11 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_reopen_status_id: boardData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
+          // A new board is pinned by default: it was just created deliberately,
+          // so it earns a tab until an admin decides otherwise. list_view_settings
+          // starts NULL — a new board inherits the tenant view rather than
+          // freezing a copy of it at creation time.
+          is_pinned: boardData.is_pinned ?? true,
           tenant
         })
         .returning('*')) as IBoard[];
@@ -824,8 +895,32 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       if ('enable_live_ticket_timer' in sanitizedData) {
         sanitizedData.enable_live_ticket_timer = sanitizedData.enable_live_ticket_timer ?? true;
       }
+      if ('is_pinned' in sanitizedData) {
+        sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);
+      }
 
-      const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
+      // updateBoard is a second write path to the same two columns that
+      // saveBoardDefaultView/clearBoardDefaultView guard, so it has to enforce
+      // the same permission — otherwise the gate on those actions is decorative.
+      // Scoped to the new fields deliberately: this action's existing lack of a
+      // permission check covers pre-existing fields and is its own change.
+      const touchesViewConfig = 'is_pinned' in sanitizedData || 'list_view_settings' in sanitizedData;
+      if (touchesViewConfig && !await hasPermission(user, 'ticket_settings', 'update', trx)) {
+        throw new Error('Permission denied: Cannot update ticket settings');
+      }
+
+      const { ticket_statuses: ticketStatuses, list_view_settings: listViewSettings, ...rest } =
+        sanitizedData;
+      const boardUpdateData: Record<string, unknown> = { ...rest };
+
+      // list_view_settings is validated strictly on write (unknown keys rejected)
+      // and stored as JSON text; null is the reset, and is distinct from {}.
+      if ('list_view_settings' in sanitizedData) {
+        boardUpdateData.list_view_settings =
+          listViewSettings === null || listViewSettings === undefined
+            ? null
+            : JSON.stringify(parseTicketViewSettings(listViewSettings));
+      }
 
       const [updatedBoard] = (await tenantScopedTable('boards')
         .where({ board_id: boardId })
@@ -883,6 +978,150 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       return expected;
     }
     console.error('Error updating board:', error);
+    throw error;
+  }
+});
+
+export interface BoardIdentity {
+  boardId: string;
+  managerUserId: string | null;
+  managerName: string | null;
+  slaPolicyId: string | null;
+  slaPolicyName: string | null;
+}
+
+/**
+ * The ownership half of the board header — manager and SLA policy display names
+ * for every board, in one round trip.
+ *
+ * Resolved for all boards rather than for the active one so switching tabs costs
+ * no fetch, and loaded out of band exactly as the tab pills are: the header
+ * renders its identity immediately and grows the ownership line when this
+ * arrives. A board with no manager or no SLA policy yields nulls, which the
+ * header omits rather than rendering an empty slot.
+ */
+export const getBoardIdentities = withAuth(async (_user, { tenant }): Promise<BoardIdentity[]> => {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const rows = await tenantDb(trx, tenant).table('boards as b')
+        .leftJoin('users as u', function () {
+          this.on('b.manager_user_id', 'u.user_id').andOn('b.tenant', 'u.tenant');
+        })
+        .leftJoin('sla_policies as p', function () {
+          this.on('b.sla_policy_id', 'p.sla_policy_id').andOn('b.tenant', 'p.tenant');
+        })
+        .select(
+          'b.board_id',
+          'b.manager_user_id',
+          'u.first_name',
+          'u.last_name',
+          'b.sla_policy_id',
+          'p.policy_name'
+        );
+
+      return (rows as Array<Record<string, any>>).map((row) => {
+        const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
+        return {
+          boardId: row.board_id as string,
+          managerUserId: (row.manager_user_id as string | null) ?? null,
+          managerName: name.length > 0 ? name : null,
+          slaPolicyId: (row.sla_policy_id as string | null) ?? null,
+          slaPolicyName: (row.policy_name as string | null) ?? null,
+        };
+      });
+    });
+  } catch (error) {
+    // Ownership is decoration on the header; failing it must not fail the list.
+    console.error('Failed to fetch board identities:', error);
+    return [];
+  }
+});
+
+/**
+ * Save the board's default ticket-list view, captured from the live list.
+ *
+ * Authoring is capture-from-the-list rather than a second filter UI in
+ * settings: the admin arranges the real list and saves it, which is why every
+ * filter added to ITicketListFilters in future is defaultable for free.
+ *
+ * Gated on ticket_settings:update — the permission that already guards board and
+ * priority settings — because this is tenant-wide configuration for all users,
+ * not a personal preference.
+ */
+export const saveBoardDefaultView = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+  view: TicketViewSettings,
+): Promise<{ success: true } | BoardActionError | ActionPermissionError> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings');
+  }
+
+  try {
+    // Strict parse: unknown keys are rejected here rather than silently stored,
+    // so a stale client cannot deposit a key nothing will read.
+    const parsed = parseTicketViewSettings(view);
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const updated = await tenantDb(trx, tenant).table('boards')
+        .where({ board_id: boardId })
+        .update({ list_view_settings: JSON.stringify(parsed) });
+
+      if (!updated) {
+        throw new Error('Board not found');
+      }
+      return { success: true as const };
+    });
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error saving board default view:', error);
+    throw error;
+  }
+});
+
+/**
+ * Reset the board to the tenant default view.
+ *
+ * Writes NULL, not {}. An empty object would be a board that has decided to
+ * express nothing — indistinguishable in storage from a board that has decided
+ * nothing, but a different thing to reason about, and one that would have to be
+ * special-cased in the resolver forever. NULL falls through cleanly.
+ */
+export const clearBoardDefaultView = withAuth(async (
+  user,
+  { tenant },
+  boardId: string,
+): Promise<{ success: true } | BoardActionError | ActionPermissionError> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'ticket_settings', 'update', db)) {
+    return permissionError('Permission denied: Cannot update ticket settings');
+  }
+
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const updated = await tenantDb(trx, tenant).table('boards')
+        .where({ board_id: boardId })
+        .update({ list_view_settings: null });
+
+      if (!updated) {
+        throw new Error('Board not found');
+      }
+      return { success: true as const };
+    });
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error clearing board default view:', error);
     throw error;
   }
 });

@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft ti ha autenticato ma ha negato l'accesso all'elenco dei tenant gestiti. Un amministratore globale deve concedere il consenso amministratore per le autorizzazioni richieste. Non è stato salvato nulla: riprova una volta concesso il consenso.",
             "expired": "Il tentativo di connessione è scaduto prima di completarsi. Non è stato salvato nulla: avvia di nuovo la connessione.",
             "generic": "Microsoft Entra non è stato connesso e non è stato salvato nulla. Riprova.",
-            "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti, quindi non è stato salvato nulla. Controlla le autorizzazioni della connessione e riprova."
+            "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti; non è stato salvato nulla. Le autorizzazioni sono state accettate — di solito il tenant partner non è integrato in Microsoft 365 Lighthouse o non ha relazioni GDAP attive.",
+            "tokenRejected": "Microsoft ha rifiutato il token di accesso della connessione; non è stato salvato nulla. Riavvia la connessione."
           },
           "cippServerLabel": "Server CIPP",
           "connectingSuffix": " (Connessione...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Credenziali OAuth Microsoft configurate per questo tenant.",
               "globalAdmin": "Un amministratore globale che possa approvare le autorizzazioni.",
-              "partnerRelationship": "Una relazione di partner (GDAP) con i tenant che gestisci."
+              "partnerRelationship": "Una relazione di partner (GDAP) con i tenant che gestisci.",
+              "lighthouse": "Microsoft 365 Lighthouse integrato nel tenant partner."
             }
           },
           "directReassurance": "Vedrai la richiesta di autorizzazioni prima che venga concesso qualcosa.",
@@ -1858,6 +1860,7 @@
         "environmentProduction": "Produzione",
         "environmentSandbox": "Ambiente sandbox",
         "errors": {
+          "automatedSalesTax": "Impossibile aggiornare la modalità Automated Sales Tax.",
           "disconnect": "Impossibile disconnettere QuickBooks.",
           "load": "Impossibile caricare le impostazioni QuickBooks.",
           "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
@@ -1879,9 +1882,21 @@
         "requiredScopes": "Scope richiesti",
         "storedClientId": "Client ID memorizzato: {{value}}",
         "storedClientSecret": "Client secret memorizzato: {{value}}",
-        "tenantOauthDescription": "Incolla le credenziali dell'app Intuit registrate per questo tenant, o lascia vuoto per usare l'app QuickBooks a livello di applicazione se ne è configurata una. I valori segreti non vengono mai restituiti al browser dopo il salvataggio.",
-        "tenantOauthTitle": "App OAuth di proprietà del tenant",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Tramite quale app Intuit si collega questo tenant. I secret non vengono mai restituiti al browser dopo il salvataggio.",
+        "tenantOauthTitle": "Credenziali dell’app Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "La modalità Automated Sales Tax è disattivata. Alga continua a calcolare l’imposta per questa azienda.",
+          "enabledMessage": "Da ora QuickBooks calcola l’imposta sulle vendite per le fatture delegate di questa azienda.",
+          "hint": "Attiva questa opzione quando questa azienda QuickBooks usa Automated Sales Tax: Intuit calcola l’imposta sulle fatture esportate in base all’indirizzo del cliente e l’importo torna in Alga.",
+          "label": "QuickBooks calcola l’imposta sulle vendite"
+        },
+        "credentialSource": {
+          "app": "Questa installazione fornisce un’app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Compila i campi seguenti solo se vuoi che questo tenant usi una propria app Intuit.",
+          "none": "Non è ancora disponibile alcuna app Intuit. Registrane una nel portale Intuit Developer e incolla qui sotto client ID e secret: la guida alla configurazione spiega come fare.",
+          "tenant": "Questo tenant si collega tramite la propria app Intuit, con le credenziali salvate qui sotto."
+        },
+        "setupGuideLink": "Guida alla configurazione di QuickBooks"
       },
       "sync": {
         "healthCardTitle": "Stato della sincronizzazione",
@@ -1970,6 +1985,15 @@
         "errors": {
           "previewFailed": "Impossibile caricare l’anteprima dell’importazione.",
           "executeFailed": "Importazione non riuscita."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identificativo {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non imponibile",
+          "taxable": "TAX — imponibile (Automated Sales Tax sceglie l’aliquota)"
         }
       }
     },
@@ -2521,6 +2545,29 @@
           "updateMapping": "Impossibile aggiornare la mappatura",
           "updateContact": "Impossibile aggiornare il contatto predefinito",
           "updateAutoSync": "Impossibile aggiornare l'impostazione di sincronizzazione automatica"
+        }
+      },
+      "deviceSync": {
+        "title": "Sincronizzazione pianificata dei dispositivi",
+        "description": "Aggiorna questo inventario dei dispositivi in base a una pianificazione anziché attendere che qualcuno esegua una sincronizzazione completa. Ogni esecuzione richiama l'API del provider e, per alcuni provider, anche un'esecuzione incrementale legge l'intero elenco dei dispositivi: un intervallo più breve comporta quindi proporzionalmente più chiamate all'API.",
+        "enabledLabel": "Sincronizza i dispositivi in base a una pianificazione",
+        "intervalLabel": "Esegui ogni (minuti)",
+        "intervalHelp": "Scegli tra {{min}} e {{max}} minuti. Un intervallo più breve mantiene i dati dei dispositivi più aggiornati e richiama l'API del provider più spesso.",
+        "intervalInvalid": "Inserisci un numero intero di minuti compreso tra {{min}} e {{max}}.",
+        "lastScheduledRun": "Ultima esecuzione pianificata: {{time}}",
+        "lastScheduledRunNever": "La sincronizzazione pianificata non è ancora stata eseguita.",
+        "lastAnySync": "Ultima sincronizzazione di qualsiasi tipo, comprese quelle complete manuali: {{time}}",
+        "lastAnySyncNever": "Non è ancora stata eseguita alcuna sincronizzazione dei dispositivi di alcun tipo.",
+        "lastSyncError": "Ultima sincronizzazione non riuscita: {{error}}",
+        "actions": {
+          "save": "Salva pianificazione",
+          "saving": "Salvataggio..."
+        },
+        "success": {
+          "saved": "Pianificazione della sincronizzazione dei dispositivi salvata. Lo scheduler la applica entro pochi minuti."
+        },
+        "errors": {
+          "saveFailed": "Impossibile salvare la pianificazione della sincronizzazione dei dispositivi."
         }
       }
     },

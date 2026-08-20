@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BillingEngine } from '@alga-psa/billing/services';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 function buildSelectBuilder(rows: Array<Record<string, any>>) {
   const builder: any = {};
   let resolvedRows = rows;
@@ -44,6 +54,12 @@ function buildUpdateBuilder() {
   return builder;
 }
 
+const eligibleLine = (clientContractLineId: string) => ({
+  client_contract_line_id: clientContractLineId,
+  billing_profile_id: null,
+  contract_billing_profile_id: null,
+});
+
 describe('BillingEngine unresolved reconciliation', () => {
   let billingEngine: BillingEngine;
 
@@ -86,8 +102,16 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
-    vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-1']);
+    // Candidates rather than bare ids: the reconcile path narrows a
+    // multi-candidate field by the work item's billing profile (F135), so the
+    // assignments travel with each line.
+    vi.spyOn(billingEngine as any, 'getEligibleContractLinesForServiceAtDate')
+      .mockResolvedValue([eligibleLine('line-1')]);
 
     const unresolved = await (billingEngine as any).calculateUnresolvedNonContractCharges(
       'client-1',
@@ -129,8 +153,13 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
-    vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate').mockResolvedValue(['line-2']);
+    vi.spyOn(billingEngine as any, 'getEligibleContractLinesForServiceAtDate')
+      .mockResolvedValue([eligibleLine('line-2')]);
 
     const unresolved = await (billingEngine as any).calculateUnresolvedNonContractCharges(
       'client-1',
@@ -210,13 +239,19 @@ describe('BillingEngine unresolved reconciliation', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
+    // The unresolved-charges select carries raw COALESCEs (the work-item
+    // billing profile from tickets/projects, and hour_block_time_allocations
+    // minutes), so the stub needs raw() as well as fn.
+    (billingEngine as any).knex.raw = vi.fn((sql: string) => ({ sql }));
 
-    const eligibleSpy = vi.spyOn(billingEngine as any, 'getEligibleContractLineIdsForServiceAtDate');
+    const eligibleSpy = vi.spyOn(billingEngine as any, 'getEligibleContractLinesForServiceAtDate');
     eligibleSpy.mockImplementation(async ({ serviceId }: { serviceId: string }) => {
-      if (serviceId === 'svc-ambiguous') return ['line-a', 'line-b'];
-      if (serviceId === 'svc-single') return ['line-single'];
+      // No candidate carries a profile, so narrowing cannot break the tie and
+      // the ambiguous case stays ambiguous — which is the point of the test.
+      if (serviceId === 'svc-ambiguous') return [eligibleLine('line-a'), eligibleLine('line-b')];
+      if (serviceId === 'svc-single') return [eligibleLine('line-single')];
       if (serviceId === 'svc-none') return [];
-      if (serviceId === 'svc-single-usage') return ['line-single-usage'];
+      if (serviceId === 'svc-single-usage') return [eligibleLine('line-single-usage')];
       return [];
     });
 

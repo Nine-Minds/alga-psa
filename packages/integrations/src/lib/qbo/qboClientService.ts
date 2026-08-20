@@ -740,6 +740,17 @@ export class QboClientService {
       CompanyName: payload.name
     };
 
+    // A separately-billing profile becomes a QuickBooks sub-customer under the
+    // client's parent customer (F118). `Job: true` plus a `ParentRef` is how
+    // QuickBooks models "one customer, several billed sub-entities" — the same
+    // shape a segmented client already has in Alga. Absent this, the profile
+    // would land as an unrelated top-level customer and its balance would stop
+    // rolling up to the client.
+    if (payload.parentExternalId) {
+      customer.Job = true;
+      customer.ParentRef = { value: payload.parentExternalId };
+    }
+
     if (payload.primaryEmail) {
       customer.PrimaryEmailAddr = { Address: payload.primaryEmail };
     }

@@ -479,6 +479,7 @@
     "email": "55555",
     "emailPlaceholder": "55555",
     "phone": "55555",
+    "extension": "55555",
     "phonePlaceholder": "55555",
     "name": "55555",
     "creating": "55555",
@@ -731,7 +732,10 @@
     "deactivateError": "55555",
     "updateError": "55555",
     "createContract": "55555",
-    "quickAdd": "55555"
+    "quickAdd": "55555",
+    "billingProfile": "55555",
+    "billingProfileUnassigned": "55555",
+    "billingProfileUpdated": "55555"
   },
   "clientContractDialog": {
     "assignTitle": "55555",
@@ -908,6 +912,40 @@
     "updatedSuccess": "55555",
     "updateError": "55555",
     "useDefaultSuccess": "55555"
+  },
+  "clientCreditDrawdownSettings": {
+    "title": "55555",
+    "useDefault": "55555",
+    "useDefaultHelp": "55555",
+    "useDefaultSuccess": "55555",
+    "clientSpecificEnabled": "55555",
+    "autoApply": "55555",
+    "autoApplyHelp": "55555",
+    "orderLabel": "55555",
+    "selectOrder": "55555",
+    "orderHelp": "55555",
+    "serviceTypesLabel": "55555",
+    "serviceTypesHelp": "55555",
+    "noServiceTypes": "55555",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "55555",
+        "all": "55555",
+        "restricted": "55555",
+        "placeholder": "55555"
+      },
+      "inheritedRestricted": "55555 {{types}} 55555",
+      "restricted": "55555"
+    },
+    "order": {
+      "expirationFirst": "55555",
+      "oldestFirst": "55555",
+      "newestFirst": "55555"
+    },
+    "updatedSuccess": "55555",
+    "loadError": "55555",
+    "saveError": "55555",
+    "updateError": "55555"
   },
   "clientExternalCreditSettings": {
     "title": "55555",
@@ -1315,6 +1353,7 @@
         "notes": "55555",
         "notesHelper": "55555",
         "phone": "55555",
+        "extension": "55555",
         "phoneHelper": "55555",
         "placeholder": {
           "addressLine1": "55555",
@@ -1332,7 +1371,10 @@
         "stateProvince": "55555",
         "stateProvinceHelper": "55555",
         "taxRegion": "55555",
-        "taxRegionHelper": "55555"
+        "taxRegionHelper": "55555",
+        "defaultBillingProfile": "55555",
+        "defaultBillingProfileNone": "55555",
+        "defaultBillingProfileHelper": "55555"
       },
       "listTitle": "55555",
       "loading": "55555",
@@ -1567,5 +1609,76 @@
       "notFound": "55555",
       "loadFailed": "55555"
     }
+  },
+  "clientBillingProfiles": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "defaultBadge": "55555",
+    "rename": "55555",
+    "makeDefault": "55555",
+    "archive": "55555",
+    "delete": "55555",
+    "restore": "55555",
+    "archivedHeading": "55555",
+    "addLabel": "55555",
+    "addPlaceholder": "55555",
+    "addButton": "55555",
+    "created": "55555 {{name}} 55555",
+    "renamed": "55555",
+    "madeDefault": "55555 {{name}} 55555",
+    "archived": "55555 {{name}} 55555",
+    "deleted": "55555 {{name}} 55555",
+    "restored": "55555 {{name}} 55555",
+    "settings": "55555"
+  },
+  "portalBillingProfileAccess": {
+    "label": "55555",
+    "restrictedHint": "55555",
+    "allHint": "55555",
+    "save": "55555",
+    "saved": "55555",
+    "emptyWarning": "55555"
+  },
+  "clientBillingProfileSettings": {
+    "saved": "55555",
+    "inherited": "55555 {{value}} 55555",
+    "notSet": "55555",
+    "billsSeparately": "55555",
+    "billsSeparatelyHint": "55555",
+    "billToName": "55555",
+    "billingEmail": "55555",
+    "poNumber": "55555",
+    "taxIdNumber": "55555",
+    "taxExemptionCertificate": "55555",
+    "invoiceDeliveryMethod": "55555",
+    "billingCycle": "55555",
+    "paymentTerms": "55555",
+    "taxExempt": "55555",
+    "taxExemptInherited": "55555 {{value}} 55555",
+    "regionNote": "55555"
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "55555",
+    "scheduleHelp": "55555",
+    "creditSwitch": "55555",
+    "creditSwitchHelp": "55555",
+    "creditThreshold": "55555",
+    "creditThresholdPlaceholder": "55555",
+    "creditThresholdHelp": "55555",
+    "creditCurrency": "55555",
+    "creditAmountError": "55555",
+    "bucketSwitch": "55555",
+    "bucketSwitchHelp": "55555",
+    "bucketPercent": "55555",
+    "bucketPercentPlaceholder": "55555",
+    "bucketPercentHelp": "55555",
+    "percentRangeError": "55555",
+    "notifyClient": "55555",
+    "notifyClientHelp": "55555",
+    "save": "55555",
+    "saveSuccess": "55555",
+    "saveError": "55555",
+    "loadError": "55555"
   }
 }

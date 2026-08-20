@@ -455,7 +455,7 @@ export function Dialog({
           </div>
           {/* Sticky footer — rendered outside the scrollable body */}
           {footer && (
-            <div className="flex flex-shrink-0 justify-end gap-2 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-6 py-4 rounded-b-lg">
+            <div className="flex flex-shrink-0 justify-end gap-2 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-6 py-4 rounded-b-lg [&>div:only-child]:w-full">
               {footer}
             </div>
           )}
@@ -584,7 +584,7 @@ export function Dialog({
           </div>
           {/* Sticky footer — rendered outside the scrollable body */}
           {footer && (
-            <div className="flex flex-shrink-0 justify-end gap-2 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-6 py-4 rounded-b-lg">
+            <div className="flex flex-shrink-0 justify-end gap-2 border-t border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] px-6 py-4 rounded-b-lg [&>div:only-child]:w-full">
               {footer}
             </div>
           )}

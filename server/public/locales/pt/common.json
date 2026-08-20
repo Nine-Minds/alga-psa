@@ -253,6 +253,7 @@
     "selectLanguage": "Selecione o idioma",
     "changeLanguage": "Alterar idioma",
     "currentLanguage": "Idioma atual",
+    "previewLanguage": "Idioma da visualização",
     "preference": {
       "label": "Preferência de idioma",
       "helper": "Selecione seu idioma preferido para a interface e notificações por e-mail. Substitui os padrões da organização e do portal do cliente para você.",
@@ -403,6 +404,42 @@
         "title": "Nenhum local adicionado ainda",
         "description": "Clique em \"Adicionar local\" para começar"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Informe um nome de cliente válido",
+        "required": "O nome do cliente é obrigatório",
+        "emojiOnly": "Este nome é composto apenas por emojis.",
+        "tooShort": "Este nome tem um único caractere — está correto?",
+        "abbreviationOnly": "Isto é apenas uma abreviação societária, não um nome.",
+        "repeatedCharacters": "Este nome repete o mesmo caractere várias vezes.",
+        "looksLikeUrl": "Isto parece um endereço da web, e não um nome.",
+        "noLettersOrNumbers": "Este nome não contém letras nem números."
+      },
+      "contactName": {
+        "structural": "Informe um nome de contato válido",
+        "placeholder": "Isto parece um espaço reservado, e não uma pessoa."
+      },
+      "email": {
+        "structural": "Informe um endereço de e-mail válido",
+        "required": "O endereço de e-mail é obrigatório",
+        "disposableDomain": "{{domain}} é um provedor de caixas de correio descartáveis.",
+        "reservedDomain": "{{domain}} é reservado para documentação e testes.",
+        "internalDomain": "{{domain}} só é resolvido dentro de uma rede privada."
+      },
+      "url": {
+        "structural": "Informe uma URL de site válida (por exemplo, apple.com)",
+        "ipAddress": "Isto é um endereço IP, e não um nome de domínio.",
+        "internalHost": "{{host}} só é resolvido dentro de uma rede privada.",
+        "reservedDomain": "{{host}} é reservado para documentação e testes."
+      },
+      "phone": {
+        "structural": "Informe um número de telefone válido",
+        "repeatedDigits": "Este número repete sempre o mesmo dígito.",
+        "sequentialDigits": "Este número percorre o teclado em sequência.",
+        "fictionalRange": "Está na faixa 555-0100 reservada para ficção."
+      },
+      "dismissWarning": "Dispensar"
     }
   },
   "commentThread": {

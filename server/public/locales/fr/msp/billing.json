@@ -22,7 +22,8 @@
     "success": "Succès",
     "update": "Mise à jour",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "export": "Exporter"
   },
   "dashboard": {
     "title": "Facturation",
@@ -499,5 +500,75 @@
     "unknownValue": "Valeur inconnue",
     "noDataForList": "Aucune donnée pour la liste : {{name}}",
     "uncategorized": "Non classé"
+  },
+  "spendByProfile": {
+    "title": "Dépenses par profil de facturation",
+    "description": "Ce que chaque site ou entité de ce client a coûté sur la période. Ouvrez une ligne pour voir les charges derrière le chiffre.",
+    "from": "Du",
+    "to": "Au",
+    "comparePrevious": "Comparer à la période précédente",
+    "defaultBadge": "Par défaut",
+    "empty": "Aucune charge finalisée pour ce client sur la période sélectionnée.",
+    "drillDownTitle": "Charges derrière ce chiffre",
+    "drillDownEmpty": "Aucune charge trouvée.",
+    "priorPeriod": "était {{amount}}",
+    "unattributedHint": "Aucun contrat, ligne de contrat ou élément de travail n'a revendiqué ces charges ; elles sont donc revenues au profil par défaut.",
+    "columns": {
+      "profile": "Profil de facturation",
+      "charges": "Lignes",
+      "net": "Net",
+      "tax": "Taxe",
+      "total": "Total",
+      "unattributed": "Revenu au profil par défaut",
+      "priorTotal": "Total période précédente",
+      "change": "Évolution"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Facturé à {{profile}} car ce profil a été choisi directement pour cette charge.",
+      "contractLine": "Facturé à {{profile}} car la ligne de contrat lui est attribuée.",
+      "contractLineNamed": "Facturé à {{profile}} car la ligne de contrat « {{line}} » lui est attribuée.",
+      "contract": "Facturé à {{profile}} car le contrat lui est attribué.",
+      "contractNamed": "Facturé à {{profile}} car le contrat « {{contract}} » lui est attribué.",
+      "workItem": "Facturé à {{profile}} car le ticket ou le projet lui est attribué ; aucune attribution de contrat ne s'applique.",
+      "workItemNamed": "Facturé à {{profile}} car « {{workItem}} » lui est attribué ; aucune attribution de contrat ne s'applique.",
+      "clientDefault": "Facturé à {{profile}} car rien d'autre n'a revendiqué cette charge — elle est revenue au profil par défaut du client.",
+      "unknown": "Aucune attribution enregistrée pour cette charge."
+    },
+    "line": {
+      "explicit": "{{line}} a été choisie manuellement pour cette saisie.",
+      "autoUniqueService": "{{line}} était la seule ligne de contrat couvrant ce service.",
+      "autoBucketOverlay": "Plusieurs lignes de contrat couvraient ce service ; seule {{line}} disposait d’un forfait.",
+      "autoBillingProfile": "Plusieurs lignes de contrat couvraient ce service ; {{line}} a été retenue car elle appartient au profil de facturation de l'élément de travail.",
+      "reconciled": "{{line}} a été rapprochée de cette saisie lors de la génération de la facture.",
+      "unresolved": "Aucune ligne de contrat n’a pu être choisie pour cette saisie.",
+      "unknown": "La façon dont cette ligne de contrat a été choisie n’a pas été enregistrée."
+    },
+    "limitation": {
+      "contractGranular": "Ce type de charge n'a pas d'enregistrement unitaire derrière lui : il ne peut être attribué qu'au niveau du contrat, pas au site ou au travail précis dont il provient."
+    }
+  },
+  "unresolvedReview": {
+    "title": "Éléments sans ligne de contrat",
+    "description": "Ces éléments ne sont pas encore rattachés à une ligne de contrat ; ils seraient donc facturés au tarif du catalogue de services.",
+    "catalogPricingCaveat": "Le tarif catalogue ignore le tarif du contrat, l'arrondi, le temps minimum facturable, les heures supplémentaires et toute grille tarifaire.",
+    "ambiguousBlocked": "{{count}} élément(s) sont couverts par un contrat mais correspondaient à plusieurs lignes de contrat. Ils ne seront pas facturés tant que vous n'aurez pas attribué une ligne ou choisi le tarif catalogue pour eux.",
+    "unknownService": "Service inconnu",
+    "timeEntry": "Saisie de temps · {{minutes}} min",
+    "usageRecord": "Relevé d'usage · {{quantity}}",
+    "assignLine": "Attribuer une ligne de contrat",
+    "assigned": "Attribué — cet élément sera facturé au tarif du contrat.",
+    "useCatalogPricing": "Utiliser le tarif catalogue",
+    "undoCatalogPricing": "Annuler",
+    "catalogPricingChosen": "Tarif catalogue choisi",
+    "catalogPricingAccepted": "Tarif catalogue choisi pour cet élément.",
+    "catalogPricingRevoked": "Tarif catalogue retiré.",
+    "uncoveredExplanation": "Aucun contrat ne couvre ce service : le tarif catalogue est le seul disponible. Il sera facturé tel quel.",
+    "ambiguousExplanation": "Un contrat couvre ce service, il existe donc un tarif négocié. Choisissez la ligne de contrat à laquelle il appartient.",
+    "reason": {
+      "uncovered": "Couvert par aucun contrat",
+      "ambiguous": "Plusieurs lignes de contrat correspondent"
+    }
   }
 }

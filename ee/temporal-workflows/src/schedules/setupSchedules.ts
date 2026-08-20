@@ -480,6 +480,7 @@ export async function setupSchedules() {
       { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
       { jobName: 'search:reconcile', cron: '0 6 * * *' },
       { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
+      { jobName: 'prepaid-balance-alert-scan', cron: '0 9 * * *' },
       { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
       { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
       { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },

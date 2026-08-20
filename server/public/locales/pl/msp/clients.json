@@ -529,6 +529,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Adres e-mail",
     "phone": "Telefon",
+    "extension": "Numer wewnętrzny",
     "phonePlaceholder": "Numer telefonu",
     "name": "Nazwa",
     "creating": "Tworzenie...",
@@ -781,7 +782,10 @@
     "deactivateError": "Nie udało się dezaktywować umowy",
     "updateError": "Nie udało się zaktualizować umowy",
     "createContract": "Utwórz umowę",
-    "quickAdd": "Szybkie dodawanie"
+    "quickAdd": "Szybkie dodawanie",
+    "billingProfile": "Profil rozliczeniowy",
+    "billingProfileUnassigned": "Nieprzypisany",
+    "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy"
   },
   "clientContractDialog": {
     "assignTitle": "Przypisz umowę do klienta",
@@ -958,6 +962,40 @@
     "updatedSuccess": "Ustawienia wygaśnięcia kredytu zostały zaktualizowane.",
     "updateError": "Nie udało się zaktualizować ustawień",
     "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wygaśnięcia kredytu."
+  },
+  "clientCreditDrawdownSettings": {
+    "title": "Ustawienia wykorzystania kredytu",
+    "useDefault": "Użyj ustawień domyślnych",
+    "useDefaultHelp": "Użyj domyślnych ustawień wykorzystania kredytu obowiązujących w całym systemie",
+    "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wykorzystania kredytu.",
+    "clientSpecificEnabled": "Włączono ustawienia wykorzystania kredytu specyficzne dla klienta.",
+    "autoApply": "Automatycznie stosuj kredyt przy finalizacji",
+    "autoApplyHelp": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury",
+    "orderLabel": "Kolejność stosowania kredytu",
+    "selectOrder": "Wybierz kolejność kredytu",
+    "orderHelp": "Wybierz kolejność, w jakiej kredyty są wykorzystywane",
+    "serviceTypesLabel": "Kwalifikujące się typy usług",
+    "serviceTypesHelp": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
+    "noServiceTypes": "Nie skonfigurowano typów usług.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Użyj wartości domyślnej organizacji",
+        "all": "Wszystkie typy usług",
+        "restricted": "Tylko wybrane typy",
+        "placeholder": "Wybierz ograniczenie typu usługi"
+      },
+      "inheritedRestricted": "Wartość domyślna organizacji: tylko wybrane typy ({{types}}).",
+      "restricted": "Kredyt jest ograniczony do wybranych typów usług. Wybierz co najmniej jeden, aby zapisać."
+    },
+    "order": {
+      "expirationFirst": "Najpierw wygasające najwcześniej",
+      "oldestFirst": "Najpierw najstarszy kredyt",
+      "newestFirst": "Najpierw najnowszy kredyt"
+    },
+    "updatedSuccess": "Ustawienia wykorzystania kredytu zostały zaktualizowane.",
+    "loadError": "Nie udało się załadować ustawień",
+    "saveError": "Nie udało się zapisać ustawień",
+    "updateError": "Nie udało się zaktualizować ustawień"
   },
   "clientExternalCreditSettings": {
     "title": "Kredyt zewnętrzny w ewidencji",
@@ -1365,6 +1403,7 @@
         "notes": "Notatki",
         "notesHelper": "Dodatkowe uwagi na temat tej lokalizacji",
         "phone": "Telefon",
+        "extension": "Numer wewnętrzny",
         "phoneHelper": "Numer telefonu do tej lokalizacji",
         "placeholder": {
           "addressLine1": "Wpisz adres *",
@@ -1382,7 +1421,10 @@
         "stateProvince": "Stan/Prowincja",
         "stateProvinceHelper": "Nazwa stanu lub prowincji",
         "taxRegion": "Region podatkowy",
-        "taxRegionHelper": "Wybierz odpowiedni region podatkowy"
+        "taxRegionHelper": "Wybierz odpowiedni region podatkowy",
+        "defaultBillingProfile": "Domyślny profil rozliczeniowy",
+        "defaultBillingProfileNone": "Brak",
+        "defaultBillingProfileHelper": "Nowe zgłoszenia w tej lokalizacji startują z tym profilem rozliczeniowym. Zawsze można go zmienić w zgłoszeniu."
       },
       "listTitle": "Lokalizacje",
       "loading": "Ładowanie lokalizacji...",
@@ -1617,5 +1659,76 @@
       "notFound": "Nie znaleziono kontaktu.",
       "loadFailed": "Nie udało się załadować kontaktu."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Profile rozliczeniowe",
+    "description": "Rozliczaj oddzielnie lokalizacje, podmioty lub zakłady w obrębie tego klienta. Opłaty są przypisywane do profilu przez umowę, pozycję umowy lub element pracy, z którego pochodzą; to, co nieprzypisane, trafia do profilu domyślnego.",
+    "loading": "Ładowanie profili rozliczeniowych…",
+    "defaultBadge": "Domyślny",
+    "rename": "Zmień nazwę",
+    "makeDefault": "Ustaw jako domyślny",
+    "archive": "Archiwizuj",
+    "delete": "Usuń",
+    "restore": "Przywróć",
+    "archivedHeading": "Zarchiwizowane",
+    "addLabel": "Dodaj profil rozliczeniowy",
+    "addPlaceholder": "np. Zakład Północ",
+    "addButton": "Dodaj profil",
+    "created": "Utworzono profil rozliczeniowy „{{name}}”",
+    "renamed": "Zmieniono nazwę profilu rozliczeniowego",
+    "madeDefault": "„{{name}}” jest teraz domyślnym profilem rozliczeniowym",
+    "archived": "Zarchiwizowano „{{name}}”",
+    "deleted": "Usunięto „{{name}}”",
+    "restored": "Przywrócono „{{name}}”",
+    "settings": "Ustawienia rozliczeń"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmenty rozliczeniowe",
+    "restrictedHint": "Ten użytkownik widzi tylko segmenty wybrane poniżej.",
+    "allHint": "Ten użytkownik widzi wszystkie segmenty rozliczeniowe, także dodane później.",
+    "save": "Zapisz dostęp do segmentów",
+    "saved": "Zaktualizowano dostęp do segmentów portalu",
+    "emptyWarning": "Wybierz co najmniej jeden segment albo wyłącz ograniczenie, aby pokazać wszystkie."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Zapisano ustawienia profilu rozliczeniowego",
+    "inherited": "Dziedziczone: {{value}}",
+    "notSet": "Nie ustawiono",
+    "billsSeparately": "Rozliczaj osobno",
+    "billsSeparatelyHint": "Wystawiaj osobną fakturę dla tego profilu, z własnym odbiorcą, metodą płatności i saldem.",
+    "billToName": "Nazwa na fakturze",
+    "billingEmail": "E-mail do faktur",
+    "poNumber": "Numer zamówienia",
+    "taxIdNumber": "NIP",
+    "taxExemptionCertificate": "Certyfikat zwolnienia podatkowego",
+    "invoiceDeliveryMethod": "Sposób dostarczania faktur",
+    "billingCycle": "Cykl rozliczeniowy",
+    "paymentTerms": "Warunki płatności",
+    "taxExempt": "Zwolniony z podatku",
+    "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
+    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Alerty salda przedpłaconego",
+    "scheduleHelp": "Kontrole są uruchamiane codziennie o 09:00 UTC. Zapisanie nie wysyła niczego natychmiast.",
+    "creditSwitch": "Alerty kredytu przedpłaconego",
+    "creditSwitchHelp": "Alert, gdy dostępny kredyt przedpłacony spadnie poniżej skonfigurowanego progu",
+    "creditThreshold": "Próg kredytu",
+    "creditThresholdPlaceholder": "np. 500,00",
+    "creditThresholdHelp": "Pozostały kredyt przedpłacony, który wyzwala alert",
+    "creditCurrency": "Waluta",
+    "creditAmountError": "Wprowadź dodatni próg kredytu",
+    "bucketSwitch": "Alerty wykorzystania pakietu",
+    "bucketSwitchHelp": "Alert, gdy pakiet godzin przedpłaconych osiągnie skonfigurowane zużycie",
+    "bucketPercent": "Próg zużycia (%)",
+    "bucketPercentPlaceholder": "np. 80",
+    "bucketPercentHelp": "Procent pojemności pakietu, który wyzwala alert",
+    "percentRangeError": "Wprowadź liczbę całkowitą od 1 do 100",
+    "notifyClient": "Wyślij również e-mail do odbiorcy faktur klienta",
+    "notifyClientHelp": "Wysyła alert do kanonicznego odbiorcy faktur klienta",
+    "save": "Zapisz",
+    "saveSuccess": "Zapisano ustawienia alertu salda przedpłaconego",
+    "saveError": "Nie udało się zapisać ustawień alertu salda przedpłaconego",
+    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego"
   }
 }

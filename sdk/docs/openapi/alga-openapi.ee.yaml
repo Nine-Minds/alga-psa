@@ -51,6 +51,7 @@ tags:
   - name: Projects
   - name: QuickBooks v1
   - name: Quotes & Contracts v1
+  - name: RMM Integrations
   - name: Search
   - name: Service Catalog
   - name: Service Categories
@@ -84,11 +85,12 @@ tags:
   - name: ext-proxy
   - name: ext-storage
   - name: extensions
-  - name: financial
   - name: import
   - name: inbound
   - name: integrations
   - name: internal
+  - name: inventory
+  - name: marketing
   - name: mcp
   - name: meta
   - name: mobile
@@ -97,6 +99,7 @@ tags:
   - name: platform-notifications
   - name: platform-reports
   - name: public
+  - name: scim
   - name: secrets
   - name: share
   - name: storage
@@ -3243,6 +3246,131 @@ components:
             - "null"
         open_tickets_count:
           type: number
+    RmmProviderParam:
+      type: object
+      properties:
+        provider:
+          type: string
+          description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+            huntress. Scheduled device sync is available for the first four;
+            huntress exposes no device listing."
+      required:
+        - provider
+    RmmIntegrationStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+          description: RMM provider slug.
+        integrationId:
+          type: string
+          format: uuid
+        isActive:
+          type: boolean
+          description: Whether the integration is connected and enabled.
+        syncStatus:
+          type:
+            - string
+            - "null"
+          description: "Last sync outcome: 'completed', 'error', 'syncing', or 'pending'."
+        syncError:
+          type:
+            - string
+            - "null"
+          description: Failure detail from the last run, when it failed.
+        connectedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastSyncAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Any sync, scheduled or manual. A manual full sync advances this too.
+        lastIncrementalSyncAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: "Only the recurring device sync writes this. Use it, not
+            lastSyncAt, to answer whether the schedule is actually running: an
+            integration can show a recent lastSyncAt from one manual sync while
+            nothing recurring has ever run."
+        deviceCount:
+          type: integer
+          description: Assets currently attributed to this provider.
+        deviceSyncEnabled:
+          type: boolean
+          description: Whether a recurring device sync is scheduled.
+        deviceSyncIntervalMinutes:
+          type: integer
+          description: Cadence in minutes, 15 to 1440. Meaningful only when
+            deviceSyncEnabled is true.
+      required:
+        - provider
+        - integrationId
+        - isActive
+        - syncStatus
+        - syncError
+        - connectedAt
+        - lastSyncAt
+        - lastIncrementalSyncAt
+        - deviceCount
+        - deviceSyncEnabled
+        - deviceSyncIntervalMinutes
+    RmmDeviceSyncUpdateBody:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Turn the recurring device sync on or off.
+        intervalMinutes:
+          type: integer
+          minimum: 15
+          maximum: 1440
+          description: Cadence in minutes. Defaults to 60. Values outside 15 to 1440 are
+            rejected rather than clamped, so the stored cadence is always the
+            one requested. Every run spends provider API quota, and on some
+            providers an incremental run still reads the whole device list.
+      required:
+        - enabled
+    RmmSyncTriggerBody:
+      type: object
+      properties:
+        syncType:
+          type: string
+          enum:
+            - full
+            - incremental
+          description: Defaults to incremental, which resumes from the same cursor the
+            schedule uses. 'full' re-reads every device regardless of when it
+            was last seen.
+    RmmSyncTriggerResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+        syncType:
+          type: string
+          enum:
+            - full
+            - incremental
+        devicesProcessed:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+      required:
+        - provider
+        - syncType
+        - devicesProcessed
+        - startedAt
+        - finishedAt
     AutomationExecutionParams:
       type: object
       properties:
@@ -7432,14 +7560,6 @@ components:
           type: string
           description: Optional idempotency key for non-GET methods. The gateway falls
             back to x-request-id when absent and forwards the key to the runner.
-        x-alga-tenant:
-          type: string
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-        x-tenant-id:
-          type: string
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
     ExtensionOpaqueRequest:
       type: object
       properties: {}
@@ -7457,16 +7577,23 @@ components:
         error:
           type: string
           enum:
+            - unauthenticated
+            - invalid_session
+            - tenant_mismatch
+            - extension_not_available
+            - endpoint_not_found
+            - forbidden
+            - rate_limited
             - not_installed
             - payload_too_large
-            - install_context_missing
-            - runner_empty_response
-            - runner_invalid_response
             - bad_gateway
-            - internal_error
-          description: Gateway-level error code.
-        detail:
-          description: Additional error detail when available.
+            - access_policy_unavailable
+          description: Gateway-level error code. Runner and install internals are never
+            returned to callers; upstream failures surface as a generic
+            bad_gateway carrying only the request ID.
+        requestId:
+          type: string
+          description: Correlates the response with server-side gateway logs.
       required:
         - error
     FinancialInvoiceUuidIdParam:
@@ -15632,12 +15759,6 @@ components:
             - string
             - "null"
           pattern: ^\d{4}-\d{2}-\d{2}$
-        next_action:
-          type: string
-          minLength: 1
-        next_action_due:
-          type: string
-          format: date-time
         generator_key:
           type:
             - string
@@ -25824,6 +25945,176 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/integrations/rmm:
+    get:
+      summary: List RMM integrations
+      description: Status of every configured RMM integration, including whether a
+        recurring device sync is scheduled, its cadence, and when it last ran.
+      tags:
+        - RMM Integrations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-permission: system_settings:read
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Configured RMM integrations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RmmIntegrationStatus"
+        "400":
+          description: Invalid request body, provider without a device sync, or an
+            inactive integration.
+        "401":
+          description: Missing or invalid API key.
+        "403":
+          description: API key lacks the system_settings permission.
+        "404":
+          description: No integration configured for this provider.
+  /api/v1/integrations/rmm/{provider}:
+    get:
+      summary: Get an RMM integration
+      description: Status of a single RMM integration.
+      tags:
+        - RMM Integrations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-permission: system_settings:read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+              huntress. Scheduled device sync is available for the first four;
+              huntress exposes no device listing."
+          required: true
+          description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+            huntress. Scheduled device sync is available for the first four;
+            huntress exposes no device listing."
+          name: provider
+          in: path
+      responses:
+        "200":
+          description: Integration status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RmmIntegrationStatus"
+        "400":
+          description: Invalid request body, provider without a device sync, or an
+            inactive integration.
+        "401":
+          description: Missing or invalid API key.
+        "403":
+          description: API key lacks the system_settings permission.
+        "404":
+          description: No integration configured for this provider.
+  /api/v1/integrations/rmm/{provider}/device-sync:
+    put:
+      summary: Configure the scheduled device sync
+      description: Turns the recurring device sync on or off and sets its cadence.
+        Writes desired state only — the scheduler reconciles the actual schedule
+        within a few minutes, so a change is not instantaneous. Returns the
+        integration status after the write.
+      tags:
+        - RMM Integrations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-permission: system_settings:update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+              huntress. Scheduled device sync is available for the first four;
+              huntress exposes no device listing."
+          required: true
+          description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+            huntress. Scheduled device sync is available for the first four;
+            huntress exposes no device listing."
+          name: provider
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RmmDeviceSyncUpdateBody"
+      responses:
+        "200":
+          description: Updated integration status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RmmIntegrationStatus"
+        "400":
+          description: Invalid request body, provider without a device sync, or an
+            inactive integration.
+        "401":
+          description: Missing or invalid API key.
+        "403":
+          description: API key lacks the system_settings permission.
+        "404":
+          description: No integration configured for this provider.
+  /api/v1/integrations/rmm/{provider}/sync:
+    post:
+      summary: Run a device sync now
+      description: "Runs a device sync immediately, through the same code path as the
+        scheduled job. Synchronous: the response is sent when the sync finishes,
+        which on a large estate can take minutes. A provider failure returns an
+        error and leaves the sync cursor untouched, so the unread window is
+        retried rather than skipped."
+      tags:
+        - RMM Integrations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-permission: system_settings:update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+              huntress. Scheduled device sync is available for the first four;
+              huntress exposes no device listing."
+          required: true
+          description: "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or
+            huntress. Scheduled device sync is available for the first four;
+            huntress exposes no device listing."
+          name: provider
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RmmSyncTriggerBody"
+      responses:
+        "200":
+          description: Sync completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RmmSyncTriggerResponse"
+        "400":
+          description: Invalid request body, provider without a device sync, or an
+            inactive integration.
+        "401":
+          description: Missing or invalid API key.
+        "403":
+          description: API key lacks the system_settings permission.
+        "404":
+          description: No integration configured for this provider.
   /api/v1/automation/executions:
     get:
       summary: List automation executions
@@ -30853,12 +31144,14 @@ paths:
   /api/email/oauth/initiate:
     post:
       summary: Initiate email OAuth flow
-      description: Starts the OAuth 2.0 authorization flow for a Google or Microsoft
-        email provider. Requires a valid Auth.js session cookie. The handler
-        builds secure OAuth state containing tenant, user, providerId, redirect
-        URI, timestamp, and nonce, resolves the provider client ID from
-        configured secrets, and returns the authorization URL for the browser to
-        visit.
+      description: "Starts the OAuth 2.0 authorization flow for a Google email
+        provider. Requires a valid Auth.js session cookie. The handler builds
+        secure OAuth state containing tenant, user, providerId, redirect URI,
+        timestamp, and nonce, resolves the provider client ID from configured
+        secrets, and returns the authorization URL for the browser to visit.
+        Microsoft mailbox OAuth is not served by this unsigned route: it must be
+        initiated from the mailbox form with an explicit application selection
+        so the callback receives a signed state token."
       tags:
         - Email
       security:
@@ -31210,14 +31503,24 @@ paths:
     get:
       summary: Forward GET request to extension runner
       description: Tenant-scoped extension gateway endpoint that forwards GET requests
-        to an installed extension runner. The gateway resolves the tenant from
-        x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in
-        development; verifies the extension is installed and enabled for that
-        tenant; forwards selected headers and all query parameters to
-        RUNNER_BASE_URL /v1/execute; and relays the runner response. GET
-        requests do not read a body and do not generate an idempotency key. The
-        gateway currently has a placeholder access check and does not enforce
-        per-extension RBAC beyond tenant install resolution.
+        to an installed extension runner. The gateway requires an authenticated
+        session and derives the tenant from that session, then forwards selected
+        headers and all query parameters to RUNNER_BASE_URL /v1/execute and
+        relays the runner response. The gateway fails closed unless the caller
+        has an authenticated session principal whose tenant matches the resolved
+        tenant. It requires an active tenant-owned install (is_enabled true and
+        status enabled), a declared endpoint on the installed version that
+        matches the effective method and path, the extension:read permission for
+        GET/HEAD requests or the extension:write permission for
+        POST/PUT/PATCH/DELETE requests for MSP users, or an explicit
+        client-portal opt-in with a resolvable client for client users, an
+        available rate-limit budget for the tenant and extension, and a durable
+        execution audit record. Header-only tenant resolution and DEV_TENANT_ID
+        never authorize execution. Runner and install internals are never
+        returned to callers. Tenant-selection headers are not accepted as
+        authentication and a header that disagrees with the session tenant fails
+        closed. GET requests do not read a body and do not generate an
+        idempotency key.
       tags:
         - Extension Gateway
       security:
@@ -31269,24 +31572,6 @@ paths:
             back to x-request-id when absent and forwards the key to the runner.
           name: x-idempotency-key
           in: header
-        - schema:
-            type: string
-            description: Internal tenant header used for tenant resolution before session
-              fallback.
-          required: false
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-          name: x-alga-tenant
-          in: header
-        - schema:
-            type: string
-            description: Legacy tenant header accepted for tenant resolution before session
-              fallback.
-          required: false
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
-          name: x-tenant-id
-          in: header
       responses:
         "200":
           description: Runner response relayed by the gateway. The actual status can vary
@@ -31298,15 +31583,26 @@ paths:
         "204":
           description: Runner returned no content, or CORS preflight for OPTIONS requests
             on this gateway path.
+        "401":
+          description: No authenticated session, or the session is missing a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
+        "403":
+          description: A tenant header conflicts with the authenticated session tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "404":
-          description: Extension is not installed or not enabled for the resolved tenant.
+          description: Extension is not installed or not enabled for the session tenant.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "500":
-          description: Tenant could not be resolved or another internal gateway error
-            occurred.
+          description: Another internal gateway error occurred.
           content:
             application/json:
               schema:
@@ -31321,17 +31617,26 @@ paths:
     post:
       summary: Forward POST request to extension runner
       description: Tenant-scoped extension gateway endpoint that forwards POST
-        requests to an installed extension runner. The gateway resolves the
-        tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID
-        in development; verifies the extension is installed and enabled for that
-        tenant; forwards selected headers, query parameters, and an optional
-        opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner
-        response. For POST requests the body is limited to 10 MB,
-        base64-encoded, and forwarded as http.body_b64. An x-idempotency-key
-        header is forwarded when supplied, otherwise the generated x-request-id
-        is used as the non-GET idempotency fallback. The gateway currently has a
-        placeholder access check and does not enforce per-extension RBAC beyond
-        tenant install resolution.
+        requests to an installed extension runner. The gateway requires an
+        authenticated session and derives the tenant from that session, then
+        forwards selected headers, query parameters, and an optional opaque body
+        to RUNNER_BASE_URL /v1/execute and relays the runner response. The
+        gateway fails closed unless the caller has an authenticated session
+        principal whose tenant matches the resolved tenant. It requires an
+        active tenant-owned install (is_enabled true and status enabled), a
+        declared endpoint on the installed version that matches the effective
+        method and path, the extension:read permission for GET/HEAD requests or
+        the extension:write permission for POST/PUT/PATCH/DELETE requests for
+        MSP users, or an explicit client-portal opt-in with a resolvable client
+        for client users, an available rate-limit budget for the tenant and
+        extension, and a durable execution audit record. Header-only tenant
+        resolution and DEV_TENANT_ID never authorize execution. Runner and
+        install internals are never returned to callers. Tenant-selection
+        headers are not accepted as authentication and a header that disagrees
+        with the session tenant fails closed. For POST requests the body is
+        limited to 10 MB, base64-encoded, and forwarded as http.body_b64. An
+        x-idempotency-key header is forwarded when supplied, otherwise the
+        generated x-request-id is used as the non-GET idempotency fallback.
       tags:
         - Extension Gateway
       security:
@@ -31384,24 +31689,6 @@ paths:
           description: Optional idempotency key for non-GET methods. The gateway falls
             back to x-request-id when absent and forwards the key to the runner.
           name: x-idempotency-key
-          in: header
-        - schema:
-            type: string
-            description: Internal tenant header used for tenant resolution before session
-              fallback.
-          required: false
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-          name: x-alga-tenant
-          in: header
-        - schema:
-            type: string
-            description: Legacy tenant header accepted for tenant resolution before session
-              fallback.
-          required: false
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
-          name: x-tenant-id
           in: header
       requestBody:
         description: Optional extension-specific POST body. The gateway accepts any
@@ -31424,8 +31711,20 @@ paths:
         "204":
           description: Runner returned no content, or CORS preflight for OPTIONS requests
             on this gateway path.
+        "401":
+          description: No authenticated session, or the session is missing a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
+        "403":
+          description: A tenant header conflicts with the authenticated session tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "404":
-          description: Extension is not installed or not enabled for the resolved tenant.
+          description: Extension is not installed or not enabled for the session tenant.
           content:
             application/json:
               schema:
@@ -31437,8 +31736,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "500":
-          description: Tenant could not be resolved or another internal gateway error
-            occurred.
+          description: Another internal gateway error occurred.
           content:
             application/json:
               schema:
@@ -31453,16 +31751,26 @@ paths:
     put:
       summary: Forward PUT request to extension runner
       description: Tenant-scoped extension gateway endpoint that forwards PUT requests
-        to an installed extension runner. The gateway resolves the tenant from
-        x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID in
-        development; verifies the extension is installed and enabled for that
-        tenant; forwards selected headers, query parameters, and an optional
-        opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner
-        response. For PUT requests the body is limited to 10 MB, base64-encoded,
-        and forwarded as http.body_b64. Clients should provide x-idempotency-key
-        for safe retries; otherwise the gateway falls back to a generated
-        request ID. The gateway currently has a placeholder access check and
-        does not enforce per-extension RBAC beyond tenant install resolution.
+        to an installed extension runner. The gateway requires an authenticated
+        session and derives the tenant from that session, then forwards selected
+        headers, query parameters, and an optional opaque body to
+        RUNNER_BASE_URL /v1/execute and relays the runner response. The gateway
+        fails closed unless the caller has an authenticated session principal
+        whose tenant matches the resolved tenant. It requires an active
+        tenant-owned install (is_enabled true and status enabled), a declared
+        endpoint on the installed version that matches the effective method and
+        path, the extension:read permission for GET/HEAD requests or the
+        extension:write permission for POST/PUT/PATCH/DELETE requests for MSP
+        users, or an explicit client-portal opt-in with a resolvable client for
+        client users, an available rate-limit budget for the tenant and
+        extension, and a durable execution audit record. Header-only tenant
+        resolution and DEV_TENANT_ID never authorize execution. Runner and
+        install internals are never returned to callers. Tenant-selection
+        headers are not accepted as authentication and a header that disagrees
+        with the session tenant fails closed. For PUT requests the body is
+        limited to 10 MB, base64-encoded, and forwarded as http.body_b64.
+        Clients should provide x-idempotency-key for safe retries; otherwise the
+        gateway falls back to a generated request ID.
       tags:
         - Extension Gateway
       security:
@@ -31515,24 +31823,6 @@ paths:
           description: Optional idempotency key for non-GET methods. The gateway falls
             back to x-request-id when absent and forwards the key to the runner.
           name: x-idempotency-key
-          in: header
-        - schema:
-            type: string
-            description: Internal tenant header used for tenant resolution before session
-              fallback.
-          required: false
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-          name: x-alga-tenant
-          in: header
-        - schema:
-            type: string
-            description: Legacy tenant header accepted for tenant resolution before session
-              fallback.
-          required: false
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
-          name: x-tenant-id
           in: header
       requestBody:
         description: Optional extension-specific PUT body. The gateway accepts any
@@ -31555,8 +31845,20 @@ paths:
         "204":
           description: Runner returned no content, or CORS preflight for OPTIONS requests
             on this gateway path.
+        "401":
+          description: No authenticated session, or the session is missing a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
+        "403":
+          description: A tenant header conflicts with the authenticated session tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "404":
-          description: Extension is not installed or not enabled for the resolved tenant.
+          description: Extension is not installed or not enabled for the session tenant.
           content:
             application/json:
               schema:
@@ -31568,8 +31870,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "500":
-          description: Tenant could not be resolved or another internal gateway error
-            occurred.
+          description: Another internal gateway error occurred.
           content:
             application/json:
               schema:
@@ -31584,16 +31885,27 @@ paths:
     patch:
       summary: Forward PATCH request to extension runner
       description: Tenant-scoped extension gateway endpoint that forwards PATCH
-        requests to an installed extension runner. The gateway resolves the
-        tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID
-        in development; verifies the extension is installed and enabled for that
-        tenant; forwards selected headers, query parameters, and an optional
-        opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner
-        response. For PATCH requests the body is limited to 10 MB,
-        base64-encoded, and forwarded as http.body_b64. Clients should provide
-        x-idempotency-key for safe retries; otherwise the gateway falls back to
-        a generated request ID. The gateway does not interpret PATCH semantics;
-        partial-update behavior is extension-defined.
+        requests to an installed extension runner. The gateway requires an
+        authenticated session and derives the tenant from that session, then
+        forwards selected headers, query parameters, and an optional opaque body
+        to RUNNER_BASE_URL /v1/execute and relays the runner response. The
+        gateway fails closed unless the caller has an authenticated session
+        principal whose tenant matches the resolved tenant. It requires an
+        active tenant-owned install (is_enabled true and status enabled), a
+        declared endpoint on the installed version that matches the effective
+        method and path, the extension:read permission for GET/HEAD requests or
+        the extension:write permission for POST/PUT/PATCH/DELETE requests for
+        MSP users, or an explicit client-portal opt-in with a resolvable client
+        for client users, an available rate-limit budget for the tenant and
+        extension, and a durable execution audit record. Header-only tenant
+        resolution and DEV_TENANT_ID never authorize execution. Runner and
+        install internals are never returned to callers. Tenant-selection
+        headers are not accepted as authentication and a header that disagrees
+        with the session tenant fails closed. For PATCH requests the body is
+        limited to 10 MB, base64-encoded, and forwarded as http.body_b64.
+        Clients should provide x-idempotency-key for safe retries; otherwise the
+        gateway falls back to a generated request ID. The gateway does not
+        interpret PATCH semantics; partial-update behavior is extension-defined.
       tags:
         - Extension Gateway
       security:
@@ -31646,24 +31958,6 @@ paths:
           description: Optional idempotency key for non-GET methods. The gateway falls
             back to x-request-id when absent and forwards the key to the runner.
           name: x-idempotency-key
-          in: header
-        - schema:
-            type: string
-            description: Internal tenant header used for tenant resolution before session
-              fallback.
-          required: false
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-          name: x-alga-tenant
-          in: header
-        - schema:
-            type: string
-            description: Legacy tenant header accepted for tenant resolution before session
-              fallback.
-          required: false
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
-          name: x-tenant-id
           in: header
       requestBody:
         description: Optional extension-specific PATCH body. The gateway accepts any
@@ -31686,8 +31980,20 @@ paths:
         "204":
           description: Runner returned no content, or CORS preflight for OPTIONS requests
             on this gateway path.
+        "401":
+          description: No authenticated session, or the session is missing a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
+        "403":
+          description: A tenant header conflicts with the authenticated session tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "404":
-          description: Extension is not installed or not enabled for the resolved tenant.
+          description: Extension is not installed or not enabled for the session tenant.
           content:
             application/json:
               schema:
@@ -31699,8 +32005,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "500":
-          description: Tenant could not be resolved or another internal gateway error
-            occurred.
+          description: Another internal gateway error occurred.
           content:
             application/json:
               schema:
@@ -31715,15 +32020,25 @@ paths:
     delete:
       summary: Forward DELETE request to extension runner
       description: Tenant-scoped extension gateway endpoint that forwards DELETE
-        requests to an installed extension runner. The gateway resolves the
-        tenant from x-alga-tenant, x-tenant-id, session cookie, or DEV_TENANT_ID
-        in development; verifies the extension is installed and enabled for that
-        tenant; forwards selected headers, query parameters, and an optional
-        opaque body to RUNNER_BASE_URL /v1/execute; and relays the runner
-        response. For DELETE requests the body, if present, is limited to 10 MB,
-        base64-encoded, and forwarded as http.body_b64. The gateway currently
-        has a placeholder access check and does not enforce per-extension RBAC
-        beyond tenant install resolution.
+        requests to an installed extension runner. The gateway requires an
+        authenticated session and derives the tenant from that session, then
+        forwards selected headers, query parameters, and an optional opaque body
+        to RUNNER_BASE_URL /v1/execute and relays the runner response. The
+        gateway fails closed unless the caller has an authenticated session
+        principal whose tenant matches the resolved tenant. It requires an
+        active tenant-owned install (is_enabled true and status enabled), a
+        declared endpoint on the installed version that matches the effective
+        method and path, the extension:read permission for GET/HEAD requests or
+        the extension:write permission for POST/PUT/PATCH/DELETE requests for
+        MSP users, or an explicit client-portal opt-in with a resolvable client
+        for client users, an available rate-limit budget for the tenant and
+        extension, and a durable execution audit record. Header-only tenant
+        resolution and DEV_TENANT_ID never authorize execution. Runner and
+        install internals are never returned to callers. Tenant-selection
+        headers are not accepted as authentication and a header that disagrees
+        with the session tenant fails closed. For DELETE requests the body, if
+        present, is limited to 10 MB, base64-encoded, and forwarded as
+        http.body_b64.
       tags:
         - Extension Gateway
       security:
@@ -31777,24 +32092,6 @@ paths:
             back to x-request-id when absent and forwards the key to the runner.
           name: x-idempotency-key
           in: header
-        - schema:
-            type: string
-            description: Internal tenant header used for tenant resolution before session
-              fallback.
-          required: false
-          description: Internal tenant header used for tenant resolution before session
-            fallback.
-          name: x-alga-tenant
-          in: header
-        - schema:
-            type: string
-            description: Legacy tenant header accepted for tenant resolution before session
-              fallback.
-          required: false
-          description: Legacy tenant header accepted for tenant resolution before session
-            fallback.
-          name: x-tenant-id
-          in: header
       requestBody:
         description: Optional extension-specific DELETE body. The gateway accepts any
           content type up to 10 MB and forwards it as base64.
@@ -31816,8 +32113,20 @@ paths:
         "204":
           description: Runner returned no content, or CORS preflight for OPTIONS requests
             on this gateway path.
+        "401":
+          description: No authenticated session, or the session is missing a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
+        "403":
+          description: A tenant header conflicts with the authenticated session tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "404":
-          description: Extension is not installed or not enabled for the resolved tenant.
+          description: Extension is not installed or not enabled for the session tenant.
           content:
             application/json:
               schema:
@@ -31829,8 +32138,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ExtensionGatewayErrorResponse"
         "500":
-          description: Tenant could not be resolved or another internal gateway error
-            occurred.
+          description: Another internal gateway error occurred.
           content:
             application/json:
               schema:
@@ -67450,7 +67758,10 @@ paths:
   /api/v1/opportunities/forecast:
     get:
       summary: Get forecast band
-      description: Returns floor and ceiling MRR/NRR with per-deal composition for a period.
+      description: "Returns floor and ceiling MRR/NRR with per-deal composition for a
+        period. Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67461,7 +67772,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -67497,7 +67807,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67523,8 +67836,10 @@ paths:
   /api/v1/opportunities/calibration:
     get:
       summary: Get seller calibration
-      description: Returns declared-confidence outcomes and new-logo agreement attach
-        rate per seller.
+      description: "Returns declared-confidence outcomes and new-logo agreement attach
+        rate per seller. Requires opportunity management: Community Edition
+        answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer
+        403 `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67535,7 +67850,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       responses:
@@ -67558,7 +67872,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67584,7 +67901,10 @@ paths:
   /api/v1/opportunities/meeting-sessions:
     post:
       summary: Start meeting session
-      description: Starts or resumes the caller’s same-day pipeline meeting session.
+      description: "Starts or resumes the caller’s same-day pipeline meeting session.
+        Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67595,7 +67915,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       responses:
@@ -67618,7 +67937,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67644,7 +67966,10 @@ paths:
   /api/v1/opportunities/meeting-sessions/active:
     get:
       summary: Get active meeting session
-      description: Returns the caller’s resumable same-day meeting session and reviews.
+      description: "Returns the caller’s resumable same-day meeting session and
+        reviews. Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67655,7 +67980,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       responses:
@@ -67678,7 +68002,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67704,7 +68031,10 @@ paths:
   /api/v1/opportunities/meeting-sessions/{sessionId}/reviews:
     post:
       summary: Mark deal reviewed
-      description: Creates or updates the review marker for a deal in a meeting session.
+      description: "Creates or updates the review marker for a deal in a meeting
+        session. Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67715,7 +68045,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -67751,7 +68080,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67777,7 +68109,10 @@ paths:
   /api/v1/opportunities/{id}/commitments:
     get:
       summary: List commitments
-      description: Lists the promises recorded for an opportunity.
+      description: "Lists the promises recorded for an opportunity. Requires
+        opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67788,7 +68123,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -67820,7 +68154,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67845,7 +68182,10 @@ paths:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
     post:
       summary: Create commitment
-      description: Records an unresolved promise on an opportunity.
+      description: "Records an unresolved promise on an opportunity. Requires
+        opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67856,7 +68196,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -67894,7 +68233,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67920,8 +68262,10 @@ paths:
   /api/v1/opportunities/{id}/commitments/{commitmentId}:
     put:
       summary: Update commitment
-      description: Edits or resolves a commitment to a downstream artifact or explicit
-        decline.
+      description: "Edits or resolves a commitment to a downstream artifact or
+        explicit decline. Requires opportunity management: Community Edition
+        answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer
+        403 `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -67932,7 +68276,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -67974,7 +68317,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -67999,7 +68345,9 @@ paths:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
     delete:
       summary: Delete commitment
-      description: Deletes a commitment.
+      description: "Deletes a commitment. Requires opportunity management: Community
+        Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro
+        answer 403 `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -68010,7 +68358,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -68042,7 +68389,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -68068,8 +68418,10 @@ paths:
   /api/v1/opportunities/qbr/{clientId}:
     get:
       summary: Get QBR trigger pack
-      description: Assembles renewal, aging/EOL asset, ticket-trend, and whitespace
-        triggers for an account.
+      description: "Assembles renewal, aging/EOL asset, ticket-trend, and whitespace
+        triggers for an account. Requires opportunity management: Community
+        Edition answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro
+        answer 403 `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -68080,7 +68432,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -68110,7 +68461,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -68136,7 +68490,10 @@ paths:
   /api/v1/opportunities/qbr/{clientId}/opportunities:
     post:
       summary: Create QBR opportunities
-      description: Batch-creates typed opportunities from current QBR trigger keys.
+      description: "Batch-creates typed opportunities from current QBR trigger keys.
+        Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -68147,7 +68504,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -68183,7 +68539,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -68209,8 +68568,10 @@ paths:
   /api/v1/opportunities/qbr/yield:
     get:
       summary: Get QBR yield
-      description: Returns fired, created, and won trigger counts by account and
-        account manager.
+      description: "Returns fired, created, and won trigger counts by account and
+        account manager. Requires opportunity management: Community Edition
+        answers 403 `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer
+        403 `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -68221,7 +68582,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       responses:
@@ -68244,7 +68604,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -68270,7 +68633,10 @@ paths:
   /api/v1/opportunities/rollups:
     get:
       summary: Get seller rollups
-      description: Returns period pipeline, outcomes, and attach rate by seller.
+      description: "Returns period pipeline, outcomes, and attach rate by seller.
+        Requires opportunity management: Community Edition answers 403
+        `ENTERPRISE_EDITION_REQUIRED`, and plans below Pro answer 403
+        `TIER_ACCESS_DENIED`."
       tags:
         - Opportunities v1
       security:
@@ -68281,7 +68647,6 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: opportunities
         x-tier-feature: OPPORTUNITY_MANAGEMENT
-        x-edition: EE
       x-alga-products:
         - psa
       parameters:
@@ -68317,7 +68682,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/OpportunityApiErrorV1"
         "403":
-          description: RBAC denied for the opportunities resource action.
+          description: RBAC denied for the opportunities resource action, or the caller’s
+            edition and plan do not include opportunity management
+            (`ENTERPRISE_EDITION_REQUIRED` in Community Edition;
+            `TIER_ACCESS_DENIED` below the Pro plan).
           content:
             application/json:
               schema:
@@ -71480,6 +71848,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InventoryApiErrorV1"
+  /api/v1/inventory/counts/{sessionId}/cancel:
+    post:
+      summary: Cancel a cycle count session
+      description: Cancels an in-progress cycle count and returns the cancelled
+        session. Quantities already recorded against the session stay on it but
+        are never applied to stock levels, since only approval posts them.
+        Cancelling an already-cancelled session returns it unchanged; an
+        approved session cannot be cancelled.
+      tags:
+        - Inventory v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
+        x-rbac-resource: cycle_count
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: sessionId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryLooseSuccessV1"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
+        "401":
+          description: API key missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
+        "403":
+          description: Product access, RBAC, or location scope denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
+        "404":
+          description: Inventory resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
+        "409":
+          description: Inventory state or uniqueness conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
+        "500":
+          description: Unexpected controller or service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryApiErrorV1"
   /api/v1/inventory/purchase-orders:
     get:
       summary: List purchase orders
@@ -74491,6 +74928,84 @@ paths:
         - psa
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/client-portal/sso/discover:
+    post:
+      summary: POST auth
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - auth
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/client-portal/sso/resolve:
+    post:
+      summary: POST auth
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - auth
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:
@@ -77745,6 +78260,241 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/inventory/sales-orders/{id}/document:
+    get:
+      summary: GET inventory
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - inventory
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/inventory/sales-orders/{id}/email-confirmation:
+    post:
+      summary: POST inventory
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - inventory
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/marketing/capture/{tenant}/{slug}:
+    post:
+      summary: POST marketing
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - marketing
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/marketing/track/click/{tenant}/{enrollmentId}/{stepId}:
+    get:
+      summary: GET marketing
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - marketing
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/marketing/track/open/{tenant}/{enrollmentId}/{stepId}:
+    get:
+      summary: GET marketing
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - marketing
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/marketing/unsubscribe/{tenant}/{enrollmentId}:
+    get:
+      summary: GET marketing
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - marketing
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST marketing
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - marketing
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/mcp:
     get:
       summary: GET mcp
@@ -78105,6 +78855,205 @@ paths:
         x-placeholder: true
       x-alga-products:
         - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/scim/v2/{connectionId}/{scimPath}:
+    delete:
+      summary: DELETE scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "204":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: GET scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    options:
+      summary: OPTIONS scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: PATCH scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: PUT scim
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - scim
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products: []
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
       responses:
         "200":
           description: Placeholder success response
@@ -79238,84 +80187,6 @@ paths:
         - psa
       responses:
         "200":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/financial/reconciliation/run:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - financial
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
-          description: Placeholder success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlaceholderObject"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/financial/reconciliation/{id}/resolve:
-    post:
-      summary: POST v1
-      description: This operation was generated automatically from the route
-        inventory. Replace with canonical OpenAPI metadata.
-      tags:
-        - financial
-      extensions:
-        x-generated-from: docs/openapi/route-inventory.json
-        x-placeholder: true
-      x-alga-products:
-        - psa
-      requestBody:
-        description: Placeholder request body
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PlaceholderObject"
-            description: Placeholder request body
-      responses:
-        "201":
           description: Placeholder success response
           content:
             application/json:
@@ -82507,6 +83378,75 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/webhooks/ai-gateway:
+    options:
+      summary: OPTIONS webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST webhooks
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - webhooks
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/webhooks/alternative-payments:
     get:
       summary: GET webhooks
@@ -83309,6 +84249,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/integrations/entra/mappings:
+    get:
+      summary: GET integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/integrations/entra/mappings/groups:
+    get:
+      summary: GET integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/integrations/entra/reconciliation-queue:
     get:
       summary: GET integrations
@@ -83324,6 +84328,46 @@ paths:
         - psa
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/integrations/entra/reconciliation-queue/dismiss:
+    post:
+      summary: POST integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:
@@ -83382,6 +84426,117 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /api/integrations/entra/reconciliation-queue/resolve-new:
+    post:
+      summary: POST integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/integrations/entra/schedule:
+    get:
+      summary: GET integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: POST integrations
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - integrations
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+        x-edition: EE
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/integrations/entra/sync/preflight:
     post:
       summary: POST integrations
       description: This operation was generated automatically from the route

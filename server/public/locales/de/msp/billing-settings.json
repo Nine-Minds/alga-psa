@@ -88,6 +88,43 @@
         "save": "Einstellungen konnten nicht gespeichert werden"
       }
     },
+    "creditDrawdown": {
+      "title": "Guthabenverrechnung",
+      "description": "Legen Sie fest, wann Kundenguthaben mit Rechnungen verrechnet wird und wie es verbraucht wird.",
+      "fields": {
+        "autoApply": {
+          "label": "Guthaben beim Abschluss automatisch verrechnen",
+          "help": "Wenn aktiviert, wird verfügbares Guthaben automatisch verrechnet, sobald eine Rechnung abgeschlossen wird"
+        },
+        "order": {
+          "label": "Reihenfolge der Guthabenverrechnung",
+          "placeholder": "Guthabenreihenfolge auswählen",
+          "help": "Wählen Sie die Reihenfolge, in der Guthaben verbraucht wird"
+        },
+        "serviceTypes": {
+          "label": "Berechtigte Servicetypen",
+          "help": "Legen Sie fest, ob Guthaben auf alle Gebühren oder nur auf Gebühren für die ausgewählten Servicetypen angewendet werden kann.",
+          "empty": "Keine Servicetypen konfiguriert.",
+          "restricted": "Guthaben ist auf die ausgewählten Servicetypen beschränkt.",
+          "mode": {
+            "all": "Alle Servicetypen",
+            "restricted": "Nur ausgewählte Typen"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Bald ablaufende zuerst",
+        "oldestFirst": "Ältestes Guthaben zuerst",
+        "newestFirst": "Neuestes Guthaben zuerst"
+      },
+      "toast": {
+        "updated": "Die Einstellungen für die Guthabenverrechnung wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Die Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden"
+      }
+    },
     "renewal": {
       "title": "Erneuerungsautomatisierung",
       "description": "Konfigurieren Sie das Standardverhalten, wenn Verträge ihr Verlängerungsdatum erreichen.",

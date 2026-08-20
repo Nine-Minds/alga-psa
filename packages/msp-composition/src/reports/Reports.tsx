@@ -1167,7 +1167,7 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const { t } = useTranslation('msp/reports');
   const [selectedReportId, setSelectedReportId] = useState<EmbeddedReportId>('ticket-workload');
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(30);
-  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
 
   const visibleReports = useMemo(
     () =>

@@ -92,6 +92,7 @@ exports.seed = async function(knex) {
         { resource: 'invoice', action: 'finalize', msp: true, client: false, description: 'Finalize invoices' },
         { resource: 'invoice', action: 'send', msp: true, client: false, description: 'Send invoices' },
         { resource: 'invoice', action: 'void', msp: true, client: false, description: 'Void invoices' },
+        { resource: 'invoice', action: 'credit', msp: true, client: false, description: 'Apply credits to invoices' },
         
         // Profile permissions
         { resource: 'profile', action: 'create', msp: true, client: false, description: 'Create profiles' },

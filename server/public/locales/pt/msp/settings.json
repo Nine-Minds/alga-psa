@@ -780,6 +780,8 @@
         "sections": {
           "general": "Geral",
           "generalHelp": "Nome, descrição, visibilidade e padrão",
+          "appearance": "Aparência e padrões",
+          "appearanceHelp": "Fixação da aba e visualização de lista padrão do quadro",
           "assignment": "Atribuição e SLA",
           "assignmentHelp": "Roteamento padrão, SLA e responsável pelo quadro",
           "inbound": "E-mail e respostas recebidas",
@@ -800,6 +802,22 @@
         "allSaved": "Todas as alterações salvas",
         "reopenBadge": "reabrir",
         "required": "Obrigatório"
+      },
+      "appearance": {
+        "pinLabel": "Fixar na tela de tickets",
+        "pinHelp": "Quadros fixados ganham uma aba permanente na tela de tickets. Quadros não fixados continuam acessíveis em \"Todos os tickets\" e no filtro de quadros.",
+        "savedView": "Visualização salva",
+        "inheritsTenant": "Herda os padrões do locatário",
+        "openBoard": "Abrir este quadro",
+        "resetToTenant": "Redefinir para o padrão do locatário",
+        "arrangeNote": "Organize a visualização deste quadro no próprio quadro e depois salve-a pelo menu \"Exibição\".",
+        "preview": "Pré-visualização",
+        "summary": {
+          "openOnly": "Somente abertos",
+          "columns": "{{columns}} colunas",
+          "density": "densidade {{level}}",
+          "sortedBy": "ordenado por {{field}}"
+        }
       },
       "empty": "Nenhum quadro encontrado.",
       "searchPlaceholder": "Pesquisar quadros…"

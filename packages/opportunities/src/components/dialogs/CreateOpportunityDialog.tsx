@@ -169,7 +169,7 @@ export function CreateOpportunityDialog({
   };
 
   const footer = (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex w-full items-center justify-between gap-3">
       <p
         id="opportunity-create-missing"
         className={`text-xs ${valid ? 'text-[rgb(var(--color-text-400))]' : 'text-[rgb(var(--color-text-600))]'}`}

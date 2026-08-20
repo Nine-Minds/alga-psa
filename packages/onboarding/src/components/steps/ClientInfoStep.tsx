@@ -3,13 +3,16 @@
 // Onboarding step: initial MSP + client identity capture.
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { validateEmailAddress } from '@alga-psa/validation';
+import { translateFieldValidation, validateEmailAddressField } from '@alga-psa/validation';
+import { getAllCountries, type ICountry } from '@alga-psa/clients/actions';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
 import {
   LOCALE_CONFIG,
@@ -24,12 +27,135 @@ interface ClientInfoStepProps extends StepProps {
 
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const { t } = useTranslation('msp/onboarding');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const { locale: currentLocale, setLocale } = useI18n();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Never gate onboarding.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [isLocaleChanging, setIsLocaleChanging] = useState(false);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+
+  useEffect(() => {
+    getAllCountries()
+      .then(setCountries)
+      .catch((error) => console.error('Failed to load countries:', error));
+  }, []);
+
+  const companyAddressSection = (
+    <div className="space-y-4 pt-4 border-t">
+      <div className="space-y-1">
+        <h3 className="text-lg font-medium">
+          {t('clientInfoStep.address.title', {
+            defaultValue: 'Company Address'
+          })}
+        </h3>
+        <p className="text-sm text-gray-600">
+          {t('clientInfoStep.address.description', {
+            defaultValue: 'Prefilled from your billing details — review and correct if needed. This address appears on your invoices and quotes.'
+          })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="companyAddressLine1">
+          {t('clientInfoStep.address.fields.addressLine1.label', {
+            defaultValue: 'Address Line 1'
+          })}
+        </Label>
+        <Input
+          id="companyAddressLine1"
+          value={data.companyAddressLine1 || ''}
+          onChange={(e) => updateData({ companyAddressLine1: e.target.value })}
+          placeholder={t('clientInfoStep.address.fields.addressLine1.placeholder', {
+            defaultValue: '123 Main St'
+          })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="companyAddressLine2">
+          {t('clientInfoStep.address.fields.addressLine2.label', {
+            defaultValue: 'Address Line 2'
+          })}
+        </Label>
+        <Input
+          id="companyAddressLine2"
+          value={data.companyAddressLine2 || ''}
+          onChange={(e) => updateData({ companyAddressLine2: e.target.value })}
+          placeholder={t('clientInfoStep.address.fields.addressLine2.placeholder', {
+            defaultValue: 'Suite 100'
+          })}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor="companyCity">
+            {t('clientInfoStep.address.fields.city.label', {
+              defaultValue: 'City'
+            })}
+          </Label>
+          <Input
+            id="companyCity"
+            value={data.companyCity || ''}
+            onChange={(e) => updateData({ companyCity: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="companyStateProvince">
+            {t('clientInfoStep.address.fields.stateProvince.label', {
+              defaultValue: 'State/Province'
+            })}
+          </Label>
+          <Input
+            id="companyStateProvince"
+            value={data.companyStateProvince || ''}
+            onChange={(e) => updateData({ companyStateProvince: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="companyPostalCode">
+            {t('clientInfoStep.address.fields.postalCode.label', {
+              defaultValue: 'Postal Code'
+            })}
+          </Label>
+          <Input
+            id="companyPostalCode"
+            value={data.companyPostalCode || ''}
+            onChange={(e) => updateData({ companyPostalCode: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="company-country-picker">
+          {t('clientInfoStep.address.fields.country.label', {
+            defaultValue: 'Country'
+          })}
+        </Label>
+        <CountryPicker
+          id="company-country-picker"
+          data-automation-id="company-country-picker"
+          value={data.companyCountryCode || ''}
+          onValueChange={(countryCode, countryName) =>
+            updateData({ companyCountryCode: countryCode, companyCountryName: countryName })
+          }
+          countries={countries}
+          labelStyle="none"
+          buttonWidth="full"
+          placeholder={t('clientInfoStep.address.fields.country.placeholder', {
+            defaultValue: 'Select Country'
+          })}
+        />
+      </div>
+    </div>
+  );
 
   const visibleLocales = useMemo(
     () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
@@ -191,6 +317,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           </p>
         </div>
 
+        {companyAddressSection}
+
         <Alert variant="info">
           <AlertDescription>
             <span className="font-semibold">
@@ -317,8 +445,9 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
             }
           }}
           onBlur={() => {
-            const error = validateEmailAddress(data.email || '');
-            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(error) }));
+            const result = translateFieldValidation(validateEmailAddressField(data.email || ''), tValidation);
+            setFieldErrors(prev => ({ ...prev, email: translateEmailValidationMessage(result.error) }));
+            setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
           }}
           placeholder={t('clientInfoStep.fields.email.placeholder', {
             defaultValue: 'john@acmeit.com'
@@ -327,6 +456,7 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           disabled
           className={fieldErrors.email ? 'border-red-500' : ''}
         />
+        <FieldWarnings warnings={fieldWarnings.email ?? []} />
         {fieldErrors.email && (
           <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
         )}
@@ -336,6 +466,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           })}
         </p>
       </div>
+
+      {companyAddressSection}
 
       <div className="space-y-4 pt-4 border-t">
         <Alert variant="warning" className="mb-4">

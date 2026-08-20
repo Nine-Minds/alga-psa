@@ -2,9 +2,12 @@
   "title": "Facturación",
   "overview": "Resumen",
   "tabs": {
-    "overview": "Resumen",
+    "hoursByService": "Horas por servicio",
     "invoices": "Facturas",
-    "quotes": "Cotizaciones"
+    "overview": "Resumen",
+    "quotes": "Cotizaciones",
+    "usageMetrics": "Métricas de uso",
+    "segments": "Por segmento"
   },
   "currentContractLine": "Línea de contrato actual",
   "nextInvoice": "Próxima factura",
@@ -171,6 +174,60 @@
     },
     "lineItems": {
       "searchPlaceholder": "Buscar o escribir un nombre de elemento personalizado..."
+    },
+    "detail": {
+      "accept": "Aceptar",
+      "acceptHint": "Al aceptar, confirma esta cotización. Su proveedor de servicios procederá en consecuencia.",
+      "acceptHintOptional": "Al aceptar, su selección de artículos opcionales se envía a su proveedor de servicios para su revisión.",
+      "acceptQuote": "Aceptar cotización",
+      "acceptedBanner": "Cotización aceptada.",
+      "acceptedBannerOptional": "Cotización aceptada. Sus artículos opcionales seleccionados se compartieron con su proveedor de servicios.",
+      "backToQuotes": "Volver a cotizaciones",
+      "cancel": "Cancelar",
+      "columns": {
+        "amount": "Importe",
+        "description": "Descripción",
+        "qty": "Cant.",
+        "rate": "Tarifa"
+      },
+      "confirmAccept": "¿Aceptar esta cotización? Se notificará a su proveedor de servicios.",
+      "confirmAcceptOptional": "¿Aceptar esta cotización con su selección actual de artículos opcionales? Sus elecciones se enviarán a su proveedor de servicios para su revisión.",
+      "confirmReject": "¿Rechazar esta cotización y enviar su comentario a su proveedor de servicios? Podrá revisarla y volver a enviarla.",
+      "discounts": "Descuentos",
+      "downloadFailed": "No se pudo descargar el PDF.",
+      "downloadFailedRetry": "No se pudo descargar el PDF. Inténtelo de nuevo.",
+      "downloadPdf": "Descargar PDF",
+      "downloading": "Descargando...",
+      "exclude": "Excluir",
+      "excluded": "Excluido",
+      "fallbackTitle": "Cotización {{id}}",
+      "include": "Incluir",
+      "included": "Incluido",
+      "lineItems": "Artículos",
+      "loading": "Cargando cotización...",
+      "notFound": "Cotización no encontrada",
+      "notes": "Notas",
+      "optional": "Opcional",
+      "optionalLockedHint": "La selección de artículos opcionales se bloquea cuando la cotización ya no espera su respuesta.",
+      "optionalToggleHint": "Active o desactive los artículos opcionales para ver su total preferido antes de responder.",
+      "poNumber": "Orden de compra n.º",
+      "quoteDate": "Fecha de la cotización",
+      "readyToRespond": "¿Listo para responder?",
+      "reject": "Rechazar",
+      "rejectCommentRequired": "Agregue un breve comentario antes de rechazar esta cotización.",
+      "rejectPlaceholder": "Indique qué debe cambiar",
+      "rejectPrompt": "Si esta cotización no le sirve, deje un comentario para que su proveedor de servicios pueda revisarla.",
+      "rejectQuote": "Rechazar cotización",
+      "rejectedBanner": "Cotización rechazada.",
+      "rejectedBannerWithReason": "Cotización rechazada: {{reason}}",
+      "savingSelections": "Guardando la selección de artículos opcionales...",
+      "scopeOfWork": "Alcance del trabajo",
+      "submitting": "Enviando...",
+      "subtotal": "Subtotal",
+      "tax": "Impuesto",
+      "termsAndConditions": "Términos y condiciones",
+      "total": "Total",
+      "validUntil": "Válido hasta"
     }
   },
   "enums": {
@@ -376,5 +433,14 @@
   "dashboard": {
     "prepaidHours": "Horas prepagadas",
     "viewBilling": "Ver facturación"
+  },
+  "hourBlocks": {
+    "title": "Bloques de horas de prepago",
+    "blockLabel": "Bloque de {{service}}",
+    "expiringSoon": "Vence en {{days}} d",
+    "hoursLeft": "Quedan {{hours}} h",
+    "expires": "Vence el {{date}}",
+    "recentBurn": "Consumo reciente",
+    "timeEntry": "Entrada de tiempo"
   }
 }

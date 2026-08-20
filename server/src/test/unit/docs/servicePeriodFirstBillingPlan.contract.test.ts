@@ -111,9 +111,13 @@ const persistedReaderExclusions = new Set([
 // check so the inventory remains an accurate record of its point in time.
 const billingCycleAlignmentPostInventoryRefs = new Set([
   'packages/billing/src/services/quoteConversionService.ts',
+  // Prepaid balance alert subscriber integration test (feature/low-balance-alerts)
+  // seeds billing_cycle_alignment in fixtures; landed after the pass-0 snapshot.
+  'server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/deferredRevenueReport.integration.test.ts',
   'server/src/lib/api/openapi/routes/contractLines.ts',
   'server/src/lib/mcp/registry.generated.ts',
+  'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
 ]);
@@ -140,6 +144,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.test.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/fee.ts',
   'packages/reporting/src/actions/report-actions/deferred-revenue/loaders.ts',
+  // Prepaid hour-block charge computation stamps servicePeriodStart/End onto
+  // the charges it emits; it landed with the ad-hoc hour-blocks work, well
+  // after the pass-0 snapshot.
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.test.ts',
   // Project-billing wave tests (feature/project-billing) landed after the
   // pass-0 snapshot and reference service-period fields in fixtures/assertions.
   'packages/billing/src/actions/accountingExportActions.test.ts',
@@ -163,6 +172,11 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts',
   'packages/billing/src/lib/billing/compute/productionGolden.test.ts',
   'packages/billing/src/lib/billing/compute/types.ts',
+  // Ad-hoc prepaid hour blocks (feature/ad-hoc-prepaid-hour-blocks) compute
+  // landed after the pass-0 snapshot and reads persisted service-period
+  // boundaries when allocating hour-block charges.
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.test.ts',
+  'packages/billing/src/lib/billing/compute/computeHourBlockCharges.ts',
   // Contract-simulator scenario interfaces mirror service-period fields for
   // simulated invoice lines; the simulator landed after the pass-0 snapshot.
   'packages/types/src/interfaces/contractSimulation.interfaces.ts',
@@ -202,9 +216,26 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/recurringDueWorkReader.integration.test.ts',
   'server/src/test/unit/billing/recurringServicePeriodActions.test.ts',
   'server/src/test/unit/billing/updateClientBillingSchedule.test.ts',
+  // Credit draw-down policy suite (feature/credit-drawdown-policy-controls)
+  // landed after the pass-0 snapshot and seeds invoice charges with persisted
+  // service-period columns in its fixtures.
+  'server/src/test/infrastructure/billing/credits/creditDrawdownPolicy.test.ts',
+  'server/src/test/infrastructure/billing/credits/creditServiceTypeRestrictionMode.test.ts',
+  'server/src/test/infrastructure/billing/credits/invoiceCreditReversalLifecycle.test.ts',
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
+  // Batched fixed-charge preview loader suite seeds persisted service-period
+  // rows in its fixtures; it landed after the pass-0 snapshot.
+  'packages/billing/tests/billingEngine.previewFixedAmounts.batchedLoad.test.ts',
   'shared/billingClients/recurringDueWork.ts',
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',
+  // PO overage dialog suite (feature/po-overage-dialog-nan-amount-and-100x-overstatem)
+  // landed after the pass-0 snapshot and seeds invoice candidates with persisted
+  // service-period columns in its fixtures.
+  'packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx',
+  // T013 golden-output gate (billing-profiles S1) landed after the pass-0
+  // snapshot; its baseline fixtures assert persisted service-period columns.
+  'server/src/test/integration/billing/goldenOutput/baseline.json',
+  'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

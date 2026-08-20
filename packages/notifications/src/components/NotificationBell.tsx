@@ -19,7 +19,7 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
 
   // Configurable notification priorities (task 29.8.46) — every user-visible
   // change is gated behind this flag. Flag off reproduces today's markup exactly.
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
 
   // Use the internal notifications hook
   const {

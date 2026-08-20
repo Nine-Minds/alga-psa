@@ -17,6 +17,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
     adapterType: AccountingAdapterType;
     companyId: string;
     targetRealm?: string | null;
+    algaEntityType?: string;
   }): Promise<CompanyMappingLookupResult | null> {
     const row = await this.lookupMapping(params);
     if (!row) {
@@ -35,6 +36,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         record.tenantId,
         record.adapterType,
         record.targetRealm ?? 'default',
+        record.algaEntityType ?? 'client',
         record.algaCompanyId
       ].join(':');
 
@@ -47,7 +49,8 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         tenantId: record.tenantId,
         adapterType: record.adapterType,
         companyId: record.algaCompanyId,
-        targetRealm: record.targetRealm ?? null
+        targetRealm: record.targetRealm ?? null,
+        algaEntityType: record.algaEntityType
       };
 
       const existing = await this.lookupMapping(lookupParams, trx);
@@ -60,7 +63,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         id: trx.raw('gen_random_uuid()'),
         tenant: record.tenantId,
         integration_type: record.adapterType,
-        alga_entity_type: 'client',
+        alga_entity_type: record.algaEntityType ?? 'client',
         alga_entity_id: record.algaCompanyId,
         external_entity_id: record.externalCompanyId,
         external_realm_id: record.targetRealm ?? null,
@@ -83,13 +86,14 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
       adapterType: AccountingAdapterType;
       companyId: string;
       targetRealm?: string | null;
+      algaEntityType?: string;
     },
     executor: Knex | Knex.Transaction = this.knex
   ) {
     const query = tenantDb(executor, params.tenantId).table(TABLE_NAME)
       .where({
         integration_type: params.adapterType,
-        alga_entity_type: 'client',
+        alga_entity_type: params.algaEntityType ?? 'client',
         alga_entity_id: params.companyId
       })
       .orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');

@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
@@ -35,6 +35,7 @@ import {
   buildRecurringServicePeriodDueSelectionQuery,
   selectDueRecurringServicePeriodRecords,
 } from '@alga-psa/shared/billingClients/recurringServicePeriodDueSelection';
+import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers';
 
 let db: Knex;
 let tenantId: string;
@@ -167,6 +168,7 @@ describe('Billing Invoice Timing Integration', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
+    wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.E2E_AUTH_BYPASS = 'true';
     process.env.DB_USER_ADMIN = process.env.DB_USER_ADMIN || 'postgres';
@@ -1472,6 +1474,75 @@ it('parity: recurring due-work blocks uniquely assignable unassigned hourly time
   await expect(
     generateInvoiceForSelectionInput(blockedCandidate!.members[0]!.selectorInput),
   ).rejects.toThrow('1 unapproved entry');
+}, HOOK_TIMEOUT);
+
+it('T047: DB-backed unresolved discovery hydrates only the billing period containing eligible non-contract time', async () => {
+  setupCommonMocks({ tenantId, userId: 'bulk-unresolved-discovery-user', permissionCheck: () => true });
+
+  const {
+    contextLike,
+    clientId,
+    currentPeriodStart,
+    nextPeriodStart,
+  } = await createClientWithRecurringCycles({
+    clientName: 'Bulk Unresolved Discovery Client',
+    billingCycle: 'monthly',
+    previousPeriodStart: '2024-12-01',
+    currentPeriodStart: '2025-01-01',
+    nextPeriodStart: '2025-02-01',
+  });
+  const serviceId = await createTestService(contextLike as any, {
+    service_name: 'Bulk Unresolved Discovery Service',
+    billing_method: 'hourly',
+    default_rate: 12500,
+    unit_of_measure: 'hour',
+    tax_region: 'US-NY',
+  });
+  await ensureUsdServicePrice(serviceId, 12500);
+
+  const eligibleEntry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId,
+    contractLineId: null,
+    startTime: '2025-01-15T10:00:00.000Z',
+    endTime: '2025-01-15T11:00:00.000Z',
+    approvalStatus: 'APPROVED',
+    billableDuration: 60,
+  });
+  const ineligibleEntry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId,
+    contractLineId: null,
+    startTime: '2024-12-15T10:00:00.000Z',
+    endTime: '2024-12-15T11:00:00.000Z',
+    approvalStatus: 'SUBMITTED',
+    billableDuration: 60,
+  });
+
+  const dueWork = await getAvailableRecurringDueWorkAction({
+    page: 1,
+    pageSize: 20,
+    searchTerm: 'Bulk Unresolved Discovery Client',
+  });
+  const unresolvedRows = dueWork.invoiceCandidates
+    .flatMap((candidate) => candidate.members)
+    .filter((member) => member.clientId === clientId && member.recordId.startsWith('unresolved:'));
+
+  expect(unresolvedRows).toHaveLength(1);
+  expect(unresolvedRows[0]).toMatchObject({
+    recordId: `unresolved:time:${eligibleEntry.entry_id}`,
+    scheduleKey: `schedule:${tenantId}:unresolved:time:${eligibleEntry.entry_id}`,
+    clientId,
+    clientName: 'Bulk Unresolved Discovery Client',
+    chargeType: 'Hourly',
+    canGenerate: true,
+    approvalBlockedEntryCount: 0,
+  });
+  expect(normalizeDateValue(unresolvedRows[0]?.invoiceWindowStart)).toBe(currentPeriodStart);
+  expect(normalizeDateValue(unresolvedRows[0]?.invoiceWindowEnd)).toBe(nextPeriodStart);
+  expect(
+    unresolvedRows.some((member) => member.recordId === `unresolved:time:${ineligibleEntry.entry_id}`),
+  ).toBe(false);
 }, HOOK_TIMEOUT);
 
 it('T002: recurring due-work does not block a window for unrelated non-approved time outside that window service-period semantics', async () => {
@@ -5042,7 +5113,7 @@ async function createClientWithRecurringCycles(
   const previousPeriodEnd = Temporal.PlainDate.from(currentPeriodStart).subtract({ days: 1 }).toString();
   const currentPeriodEnd = Temporal.PlainDate.from(nextPeriodStart).subtract({ days: 1 }).toString();
 
-  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+  await seedBillingCycle(db, tenantId, {
     billing_cycle_id: uuidv4(),
     tenant: tenantId,
     client_id: clientId,
@@ -5055,7 +5126,7 @@ async function createClientWithRecurringCycles(
   });
 
   const cycleId = uuidv4();
-  await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+  await seedBillingCycle(db, tenantId, {
     billing_cycle_id: cycleId,
     tenant: tenantId,
     client_id: clientId,

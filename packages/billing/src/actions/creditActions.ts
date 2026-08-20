@@ -8,7 +8,10 @@ import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
+import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
+import type { CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -55,7 +58,6 @@ type CreditTrackingRow = Omit<ICreditTracking, 'expiration_date'> & DbRow & {
 };
 type CreditAllocationRow = DbRow & {
     amount: number;
-    total_applied?: string | number | null;
 };
 
 type CreditActionTableRows = {
@@ -459,6 +461,108 @@ export async function resolveCreditExpirationDate(
     return undefined;
 }
 
+export { resolveCreditDrawdownPolicy };
+
+/**
+ * Server-action wrapper over resolveCreditDrawdownPolicy so client components
+ * can surface the resolved draw-down policy (the "Use Default" inherited
+ * display and the order note on the manual credit-application dialog).
+ */
+export const getResolvedCreditDrawdownPolicy = withAuth(async (
+    user,
+    { tenant },
+    clientId: string
+): Promise<CreditDrawdownPolicy | CreditActionError> => {
+    return withCreditActionErrors(async () => {
+        if (!await hasPermission(user, 'credit', 'read')) {
+            throw new Error('Permission denied: Cannot read client credits');
+        }
+
+        const { knex } = await createTenantKnex();
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return resolveCreditDrawdownPolicy(trx, tenant, clientId);
+        });
+    });
+});
+
+/**
+ * Sum the invoice charges eligible for credit application under the resolved
+ * policy: charges on contracts opted out of credit draw-down are excluded, and
+ * when a service-type restriction is set, only charges whose resolved service
+ * type is in the list count (charges with no `service_id` are conservatively
+ * ineligible). Eligibility is computed from stored charge totals (tax included,
+ * per charge) — no proportional tax attribution is attempted.
+ */
+async function computeEligibleCreditAmount(
+    trx: Knex.Transaction,
+    tenant: string,
+    invoiceId: string,
+    policy: CreditDrawdownPolicy
+): Promise<number> {
+    const charges = (await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .select('total_price', 'net_amount', 'service_id', 'client_contract_id')) as Array<{
+        total_price: number | string | null;
+        net_amount: number | string | null;
+        service_id: string | null;
+        client_contract_id: string | null;
+    }>;
+
+    const contractIds = Array.from(new Set(
+        charges
+            .map((charge) => charge.client_contract_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ));
+
+    let optedOutContractIds = new Set<string>();
+    if (contractIds.length > 0) {
+        const optedOutRows = (await tenantScopedTable(trx, tenant, 'client_contracts')
+            .whereIn('client_contract_id', contractIds)
+            .where('credit_drawdown_opt_out', true)
+            .select('client_contract_id')) as Array<{ client_contract_id: string }>;
+        optedOutContractIds = new Set(optedOutRows.map((row) => row.client_contract_id));
+    }
+
+    const serviceRestriction = policy.eligibleServiceTypeIds;
+    let serviceTypeByServiceId = new Map<string, string>();
+    if (serviceRestriction !== null) {
+        const serviceIds = Array.from(new Set(
+            charges
+                .map((charge) => charge.service_id)
+                .filter((id): id is string => typeof id === 'string' && id.length > 0)
+        ));
+        if (serviceIds.length > 0) {
+            const catalogRows = (await tenantScopedTable(trx, tenant, 'service_catalog')
+                .whereIn('service_id', serviceIds)
+                .select('service_id', 'custom_service_type_id')) as Array<{ service_id: string; custom_service_type_id: string }>;
+            for (const row of catalogRows) {
+                serviceTypeByServiceId.set(row.service_id, row.custom_service_type_id);
+            }
+        }
+    }
+
+    const eligibleSet = serviceRestriction !== null ? new Set(serviceRestriction) : null;
+
+    let eligibleAmount = 0;
+    for (const charge of charges) {
+        if (charge.client_contract_id && optedOutContractIds.has(charge.client_contract_id)) {
+            continue;
+        }
+        if (eligibleSet !== null) {
+            if (!charge.service_id) {
+                continue;
+            }
+            const serviceTypeId = serviceTypeByServiceId.get(charge.service_id);
+            if (!serviceTypeId || !eligibleSet.has(serviceTypeId)) {
+                continue;
+            }
+        }
+        eligibleAmount += Number(charge.total_price ?? charge.net_amount ?? 0);
+    }
+
+    return eligibleAmount;
+}
+
 /**
  * Grant credit to a client directly — no invoice is created. Writes the
  * credit_issuance transaction and credit_tracking entry atomically, so the
@@ -470,7 +574,15 @@ export const grantCredit = withAuth(async (
     clientId: string,
     amount: number,
     manualExpirationDate?: string,
-    description?: string
+    description?: string,
+    /**
+     * Which of the client's billing entities holds this credit (F108).
+     * Omitted for an unsegmented client, where it resolves to the only profile
+     * there is. Once a client is segmented, issuing to the wrong profile means
+     * the credit cannot pay the invoice it was meant for — so this is asked
+     * explicitly rather than guessed from the invoice that prompted it.
+     */
+    billingProfileId?: string
 ): Promise<ICreditTracking | CreditActionError> => {
     return withCreditActionErrors(async () => {
     if (!await hasPermission(user, 'credit', 'create')) {
@@ -495,6 +607,12 @@ export const grantCredit = withAuth(async (
         }
 
         const clientCurrency = client.default_currency_code || 'USD';
+        const creditBillingProfileId = await resolvePaymentBillingProfileId(
+            trx,
+            tenant,
+            clientId,
+            billingProfileId ?? null
+        );
         const expirationDate = await resolveCreditExpirationDate(trx, tenant, clientId, manualExpirationDate);
 
         const currentBalance = await tenantScopedTable(trx, tenant, 'transactions')
@@ -508,6 +626,7 @@ export const grantCredit = withAuth(async (
         await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: transactionId,
             client_id: clientId,
+            billing_profile_id: creditBillingProfileId,
             amount,
             type: 'credit_issuance',
             status: 'completed',
@@ -525,6 +644,7 @@ export const grantCredit = withAuth(async (
                 credit_id: creditId,
                 tenant,
                 client_id: clientId,
+                billing_profile_id: creditBillingProfileId,
                 transaction_id: transactionId,
                 amount,
                 remaining_amount: amount,
@@ -581,7 +701,13 @@ export const createPrepaymentInvoice = withAuth(async (
     { tenant },
     clientId: string,
     amount: number,
-    manualExpirationDate?: string
+    manualExpirationDate?: string,
+    /**
+     * Which entity is prepaying (F096). Omitted for an unsegmented client,
+     * where it resolves to the only profile there is. The credit this invoice
+     * issues inherits the same profile, so it can pay that entity's invoices.
+     */
+    billingProfileId?: string
 ): Promise<IInvoice | CreditActionError> => {
     return withCreditActionErrors(async () => {
     // Check permission for credit creation
@@ -618,11 +744,18 @@ export const createPrepaymentInvoice = withAuth(async (
 
         // Get client's currency
         const clientCurrency = client.default_currency_code || 'USD';
+        const prepaymentProfileId = await resolvePaymentBillingProfileId(
+            trx,
+            tenant,
+            clientId,
+            billingProfileId ?? null
+        );
 
         // Create the prepayment invoice
         const [createdInvoice] = await tenantScopedTable(trx, tenant, 'invoices')
             .insert({
                 client_id: clientId,
+                billing_profile_id: prepaymentProfileId,
                 tenant,
                 invoice_date: new Date().toISOString(),
                 due_date: new Date().toISOString(), // Due immediately
@@ -701,13 +834,32 @@ export async function applyCreditToInvoiceInternal(
     }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Check if the invoice already has credit applied and get its currency
+        // Check if the invoice already has credit applied and get its currency.
+        //
+        // FOR UPDATE serializes concurrent applications to the same invoice:
+        // the remaining eligible headroom is derived from `credit_applied`
+        // read here, so this row lock must be taken BEFORE that read and held
+        // until every write this application performs (credit_tracking
+        // draw-down, transactions, credit_allocations, the credit_applied
+        // increment) commits with this transaction. An overlapping call blocks
+        // on this SELECT and, once the winner commits, re-reads the committed
+        // credit_applied — without the lock both callers observe the same
+        // headroom and can jointly exceed the eligible cap. Every entry path
+        // (finalize auto-apply, the manual applyCreditToInvoice action, and
+        // the REST services) funnels through this function, which always owns
+        // this transaction, so this is the single serialization point.
+        //
+        // It also honours the shared lock order every credit writer follows —
+        // invoice row first, then credit rows in stable credit_id order — so
+        // application serializes against a concurrent void/unfinalize/
+        // hard-delete reversal instead of interleaving with it.
         const invoice = await tenantScopedTable(trx, tenant, 'invoices')
             .where({
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'currency_code', 'project_id')
+            .select('credit_applied', 'currency_code', 'project_id', 'billing_profile_id')
+            .forUpdate()
             .first();
 
         if (!invoice) {
@@ -715,17 +867,22 @@ export async function applyCreditToInvoiceInternal(
         }
 
         const invoiceCurrency = invoice.currency_code || 'USD';
+        // Credit application is constrained to the invoice's own billing
+        // profile (F111, decision D7). Sibling profiles are separately billed
+        // entities with different owners and different cards — a credit issued
+        // to one silently paying another's invoice is a real AR defect, not a
+        // convenience. Pre-profile invoices carry no profile and fall back to
+        // the client-wide pool, which is what they have always drawn on.
+        const invoiceBillingProfileId = (invoice.billing_profile_id as string | null) ?? null;
         
-        // Check if credit has already been applied to this invoice
-        const existingCreditAllocations = await tenantScopedTable(trx, tenant, 'credit_allocations')
-            .where({
-                invoice_id: invoiceId,
-                tenant
-            })
-            .sum('amount as total_applied')
-            .first();
-        
-        const alreadyAppliedCredit = Number(existingCreditAllocations?.total_applied || 0);
+        // Credit already applied to this invoice. Read the canonical
+        // `credit_applied` column rather than summing `credit_allocations`:
+        // allocation rows are append-only and survive a reversal/void, so a
+        // gross sum would permanently consume eligible headroom after a
+        // reversal. The column is zeroed by the reversal path
+        // (reverseCreditApplicationsForInvoice), so it correctly frees the
+        // headroom.
+        const alreadyAppliedCredit = Number(invoice.credit_applied || 0);
         
         // If credit has already been applied, check if we're trying to apply more
         if (alreadyAppliedCredit > 0) {
@@ -758,9 +915,6 @@ export async function applyCreditToInvoiceInternal(
             requestedAmount = adjustedRequestedAmount;
         }
         
-        // Available credit in the invoice's currency, derived from tracking rows
-        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
-
         // A non-positive request is the only safe early exit. Even when the
         // invoice-currency balance is zero, inspect tracking rows below so a
         // client with credit in another currency gets the explicit mismatch
@@ -768,10 +922,44 @@ export async function applyCreditToInvoiceInternal(
         if (requestedAmount <= 0) {
             return;
         }
-        
-        // Get all active credit tracking entries for this client in the same currency as the invoice
+
+        // Resolve the draw-down policy (auto-apply toggle is enforced only in
+        // finalize; here we honor eligibility + ordering). The eligible-amount
+        // clamp itself is deferred until after the cross-currency validation
+        // below, so an invoice with no eligible charges cannot silently swallow
+        // the explicit currency-mismatch error.
+        const policy = await resolveCreditDrawdownPolicy(trx, tenant, clientId);
+
+        const creditOrderBy: Array<{ column: string; order: 'asc' | 'desc'; nulls?: 'last' }> =
+            policy.applicationOrder === 'oldest_first'
+                ? [
+                    { column: 'created_at', order: 'asc' },
+                    { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                ]
+                : policy.applicationOrder === 'newest_first'
+                    ? [
+                        { column: 'created_at', order: 'desc' },
+                        { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                    ]
+                    : [
+                        { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                        { column: 'created_at', order: 'asc' },
+                    ];
+
+        // Get all active credit tracking entries for this client in the same currency as the invoice.
+        //
+        // FOR UPDATE: `remaining_amount` is decremented below from the value
+        // read here, so concurrent applications for the same client (to a
+        // *different* invoice — same-invoice calls are already serialized by
+        // the invoice row lock above) must not interleave between this read
+        // and that write, or one decrement silently overwrites the other and
+        // the same credit is spent twice. Lock order is deadlock-safe: every
+        // application locks its invoice row first, then the client's credit
+        // rows in the same per-client ORDER BY. The client-currency balance
+        // that feeds the transaction's `balance_after` is also read only
+        // after this lock is held (see below).
         const now = new Date().toISOString();
-        let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
+        const creditEntriesQuery = tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
@@ -782,11 +970,20 @@ export async function applyCreditToInvoiceInternal(
                 this.whereNull('expiration_date')
                     .orWhere('expiration_date', '>', now);
             })
-            .where('remaining_amount', '>', 0)
-            .orderBy([
-                { column: 'expiration_date', order: 'asc', nulls: 'last' }, // Prioritize credits with expiration dates (oldest first)
-                { column: 'created_at', order: 'asc' } // For credits with same expiration date or no expiration, use FIFO
-            ]);
+            .where('remaining_amount', '>', 0);
+        if (invoiceBillingProfileId) {
+            creditEntriesQuery.where(function () {
+                this.where('billing_profile_id', invoiceBillingProfileId)
+                    // Credit issued before profiles existed belongs to the
+                    // client as a whole and stays spendable on any of its
+                    // invoices — narrowing it would strand money a client
+                    // already holds. Everything issued since carries a profile.
+                    .orWhereNull('billing_profile_id');
+            });
+        }
+        let creditEntries = await creditEntriesQuery
+            .orderBy(creditOrderBy)
+            .forUpdate();
 
         if (creditEntries.length === 0) {
             // Check if there are credits in other currencies
@@ -807,6 +1004,21 @@ export async function applyCreditToInvoiceInternal(
             console.log(`No valid credit entries found for client ${clientId}`);
             return;
         }
+
+        // Available credit in the invoice's currency, derived from tracking
+        // rows. This read must come AFTER the credit_tracking FOR UPDATE
+        // above: the invoice row lock only serializes same-invoice callers, so
+        // a concurrent application for the same client against a *different*
+        // invoice can commit while this one is en route to the credit-row
+        // lock. A pre-lock read would then persist a stale `balance_after` on
+        // the credit_application transaction below. Under READ COMMITTED this
+        // statement takes a fresh snapshot once the lock wait ends, so it
+        // reflects every committed draw-down; it runs before this
+        // application's own decrements, so `availableCredit -
+        // totalAppliedAmount` is the true post-application balance. Scoped to
+        // the invoice's billing profile (F111/D7): sibling profiles' credit
+        // never counts toward this profile's balance.
+        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency, invoiceBillingProfileId);
 
         const invoiceProjectId = invoice.project_id ?? null;
         if (invoiceProjectId) {
@@ -851,23 +1063,58 @@ export async function applyCreditToInvoiceInternal(
             }
         }
         
+        // Cap the request at the eligible amount now that same-currency credits
+        // are confirmed to exist. Over-cap requests clamp (mirroring the existing
+        // clamp-to-remaining-invoice behavior above), not error. The cap is the
+        // *remaining* eligible headroom so repeated applications cannot
+        // cumulatively exceed the eligible subtotal (each prior allocation
+        // already consumes part of it).
+        const eligibleAmount = await computeEligibleCreditAmount(trx, tenant, invoiceId, policy);
+        const remainingEligible = Math.max(0, eligibleAmount - alreadyAppliedCredit);
+        if (requestedAmount > remainingEligible) {
+            requestedAmount = remainingEligible;
+        }
+        if (requestedAmount <= 0) {
+            console.log(`No eligible credit amount for invoice ${invoiceId}; skipping application.`);
+            return;
+        }
+
+        // Lock the candidate credit rows in stable credit_id order (the same
+        // order the reversal primitive uses after locking the invoice row) and
+        // re-read remaining_amount under the lock: a concurrent apply or
+        // reversal that committed between the unlocked candidate scan above
+        // and this point must be visible before any balance is drawn down, or
+        // the pool could be over-drawn / a restore lost.
+        const candidateCreditIds = creditEntries
+            .map((credit) => String(credit.credit_id))
+            .sort();
+        const lockedCreditRows = await tenantScopedTable(trx, tenant, 'credit_tracking')
+            .whereIn('credit_id', candidateCreditIds)
+            .orderBy('credit_id', 'asc')
+            .forUpdate()
+            .select('credit_id', 'remaining_amount');
+        const lockedRemainingByCreditId = new Map<string, number>(
+            lockedCreditRows.map((row) => [String(row.credit_id), Number(row.remaining_amount)])
+        );
+
         let remainingRequestedAmount = requestedAmount;
         let totalAppliedAmount = 0;
         const appliedCredits: { creditId: string, amount: number, transactionId: string }[] = [];
-        
+
         // Apply credits in order of expiration date until the requested amount is fulfilled
         for (const credit of creditEntries) {
             if (remainingRequestedAmount <= 0) break;
-            
+
+            const lockedRemainingAmount = lockedRemainingByCreditId.get(String(credit.credit_id)) ?? 0;
             const amountToApplyFromCredit = Math.min(
                 remainingRequestedAmount,
-                Number(credit.remaining_amount)
+                lockedRemainingAmount
             );
-            
+
             if (amountToApplyFromCredit <= 0) continue;
-            
+
             // Update the credit tracking entry
-            const newRemainingAmount = Number(credit.remaining_amount) - amountToApplyFromCredit;
+            const newRemainingAmount = lockedRemainingAmount - amountToApplyFromCredit;
             await tenantScopedTable(trx, tenant, 'credit_tracking')
                 .where({ credit_id: credit.credit_id })
                 .update({
@@ -900,6 +1147,7 @@ export async function applyCreditToInvoiceInternal(
         const [creditTransaction] = await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: uuidv4(),
             client_id: clientId,
+            billing_profile_id: invoiceBillingProfileId,
             invoice_id: invoiceId,
             amount: -totalAppliedAmount,
             type: 'credit_application',
@@ -918,6 +1166,9 @@ export async function applyCreditToInvoiceInternal(
             allocation_id: allocationId,
             transaction_id: creditTransaction.transaction_id,
             invoice_id: invoiceId,
+            // The profile whose credit paid, which by the constraint above is
+            // also the profile the invoice belongs to (F109).
+            billing_profile_id: invoiceBillingProfileId,
             amount: totalAppliedAmount,
             created_at: now,
             tenant

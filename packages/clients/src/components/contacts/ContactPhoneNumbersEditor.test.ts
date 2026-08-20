@@ -27,6 +27,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     expect(rows).toEqual([
       {
         phone_number: '+1 555-246-8135',
+        extension: null,
         canonical_type: 'work',
         custom_type: null,
         is_default: true,
@@ -35,6 +36,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
       },
       {
         phone_number: '',
+        extension: null,
         canonical_type: null,
         custom_type: '',
         is_default: false,
@@ -69,6 +71,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
     expect(rows).toEqual([
       {
         phone_number: '+1 555-246-8135',
+        extension: null,
         canonical_type: 'work',
         custom_type: null,
         is_default: true,
@@ -77,6 +80,7 @@ describe('ContactPhoneNumbersEditor helpers', () => {
       },
       {
         phone_number: '+1 646-555-1212 ext. 7',
+        extension: null,
         canonical_type: null,
         custom_type: 'After Hours',
         is_default: false,
@@ -103,6 +107,56 @@ describe('ContactPhoneNumbersEditor helpers', () => {
         },
       ])
     ).toContain('Phone 2: Enter a custom phone type.');
+  });
+
+  it('requires an explicit international prefix for a new contact phone', () => {
+    expect(validateContactPhoneNumbers([{
+      phone_number: '1 212 555 0100',
+      canonical_type: 'mobile',
+      custom_type: null,
+      is_default: true,
+    }])).toContain('Phone 1: Include the country calling code, starting with +.');
+
+    expect(validateContactPhoneNumbers([{
+      phone_number: '+1 212 555 0100',
+      canonical_type: 'mobile',
+      custom_type: null,
+      is_default: true,
+    }])).toEqual([]);
+  });
+
+  it('grandfathers a stored number that comes back unchanged', () => {
+    // Annotated numbers like this predate the schema and pass the contact model's
+    // own rules, so they must not block an edit to some other field.
+    const stored = [
+      {
+        contact_phone_number_id: '11111111-1111-1111-1111-111111111111',
+        phone_number: '555-123-4567 (cell)',
+        canonical_type: 'work' as const,
+        custom_type: null,
+        is_default: true,
+      },
+    ];
+
+    expect(validateContactPhoneNumbers(stored)).toContain('Phone 1: Please enter a valid phone number');
+    expect(validateContactPhoneNumbers(stored, { existingRows: stored })).toEqual([]);
+  });
+
+  it('still rejects a stored number once the user edits it', () => {
+    const stored = [
+      {
+        contact_phone_number_id: '11111111-1111-1111-1111-111111111111',
+        phone_number: '555-123-4567 (cell)',
+        canonical_type: 'work' as const,
+        custom_type: null,
+        is_default: true,
+      },
+    ];
+    const edited = [{ ...stored[0], phone_number: '555-123-4567 (mobile)' }];
+
+    expect(validateContactPhoneNumbers(edited, { existingRows: stored })).toContain(
+      'Phone 1: Please enter a valid phone number'
+    );
   });
 
   it('preserves moved row data when reordering draft rows', () => {

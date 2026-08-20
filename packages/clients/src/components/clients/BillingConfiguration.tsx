@@ -23,8 +23,11 @@ import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
 import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
+import ClientCreditDrawdownSettings from './ClientCreditDrawdownSettings';
 import ClientExternalCreditSettings from './ClientExternalCreditSettings';
+import ClientPrepaidBalanceAlertSettings from './ClientPrepaidBalanceAlertSettings';
 import ClientContractAssignment from './ClientContractAssignment';
+import ClientBillingProfiles from './ClientBillingProfiles';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
 import {
@@ -35,6 +38,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -48,6 +52,9 @@ const isReturnedActionError = (value: unknown) =>
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onSave, contacts = [] }) => {
     const { t } = useTranslation('msp/clients');
     const [activeTab, setActiveTab] = useState('general');
+    const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
+        defaultValue: false,
+    });
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: client.payment_terms || 'net_30',
         credit_limit: client.credit_limit || 0,
@@ -251,6 +258,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
                     <ClientBillingSchedule clientId={client.client_id} />
 
+                    <ClientBillingProfiles clientId={client.client_id} />
+
                     <ClientZeroDollarInvoiceSettings
                         clientId={client.client_id}
                     />
@@ -258,6 +267,17 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     <ClientCreditExpirationSettings
                         clientId={client.client_id}
                     />
+
+                    <ClientPrepaidBalanceAlertSettings
+                        clientId={client.client_id}
+                        defaultCurrencyCode={client.default_currency_code}
+                    />
+
+                    {creditDrawdownEnabled && (
+                        <ClientCreditDrawdownSettings
+                            clientId={client.client_id}
+                        />
+                    )}
 
                     <ClientExternalCreditSettings
                         clientId={client.client_id}

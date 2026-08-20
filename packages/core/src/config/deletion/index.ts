@@ -54,6 +54,39 @@ const countContractLineServiceDeps = async (
   return Number(result?.count ?? 0);
 };
 
+// composite_tax_mappings has no `tenant` column of its own (verified against the
+// live schema; @alga-psa/db registers it as scope 'tenantViaParent' through
+// tax_rates.composite_tax_id). So both sides are tenant-scoped through their
+// parents: tax_components.tenant for the components owned by the rate being
+// deleted, and the owning composite tax_rates row for the mapping itself.
+//
+// The relationship is indirect — tax_rates -> tax_components.tax_rate_id ->
+// composite_tax_mappings.tax_component_id — so a plain `foreignKey` dependency
+// cannot express it.
+const countCompositeTaxComponentUsage = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await trx('composite_tax_mappings as ctm')
+    .join('tax_components as tc', function () {
+      this.on('tc.tax_component_id', '=', 'ctm.tax_component_id');
+    })
+    .join('tax_rates as owner', function () {
+      this.on('owner.tax_rate_id', '=', 'ctm.composite_tax_id')
+        .andOn('owner.tenant', '=', 'tc.tenant');
+    })
+    .where('tc.tenant', options.tenant)
+    .where({ 'tc.tax_rate_id': options.entityId })
+    // Mappings owned by the rate being deleted are cascaded by deleteTaxRate
+    // before the components are removed, so counting them here would falsely
+    // block a composite rate from deleting its own component mappings.
+    .where('ctm.composite_tax_id', '!=', options.entityId)
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -394,6 +427,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       },
       { type: 'usage', table: 'usage_tracking', foreignKey: 'contract_line_id', label: 'usage record' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'contract_line_id', label: 'bucket usage record' },
+      { type: 'bucket', table: 'contract_line_buckets', foreignKey: 'contract_line_id', label: 'bucket pool' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'contract_line_id', label: 'time entry' }
     ]
   },
@@ -404,6 +438,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'time_entry', table: 'time_entries', foreignKey: 'service_id', label: 'time entry' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'service_catalog_id', label: 'bucket usage record' },
+      { type: 'bucket_member', table: 'contract_line_bucket_services', foreignKey: 'service_id', label: 'bucket pool member' },
       { type: 'usage', table: 'usage_tracking', foreignKey: 'service_id', label: 'usage record' },
       {
         type: 'contract_line_service',
@@ -429,7 +464,17 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'client_tax_rate', table: 'client_tax_rates', foreignKey: 'tax_rate_id', label: 'client tax assignment' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'tax_rate_id', label: 'time entry' },
-      { type: 'service', table: 'service_catalog', foreignKey: 'tax_rate_id', label: 'service' }
+      { type: 'service', table: 'service_catalog', foreignKey: 'tax_rate_id', label: 'service' },
+      {
+        // This rate's tax_components are referenced by *other* composite rates'
+        // mappings. deleteTaxRate deletes this rate's components, which would
+        // raise 23503 on composite_tax_mappings_tax_component_id_foreign
+        // (NO ACTION) mid-transaction. Block with a friendly count instead.
+        type: 'composite_tax_mapping',
+        table: 'composite_tax_mappings',
+        label: 'composite tax mapping',
+        countQuery: countCompositeTaxComponentUsage
+      }
     ]
   },
   asset: {

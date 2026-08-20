@@ -1,17 +1,24 @@
 'use server'
 
-import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { determineDefaultContractLine } from '../lib/contractLineDisambiguation';
+import { resolveContractLineSelection } from '../lib/contractLineDisambiguation';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
 // the dropped `client_contract_lines` table and caused a prod outage on
 // time-entry save. Don't recreate a local copy.
-import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
+import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
+// Hour-block burn MUST go through the shared canonical service too — same
+// rationale as bucketUsageService (both scheduling and billing import it).
 import {
+  allocateTimeEntry,
+  reverseTimeEntryAllocations,
+} from '@alga-psa/shared/billingClients/hourBlockService';
+import {
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
   ITimeEntry,
   ITimeEntryWithWorkItem,
+  type ContractLineSource,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -433,6 +440,10 @@ export const saveTimeEntry = withAuth(async (
       service_id,
       tax_region,
       contract_line_id,
+      // Provenance for the contract line (F062). A caller-supplied line is
+      // 'explicit' by definition; the resolver below overwrites this when it
+      // picks (or fails to pick) one itself.
+      contract_line_source: (contract_line_id ? 'explicit' : null) as ContractLineSource | null,
       tax_rate_id, // Add tax_rate_id to the object being saved
       user_id: timeEntryUserId,
       updated_by: actorUserId,
@@ -450,6 +461,11 @@ export const saveTimeEntry = withAuth(async (
       try {
         const effectiveDateForContractResolution = work_date || start_time;
         let defaultContractClientId: string | null = null;
+        // The work item's billing profile narrows contract-line selection when
+        // more than one line is eligible — the case parallel per-profile
+        // contracts create (F134). Selected alongside the client so the
+        // narrowing costs no extra round trip.
+        let workItemBillingProfileId: string | null = null;
 
         if (work_item_type === 'project_task') {
           const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
@@ -465,30 +481,41 @@ export const saveTimeEntry = withAuth(async (
             'project_phases.project_id',
             'projects.project_id',
           );
-          defaultContractClientId = (await projectTaskClientQuery
+          const projectRow = await projectTaskClientQuery
             .where({ 'project_tasks.task_id': work_item_id })
-            .first('projects.client_id'))?.client_id ?? null;
+            .first('projects.client_id', 'projects.billing_profile_id');
+          defaultContractClientId = projectRow?.client_id ?? null;
+          workItemBillingProfileId = projectRow?.billing_profile_id ?? null;
         } else if (work_item_type === 'ticket') {
-          defaultContractClientId = (await tenantScopedDb.table('tickets')
+          const ticketRow = await tenantScopedDb.table('tickets')
             .where({ ticket_id: work_item_id })
-            .first('client_id'))?.client_id ?? null;
+            .first('client_id', 'billing_profile_id');
+          defaultContractClientId = ticketRow?.client_id ?? null;
+          workItemBillingProfileId = ticketRow?.billing_profile_id ?? null;
         } else if (work_item_type === 'interaction') {
           defaultContractClientId = (await tenantScopedDb.table('interactions')
             .where({ interaction_id: work_item_id })
             .first('client_id'))?.client_id ?? null;
         }
 
-        const defaultPlanId = await determineDefaultContractLine(
+        const selection = await resolveContractLineSelection(
           defaultContractClientId as string,
           service_id,
-          effectiveDateForContractResolution
+          effectiveDateForContractResolution,
+          { billingProfileId: workItemBillingProfileId }
         );
 
-        if (defaultPlanId) {
-          cleanedEntry.contract_line_id = defaultPlanId;
+        if (selection.selectedContractLineId) {
+          cleanedEntry.contract_line_id = selection.selectedContractLineId;
         }
+        // Record how the line was chosen, including the unresolved case — the
+        // reason is what the review queue and the attribution inspector read
+        // (F062, F063).
+        cleanedEntry.contract_line_source =
+          CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
       } catch (error) {
         console.error('Error determining default contract line:', error);
+        cleanedEntry.contract_line_source = 'unresolved';
       }
     }
 
@@ -497,11 +524,19 @@ export const saveTimeEntry = withAuth(async (
       const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
       let oldDuration = 0; // Initialize oldDuration
+      let oldEntrySpan: {
+        service_id?: string | null;
+        start_time?: string | Date;
+        end_time?: string | Date;
+        contract_line_id?: string | null;
+        work_item_id?: string | null;
+        work_item_type?: string | null;
+      } | null = null;
       if (entry_id) {
         // Fetch original entry before update to calculate delta
         const originalEntryForUpdate = await trxTenantDb.table('time_entries')
           .where({ entry_id })
-          .select('billable_duration', 'work_item_id', 'work_item_type')
+          .select('billable_duration', 'work_item_id', 'work_item_type', 'service_id', 'start_time', 'end_time', 'contract_line_id')
           .first();
         // If original entry not found, maybe throw error or handle gracefully?
         // Throwing error for now as update shouldn't happen if original is gone.
@@ -509,6 +544,7 @@ export const saveTimeEntry = withAuth(async (
              throw new Error(`Original time entry with ID ${entry_id} not found for update.`);
         }
         oldDuration = originalEntryForUpdate.billable_duration || 0;
+        oldEntrySpan = originalEntryForUpdate;
 
         // Update existing entry - exclude tenant from SET clause (partition key cannot be modified)
         const { tenant: _tenant, user_id: _user_id, ...updateData } = cleanedEntry;
@@ -661,71 +697,133 @@ export const saveTimeEntry = withAuth(async (
         }
       }
       // --- Bucket Usage Update Logic ---
-      // Check if billable based on duration > 0
-      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
-        // Ensure work_item_id and work_item_type exist and call helper
-        let clientId: string | null = null;
-        if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
-            // Now TypeScript knows both are strings here
-            clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
-        }
-        const currentPlanId = resultingEntry.contract_line_id; // Use the plan ID associated with the entry
+      // Ordering matters: the OLD draw must be fully reversed BEFORE the NEW
+      // draw is applied. findOrCreateCurrentBucketUsageRecord computes rollover
+      // from the previous period's minutes_used, and updateBucketUsageMinutes
+      // derives overage from the running total — both snapshot whatever usage
+      // state exists at the moment they run. If the new draw ran first, a
+      // cross-period edit/reassignment would create (or update) the target
+      // period's record with rollover computed from usage that still includes
+      // the old, not-yet-reversed draw, leaving stale rollover behind. So:
+      // reverse the old side first (under the OLD entry's own client derived
+      // from its own work item, span, service, and line), then apply the new
+      // side (under the NEW entry's own client, span, service, and line).
+      // Rollover state is only ever computed from post-reversal data.
+      // Never reuse the new context to reverse the old draw (or vice versa) —
+      // that would reverse against the wrong pool when an entry moves
+      // clients/lines.
 
-        if (clientId && currentPlanId && resultingEntry.service_id) {
-          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
-            .where({
-              contract_line_id: currentPlanId,
-              service_id: resultingEntry.service_id,
-              configuration_type: 'Bucket'
-            })
-            .first('config_id');
-
-          if (overlayConfig) {
-            console.log(`Time entry ${resultingEntry.entry_id} linked to bucket overlay on contract line ${currentPlanId}. Updating usage.`);
-
-            const newDuration = resultingEntry.billable_duration || 0;
-            // Calculate delta in MINUTES first
-            const minutesDelta = newDuration - oldDuration; // oldDuration is 0 for inserts
-
-            // Pass delta in MINUTES to bucket usage service
-            if (minutesDelta !== 0) {
-              try {
-                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-                  trx,
-                  clientId,
-                  resultingEntry.service_id,
-                  resultingEntry.start_time // Use entry's start time to find the correct period
-                );
-
-                await updateBucketUsageMinutes(
-                  trx,
-                  bucketUsageRecord.usage_id,
-                  minutesDelta // Pass the delta in minutes
-                );
-                console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id}`);
-              } catch (bucketError) {
-                console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
-                // Re-throwing ensures data consistency. Keep the typed failure
-                // intact — the action guard maps its code to a message the user
-                // can actually act on.
-                if (isBucketUsageError(bucketError)) {
-                  throw bucketError;
-                }
-                throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-              }
-            } else {
-               console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
-            }
-          } else {
-             console.log(`Time entry ${resultingEntry.entry_id} service/plan has no bucket overlay or plan not found.`);
+      // Old side (updates only): resolve the reversal under the OLD entry's own
+      // client (its own work item), span, service, and line — before any new
+      // draw runs.
+      let oldClientId: string | null = null;
+      if (entry_id && oldEntrySpan?.work_item_id && oldEntrySpan.work_item_type) {
+        oldClientId = await getClientIdForWorkItem(trx, tenant, oldEntrySpan.work_item_id as string, oldEntrySpan.work_item_type as string);
+      }
+      if (entry_id && oldClientId && oldEntrySpan?.service_id && oldEntrySpan.start_time) {
+        try {
+          const reversedDelta = await adjustTimeSpanDraw(
+            trx,
+            tenant,
+            oldClientId,
+            {
+              service_id: oldEntrySpan.service_id,
+              start_time: oldEntrySpan.start_time,
+              end_time: oldEntrySpan.end_time ?? oldEntrySpan.start_time,
+              billable_duration: oldDuration,
+              contract_line_id: oldEntrySpan.contract_line_id ?? null,
+            },
+            -1,
+          );
+          if (reversedDelta !== 0) {
+            console.log(`Reversed old bucket usage for entry ${resultingEntry?.entry_id} (weighted ${reversedDelta})`);
           }
-        } else {
-           console.log(`Could not determine client ID or contract line for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+        } catch (bucketError) {
+          if (isBucketUsageError(bucketError)) throw bucketError;
+          throw new Error(`Bucket usage reversal failed for time entry ${resultingEntry?.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
         }
-      } else {
-         console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
+      }
+
+      // New side: apply the saved entry's burn when it resolves to a pool.
+      let newClientId: string | null = null;
+      if (resultingEntry?.work_item_id && resultingEntry.work_item_type) {
+        newClientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+      }
+      if (newClientId) {
+        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+          try {
+            const appliedDelta = await adjustTimeSpanDraw(
+              trx,
+              tenant,
+              newClientId,
+              {
+                service_id: resultingEntry.service_id,
+                start_time: resultingEntry.start_time,
+                end_time: resultingEntry.end_time,
+                billable_duration: resultingEntry.billable_duration,
+                contract_line_id: resultingEntry.contract_line_id ?? null,
+              },
+              1,
+            );
+            if (appliedDelta !== 0) {
+              console.log(`Applied new bucket usage for entry ${resultingEntry.entry_id} (weighted ${appliedDelta})`);
+            }
+          } catch (bucketError) {
+            if (isBucketUsageError(bucketError)) throw bucketError;
+            throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+          }
+        }
       }
       // --- End Bucket Usage Update Logic ---
+
+      // --- Hour-block burn logic ---
+      // Applies only when the entry is NOT contract-covered (contracts always
+      // win), so it never fires for the bucket path above — the two are
+      // mutually exclusive by construction. Block burn is best-effort on save:
+      // a failure is logged, never aborts the entry save, and the nightly
+      // reconcile converges allocations to the canonical FIFO state.
+      // The reverse-on-update runs UNCONDITIONALLY (before any eligibility
+      // check): an entry edited to be contract-covered, non-billable, or
+      // serviceless must still give its minutes back to the blocks immediately
+      // — otherwise the client loses block minutes AND pays the contract/
+      // hourly rate until the nightly reconcile catches up.
+      try {
+        const savedEntryId = resultingEntry?.entry_id;
+        if (entry_id && savedEntryId) {
+          // Update: reverse then re-allocate (clean FIFO, no delta).
+          await reverseTimeEntryAllocations(trx, tenant, savedEntryId);
+        }
+        if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+          let blockClientId: string | null = null;
+          if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
+            blockClientId = await getClientIdForWorkItem(
+              trx,
+              tenant,
+              resultingEntry.work_item_id as string,
+              resultingEntry.work_item_type as string,
+            );
+          }
+          if (blockClientId && !resultingEntry.contract_line_id) {
+            const burnEntry = {
+              entry_id: savedEntryId!,
+              service_id: resultingEntry.service_id,
+              billable_duration: resultingEntry.billable_duration,
+              contract_line_id: resultingEntry.contract_line_id,
+              work_item_id: resultingEntry.work_item_id,
+              work_item_type: resultingEntry.work_item_type,
+              work_date: resultingEntry.work_date,
+              start_time: resultingEntry.start_time,
+            };
+            const burned = await allocateTimeEntry(trx, tenant, blockClientId, burnEntry);
+            if (burned.length > 0) {
+              console.log(`Time entry ${savedEntryId} burned ${burned.reduce((sum, a) => sum + a.minutes, 0)} block minutes.`);
+            }
+          }
+        }
+      } catch (blockBurnError) {
+        console.error(`Error applying hour-block burn for time entry ${resultingEntry?.entry_id}:`, blockBurnError);
+      }
+      // --- End Hour-block burn logic ---
     });
 
     if (!resultingEntry) {
@@ -1037,49 +1135,50 @@ export const deleteTimeEntry = withAuth(async (
         if (timeEntry.work_item_id && timeEntry.work_item_type) {
             clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
         }
-        const currentPlanId = timeEntry.contract_line_id;
 
-        if (clientId && currentPlanId && timeEntry.service_id) {
-          const overlayConfig = await trxTenantDb.table('contract_line_service_configuration')
-            .where({
-              contract_line_id: currentPlanId,
-              service_id: timeEntry.service_id,
-              configuration_type: 'Bucket'
-            })
-            .first('config_id');
-
-          if (overlayConfig) {
-            console.log(`Time entry ${entryId} linked to bucket overlay on contract line ${currentPlanId}. Decrementing usage.`);
-            const minutesDelta = -(timeEntry.billable_duration || 0); // Negative delta
-
-            if (minutesDelta !== 0) {
-              try {
-                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
-                  trx,
-                  clientId,
-                  timeEntry.service_id,
-                  timeEntry.start_time // Use entry's start time to find the correct period
-                );
-
-                await updateBucketUsageMinutes(
-                  trx,
-                  bucketUsageRecord.usage_id,
-                  minutesDelta // Pass negative delta
-                );
-                console.log(`Successfully decremented bucket usage for deleted entry ${entryId}`);
-              } catch (bucketError) {
-                console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-                // Re-throwing ensures data consistency; preserve the typed code.
-                if (isBucketUsageError(bucketError)) {
-                  throw bucketError;
-                }
-                throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-              }
+        if (clientId && timeEntry.service_id) {
+          // Scope-resolution gate + weighted burn, resolved under the deleted
+          // entry's OWN client and line (negative on delete).
+          try {
+            const reversedDelta = await adjustTimeSpanDraw(
+              trx,
+              tenant,
+              clientId,
+              {
+                service_id: timeEntry.service_id,
+                start_time: timeEntry.start_time,
+                end_time: timeEntry.end_time,
+                billable_duration: timeEntry.billable_duration,
+                contract_line_id: timeEntry.contract_line_id ?? null,
+              },
+              -1,
+            );
+            if (reversedDelta !== 0) {
+              console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${reversedDelta})`);
             }
+          } catch (bucketError) {
+            console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
+            // Re-throwing ensures data consistency; preserve the typed code.
+            if (isBucketUsageError(bucketError)) {
+              throw bucketError;
+            }
+            throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
       }
       // --- End Bucket Usage Update Logic ---
+
+      // --- Hour-block burn reversal ---
+      // Restore the minutes the deleted entry drew from any hour blocks. Best-
+      // effort like the save path: failures are logged and the nightly
+      // reconcile converges. Runs unconditionally (an entry may carry block
+      // allocations without being contract-covered).
+      try {
+        await reverseTimeEntryAllocations(trx, tenant, entryId);
+      } catch (blockReverseError) {
+        console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
+      }
+      // --- End Hour-block burn reversal ---
 
       // 2. Delete the time entry
       const deleteCount = await trxTenantDb.table('time_entries')

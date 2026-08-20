@@ -180,6 +180,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ...section,
       items: section.items
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
+        .filter((item) => item.name !== 'Passwords' || releaseV15Enabled)
         .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
@@ -199,7 +200,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, releaseV15Enabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

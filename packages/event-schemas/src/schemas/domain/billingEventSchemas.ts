@@ -197,6 +197,31 @@ export const creditExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 
 export type CreditExpiringEventPayload = z.infer<typeof creditExpiringEventPayloadSchema>;
 
+// Emitted by the prepaid-balance-alert-scan maintenance handler to request the
+// server-side daily 09:00 UTC low-balance evaluation for one tenant. The
+// handler (Temporal worker / pg-boss) may only publish; the server subscriber
+// owns flag gating, ledger queries, alert lifecycle, and delivery draining.
+export const prepaidBalanceAlertScanRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().optional().describe('Optional single-client scan for tests/backfills'),
+}).describe('Payload for PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
+
+export type PrepaidBalanceAlertScanRequestedEventPayload = z.infer<typeof prepaidBalanceAlertScanRequestedEventPayloadSchema>;
+export const hourBlockExpiringEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: z.string().describe('Client ID whose hour blocks are expiring'),
+  daysBeforeExpiration: z.number().describe('Days remaining before the hour blocks expire'),
+  blocks: z
+    .array(
+      z.object({
+        blockId: z.string().describe('Hour block ID'),
+        remainingMinutes: z.number().describe('Remaining minutes on the block'),
+        expirationDate: z.string().describe('Block expiration date (ISO 8601)'),
+      })
+    )
+    .describe('Hour blocks expiring on the target date'),
+}).describe('Payload for HOUR_BLOCK_EXPIRING');
+
+export type HourBlockExpiringEventPayload = z.infer<typeof hourBlockExpiringEventPayloadSchema>;
+
 export const contractCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contractId: contractIdSchema,
   clientId: clientIdSchema,

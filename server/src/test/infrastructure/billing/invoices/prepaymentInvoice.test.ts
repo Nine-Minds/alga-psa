@@ -22,6 +22,7 @@ import {
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -571,7 +572,7 @@ describe('Prepayment Invoice System', () => {
 
       // Create billing cycle
       billingCycleId = uuidv4();
-      await tenantTable(context, 'client_billing_cycles').insert({
+      await seedBillingCycle(context.db, context.tenantId, {
         billing_cycle_id: billingCycleId,
         client_id: context.clientId,
         tenant: context.tenantId,
@@ -838,7 +839,7 @@ describe('Multiple Credit Applications', () => {
     billingCycleId1 = uuidv4();
     billingCycleId2 = uuidv4();
 
-    await tenantTable(context, 'client_billing_cycles').insert([
+    await seedBillingCycle(context.db, context.tenantId, [
       {
         billing_cycle_id: billingCycleId1,
         client_id: context.clientId,

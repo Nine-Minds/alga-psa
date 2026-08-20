@@ -329,6 +329,33 @@
         "help": "Wordt de organisatiestandaard voor iedereen: MSP-personeel en klantportaalgebruikers. Individuele gebruikers en klanten kunnen dit later overschrijven."
       }
     },
+    "address": {
+      "title": "Bedrijfsadres",
+      "description": "Vooraf ingevuld op basis van uw factuurgegevens — controleer en corrigeer indien nodig. Dit adres verschijnt op uw facturen en offertes.",
+      "fields": {
+        "addressLine1": {
+          "label": "Adresregel 1",
+          "placeholder": "Hoofdstraat 123"
+        },
+        "addressLine2": {
+          "label": "Adresregel 2",
+          "placeholder": "3e verdieping"
+        },
+        "city": {
+          "label": "Plaats"
+        },
+        "stateProvince": {
+          "label": "Staat/Provincie"
+        },
+        "postalCode": {
+          "label": "Postcode"
+        },
+        "country": {
+          "label": "Land",
+          "placeholder": "Land selecteren"
+        }
+      }
+    },
     "password": {
       "resetRequired": {
         "title": "Wachtwoord opnieuw instellen vereist",

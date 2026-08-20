@@ -34,6 +34,17 @@ function createMockDb() {
       orderBy() {
         return builder;
       },
+      // hour-block activation hook chain: where(...).orderBy(...).forUpdate().select(...)
+      forUpdate() {
+        return builder;
+      },
+      select() {
+        return builder;
+      },
+      // The activation hook awaits the builder itself for the row list.
+      then(onFulfilled: any, onRejected: any) {
+        return Promise.resolve(filteredRows).then(onFulfilled, onRejected);
+      },
       async insert(payload: Row) {
         rows.push(payload);
         return [payload];
@@ -88,6 +99,11 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
   applyCreditToInvoice: mocks.applyCreditToInvoice,
   resolveCreditExpirationDate: vi.fn(async () => undefined),
+  resolveCreditDrawdownPolicy: vi.fn(async () => ({
+    autoApplyEnabled: true,
+    applicationOrder: 'expiration_first',
+    eligibleServiceTypeIds: null,
+  })),
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/creditBalance', () => ({

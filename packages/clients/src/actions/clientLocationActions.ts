@@ -18,10 +18,65 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  clientLocationCoreFieldsSchema,
+  isUnchangedFromStored,
+  normalizePhone,
+  parseSubmittedFields
+} from '@alga-psa/validation';
+import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 
 type ClientLocationActionError = ActionMessageError | ActionPermissionError;
 
+/** Carries a structural failure out of the transaction without rolling into a 500. */
+class StructuralLocationError extends Error {
+  constructor(readonly actionError: ClientLocationActionError) {
+    super('Structural validation failed');
+  }
+}
+
+/**
+ * Structural validation, applied on write only. Pass `existing` on an update so a
+ * value that arrives unchanged is left exactly as stored — neither re-validated nor
+ * re-normalized — and a location that predates the schema stays editable.
+ *
+ * A location knows its country, so a national number is normalized against it
+ * before the schema sees it rather than being kept verbatim.
+ */
+function applyLocationStructuralSchema<T extends Record<string, any>>(
+  payload: T,
+  countryCode?: string | null,
+  existing?: Record<string, unknown> | null
+): StructuralResult<T, ClientLocationActionError> {
+  const candidate: Record<string, unknown> = { ...payload };
+  for (const field of ['phone', 'fax'] as const) {
+    const value = candidate[field];
+    if (existing && isUnchangedFromStored(value, existing[field])) {
+      continue;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      const normalized = normalizePhone(value, { defaultCountry: countryCode });
+      if (!normalized.error) {
+        candidate[field] = normalized.value;
+        const extensionField = `${field}_extension` as const;
+        if (normalized.extension && !candidate[extensionField]) {
+          candidate[extensionField] = normalized.extension;
+        }
+      }
+    }
+  }
+
+  const result = parseSubmittedFields(clientLocationCoreFieldsSchema, candidate, { existing });
+  if (!result.success) {
+    return { ok: false, error: actionError(result.error ?? 'Invalid location data') };
+  }
+  return { ok: true, data: { ...payload, ...(result.data ?? {}) } };
+}
+
 function clientLocationActionErrorFrom(error: unknown): ClientLocationActionError | null {
+  if (error instanceof StructuralLocationError) {
+    return error.actionError;
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
@@ -144,6 +199,12 @@ export const createClientLocation = withAuth(async (
 ): Promise<IClientLocation | ClientLocationActionError> => {
   const { knex } = await createTenantKnex();
 
+  const structural = applyLocationStructuralSchema(locationData, locationData.country_code);
+  if (isStructuralFailure(structural)) {
+    return structural.error;
+  }
+  const validatedLocationData = structural.data;
+
   let newLocation: IClientLocation;
   try {
     newLocation = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -157,7 +218,7 @@ export const createClientLocation = withAuth(async (
         trx
       );
 
-      return createLocation(trx, tenant, clientId, locationData);
+      return createLocation(trx, tenant, clientId, validatedLocationData);
     });
   } catch (error) {
     const expected = clientLocationActionErrorFrom(error);
@@ -187,7 +248,7 @@ export const updateClientLocation = withAuth(async (
       const db = tenantDb(trx, tenant);
 
       const existingLocation = await db.table<IClientLocation>('client_locations')
-        .select('client_id')
+        .select('client_id', 'country_code', 'email', 'phone', 'phone_extension', 'fax', 'fax_extension')
         .where({
           location_id: locationId,
           is_active: true
@@ -208,12 +269,21 @@ export const updateClientLocation = withAuth(async (
         trx
       );
 
+      const structural = applyLocationStructuralSchema(
+        locationData,
+        locationData.country_code ?? existingLocation.country_code,
+        existingLocation as unknown as Record<string, unknown>
+      );
+      if (isStructuralFailure(structural)) {
+        throw new StructuralLocationError(structural.error);
+      }
+
       return updateLocation(
         trx,
         tenant,
         existingLocation.client_id,
         locationId,
-        locationData
+        structural.data
       );
     });
   } catch (error) {

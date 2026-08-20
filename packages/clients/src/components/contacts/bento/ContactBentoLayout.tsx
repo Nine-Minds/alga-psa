@@ -21,6 +21,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { InteractionIcon } from '@alga-psa/ui/components/InteractionIcon';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyAction } from '@alga-psa/ui/components/bento/BentoTile';
+import { ContentCardVariantProvider } from '@alga-psa/ui/components/ContentCard';
 import { TagManager } from '@alga-psa/tags/components';
 import { useToast, useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -30,6 +31,7 @@ import { useOptionalClientCrossFeature } from '../../../context/ClientCrossFeatu
 import { QuickAddInteraction } from '../../interactions/QuickAddInteraction';
 import InteractionDetails from '../../interactions/InteractionDetails';
 import { ContactPortalTab } from '../ContactPortalTab';
+import { ContactCredentialsSection } from '../ContactCredentialsSection';
 import ContactDetailsEdit from '../ContactDetailsEdit';
 import type {
   ContactPortalSummary,
@@ -835,6 +837,14 @@ export function ContactBentoLayout({
         {reachTile}
         {portalTile}
         {showDocuments ? documentsTile : null}
+        {/* Compact passwords tile (flag-gated inside the section); its own
+            manager dialog handles create/attach/detach. */}
+        <ContentCardVariantProvider variant="bento">
+          <ContactCredentialsSection
+            contactId={contact.contact_name_id}
+            clientId={contact.client_id ?? null}
+          />
+        </ContentCardVariantProvider>
         {showRelatedWork ? relatedWorkTile : null}
         {notesTile}
       </div>

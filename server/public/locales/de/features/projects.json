@@ -1798,6 +1798,12 @@
       "approved": "Genehmigt: {{amount}}",
       "ready": "Bereit: {{amount}}",
       "total": "Gesamt: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Abrechnungsprofil",
+      "none": "Standardprofil des Kunden verwenden",
+      "hint": "Zeit- und Terminbuchungen dieses Projekts werden diesem Profil berechnet, sofern kein Vertrag sie beansprucht.",
+      "updated": "Abrechnungsprofil aktualisiert"
     }
   },
   "taskTypes": {

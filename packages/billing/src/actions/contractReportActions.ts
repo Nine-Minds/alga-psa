@@ -460,46 +460,71 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
 
-    // Query for bucket-type contract lines and their time tracking
-    // Note: We're working with contracts that have bucket-type lines
-    // For now, we'll show all bucket contracts without specific hour allocations
-    // (as the bucket config is stored separately and not directly linked to contract_line_id)
+    // Weighted-burn pools: one row per (client contract assignment × bucket
+    // pool). Used/remaining/overage come from the canonical period-scoped
+    // weighted bucket_usage ledger — the single source of truth the draw and
+    // overage-billing paths write — NEVER from raw time_entries, which are
+    // unweighted, unscoped, and include entries that never drew from the pool.
+    const todayISO = new Date().toISOString().slice(0, 10);
+
     const dataQuery = db.table('contracts as c')
-      .where({ 'cl_line.contract_line_type': 'Bucket' })
       .select(
         'c.contract_id',
         'c.contract_name',
         'cl.client_id',
         'cl.client_name',
-        knex.raw('COALESCE(SUM(te.billable_duration), 0) as used_minutes')
-      )
-      .groupBy('c.contract_id', 'c.contract_name', 'cl.client_id', 'cl.client_name');
+        'clb.total_minutes as pool_total_minutes',
+        'bu.minutes_used as used_minutes',
+        'bu.overage_minutes as overage_minutes',
+        'bu.rolled_over_minutes as rolled_over_minutes'
+      );
     db.tenantJoin(dataQuery, 'contract_lines as cl_line', 'c.contract_id', 'cl_line.contract_id', { type: 'left' });
+    db.tenantJoin(dataQuery, 'contract_line_buckets as clb', 'cl_line.contract_line_id', 'clb.contract_line_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
-    db.tenantJoin(dataQuery, 'time_entries as te', 'cl_line.contract_line_id', 'te.contract_line_id', { type: 'left' });
+    // Current-period ledger row for this pool and this client assignment.
+    // period_start/period_end are stored as inclusive calendar dates by
+    // findOrCreateCurrentBucketUsageRecord, so containment is <= today <= end.
+    db.tenantJoin(dataQuery, 'bucket_usage as bu', 'clb.bucket_id', 'bu.bucket_id', {
+      type: 'left',
+      on: (join) => {
+        join.andOn('bu.client_id', '=', 'cc.client_id');
+        join.andOn('bu.period_start', '<=', knex.raw('?', [todayISO]));
+        join.andOn('bu.period_end', '>=', knex.raw('?', [todayISO]));
+      },
+    });
     const data = await dataQuery;
 
+    // Display rounding only — all arithmetic stays in weighted minutes so
+    // rounding can neither invent nor hide overage.
+    const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+
     const bucketUsages: BucketUsage[] = data
-      .filter((row: any) => row.contract_name) // Filter out null results
+      .filter((row: any) => row.contract_name && row.pool_total_minutes != null) // Only lines that actually have a pool
       .map((row: any) => {
-        // For bucket contracts, use a default allocation if not specified
-        // This is a reasonable default of 40 hours per week
-        const totalHours = 40;
-        const usedHours = row.used_minutes ? Math.round(row.used_minutes / 60) : 0;
-        const remainingHours = Math.max(0, totalHours - usedHours);
-        const utilizationPercentage = totalHours > 0 ? Math.round((usedHours / totalHours) * 100) : 0;
-        const overageHours = Math.max(0, usedHours - totalHours);
+        const poolMinutes = Number(row.pool_total_minutes);
+        const rolledOverMinutes = row.rolled_over_minutes != null ? Number(row.rolled_over_minutes) : 0;
+        // Effective capacity for the current period: pool size + rollover,
+        // exactly as updateBucketUsageMinutes computes overage against.
+        const capacityMinutes = poolMinutes + rolledOverMinutes;
+        const usedMinutes = row.used_minutes != null ? Number(row.used_minutes) : 0;
+        const overageMinutes = row.overage_minutes != null
+          ? Number(row.overage_minutes)
+          : Math.max(0, usedMinutes - capacityMinutes);
+        const remainingMinutes = Math.max(0, capacityMinutes - usedMinutes);
+        const utilizationPercentage = capacityMinutes > 0
+          ? Math.round((usedMinutes / capacityMinutes) * 100)
+          : 0;
 
         return {
           contract_name: row.contract_name,
           client_id: row.client_id,
           client_name: row.client_name || 'Unknown Client',
-          total_hours: totalHours,
-          used_hours: usedHours,
-          remaining_hours: remainingHours,
+          total_hours: minutesToHours(capacityMinutes),
+          used_hours: minutesToHours(usedMinutes),
+          remaining_hours: minutesToHours(remainingMinutes),
           utilization_percentage: utilizationPercentage,
-          overage_hours: overageHours
+          overage_hours: minutesToHours(overageMinutes)
         };
       });
 

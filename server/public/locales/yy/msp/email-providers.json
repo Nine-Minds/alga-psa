@@ -159,7 +159,8 @@
       "resyncMailbox": "55555",
       "pause": "55555",
       "resume": "55555",
-      "delete": "55555"
+      "delete": "55555",
+      "runGmailDiagnostics": "55555"
     },
     "feedback": {
       "paused": "55555",
@@ -167,6 +168,11 @@
       "pauseError": "55555"
     },
     "pausedHelp": "55555",
+    "authFailure": {
+      "title": "55555",
+      "description": "55555 {{mailbox}} 55555",
+      "action": "55555"
+    },
     "fields": {
       "status": "55555",
       "lastSync": "55555",
@@ -208,6 +214,14 @@
       "title": "55555",
       "description": "55555",
       "action": "55555"
+    },
+    "gmailWatch": {
+      "expiredTitle": "55555",
+      "expiredDescription": "55555 {{mailbox}} 55555",
+      "missingTitle": "55555",
+      "missingDescription": "55555 {{mailbox}} 55555",
+      "expiringTitle": "55555",
+      "expiringDescription": "55555"
     }
   },
   "forms": {
@@ -237,6 +251,9 @@
         "authorizing": "55555",
         "authorized": "55555",
         "authorizeAccess": "55555"
+      },
+      "messages": {
+        "setupIncomplete": "55555 {{error}} 55555"
       }
     },
     "microsoft": {

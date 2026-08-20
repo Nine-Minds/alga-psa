@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Indirizzo e-mail",
     "phone": "Telefono",
+    "extension": "Interno",
     "phonePlaceholder": "Numero di telefono",
     "name": "Nome",
     "creating": "Creazione...",
@@ -731,7 +732,10 @@
     "deactivateError": "Impossibile disattivare il contratto",
     "updateError": "Impossibile aggiornare il contratto",
     "createContract": "Crea contratto",
-    "quickAdd": "Aggiunta rapida"
+    "quickAdd": "Aggiunta rapida",
+    "billingProfile": "Profilo di fatturazione",
+    "billingProfileUnassigned": "Non assegnato",
+    "billingProfileUpdated": "Profilo di fatturazione aggiornato"
   },
   "clientContractDialog": {
     "assignTitle": "Assegnare contratto al cliente",
@@ -908,6 +912,40 @@
     "updatedSuccess": "Le impostazioni di scadenza del credito sono state aggiornate.",
     "updateError": "Impossibile aggiornare le impostazioni",
     "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di scadenza del credito."
+  },
+  "clientCreditDrawdownSettings": {
+    "title": "Impostazioni di utilizzo del credito",
+    "useDefault": "Utilizza le impostazioni predefinite",
+    "useDefaultHelp": "Utilizza le impostazioni predefinite a livello di sistema per l'utilizzo del credito",
+    "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di utilizzo del credito.",
+    "clientSpecificEnabled": "Impostazioni di utilizzo del credito specifiche del cliente abilitate.",
+    "autoApply": "Applica automaticamente il credito alla finalizzazione",
+    "autoApplyHelp": "Se abilitato, il credito disponibile viene applicato automaticamente quando una fattura viene finalizzata",
+    "orderLabel": "Ordine di applicazione del credito",
+    "selectOrder": "Seleziona l'ordine del credito",
+    "orderHelp": "Scegli l'ordine in cui i crediti vengono consumati",
+    "serviceTypesLabel": "Tipi di servizio idonei",
+    "serviceTypesHelp": "Scegli se il credito può essere applicato a tutti gli addebiti o solo agli addebiti dei tipi di servizio selezionati.",
+    "noServiceTypes": "Nessun tipo di servizio configurato.",
+    "serviceTypes": {
+      "mode": {
+        "inherit": "Usa il valore predefinito del tenant",
+        "all": "Tutti i tipi di servizio",
+        "restricted": "Solo i tipi selezionati",
+        "placeholder": "Seleziona la restrizione del tipo di servizio"
+      },
+      "inheritedRestricted": "Predefinito del tenant: solo i tipi selezionati ({{types}}).",
+      "restricted": "Il credito è limitato ai tipi di servizio selezionati. Selezionane almeno uno per salvare."
+    },
+    "order": {
+      "expirationFirst": "Prima quelli in scadenza",
+      "oldestFirst": "Prima il credito più vecchio",
+      "newestFirst": "Prima il credito più recente"
+    },
+    "updatedSuccess": "Le impostazioni di utilizzo del credito sono state aggiornate.",
+    "loadError": "Impossibile caricare le impostazioni",
+    "saveError": "Impossibile salvare le impostazioni",
+    "updateError": "Impossibile aggiornare le impostazioni"
   },
   "clientExternalCreditSettings": {
     "title": "Credito esterno registrato",
@@ -1315,6 +1353,7 @@
         "notes": "Note",
         "notesHelper": "Ulteriori note su questa posizione",
         "phone": "Telefono",
+        "extension": "Interno",
         "phoneHelper": "Numero di telefono per questa posizione",
         "placeholder": {
           "addressLine1": "Inserisci l'indirizzo *",
@@ -1332,7 +1371,10 @@
         "stateProvince": "Stato/Provincia",
         "stateProvinceHelper": "Nome dello stato o della provincia",
         "taxRegion": "Regione fiscale",
-        "taxRegionHelper": "Seleziona la regione fiscale applicabile"
+        "taxRegionHelper": "Seleziona la regione fiscale applicabile",
+        "defaultBillingProfile": "Profilo di fatturazione predefinito",
+        "defaultBillingProfileNone": "Nessuno",
+        "defaultBillingProfileHelper": "I nuovi ticket in questa sede partono con questo profilo di fatturazione. Può sempre essere cambiato sul ticket."
       },
       "listTitle": "Posizioni",
       "loading": "Caricamento posizioni...",
@@ -1567,5 +1609,76 @@
       "notFound": "Contatto non trovato.",
       "loadFailed": "Impossibile caricare il contatto."
     }
+  },
+  "clientBillingProfiles": {
+    "title": "Profili di fatturazione",
+    "description": "Fattura separatamente sedi, entità o stabilimenti allʼinterno di questo cliente. Gli addebiti vengono attribuiti a un profilo tramite il contratto, la riga di contratto o lʼelemento di lavoro da cui provengono; ciò che non è assegnato ricade sul profilo predefinito.",
+    "loading": "Caricamento profili di fatturazione…",
+    "defaultBadge": "Predefinito",
+    "rename": "Rinomina",
+    "makeDefault": "Imposta come predefinito",
+    "archive": "Archivia",
+    "delete": "Elimina",
+    "restore": "Ripristina",
+    "archivedHeading": "Archiviati",
+    "addLabel": "Aggiungi un profilo di fatturazione",
+    "addPlaceholder": "es. Stabilimento Nord",
+    "addButton": "Aggiungi profilo",
+    "created": "Profilo di fatturazione «{{name}}» creato",
+    "renamed": "Profilo di fatturazione rinominato",
+    "madeDefault": "«{{name}}» è ora il profilo di fatturazione predefinito",
+    "archived": "«{{name}}» archiviato",
+    "deleted": "«{{name}}» eliminato",
+    "restored": "«{{name}}» ripristinato",
+    "settings": "Impostazioni di fatturazione"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmenti di fatturazione",
+    "restrictedHint": "Questo utente vede solo i segmenti selezionati qui sotto.",
+    "allHint": "Questo utente vede tutti i segmenti di fatturazione, compresi quelli aggiunti in seguito.",
+    "save": "Salva accesso ai segmenti",
+    "saved": "Accesso ai segmenti del portale aggiornato",
+    "emptyWarning": "Seleziona almeno un segmento oppure disattiva la restrizione per mostrarli tutti."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Impostazioni del profilo di fatturazione salvate",
+    "inherited": "Ereditato: {{value}}",
+    "notSet": "Non impostato",
+    "billsSeparately": "Fattura separatamente",
+    "billsSeparatelyHint": "Genera una fattura separata per questo profilo, con proprio intestatario, metodo di pagamento e saldo.",
+    "billToName": "Intestatario fattura",
+    "billingEmail": "Email di fatturazione",
+    "poNumber": "Numero ordine",
+    "taxIdNumber": "Partita IVA",
+    "taxExemptionCertificate": "Certificato di esenzione",
+    "invoiceDeliveryMethod": "Modalità di invio fatture",
+    "billingCycle": "Ciclo di fatturazione",
+    "paymentTerms": "Termini di pagamento",
+    "taxExempt": "Esente da imposta",
+    "taxExemptInherited": "Ereditato dal cliente ({{value}})",
+    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente."
+  },
+  "clientPrepaidBalanceAlertSettings": {
+    "title": "Avvisi saldo prepagato",
+    "scheduleHelp": "I controlli vengono eseguiti ogni giorno alle 09:00 UTC. Il salvataggio non invia nulla immediatamente.",
+    "creditSwitch": "Avvisi credito prepagato",
+    "creditSwitchHelp": "Avvisa quando il credito prepagato disponibile scende sotto la soglia configurata",
+    "creditThreshold": "Soglia di credito",
+    "creditThresholdPlaceholder": "es. 500,00",
+    "creditThresholdHelp": "Credito prepagato residuo che attiva un avviso",
+    "creditCurrency": "Valuta",
+    "creditAmountError": "Inserire una soglia di credito positiva",
+    "bucketSwitch": "Avvisi utilizzo pacchetto",
+    "bucketSwitchHelp": "Avvisa quando un pacchetto ore prepagato raggiunge il consumo configurato",
+    "bucketPercent": "Soglia di consumo (%)",
+    "bucketPercentPlaceholder": "es. 80",
+    "bucketPercentHelp": "Percentuale di capacità del pacchetto che attiva un avviso",
+    "percentRangeError": "Inserire un numero intero da 1 a 100",
+    "notifyClient": "Invia anche un’e-mail al destinatario di fatturazione del cliente",
+    "notifyClientHelp": "Invia l’avviso al destinatario di fatturazione canonico del cliente",
+    "save": "Salva",
+    "saveSuccess": "Impostazioni avviso saldo prepagato salvate",
+    "saveError": "Impossibile salvare le impostazioni avviso saldo prepagato",
+    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato"
   }
 }

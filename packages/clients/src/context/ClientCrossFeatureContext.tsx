@@ -31,10 +31,25 @@ export interface ClientAssetsRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksSectionRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface ClientOpportunitiesRenderProps {
   clientId: string;
   clientName: string;
   clientLifecycleStatus?: string | null;
+}
+
+export interface ClientBillingProfileSpendRenderProps {
+  clientId: string;
+}
+
+export interface ClientUnresolvedChargeReviewRenderProps {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
 }
 
 export interface ClientTicketsRenderProps {
@@ -75,6 +90,11 @@ export interface ContractQuickAddRenderProps {
   clientId: string;
 }
 
+export interface HourBlocksRenderProps {
+  clientId: string;
+  currencyCode?: string;
+}
+
 export interface TeamsMeetingCapability {
   available: boolean;
   reason?: string;
@@ -107,12 +127,27 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /** Optional: prepaid hour blocks on the client billing tab (billing owns the component; clients must not import it directly). */
+  renderHourBlocksSection?: (props: HourBlocksSectionRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
   renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
+  /**
+   * Optional: spend broken down by billing profile. Lives in the billing
+   * package, which the clients package must not depend on, so it arrives
+   * through this seam. Renders nothing for a single-profile client.
+   */
+  renderClientBillingProfileSpend?: (props: ClientBillingProfileSpendRenderProps) => ReactNode;
+  /**
+   * Optional: the queue of time entries and usage records with no contract
+   * line, and the two remedies for them. Also lives in the billing package.
+   */
+  renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;
   renderContractQuickAdd?: (props: ContractQuickAddRenderProps) => ReactNode;
+  /** Optional: the Hour Blocks section on client detail (provided by the composition layer). */
+  renderHourBlocks?: (props: HourBlocksRenderProps) => ReactNode;
   /** Open a ticket in the shared drawer, keeping the current page underneath. */
   openTicketDetails?: (ticketId: string) => Promise<void>;
   getTeamsMeetingCapability?: () => Promise<TeamsMeetingCapability>;

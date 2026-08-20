@@ -93,7 +93,14 @@ RUN apk add --no-cache bash \
     ghostscript \
     curl \
     nano \
-    bash
+    bash \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -131,6 +138,10 @@ EXPOSE 3000
 
 # Environment configuration
 ENV NODE_ENV=production
+
+# Puppeteer chromium configuration
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Secret provider configuration
 # Default configuration for composite secret system

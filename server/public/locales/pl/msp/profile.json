@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Numer telefonu"
       },
+      "phoneExtension": {
+        "label": "Numer wewnętrzny"
+      },
       "timeZone": {
         "label": "Strefa czasowa"
       }

@@ -14,6 +14,17 @@ const cssIdentifierSchema = z
   .min(1)
   .regex(CSS_SAFE_IDENTIFIER_REGEX, { message: 'Invalid CSS identifier.' });
 
+// Display strings are key-or-literal: a bare string is used exactly as written,
+// a key reference is resolved against the recipient's locale at render time.
+// Additive on purpose — every AST authored before this still validates.
+const i18nRefSchema = z.object({
+  i18nKey: z.string().min(1),
+  defaultValue: z.string(),
+}).strict();
+
+const i18nTextSchema = z.union([z.string(), i18nRefSchema]);
+const nonEmptyI18nTextSchema = z.union([z.string().min(1), i18nRefSchema]);
+
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
 const fieldDisplayFormatSchema = z.enum(['single-line', 'multiline', 'raw']);
 const fieldBorderStyleSchema = z.enum(['underline', 'box', 'none']);
@@ -82,11 +93,14 @@ const bindingRefSchema = z.object({
   bindingId: z.string().min(1),
 }).strict();
 
+type I18nTextInput = string | { i18nKey: string; defaultValue: string };
+
 type ValueExpressionInput =
   | { type: 'literal'; value: string | number | boolean | null }
   | { type: 'binding'; bindingId: string }
   | { type: 'path'; path: string }
-  | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> };
+  | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> }
+  | { type: 'i18n'; i18nKey: string; defaultValue: string };
 
 const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
@@ -106,6 +120,11 @@ const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
       type: z.literal('template'),
       template: z.string().min(1),
       args: z.record(z.string(), valueExpressionSchema).optional(),
+    }).strict(),
+    z.object({
+      type: z.literal('i18n'),
+      i18nKey: z.string().min(1),
+      defaultValue: z.string(),
     }).strict(),
   ])
 );
@@ -251,7 +270,7 @@ type NodeInput =
   | {
       id: string;
       type: 'section';
-      title?: string;
+      title?: I18nTextInput;
       style?: z.infer<typeof nodeStyleRefSchema>;
       children: NodeInput[];
     }
@@ -278,7 +297,7 @@ type NodeInput =
       type: 'field';
       style?: z.infer<typeof nodeStyleRefSchema>;
       binding: z.infer<typeof bindingRefSchema>;
-      label?: string;
+      label?: I18nTextInput;
       labelStyle?: z.infer<typeof nodeStyleRefSchema>;
       emptyValue?: string;
       placeholder?: string;
@@ -306,12 +325,12 @@ type NodeInput =
       rowBinding: string;
       columns: Array<{
         id: string;
-        header?: string;
+        header?: I18nTextInput;
         value: ValueExpressionInput;
         format?: z.infer<typeof valueFormatSchema>;
         style?: z.infer<typeof nodeStyleRefSchema>;
       }>;
-      emptyStateText?: string;
+      emptyStateText?: I18nTextInput;
     }
   | {
       id: string;
@@ -324,12 +343,12 @@ type NodeInput =
       };
       columns: Array<{
         id: string;
-        header?: string;
+        header?: I18nTextInput;
         value: ValueExpressionInput;
         format?: z.infer<typeof valueFormatSchema>;
         style?: z.infer<typeof nodeStyleRefSchema>;
       }>;
-      emptyStateText?: string;
+      emptyStateText?: I18nTextInput;
     }
   | {
       id: string;
@@ -338,7 +357,7 @@ type NodeInput =
       sourceBinding: z.infer<typeof bindingRefSchema>;
       rows: Array<{
         id: string;
-        label: string;
+        label: I18nTextInput;
         value: ValueExpressionInput;
         format?: z.infer<typeof valueFormatSchema>;
         emphasize?: boolean;
@@ -357,7 +376,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     z.object({
       id: z.string().min(1),
       type: z.literal('section'),
-      title: z.string().optional(),
+      title: i18nTextSchema.optional(),
       style: nodeStyleRefSchema.optional(),
       children: z.array(nodeSchema),
     }).strict(),
@@ -384,7 +403,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       type: z.literal('field'),
       style: nodeStyleRefSchema.optional(),
       binding: bindingRefSchema,
-      label: z.string().optional(),
+      label: i18nTextSchema.optional(),
       labelStyle: nodeStyleRefSchema.optional(),
       emptyValue: z.string().optional(),
       placeholder: z.string().optional(),
@@ -413,12 +432,12 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       rowBinding: z.string().min(1),
       columns: z.array(z.object({
         id: z.string().min(1),
-        header: z.string().optional(),
+        header: i18nTextSchema.optional(),
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
-      emptyStateText: z.string().optional(),
+      emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
@@ -432,12 +451,12 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       }).strict(),
       columns: z.array(z.object({
         id: z.string().min(1),
-        header: z.string().optional(),
+        header: i18nTextSchema.optional(),
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
-      emptyStateText: z.string().optional(),
+      emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
@@ -446,7 +465,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       sourceBinding: bindingRefSchema,
       rows: z.array(z.object({
         id: z.string().min(1),
-        label: z.string().min(1),
+        label: nonEmptyI18nTextSchema,
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),

@@ -26,6 +26,7 @@ import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
+import { GmailDiagnosticsDialog } from './admin/GmailDiagnosticsDialog';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -415,6 +416,19 @@ function EmailProviderConfigurationContent({
     setDiagnosticsOpen(true);
   };
 
+  // Provider-specific reconnect dispatch for auth_failure auto-pauses. The
+  // card's Reconnect button threads through here so no OAuth logic lives in
+  // the card: Microsoft/Google open their setup flow in the edit drawer,
+  // IMAP OAuth mailboxes start the popup reconnect flow, and password IMAP
+  // mailboxes open credential editing.
+  const handleReconnect = (provider: EmailProvider) => {
+    if (provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2') {
+      handleReconnectOAuth(provider);
+      return;
+    }
+    openEditDrawer(provider);
+  };
+
   // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
@@ -539,6 +553,7 @@ function EmailProviderConfigurationContent({
           onReconnectOAuth={handleReconnectOAuth}
           onResyncProvider={handleResyncProvider}
           onRunDiagnostics={handleRunDiagnostics}
+          onReconnect={handleReconnect}
           onAddClick={() => setWizardOpen(true)}
         />
 
@@ -683,7 +698,12 @@ function EmailProviderConfigurationContent({
               microsoftEmailSetup={microsoftEmailSetup}
             />
             <Microsoft365DiagnosticsDialog
-              isOpen={diagnosticsOpen}
+              isOpen={diagnosticsOpen && diagnosticsProvider?.providerType === 'microsoft'}
+              onClose={() => setDiagnosticsOpen(false)}
+              provider={diagnosticsProvider}
+            />
+            <GmailDiagnosticsDialog
+              isOpen={diagnosticsOpen && diagnosticsProvider?.providerType === 'google'}
               onClose={() => setDiagnosticsOpen(false)}
               provider={diagnosticsProvider}
             />

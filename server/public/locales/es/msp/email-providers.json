@@ -159,7 +159,8 @@
       "resyncMailbox": "Resincronizar buzón",
       "pause": "Pausar correo entrante",
       "resume": "Reanudar correo entrante",
-      "delete": "Eliminar proveedor"
+      "delete": "Eliminar proveedor",
+      "runGmailDiagnostics": "Ejecutar diagnósticos de entrega de Gmail"
     },
     "feedback": {
       "paused": "Correo entrante en pausa.",
@@ -167,6 +168,11 @@
       "pauseError": "No se pudo cambiar el estado de pausa del correo entrante."
     },
     "pausedHelp": "Los mensajes recibidos mientras esta bandeja está en pausa no se importan retroactivamente.",
+    "authFailure": {
+      "title": "Correo entrante en pausa — se requiere reconexión",
+      "description": "El correo entrante de {{mailbox}} está en pausa porque sus credenciales ya no funcionan. Los mensajes no se pierden: permanecen en el buzón de origen y se importarán después de que vuelva a conectar.",
+      "action": "Reconectar"
+    },
     "fields": {
       "status": "Estado",
       "lastSync": "Última sincronización",
@@ -208,6 +214,14 @@
       "title": "No hay proveedores de correo electrónico configurados",
       "description": "Agregue un proveedor de correo electrónico para comenzar a recibir y procesar correos electrónicos entrantes como tickets.",
       "action": "Agregar proveedor de correo electrónico"
+    },
+    "gmailWatch": {
+      "expiredTitle": "Gmail ya no envía correo nuevo aquí",
+      "expiredDescription": "La vigilancia de Gmail para {{mailbox}} caducó, así que Google dejó de publicar notificaciones. Los mensajes no se pierden: permanecen en el buzón. Use Actualizar Pub/Sub y Ver para reanudar la entrega.",
+      "missingTitle": "La entrega push de Gmail no está registrada",
+      "missingDescription": "No hay ninguna vigilancia de Gmail registrada para {{mailbox}}, por lo que no llegará correo entrante. Use Actualizar Pub/Sub y Ver para registrar una.",
+      "expiringTitle": "La entrega push de Gmail caduca en menos de un día",
+      "expiringDescription": "Las vigilancias de Gmail duran siete días. Use Actualizar Pub/Sub y Ver antes de que caduque, o el correo entrante se detendrá sin más aviso."
     }
   },
   "forms": {
@@ -237,6 +251,9 @@
         "authorizing": "Autorizando...",
         "authorized": "Autorizado",
         "authorizeAccess": "Autorizar acceso"
+      },
+      "messages": {
+        "setupIncomplete": "Proveedor guardado pero configuración incompleta: {{error}}"
       }
     },
     "microsoft": {

@@ -780,6 +780,8 @@
         "sections": {
           "general": "General",
           "generalHelp": "Name, description, visibility and default",
+          "appearance": "Appearance & defaults",
+          "appearanceHelp": "Tab pinning and the board's default list view",
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
           "inbound": "Email & inbound replies",
@@ -800,6 +802,22 @@
         "allSaved": "All changes saved",
         "reopenBadge": "reopen",
         "required": "Required"
+      },
+      "appearance": {
+        "pinLabel": "Pin to the tickets screen",
+        "pinHelp": "Pinned boards get a permanent tab on the tickets screen. Unpinned boards stay reachable from All tickets and the board filter.",
+        "savedView": "Saved view",
+        "inheritsTenant": "Inherits tenant defaults",
+        "openBoard": "Open this board",
+        "resetToTenant": "Reset to tenant default",
+        "arrangeNote": "Arrange this board's view on the board itself, then save it from the View menu.",
+        "preview": "Preview",
+        "summary": {
+          "openOnly": "Open only",
+          "columns": "{{columns}} columns",
+          "density": "density {{level}}",
+          "sortedBy": "sorted by {{field}}"
+        }
       },
       "empty": "No boards found.",
       "searchPlaceholder": "Search boards…"

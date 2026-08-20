@@ -10,7 +10,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   checkClientPortalPermissions,
   getClientBucketUsage,
+  getClientHourBlocks,
   type ClientBucketUsageResult,
+  type ClientPortalHourBlock,
 } from '@alga-psa/client-portal/actions';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -21,20 +23,23 @@ import {
 
 /**
  * "Prepaid hours" dashboard widget: one mini remaining-hours meter per bucket
- * line. Renders nothing unless the release flag is on, the portal user has
- * billing access, and there is at least one bucket line. A permission error
- * from the bucket action also counts as "render nothing".
+ * line, plus one row per prepaid hour block. Renders nothing unless the release
+ * flag is on, the portal user has billing access, and there is at least one
+ * bucket line or hour block. A permission error from the actions also counts
+ * as "render nothing".
  */
 export function PrepaidHoursCard() {
   const { t } = useTranslation('features/billing');
-  const { enabled: widgetEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: widgetEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [buckets, setBuckets] = useState<ClientBucketUsageResult[] | null>(null);
+  const [hourBlocks, setHourBlocks] = useState<ClientPortalHourBlock[]>([]);
 
   useEffect(() => {
     if (!widgetEnabled) {
       setBuckets(null);
+      setHourBlocks([]);
       return;
     }
     let cancelled = false;
@@ -46,13 +51,19 @@ export function PrepaidHoursCard() {
           setBuckets([]);
           return;
         }
-        const result = await getClientBucketUsage();
+        const [bucketResult, blockResult] = await Promise.all([
+          getClientBucketUsage(),
+          getClientHourBlocks(),
+        ]);
         if (cancelled) return;
-        if (isActionMessageError(result) || isActionPermissionError(result)) {
+        if (isActionMessageError(bucketResult) || isActionPermissionError(bucketResult)) {
           setBuckets([]);
-          return;
+        } else {
+          setBuckets(bucketResult);
         }
-        setBuckets(result);
+        if (!isActionMessageError(blockResult) && !isActionPermissionError(blockResult)) {
+          setHourBlocks(blockResult);
+        }
       } catch (error) {
         console.error('Error loading prepaid hours widget:', error);
         if (!cancelled) setBuckets([]);
@@ -63,7 +74,7 @@ export function PrepaidHoursCard() {
     };
   }, [widgetEnabled]);
 
-  if (!widgetEnabled || !buckets || buckets.length === 0) {
+  if (!widgetEnabled || !buckets || (buckets.length === 0 && hourBlocks.length === 0)) {
     return null;
   }
 
@@ -123,6 +134,44 @@ export function PrepaidHoursCard() {
                 <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200">
                   <div
                     className={`h-1.5 rounded-full ${meterColors.bg}`}
+                    style={{ width: `${fillPercent}%` }}
+                  ></div>
+                </div>
+              </li>
+            );
+          })}
+          {hourBlocks.map((block) => {
+            const remainingHours = block.hours_remaining;
+            const totalHours = block.hours_total;
+            const fillPercent = totalHours > 0 ? Math.max(0, Math.min(100, ((totalHours - remainingHours) / totalHours) * 100)) : 0;
+            return (
+              <li
+                key={block.block_id}
+                className="rounded-md border border-[rgb(var(--color-border-100))] p-2.5"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-medium text-[rgb(var(--color-text-900))]">
+                    {t('hourBlocks.blockLabel', { service: block.service_name, defaultValue: '{{service}} block' })}
+                  </span>
+                  {block.expiring_soon_days != null ? (
+                    <Badge variant="warning" size="sm" className="shrink-0">
+                      {t('hourBlocks.expiringSoon', {
+                        days: block.expiring_soon_days,
+                        defaultValue: 'Expires in {{days}}d',
+                      })}
+                    </Badge>
+                  ) : (
+                    <span className="shrink-0 text-sm font-semibold text-[rgb(var(--color-text-900))]">
+                      {t('bucket.leftHours', {
+                        hours: remainingHours.toFixed(1),
+                        defaultValue: '{{hours}}h left',
+                      })}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-gray-200">
+                  <div
+                    className="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]"
                     style={{ width: `${fillPercent}%` }}
                   ></div>
                 </div>

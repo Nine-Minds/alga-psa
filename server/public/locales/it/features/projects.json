@@ -1798,6 +1798,12 @@
       "approved": "Approvato: {{amount}}",
       "ready": "Pronto: {{amount}}",
       "total": "Totale: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo predefinito del cliente",
+      "hint": "Gli addebiti di tempo e di piano di questo progetto vengono fatturati a questo profilo, salvo che un contratto li rivendichi.",
+      "updated": "Profilo di fatturazione aggiornato"
     }
   },
   "taskTypes": {

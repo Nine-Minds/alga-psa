@@ -602,7 +602,39 @@ jobs:
       - name: Install Playwright system dependencies
         if: steps.wait_for_setup.outputs.status == 'success'
         working-directory: ./e2e-tests
-        run: npx playwright install-deps
+        # Hard ceiling so this step can never again consume the whole job budget.
+        timeout-minutes: 12
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          # `npx playwright install-deps` shells out to `apt-get`, which has
+          # intermittently stalled for 30+ minutes on the GitHub runner (an
+          # apt/dpkg lock or a Debian mirror hang). Because the step had no
+          # timeout, a single stall consumed the entire 60-minute job budget and
+          # the run was cancelled at "Install Playwright system dependencies"
+          # before the login e2e test ever executed -- even though the build and
+          # all services were up and healthy by ~T+29m. Good runs finish this
+          # step in 35-490s, so bound each attempt and retry: a transient stall
+          # self-heals instead of killing the job.
+          set -x
+          attempt=1
+          max_attempts=3
+          until timeout 240 npx playwright install-deps; do
+            code=$?
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "playwright install-deps failed after $attempt attempts (last exit $code)."
+              exit "$code"
+            fi
+            echo "Attempt $attempt failed/stalled (exit $code); clearing apt locks and retrying..."
+            # A timed-out attempt can leave apt/dpkg holding a lock; clear it so
+            # the retry is not guaranteed to stall the same way.
+            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
+              /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
+            sudo dpkg --configure -a 2>/dev/null || true
+            attempt=$((attempt+1))
+            sleep 10
+          done
         shell: bash
 
       - name: Create Playwright config file

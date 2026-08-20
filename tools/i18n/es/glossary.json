@@ -162,6 +162,12 @@
       "notes": "Use filtro como sustantivo y filtrar para la acción. Limpiar filtros es la formulación establecida para restablecerlos."
     },
     {
+      "id": "fulfillment",
+      "en-term": "fulfillment",
+      "term": "cumplimiento",
+      "notes": "Use cumplimiento para la columna fulfillment de las órdenes de venta y para la etiqueta equivalente en los documentos del cliente; entrega se refiere al envío físico."
+    },
+    {
       "id": "industry",
       "en-term": "industry",
       "term": "sector",
@@ -270,6 +276,12 @@
       "notes": "Use cotización (femenino: la cotización) para ofertas comerciales. features/billing conserva una pestaña Presupuestos, pero presupuesto está reservado al budget; cita/citación no significan quote."
     },
     {
+      "id": "rate",
+      "en-term": "rate",
+      "term": "tarifa",
+      "notes": "Use tarifa para la columna de tarifa en documentos del cliente y reserve precio unitario para unit price: ambas etiquetas deben seguir siendo distinguibles cuando un documento muestra las dos columnas."
+    },
+    {
       "id": "report",
       "en-term": "report",
       "term": "informe",
@@ -348,6 +360,12 @@
       "notes": "Use tarea para tareas de proyectos, flujos de trabajo, bandejas y listas de comprobación."
     },
     {
+      "id": "tax",
+      "en-term": "tax",
+      "term": "impuesto",
+      "notes": "Use el término neutro impuesto en los documentos del cliente; nombre el IVA solo cuando se trate específicamente de ese impuesto."
+    },
+    {
       "id": "technician",
       "en-term": "technician",
       "term": "técnico",
@@ -376,6 +394,12 @@
       "en-term": "timesheet",
       "term": "hoja de horas",
       "notes": "Use hoja de horas para el conjunto enviado o aprobado de entradas. Los encabezados alternan hoja de tiempo y hoja de horas; prefiera esta última para dejar claro que registra horas facturables."
+    },
+    {
+      "id": "unit-price",
+      "en-term": "unit price",
+      "term": "precio unitario",
+      "notes": "Use precio unitario para la columna de precio por unidad y tarifa para rate; nunca intercambie ambos términos."
     },
     {
       "id": "user",
@@ -846,7 +870,8 @@
       "workflow-id",
       "workflow.event",
       "| null",
-      "Sage"
+      "Sage",
+      "×"
     ],
     "caseInsensitive": [
       "api",

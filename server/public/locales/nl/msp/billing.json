@@ -22,7 +22,8 @@
     "success": "Succes",
     "update": "Bijwerken",
     "yes": "Ja",
-    "no": "Nee"
+    "no": "Nee",
+    "export": "Exporteren"
   },
   "dashboard": {
     "title": "Facturering",
@@ -499,5 +500,75 @@
     "unknownValue": "Onbekende waarde",
     "noDataForList": "Geen gegevens voor lijst: {{name}}",
     "uncategorized": "Niet gecategoriseerd"
+  },
+  "spendByProfile": {
+    "title": "Uitgaven per facturatieprofiel",
+    "description": "Wat elke locatie of entiteit binnen deze klant in de periode heeft gekost. Open een rij om de kosten achter het getal te zien.",
+    "from": "Van",
+    "to": "Tot",
+    "comparePrevious": "Vergelijken met vorige periode",
+    "defaultBadge": "Standaard",
+    "empty": "Geen definitieve kosten voor deze klant in de geselecteerde periode.",
+    "drillDownTitle": "Kosten achter dit getal",
+    "drillDownEmpty": "Geen kosten gevonden.",
+    "priorPeriod": "voorheen {{amount}}",
+    "unattributedHint": "Geen contract, contractregel of werkitem heeft deze kosten opgeëist, dus zijn ze op het standaardprofiel beland.",
+    "columns": {
+      "profile": "Facturatieprofiel",
+      "charges": "Kosten",
+      "net": "Netto",
+      "tax": "Btw",
+      "total": "Totaal",
+      "unattributed": "Teruggevallen op standaard",
+      "priorTotal": "Totaal vorige periode",
+      "change": "Verschil"
+    }
+  },
+  "attribution": {
+    "profile": {
+      "explicit": "Gefactureerd aan {{profile}} omdat dit profiel rechtstreeks voor deze kosten is gekozen.",
+      "contractLine": "Gefactureerd aan {{profile}} omdat de contractregel eraan is toegewezen.",
+      "contractLineNamed": "Gefactureerd aan {{profile}} omdat contractregel “{{line}}” eraan is toegewezen.",
+      "contract": "Gefactureerd aan {{profile}} omdat het contract eraan is toegewezen.",
+      "contractNamed": "Gefactureerd aan {{profile}} omdat contract “{{contract}}” eraan is toegewezen.",
+      "workItem": "Gefactureerd aan {{profile}} omdat het ticket of project eraan is toegewezen; er geldt geen contracttoewijzing.",
+      "workItemNamed": "Gefactureerd aan {{profile}} omdat “{{workItem}}” eraan is toegewezen; er geldt geen contracttoewijzing.",
+      "clientDefault": "Gefactureerd aan {{profile}} omdat niets anders deze kosten opeiste — ze vielen terug op het standaardprofiel van de klant.",
+      "unknown": "Voor deze kosten is geen toewijzing vastgelegd."
+    },
+    "line": {
+      "explicit": "{{line}} is handmatig voor deze regel gekozen.",
+      "autoUniqueService": "{{line}} was de enige contractregel die deze dienst dekte.",
+      "autoBucketOverlay": "Meerdere contractregels dekten deze dienst; alleen {{line}} had een bundel.",
+      "autoBillingProfile": "Meerdere contractregels dekten deze dienst; {{line}} is gekozen omdat die bij het facturatieprofiel van het werkitem hoort.",
+      "reconciled": "{{line}} is aan deze regel gekoppeld toen de factuur werd gegenereerd.",
+      "unresolved": "Er kon geen contractregel voor deze regel worden gekozen.",
+      "unknown": "Hoe deze contractregel is gekozen, is niet vastgelegd."
+    },
+    "limitation": {
+      "contractGranular": "Achter dit kostentype zit geen registratie per item, dus het kan alleen tot aan het contract worden toegewezen — niet tot de specifieke locatie of het werk waar het vandaan komt."
+    }
+  },
+  "unresolvedReview": {
+    "title": "Items zonder contractregel",
+    "description": "Deze items zijn nog niet aan een contractregel gekoppeld en zouden dus tegen het tarief uit de servicecatalogus worden gefactureerd.",
+    "catalogPricingCaveat": "Catalogusprijzen negeren het contracttarief, afronding, minimale factureerbare tijd, overwerk en elk prijsschema.",
+    "ambiguousBlocked": "{{count}} item(s) worden door een contract gedekt maar kwamen overeen met meer dan één contractregel. Ze worden pas gefactureerd nadat u een regel toewijst of catalogusprijzen kiest.",
+    "unknownService": "Onbekende dienst",
+    "timeEntry": "Tijdregel · {{minutes}} min",
+    "usageRecord": "Verbruiksregel · {{quantity}}",
+    "assignLine": "Contractregel toewijzen",
+    "assigned": "Toegewezen — dit item wordt tegen contracttarief gefactureerd.",
+    "useCatalogPricing": "Catalogusprijs gebruiken",
+    "undoCatalogPricing": "Ongedaan maken",
+    "catalogPricingChosen": "Catalogusprijs gekozen",
+    "catalogPricingAccepted": "Catalogusprijs gekozen voor dit item.",
+    "catalogPricingRevoked": "Catalogusprijs ingetrokken.",
+    "uncoveredExplanation": "Geen enkel contract dekt deze dienst, dus het catalogustarief is het enige beschikbare tarief. Het wordt ongewijzigd gefactureerd.",
+    "ambiguousExplanation": "Een contract dekt deze dienst, dus er bestaat een onderhandeld tarief. Kies de contractregel waar het bij hoort.",
+    "reason": {
+      "uncovered": "Niet gedekt door een contract",
+      "ambiguous": "Meer dan één contractregel komt overeen"
+    }
   }
 }

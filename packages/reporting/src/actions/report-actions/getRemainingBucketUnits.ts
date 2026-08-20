@@ -31,11 +31,17 @@ export interface RemainingBucketUnitsResult {
 }
 
 /**
- * Server action to fetch remaining units (hours) for active bucket plans
+ * Server action to fetch remaining units (hours) for active bucket pools
  * associated with a specific client for the current period.
  *
+ * Weighted-burn model: a bucket is a line-owned pool. One row is returned per
+ * pool; the display label is the pool name, the single member service name
+ * (member-scoped pool), or a generic pool label (catch-all). `minutes_used`
+ * is the pool's weighted consumption, so the numbers read correctly for both
+ * 1x and weighted pools.
+ *
  * @param input - Object containing clientId and currentDate.
- * @returns A promise that resolves to an array of bucket plan usage details.
+ * @returns A promise that resolves to an array of bucket pool usage details.
  */
 export const getRemainingBucketUnits = withAuth(async (
   _user,
@@ -55,77 +61,96 @@ export const getRemainingBucketUnits = withAuth(async (
 
   try {
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Query contract lines via client_contracts -> contracts -> contract_lines
-      // This replaces the old client_contract_lines-based query
       const scopedDb = tenantDb(trx, tenant);
-      const query = scopedDb.table('client_contracts as cc');
 
+      // Active client contract lines owning at least one bucket pool.
+      const lineQuery = scopedDb.table('client_contracts as cc');
       scopedDb.tenantJoin(
-        query,
+        lineQuery,
         'contracts as c',
         'c.contract_id',
         trx.raw('coalesce(cc.template_contract_id, cc.contract_id)') as unknown as string,
         { rootTenantColumn: 'cc.tenant' }
       );
-      scopedDb.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
-      // Add joins for configuration structure
-      scopedDb.tenantJoin(query, 'contract_line_services as ps', 'cl.contract_line_id', 'ps.contract_line_id');
-      // Join to service_catalog to get service_name
-      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ps.service_id', 'sc.service_id');
-      scopedDb.tenantJoin(query, 'contract_line_service_configuration as psc', 'ps.contract_line_id', 'psc.contract_line_id', {
-        on: (join) => {
-          join.andOn('ps.service_id', '=', 'psc.service_id');
-        },
+      scopedDb.tenantJoin(lineQuery, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
+      scopedDb.tenantJoin(lineQuery, 'contract_line_buckets as clb', 'cl.contract_line_id', 'clb.contract_line_id');
+
+      // Member (first member only, for the label when member-scoped).
+      scopedDb.tenantJoin(
+        lineQuery,
+        'contract_line_bucket_services as first_member',
+        'first_member.bucket_id',
+        'clb.bucket_id',
+        {
+          type: 'left',
+          on: (join) => {
+            // Deterministic "first" member for the display label.
+            join.andOn('first_member.service_id', '=', trx.raw('(' +
+              'SELECT ms.service_id FROM contract_line_bucket_services ms ' +
+              'WHERE ms.tenant = first_member.tenant AND ms.bucket_id = first_member.bucket_id ' +
+              'ORDER BY ms.service_id ASC LIMIT 1' +
+            ')'));
+          },
+        }
+      );
+      scopedDb.tenantJoin(lineQuery, 'service_catalog as sc', 'first_member.service_id', 'sc.service_id', {
+        type: 'left',
       });
-      scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
-      scopedDb.tenantJoin(query, 'bucket_usage as bu', 'cl.contract_line_id', 'bu.contract_line_id', {
+      scopedDb.tenantJoin(lineQuery, 'bucket_usage as bu', 'clb.bucket_id', 'bu.bucket_id', {
         type: 'left',
         rootTenantColumn: 'cc.tenant',
         on: (join) => {
           join
             .andOn('cc.client_id', '=', 'bu.client_id')
-            // Filter bucket_usage for the period containing currentDate
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
         },
       });
 
-      query
-      .where('cc.client_id', clientId)
-      .andWhere('cc.is_active', true)
-      .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
-      .andWhere(function() {
-        this.whereNull('cc.end_date')
-            .orWhere('cc.end_date', '>', trx.raw('?', [currentDate]));
-      })
-      .select(
-        'cl.contract_line_id',
-        'cl.contract_line_name',
-        'ps.service_id',
-        'sc.service_name',
-        'psbc.total_minutes',
-        trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
-        trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
-        'bu.period_start',
-        'bu.period_end'
-      );
-      
-      console.log('Generated SQL:', query.toString());
-      
-      const rawResults: any[] = await query;
-      
+      lineQuery
+        .where('cc.client_id', clientId)
+        .andWhere('cc.is_active', true)
+        .andWhere('cc.start_date', '<=', trx.raw('?', [currentDate]))
+        .andWhere(function() {
+          this.whereNull('cc.end_date')
+              .orWhere('cc.end_date', '>', trx.raw('?', [currentDate]));
+        })
+        .select(
+          'cl.contract_line_id',
+          'cl.contract_line_name',
+          'clb.bucket_id',
+          'clb.bucket_name',
+          'clb.covers_all_services',
+          'clb.total_minutes',
+          'first_member.service_id',
+          'sc.service_name',
+          trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
+          trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
+          'bu.period_start',
+          'bu.period_end'
+        );
+
+      const rawResults: any[] = await lineQuery;
+
       return rawResults.map(row => {
         const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
         const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
         const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
         const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
-        const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
-      
+        const serviceName = row.service_name
+          ? String(row.service_name)
+          : row.covers_all_services
+            ? 'All services'
+            : 'Bucket pool';
+        const displayLabel = row.bucket_name
+          ? String(row.bucket_name)
+          : `${row.contract_line_name} - ${serviceName}`;
+
         return {
           contract_line_id: row.contract_line_id,
           contract_line_name: row.contract_line_name,
-          service_id: row.service_id,
-          service_name: row.service_name,
+          service_id: row.service_id ?? null,
+          service_name: serviceName,
           display_label: displayLabel,
           total_minutes: totalMinutes,
           minutes_used: minutesUsed,
@@ -136,8 +161,8 @@ export const getRemainingBucketUnits = withAuth(async (
         };
       });
     });
-      
-    console.log(`Found ${results.length} active bucket plans for client ${clientId}`);
+
+    console.log(`Found ${results.length} active bucket pools for client ${clientId}`);
     return results;
 
   } catch (error) {

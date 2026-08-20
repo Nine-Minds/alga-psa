@@ -159,7 +159,8 @@
       "resyncMailbox": "Ressincronizar caixa de correio",
       "pause": "Pausar e-mails recebidos",
       "resume": "Retomar e-mails recebidos",
-      "delete": "Excluir provedor"
+      "delete": "Excluir provedor",
+      "runGmailDiagnostics": "Executar o diagnóstico de entrega do Gmail"
     },
     "feedback": {
       "paused": "E-mails recebidos pausados.",
@@ -167,6 +168,11 @@
       "pauseError": "Não foi possível alterar o estado de pausa dos e-mails recebidos."
     },
     "pausedHelp": "As mensagens recebidas enquanto esta caixa está pausada não são importadas retroativamente.",
+    "authFailure": {
+      "title": "E-mail de entrada pausado — reconexão necessária",
+      "description": "O e-mail de entrada de {{mailbox}} está pausado porque suas credenciais não funcionam mais. As mensagens não são perdidas — permanecem na caixa de correio de origem e serão importadas depois de você reconectar.",
+      "action": "Reconectar"
+    },
     "fields": {
       "status": "Status",
       "lastSync": "Última sincronização",
@@ -208,6 +214,14 @@
       "title": "Nenhum provedor de e-mail configurado",
       "description": "Adicione um provedor de e-mail para começar a receber e processar e-mails recebidos como tickets.",
       "action": "Adicionar provedor de e-mail"
+    },
+    "gmailWatch": {
+      "expiredTitle": "O Gmail não envia mais mensagens novas para cá",
+      "expiredDescription": "A observação do Gmail para {{mailbox}} expirou, então o Google parou de publicar notificações. As mensagens não são perdidas — elas permanecem na caixa de entrada. Use Atualizar Pub/Sub e assistir para retomar a entrega.",
+      "missingTitle": "A entrega push do Gmail não está registrada",
+      "missingDescription": "Nenhuma observação do Gmail está registrada para {{mailbox}}, então nenhuma mensagem recebida chegará. Use Atualizar Pub/Sub e assistir para registrar uma.",
+      "expiringTitle": "A entrega push do Gmail expira em menos de um dia",
+      "expiringDescription": "As observações do Gmail duram sete dias. Use Atualizar Pub/Sub e assistir antes que esta expire, ou as mensagens recebidas vão parar sem outro aviso."
     }
   },
   "forms": {
@@ -237,6 +251,9 @@
         "authorizing": "Autorizando...",
         "authorized": "Autorizado",
         "authorizeAccess": "Autorizar acesso"
+      },
+      "messages": {
+        "setupIncomplete": "Provedor salvo, mas configuração incompleta: {{error}}"
       }
     },
     "microsoft": {

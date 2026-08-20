@@ -12,7 +12,10 @@ export interface EmailProvider {
   mailbox: string;
   isActive: boolean;
   inboundPausedAt?: string | null;
-  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | 'auth_failure' | null;
+  inboundAuthFailureCount?: number;
+  inboundAuthFailureLastAt?: string | null;
+  inboundAuthFailureCode?: string | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
@@ -67,7 +70,11 @@ export interface GoogleEmailProviderConfig {
   token_expires_at?: string;
   history_id?: string;
   watch_expiration?: string;
+  /** Last verified Pub/Sub push accepted for this mailbox. */
+  last_push_received_at?: string;
   pubsub_initialised_at?: string;
+  pubsub_topic_name?: string | null;
+  pubsub_subscription_name?: string | null;
   created_at: string;
   updated_at: string;
 }

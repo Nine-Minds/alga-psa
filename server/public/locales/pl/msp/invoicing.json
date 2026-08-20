@@ -361,7 +361,7 @@
       "refresh": "Wystąpił błąd podczas odświeżania danych faktury.",
       "updateFailed": "Błąd podczas aktualizowania faktury",
       "generateFailed": "Błąd podczas generowania faktury",
-      "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej klienta i spróbuj ponownie.",
+      "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej i spróbuj ponownie.",
       "CLIENT_NOT_FOUND": "Nie znaleziono wybranego klienta. Odśwież stronę i spróbuj ponownie.",
       "SERVICE_NOT_FOUND": "Nie znaleziono usługi {{serviceId}}. Odśwież stronę i spróbuj ponownie.",
       "INVALID_QUANTITY": "Ilość musi być większa od zera.",
@@ -375,7 +375,7 @@
       "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży."
     },
     "warnings": {
-      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej przed wygenerowaniem faktury."
+      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
     },
     "errorFallback": {
       "title": "Coś poszło nie tak",
@@ -1716,7 +1716,8 @@
       }
     },
     "canvas": {
-      "templateBoundary": "Granica szablonu"
+      "templateBoundary": "Granica szablonu",
+      "translatableHint": "Tłumaczone automatycznie na język odbiorcy. Po edycji tekstu zostanie użyty Twój własny stały tekst."
     },
     "dragOverlay": {
       "component": "Komponent"

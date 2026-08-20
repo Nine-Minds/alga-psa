@@ -42,10 +42,27 @@ export async function findUserByIdForApi(
       // Get avatar URL
       const avatarUrl = await getUserAvatarUrl(userId, tenantId);
 
+      // Resolve the authoritative client scope for a client user from the
+      // tenant-scoped contact relation — never from headers, payloads, role
+      // names, or API-key metadata. A missing contact, a client-less contact,
+      // or a cross-tenant association leaves the client ID unresolved; such a
+      // user is already rejected at the API surface and the kernel rule denies
+      // record access independently.
+      let clientId: string | undefined;
+      if (user.user_type === 'client' && user.contact_id) {
+        const contact = await tenantDb(knex, tenantId).table('contacts')
+          .where({ contact_name_id: user.contact_id })
+          .first('client_id');
+        if (typeof contact?.client_id === 'string' && contact.client_id.length > 0) {
+          clientId = contact.client_id;
+        }
+      }
+
       return {
         ...user,
         roles,
-        avatarUrl
+        avatarUrl,
+        ...(clientId !== undefined ? { clientId } : {}),
       };
     });
   } catch (error) {

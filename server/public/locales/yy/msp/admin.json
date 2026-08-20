@@ -628,5 +628,35 @@
       "error": "55555",
       "metadata": "55555"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "55555",
+    "description": "55555",
+    "labels": {
+      "provider": "55555",
+      "mailbox": "55555",
+      "overall": "55555",
+      "recommendations": "55555",
+      "error": "55555"
+    },
+    "audienceMismatch": {
+      "title": "55555",
+      "expected": "55555",
+      "actual": "55555"
+    },
+    "actions": {
+      "copySupportBundle": "55555",
+      "copied": "55555"
+    },
+    "states": {
+      "running": "55555",
+      "diagnosticsFailed": "55555"
+    },
+    "statuses": {
+      "pass": "55555",
+      "warn": "55555",
+      "fail": "55555",
+      "skip": "55555"
+    }
   }
 }

@@ -59,7 +59,7 @@ export function ClientNotificationCard({
 }: ClientNotificationCardProps) {
   const { t } = useTranslation('client-portal');
   // Flag off: markup/behavior exactly as today. Flag on: priority ring/dim + indicator.
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   const priorityCardClass = priorityEnabled
     ? activity.priority === 'high'
       ? ' ring-1 ring-rose-400'

@@ -335,7 +335,10 @@ describe('T100/T321: every scanned translation key resolves in the en locale', (
   });
 
   it('the two ClientDetails Hudu tab labels are exactly the expected keys', () => {
-    const keys = collectHuduKeys(clientDetailsSource as string).sort();
+    // The unified credentials-vault tab reuses `clientDetails.huduPasswordsTab`
+    // for its "Passwords" label (same label as the legacy Hudu-only tab), so the
+    // key legitimately appears twice in the source; dedupe before comparing.
+    const keys = [...new Set(collectHuduKeys(clientDetailsSource as string))].sort();
     expect(keys).toEqual(['clientDetails.huduPasswordsTab', 'clientDetails.huduTab']);
   });
 

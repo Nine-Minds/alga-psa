@@ -300,7 +300,9 @@
     "scheduleVisitFailed": "No se pudo abrir el planificador",
     "loadCommentsFailed": "No se pudieron cargar los comentarios",
     "updateTicketFailed": "No se pudo actualizar el ticket",
-    "errorWithMessage": "Error: {{message}}"
+    "errorWithMessage": "Error: {{message}}",
+    "billingProfileUpdated": "Perfil de facturación actualizado",
+    "updateBillingProfileFailed": "No se pudo actualizar el perfil de facturación"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -495,7 +497,31 @@
     },
     "exportSelectedAction": "Exportar seleccionados ({{count}})",
     "exportAction": "Exportar CSV",
-    "importAction": "Importar CSV"
+    "importAction": "Importar CSV",
+    "boardTabs": {
+      "all": "Todos los tickets"
+    },
+    "boardHeader": {
+      "open": "Abiertos",
+      "overdue": "Vencidos",
+      "slaBreach": "Incumplimiento de SLA",
+      "unassigned": "Sin asignar",
+      "managedBy": "Gestionado por",
+      "sla": "SLA"
+    },
+    "viewMenu": {
+      "label": "Vista",
+      "columns": "Columnas",
+      "density": "Densidad",
+      "saveBoardDefault": "Guardar como vista predeterminada de este tablero",
+      "saveTenantDefault": "Guardar como vista predeterminada para todos",
+      "resetToTenant": "Restablecer al valor predeterminado del inquilino",
+      "unsavedChanges": "Esta vista difiere del valor predeterminado guardado",
+      "saved": "Vista predeterminada guardada",
+      "saveFailed": "No se pudo guardar la vista predeterminada",
+      "reset": "Restablecer al valor predeterminado del inquilino",
+      "resetFailed": "No se pudo restablecer la vista"
+    }
   },
   "bulk": {
     "bundleTickets": "Agrupar tickets",
@@ -955,7 +981,10 @@
       "selective": "Seleccionar miembros individuales para conservar/eliminar"
     },
     "noTeamMembersOnTicket": "No se encontraron miembros del equipo en este ticket.",
-    "unnamedUser": "Usuario sin nombre"
+    "unnamedUser": "Usuario sin nombre",
+    "billingProfile": "Perfil de facturación",
+    "billingProfileUnassigned": "Usar el perfil predeterminado",
+    "billingProfileHint": "Solo se usa cuando ningún contrato asigna este trabajo a un perfil."
   },
   "settings": {
     "categories": {

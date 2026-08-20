@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft hat Sie angemeldet, den Zugriff auf Ihre verwaltete Mandantenliste jedoch verweigert. Ein globaler Administrator muss die Administratorzustimmung für die angeforderten Berechtigungen erteilen. Es wurde nichts gespeichert – versuchen Sie es nach erteilter Zustimmung erneut.",
             "expired": "Der Verbindungsversuch ist abgelaufen, bevor er abgeschlossen war. Es wurde nichts gespeichert – starten Sie die Verbindung erneut.",
             "generic": "Microsoft Entra wurde nicht verbunden, und es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
-            "validationFailed": "Microsoft hat Sie angemeldet, aber Ihre verwaltete Mandantenliste konnte nicht gelesen werden, daher wurde nichts gespeichert. Prüfen Sie die Berechtigungen der Verbindung und versuchen Sie es erneut."
+            "validationFailed": "Microsoft hat Sie angemeldet, aber die verwaltete Mandantenliste konnte nicht gelesen werden; es wurde nichts gespeichert. Ihre Berechtigungen wurden akzeptiert — meist ist der Partner-Mandant nicht in Microsoft 365 Lighthouse eingebunden oder es bestehen keine aktiven GDAP-Beziehungen.",
+            "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut."
           },
           "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Für diesen Mandanten konfigurierte Microsoft-OAuth-Anmeldedaten.",
               "globalAdmin": "Einen globalen Administrator, der die Berechtigungen genehmigen kann.",
-              "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten."
+              "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten.",
+              "lighthouse": "Microsoft 365 Lighthouse ist in Ihrem Partner-Mandanten eingerichtet."
             }
           },
           "directReassurance": "Sie sehen die Berechtigungsabfrage, bevor irgendetwas erteilt wird.",
@@ -1858,6 +1860,7 @@
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
         "errors": {
+          "automatedSalesTax": "Der Automated-Sales-Tax-Modus konnte nicht aktualisiert werden.",
           "disconnect": "QuickBooks konnte nicht getrennt werden.",
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
           "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
@@ -1879,9 +1882,21 @@
         "requiredScopes": "Erforderliche Scopes",
         "storedClientId": "Gespeicherte Client ID: {{value}}",
         "storedClientSecret": "Gespeichertes Client Secret: {{value}}",
-        "tenantOauthDescription": "Fügen Sie die für diesen Mandanten registrierten Intuit-App-Anmeldedaten ein, oder lassen Sie das Feld leer, um die QuickBooks-App auf Anwendungsebene zu verwenden, sofern eine konfiguriert ist. Secret-Werte werden nach dem Speichern nicht mehr an den Browser zurückgegeben.",
-        "tenantOauthTitle": "Mandanteneigene OAuth-App",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "Über welche Intuit-App sich dieser Mandant verbindet. Secrets werden nach dem Speichern nie an den Browser zurückgegeben.",
+        "tenantOauthTitle": "Intuit-App-Zugangsdaten",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Der Automated-Sales-Tax-Modus ist aus. Alga berechnet die Steuer für dieses Unternehmen weiterhin selbst.",
+          "enabledMessage": "QuickBooks berechnet die Umsatzsteuer für delegierte Rechnungen dieses Unternehmens ab sofort selbst.",
+          "hint": "Aktivieren Sie dies, wenn dieses QuickBooks-Unternehmen Automated Sales Tax verwendet. Intuit besteuert exportierte Rechnungen dann anhand der Kundenadresse und die Steuer fließt nach Alga zurück.",
+          "label": "QuickBooks berechnet die Umsatzsteuer"
+        },
+        "credentialSource": {
+          "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit — Sie können QuickBooks verbinden, ohne selbst eine zu registrieren. Füllen Sie die Felder unten nur aus, wenn dieser Mandant stattdessen eine eigene Intuit-App verwenden soll.",
+          "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine im Intuit-Developer-Portal und fügen Sie Client-ID und Secret unten ein — die Einrichtungsanleitung führt Sie durch die Schritte.",
+          "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
+        },
+        "setupGuideLink": "QuickBooks-Einrichtungsanleitung"
       },
       "sync": {
         "healthCardTitle": "Synchronisierungsstatus",
@@ -1970,6 +1985,15 @@
         "errors": {
           "previewFailed": "Die Importvorschau konnte nicht geladen werden.",
           "executeFailed": "Der Import ist fehlgeschlagen."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · Kennung {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — nicht steuerpflichtig",
+          "taxable": "TAX — steuerpflichtig (Automated Sales Tax bestimmt den Satz)"
         }
       }
     },
@@ -2521,6 +2545,29 @@
           "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
           "updateContact": "Standardkontakt konnte nicht aktualisiert werden",
           "updateAutoSync": "Auto-Sync-Einstellung konnte nicht aktualisiert werden"
+        }
+      },
+      "deviceSync": {
+        "title": "Geplante Gerätesynchronisierung",
+        "description": "Aktualisieren Sie dieses Geräteinventar nach einem Zeitplan, statt auf eine manuelle Vollsynchronisierung zu warten. Jeder Lauf ruft die Anbieter-API auf, und bei manchen Anbietern liest auch ein inkrementeller Lauf die vollständige Geräteliste, sodass ein kürzeres Intervall entsprechend mehr API-Aufrufe verursacht.",
+        "enabledLabel": "Geräte nach Zeitplan synchronisieren",
+        "intervalLabel": "Ausführen alle (Minuten)",
+        "intervalHelp": "Wählen Sie zwischen {{min}} und {{max}} Minuten. Ein kürzeres Intervall hält die Gerätedaten aktueller und ruft die Anbieter-API häufiger auf.",
+        "intervalInvalid": "Geben Sie eine ganze Zahl von Minuten zwischen {{min}} und {{max}} ein.",
+        "lastScheduledRun": "Letzter geplanter Lauf: {{time}}",
+        "lastScheduledRunNever": "Die geplante Synchronisierung wurde noch nicht ausgeführt.",
+        "lastAnySync": "Letzte Synchronisierung jeder Art, einschließlich manueller Vollsynchronisierungen: {{time}}",
+        "lastAnySyncNever": "Es wurde noch keine Gerätesynchronisierung jeglicher Art ausgeführt.",
+        "lastSyncError": "Die letzte Synchronisierung ist fehlgeschlagen: {{error}}",
+        "actions": {
+          "save": "Synchronisierungszeitplan speichern",
+          "saving": "Wird gespeichert..."
+        },
+        "success": {
+          "saved": "Zeitplan für die Gerätesynchronisierung gespeichert. Der Scheduler wendet ihn innerhalb weniger Minuten an."
+        },
+        "errors": {
+          "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
       }
     },

@@ -1,0 +1,650 @@
+[
+  {
+    "id": "T001",
+    "description": "parseRmmDeviceSyncState returns intervalMinutes 60 when settings.deviceSync is absent",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "parseRmmDeviceSyncState clamps intervalMinutes 5 up to 15",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "parseRmmDeviceSyncState clamps intervalMinutes 5000 down to 1440",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "parseRmmDeviceSyncState handles settings stored as a JSON string as well as an object",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F001"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "parseRmmDeviceSyncState returns syncEnabled false when deviceSync is absent (opt-in default)",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F001"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "parseRmmDeviceSyncState returns syncEnabled false when the integration is inactive even if deviceSync.enabled is true",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "RMM_DEVICE_SYNC_PROVIDERS is not the same array reference or contents as RMM_ALERT_POLLING_PROVIDERS",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "intervalMinutesToCron(60) returns an hourly cron expression",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "intervalMinutesToCron(1440) returns a daily cron expression",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "The reconciler creates a device-sync schedule for an active, enabled, eligible integration that has none",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "The reconciler creates the schedule with singletonKey rmm-device-sync:<tenant>:<integration>",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Running the reconciler twice does not produce two schedules for the same integration",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F014"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "The reconciler cancels the schedule when is_active flips to false",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "The reconciler cancels the schedule when deviceSync.enabled flips to false",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "The reconciler recreates the schedule with a new cron when intervalMinutes changes",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "The reconciler makes no schedule calls when nothing changed between passes",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "The reconciler ignores integrations whose provider is not in RMM_DEVICE_SYNC_PROVIDERS",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "The reconciler continues processing remaining integrations when one row errors",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "The reconciler tolerates an integration deleted between scan and schedule creation without throwing",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Reconciling device sync does not create, cancel or modify any alert-polling schedule",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F004"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Enabling device sync on one integration leaves a sibling integration in the same tenant without a schedule",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "The device-sync handler invokes the provider strategy with the resolved delta cursor",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F023"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "The delta cursor uses last_incremental_sync_at when present",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "The delta cursor falls back to last_full_sync_at when last_incremental_sync_at is null",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "The delta cursor falls back to now-24h when both timestamps are null",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "The handler warns and no-ops when no strategy is registered for the provider",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "A successful run sets last_incremental_sync_at to the run time",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "A successful run sets sync_status = 'completed' and clears a previous sync_error",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "A failed run sets sync_status = 'failed' and records the error message in sync_error",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "A failed run does not advance last_incremental_sync_at",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F017"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "A failed run leaves the recurring schedule in place",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "A run for a suspended tenant returns before any provider API call is made",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "A second run for the same integration is suppressed while the first is in flight",
+    "implemented": false,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "NinjaOne scheduled runs call syncDevicesIncremental, not the full-sync path",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "NinjaOne manual and scheduled syncs produce identical asset writes for the same input",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "NinjaOne incremental sync passes the cursor as the API's since parameter in the documented format",
+    "implemented": false,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Level.io syncDevicesIncremental returns only devices whose last_seen_at is at or after the cursor",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Level.io incremental sync follows starting_after pagination across more than one page",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Level.io incremental sync stops paginating when has_more is false",
+    "implemented": false,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Level.io incremental sync leaves unchanged asset rows untouched",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Level.io incremental sync with no changed devices completes successfully and still advances the cursor",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F017"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Tanium device sync either exposes syncDevicesIncremental or is scheduled as full sync at a documented low cadence",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "TacticalRMM manual device sync completes successfully against a fixture before any schedule is created",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "TacticalRMM syncDevicesIncremental returns only devices changed since the cursor",
+    "implemented": false,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Huntress is excluded from RMM_DEVICE_SYNC_PROVIDERS unless a device sync path is implemented",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "A Huntress device sync, if implemented, does not overwrite last_incremental_sync_at in a way that breaks the incident poller's cursor",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "The integration panel renders a Device sync toggle for an eligible provider",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "The panel does not render the Device sync control for an ineligible provider",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "The interval input rejects values below 15 and above 1440 in the UI",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "A value that bypasses the UI constraint is still clamped server-side",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F046"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "The panel shows last synced from last_incremental_sync_at when present",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "The panel falls back to last_full_sync_at for last synced when no incremental has run",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "The panel renders sync_error when the last run failed",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "The panel renders no error state when sync_error is null",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Saving the interval persists settings.deviceSync.intervalMinutes to the integration row",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F046"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Saving deviceSync settings without permission is rejected",
+    "implemented": false,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Saving deviceSync settings for another tenant's integration is rejected",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F057"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "The manual Full sync button still triggers the existing full sync workflow unchanged",
+    "implemented": false,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Every new UI string resolves through the English pack (find-missing-i18n-keys reports none)",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "The new panel controls do not appear in the hardcoded-English scanner's high-severity list",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "New interactive elements have kebab-case ids",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Level.io deviceMapper maps agent_version from a fixture payload that contains it",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Level.io deviceMapper maps wan_ip from a fixture payload that contains it",
+    "implemented": false,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Level.io deviceMapper maps pending_patches from a fixture payload",
+    "implemented": false,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Level.io deviceMapper maps pending_software_patches from a fixture payload",
+    "implemented": false,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Level.io deviceMapper maps failed_patches from a fixture payload",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Level.io deviceMapper writes null, not undefined or a crash, when a mapped field is absent from the payload",
+    "implemented": false,
+    "featureIds": [
+      "F047",
+      "F048",
+      "F049",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Level.io deviceMapper still maps the previously working fields (os_type, os_version, lan_ip, antivirus_status, last_reboot_at, pending_os_patches) — regression guard",
+    "implemented": false,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "upsertAssetExtension persists all newly mapped fields to workstation_assets",
+    "implemented": false,
+    "featureIds": [
+      "F047",
+      "F048",
+      "F049",
+      "F050",
+      "F051"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "A device sync on a CE deployment creates a pg-boss cron schedule",
+    "implemented": false,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "A device sync on an EE deployment creates a Temporal Schedule",
+    "implemented": false,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "CE startup does not fail when a provider's sync engine is EE-only",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "The device-sync handler is registered in the job registry under 'rmm-device-sync'",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Device-sync queries filter by tenant in every WHERE and JOIN clause",
+    "implemented": false,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "End to end: enabling device sync on an integration results in assets updating without any manual action",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F017",
+      "F024"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "End to end: disabling device sync stops further asset updates for that integration",
+    "implemented": false,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "rmm-device-sync job data round-trips { tenantId, integrationId, provider } through the runner",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Every provider registered in RMM_DEVICE_SYNC_PROVIDERS exposes a strategy satisfying the syncDevicesIncremental interface",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F004"
+    ]
+  }
+]

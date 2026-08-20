@@ -2,7 +2,8 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
-import { getConnection, createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
+import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -27,7 +28,7 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
-import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
+import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
@@ -36,6 +37,7 @@ import {
   getClientIdFromPortalUser as getClientIdFromUser,
   hasClientBillingReadPermission as hasBillingPermission,
 } from './clientBillingPermissions';
+import { selectJobArtifactFileId } from './jobArtifact';
 
 export type ClientBillingActionError =
   | { readonly actionError: string }
@@ -45,6 +47,18 @@ export type ClientBillingActionResult<T> = T | ClientBillingActionError;
 
 function actionError(message: string): ClientBillingActionError {
   return { actionError: message };
+}
+
+/**
+ * Whole-day difference between two YYYY-MM-DD calendar dates (`to` minus
+ * `from`). Computed via Date.UTC on the calendar components so it is host-
+ * timezone independent (no local Date math), matching the tenant-calendar
+ * invariant used for hour-block expiring-soon badges.
+ */
+function calendarDayDifference(from: string, to: string): number {
+  const [fromYear, fromMonth, fromDay] = from.split('-').map(Number);
+  const [toYear, toMonth, toDay] = to.split('-').map(Number);
+  return Math.round((Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86_400_000);
 }
 
 function permissionError(message: string): ClientBillingActionError {
@@ -368,6 +382,7 @@ export const getClientCreditSummary = withAuth(async (user, { tenant }): Promise
           amount: Number(row.amount ?? 0),
           remaining_amount: Number(row.remaining_amount ?? 0),
           created_at: String(row.created_at),
+          // LEVERAGE: friction pg-date-stringify — same unsafe String(pg DATE) mapping as the hour-block surface (fixed on the branch); consolidate on toCalendarDateString.
           expiration_date: row.expiration_date ? String(row.expiration_date) : null,
           is_expired: Boolean(row.is_expired),
           currency_code: (row.currency_code as string) ?? null,
@@ -827,17 +842,24 @@ export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Prom
 });
 
 /**
- * Download invoice PDF response
+ * Download invoice PDF response.
+ *
+ * Exactly one of `fileId` / `pdfData` is set on success: a file id when the
+ * client already has a published document to fetch, raw bytes when the PDF had
+ * to be rendered for this download. See downloadClientInvoicePdf for why a
+ * fresh render is never handed back as a file id.
  */
 export interface DownloadPdfResult {
   success: boolean;
   fileId?: string;
+  pdfData?: number[];
+  invoiceNumber?: string;
   error?: string;
 }
 
 /**
- * Download invoice PDF - returns the stored PDF when one exists, otherwise
- * schedules generation, waits for completion, and returns the file ID.
+ * Download invoice PDF - serves the published document when one exists,
+ * otherwise renders the invoice and returns the bytes directly.
  */
 export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<DownloadPdfResult>> => {
   const knex = await getConnection(tenant);
@@ -863,7 +885,9 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
         'da.entity_type': 'invoice',
       })
       .whereNotNull('d.file_id')
-      .orderBy('d.is_client_visible', 'desc')
+      // Only the published copy: an MSP-side render stays hidden until the
+      // invoice is sent, and serving its file id would just 403 at download.
+      .where('d.is_client_visible', true)
       .orderBy('da.created_at', 'desc')
       .select('d.file_id')
       .first<{ file_id: string } | undefined>();
@@ -874,32 +898,55 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
       return { success: true, fileId: storedDoc.file_id };
     }
 
-    // Schedule PDF generation
-    const result = await scheduleInvoiceZipAction([invoiceId]);
+    // No published PDF yet — render one and hand back the bytes.
+    //
+    // Deliberately NOT a file id: generateAndStore files invoice documents with
+    // is_client_visible = false (they become visible when the invoice is sent),
+    // and the documents download route denies a portal user any document that is
+    // not client-visible unless they happen to own it. A brand new document is
+    // owned by whoever rendered it, but a refresh of an MSP-filed one keeps the
+    // MSP's created_by — so returning the file id would work or 404 depending on
+    // whether the MSP had rendered the invoice first. Bytes are unconditional.
+    //
+    // The alternative — publishing the render as client-visible — was rejected:
+    // it would put an unsent invoice's document into the client's Documents list
+    // as a side effect of clicking Download, changing MSP-side send semantics.
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .first<{ invoice_number?: string | null } | undefined>('invoice_number');
+    const invoiceNumber = invoice?.invoice_number ?? invoiceId;
 
-    if (isClientBillingActionError(result)) {
-      return result;
-    }
+    const { getStoredInvoicePdf } = await import('@alga-psa/billing/services');
+    const pdfBuffer = await getStoredInvoicePdf({
+      tenant,
+      invoiceId,
+      invoiceNumber,
+      userId: user.user_id,
+      logLabel: '[downloadClientInvoicePdf]',
+    });
 
-    if (!result?.jobId) {
-      return actionError('Failed to start PDF generation');
-    }
-
-    // Poll until job completes
-    const status = await pollJobUntilComplete(result.jobId, tenant);
-
-    if (status.status === 'completed' && status.fileId) {
-      return { success: true, fileId: status.fileId };
-    } else {
-      return actionError(status.error || 'PDF generation failed');
-    }
+    return {
+      success: true,
+      pdfData: Array.from(pdfBuffer),
+      invoiceNumber,
+    };
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {
       return expected;
     }
-    console.error('Error downloading invoice PDF:', error);
-    throw error;
+    // Next.js redacts thrown server-action messages in production, so throwing
+    // here lands every failure on the UI's generic "Failed to download PDF"
+    // toast and tells the operator nothing. Return a typed error instead, and
+    // log the real one with enough context to find it.
+    console.error(
+      `[downloadClientInvoicePdf] Invoice PDF download failed (tenant=${tenant} ` +
+        `invoice=${invoiceId} user=${user.user_id}):`,
+      error
+    );
+    return actionError(
+      'The invoice PDF could not be generated. Please try again, and contact support if the problem continues.'
+    );
   }
 });
 
@@ -992,22 +1039,16 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
     status = 'failed';
   }
 
-  // If completed, get the file_id from job details
+  // If completed, get the file_id from job details. Ordered by completion time
+  // (detail_id only to break ties deterministically) so the deliverable — the
+  // last artifact the job produced — wins over the intermediates before it.
   let fileId: string | undefined;
   if (status === 'completed') {
     const details = await scopedDb.table('job_details')
       .where({ job_id: jobId })
-      .select('metadata');
-    // Look for file_id in the metadata of completed steps
-    for (const detail of details) {
-      const metadata = (typeof detail.metadata === 'string'
-        ? JSON.parse(detail.metadata)
-        : detail.metadata) as Record<string, unknown> | undefined;
-      if (metadata?.file_id && typeof metadata.file_id === 'string') {
-        fileId = metadata.file_id;
-        break;
-      }
-    }
+      .orderBy([{ column: 'processed_at', order: 'asc' }, { column: 'detail_id', order: 'asc' }])
+      .select('step_name', 'status', 'metadata');
+    fileId = selectJobArtifactFileId(details);
   }
 
   // If failed, get error message
@@ -1288,4 +1329,167 @@ export const getClientExternalCreditNotice = withAuth(async (
       note: row?.external_credit_note ?? null
     };
   });
+});
+
+export interface ClientPortalHourBlock {
+  block_id: string;
+  service_name: string;
+  total_minutes: number;
+  remaining_minutes: number;
+  hours_remaining: number;
+  hours_total: number;
+  expiration_date: string | null;
+  status: string;
+  currency_code: string | null;
+  expiring_soon_days: number | null;
+}
+
+export interface ClientPortalHourBlockBurnEntry {
+  allocation_id: string;
+  minutes: number;
+  hours: number;
+  entry_date: string | null;
+  work_item_title: string | null;
+}
+
+/**
+ * The signed-in client's hour blocks (active or expiring), newest first. Rows
+ * are scoped to the portal user's client and gated by the client billing read
+ * permission. No cross-client or MSP-internal fields leak through.
+ */
+export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalHourBlock[]>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      // "Today" for the expiring-soon badge is the TENANT's calendar date (same
+      // invariant as auto-expiration / the burn engine): the badge must be
+      // worker-independent, so a UTC server cannot shift a Berlin tenant's
+      // "expires in N days". resolveEffectiveTimeZone falls back to UTC.
+      const timeZone = await resolveEffectiveTimeZone(trx, tenant);
+      const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
+      const query = db.table('hour_blocks as hb');
+      db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      const rows = await query
+        .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
+        .where('hb.remaining_minutes', '>', 0)
+        .select(
+          'hb.block_id',
+          'hb.total_minutes',
+          'hb.remaining_minutes',
+          'hb.expiration_date',
+          'hb.status',
+          'hb.currency_code',
+          { service_name: 'sc.service_name' },
+        )
+        .orderBy('hb.purchased_at', 'asc')
+        .orderBy('hb.created_at', 'asc');
+
+      return rows.map((row: Record<string, unknown>) => {
+        const remaining = Number(row.remaining_minutes ?? 0);
+        const total = Number(row.total_minutes ?? 0);
+        let expiringSoonDays: number | null = null;
+        // Normalize the pg DATE column to a plain YYYY-MM-DD string (node-postgres
+        // materializes DATE as a local-midnight Date, so String() would emit a
+        // locale/timezone-dependent blob). The same value also drives the badge.
+        let expirationDate: string | null = null;
+        if (row.expiration_date) {
+          const expDate = toCalendarDateString(row.expiration_date as string | Date | null);
+          if (expDate) {
+            expirationDate = expDate;
+            const days = calendarDayDifference(today, expDate);
+            if (days <= 7 && days >= 0) {
+              expiringSoonDays = days;
+            }
+          }
+        }
+        return {
+          block_id: String(row.block_id),
+          service_name: (row.service_name as string) ?? 'Prepaid hours',
+          total_minutes: total,
+          remaining_minutes: remaining,
+          hours_remaining: Math.round((remaining / 60) * 10) / 10,
+          hours_total: Math.round((total / 60) * 10) / 10,
+          expiration_date: expirationDate,
+          status: String(row.status),
+          currency_code: (row.currency_code as string) ?? null,
+          expiring_soon_days: expiringSoonDays,
+        };
+      });
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client hour blocks:', error);
+    throw error;
+  }
+});
+
+/**
+ * Recent hour-block burn history for the signed-in client (newest first,
+ * limit 20). Scoped and permission-gated like getClientHourBlocks.
+ */
+export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalHourBlockBurnEntry[]>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const query = db.table('hour_block_time_allocations as hba');
+      db.tenantJoin(query, 'hour_blocks as hb', 'hba.block_id', 'hb.block_id');
+      db.tenantJoin(query, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
+      db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', { type: 'left' });
+      db.tenantJoin(query, 'project_tasks as pt', 'te.work_item_id', 'pt.task_id', { type: 'left' });
+      const rows = await query
+        .where({ 'hb.client_id': clientId })
+        .select(
+          'hba.allocation_id',
+          'hba.minutes',
+          'hba.created_at',
+          'te.work_date',
+          'tk.title as ticket_title',
+          'pt.task_name as task_title',
+        )
+        .orderBy('hba.created_at', 'desc')
+        .limit(20);
+
+      return rows.map((row: Record<string, unknown>) => ({
+        allocation_id: String(row.allocation_id),
+        minutes: Number(row.minutes ?? 0),
+        hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
+        entry_date: toCalendarDateString(row.work_date as string | Date | null),
+        work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
+      }));
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client hour block burn history:', error);
+    throw error;
+  }
 });

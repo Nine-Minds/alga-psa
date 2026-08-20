@@ -544,7 +544,9 @@ describe('Extension schedules (actions) – DB integration', () => {
 
     const out = await createExtensionSchedule(registryId, { endpointId, cron: '0 1 * * *', timezone: 'UTC' });
     expect(out.success).toBe(false);
-    expect(String(out.message)).toMatch(/disabled/i);
+    // Disabled installs no longer hydrate via getInstallConfig (fail-closed),
+    // so the action reports the install as unavailable rather than disabled.
+    expect(String(out.message)).toMatch(/not found/i);
   });
 
   it('API: list schedules returns schedules for the extension install', async () => {
@@ -814,7 +816,9 @@ describe('Extension schedules (actions) – DB integration', () => {
     runner.scheduleJob.mockClear();
     const out = await runExtensionScheduleNow(registryId, created.scheduleId!);
     expect(out.success).toBe(false);
-    expect(String(out.message)).toMatch(/disabled/i);
+    // Disabled installs no longer hydrate via getInstallConfig (fail-closed),
+    // so run-now reports the install as unavailable rather than disabled.
+    expect(String(out.message)).toMatch(/not found/i);
     expect(runner.scheduleJob).toHaveBeenCalledTimes(0);
   });
 

@@ -97,7 +97,8 @@
       "sequences": "Secuencias",
       "forms": "Formularios",
       "channels": "Canales"
-    }
+    },
+    "passwords": "Contraseñas"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

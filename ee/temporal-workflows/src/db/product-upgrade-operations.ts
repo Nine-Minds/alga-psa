@@ -3,6 +3,7 @@ import {
   getAdminConnection,
   withAdminTransactionRetryReadOnly,
 } from '@alga-psa/db/admin.js';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles.js';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -467,13 +468,23 @@ export async function backfillClientTaxDefaults(
 
     // Keep client tax reads single-table because these tables may be Citus-local.
     for (const client of clients) {
+      // S7 re-keyed client_tax_settings to (tenant, client_id,
+      // billing_profile_id) with a NOT NULL profile column: the settings row
+      // belongs to the client's default billing profile, so ensure it exists
+      // and key both the insert and the conflict target to the new identity.
+      const billingProfileId = await ensureClientDefaultBillingProfile(
+        trx,
+        tenantId,
+        client.client_id,
+      );
       const insertedSettings = await db.table('client_tax_settings')
         .insert({
           tenant: tenantId,
           client_id: client.client_id,
+          billing_profile_id: billingProfileId,
           is_reverse_charge_applicable: false,
         })
-        .onConflict(['tenant', 'client_id'])
+        .onConflict(['tenant', 'client_id', 'billing_profile_id'])
         .ignore()
         .returning('client_id');
       settingsCreated += insertedSettings.length;

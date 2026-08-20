@@ -185,7 +185,7 @@ describe('Entra OAuth callback validation', () => {
 
     // The Graph probe runs on the freshly exchanged token, before anything is written.
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants?$top=1',
+      'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=1',
       expect.objectContaining({
         headers: { Authorization: 'Bearer access-token-1' },
       })

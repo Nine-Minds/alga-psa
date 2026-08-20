@@ -65,13 +65,22 @@ export default defineConfig({
     'extensions/installs': 'extensions/installs.ts',
     'extensions/types': 'extensions/types.ts',
     'billingClients/index': 'billingClients/index.ts',
+    // packages/jobs runs vitest from its own root, so this resolves through the
+    // exports map into dist/ rather than being transpiled from source the way
+    // the Next-built consumers are. Without an entry it is "Cannot find
+    // package" at test time.
+    'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
+    'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
+    'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
+    'billingClients/templateClone': 'billingClients/templateClone.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',
     'lib/ticketActivity/readTicketActivity': 'lib/ticketActivity/readTicketActivity.ts',
     'lib/ticketActivity/curatedTicketDiff': 'lib/ticketActivity/curatedTicketDiff.ts',
+    'lib/businessHours/businessHoursSegmentation': 'lib/businessHours/businessHoursSegmentation.ts',
   },
   format: ['esm'],
   dts: false,

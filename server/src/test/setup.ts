@@ -85,6 +85,8 @@ afterEach(async () => {
 // require('dotenv').config(), so the first suite that reaches it (e.g. the
 // search-backfill script) dumps the developer's whole server/.env into the
 // shared fork and every later Microsoft OAuth assertion reads the emulator.
+// TZ shifts every date the process formats — a timezone test that sets it
+// and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
   'EDITION',
   'NEXT_PUBLIC_EDITION',
@@ -93,6 +95,7 @@ const GUARDED_ENV_VARS = [
   'NEXT_PUBLIC_BASE_URL',
   'MICROSOFT_LOGIN_BASE_URL',
   'MICROSOFT_GRAPH_BASE_URL',
+  'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];
 

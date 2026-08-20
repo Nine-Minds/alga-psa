@@ -119,6 +119,7 @@
     },
     "clientAssignment": {
       "clientContractId": "ID du contrat client : {{id}}",
+      "creditDrawdownOptOut": "Exclure de la consommation du crédit",
       "empty": "Ce contrat n'est pas encore affecté à un client.",
       "endDate": "Date de fin",
       "endDateLabel": "Date de fin d'affectation",
@@ -469,6 +470,12 @@
       "collapseLine": "Replier la ligne de contrat",
       "createCustom": "Créer personnalisé",
       "expandLine": "Déplier la ligne de contrat"
+    },
+    "billingProfile": {
+      "hint": "Les charges de cette ligne sont facturées à ce profil, remplaçant le contrat.",
+      "label": "Profil de facturation",
+      "none": "Utiliser le profil du contrat",
+      "updated": "Profil de facturation mis à jour"
     },
     "bucket": {
       "billingPeriod": "Période de facturation : {{period}}",
@@ -826,6 +833,7 @@
         "editPricingSchedule": "Modifier le barème de prix"
       },
       "validation": {
+        "currencySettingsLoading": "Les paramètres de devise sont encore en cours de chargement ; réessayez dans un instant",
         "customRatePositive": "Le tarif personnalisé doit être un nombre positif",
         "customRateRequired": "Le tarif personnalisé est requis lorsque le tarif par défaut n'est pas utilisé",
         "durationPositive": "La durée doit être un nombre positif",
@@ -2322,5 +2330,47 @@
       "description": "Le simulateur de contrat est disponible dans AlgaPSA Pro.",
       "title": "Fonctionnalité Pro"
     }
+  },
+  "bucketPools": {
+    "heading": "Forfaits d’heures",
+    "actions": {
+      "addPool": "Ajouter un forfait",
+      "create": "Créer le forfait",
+      "cancel": "Annuler",
+      "remove": "Retirer",
+      "applyRule": "Appliquer la règle hors horaires"
+    },
+    "loading": "Chargement des forfaits d’heures…",
+    "empty": "Aucun forfait d’heures sur cette ligne. Ajoutez un forfait pour inclure des heures prépayées.",
+    "labels": {
+      "catchAll": "Tous les services de cette ligne",
+      "pool": "Forfait d’heures",
+      "scopeCatchAll": "Couvre tous les services de la ligne (les services membres remplacent le multiplicateur)",
+      "scopeMembers": "Services membres uniquement",
+      "totalHours": "Heures totales",
+      "overageRate": "Tarif de dépassement ($/h)",
+      "rollover": "Autoriser le report",
+      "afterHours": "Multiplicateur de consommation hors horaires",
+      "afterHoursMultiplier": "Multiplicateur (p. ex. 1,5)",
+      "schedule": "Planning des heures ouvrées",
+      "default": "par défaut",
+      "members": "Services membres",
+      "multiplier": "×",
+      "noMembers": "Aucun service membre associé.",
+      "selectService": "Sélectionner un service…",
+      "poolName": "Nom du forfait (facultatif)",
+      "poolNamePlaceholder": "p. ex. Heures standard",
+      "coversAll": "Couvre tous les services de cette ligne"
+    },
+    "badges": {
+      "dormant": "aucun service associé — rien n’est décompté de ce forfait"
+    },
+    "errors": {
+      "catchAllExists": "Cette ligne possède déjà un forfait global."
+    }
+  },
+  "wizardBucketPools": {
+    "heading": "Forfaits d’heures pour cette ligne",
+    "empty": "Aucun forfait d’heures sur cette ligne pour le moment. Ajoutez un forfait pour inclure des heures prépayées."
   }
 }

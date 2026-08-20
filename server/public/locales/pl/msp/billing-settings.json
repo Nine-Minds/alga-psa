@@ -88,6 +88,43 @@
         "save": "Nie udało się zapisać ustawień"
       }
     },
+    "creditDrawdown": {
+      "title": "Wykorzystanie kredytu",
+      "description": "Kontroluj, kiedy kredyty klienta są stosowane do faktur i w jaki sposób są wykorzystywane.",
+      "fields": {
+        "autoApply": {
+          "label": "Automatycznie stosuj kredyt przy finalizacji",
+          "help": "Gdy ta opcja jest włączona, dostępny kredyt jest stosowany automatycznie podczas finalizacji faktury"
+        },
+        "order": {
+          "label": "Kolejność stosowania kredytu",
+          "placeholder": "Wybierz kolejność kredytu",
+          "help": "Wybierz kolejność, w jakiej kredyty są wykorzystywane"
+        },
+        "serviceTypes": {
+          "label": "Kwalifikujące się typy usług",
+          "help": "Wybierz, czy kredyt może być stosowany do wszystkich opłat, czy tylko do opłat za wybrane typy usług.",
+          "empty": "Nie skonfigurowano typów usług.",
+          "restricted": "Kredyt jest ograniczony do wybranych typów usług.",
+          "mode": {
+            "all": "Wszystkie typy usług",
+            "restricted": "Tylko wybrane typy"
+          }
+        }
+      },
+      "options": {
+        "expirationFirst": "Najpierw wygasające najwcześniej",
+        "oldestFirst": "Najpierw najstarszy kredyt",
+        "newestFirst": "Najpierw najnowszy kredyt"
+      },
+      "toast": {
+        "updated": "Ustawienia wykorzystania kredytu zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się załadować ustawień",
+        "save": "Nie udało się zapisać ustawień"
+      }
+    },
     "renewal": {
       "title": "Automatyzacja odnowień",
       "description": "Skonfiguruj domyślne zachowanie, gdy umowy osiągną datę odnowienia.",

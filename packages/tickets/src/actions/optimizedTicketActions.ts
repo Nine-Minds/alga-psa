@@ -71,6 +71,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
+import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
@@ -1372,20 +1373,13 @@ async function buildTicketListBaseQuery(
           break;
 
         case 'breached':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .where(function() {
-              this.where(function() {
-                this.where('t.sla_response_due_at', '<', nowIso)
-                  .whereNull('t.sla_response_at');
-              })
-              .orWhere(function() {
-                this.where('t.sla_resolution_due_at', '<', nowIso)
-                  .whereNull('t.sla_resolution_at');
-              })
-              .orWhere('t.sla_response_met', false)
-              .orWhere('t.sla_resolution_met', false);
-            });
+          // Shared with getBoardListStats' sla_breached aggregate: the board
+          // header's breach count and this filter must describe the same set,
+          // which they can only be relied on to do if they read one predicate.
+          baseQuery = baseQuery.whereRaw(
+            ticketSlaBreachedSql('t'),
+            ticketSlaBreachedBindings(nowIso)
+          );
           break;
 
         case 'paused':

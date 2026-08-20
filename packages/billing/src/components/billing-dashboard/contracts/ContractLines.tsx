@@ -35,6 +35,9 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
+import { BucketPoolEditor } from './BucketPoolEditor';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
   type ContractLineServiceSelection,
@@ -43,6 +46,12 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { toast } from 'react-hot-toast';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import {
+  assignContractLineBillingProfile,
+  getClientBillingProfilesForBilling,
+} from '@alga-psa/billing/actions/billingProfileActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -75,6 +84,8 @@ interface DetailedContractLineMapping {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   location_id?: string | null;
+  /** Step 2 of the charge-attribution chain; overrides the contract's profile. */
+  billing_profile_id?: string | null;
 }
 
 /**
@@ -129,11 +140,37 @@ interface PendingServiceAddition {
 
 const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
 
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
+
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
+
+  const handleAssignLineBillingProfile = async (
+    contractLineId: string,
+    billingProfileId: string | null,
+  ) => {
+    try {
+      await assignContractLineBillingProfile({ contractLineId, billingProfileId });
+      await fetchData();
+      toast.success(t('contractLines.billingProfile.updated', { defaultValue: 'Billing profile updated' }));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
+  // Flag-on line-level bucket pools (weighted-burn model). Flag off keeps the
+  // existing per-service overlay UI served by the compat layer.
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
+    defaultValue: false,
+  });
+  const [bucketSchedules, setBucketSchedules] = useState<Array<{
+    schedule_id: string;
+    schedule_name: string;
+    is_default: boolean;
+  }>>([]);
   const billingTimingOptions = [
     {
       value: 'advance',
@@ -186,6 +223,30 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       void fetchData();
     }
   }, [contract.contract_id]);
+
+  useEffect(() => {
+    if (!bucketPoolEditorEnabled) return;
+    let isActive = true;
+    void (async () => {
+      try {
+        const schedules = await listBucketBusinessHoursSchedules();
+        if (isActive && Array.isArray(schedules)) {
+          setBucketSchedules(schedules.map((schedule) => ({
+            schedule_id: schedule.schedule_id,
+            schedule_name: schedule.schedule_name,
+            is_default: Boolean(schedule.is_default),
+          })));
+        }
+      } catch {
+        // The schedule list is a convenience for the after-hours rule; if it
+        // cannot be loaded, the rule simply has no schedule to pick from.
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucketPoolEditorEnabled]);
 
   useEffect(() => {
     let isActive = true;
@@ -1214,6 +1275,29 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               </div>
                             )}
 
+                            {/* Billing profile (F045). Step 2 of the charge-attribution
+                                chain and the most specific contract-side step: a line
+                                assignment overrides its contract's. The picker renders
+                                nothing while the client holds a single profile. */}
+                            <BillingProfilePicker
+                              id={`billing-profile-${line.contract_line_id}`}
+                              clientId={clientId}
+                              loadProfiles={loadBillingProfiles}
+                              value={line.billing_profile_id ?? null}
+                              onChange={(billingProfileId) =>
+                                void handleAssignLineBillingProfile(line.contract_line_id, billingProfileId)
+                              }
+                              label={t('contractLines.billingProfile.label', { defaultValue: 'Billing profile' })}
+                              unassignedLabel={t('contractLines.billingProfile.none', {
+                                defaultValue: "Use the contract's profile",
+                              })}
+                              hint={t('contractLines.billingProfile.hint', {
+                                defaultValue:
+                                  'Charges from this line are billed to this profile, overriding the contract.',
+                              })}
+                              disabled={isReadOnly}
+                            />
+
                             {/* Billing timing and cadence owner - applies to all recurring line types */}
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
@@ -1677,6 +1761,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                               </div>
                             )}
                           </div>
+                        </div>
+                      )}
+                      {/* Flag-on line-level bucket pools (weighted-burn model). */}
+                      {bucketPoolEditorEnabled && (
+                        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+                          <BucketPoolEditor
+                            contractLineId={line.contract_line_id}
+                            lineServices={services
+                              .map((serviceConfig) => ({
+                                service_id: serviceConfig.service.service_id,
+                                service_name: serviceConfig.service.service_name,
+                              }))}
+                            allServices={services.map((serviceConfig) => ({
+                              service_id: serviceConfig.service.service_id,
+                              service_name: serviceConfig.service.service_name,
+                            }))}
+                            schedules={bucketSchedules}
+                            onChanged={() => {
+                              void loadServicesForLine(line.contract_line_id, true);
+                            }}
+                          />
                         </div>
                       )}
                     </div>

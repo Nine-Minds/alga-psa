@@ -25,6 +25,7 @@ export default defineConfig({
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
     include: [
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       // shared/ carries ~120 test files (inbound email, billing schedule,
       // workflow actions) that gated nothing before this line: the CI job
@@ -357,6 +358,7 @@ export default defineConfig({
       { find: '@tiptap/react/menus', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-react-menus.tsx') },
       { find: 'emoticon', replacement: path.resolve(__dirname, './src/test/stubs/emoticon.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
+      { find: '@product/ext-proxy', replacement: path.resolve(__dirname, '../packages/product-ext-proxy') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },

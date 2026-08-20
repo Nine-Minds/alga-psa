@@ -14,6 +14,9 @@ import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelec
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
+import { BucketPoolDraftEditor } from './BucketPoolDraftEditor';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -22,6 +25,37 @@ interface HourlyServicesStepProps {
 
 export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
+    defaultValue: false,
+  });
+  const [bucketSchedules, setBucketSchedules] = React.useState<Array<{
+    schedule_id: string;
+    schedule_name: string;
+    is_default: boolean;
+  }>>([]);
+
+  React.useEffect(() => {
+    if (!bucketPoolEditorEnabled) return;
+    let isActive = true;
+    void (async () => {
+      try {
+        const schedules = await listBucketBusinessHoursSchedules();
+        if (isActive && Array.isArray(schedules)) {
+          setBucketSchedules(schedules.map((schedule) => ({
+            schedule_id: schedule.schedule_id,
+            schedule_name: schedule.schedule_name,
+            is_default: Boolean(schedule.is_default),
+          })));
+        }
+      } catch {
+        // The schedule list is a convenience for the after-hours rule; if it
+        // cannot be loaded, the rule simply has no schedule to pick from.
+      }
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [bucketPoolEditorEnabled]);
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
   // Legacy default_rate (untagged) from service_catalog, shown as a hint when no currency-specific price exists.
   const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number | null>>({});
@@ -290,22 +324,24 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                 ) : null}
               </div>
 
-              <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
-                <SwitchWithLabel
-                  label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
-                  checked={Boolean(service.bucket_overlay)}
-                  onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
-                />
-                {service.bucket_overlay && (
-                  <BucketOverlayFields
-                    mode="hours"
-                    value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
-                    onChange={(next) => updateBucketOverlay(index, next)}
-                    automationId={`hourly-bucket-${index}`}
-                    billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
+              {!bucketPoolEditorEnabled && (
+                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                  <SwitchWithLabel
+                    label={t('wizardHourly.labels.setBucketOfHours', { defaultValue: 'Set bucket of hours' })}
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
                   />
-                )}
-              </div>
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="hours"
+                      value={service.bucket_overlay ?? defaultOverlay(data.hourly_billing_frequency ?? data.billing_frequency)}
+                      onChange={(next) => updateBucketOverlay(index, next)}
+                      automationId={`hourly-bucket-${index}`}
+                      billingFrequency={data.hourly_billing_frequency ?? data.billing_frequency}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             <Button
@@ -340,6 +376,30 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               defaultValue: 'No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t need time & materials billing.',
             })}
           </p>
+        </div>
+      )}
+
+      {bucketPoolEditorEnabled && (
+        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+          <BucketPoolDraftEditor
+            pools={(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') === 'hourly')}
+            lineServices={data.hourly_services
+              .filter((service) => service.service_id)
+              .map((service) => ({
+                service_id: service.service_id,
+                service_name: service.service_name || service.service_id,
+              }))}
+            schedules={bucketSchedules}
+            lineKey="hourly"
+            onChange={(pools) => {
+              updateData({
+                bucket_pools: [
+                  ...(data.bucket_pools ?? []).filter((pool) => (pool.line_key ?? 'hourly') !== 'hourly'),
+                  ...pools,
+                ],
+              });
+            }}
+          />
         </div>
       )}
 
@@ -391,7 +451,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   {formatBillingFrequency(data.hourly_billing_frequency)}
                 </p>
               )}
-              {data.hourly_services.some((service) => service.bucket_overlay) && (
+              {!bucketPoolEditorEnabled && data.hourly_services.some((service) => service.bucket_overlay) && (
                 <div className="pt-2">
                   <p className="font-semibold">
                     {t('wizardHourly.summary.labels.bucketsHeading', { defaultValue: 'Buckets:' })}
