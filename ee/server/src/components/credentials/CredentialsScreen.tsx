@@ -16,7 +16,7 @@
  * and the unified client Passwords tab (`clientId` scopes it).
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -53,6 +53,7 @@ import {
   removeCredentialFromEntity,
   updateCredential,
 } from '../../lib/actions/credentials/credentialActions';
+import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type {
   CredentialAssociationEntityType,
   CredentialSummary,
@@ -162,6 +163,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   // dialogs (the embed often already lives inside the tile's manager dialog,
   // and a dialog on a dialog reads as broken chrome).
   const [entityView, setEntityView] = useState<'list' | 'attach' | 'create'>('list');
+  const inlineFormRequestClose = useRef<(() => void) | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{
     kind: 'detach' | 'delete';
     credential: CredentialSummary;
@@ -182,6 +184,9 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     },
     [search, clientFilter, sourceFilter]
   );
+  useEffect(() => {
+    if (context?.huduConnected !== true && sourceFilter === 'hudu') setSourceFilter('all');
+  }, [context?.huduConnected, sourceFilter]);
 
   // Tenant client list backs the global screen's client filter and row
   // labels. Entity embeds never render either (the scope already fixes the
@@ -201,8 +206,9 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   }, [flagEnabled, entityScoped]);
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
+    let result: CredentialSaveResult;
     if (editing) {
-      await updateCredential(editing.id, {
+      result = await updateCredential(editing.id, {
         clientId: value.clientId,
         name: value.name,
         username: value.username,
@@ -212,7 +218,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         description: value.description,
       });
     } else {
-      await createCredential({
+      result = await createCredential({
         destination: value.destination,
         clientId: value.clientId,
         name: value.name,
@@ -224,10 +230,12 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         attachments: value.attachments,
       });
     }
+    if (result.ok === false) return result;
     setFormOpen(false);
     setEditing(null);
     setEntityView('list');
     await load();
+    return result;
   };
 
   const handleLink = async (credential: CredentialSummary) => {
@@ -414,7 +422,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           >
             <option value="all">{t('credentials.screen.allSources')}</option>
             <option value="alga">{t('credentials.screen.sourceAlga')}</option>
-            <option value="hudu">{t('credentials.screen.sourceHudu')}</option>
+            {context?.huduConnected === true && <option value="hudu">{t('credentials.screen.sourceHudu')}</option>}
           </select>
         </div>
       )}
@@ -628,7 +636,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               className="h-7 w-7 p-0"
               aria-label={t('credentials.screen.back')}
               title={t('credentials.screen.back')}
-              onClick={() => setEntityView('list')}
+              onClick={() => entityView === 'create' ? inlineFormRequestClose.current?.() : setEntityView('list')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -657,6 +665,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               entityType={entityType ?? null}
               entityId={entityId ?? null}
               context={context}
+              onRequestClose={(requestClose) => { inlineFormRequestClose.current = requestClose; }}
             />
           )}
         </div>
