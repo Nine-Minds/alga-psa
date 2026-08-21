@@ -960,7 +960,8 @@
       "quoteData": "Sin autorización para acceder a los datos de la cotización",
       "invoiceData": "Sin autorización para acceder a los datos de la factura",
       "billingData": "Sin autorización para acceder a los datos de facturación",
-      "settingsUpdate": "No tiene permiso para actualizar esta configuración."
+      "settingsUpdate": "No tiene permiso para actualizar esta configuración.",
+      "billingSegment": "Sin autorización para acceder a ese segmento de facturación"
     },
     "billing": {
       "quoteNotFound": "Cotización no encontrada o acceso denegado",

@@ -28,7 +28,7 @@ import { getAvailableCreditByProfile, getUnattributedCredit } from '../lib/credi
 export type BillingProfileArError = ActionMessageError;
 
 const permissionDenied = (): BillingProfileArError =>
-  actionError('Permission denied: you do not have access to this client’s billing.');
+  actionError('Permission denied: you do not have access to this client’s billing.', 'msp/billing:errors.permissions.clientBillingAccess');
 
 /**
  * The client's AR, per billing profile and in total (F113, F115).
@@ -118,7 +118,7 @@ export const getBillingProfileStatement = withAuth(async (
     if (!profiles.some((profile) => profile.billing_profile_id === input.billingProfileId)) {
       // A profile from another client would produce a statement addressed to
       // the wrong entity, which is worse than producing nothing.
-      return actionError('That billing profile does not belong to this client.');
+      return actionError('That billing profile does not belong to this client.', 'msp/billing:errors.billingProfile.notThisClient');
     }
 
     return buildProfileStatement(trx, tenant, input.clientId, input.billingProfileId, {

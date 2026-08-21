@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Os alertas de saldo pré-pago não estão habilitados para este espaço de trabalho",
       "invalidPrepaidAlertSettings": "Configurações de alerta de saldo pré-pago inválidas",
       "prepaidAlertUpdateFailed": "Não foi possível atualizar as configurações de alerta de saldo pré-pago"
+    },
+    "billingProfile": {
+      "signInRequired": "Você precisa estar conectado para gerenciar perfis de faturamento.",
+      "duplicateDefault": "Este cliente já tem um perfil de faturamento padrão.",
+      "stillReferenced": "O perfil de faturamento ainda está em uso e não pode ser removido.",
+      "defaultRequired": "Um cliente deve sempre ter exatamente um perfil de faturamento padrão.",
+      "nameRequired": "Um perfil de faturamento precisa de um nome.",
+      "notThisClient": "Esse perfil de faturamento não pertence a este cliente.",
+      "archivedCannotBeDefault": "Um perfil de faturamento arquivado não pode ser definido como padrão.",
+      "notFound": "Esse perfil de faturamento não existe mais.",
+      "defaultCannotArchive": "O perfil de faturamento padrão não pode ser arquivado. Defina outro perfil como padrão primeiro.",
+      "defaultCannotDelete": "O perfil de faturamento padrão não pode ser excluído. Defina outro perfil como padrão primeiro.",
+      "inUse": "Este perfil de faturamento é usado por {{references}}. Arquive-o em vez de excluí-lo — a exclusão apagaria como essas cobranças foram atribuídas.",
+      "recordNotFound": "Esse registro ou perfil de faturamento não existe mais.",
+      "otherClient": "Esse perfil de faturamento pertence a outro cliente.",
+      "archived": "Esse perfil de faturamento está arquivado.",
+      "selectionNotThisClient": "Um dos perfis de faturamento selecionados não pertence a este cliente."
     }
   }
 }

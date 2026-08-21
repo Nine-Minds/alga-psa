@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Prepaid balance alerts are not enabled for this workspace",
       "invalidPrepaidAlertSettings": "Invalid prepaid balance alert settings",
       "prepaidAlertUpdateFailed": "Failed to update prepaid balance alert settings"
+    },
+    "billingProfile": {
+      "signInRequired": "You must be signed in to manage billing profiles.",
+      "duplicateDefault": "This client already has a default billing profile.",
+      "stillReferenced": "The billing profile is still referenced and cannot be removed.",
+      "defaultRequired": "A client must always have exactly one default billing profile.",
+      "nameRequired": "A billing profile needs a name.",
+      "notThisClient": "That billing profile does not belong to this client.",
+      "archivedCannotBeDefault": "An archived billing profile cannot be made the default.",
+      "notFound": "That billing profile no longer exists.",
+      "defaultCannotArchive": "The default billing profile cannot be archived. Make another profile the default first.",
+      "defaultCannotDelete": "The default billing profile cannot be deleted. Make another profile the default first.",
+      "inUse": "This billing profile is used by {{references}}. Archive it instead — deleting it would erase how those charges were attributed.",
+      "recordNotFound": "That record or billing profile no longer exists.",
+      "otherClient": "That billing profile belongs to a different client.",
+      "archived": "That billing profile is archived.",
+      "selectionNotThisClient": "One of the selected billing profiles does not belong to this client."
     }
   }
 }

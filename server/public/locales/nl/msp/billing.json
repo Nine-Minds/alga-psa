@@ -581,7 +581,8 @@
       "clientRead": "Toestemming geweigerd: leesrechten voor klanten vereist",
       "otherClientLocations": "Toestemming geweigerd: locaties van een andere klant zijn niet toegankelijk",
       "clientPortalUnavailable": "Toestemming geweigerd: bewerking niet beschikbaar in het klantenportaal",
-      "resolveCurrency": "Toestemming geweigerd: de factuurvaluta van de klant kan niet worden bepaald"
+      "resolveCurrency": "Toestemming geweigerd: de factuurvaluta van de klant kan niet worden bepaald",
+      "clientBillingAccess": "Toestemming geweigerd: u hebt geen toegang tot de facturatie van deze klant."
     },
     "context": {
       "tenantNotFound": "Tenant niet gevonden",
@@ -690,6 +691,16 @@
         "delete": "Toestemming geweigerd: documentsjablonen kunnen niet worden verwijderd",
         "preview": "Toestemming geweigerd: documentsjablonen kunnen niet worden voorvertoond"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Kies een periode waarvan de start op of vóór het einde ligt.",
+      "comparisonPeriodOrder": "Kies een vergelijkingsperiode waarvan de start op of vóór het einde ligt.",
+      "notThisClient": "Dat facturatieprofiel hoort niet bij deze klant."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Dat item bestaat niet meer.",
+      "alreadyInvoiced": "Dat item is al gefactureerd.",
+      "contractLineNotFound": "Die contractregel bestaat niet meer."
     }
   }
 }

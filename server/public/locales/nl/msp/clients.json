@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Waarschuwingen voor prepaidsaldo zijn niet ingeschakeld voor deze werkruimte",
       "invalidPrepaidAlertSettings": "Ongeldige instellingen voor prepaidsaldowaarschuwingen",
       "prepaidAlertUpdateFailed": "De instellingen voor prepaidsaldowaarschuwingen konden niet worden bijgewerkt"
+    },
+    "billingProfile": {
+      "signInRequired": "U moet aangemeld zijn om facturatieprofielen te beheren.",
+      "duplicateDefault": "Deze klant heeft al een standaard facturatieprofiel.",
+      "stillReferenced": "Het facturatieprofiel wordt nog gebruikt en kan niet worden verwijderd.",
+      "defaultRequired": "Een klant moet altijd precies één standaard facturatieprofiel hebben.",
+      "nameRequired": "Een facturatieprofiel heeft een naam nodig.",
+      "notThisClient": "Dat facturatieprofiel hoort niet bij deze klant.",
+      "archivedCannotBeDefault": "Een gearchiveerd facturatieprofiel kan niet als standaard worden ingesteld.",
+      "notFound": "Dat facturatieprofiel bestaat niet meer.",
+      "defaultCannotArchive": "Het standaard facturatieprofiel kan niet worden gearchiveerd. Stel eerst een ander profiel in als standaard.",
+      "defaultCannotDelete": "Het standaard facturatieprofiel kan niet worden verwijderd. Stel eerst een ander profiel in als standaard.",
+      "inUse": "Dit facturatieprofiel wordt gebruikt door {{references}}. Archiveer het in plaats van het te verwijderen — verwijderen zou wissen hoe die kosten zijn toegewezen.",
+      "recordNotFound": "Dat record of facturatieprofiel bestaat niet meer.",
+      "otherClient": "Dat facturatieprofiel hoort bij een andere klant.",
+      "archived": "Dat facturatieprofiel is gearchiveerd.",
+      "selectionNotThisClient": "Een van de geselecteerde facturatieprofielen hoort niet bij deze klant."
     }
   }
 }

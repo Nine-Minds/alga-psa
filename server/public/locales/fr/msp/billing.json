@@ -581,7 +581,8 @@
       "clientRead": "Autorisation refusée : autorisation de lecture sur les clients requise",
       "otherClientLocations": "Autorisation refusée : impossible d’accéder aux emplacements d’un autre client",
       "clientPortalUnavailable": "Autorisation refusée : opération non disponible dans le portail client",
-      "resolveCurrency": "Autorisation refusée : impossible de déterminer la devise de facturation du client"
+      "resolveCurrency": "Autorisation refusée : impossible de déterminer la devise de facturation du client",
+      "clientBillingAccess": "Autorisation refusée : vous n’avez pas accès à la facturation de ce client."
     },
     "context": {
       "tenantNotFound": "Locataire introuvable",
@@ -690,6 +691,16 @@
         "delete": "Autorisation refusée : impossible de supprimer les modèles de document",
         "preview": "Autorisation refusée : impossible de prévisualiser les modèles de document"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Choisissez une période dont le début est antérieur ou égal à la fin.",
+      "comparisonPeriodOrder": "Choisissez une période de comparaison dont le début est antérieur ou égal à la fin.",
+      "notThisClient": "Ce profil de facturation n’appartient pas à ce client."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Cet élément n’existe plus.",
+      "alreadyInvoiced": "Cet élément a déjà été facturé.",
+      "contractLineNotFound": "Cette ligne de contrat n’existe plus."
     }
   }
 }

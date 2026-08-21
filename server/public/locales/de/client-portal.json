@@ -960,7 +960,8 @@
       "quoteData": "Kein Zugriff auf Angebotsdaten",
       "invoiceData": "Kein Zugriff auf Rechnungsdaten",
       "billingData": "Kein Zugriff auf Abrechnungsdaten",
-      "settingsUpdate": "Sie haben keine Berechtigung, diese Einstellungen zu ändern."
+      "settingsUpdate": "Sie haben keine Berechtigung, diese Einstellungen zu ändern.",
+      "billingSegment": "Kein Zugriff auf dieses Abrechnungssegment"
     },
     "billing": {
       "quoteNotFound": "Angebot nicht gefunden oder Zugriff verweigert",

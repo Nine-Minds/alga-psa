@@ -581,7 +581,8 @@
       "clientRead": "Autorizzazione negata: è richiesta l’autorizzazione di lettura per i clienti",
       "otherClientLocations": "Autorizzazione negata: impossibile accedere alle sedi di un altro cliente",
       "clientPortalUnavailable": "Autorizzazione negata: operazione non disponibile nel portale clienti",
-      "resolveCurrency": "Autorizzazione negata: impossibile determinare la valuta di fatturazione del cliente"
+      "resolveCurrency": "Autorizzazione negata: impossibile determinare la valuta di fatturazione del cliente",
+      "clientBillingAccess": "Autorizzazione negata: non hai accesso alla fatturazione di questo cliente."
     },
     "context": {
       "tenantNotFound": "Tenant non trovato",
@@ -690,6 +691,16 @@
         "delete": "Autorizzazione negata: impossibile eliminare i modelli di documento",
         "preview": "Autorizzazione negata: impossibile visualizzare l’anteprima dei modelli di documento"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Scegliere un periodo il cui inizio non sia successivo alla fine.",
+      "comparisonPeriodOrder": "Scegliere un periodo di confronto il cui inizio non sia successivo alla fine.",
+      "notThisClient": "Questo profilo di fatturazione non appartiene a questo cliente."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Questo elemento non esiste più.",
+      "alreadyInvoiced": "Questo elemento è già stato fatturato.",
+      "contractLineNotFound": "Questa linea contrattuale non esiste più."
     }
   }
 }

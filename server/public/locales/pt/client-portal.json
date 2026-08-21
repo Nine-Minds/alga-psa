@@ -960,7 +960,8 @@
       "quoteData": "Sem autorização para acessar os dados da cotação",
       "invoiceData": "Sem autorização para acessar os dados da fatura",
       "billingData": "Sem autorização para acessar os dados de faturamento",
-      "settingsUpdate": "Você não tem permissão para alterar estas configurações."
+      "settingsUpdate": "Você não tem permissão para alterar estas configurações.",
+      "billingSegment": "Sem autorização para acessar esse segmento de faturamento"
     },
     "billing": {
       "quoteNotFound": "Cotação não encontrada ou acesso negado",

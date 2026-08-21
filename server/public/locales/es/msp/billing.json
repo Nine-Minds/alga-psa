@@ -581,7 +581,8 @@
       "clientRead": "Permiso denegado: se requiere permiso de lectura de clientes",
       "otherClientLocations": "Permiso denegado: no se puede acceder a las ubicaciones de otro cliente",
       "clientPortalUnavailable": "Permiso denegado: la operación no está disponible en el portal del cliente",
-      "resolveCurrency": "Permiso denegado: no se puede determinar la moneda de facturación del cliente"
+      "resolveCurrency": "Permiso denegado: no se puede determinar la moneda de facturación del cliente",
+      "clientBillingAccess": "Permiso denegado: no tiene acceso a la facturación de este cliente."
     },
     "context": {
       "tenantNotFound": "Inquilino no encontrado",
@@ -690,6 +691,16 @@
         "delete": "Permiso denegado: no se pueden eliminar las plantillas de documento",
         "preview": "Permiso denegado: no se pueden previsualizar las plantillas de documento"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Elija un período cuyo inicio sea anterior o igual a su fin.",
+      "comparisonPeriodOrder": "Elija un período de comparación cuyo inicio sea anterior o igual a su fin.",
+      "notThisClient": "Ese perfil de facturación no pertenece a este cliente."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Ese elemento ya no existe.",
+      "alreadyInvoiced": "Ese elemento ya se facturó.",
+      "contractLineNotFound": "Esa línea de contrato ya no existe."
     }
   }
 }

@@ -581,7 +581,8 @@
       "clientRead": "Odmowa uprawnień: wymagane uprawnienie odczytu klientów",
       "otherClientLocations": "Odmowa uprawnień: brak dostępu do lokalizacji innego klienta",
       "clientPortalUnavailable": "Odmowa uprawnień: operacja niedostępna w portalu klienta",
-      "resolveCurrency": "Odmowa uprawnień: nie można ustalić waluty rozliczeniowej klienta"
+      "resolveCurrency": "Odmowa uprawnień: nie można ustalić waluty rozliczeniowej klienta",
+      "clientBillingAccess": "Odmowa uprawnień: nie masz dostępu do rozliczeń tego klienta."
     },
     "context": {
       "tenantNotFound": "Nie znaleziono organizacji",
@@ -690,6 +691,16 @@
         "delete": "Odmowa uprawnień: nie można usuwać szablonów dokumentów",
         "preview": "Odmowa uprawnień: nie można wyświetlać podglądu szablonów dokumentów"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Wybierz okres, którego początek nie jest późniejszy niż koniec.",
+      "comparisonPeriodOrder": "Wybierz okres porównawczy, którego początek nie jest późniejszy niż koniec.",
+      "notThisClient": "Ten profil rozliczeniowy nie należy do tego klienta."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Ta pozycja już nie istnieje.",
+      "alreadyInvoiced": "Ta pozycja została już zafakturowana.",
+      "contractLineNotFound": "Ta linia umowy już nie istnieje."
     }
   }
 }

@@ -960,7 +960,8 @@
       "quoteData": "Unauthorized to access quote data",
       "invoiceData": "Unauthorized to access invoice data",
       "billingData": "Unauthorized to access billing data",
-      "settingsUpdate": "You do not have permission to update these settings."
+      "settingsUpdate": "You do not have permission to update these settings.",
+      "billingSegment": "Unauthorized to access that billing segment"
     },
     "billing": {
       "quoteNotFound": "Quote not found or access denied",

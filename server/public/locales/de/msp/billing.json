@@ -581,7 +581,8 @@
       "clientRead": "Berechtigung verweigert: Leseberechtigung für Kunden erforderlich",
       "otherClientLocations": "Berechtigung verweigert: Auf Standorte eines anderen Kunden kann nicht zugegriffen werden",
       "clientPortalUnavailable": "Berechtigung verweigert: Vorgang im Kundenportal nicht verfügbar",
-      "resolveCurrency": "Berechtigung verweigert: Abrechnungswährung des Kunden kann nicht ermittelt werden"
+      "resolveCurrency": "Berechtigung verweigert: Abrechnungswährung des Kunden kann nicht ermittelt werden",
+      "clientBillingAccess": "Berechtigung verweigert: Sie haben keinen Zugriff auf die Abrechnung dieses Kunden."
     },
     "context": {
       "tenantNotFound": "Mandant nicht gefunden",
@@ -690,6 +691,16 @@
         "delete": "Berechtigung verweigert: Dokumentvorlagen können nicht gelöscht werden",
         "preview": "Berechtigung verweigert: Dokumentvorlagen können nicht in der Vorschau angezeigt werden"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Wählen Sie einen Zeitraum, dessen Beginn nicht nach dem Ende liegt.",
+      "comparisonPeriodOrder": "Wählen Sie einen Vergleichszeitraum, dessen Beginn nicht nach dem Ende liegt.",
+      "notThisClient": "Dieses Abrechnungsprofil gehört nicht zu diesem Kunden."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Dieser Posten existiert nicht mehr.",
+      "alreadyInvoiced": "Dieser Posten wurde bereits in Rechnung gestellt.",
+      "contractLineNotFound": "Diese Vertragslinie existiert nicht mehr."
     }
   }
 }

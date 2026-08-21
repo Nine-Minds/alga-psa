@@ -960,7 +960,8 @@
       "quoteData": "Accesso non autorizzato ai dati del preventivo",
       "invoiceData": "Accesso non autorizzato ai dati della fattura",
       "billingData": "Accesso non autorizzato ai dati di fatturazione",
-      "settingsUpdate": "Non ha l’autorizzazione per modificare queste impostazioni."
+      "settingsUpdate": "Non ha l’autorizzazione per modificare queste impostazioni.",
+      "billingSegment": "Accesso non autorizzato a questo segmento di fatturazione"
     },
     "billing": {
       "quoteNotFound": "Preventivo non trovato o accesso negato",

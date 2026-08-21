@@ -581,7 +581,8 @@
       "clientRead": "Permissão negada: é necessária permissão de leitura de clientes",
       "otherClientLocations": "Permissão negada: não é possível acessar os locais de outro cliente",
       "clientPortalUnavailable": "Permissão negada: operação não disponível no portal do cliente",
-      "resolveCurrency": "Permissão negada: não é possível determinar a moeda de faturamento do cliente"
+      "resolveCurrency": "Permissão negada: não é possível determinar a moeda de faturamento do cliente",
+      "clientBillingAccess": "Permissão negada: você não tem acesso ao faturamento deste cliente."
     },
     "context": {
       "tenantNotFound": "Tenant não encontrado",
@@ -690,6 +691,16 @@
         "delete": "Permissão negada: não é possível excluir os modelos de documento",
         "preview": "Permissão negada: não é possível pré-visualizar os modelos de documento"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Escolha um período cujo início seja anterior ou igual ao fim.",
+      "comparisonPeriodOrder": "Escolha um período de comparação cujo início seja anterior ou igual ao fim.",
+      "notThisClient": "Esse perfil de faturamento não pertence a este cliente."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "Esse item não existe mais.",
+      "alreadyInvoiced": "Esse item já foi faturado.",
+      "contractLineNotFound": "Essa linha de contrato não existe mais."
     }
   }
 }

@@ -964,7 +964,8 @@
       "quoteData": "Brak uprawnień dostępu do danych oferty",
       "invoiceData": "Brak uprawnień dostępu do danych faktury",
       "billingData": "Brak uprawnień dostępu do danych rozliczeniowych",
-      "settingsUpdate": "Nie masz uprawnień do zmiany tych ustawień."
+      "settingsUpdate": "Nie masz uprawnień do zmiany tych ustawień.",
+      "billingSegment": "Brak uprawnień dostępu do tego segmentu rozliczeniowego"
     },
     "billing": {
       "quoteNotFound": "Nie znaleziono oferty lub odmowa dostępu",

@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Les alertes de solde prépayé ne sont pas activées pour cet espace de travail",
       "invalidPrepaidAlertSettings": "Paramètres d’alerte de solde prépayé non valides",
       "prepaidAlertUpdateFailed": "Échec de la mise à jour des paramètres d’alerte de solde prépayé"
+    },
+    "billingProfile": {
+      "signInRequired": "Vous devez être connecté pour gérer les profils de facturation.",
+      "duplicateDefault": "Ce client possède déjà un profil de facturation par défaut.",
+      "stillReferenced": "Le profil de facturation est encore référencé et ne peut pas être supprimé.",
+      "defaultRequired": "Un client doit toujours avoir exactement un profil de facturation par défaut.",
+      "nameRequired": "Un profil de facturation doit avoir un nom.",
+      "notThisClient": "Ce profil de facturation n’appartient pas à ce client.",
+      "archivedCannotBeDefault": "Un profil de facturation archivé ne peut pas être défini par défaut.",
+      "notFound": "Ce profil de facturation n’existe plus.",
+      "defaultCannotArchive": "Le profil de facturation par défaut ne peut pas être archivé. Définissez d’abord un autre profil par défaut.",
+      "defaultCannotDelete": "Le profil de facturation par défaut ne peut pas être supprimé. Définissez d’abord un autre profil par défaut.",
+      "inUse": "Ce profil de facturation est utilisé par {{references}}. Archivez-le plutôt que de le supprimer : la suppression effacerait la manière dont ces frais ont été attribués.",
+      "recordNotFound": "Cet enregistrement ou ce profil de facturation n’existe plus.",
+      "otherClient": "Ce profil de facturation appartient à un autre client.",
+      "archived": "Ce profil de facturation est archivé.",
+      "selectionNotThisClient": "L’un des profils de facturation sélectionnés n’appartient pas à ce client."
     }
   }
 }

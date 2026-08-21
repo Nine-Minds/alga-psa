@@ -960,7 +960,8 @@
       "quoteData": "Geen toegang tot offertegegevens",
       "invoiceData": "Geen toegang tot factuurgegevens",
       "billingData": "Geen toegang tot facturatiegegevens",
-      "settingsUpdate": "U hebt geen rechten om deze instellingen te wijzigen."
+      "settingsUpdate": "U hebt geen rechten om deze instellingen te wijzigen.",
+      "billingSegment": "Geen toegang tot dat facturatiesegment"
     },
     "billing": {
       "quoteNotFound": "Offerte niet gevonden of toegang geweigerd",

@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Warnungen zum Guthabenstand sind für diesen Arbeitsbereich nicht aktiviert",
       "invalidPrepaidAlertSettings": "Ungültige Einstellungen für Guthabenwarnungen",
       "prepaidAlertUpdateFailed": "Die Einstellungen für Guthabenwarnungen konnten nicht aktualisiert werden"
+    },
+    "billingProfile": {
+      "signInRequired": "Sie müssen angemeldet sein, um Abrechnungsprofile zu verwalten.",
+      "duplicateDefault": "Dieser Kunde hat bereits ein Standard-Abrechnungsprofil.",
+      "stillReferenced": "Das Abrechnungsprofil wird noch verwendet und kann nicht entfernt werden.",
+      "defaultRequired": "Ein Kunde muss immer genau ein Standard-Abrechnungsprofil haben.",
+      "nameRequired": "Ein Abrechnungsprofil benötigt einen Namen.",
+      "notThisClient": "Dieses Abrechnungsprofil gehört nicht zu diesem Kunden.",
+      "archivedCannotBeDefault": "Ein archiviertes Abrechnungsprofil kann nicht als Standard festgelegt werden.",
+      "notFound": "Dieses Abrechnungsprofil existiert nicht mehr.",
+      "defaultCannotArchive": "Das Standard-Abrechnungsprofil kann nicht archiviert werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "defaultCannotDelete": "Das Standard-Abrechnungsprofil kann nicht gelöscht werden. Legen Sie zuerst ein anderes Profil als Standard fest.",
+      "inUse": "Dieses Abrechnungsprofil wird von {{references}} verwendet. Archivieren Sie es stattdessen – beim Löschen ginge verloren, wie diese Posten zugeordnet wurden.",
+      "recordNotFound": "Dieser Datensatz oder dieses Abrechnungsprofil existiert nicht mehr.",
+      "otherClient": "Dieses Abrechnungsprofil gehört zu einem anderen Kunden.",
+      "archived": "Dieses Abrechnungsprofil ist archiviert.",
+      "selectionNotThisClient": "Eines der ausgewählten Abrechnungsprofile gehört nicht zu diesem Kunden."
     }
   }
 }

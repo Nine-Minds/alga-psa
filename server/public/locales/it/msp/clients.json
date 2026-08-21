@@ -1791,6 +1791,23 @@
       "prepaidAlertsDisabled": "Gli avvisi sul saldo prepagato non sono abilitati per questo spazio di lavoro",
       "invalidPrepaidAlertSettings": "Impostazioni degli avvisi sul saldo prepagato non valide",
       "prepaidAlertUpdateFailed": "Impossibile aggiornare le impostazioni degli avvisi sul saldo prepagato"
+    },
+    "billingProfile": {
+      "signInRequired": "È necessario aver effettuato l’accesso per gestire i profili di fatturazione.",
+      "duplicateDefault": "Questo cliente ha già un profilo di fatturazione predefinito.",
+      "stillReferenced": "Il profilo di fatturazione è ancora referenziato e non può essere rimosso.",
+      "defaultRequired": "Un cliente deve sempre avere esattamente un profilo di fatturazione predefinito.",
+      "nameRequired": "Un profilo di fatturazione richiede un nome.",
+      "notThisClient": "Questo profilo di fatturazione non appartiene a questo cliente.",
+      "archivedCannotBeDefault": "Un profilo di fatturazione archiviato non può essere impostato come predefinito.",
+      "notFound": "Questo profilo di fatturazione non esiste più.",
+      "defaultCannotArchive": "Il profilo di fatturazione predefinito non può essere archiviato. Impostare prima un altro profilo come predefinito.",
+      "defaultCannotDelete": "Il profilo di fatturazione predefinito non può essere eliminato. Impostare prima un altro profilo come predefinito.",
+      "inUse": "Questo profilo di fatturazione è utilizzato da {{references}}. Archiviarlo invece di eliminarlo: l’eliminazione cancellerebbe il modo in cui tali addebiti sono stati attribuiti.",
+      "recordNotFound": "Questo record o profilo di fatturazione non esiste più.",
+      "otherClient": "Questo profilo di fatturazione appartiene a un altro cliente.",
+      "archived": "Questo profilo di fatturazione è archiviato.",
+      "selectionNotThisClient": "Uno dei profili di fatturazione selezionati non appartiene a questo cliente."
     }
   }
 }

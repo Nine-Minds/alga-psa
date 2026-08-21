@@ -960,7 +960,8 @@
       "quoteData": "Accès non autorisé aux données du devis",
       "invoiceData": "Accès non autorisé aux données de facture",
       "billingData": "Accès non autorisé aux données de facturation",
-      "settingsUpdate": "Vous n’avez pas l’autorisation de modifier ces paramètres."
+      "settingsUpdate": "Vous n’avez pas l’autorisation de modifier ces paramètres.",
+      "billingSegment": "Accès non autorisé à ce segment de facturation"
     },
     "billing": {
       "quoteNotFound": "Devis introuvable ou accès refusé",

@@ -581,7 +581,8 @@
       "clientRead": "Permission denied: client read required",
       "otherClientLocations": "Permission denied: cannot access locations for another client",
       "clientPortalUnavailable": "Permission denied: operation not available in client portal",
-      "resolveCurrency": "Permission denied: Cannot resolve client billing currency"
+      "resolveCurrency": "Permission denied: Cannot resolve client billing currency",
+      "clientBillingAccess": "Permission denied: you do not have access to this client’s billing."
     },
     "context": {
       "tenantNotFound": "Tenant not found",
@@ -690,6 +691,16 @@
         "delete": "Permission denied: cannot delete document templates",
         "preview": "Permission denied: cannot preview document templates"
       }
+    },
+    "billingProfile": {
+      "periodOrder": "Choose a period whose start is on or before its end.",
+      "comparisonPeriodOrder": "Choose a comparison period whose start is on or before its end.",
+      "notThisClient": "That billing profile does not belong to this client."
+    },
+    "unresolvedCharge": {
+      "itemNotFound": "That item no longer exists.",
+      "alreadyInvoiced": "That item has already been invoiced.",
+      "contractLineNotFound": "That contract line no longer exists."
     }
   }
 }

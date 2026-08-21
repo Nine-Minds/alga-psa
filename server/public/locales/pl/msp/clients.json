@@ -1843,6 +1843,23 @@
       "prepaidAlertsDisabled": "Alerty o saldzie przedpłaconym nie są włączone dla tego obszaru roboczego",
       "invalidPrepaidAlertSettings": "Nieprawidłowe ustawienia alertów o saldzie przedpłaconym",
       "prepaidAlertUpdateFailed": "Nie udało się zaktualizować ustawień alertów o saldzie przedpłaconym"
+    },
+    "billingProfile": {
+      "signInRequired": "Musisz być zalogowany, aby zarządzać profilami rozliczeniowymi.",
+      "duplicateDefault": "Ten klient ma już domyślny profil rozliczeniowy.",
+      "stillReferenced": "Profil rozliczeniowy jest nadal używany i nie można go usunąć.",
+      "defaultRequired": "Klient musi zawsze mieć dokładnie jeden domyślny profil rozliczeniowy.",
+      "nameRequired": "Profil rozliczeniowy wymaga nazwy.",
+      "notThisClient": "Ten profil rozliczeniowy nie należy do tego klienta.",
+      "archivedCannotBeDefault": "Zarchiwizowanego profilu rozliczeniowego nie można ustawić jako domyślny.",
+      "notFound": "Ten profil rozliczeniowy już nie istnieje.",
+      "defaultCannotArchive": "Domyślnego profilu rozliczeniowego nie można zarchiwizować. Najpierw ustaw inny profil jako domyślny.",
+      "defaultCannotDelete": "Domyślnego profilu rozliczeniowego nie można usunąć. Najpierw ustaw inny profil jako domyślny.",
+      "inUse": "Ten profil rozliczeniowy jest używany przez: {{references}}. Zarchiwizuj go zamiast usuwać — usunięcie wymazałoby sposób przypisania tych obciążeń.",
+      "recordNotFound": "Ten rekord lub profil rozliczeniowy już nie istnieje.",
+      "otherClient": "Ten profil rozliczeniowy należy do innego klienta.",
+      "archived": "Ten profil rozliczeniowy jest zarchiwizowany.",
+      "selectionNotThisClient": "Jeden z wybranych profili rozliczeniowych nie należy do tego klienta."
     }
   }
 }
