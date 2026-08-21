@@ -8,7 +8,7 @@
  * regexes that made a single large file pin an event loop for minutes.
  */
 
-import { Lexer } from 'marked';
+import { Lexer, Tokenizer } from 'marked';
 import type { Token, Tokens } from 'marked';
 import { Parser as HtmlParser } from 'htmlparser2';
 
@@ -50,6 +50,7 @@ export class KbImportParseTimeoutError extends Error {
 }
 
 const HTML_CHUNK_SIZE = 64 * 1024;
+const MARKDOWN_CHUNK_SIZE = 64 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
@@ -296,9 +297,72 @@ function appendTokens(tokens: Token[], blocks: BlockNoteBlock[], deadline: Deadl
   }
 }
 
+/**
+ * CRLF normalization in chunks, so a multi-MB file cannot run a single
+ * unbounded `.replace()` before the deadline is ever consulted.
+ */
+function normalizeLineEndings(markdown: string, deadline: Deadline): string {
+  const parts: string[] = [];
+  let carry = '';
+
+  for (let offset = 0; offset < markdown.length; offset += MARKDOWN_CHUNK_SIZE) {
+    deadline.check(true);
+    const end = offset + MARKDOWN_CHUNK_SIZE;
+    let chunk = carry + markdown.slice(offset, end);
+    carry = '';
+    // A CR on the boundary may be half of a CRLF: hold it for the next chunk.
+    if (end < markdown.length && chunk.endsWith('\r')) {
+      chunk = chunk.slice(0, -1);
+      carry = '\r';
+    }
+    parts.push(chunk.replace(/\r\n?/g, '\n'));
+  }
+
+  return parts.join('');
+}
+
+/**
+ * Consulted first in marked's block (`space`) and inline (`escape`) tokenizer
+ * chains, so every token marked produces costs one deadline check — the
+ * markdown equivalent of feeding htmlparser2 in chunks.
+ */
+class DeadlineTokenizer extends Tokenizer {
+  private readonly deadline: Deadline;
+
+  constructor(deadline: Deadline) {
+    super();
+    this.deadline = deadline;
+  }
+
+  space(src: string): Tokens.Space | undefined {
+    this.deadline.check(true);
+    return super.space(src);
+  }
+
+  escape(src: string): Tokens.Escape | undefined {
+    this.deadline.check(true);
+    return super.escape(src);
+  }
+}
+
+/** Bounds the deferred inline pass, which marked runs once per queued run. */
+class DeadlineLexer extends Lexer {
+  private readonly deadline: Deadline;
+
+  constructor(deadline: Deadline) {
+    super({ gfm: true, tokenizer: new DeadlineTokenizer(deadline) });
+    this.deadline = deadline;
+  }
+
+  inlineTokens(src: string, tokens: Token[] = []): Token[] {
+    this.deadline.check(true);
+    return super.inlineTokens(src, tokens);
+  }
+}
+
 export function markdownToBlocks(markdown: string, options: KbImportParseOptions = {}): BlockNoteBlock[] {
   const deadline = new Deadline(options.maxDurationMs);
-  const tokens = Lexer.lex(markdown.replace(/\r\n?/g, '\n'), { gfm: true });
+  const tokens = new DeadlineLexer(deadline).lex(normalizeLineEndings(markdown, deadline));
   const blocks: BlockNoteBlock[] = [];
   appendTokens(tokens as Token[], blocks, deadline);
   return blocks;

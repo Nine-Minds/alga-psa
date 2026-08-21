@@ -252,4 +252,18 @@ describe('kbImportBlocks pathological input stays linear', () => {
     const html = `<p>${'text '.repeat(1_000_000)}</p>`;
     expect(() => htmlToBlocks(html, { maxDurationMs: 1 })).toThrow(KbImportParseTimeoutError);
   });
+
+  it('enforces the cooperative parse deadline on markdown', () => {
+    const markdown = 'word '.repeat(600_000);
+    expect(markdown.length).toBeGreaterThan(3_000_000 - 1);
+    expect(() => markdownToBlocks(markdown, { maxDurationMs: 1 })).toThrow(KbImportParseTimeoutError);
+  });
+
+  it('normalizes CRLF identically across chunk boundaries', () => {
+    const lines = Array.from({ length: 4_000 }, (_, i) => `Line ${i} with **bold** text.`);
+    const lf = lines.join('\n\n');
+    expect(lf.length).toBeGreaterThan(64 * 1024);
+    expect(markdownToBlocks(lf.replace(/\n/g, '\r\n'))).toEqual(markdownToBlocks(lf));
+    expect(markdownToBlocks(lf.replace(/\n/g, '\r'))).toEqual(markdownToBlocks(lf));
+  });
 });
