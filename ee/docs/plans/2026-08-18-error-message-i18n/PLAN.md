@@ -4,7 +4,8 @@ Status: in progress. Written 2026-08-18, reconciled with the repo 2026-08-19, an
 2026-08-20 after a browser walk found the category the first inventory missed.
 Categories 1, 2, 3, 4 and 6 are done; category 5 is a 137-file ratchet; **category 7 — the
 `{ success: false, error }` channel — is newly opened, mechanism landed, one path migrated.**
-Rebased onto main 2026-08-20; see "Rebase reconciliation" below for what main changed underfoot.
+Rebased onto main 2026-08-21 (`7fd494d9f6`, PR #3224); see "Rebase reconciliation" below for
+what main changed underfoot.
 The verification list below grew a third entry on 2026-08-20 — see "Namespace arrays hid a
 pack of English defaults", which the gate, `tsc` and both ad hoc greps all missed.
 
@@ -481,7 +482,7 @@ Closes the gaps left by the current diff. Half a day.
   `result.error || t('…')`, which is a category-4 site, not a category-3 one. The only `Record<string, string>`
   left nearby is `TeamsIntegrationSettings`'s wizard-step map, and that is keyed by step id, not by prose.
 
-## Rebase reconciliation (2026-08-20)
+## Rebase reconciliation (2026-08-20, refreshed 2026-08-21 onto `7fd494d9f6`)
 
 Rebasing onto main replayed 46 commits over 162 and found that two of this branch's early commits had
 already landed there — in an evolved form that supersedes them. The resolutions worth knowing:
@@ -513,6 +514,28 @@ already landed there — in an evolved form that supersedes them. The resolution
 - **A private error constructor silently drops the key.** `client-billing-segments.ts` declared its own
   one-argument `permissionError`, so passing a key was a type error rather than a no-op — the loud failure
   mode, luckily. It now uses the shared `@alga-psa/ui/lib/errorHandling` helpers and the shared payload types.
+
+### Third rebase, 2026-08-21 (`d3d328548e`, then `7fd494d9f6`)
+
+Forty more commits of main. Conflicts landed in thirteen files and each class has one right answer:
+
+- **Locale packs are a catalog merge, never a pick-a-side.** `msp/clients.json` conflicted in all eight
+  real locales because main's retainer-replenishment and client-card work added keys into the same object
+  this branch was adding `errors.*` into. Resolved as a true three-way merge over the key tree — main's
+  additions kept, this branch's `errors.*` kept, and main's six deleted `clientGridCard.*` keys honoured as
+  deletions. Taking either side wholesale silently drops one half and no test catches it.
+- **Pseudo packs are generated, not merged.** `xx`/`yy` conflicts were resolved by taking one side and
+  re-running `node scripts/generate-pseudo-locales.cjs`, which is the only way they stay consistent with `en`.
+- **`taxSourceActions.ts` needed both sides.** Main (PRs #3217/#3218) extracted
+  `validateInvoiceFinalizationInternal(knex, tenant, invoiceId)` and left `validateInvoiceFinalization` as a
+  thin `withAuth` wrapper; this branch had added a `messageKey` to that wrapper's `permissionError`. The
+  extraction is kept and the key re-applied to the wrapper — clobbering either way loses a feature.
+- **Main brought one more unkeyed action pair.** `billingHelpers.ts` gained
+  `getPrepaidReplenishmentContractOverridesAsync` / `updatePrepaidReplenishmentContractOverrideAsync` with
+  five bare-English returns. Four reuse existing keys (`prepaidAlertsDisabled`, `readRequired`,
+  `updateRequired`); one new key, `msp/clients:errors.billingSettings.contractReplenishmentUpdateFailed`,
+  is translated in all seven locales. This is the third rebase in a row to land new unkeyed call sites —
+  the grep is not optional.
 
 ## Category 7 — the `{ success: false, error }` channel (~1,132 literals across 254 files)
 
