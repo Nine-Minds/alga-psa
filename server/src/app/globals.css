@@ -3022,18 +3022,70 @@ html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] .switch
   background: rgb(var(--color-border-200)) !important;
 }
 
-/* Paper-feel background for text editors (light + dark) */
+/* Paper-feel background for text editors: the block should read as a shallow
+   well pressed into the card, not as a panel sitting on it.
+
+   The depth cue is the inset shadow — a tight dark line under the top edge plus
+   a wider falloff — NOT a darker fill. Filling the whole surface is what made an
+   earlier version look disabled in light mode, so the fill stays at the card
+   color and only carries a ~2% scrim that fades out by 40% height, reading as
+   light from above.
+
+   On top of that sit two corner lamps, anchored past the corners and taller than
+   the box so their falloff is horizontal — a wash out of the corner rather than
+   a blob in the middle. Their hues come from the running pair's own tokens, so
+   each theme tints itself. They are deliberately near the threshold of
+   perception: the moment you can name the shape, it is too strong. */
 .editor-paper {
-  background-color: #fefefe;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.03);
+  background:
+    radial-gradient(ellipse 55% 150% at 0% 100%, rgb(var(--color-primary-500) / 0.06) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 130% at 100% 0%, rgb(var(--color-secondary-500) / 0.05) 0%, transparent 65%),
+    linear-gradient(rgb(0 0 0 / 0.022), rgb(0 0 0 / 0.006) 40%),
+    rgb(var(--color-card));
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.1),
+    inset 0 5px 12px -4px rgb(0 0 0 / 0.1),
+    inset 0 0 0 1px rgb(0 0 0 / 0.05);
 }
 
+/* Dark needs roughly half the tint of light for the same apparent strength: the
+   lamps add light against a dark ground instead of subtracting it from a white
+   one, so the same alpha reads far louder. The shadow does the opposite and has
+   to get deeper to stay visible. */
 .dark .editor-paper {
   background:
-    radial-gradient(ellipse 80% 60% at 15% 85%, rgb(45 30 70 / 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 85% 20%, rgb(20 50 65 / 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 150% at 0% 100%, rgb(var(--color-primary-500) / 0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 130% at 100% 0%, rgb(var(--color-secondary-500) / 0.035) 0%, transparent 65%),
     rgb(var(--color-border-100));
-  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.3), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.05);
+}
+
+/* High contrast opts out of the LAMPS only: its primary/secondary are neutral
+   greys, so a hue tint would just smear the surface. The shading stays, because
+   it costs no contrast — the hard border remains the primary affordance and the
+   shadow is purely additive on top of it. */
+html[data-theme-pair="high-contrast"] .editor-paper {
+  background: rgb(var(--color-card));
+  box-shadow: inset 0 0 0 1px rgb(var(--color-border-300));
+}
+
+/* Same well lit from above, read from whichever wall the ground can show. On
+   white you see the shadow cast down the top inner wall. */
+html.light[data-theme-pair="high-contrast"] .editor-paper {
+  box-shadow:
+    inset 0 2px 3px rgb(0 0 0 / 0.22),
+    inset 0 7px 16px -6px rgb(0 0 0 / 0.18),
+    inset 0 0 0 1px rgb(var(--color-border-300));
+}
+
+/* The dark card is literally #000 — there is no darker to go, so a top shadow
+   would be invisible. The cue flips to the light caught on the bottom wall. */
+html.dark[data-theme-pair="high-contrast"] .editor-paper {
+  box-shadow:
+    inset 0 -3px 6px -2px rgb(255 255 255 / 0.18),
+    inset 0 0 0 1px rgb(var(--color-border-300));
 }
 
 /* Expression editor placeholder (Monaco inline decoration) */

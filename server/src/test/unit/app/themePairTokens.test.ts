@@ -25,6 +25,13 @@ function tokensOf(selector: string): Record<string, string> {
   return tokens;
 }
 
+/** A rule's declaration body, for selectors that carry no tokens. */
+function block(selector: string): string {
+  const start = css.indexOf(`${selector} {`);
+  expect(start, `missing rule: ${selector}`).toBeGreaterThan(-1);
+  return css.slice(start, css.indexOf('}', start));
+}
+
 const sum = (triple: string) => triple.split(' ').map(Number).reduce((a, b) => a + b, 0);
 
 describe('theme pair token blocks', () => {
@@ -171,6 +178,41 @@ describe('theme pair token blocks', () => {
   it('does not globally erase native data-table header borders', () => {
     expect(css).not.toContain('thead tr th,');
     expect(css).not.toContain('table th,');
+  });
+
+  // The editor's paper tint was flattened once already because it was read as a
+  // disabled-looking grey. It stays, but tinted from the running pair's own
+  // tokens and only in the corners, so the reading surface keeps full brightness.
+  it('tints the editor paper from pair tokens in both modes', () => {
+    const light = block('.editor-paper');
+    const dark = block('.dark .editor-paper');
+
+    [light, dark].forEach((rule) => {
+      expect(rule).toContain('rgb(var(--color-primary-500) /');
+      expect(rule).toContain('rgb(var(--color-secondary-500) /');
+      // No pair-specific literals: every theme has to tint itself.
+      expect(rule).not.toMatch(/radial-gradient\([^)]*rgb\(\s*\d/);
+      expect(rule).toContain('inset');
+    });
+
+    expect(light).toContain('rgb(var(--color-card))');
+    expect(dark).toContain('rgb(var(--color-border-100))');
+  });
+
+  // High contrast drops the hue lamps but keeps the shading: a shadow costs no
+  // contrast, and the hard border is still there underneath it.
+  it('shades the high-contrast editor paper without tinting it', () => {
+    const base = block('html[data-theme-pair="high-contrast"] .editor-paper');
+    expect(base).not.toContain('radial-gradient');
+    expect(base).toContain('background: rgb(var(--color-card));');
+
+    ['light', 'dark'].forEach((mode) => {
+      const rule = block(`html.${mode}[data-theme-pair="high-contrast"] .editor-paper`);
+      expect(rule, mode).not.toContain('radial-gradient');
+      expect(rule, mode).toContain('inset');
+      // The border ring survives the shadow override.
+      expect(rule, mode).toContain('inset 0 0 0 1px rgb(var(--color-border-300))');
+    });
   });
 
   it('inverts high-contrast switch surfaces between off and on', () => {

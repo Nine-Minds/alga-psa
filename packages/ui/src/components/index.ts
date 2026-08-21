@@ -115,6 +115,8 @@ export { default as SearchableSelect } from './SearchableSelect';
 export * from './Separator';
 export * from './Skeleton';
 export * from './Spinner';
+export * from './StickyComposerDock';
+export { default as StickyComposerDock } from './StickyComposerDock';
 export { default as Spinner } from './Spinner';
 export * from './SuccessDialog';
 export { default as SuccessDialog } from './SuccessDialog';

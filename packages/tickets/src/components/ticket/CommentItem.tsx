@@ -156,6 +156,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation.comment_id, currentComment?.comment_id, id]
   );
 
+  // Stable identity for the viewer: re-parsing inline on every render handed
+  // RichTextViewer a brand-new array each time, which is what made it rebuild
+  // its document and drop the reader's selection.
+  const displayContent = useMemo(
+    () => parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'display'),
+    [conversation.note, conversation.comment_id]
+  );
+
   const resolvedAuthor = useMemo(
     () =>
       resolveCommentAuthor(conversation, {
@@ -538,18 +546,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
               editorContent
             ) : (
-            (() => {
-              const noteContent = conversation.note || '';
-              const parsed = parseCommentNoteContent(noteContent, conversation.comment_id, 'display');
-              if (process.env.NODE_ENV !== 'production') console.log('[CommentItem] render viewer', {
-                comment_id: conversation.comment_id,
-                updated_at: conversation.updated_at,
-                noteLen: (conversation.note || '').length,
-                usingArray: Array.isArray(parsed),
-                blocks: Array.isArray(parsed) ? (parsed as PartialBlock[]).length : undefined,
-              });
-              return (
-                <div
+              <div
                   {...withDataAutomationId({ id: `${commentId}-content` })}
                   className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
                     isCompact
@@ -564,12 +561,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 >
                   <RichTextViewer
                     key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                    content={parsed as any}
+                    content={displayContent as any}
                     className="w-full min-w-0 max-w-full"
                   />
-                </div>
-              );
-            })()
+              </div>
           )}
           {reactions && onToggleReaction && (
             <ReactionDisplay
