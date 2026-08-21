@@ -1572,7 +1572,8 @@
           "invalidState": "This Microsoft setup request is invalid or expired. Start again from Providers settings.",
           "microsoftError": "Microsoft could not complete the setup request. Try again or use manual setup.",
           "missingCode": "Microsoft did not return an authorization code. Start setup again.",
-          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again."
+          "sessionMismatch": "Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.",
+          "optionsLoadFailed": "Failed to load Microsoft Email setup options."
         },
         "fields": {
           "clientId": "Client ID",

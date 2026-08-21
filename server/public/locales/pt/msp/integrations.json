@@ -1572,7 +1572,8 @@
           "invalidState": "Esta solicitação de configuração da Microsoft é inválida ou expirou. Inicie novamente nas configurações de Provedores.",
           "microsoftError": "A Microsoft não conseguiu concluir a solicitação de configuração. Tente novamente ou use a configuração manual.",
           "missingCode": "A Microsoft não retornou um código de autorização. Inicie a configuração novamente.",
-          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente."
+          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente.",
+          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft."
         },
         "fields": {
           "clientId": "ID do cliente",

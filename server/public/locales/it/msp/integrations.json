@@ -1572,7 +1572,8 @@
           "invalidState": "Questa richiesta di configurazione Microsoft non è valida o è scaduta. Ricomincia dalle impostazioni dei provider.",
           "microsoftError": "Microsoft non ha potuto completare la richiesta di configurazione. Riprova o usa la configurazione manuale.",
           "missingCode": "Microsoft non ha restituito un codice di autorizzazione. Riavvia la configurazione.",
-          "sessionMismatch": "La tua sessione AlgaPSA non corrisponde all'amministratore che ha avviato questa configurazione. Accedi e riprova."
+          "sessionMismatch": "La tua sessione AlgaPSA non corrisponde all'amministratore che ha avviato questa configurazione. Accedi e riprova.",
+          "optionsLoadFailed": "Impossibile caricare le opzioni di configurazione dell'email Microsoft."
         },
         "fields": {
           "clientId": "ID client",

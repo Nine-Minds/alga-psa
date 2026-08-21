@@ -1572,7 +1572,8 @@
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
           "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut."
+          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
+          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden."
         },
         "fields": {
           "clientId": "Client ID",

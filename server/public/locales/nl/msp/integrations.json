@@ -1572,7 +1572,8 @@
           "invalidState": "Dit Microsoft-configuratieverzoek is ongeldig of verlopen. Start opnieuw vanuit de providerinstellingen.",
           "microsoftError": "Microsoft kon het configuratieverzoek niet voltooien. Probeer het opnieuw of gebruik de handmatige configuratie.",
           "missingCode": "Microsoft heeft geen autorisatiecode geretourneerd. Start de configuratie opnieuw.",
-          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw."
+          "sessionMismatch": "Uw AlgaPSA-sessie komt niet overeen met de beheerder die deze configuratie heeft gestart. Meld u aan en probeer het opnieuw.",
+          "optionsLoadFailed": "Kan de configuratieopties voor Microsoft-e-mail niet laden."
         },
         "fields": {
           "clientId": "Client ID",

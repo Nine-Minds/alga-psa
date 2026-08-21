@@ -1572,7 +1572,8 @@
           "invalidState": "Cette demande de configuration Microsoft est invalide ou a expiré. Recommencez depuis les paramètres des fournisseurs.",
           "microsoftError": "Microsoft n’a pas pu mener à bien la demande de configuration. Réessayez ou utilisez la configuration manuelle.",
           "missingCode": "Microsoft n’a renvoyé aucun code d’autorisation. Recommencez la configuration.",
-          "sessionMismatch": "Votre session AlgaPSA ne correspond pas à l’administrateur qui a démarré cette configuration. Connectez-vous et réessayez."
+          "sessionMismatch": "Votre session AlgaPSA ne correspond pas à l’administrateur qui a démarré cette configuration. Connectez-vous et réessayez.",
+          "optionsLoadFailed": "Impossible de charger les options de configuration de l'e-mail Microsoft."
         },
         "fields": {
           "clientId": "ID client",
