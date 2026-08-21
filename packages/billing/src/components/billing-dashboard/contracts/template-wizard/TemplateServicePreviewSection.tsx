@@ -121,7 +121,7 @@ export function TemplateServicePreviewSection({
                       {service.name}
                     </span>
                     {service.fromPreset && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 border border-purple-200 rounded text-xs text-purple-700">
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-[rgb(var(--color-primary-100))] border border-[rgb(var(--color-primary-200))] rounded text-xs text-[rgb(var(--color-primary-700))]">
                         <Sparkles className="h-3 w-3" />
                         <span>{service.fromPreset.presetName}</span>
                       </div>

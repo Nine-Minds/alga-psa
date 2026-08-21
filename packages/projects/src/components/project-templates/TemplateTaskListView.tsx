@@ -568,7 +568,7 @@ export default function TemplateTaskListView({
                                 <h4 className="font-semibold text-gray-900">
                                   {phaseGroup.phase.phase_name || t('templates.editor.untitledPhase', 'Untitled Phase')}
                                 </h4>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
                                   {phaseGroup.totalTasks === 1
                                     ? t('templates.editor.taskCount_one', '1 task')
                                     : t('templates.editor.taskCount_other', '{{count}} tasks', {

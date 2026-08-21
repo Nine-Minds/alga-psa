@@ -91,7 +91,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
   return (
     <div className="w-full max-w-[200px] bg-gray-200 rounded-full h-1.5 overflow-hidden">
       <div
-        className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+        className="bg-[rgb(var(--color-primary-600))] h-1.5 rounded-full transition-all duration-300"
         style={{ width: `${Math.min(percentage, 100)}%` }}
       />
     </div>
@@ -382,7 +382,7 @@ export default function ClientTaskListView({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-base font-semibold text-gray-900">{phase.phase_name}</span>
                             {showTasks && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
                                 {totalTasks} {totalTasks === 1 ? t('task', 'task') : t('tasks.title', 'tasks').toLowerCase()}
                               </span>
                             )}
@@ -417,7 +417,7 @@ export default function ClientTaskListView({
                           <div className="flex items-center gap-3 flex-shrink-0">
                             <ProgressBar percentage={phase.completion_percentage} />
                             <div className="text-right min-w-[60px]">
-                              <span className="text-lg font-bold text-purple-600">
+                              <span className="text-lg font-bold text-[rgb(var(--color-primary-600))]">
                                 {phase.completion_percentage}%
                               </span>
                               <div className="text-xs text-gray-500">

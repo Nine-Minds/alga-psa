@@ -1701,7 +1701,7 @@ export default function TaskForm({
                 clearErrorIfSubmitted();
               }}
               placeholder={taskFormT('taskNamePlaceholder', 'Enter task name...')}
-              className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+              className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${
                 hasAttemptedSubmit && !taskName.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
@@ -2287,7 +2287,7 @@ export default function TaskForm({
 
         {/* Action Buttons - only rendered inside form for drawer mode */}
         {inDrawer && (
-          <div className="pt-4 pb-2 border-t bg-white dark:bg-[rgb(var(--color-bg-1))] flex-shrink-0">
+          <div className="pt-4 pb-2 border-t bg-white dark:bg-[rgb(var(--color-card))] flex-shrink-0">
             {renderActionButtons(false)}
           </div>
         )}

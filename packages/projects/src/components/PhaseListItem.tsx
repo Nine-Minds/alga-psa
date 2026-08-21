@@ -272,7 +272,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
-        ${isSelected ? 'bg-purple-50 dark:bg-purple-500/10' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
+        ${isSelected ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-500)/0.1)]' : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'}
         ${isDragging ? styles.dragging + ' opacity-50 scale-95' : ''}
         ${isAnimating ? styles.entering : ''}
         ${taskDraggingOverPhaseId === phase.phase_id ? styles.taskDragOver : ''}
@@ -297,7 +297,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 ref={nameInputRef}
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
-                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent resize-none"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -307,7 +307,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               <TextArea
                 value={editingDescription ?? ''}
                 onChange={(e) => onDescriptionChange(e.target.value || null)}
-                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent resize-none"
                 placeholder={t('phases.descriptionPlaceholder')}
                 onClick={(e) => e.stopPropagation()}
                 rows={2}
@@ -428,7 +428,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </Tooltip>
                 )}
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-500)/0.2)] text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))]">
                   {t('phases.taskCount', { count: taskCount ?? 0 })}
                 </span>
               </div>

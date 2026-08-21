@@ -155,7 +155,7 @@ function TaskCard({
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+              className="text-xs text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium mt-1"
             >
               {isDescriptionExpanded
                 ? t('tasks.seeLess', 'See less')
@@ -375,12 +375,12 @@ function PhaseCard({
       <div className="flex flex-col gap-1">
         {/* Phase name */}
         <div className="flex items-start justify-between gap-2">
-          <span className={`text-lg font-bold ${isSelected ? 'text-purple-600' : 'text-[rgb(var(--color-text-900))]'}`}>
+          <span className={`text-lg font-bold ${isSelected ? 'text-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-900))]'}`}>
             {phase.phase_name}
           </span>
         </div>
         {showCompletion && phase.completion_percentage !== undefined && (
-          <span className={`text-xs font-medium ${isSelected ? 'text-purple-600' : 'text-[rgb(var(--color-text-500))]'}`}>
+          <span className={`text-xs font-medium ${isSelected ? 'text-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-500))]'}`}>
             {phase.completion_percentage}%
           </span>
         )}

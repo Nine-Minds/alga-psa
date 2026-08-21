@@ -859,7 +859,7 @@ function DocumentStorageCardComponent({
                                         onMove(document);
                                     }}
                                     disabled={isDeleteProcessing}
-                                    className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 p-1.5"
+                                    className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-500)/0.1)] p-1.5"
                                 >
                                     <FolderInput className="w-4 h-4" />
                                 </Button>

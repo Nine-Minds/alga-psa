@@ -103,7 +103,7 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
         <>
           <div className="relative my-3 h-2.5 rounded-full bg-[rgb(var(--color-border-100))]">
             <div
-              className={`h-full rounded-full ${billed >= cap ? 'bg-red-500' : 'bg-purple-500'}`}
+              className={`h-full rounded-full ${billed >= cap ? 'bg-red-500' : 'bg-[rgb(var(--color-primary-500))]'}`}
               style={{ width: `${pct(billed, cap)}%` }}
             />
             {thresholds.map((threshold) => (
@@ -117,7 +117,7 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
           </div>
           <dl className="flex flex-col gap-1.5 text-[13px]">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-sm bg-purple-500" />
+              <span className="h-2 w-2 rounded-sm bg-[rgb(var(--color-primary-500))]" />
               <dt className="text-[rgb(var(--color-text-600))]">{t('billing.budget.billed', 'Billed to date')}</dt>
               <dd className="ml-auto font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                 {money(billed, currency ?? undefined)} · {pct(billed, cap).toFixed(0)}%

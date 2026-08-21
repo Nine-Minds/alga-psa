@@ -318,7 +318,7 @@ export function ClientPortalSidebar({
               />
             </div>
           ) : (
-            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
               <Image
                 src="/images/avatar-purple-background.png"
                 alt={t('sidebar.logoAlt', 'Client Portal Logo')}

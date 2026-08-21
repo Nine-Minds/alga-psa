@@ -398,7 +398,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             id={`toggle-title-${task.task_id}`}
             variant="ghost"
             size="sm"
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+            className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
@@ -423,7 +423,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               id={`toggle-desc-${task.task_id}`}
               variant="ghost"
               size="sm"
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+              className={`${zoomScales.metaSize} text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);

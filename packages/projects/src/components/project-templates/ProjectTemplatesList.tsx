@@ -273,7 +273,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
             <Button
               id="add-template"
               onClick={() => setShowAddDialog(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
             >
               <Wand2 className="h-4 w-4 mr-2" />
               {t('templates.list.addTemplate', 'Add Template')}

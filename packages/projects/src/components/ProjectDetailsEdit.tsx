@@ -249,7 +249,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               value={project.project_name}
               onChange={handleInputChange}
               placeholder={t('projectEdit.projectNamePlaceholder', 'Enter project name...')}
-              className={`w-full text-base font-medium p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+              className={`w-full text-base font-medium p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] ${
                 hasAttemptedSubmit && !project.project_name?.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
@@ -267,7 +267,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               value={project.description || ''}
               onChange={handleInputChange}
               placeholder={t('projectEdit.descriptionPlaceholder', 'Enter project description...')}
-              className="w-full text-sm p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full text-sm p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
               rows={3}
             />
           </div>
