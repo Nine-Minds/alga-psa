@@ -56,7 +56,22 @@ Landed on `i18n/error_messages`:
   `completeUserInvitationSetup` returns the failing rule's key beside the English.
   `ContactPhoneNumbersEditor` returns translated messages with a numeric `rowIndex`, and
   `translateContactPhoneValidationErrors` is deleted. `QuickAddClient`'s inline phone branches are gone.
-- **Category 3 — done for every payload-level match.** `isPermissionError` (both copies) is shape-based;
+
+  **Three render sites were missed on the first pass and are now wired** (2026-08-21):
+  `PasswordChangeForm` (the `/msp/profile` change-password form), the portal-setup page, and
+  `SetNewPasswordClient` all called `validatePasswordPolicy` without a translator and piped the result
+  straight to the user. Reachable in one step: `Password1!` satisfies every rule drawn in the on-screen
+  checklist and is then rejected by the common-word blocklist, so a German user got an English sentence
+  from the *first* branch past the checklist. The asymmetry with the already-fixed team-setup page was the
+  tell. Guarded by `server/src/test/unit/i18n/passwordPolicyCallSites.test.ts`, which enumerates every
+  consumer of the shared policy, resolves each file's local import name (several alias it to
+  `validatePasswordPolicy` to keep it apart from their own checklist helper), and fails on any call whose
+  result is *bound to a variable* — i.e. kept in order to be shown — without a second argument. Boolean
+  predicate uses (`… === null`, the submit-button guard) are pinned as exempt so a later sweep does not
+  churn them; `passwordSchema` is exempt by name, because the server-side Zod gate has no request context
+  and is re-keyed at the boundary.
+- **Category 3 — done for every payload-level match.** `isPermissionError` (all three copies) is shape- or
+  code-based;
   `CodedError` / `errorCodeOf` / `isAuthorizationThrow` give thrown errors a code channel, adopted by 13
   `*ActionErrors` mappers; contact save errors parse `{ code, detail }` through one helper. `ticketActionErrors`
   classifies by `TicketErrorCode` first. The 52-prefix list survives as an explicitly deprecated fallback — the
@@ -260,6 +275,34 @@ local SSO discovery probe and document previews for seeded rows whose files are 
 
 What a browser still cannot reach is category 2: a Zod message is still English inside an otherwise
 translated payload, and no screen shows that until a schema attaches a key.
+
+## Progress (2026-08-21, reviewer follow-up)
+
+- **Three missed password render sites wired** — see the category 6 entry above. Re-walked in the browser
+  against the card app in German: `/msp/profile?tab=security`, `Password1!` in both new-password fields,
+  and the form now answers *"Das Passwort ist zu gebräuchlich. Bitte wählen Sie ein stärkeres Passwort"*
+  on an otherwise German page. This is the branch that the earlier walk never triggered — it exercised the
+  mismatch and `currentIncorrect` branches, both of which were already translated, and stopped there.
+  `CustomTabs` syncs to `?tab=`, so the security tab can be reached by URL instead of clicking a Radix
+  trigger; that is the cheap way to reach it from a script.
+- **The last key-incapable `permissionError` clone is gone.** `server/src/lib/utils/errorHandling.ts` held a
+  one-argument copy that could not carry a `messageKey` — convention 5's landmine, still loaded. The whole
+  module had **zero importers** in any form (path alias, relative, or barrel), so it was deleted rather than
+  rewired. The only remaining local clones are in `packages/auth` (`sessionActions`, `policyActions`) and
+  both already take `messageKey`.
+- **`isPermissionError` — three copies, not two.** `packages/auth/src/lib/errors.ts` was still matching
+  `.includes('Permission denied')`. It now checks the `PERMISSION_DENIED` code first and keeps the prefix
+  only as the documented fallback, mirroring `isAuthorizationThrow`. Reimplemented rather than imported: the
+  canonical module pulls in React, `react-hot-toast` and `lucide-react` at its top level, and this leaf is
+  re-exported from the `@alga-psa/auth` barrel.
+- **One category-4 leftover keyed.** `MicrosoftEmailSetupDialog`'s options-load fallback was a bare English
+  literal with no `t()`; it now resolves `integrations.microsoft.emailSetup.errors.optionsLoadFailed`
+  (8 real locales + regenerated pseudo). The comment above `CALLBACK_ERROR_TEXT` named the wrong namespace
+  (`msp/email-providers`); the keys have always lived in `msp/integrations`, which is what the component
+  binds.
+- **`docs/architecture/i18n.md` pseudo-locale section refreshed.** It still described the retired
+  `'11111'` / `'55555'` single-fill contract while this branch had already replaced it with per-character
+  accenting — the doc contradicted the branch's own generator.
 
 ## Existing infrastructure to build on (do not rebuild)
 
