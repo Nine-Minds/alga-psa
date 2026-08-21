@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -23,14 +24,12 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import {
-  buildBoardSelectionFilterUpdate,
-  hasBoardFilterParam,
   hasTicketViewFilterParams,
-  resolveInitialBoardTab,
   shouldApplyBoardDefaultView,
   type BoardArrivalTrigger,
   TICKETS_LAST_ACTIVE_BOARD_SETTING,
 } from '../lib/boardTabs';
+import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import {
   buildBoardArrivalFilters,
   resolveTicketViewSettings,
@@ -194,6 +193,7 @@ export default function TicketingDashboardContainer({
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
+  const navigatingAwayRef = useRef(false);
 
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -264,11 +264,11 @@ export default function TicketingDashboardContainer({
     }
   );
 
-  const {
-    value: storedActiveBoard,
-    setValue: setStoredActiveBoard,
-    isLoading: isActiveBoardPreferenceLoading,
-  } = useUserPreference<string>(
+  // Write-only here: the remembered tab is *restored* on the server, before the
+  // first paint (server/src/app/msp/tickets/page.tsx), so this screen never has
+  // to re-write the URL a beat after rendering. This hook only records where the
+  // user went next.
+  const { setValue: setStoredActiveBoard } = useUserPreference<string>(
     TICKETS_LAST_ACTIVE_BOARD_SETTING,
     {
       // '' means the "All tickets" tab — a distinct, storable choice rather than
@@ -279,6 +279,31 @@ export default function TicketingDashboardContainer({
     }
   );
 
+  /**
+   * The user has asked to leave the list. Everything that would still write to
+   * history from here on is stale by definition, so the flag is set before the
+   * router.push rather than after it — the whole window that has to be closed
+   * is the one where the push is in flight and window.location has not moved.
+   */
+  const markNavigatingAway = useCallback(() => {
+    navigatingAwayRef.current = true;
+    if (filterFetchTimeoutRef.current) {
+      clearTimeout(filterFetchTimeoutRef.current);
+      filterFetchTimeoutRef.current = null;
+    }
+  }, []);
+
+  // …and lifts again on the way back. Export, Import and every bulk action are
+  // *intercepted* routes: the list stays mounted underneath them, so a flag that
+  // only ever went one way would leave the address bar ignoring filter changes
+  // for the rest of the session once the user had opened one dialog.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pathname === TICKET_LIST_PATHNAME) {
+      navigatingAwayRef.current = false;
+    }
+  }, [pathname]);
+
   // Function to sync filter state and pagination to URL
   const updateURLWithFilters = useCallback((
     filters: Partial<ITicketListFilters>,
@@ -286,6 +311,18 @@ export default function TicketingDashboardContainer({
     pageSize?: number,
     historyMode: 'replace' | 'push' = 'replace',
   ) => {
+    // The list is no longer the page being described: writing here would replace
+    // the history entry the router just pushed for the ticket detail and bounce
+    // the user straight back to the list. lastAppliedSearchRef is deliberately
+    // left untouched — nothing was applied, so a later popstate must still be
+    // able to tell that the URL differs from what this screen last rendered.
+    if (!shouldWriteTicketListUrl({
+      pathname: typeof window === 'undefined' ? null : window.location.pathname,
+      hasNavigatedAway: navigatingAwayRef.current,
+    })) {
+      return;
+    }
+
     const params = new URLSearchParams();
 
     // Add pagination params
@@ -721,62 +758,12 @@ export default function TicketingDashboardContainer({
     updateURLWithFilters,
   ]);
 
-  // Restore the last-active board tab on a bare /msp/tickets. Applied at most
-  // once per mount (appliedInitialBoardRef) and only once the preference has
-  // actually resolved from the server, so a shared link is never stomped by a
-  // preference that arrives a tick later. A URL that names a board wins outright.
-  const availableBoardIds = useMemo(
-    () => effectiveOptions.boardOptions.map(board => board.board_id).filter((id): id is string => Boolean(id)),
-    [effectiveOptions.boardOptions]
-  );
-  const appliedInitialBoardRef = useRef(false);
-  useEffect(() => {
-    if (appliedInitialBoardRef.current || isActiveBoardPreferenceLoading || typeof window === 'undefined') {
-      return;
-    }
-    appliedInitialBoardRef.current = true;
-
-    const decision = resolveInitialBoardTab({
-      urlHasBoardFilter: hasBoardFilterParam(window.location.search),
-      storedBoardId: storedActiveBoard,
-      availableBoardIds,
-    });
-    if (!decision.apply) {
-      return;
-    }
-
-    const boardSelection = buildBoardSelectionFilterUpdate({
-      selectedBoards: [decision.boardId],
-      excludedBoards: [],
-      statusOptions: effectiveOptions.statusOptions,
-      currentStatusId: activeFiltersRef.current.statusId,
-    });
-    // Restoring the remembered tab is an arrival too, so the board's stored view
-    // applies here exactly as it does on a click — layered into this effect's
-    // existing single fetch rather than chasing it with another.
-    applyBoardViewPresentation(decision.boardId);
-    const arrival = boardArrivalFilters(decision.boardId, boardSelection, 'initial');
-    const mergedFilters: Partial<ITicketListFilters> =
-      arrival ?? { ...activeFiltersRef.current, ...boardSelection };
-    if (arrival?.sortBy) setSortBy(arrival.sortBy);
-    if (arrival?.sortDirection) setSortDirection(arrival.sortDirection);
-    setActiveFilters(mergedFilters);
-    activeFiltersRef.current = mergedFilters;
-    setCurrentPage(1);
-    // Replace (not push): restoring a remembered tab is where the user landed,
-    // so "back" should leave the page rather than fall through to All tickets.
-    updateURLWithFilters(mergedFilters, 1, pageSize);
-    void fetchTicketsRef.current(mergedFilters, 1, pageSize);
-  }, [
-    isActiveBoardPreferenceLoading,
-    storedActiveBoard,
-    availableBoardIds,
-    effectiveOptions.statusOptions,
-    pageSize,
-    updateURLWithFilters,
-    applyBoardViewPresentation,
-    boardArrivalFilters,
-  ]);
+  // The last-active board tab used to be restored here, by an effect that fired
+  // once the preference resolved — a second fetch, a visible board jump a beat
+  // after first paint, and a history write that could land after the user had
+  // already clicked into a ticket and bounce them back to the list. It is now
+  // resolved on the server (server/src/app/msp/tickets/page.tsx), so the board
+  // arrives in initialFilters and nothing here re-writes the URL on arrival.
 
   const handlePageChange = useCallback(async (newPage: number) => {
     setCurrentPage(newPage);
@@ -985,6 +972,7 @@ export default function TicketingDashboardContainer({
       initialTicketTags={ticketMetadata.ticketTags}
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
+      onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
         useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         viewPresentation={viewPresentation}

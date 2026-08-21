@@ -290,6 +290,47 @@ describe('hasBoardFilterParam', () => {
   });
 });
 
+describe('URL probes on a server-built search string', () => {
+  /**
+   * The remembered board tab is resolved on the server now (see
+   * server/src/app/msp/tickets/page.tsx), where there is no `window.location`
+   * to read — the search string is rebuilt from Next's searchParams object via
+   * `URLSearchParams.toString()`, which yields no leading `?` and re-encodes
+   * repeated params. Both probes have to answer identically in that shape, or
+   * the server would silently stop honouring a shared link.
+   */
+  const searchStringFrom = (params: Record<string, string | string[]>) =>
+    new URLSearchParams(
+      Object.entries(params).flatMap(([key, value]): [string, string][] =>
+        Array.isArray(value) ? value.map(item => [key, item]) : [[key, value]]
+      )
+    ).toString();
+
+  it('sees a board opinion with no leading question mark', () => {
+    const search = searchStringFrom({ boardId: BOARD_A });
+    expect(search.startsWith('?')).toBe(false);
+    expect(hasBoardFilterParam(search)).toBe(true);
+    expect(hasTicketViewFilterParams(search)).toBe(false);
+  });
+
+  it('sees no board opinion on a bare entry, so the preference gets its turn', () => {
+    expect(hasBoardFilterParam(searchStringFrom({}))).toBe(false);
+    expect(hasBoardFilterParam(searchStringFrom({ page: '2', pageSize: '50' }))).toBe(false);
+  });
+
+  it('sees a filter opinion in a repeated param', () => {
+    // Next hands a repeated query param through as an array; flattened back to
+    // `tags=a&tags=b` it still has to read as "this link means these tickets".
+    expect(hasTicketViewFilterParams(searchStringFrom({ tags: ['urgent', 'vip'] }))).toBe(true);
+  });
+
+  it('survives values that need re-encoding', () => {
+    const search = searchStringFrom({ searchQuery: 'disk full & failing' });
+    expect(search).toContain('%26');
+    expect(hasTicketViewFilterParams(search)).toBe(true);
+  });
+});
+
 describe('resolveInitialBoardTab (URL beats preference)', () => {
   it('does not apply the preference when the URL names a board', () => {
     expect(resolveInitialBoardTab({

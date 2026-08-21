@@ -136,6 +136,13 @@ interface TicketingDashboardProps {
   initialTicketTags?: Record<string, ITag[]>;
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
+  /**
+   * Called immediately before any route change out of the list, so the container
+   * can stop mirroring filter state into the URL. A write that lands while the
+   * push is in flight replaces the entry the router just made and bounces the
+   * user back to the list.
+   */
+  onNavigateAway?: () => void;
   allowSlaStatusFilter?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
   /**
@@ -280,6 +287,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTicketTags = {},
   initialTeams = [],
   canUpdateTickets = true,
+  onNavigateAway,
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
   viewPresentation,
@@ -408,12 +416,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
+  // The only way out of this route. Announcing the departure *before* the push
+  // is the point: the container mirrors filter state into the URL, and a write
+  // that lands while the push is still in flight replaces the entry the router
+  // just made — which is what made a freshly-opened ticket snap back to the list.
+  const navigateAwayTo = useCallback((href: string) => {
+    onNavigateAway?.();
+    router.push(href);
+  }, [onNavigateAway, router]);
+
   // Create-ticket is a routed modal now (keeps the rich-text editor out of this route's
   // bundle). Navigate instead of rendering QuickAddTicket inline; the route renders the
   // dialog (intercepted as an overlay over the list) and refreshes the list on success.
   const openQuickAddTicket = useCallback(
-    () => router.push(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
-    [router, useAlgaDeskQuickAddForm],
+    () => navigateAwayTo(buildCreateTicketHref({ isAlgaDeskMode: useAlgaDeskQuickAddForm })),
+    [navigateAwayTo, useAlgaDeskQuickAddForm],
   );
   usePageCreateShortcut(openQuickAddTicket);
 
@@ -822,11 +839,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
     const filterQuery = getCurrentFiltersQuery();
-    const href = filterQuery 
+    const href = filterQuery
       ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(filterQuery)}`
       : `/msp/tickets/${ticketId}`;
-    router.push(href);
-  }, [getCurrentFiltersQuery, router]);
+    navigateAwayTo(href);
+  }, [getCurrentFiltersQuery, navigateAwayTo]);
 
 
   // Handle saving time entries created from intervals
@@ -2123,7 +2140,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       defaultValue: 'Export selected ({{count}})',
                     })
                   : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
-                onSelect: () => router.push('/msp/tickets/export'),
+                onSelect: () => navigateAwayTo('/msp/tickets/export'),
                 disabled: !hasSelection,
                 separator: true,
               },
@@ -2131,7 +2148,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 id: `${id}-share-import`,
                 icon: Upload,
                 label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
-                onSelect: () => router.push('/msp/tickets/import'),
+                onSelect: () => navigateAwayTo('/msp/tickets/import'),
               },
             ] satisfies ShareAction[]}
           />
@@ -2962,19 +2979,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {
-          router.push('/msp/tickets/bulk-assign');
+          navigateAwayTo('/msp/tickets/bulk-assign');
         }}
         onStatus={() => {
-          router.push('/msp/tickets/bulk-status');
+          navigateAwayTo('/msp/tickets/bulk-status');
         }}
         onPriority={() => {
-          router.push('/msp/tickets/bulk-priority');
+          navigateAwayTo('/msp/tickets/bulk-priority');
         }}
         onTags={() => {
-          router.push('/msp/tickets/bulk-tags');
+          navigateAwayTo('/msp/tickets/bulk-tags');
         }}
         onDueDate={() => {
-          router.push('/msp/tickets/bulk-due-date');
+          navigateAwayTo('/msp/tickets/bulk-due-date');
         }}
         onDelete={() => {
           setBulkDeleteErrors([]);
