@@ -25,6 +25,9 @@ data:
   # against at setup (POST /register) and checks in with. Path-scoped public
   # ingress; see nm-kube-config/alga-license/istio-gateway.yaml.
   ALGA_LICENSE_SERVICE_URL: "https://license.nineminds.com"
+  # Public appliance-authenticated remote-support API. Operator traffic uses a
+  # separate Cloudflare Access-protected host and the relay uses public WSS.
+  ALGA_SUPPORT_CONTROL_URL: "https://support-api.nineminds.com"
 ---
 apiVersion: apps/v1
 kind: Deployment
