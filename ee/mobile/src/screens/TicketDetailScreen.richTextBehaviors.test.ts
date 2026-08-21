@@ -425,7 +425,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
       });
     });
 
-    pressControl(renderer, "Save");
+    pressControl(renderer, "Save description");
     await flushAsyncWork();
 
     expect(updateTicketAttributesMock).toHaveBeenCalledWith(
@@ -452,7 +452,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
       });
     });
 
-    pressControl(renderer, "Cancel");
+    pressControl(renderer, "Cancel description editing");
     await flushAsyncWork();
 
     expect(updateTicketAttributesMock).not.toHaveBeenCalled();
@@ -484,7 +484,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
       });
     });
 
-    pressControl(renderer, "Save");
+    pressControl(renderer, "Save description");
     await flushAsyncWork();
 
     expect(updateTicketAttributesMock).toHaveBeenCalledWith(
@@ -501,6 +501,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
     const renderer = renderBody();
     await flushAsyncWork();
 
+    pressControl(renderer, "Expand comment editor");
     const commentEditor = findRichTextEditor(renderer, "Loading comment editor…");
     await act(async () => {
       (commentEditor.props.onContentChange as ((payload: { json: unknown }) => void) | undefined)?.({
@@ -524,6 +525,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
     const reloadedRenderer = renderBody();
     await flushAsyncWork();
 
+    pressControl(reloadedRenderer, "Expand comment editor");
     const reloadedCommentEditor = findRichTextEditor(reloadedRenderer, "Loading comment editor…");
     expect(reloadedCommentEditor.props.content).toBe(JSON.stringify(richCommentJson));
   });
@@ -532,6 +534,7 @@ describe("TicketDetailScreen rich text behavior flows", () => {
     const renderer = renderBody();
     await flushAsyncWork();
 
+    pressControl(renderer, "Expand comment editor");
     const commentEditor = findRichTextEditor(renderer, "Loading comment editor…");
     await act(async () => {
       (commentEditor.props.onContentChange as ((payload: { json: unknown }) => void) | undefined)?.({
