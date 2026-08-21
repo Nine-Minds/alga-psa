@@ -16,6 +16,7 @@ import { createUser } from '../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { ATTRIBUTION_TABLES } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import Invoice from '@alga-psa/billing/models/invoice';
 import type { IRecurringServicePeriodRecord } from '@alga-psa/types';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
@@ -41,6 +42,7 @@ let db: Knex;
 let tenantId: string;
 let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let generateInvoiceForSelectionInput: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInput;
+let generateInvoiceForSelectionInputs: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoiceForSelectionInputs;
 let calculateBillingForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').calculateBillingForSelectionInput;
 let previewInvoiceForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').previewInvoiceForSelectionInput;
 let getPurchaseOrderOverageForSelectionInputAction: typeof import('@alga-psa/billing/actions/invoiceGeneration').getPurchaseOrderOverageForSelectionInput;
@@ -196,6 +198,7 @@ describe('Billing Invoice Timing Integration', () => {
     ({
       generateInvoice,
       generateInvoiceForSelectionInput,
+      generateInvoiceForSelectionInputs,
       calculateBillingForSelectionInput: calculateBillingForSelectionInputAction,
       previewInvoiceForSelectionInput: previewInvoiceForSelectionInputAction,
       getPurchaseOrderOverageForSelectionInput: getPurchaseOrderOverageForSelectionInputAction,
@@ -5047,9 +5050,26 @@ it('T154: recurring due-work listing is byte-stable and performs no source-row D
     contract_line_source: null,
     contract_line_unresolved_reason: null,
   });
+  const timeServiceId = await createTestService(contextLike as any, {
+    service_name: 'Read-Only Unassigned Time',
+    billing_method: 'hourly',
+    default_rate: 12500,
+    unit_of_measure: 'hour',
+    tax_region: 'US-NY',
+  } as any);
+  const timeEntry = await createApprovedTimeEntryForContractLine({
+    clientId,
+    serviceId: timeServiceId,
+    contractLineId: null,
+    startTime: '2025-02-15T10:00:00.000Z',
+    endTime: '2025-02-15T11:00:00.000Z',
+  });
 
-  const before = await tenantTable(db, tenantId, 'usage_tracking')
+  const beforeUsage = await tenantTable(db, tenantId, 'usage_tracking')
     .where({ tenant: tenantId, usage_id: usageId })
+    .first();
+  const beforeTime = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: timeEntry.entry_id })
     .first();
   const dml: string[] = [];
   const listener = (queryData: { sql?: string }) => {
@@ -5073,11 +5093,15 @@ it('T154: recurring due-work listing is byte-stable and performs no source-row D
   });
   db.removeListener('query', listener);
 
-  const after = await tenantTable(db, tenantId, 'usage_tracking')
+  const afterUsage = await tenantTable(db, tenantId, 'usage_tracking')
     .where({ tenant: tenantId, usage_id: usageId })
     .first();
+  const afterTime = await tenantTable(db, tenantId, 'time_entries')
+    .where({ tenant: tenantId, entry_id: timeEntry.entry_id })
+    .first();
   expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-  expect(after).toEqual(before);
+  expect(afterUsage).toEqual(beforeUsage);
+  expect(afterTime).toEqual(beforeTime);
   expect(dml.filter((sql) => /time_entries|usage_tracking/i.test(sql))).toEqual([]);
   expect(first.invoiceCandidates.flatMap((candidate) => candidate.members)).toEqual(
     expect.arrayContaining([
@@ -5189,6 +5213,15 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     cadenceOwner: 'contract',
   });
   await syncContractLineRecurringPeriods(line.contractLineId);
+  const usageLine = await createUsageContractLine(contextLike, {
+    serviceName: 'Same-Run Reconciliation Usage Service',
+    planName: 'Same-Run Reconciliation Usage Plan',
+    baseRateCents: 2000,
+    startDate: '2025-02-01',
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await syncContractLineRecurringPeriods(usageLine.contractLineId);
   const entry = await createApprovedTimeEntryForContractLine({
     clientId,
     serviceId: line.serviceId,
@@ -5196,14 +5229,28 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     startTime: '2025-02-15T10:00:00.000Z',
     endTime: '2025-02-15T11:00:00.000Z',
   });
+  const usage = await createUsageRecordForContractLine({
+    clientId,
+    serviceId: usageLine.serviceId,
+    contractLineId: null,
+    usageDate: '2025-02-15',
+    quantity: 3,
+  });
   const dueWork = await getAvailableRecurringDueWorkAction({ page: 1, pageSize: 20, searchTerm: 'Same-Run Reconciliation Client' });
-  const dueRow = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members)
+  const dueRows = dueWork.invoiceCandidates.flatMap((candidate) => candidate.members);
+  const dueRow = dueRows
     .find((row) => row.contractLineId === line.contractLineId
       && row.invoiceWindowStart === '2025-02-01'
       && row.invoiceWindowEnd === '2025-03-01');
+  const usageDueRow = dueRows
+    .find((row) => row.contractLineId === usageLine.contractLineId
+      && row.invoiceWindowStart === '2025-02-01'
+      && row.invoiceWindowEnd === '2025-03-01');
   expect(dueRow).toBeTruthy();
+  expect(usageDueRow).toBeTruthy();
 
-  const invoice = await generateInvoiceForSelectionInput(dueRow!.selectorInput);
+  const selectorInputs = [dueRow!.selectorInput, usageDueRow!.selectorInput];
+  const invoice = await generateInvoiceForSelectionInputs(selectorInputs);
   expect(invoice).toBeTruthy();
   const persistedEntry = await tenantTable(db, tenantId, 'time_entries').where({ entry_id: entry.entry_id }).first();
   expect(persistedEntry).toMatchObject({
@@ -5214,10 +5261,23 @@ it('T156: generation reconciles before calculation, bills the newly covered entr
     .where({ tenant: tenantId, entry_id: entry.entry_id })
     .select('invoice_id');
   expect(linkedCharges).toHaveLength(1);
-  await expect(generateInvoiceForSelectionInput(dueRow!.selectorInput)).resolves.toMatchObject({
+  const persistedUsage = await tenantTable(db, tenantId, 'usage_tracking')
+    .where({ tenant: tenantId, usage_id: usage.usage_id })
+    .first(['contract_line_id', 'contract_line_source', 'invoiced']);
+  expect(persistedUsage).toMatchObject({
+    contract_line_id: usageLine.contractLineId,
+    contract_line_source: 'reconciled_at_generation',
+    invoiced: true,
+  });
+  const linkedUsageCharges = await tenantTable(db, tenantId, 'invoice_usage_records')
+    .where({ tenant: tenantId, usage_id: usage.usage_id })
+    .select('invoice_id');
+  expect(linkedUsageCharges).toHaveLength(1);
+  await expect(generateInvoiceForSelectionInputs(selectorInputs)).resolves.toMatchObject({
     actionError: expect.stringMatching(/already exists|duplicate/i),
   });
   expect(await tenantTable(db, tenantId, 'invoice_time_entries').where({ entry_id: entry.entry_id })).toHaveLength(1);
+  expect(await tenantTable(db, tenantId, 'invoice_usage_records').where({ usage_id: usage.usage_id })).toHaveLength(1);
 }, HOOK_TIMEOUT);
 
 it('T157: preview and PO-overage calculation reconcile for pricing but roll back attribution writes', async () => {
@@ -5318,7 +5378,11 @@ it('T159: production schema has time-entry updated_at but no usage_tracking upda
     .whereIn('table_name', ['time_entries', 'usage_tracking'])
     .where('column_name', 'updated_at')
     .select('table_name', 'column_name');
-  expect(columns).toEqual([{ table_name: 'time_entries', column_name: 'updated_at' }]);
+  const tablesWithUpdatedAt = new Set(columns.map((column) => column.table_name));
+  for (const descriptor of Object.values(ATTRIBUTION_TABLES)) {
+    expect(tablesWithUpdatedAt.has(descriptor.table)).toBe(descriptor.hasUpdatedAt);
+  }
+  expect(tablesWithUpdatedAt.has('usage_tracking')).toBe(false);
 });
 
 });
@@ -5871,7 +5935,7 @@ async function createApprovedTimeEntryForContractLine(params: {
 async function createUsageRecordForContractLine(params: {
   clientId: string;
   serviceId: string;
-  contractLineId: string;
+  contractLineId?: string | null;
   usageDate: string;
   quantity: number;
 }) {
