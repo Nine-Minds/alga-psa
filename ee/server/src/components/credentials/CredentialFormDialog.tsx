@@ -375,7 +375,7 @@ export function CredentialFormDialog({
               <Button id="credential-form-password-visibility" type="button" variant="ghost" size="sm" aria-label={t(passwordVisible ? 'credentials.form.passwordHide' : 'credentials.form.passwordShow')} onClick={() => setPasswordVisible((visible) => !visible)}>
                 {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button id="credential-form-password-copy" type="button" variant="ghost" size="sm" disabled={!password} onClick={async () => { await navigator.clipboard?.writeText(password); setCopied(true); }}>
+              <Button id="credential-form-password-copy" type="button" variant="ghost" size="sm" aria-label={t('credentials.form.passwordCopy')} disabled={!password} onClick={async () => { await navigator.clipboard?.writeText(password); setCopied(true); }}>
                 <Copy className="h-4 w-4" />
               </Button>
               <Button

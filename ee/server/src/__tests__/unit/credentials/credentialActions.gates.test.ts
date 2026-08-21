@@ -205,6 +205,15 @@ describe('credential save safe-error boundary', () => {
     expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('GEZDGNBVGY3TQOJQ');
   });
 
+  it('converts tier denial before create into PERMISSION_DENIED with the same redacted log shape', async () => {
+    assertTierAccessMock.mockRejectedValue(new TierAccessErrorMock());
+    const { createCredential } = await importActions();
+    await expect(createCredential(secretInput)).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(loggerErrorMock).toHaveBeenCalledWith('[CredentialActions] credential save failed', expect.objectContaining({ operation: 'create', code: 'PERMISSION_DENIED', tenant: 'tenant-1', userId: 'user-1' }));
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('do-not-log');
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain('GEZDGNBVGY3TQOJQ');
+  });
+
   it('logs create and update source failures with safe context only', async () => {
     nativeCreateMock.mockRejectedValue(Object.assign(new Error('client mismatch'), { code: 'CREDENTIAL_CLIENT_MISMATCH' }));
     nativeUpdateMock.mockRejectedValue(new Error('unexpected query payload password=do-not-log'));

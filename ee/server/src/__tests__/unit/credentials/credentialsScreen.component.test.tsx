@@ -25,6 +25,7 @@ const {
   addCredentialToEntityMock,
   removeCredentialFromEntityMock,
   setEntityCredentialsMock,
+  clipboardWriteMock,
 } = vi.hoisted(() => ({
   getCredentialsContextMock: vi.fn(),
   listCredentialsMock: vi.fn(),
@@ -39,6 +40,7 @@ const {
   addCredentialToEntityMock: vi.fn(),
   removeCredentialFromEntityMock: vi.fn(),
   setEntityCredentialsMock: vi.fn(),
+  clipboardWriteMock: vi.fn(),
 }));
 
 vi.mock('server/src/context/TierContext', () => ({
@@ -168,15 +170,20 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
     isOpen,
     title,
     footer,
+    onClose,
   }: {
     children: React.ReactNode;
     isOpen: boolean;
     title?: string;
     footer?: React.ReactNode;
+    onClose?: () => void;
   }) =>
     isOpen ? (
       <div data-testid="dialog">
         {title ? <h2>{title}</h2> : null}
+        <button id="dialog-close-x" onClick={onClose}>X</button>
+        <button id="dialog-close-escape" onClick={onClose}>Escape</button>
+        <button id="dialog-close-backdrop" onClick={onClose}>Backdrop</button>
         {children}
         {footer}
       </div>
@@ -304,6 +311,7 @@ beforeEach(() => {
   createCredentialMock.mockResolvedValue(credential());
   getAllClientsMock.mockResolvedValue([{ client_id: CLIENT_ID, client_name: 'Acme Corp' }]);
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: clipboardWriteMock.mockResolvedValue(undefined) } });
   for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
     consoleSpies.push(vi.spyOn(console, method).mockImplementation(() => undefined));
   }
@@ -479,6 +487,35 @@ describe('CredentialsScreen — filters and flags', () => {
 });
 
 describe('CredentialsScreen — create dialog destination picker', () => {
+  it('closes an untouched overlay through Cancel, X, Escape, and backdrop without confirmation', async () => {
+    for (const closeId of ['credential-form-cancel', 'dialog-close-x', 'dialog-close-escape', 'dialog-close-backdrop']) {
+      cleanup();
+      await renderScreen();
+      fireEvent.click(document.getElementById('credentials-screen-new')!);
+      await waitFor(() => expect(document.querySelector('[data-testid="dialog"]')).toBeTruthy());
+      fireEvent.click(document.getElementById(closeId)!);
+      await waitFor(() => expect(document.querySelector('[data-testid="dialog"]')).toBeNull());
+      expect(document.getElementById('credential-form-discard')).toBeNull();
+    }
+  });
+
+  it('guards dirty overlay close routes, keeps editing, then discards when confirmed', async () => {
+    for (const closeId of ['credential-form-cancel', 'dialog-close-x', 'dialog-close-escape', 'dialog-close-backdrop']) {
+      cleanup();
+      await renderScreen();
+      fireEvent.click(document.getElementById('credentials-screen-new')!);
+      await waitFor(() => expect(document.getElementById('credential-form-name')).toBeTruthy());
+      fireEvent.change(document.getElementById('credential-form-name')!, { target: { value: `changed-${closeId}` } });
+      fireEvent.click(document.getElementById(closeId)!);
+      expect(document.getElementById('credential-form-discard')).toBeTruthy();
+      fireEvent.click(document.getElementById('credential-form-discard-cancel')!);
+      expect(document.querySelector('[data-testid="dialog"]')).toBeTruthy();
+      fireEvent.click(document.getElementById(closeId)!);
+      fireEvent.click(document.getElementById('credential-form-discard-confirm')!);
+      await waitFor(() => expect(document.querySelector('[data-testid="dialog"]')).toBeNull());
+    }
+  });
+
   it('hides Hudu filter and destination when the integration is inactive', async () => {
     await renderScreen();
     expect(document.querySelector('#credentials-screen-source-filter option[value="hudu"]')).toBeNull();
@@ -527,9 +564,17 @@ describe('CredentialsScreen — create dialog destination picker', () => {
     checks.forEach((check) => fireEvent.click(check));
     fireEvent.click(document.getElementById('credential-form-generator-apply')!);
     const password = (document.getElementById('credential-form-password') as HTMLInputElement).value;
-    expect(password).toMatch(/[A-Z]/); expect(password).toMatch(/[a-z]/); expect(password).toMatch(/[0-9]/); expect(password).toMatch(/[!@#$%^&*]/);
+    expect(password).toMatch(/[A-Z]/); expect(password).toMatch(/[a-z]/); expect(password).toMatch(/[0-9]/); expect(password).toMatch(/[!@#$%^&*()_+\-=[\]{};:,.<>?]/);
     expect((document.getElementById('credential-form-password') as HTMLInputElement).type).toBe('text');
+    fireEvent.click(document.getElementById('credential-form-password-visibility')!);
+    expect((document.getElementById('credential-form-password') as HTMLInputElement).type).toBe('password');
+    expect(document.getElementById('credential-form-password-copy')?.getAttribute('aria-label')).toBe('credentials.form.passwordCopy');
+    fireEvent.click(document.getElementById('credential-form-password-copy')!);
+    await waitFor(() => expect(clipboardWriteMock).toHaveBeenCalledWith(password));
+    expect(document.getElementById('credential-form-password-copied')).toBeTruthy();
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'GEZDGNBVGY3TQOJQ' } });
+    await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
+    fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'otpauth://totp/Example?secret=GEZDGNBVGY3TQOJQ&issuer=Example' } });
     await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeTruthy());
     fireEvent.change(document.getElementById('credential-form-otp')!, { target: { value: 'invalid!' } });
     await waitFor(() => expect(document.getElementById('credential-form-otp-qr')).toBeNull());
