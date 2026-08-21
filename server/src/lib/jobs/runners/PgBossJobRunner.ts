@@ -462,24 +462,38 @@ export class PgBossJobRunner implements IJobRunner {
       }
 
       // For cron schedules, external_id is the schedule name and must be removed via unschedule().
-      if (metadata?.recurring && typeof job.external_id === 'string' && job.external_id) {
-        try {
-          await this.boss.unschedule(job.external_id);
+      if (metadata?.recurring) {
+        if (typeof job.external_id === 'string' && job.external_id) {
           try {
-            await this.boss.deleteQueue(job.external_id);
-          } catch {
-            // Best-effort queue cleanup; ignore failures.
+            await this.boss.unschedule(job.external_id);
+            try {
+              await this.boss.deleteQueue(job.external_id);
+            } catch {
+              // Best-effort queue cleanup; ignore failures.
+            }
+          } catch (e) {
+            logger.warn('Failed to unschedule recurring job', { jobId, tenantId, error: e });
           }
-          // Clear the schedule pointer so repeat cancels (and reconcilers
-          // scanning for live schedules) see this record as already torn down.
-          await runWithTenant(tenantId, async () => {
-            await tenantDb(knex, tenantId).table('jobs')
-              .where({ job_id: jobId })
-              .update({ external_id: null });
-          });
-        } catch (e) {
-          logger.warn('Failed to unschedule recurring job', { jobId, tenantId, error: e });
         }
+        // A cancelled schedule is routine teardown, not a failure — closing it
+        // as failed would trip failure metrics forever. Clear the schedule
+        // pointer so repeat cancels (and reconcilers scanning for live
+        // schedules) see this record as already torn down.
+        await runWithTenant(tenantId, async () => {
+          await tenantDb(knex, tenantId).table('jobs')
+            .where({ job_id: jobId })
+            .update({
+              status: JobStatus.Completed,
+              metadata: JSON.stringify({
+                ...metadata,
+                cancelReason: 'Schedule cancelled',
+                cancelledAt: new Date().toISOString(),
+              }),
+              external_id: null,
+              updated_at: new Date(),
+            });
+        });
+        return true;
       } else {
         // Cancel in PG Boss if we have an external ID
         // pg-boss cancel() requires both queue name (type) and job ID (external_id)
