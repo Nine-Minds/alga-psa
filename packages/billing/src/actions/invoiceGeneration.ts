@@ -9,6 +9,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
+import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
   getCycleBillingProfileId,
@@ -1471,6 +1472,58 @@ export async function calculateBillingForSelectionInputs(input: {
   );
 }
 
+class RollbackReconciliation extends Error {
+  constructor(readonly billingResult: IBillingResult) {
+    super('Reconciliation was intentionally rolled back after calculation.');
+    this.name = 'RollbackReconciliation';
+  }
+}
+
+/**
+ * Reconcile only at an explicit billing boundary. Generation commits the
+ * reconciliation transaction after calculation; preview and PO checks throw a
+ * sentinel so the same calculation sees the writes but the transaction rolls
+ * them back before returning.
+ */
+async function calculateBillingWithReconciledAttribution(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+  persistReconciliation: boolean;
+}): Promise<IBillingResult> {
+  const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
+
+  try {
+    return await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      await reconcileWindowAttribution({
+        trx,
+        tenant: params.tenant,
+        clientId: canonicalSelection.clientId,
+        windowStart: canonicalSelection.windowStart,
+        windowEnd: canonicalSelection.windowEnd,
+      });
+
+      const billingResult = await calculateBillingForSelectionInputs({
+        billingEngine: BillingEngine.forTransaction(trx, params.tenant),
+        selectorInputs: params.selectorInputs,
+      });
+
+      if (params.persistReconciliation && billingResult.error) {
+        throw new Error(billingResult.error);
+      }
+      if (!params.persistReconciliation) {
+        throw new RollbackReconciliation(billingResult);
+      }
+      return billingResult;
+    });
+  } catch (error) {
+    if (error instanceof RollbackReconciliation) {
+      return error.billingResult;
+    }
+    throw error;
+  }
+}
+
 export async function calculateBillingForSelectionInput(input: {
   billingEngine: BillingEngine;
   selectorInput: IRecurringDueSelectionInput;
@@ -1503,10 +1556,11 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
   const client_id = selectorInput.clientId;
   const cycleEnd = selectorInput.windowEnd;
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInput({
-    billingEngine,
-    selectorInput,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
+    selectorInputs: [selectorInput],
+    persistReconciliation: false,
   });
   if (billingResult.error) {
     throw new Error(billingResult.error);
@@ -1792,10 +1846,11 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     }
   }
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInputs({
-    billingEngine,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
     selectorInputs,
+    persistReconciliation: false,
   });
 
   if (billingResult.error) {
@@ -2622,10 +2677,11 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     );
   }
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInputs({
-    billingEngine,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
     selectorInputs: params.normalizedSelectorInputs,
+    persistReconciliation: true,
   });
   if (billingResult.error) {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);

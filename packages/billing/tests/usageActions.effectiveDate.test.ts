@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.fn();
-const determineDefaultContractLineMock = vi.fn();
+const getEligibleContractLinesMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
@@ -21,7 +21,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/billing/lib/contractLineDisambiguation', () => ({
-  determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
+  getEligibleContractLines: (...args: any[]) => getEligibleContractLinesMock(...args),
 }));
 
 vi.mock('next/cache', () => ({
@@ -106,7 +106,9 @@ describe('usage actions effective-date contract resolution', () => {
   it('T004: createUsageRecord resolves default line with the usage effective date', async () => {
     const { db, calls } = createUsageDbStub();
     createTenantKnexMock.mockResolvedValue({ knex: db });
-    determineDefaultContractLineMock.mockResolvedValue('line-default');
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-default' },
+    ]);
 
     const { createUsageRecord } = await import('../src/actions/usageActions');
 
@@ -121,8 +123,15 @@ describe('usage actions effective-date contract resolution', () => {
       },
     );
 
-    expect(determineDefaultContractLineMock).toHaveBeenCalledWith('client-1', 'service-1', '2025-02-10');
+    expect(getEligibleContractLinesMock).toHaveBeenCalledWith(
+      db,
+      'tenant-1',
+      'client-1',
+      'service-1',
+      '2025-02-10',
+    );
     expect(calls.inserts[0]?.contract_line_id).toBe('line-default');
+    expect(calls.inserts[0]?.contract_line_source).toBe('auto_unique_service');
     expect(revalidatePathMock).toHaveBeenCalledWith('/msp/billing');
   });
 
@@ -139,7 +148,9 @@ describe('usage actions effective-date contract resolution', () => {
       },
     });
     createTenantKnexMock.mockResolvedValue({ knex: db });
-    determineDefaultContractLineMock.mockResolvedValue('line-default-next');
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-default-next' },
+    ]);
 
     const { updateUsageRecord } = await import('../src/actions/usageActions');
 
@@ -152,8 +163,15 @@ describe('usage actions effective-date contract resolution', () => {
       },
     );
 
-    expect(determineDefaultContractLineMock).toHaveBeenCalledWith('client-1', 'service-1', '2027-08-01');
+    expect(getEligibleContractLinesMock).toHaveBeenCalledWith(
+      db,
+      'tenant-1',
+      'client-1',
+      'service-1',
+      '2027-08-01',
+    );
     expect(calls.updates[0]?.contract_line_id).toBe('line-default-next');
+    expect(calls.updates[0]?.contract_line_source).toBe('auto_unique_service');
     expect(revalidatePathMock).toHaveBeenCalledWith('/msp/billing');
   });
 });

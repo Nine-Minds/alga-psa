@@ -25,7 +25,10 @@ type LineCandidate = {
  * failed, and is gated like `ambiguous`: a human decides.
  */
 export type { ContractLineSelectionReason } from '@alga-psa/types';
-import type { ContractLineSelectionReason } from '@alga-psa/types';
+import type {
+  ContractLineSelectionReason,
+  ContractLineSource,
+} from '@alga-psa/types';
 
 export interface ContractLineSelectionResult {
   selectedContractLineId: string | null;
@@ -46,6 +49,53 @@ export interface ContractLineSelectionOptions {
    * selection turn out to be the same question (F133).
    */
   billingProfileId?: string | null;
+}
+
+export type ContractLineAttributionDecision =
+  | {
+      kind: 'time_entry' | 'usage_record';
+      recordId: string;
+      action: 'assign';
+      contractLineId: string;
+      source: ContractLineSource;
+    }
+  | {
+      kind: 'time_entry' | 'usage_record';
+      recordId: string;
+      action: 'mark_unresolved';
+      reason: ContractLineSelectionReason;
+    };
+
+/**
+ * Convert the shared deterministic selection into the in-memory write proposal
+ * used by generation reconciliation. The resolver remains the only place that
+ * decides whether a candidate is unique, ambiguous, or absent.
+ */
+export function buildContractLineAttributionDecision(input: {
+  kind: 'time_entry' | 'usage_record';
+  recordId: string;
+  selection: ContractLineSelectionResult;
+}): ContractLineAttributionDecision {
+  const { kind, recordId, selection } = input;
+  if (
+    selection.selectedContractLineId &&
+    (selection.decision === 'explicit' || selection.decision === 'billing_profile')
+  ) {
+    return {
+      kind,
+      recordId,
+      action: 'assign',
+      contractLineId: selection.selectedContractLineId,
+      source: 'reconciled_at_generation',
+    };
+  }
+
+  return {
+    kind,
+    recordId,
+    action: 'mark_unresolved',
+    reason: selection.reason,
+  };
 }
 
 const belongsToProfile = (

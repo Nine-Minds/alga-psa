@@ -36,21 +36,8 @@ function buildSelectBuilder(rows: Array<Record<string, any>>) {
   });
   builder.then = vi.fn((onFulfilled?: any, onRejected?: any) => Promise.resolve(resolvedRows).then(onFulfilled, onRejected));
   builder.first = vi.fn(async () => rows[0] ?? null);
-
-  return builder;
-}
-
-function buildUpdateBuilder() {
-  const builder: any = {};
-  const passthrough = () => builder;
-  builder.where = vi.fn((condition: any) => {
-    if (typeof condition === 'function') {
-      condition.call(builder, builder);
-    }
-    return builder;
-  });
-  builder.whereNull = vi.fn(passthrough);
   builder.update = vi.fn(async () => 1);
+
   return builder;
 }
 
@@ -73,7 +60,7 @@ describe('BillingEngine unresolved reconciliation', () => {
     });
   });
 
-  it('T005: deterministic unresolved time entry is persisted and excluded from unresolved output', async () => {
+  it('T005: deterministic time-entry attribution is proposed in memory and excluded from unresolved output', async () => {
     const clientsBuilder = buildSelectBuilder([{ client_id: 'client-1', tenant: 'tenant-1', is_tax_exempt: false, default_currency_code: 'USD' }]);
     const timeSelectBuilder = buildSelectBuilder([
       {
@@ -88,16 +75,11 @@ describe('BillingEngine unresolved reconciliation', () => {
         service_name: 'Service 1',
       },
     ]);
-    const timeUpdateBuilder = buildUpdateBuilder();
     const usageSelectBuilder = buildSelectBuilder([]);
 
-    let timeEntriesCalls = 0;
     (billingEngine as any).knex = vi.fn((table: string) => {
       if (table === 'clients') return clientsBuilder;
-      if (table === 'time_entries') {
-        timeEntriesCalls += 1;
-        return timeEntriesCalls === 1 ? timeSelectBuilder : timeUpdateBuilder;
-      }
+      if (table === 'time_entries') return timeSelectBuilder;
       if (table === 'usage_tracking') return usageSelectBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
@@ -119,13 +101,10 @@ describe('BillingEngine unresolved reconciliation', () => {
     );
 
     expect(unresolved).toEqual([]);
-    expect(timeUpdateBuilder.whereNull).toHaveBeenCalledWith('contract_line_id');
-    expect(timeUpdateBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-1' }),
-    );
+    expect(timeSelectBuilder.update).not.toHaveBeenCalled();
   });
 
-  it('T006: deterministic unresolved usage record is persisted and excluded from unresolved output', async () => {
+  it('T006: deterministic usage attribution is proposed in memory and excluded from unresolved output', async () => {
     const clientsBuilder = buildSelectBuilder([{ client_id: 'client-1', tenant: 'tenant-1', is_tax_exempt: false, default_currency_code: 'USD' }]);
     const timeSelectBuilder = buildSelectBuilder([]);
     const usageSelectBuilder = buildSelectBuilder([
@@ -140,16 +119,10 @@ describe('BillingEngine unresolved reconciliation', () => {
         service_name: 'Service 1',
       },
     ]);
-    const usageUpdateBuilder = buildUpdateBuilder();
-
-    let usageCalls = 0;
     (billingEngine as any).knex = vi.fn((table: string) => {
       if (table === 'clients') return clientsBuilder;
       if (table === 'time_entries') return timeSelectBuilder;
-      if (table === 'usage_tracking') {
-        usageCalls += 1;
-        return usageCalls === 1 ? usageSelectBuilder : usageUpdateBuilder;
-      }
+      if (table === 'usage_tracking') return usageSelectBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
@@ -167,10 +140,7 @@ describe('BillingEngine unresolved reconciliation', () => {
     );
 
     expect(unresolved).toEqual([]);
-    expect(usageUpdateBuilder.whereNull).toHaveBeenCalledWith('contract_line_id');
-    expect(usageUpdateBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-2' }),
-    );
+    expect(usageSelectBuilder.update).not.toHaveBeenCalled();
   });
 
   it('T007: ambiguous/no-match rows remain unresolved while deterministic rows are reconciled', async () => {
@@ -221,21 +191,10 @@ describe('BillingEngine unresolved reconciliation', () => {
         service_name: 'Service Single Usage',
       },
     ]);
-    const timeUpdateBuilder = buildUpdateBuilder();
-    const usageUpdateBuilder = buildUpdateBuilder();
-
-    let timeCalls = 0;
-    let usageCalls = 0;
     (billingEngine as any).knex = vi.fn((table: string) => {
       if (table === 'clients') return clientsBuilder;
-      if (table === 'time_entries') {
-        timeCalls += 1;
-        return timeCalls === 1 ? timeSelectBuilder : timeUpdateBuilder;
-      }
-      if (table === 'usage_tracking') {
-        usageCalls += 1;
-        return usageCalls === 1 ? usageSelectBuilder : usageUpdateBuilder;
-      }
+      if (table === 'time_entries') return timeSelectBuilder;
+      if (table === 'usage_tracking') return usageSelectBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
     (billingEngine as any).knex.fn = { now: vi.fn(() => 'NOW') };
@@ -265,11 +224,7 @@ describe('BillingEngine unresolved reconciliation', () => {
       'te-ambiguous',
       'usage-no-match',
     ]);
-    expect(timeUpdateBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-single' }),
-    );
-    expect(usageUpdateBuilder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ contract_line_id: 'line-single-usage' }),
-    );
+    expect(timeSelectBuilder.update).not.toHaveBeenCalled();
+    expect(usageSelectBuilder.update).not.toHaveBeenCalled();
   });
 });

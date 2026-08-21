@@ -2,8 +2,20 @@
 
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
-import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
+import { getEligibleContractLines } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import {
+  buildContractLineAttributionDecision,
+  resolveDeterministicContractLineSelection,
+} from '../lib/contractLineDisambiguation.shared';
+import {
+  ICreateUsageRecord,
+  IUpdateUsageRecord,
+  IUsageFilter,
+  IUsageRecord,
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  type ContractLineSelectionReason,
+  type ContractLineSource,
+} from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
@@ -29,6 +41,31 @@ function tenantScopedTable(
   table: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+async function resolveUsageAttribution(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  usageDate: string | Date;
+}) {
+  const eligibleLines = await getEligibleContractLines(
+    params.trx,
+    params.tenant,
+    params.clientId,
+    params.serviceId,
+    params.usageDate,
+  );
+  const selection = resolveDeterministicContractLineSelection(eligibleLines);
+  return {
+    selection,
+    decision: buildContractLineAttributionDecision({
+      kind: 'usage_record',
+      recordId: 'usage-write',
+      selection,
+    }),
+  };
 }
 
 function usageActionErrorFrom(error: unknown): UsageActionError | null {
@@ -78,22 +115,30 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     return await knex.transaction(async (trx) => {
     // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
+    let contractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : null;
+    let contractLineUnresolvedReason: ContractLineSelectionReason | null = null;
     if (!contractLineId && data.service_id && data.client_id) {
       try {
-        // Use trx for consistency if determineDefaultContractLine needs DB access within transaction
-        const defaultPlanId = await determineDefaultContractLine(
-          data.client_id,
-          data.service_id,
-          data.usage_date
-          // trx // Removed transaction argument
-        );
-
-        if (defaultPlanId) {
-          contractLineId = defaultPlanId;
+        const { selection, decision } = await resolveUsageAttribution({
+          trx,
+          tenant,
+          clientId: data.client_id,
+          serviceId: data.service_id,
+          usageDate: data.usage_date,
+        });
+        if (decision.action === 'assign') {
+          contractLineId = decision.contractLineId;
+          contractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+        } else {
+          contractLineSource = 'unresolved';
+          contractLineUnresolvedReason = decision.reason;
         }
       } catch (error) {
         console.error('Error determining default contract line:', error);
-        // Potentially rethrow or handle if this is critical
+        contractLineSource = 'unresolved';
+        contractLineUnresolvedReason = 'error';
       }
     }
 
@@ -106,6 +151,8 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         quantity: data.quantity,
         usage_date: data.usage_date,
         contract_line_id: contractLineId, // Use determined or provided plan ID
+        contract_line_source: contractLineSource,
+        contract_line_unresolved_reason: contractLineUnresolvedReason,
       })
       .returning('*');
 
@@ -174,26 +221,42 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     const oldQuantity = originalRecord.quantity || 0;
 
     // 2. Determine the final contract line ID
-    let finalContractLineId = data.contract_line_id;
+    let finalContractLineId: string | null | undefined = data.contract_line_id;
+    let finalContractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : (originalRecord.contract_line_source ?? null);
+    let finalContractLineUnresolvedReason: ContractLineSelectionReason | null =
+      originalRecord.contract_line_unresolved_reason ?? null;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalContractLineId === null || finalContractLineId === undefined) {
       const clientIdForPlan = data.client_id || originalRecord.client_id;
       const serviceIdForPlan = data.service_id || originalRecord.service_id;
       if (clientIdForPlan && serviceIdForPlan) {
         try {
-          const defaultPlanId = await determineDefaultContractLine(
-            clientIdForPlan,
-            serviceIdForPlan,
-            data.usage_date || originalRecord.usage_date
-            // trx // Removed transaction argument
-          );
-          finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
+          const { selection, decision } = await resolveUsageAttribution({
+            trx,
+            tenant,
+            clientId: clientIdForPlan,
+            serviceId: serviceIdForPlan,
+            usageDate: data.usage_date || originalRecord.usage_date,
+          });
+          if (decision.action === 'assign') {
+            finalContractLineId = decision.contractLineId;
+            finalContractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+            finalContractLineUnresolvedReason = null;
+          } else {
+            finalContractLineId = null;
+            finalContractLineSource = 'unresolved';
+            finalContractLineUnresolvedReason = decision.reason;
+          }
         } catch (error) {
           console.error('Error determining default contract line during update:', error);
           finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
+          finalContractLineSource = 'unresolved';
+          finalContractLineUnresolvedReason = 'error';
         }
       } else {
-         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
+        finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
       }
     }
 
@@ -205,7 +268,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         ...(data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
         contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
-        // updated_at is likely handled by DB trigger/default, removed from payload
+        contract_line_source: finalContractLineSource,
+        contract_line_unresolved_reason: finalContractLineUnresolvedReason,
     };
 
 

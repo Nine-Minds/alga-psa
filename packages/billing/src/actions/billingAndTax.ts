@@ -862,7 +862,8 @@ function toTimestampMs(value: Date | string | null | undefined): number | null {
  * These two tenant-scoped reads mirror the billing engine's coarse eligibility
  * filters. They deliberately do not reproduce pricing, deterministic contract
  * reconciliation, project-cap handling, or tax behavior; the authoritative
- * billing-engine call still performs all of that for each populated window.
+ * billing-engine call still performs the read-only classification and pricing
+ * for each populated window.
  */
 async function filterBillingPeriodsWithPotentialUnresolvedWork(
     trx: BillingQueryExecutor,
@@ -1022,8 +1023,8 @@ async function fetchUnresolvedNonContractDueWorkRows(
     const billingEngine = new BillingEngine();
     const rows: IRecurringDueWorkRow[] = [];
 
-    // Keep these calls serial: BillingEngine pins a transaction on the instance
-    // and may reconcile a uniquely assignable source record as it reads it.
+    // Keep these calls serial: each BillingEngine instance pins its own read
+    // connection, and the listing must not reconcile source records as it reads.
     for (const period of populatedBillingPeriods) {
         if (!period.period_start_date || !period.period_end_date) {
             continue;

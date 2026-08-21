@@ -107,6 +107,7 @@ import {
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
 import {
+  buildContractLineAttributionDecision,
   resolveDeterministicContractLineSelection,
   type ContractLineSelectionReason,
 } from "../contractLineDisambiguation.shared";
@@ -249,26 +250,6 @@ const RECURRING_TIMING_ROLLOUT_GUARD_PREFIX =
  * catalog pricing (F139). Carries the offending records so the caller can turn
  * it into an actionable message rather than a generic failure.
  */
-/**
- * Whether a contract-line selection may be written back at generation time.
- *
- * Reconcile has always accepted exactly one thing: a single eligible line.
- * Profile narrowing joins it (F135), because parallel per-profile contracts
- * carrying the same service are the multi-candidate case this feature creates
- * and the work item's profile genuinely answers it.
- *
- * The bucket-overlay tie-break does **not** join it. That rule belongs to
- * time-entry *creation*, where a person is choosing a line and an overlay is a
- * reasonable default. Applying it here would silently attach a contract line to
- * records the engine has always left unresolved — and those records then get
- * billed twice, once by the contract-line path and once by the usage path.
- */
-function isReconcilableSelection(selection: {
-  decision: string;
-}): boolean {
-  return selection.decision === "explicit" || selection.decision === "billing_profile";
-}
-
 export class UnresolvedCatalogPricingError extends Error {
   readonly items: Array<{ kind: "time_entry" | "usage_record"; id: string; label: string }>;
 
@@ -387,6 +368,13 @@ export class BillingEngine {
   constructor() {
     this.knex = null as any;
     this.tenant = null;
+  }
+
+  static forTransaction(trx: Knex.Transaction, tenant: string): BillingEngine {
+    const engine = new BillingEngine();
+    engine.knex = trx;
+    engine.tenant = tenant;
+    return engine;
   }
 
   private async initKnex() {
@@ -2559,20 +2547,12 @@ export class BillingEngine {
           eligibleLines,
           { billingProfileId: entry.work_item_billing_profile_id ?? null },
         );
-        if (selection.selectedContractLineId && isReconcilableSelection(selection)) {
-          const updatedCount = await db
-            .table("time_entries")
-            .where({
-              tenant: this.tenant,
-              entry_id: entry.entry_id,
-            })
-            .whereNull("contract_line_id")
-            .update({
-              contract_line_id: selection.selectedContractLineId,
-              contract_line_source: "reconciled_at_generation",
-              contract_line_unresolved_reason: null,
-              updated_at: this.knex.fn.now(),
-            });
+        const attributionDecision = buildContractLineAttributionDecision({
+          kind: "time_entry",
+          recordId: entry.entry_id,
+          selection,
+        });
+        if (attributionDecision.action === "assign") {
           console.info("[billing_engine.reconcile.unresolved]", {
             event: "billing_engine.reconcile.unresolved",
             recordType: "time_entry",
@@ -2581,21 +2561,22 @@ export class BillingEngine {
             recordId: entry.entry_id,
             decision: "deterministic_single_match",
             reason: selection.reason,
-            selectedContractLineId: selection.selectedContractLineId,
+            selectedContractLineId: attributionDecision.contractLineId,
             eligibleLineCount: eligibleLines.length,
-            persisted: updatedCount > 0,
+            persisted: false,
             metric: { name: "unmatched_resolved_deterministically", value: 1 },
           });
           continue;
         }
         // The reason is what distinguishes "no contract covers this service"
         // (catalog rate is honest) from "a contract does, and we could not tell
-        // which line" (catalog rate is wrong). Persisted rather than only
-        // logged, so the dashboard can say which it is (F137).
-        unresolvedReasonByRecordId.set(entry.entry_id, selection.reason);
+        // which line" (catalog rate is wrong). Carried rather than only
+        // logged, so billing can use the same reason without mutating the read
+        // path (F137).
+        unresolvedReasonByRecordId.set(entry.entry_id, attributionDecision.reason);
         if (
           requireCatalogPricingDecision &&
-          selection.reason !== "no_match" &&
+          attributionDecision.reason !== "no_match" &&
           !entry.catalog_pricing_acknowledged_at
         ) {
           blockedFromCatalogPricing.push({
@@ -2604,23 +2585,14 @@ export class BillingEngine {
             label: entry.service_name ?? entry.entry_id,
           });
         }
-        await db
-          .table("time_entries")
-          .where({ tenant: this.tenant, entry_id: entry.entry_id })
-          .whereNull("contract_line_id")
-          .update({
-            contract_line_source: "unresolved",
-            contract_line_unresolved_reason: selection.reason,
-            updated_at: this.knex.fn.now(),
-          });
         console.info("[billing_engine.reconcile.unresolved]", {
           event: "billing_engine.reconcile.unresolved",
           recordType: "time_entry",
           tenant: this.tenant,
           clientId,
           recordId: entry.entry_id,
-          decision: selection.reason === "no_match" ? "no_match" : "ambiguous",
-          reason: selection.reason,
+          decision: attributionDecision.reason === "no_match" ? "no_match" : "ambiguous",
+          reason: attributionDecision.reason,
           selectedContractLineId: null,
           eligibleLineCount: eligibleLines.length,
           persisted: false,
@@ -2794,20 +2766,12 @@ export class BillingEngine {
       // symmetrically to usage (F141).
       const usageSelection =
         resolveDeterministicContractLineSelection(eligibleLines);
-      if (usageSelection.selectedContractLineId && isReconcilableSelection(usageSelection)) {
-        const updatedCount = await db
-          .table("usage_tracking")
-          .where({
-            tenant: this.tenant,
-            usage_id: record.usage_id,
-          })
-          .whereNull("contract_line_id")
-          .update({
-            contract_line_id: usageSelection.selectedContractLineId,
-            contract_line_source: "reconciled_at_generation",
-            contract_line_unresolved_reason: null,
-            updated_at: this.knex.fn.now(),
-          });
+      const attributionDecision = buildContractLineAttributionDecision({
+        kind: "usage_record",
+        recordId: record.usage_id,
+        selection: usageSelection,
+      });
+      if (attributionDecision.action === "assign") {
         console.info("[billing_engine.reconcile.unresolved]", {
           event: "billing_engine.reconcile.unresolved",
           recordType: "usage_record",
@@ -2816,17 +2780,17 @@ export class BillingEngine {
           recordId: record.usage_id,
           decision: "deterministic_single_match",
           reason: usageSelection.reason,
-          selectedContractLineId: usageSelection.selectedContractLineId,
+          selectedContractLineId: attributionDecision.contractLineId,
           eligibleLineCount: eligibleLines.length,
-          persisted: updatedCount > 0,
+          persisted: false,
           metric: { name: "unmatched_resolved_deterministically", value: 1 },
         });
         continue;
       }
-      unresolvedReasonByRecordId.set(record.usage_id, usageSelection.reason);
+      unresolvedReasonByRecordId.set(record.usage_id, attributionDecision.reason);
       if (
         requireCatalogPricingDecision &&
-        usageSelection.reason !== "no_match" &&
+        attributionDecision.reason !== "no_match" &&
         !record.catalog_pricing_acknowledged_at
       ) {
         blockedFromCatalogPricing.push({
@@ -2835,15 +2799,6 @@ export class BillingEngine {
           label: record.service_name ?? record.usage_id,
         });
       }
-      await db
-        .table("usage_tracking")
-        .where({ tenant: this.tenant, usage_id: record.usage_id })
-        .whereNull("contract_line_id")
-        .update({
-          contract_line_source: "unresolved",
-          contract_line_unresolved_reason: usageSelection.reason,
-          updated_at: this.knex.fn.now(),
-        });
       console.info("[billing_engine.reconcile.unresolved]", {
         event: "billing_engine.reconcile.unresolved",
         recordType: "usage_record",
@@ -2851,8 +2806,8 @@ export class BillingEngine {
         clientId,
         recordId: record.usage_id,
         decision:
-          usageSelection.reason === "no_match" ? "no_match" : "ambiguous",
-        reason: usageSelection.reason,
+          attributionDecision.reason === "no_match" ? "no_match" : "ambiguous",
+        reason: attributionDecision.reason,
         selectedContractLineId: null,
         eligibleLineCount: eligibleLines.length,
         persisted: false,
