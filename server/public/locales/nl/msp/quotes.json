@@ -114,7 +114,9 @@
       "delete": "Kan offerte niet verwijderen.",
       "duplicate": "Kan de offerte niet dupliceren.",
       "load": "Kan offertes niet laden",
-      "send": "Kan de offerte niet verzenden."
+      "send": "Kan de offerte niet verzenden.",
+      "resend": "Kan de offerte niet opnieuw verzenden.",
+      "sendReminder": "Kan de herinnering voor de offerte niet verzenden."
     },
     "loading": "Offertes laden...",
     "rowActions": {

@@ -114,7 +114,9 @@
       "delete": "No se pudo eliminar la cotización.",
       "duplicate": "No se pudo duplicar la cotización.",
       "load": "No se pudieron cargar las cotizaciones",
-      "send": "No se pudo enviar la cotización."
+      "send": "No se pudo enviar la cotización.",
+      "resend": "No se pudo reenviar la cotización.",
+      "sendReminder": "No se pudo enviar el recordatorio de la cotización."
     },
     "loading": "Cargando cotizaciones...",
     "rowActions": {
