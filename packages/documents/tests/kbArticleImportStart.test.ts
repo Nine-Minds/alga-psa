@@ -72,6 +72,7 @@ vi.mock('@alga-psa/shared/models/kbArticleModel', () => ({
   KB_ARTICLE_SELECT_COLUMNS: ['article_id'],
   createKbArticle: async () => ({ article_id: 'article-1' }),
   generateKbArticleSlug: (title: string) => title.toLowerCase(),
+  publishKbArticleCreated: async () => undefined,
 }));
 
 const enqueueMock = vi.fn(async () => ({ jobId: 'job-1', scheduledJobId: 'sched-1' }));

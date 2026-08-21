@@ -51,6 +51,14 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
     expect(modelSource).toContain("tenantScopedTable(knex, 'documents', tenant)");
     expect(modelSource).toContain("tenantScopedTable(knex, 'document_block_content', tenant)");
     expect(modelSource).toContain("eventType: 'KB_ARTICLE_CREATED'");
+    expect(modelSource).toContain('export async function publishKbArticleCreated(');
+    // The event belongs after the caller's commit: a job that stages the
+    // article inside a transaction must not announce a rolled-back write.
+    const creationSource = modelSource.slice(
+      modelSource.indexOf('export async function createKbArticle('),
+    );
+    expect(creationSource).not.toContain('publishKbArticleCreated(');
+    expect(source).toContain('await publishKbArticleCreated(tenant, article, user.user_id)');
     expect(modelSource).not.toContain('withAuth');
     expect(modelSource).not.toContain('createTenantKnex');
     expect(modelSource).not.toContain('.where({ tenant,');

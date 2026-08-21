@@ -18,6 +18,7 @@ import {
   KB_ARTICLE_SELECT_COLUMNS,
   createKbArticle,
   generateKbArticleSlug as generateSlug,
+  publishKbArticleCreated,
 } from '@alga-psa/shared/models/kbArticleModel';
 import type {
   ArticleAudience,
@@ -132,8 +133,12 @@ export const createArticle = withAuth(
       return permissionError('Permission denied');
     }
 
-    // The shared model publishes KB_ARTICLE_CREATED for search indexing.
-    return createKbArticle(knex, { tenant, userId: user.user_id }, input);
+    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, input);
+
+    // Published after the writes land, never from inside a transaction.
+    await publishKbArticleCreated(tenant, article, user.user_id);
+
+    return article;
   }
 );
 
@@ -1289,11 +1294,15 @@ export const createArticleFromTicket = withAuth(
     ];
 
     // Create the article through the shared model (avoids nested withAuth calls)
-    return createKbArticle(knex, { tenant, userId: user.user_id }, {
+    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, {
       title,
       articleType: 'troubleshooting',
       audience: 'internal',
       content,
     });
+
+    await publishKbArticleCreated(tenant, article, user.user_id);
+
+    return article;
   }
 );

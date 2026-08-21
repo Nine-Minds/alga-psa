@@ -1,6 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { createKbArticle } from '@alga-psa/shared/models/kbArticleModel';
+import { createKbArticle, publishKbArticleCreated } from '@alga-psa/shared/models/kbArticleModel';
 import type { Knex } from 'knex';
 import type { BaseJobData } from '../jobs/interfaces';
 import {
@@ -35,6 +35,8 @@ export interface KbArticleImportResult extends Record<string, unknown> {
   imported: number;
   failed: number;
 }
+
+type CreatedArticle = Awaited<ReturnType<typeof createKbArticle>>;
 
 interface KbImportFileRow {
   import_file_id: string;
@@ -121,6 +123,10 @@ export async function kbArticleImportHandler(
 
   for (const fileId of fileIds) {
     let outcome: 'imported' | 'failed';
+    // Articles created by this attempt. The search event fires only once the
+    // transaction below has committed, so a rollback cannot leave the index
+    // pointing at an article that no longer exists.
+    const committedArticles: CreatedArticle[] = [];
     try {
       outcome = await knex.transaction(async (trx) => {
         // The row lock and article/staging writes share one transaction. If a
@@ -170,9 +176,13 @@ export async function kbArticleImportHandler(
             updated_at: new Date(),
           });
 
+        committedArticles.push(article);
         return 'imported';
       });
     } catch (error) {
+      // Whatever the transaction wrote is gone; nothing to announce.
+      committedArticles.length = 0;
+
       logger.error('[kbArticleImport] Failed to import staged file', {
         fileId,
         tenant,
@@ -201,6 +211,10 @@ export async function kbArticleImportHandler(
           .first()) as KbImportFileRow | undefined;
         outcome = settled?.status === 'imported' ? 'imported' : 'failed';
       }
+    }
+
+    for (const article of committedArticles) {
+      await publishKbArticleCreated(tenant, article, data.userId);
     }
 
     if (outcome === 'imported') progress.imported += 1;

@@ -76,7 +76,12 @@ export function generateKbArticleSlug(title: string): string {
     .substring(0, 100);
 }
 
-async function publishKbArticleCreated(
+/**
+ * Announces a created article to the search indexer. Callers invoke this after
+ * their transaction commits — publishing inside the transaction would emit a
+ * ghost event for an article a later rollback erases.
+ */
+export async function publishKbArticleCreated(
   tenant: string,
   article: IKBArticleWithDocument,
   userId: string,
@@ -100,9 +105,9 @@ async function publishKbArticleCreated(
 }
 
 /**
- * Creates a KB article and its underlying document, then publishes
- * KB_ARTICLE_CREATED so search indexing picks it up. Callers are responsible
- * for authorization — this runs with whatever connection/tenant it is handed.
+ * Creates a KB article and its underlying document. Callers are responsible for
+ * authorization — this runs with whatever connection/tenant it is handed — and
+ * for calling publishKbArticleCreated once their transaction has committed.
  */
 export async function createKbArticle(
   knex: Knex | Knex.Transaction,
@@ -210,13 +215,9 @@ export async function createKbArticle(
     .where({ article_id: articleId })
     .first();
 
-  const created = {
+  return {
     ...article,
     document,
     document_name: document.document_name,
   } as unknown as IKBArticleWithDocument;
-
-  await publishKbArticleCreated(tenant, created, userId);
-
-  return created;
 }

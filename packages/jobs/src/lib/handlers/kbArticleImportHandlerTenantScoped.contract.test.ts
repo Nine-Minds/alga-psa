@@ -60,8 +60,11 @@ const createKbArticleMock = vi.fn(async () => {
   return { article_id: 'article-1' };
 });
 
+const publishKbArticleCreatedMock = vi.fn(async () => undefined);
+
 vi.mock('@alga-psa/shared/models/kbArticleModel', () => ({
   createKbArticle: (...args: unknown[]) => createKbArticleMock(...(args as [])),
+  publishKbArticleCreated: (...args: unknown[]) => publishKbArticleCreatedMock(...(args as [])),
 }));
 
 import { KB_ARTICLE_IMPORT_JOB, kbArticleImportHandler } from './kbArticleImportHandler';
@@ -142,6 +145,7 @@ describe('kb-article-import handler execution', () => {
     createdArticleIds.length = 0;
     failNextImportedUpdate = false;
     createKbArticleMock.mockClear();
+    publishKbArticleCreatedMock.mockClear();
     createKbArticleMock.mockImplementation(async () => {
       createdArticleIds.push('article-1');
       return { article_id: 'article-1' } as any;
@@ -186,6 +190,12 @@ describe('kb-article-import handler execution', () => {
     expect(row.status).toBe('imported');
     expect(row.article_id).toBe('article-1');
     expect(row.content).toBeNull();
+    expect(publishKbArticleCreatedMock).toHaveBeenCalledTimes(1);
+    expect(publishKbArticleCreatedMock.mock.calls[0]).toEqual([
+      'tenant-1',
+      { article_id: 'article-1' },
+      'user-1',
+    ]);
   });
 
   it('is idempotent across retries: already consumed rows are not re-imported', async () => {
@@ -195,6 +205,7 @@ describe('kb-article-import handler execution', () => {
     const result = await run(['file-1', 'file-2']);
 
     expect(createKbArticleMock).not.toHaveBeenCalled();
+    expect(publishKbArticleCreatedMock).not.toHaveBeenCalled();
     expect(result).toEqual({ total: 2, processed: 2, imported: 1, failed: 1 });
     // A retry that finds every row already consumed must still leave the final
     // counts on the job row, or the dialog polls a batch that never settles.
@@ -212,6 +223,9 @@ describe('kb-article-import handler execution', () => {
     expect(createdArticleIds).toEqual([]);
     expect(row.status).toBe('failed');
     expect(row.error).toBe('Failed to import article');
+    // The article never survived the rollback, so search must not be told
+    // about it — publishing inside the transaction would leak a ghost event.
+    expect(publishKbArticleCreatedMock).not.toHaveBeenCalled();
   });
 
   it('maps user-facing failures onto the staged row', async () => {
