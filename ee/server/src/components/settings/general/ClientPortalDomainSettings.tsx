@@ -313,8 +313,8 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
         )}
         {portalLoading ? (
           <div className="space-y-3">
-            <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-24 animate-pulse rounded bg-gray-100" />
+            <div className="h-5 w-48 animate-pulse rounded skeleton-fill" />
+            <div className="h-24 animate-pulse rounded skeleton-fill" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -401,7 +401,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
                 ) : (
                   <p className="text-xs text-gray-500">
                     {t('clientPortal.domain.form.helpTextPrefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{portalStatus?.canonicalHost}</code>
                     {t('clientPortal.domain.form.helpTextSuffix')}
                   </p>
                 )}
@@ -466,7 +466,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
                 <ol className="mt-2 list-decimal space-y-2 pl-4">
                   <li>
                     {t('clientPortal.domain.appliance.step1Prefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{proxyTargetHost}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{proxyTargetHost}</code>
                     {t('clientPortal.domain.appliance.step1Suffix')}
                   </li>
                   <li>{t('clientPortal.domain.appliance.step2')}</li>
@@ -489,7 +489,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
                 <ol className="mt-2 list-decimal space-y-2 pl-4">
                   <li>
                     {t('clientPortal.domain.checklist.step1Prefix')}
-                    <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
+                    <code className="rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{portalStatus?.canonicalHost ?? t('clientPortal.domain.checklist.canonicalHostFallback')}</code>
                     {t('clientPortal.domain.checklist.step1Suffix')}
                   </li>
                   <li>{t('clientPortal.domain.checklist.step2')}</li>

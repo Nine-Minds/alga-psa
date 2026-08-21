@@ -37,12 +37,12 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
-  loading: () => <div className="loading-dialog-skeleton animate-pulse p-6 bg-white rounded-lg shadow-lg">
-    <div className="h-6 w-1/3 bg-gray-200 rounded mb-4"></div>
+  loading: () => <div className="loading-dialog-skeleton animate-pulse p-6 bg-[rgb(var(--color-card))] rounded-lg shadow-lg">
+    <div className="h-6 w-1/3 skeleton-fill rounded mb-4"></div>
     <div className="space-y-3">
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-4 skeleton-fill rounded w-full"></div>
+      <div className="h-4 skeleton-fill rounded w-full"></div>
+      <div className="h-4 skeleton-fill rounded w-3/4"></div>
     </div>
   </div>
 });
@@ -55,10 +55,10 @@ import BillingSegmentsTab from './BillingSegmentsTab';
 // Lazy load other tabs
 const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
   loading: () => <div id="invoices-tab-skeleton" className="animate-pulse p-4">
-    <div className="h-10 bg-gray-200 rounded w-full mb-4"></div>
+    <div className="h-10 skeleton-fill rounded w-full mb-4"></div>
     <div className="space-y-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-12 bg-gray-200 rounded w-full"></div>
+        <div key={i} className="h-12 skeleton-fill rounded w-full"></div>
       ))}
     </div>
   </div>
@@ -66,10 +66,10 @@ const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
 
 const QuotesTab = dynamic(() => import('./QuotesTab'), {
   loading: () => <div id="quotes-tab-skeleton" className="animate-pulse p-4">
-    <div className="h-10 bg-gray-200 rounded w-full mb-4"></div>
+    <div className="h-10 skeleton-fill rounded w-full mb-4"></div>
     <div className="space-y-3">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-12 bg-gray-200 rounded w-full"></div>
+        <div key={i} className="h-12 skeleton-fill rounded w-full"></div>
       ))}
     </div>
   </div>
@@ -77,10 +77,10 @@ const QuotesTab = dynamic(() => import('./QuotesTab'), {
 
 const HoursByServiceTab = dynamic(() => import('./HoursByServiceTab'), {
   loading: () => <div id="hours-service-tab-skeleton" className="animate-pulse p-4">
-    <div className="h-24 bg-gray-200 rounded w-full mb-4"></div>
+    <div className="h-24 skeleton-fill rounded w-full mb-4"></div>
     <div className="space-y-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-12 bg-gray-200 rounded w-full"></div>
+        <div key={i} className="h-12 skeleton-fill rounded w-full"></div>
       ))}
     </div>
   </div>
@@ -88,10 +88,10 @@ const HoursByServiceTab = dynamic(() => import('./HoursByServiceTab'), {
 
 const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
   loading: () => <div id="usage-metrics-tab-skeleton" className="animate-pulse p-4">
-    <div className="h-24 bg-gray-200 rounded w-full mb-4"></div>
+    <div className="h-24 skeleton-fill rounded w-full mb-4"></div>
     <div className="space-y-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="h-12 bg-gray-200 rounded w-full"></div>
+        <div key={i} className="h-12 skeleton-fill rounded w-full"></div>
       ))}
     </div>
   </div>
@@ -99,7 +99,7 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
 
 const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'), {
   loading: () => <div id="bucket-history-skeleton" className="animate-pulse p-4">
-    <div className="h-48 bg-gray-200 rounded w-full"></div>
+    <div className="h-48 skeleton-fill rounded w-full"></div>
   </div>
 });
 

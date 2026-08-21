@@ -62,7 +62,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
         <div className="space-y-4">
           <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6">
             {portalLoading ? (
-              <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+              <div className="h-5 w-48 animate-pulse rounded skeleton-fill" />
             ) : (
               <div className="space-y-3 text-center">
                 <div className="text-sm font-medium text-gray-600">

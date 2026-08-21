@@ -3783,7 +3783,7 @@ const handleClose = () => {
                 ) : (
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
-                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse skeleton-fill h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 <TicketInfo
                                     id={`${id}-info`}
@@ -3841,7 +3841,7 @@ const handleClose = () => {
                                 />
                             </div>
                         </Suspense>
-                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 <TicketConversation
                                     id={`${id}-conversation`}
@@ -3893,7 +3893,7 @@ const handleClose = () => {
                             />
                         </div>
 
-                        <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse skeleton-fill h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
@@ -3915,7 +3915,7 @@ const handleClose = () => {
 
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
-                        <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                                 <TicketProperties
                                     id={`${id}-properties`}
                                     ticket={ticket}

@@ -43,10 +43,10 @@ const ChartSkeleton = ({
   const renderPieChart = () => (
     <div className="flex items-center justify-center h-full">
       <div className="relative">
-        <div className="w-32 h-32 border-8 border-gray-200 rounded-full"></div>
+        <div className="w-32 h-32 border-8 border-[rgb(var(--color-border-200))] rounded-full"></div>
         <div className="absolute top-0 left-0 w-32 h-32 border-8 border-blue-200 rounded-full border-r-transparent border-b-transparent animate-pulse"></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-16 h-16 bg-white rounded-full border-4 border-gray-100"></div>
+          <div className="w-16 h-16 bg-[rgb(var(--color-card))] rounded-full border-4 border-[rgb(var(--color-border-100))]"></div>
         </div>
       </div>
     </div>
@@ -55,7 +55,7 @@ const ChartSkeleton = ({
   const renderRadialChart = () => (
     <div className="flex items-center justify-center h-full">
       <div className="relative">
-        <div className="w-24 h-24 border-4 border-gray-200 rounded-full"></div>
+        <div className="w-24 h-24 border-4 border-[rgb(var(--color-border-200))] rounded-full"></div>
         <div className="absolute top-0 left-0 w-24 h-24 border-4 border-green-200 rounded-full border-l-transparent border-b-transparent animate-pulse"></div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
@@ -95,9 +95,9 @@ const ChartSkeleton = ({
   };
 
   return (
-    <div className="animate-pulse border rounded-lg overflow-hidden bg-white">
+    <div className="animate-pulse border rounded-lg overflow-hidden bg-[rgb(var(--color-card))]">
       {/* Chart Header */}
-      <div className="p-4 border-b bg-gray-50">
+      <div className="p-4 border-b bg-[rgb(var(--color-border-50))]">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {getChartIcon()}
@@ -138,7 +138,7 @@ const ChartSkeleton = ({
           )}
           
           {/* Loading overlay */}
-          <div className="absolute inset-0 bg-white/60 dark:bg-black/60 flex items-center justify-center">
+          <div className="absolute inset-0 bg-[rgb(var(--color-card))]/60 dark:bg-black/60 flex items-center justify-center">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
               <p className="text-gray-500 text-sm">Loading {title.toLowerCase()}...</p>

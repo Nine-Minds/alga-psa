@@ -63,7 +63,7 @@ export function AssetTypeBreakdownCard({
         {t('assetTypeBreakdown.title', { defaultValue: 'Assets by type' })}
       </p>
       {counts === null ? (
-        <div className="mt-3 h-8 w-full animate-pulse rounded bg-gray-100" />
+        <div className="mt-3 h-8 w-full animate-pulse rounded skeleton-fill" />
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {items.map(([slug, count]) => {

@@ -21,7 +21,7 @@ const SkeletonLine: React.FC<{
   className?: string;
 }> = ({ width = '100%', height = '16px', className = '' }) => (
   <div
-    className={`bg-gray-200 rounded animate-pulse ${className}`}
+    className={`skeleton-fill rounded animate-pulse ${className}`}
     style={{ width, height }}
   />
 );
@@ -30,7 +30,7 @@ const SkeletonLine: React.FC<{
  * Skeleton card for a mapping field
  */
 const SkeletonField: React.FC = () => (
-  <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 space-y-2 bg-white dark:bg-[rgb(var(--color-card))]">
+  <div className="border border-[rgb(var(--color-border-200))] rounded-lg p-3 space-y-2 bg-[rgb(var(--color-card))]">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <SkeletonLine width="16px" height="16px" />
@@ -54,7 +54,7 @@ const SkeletonTree: React.FC = () => (
     <SkeletonLine width="100%" height="32px" className="rounded-md" />
 
     {/* Section header */}
-    <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-2 py-2 px-3 bg-[rgb(var(--color-border-50))] rounded-lg">
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="80px" height="14px" />
@@ -74,7 +74,7 @@ const SkeletonTree: React.FC = () => (
     </div>
 
     {/* Another section */}
-    <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-2 py-2 px-3 bg-[rgb(var(--color-border-50))] rounded-lg">
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="16px" height="16px" />
       <SkeletonLine width="100px" height="14px" />
@@ -121,7 +121,7 @@ export const MappingEditorSkeleton: React.FC<MappingEditorSkeletonProps> = ({
       {message && (
         <div className="flex items-center justify-center py-4">
           <div className="flex items-center gap-2 text-gray-500">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-primary-500 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-[rgb(var(--color-border-300))] border-t-primary-500 rounded-full animate-spin" />
             <span className="text-sm">{message}</span>
           </div>
         </div>
@@ -131,7 +131,7 @@ export const MappingEditorSkeleton: React.FC<MappingEditorSkeletonProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Source tree panel */}
         {showSourceTree && (
-          <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
+          <div className="border border-[rgb(var(--color-border-200))] rounded-lg bg-[rgb(var(--color-card))] overflow-hidden">
             <SkeletonTree />
           </div>
         )}

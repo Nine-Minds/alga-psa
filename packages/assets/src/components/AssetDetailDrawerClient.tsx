@@ -578,7 +578,7 @@ function renderTabSkeleton(tab: AssetDrawerTab) {
   return (
     <div className="space-y-4">
       {rows.map((_, index) => (
-        <div key={`${tab}-skeleton-${index}`} className="h-16 rounded-lg bg-gray-100 animate-pulse" />
+        <div key={`${tab}-skeleton-${index}`} className="h-16 rounded-lg skeleton-fill animate-pulse" />
       ))}
     </div>
   );
