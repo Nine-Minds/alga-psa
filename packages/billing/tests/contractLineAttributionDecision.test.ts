@@ -50,6 +50,41 @@ describe('contract-line attribution decisions', () => {
     });
   });
 
+  it('persists bucket-overlay selection only for record create/edit, not generation reconciliation', () => {
+    const selection = resolveDeterministicContractLineSelection([
+      { ...line('line-overlay'), bucket_overlay: { config_id: 'bucket-1' } },
+      line('line-other'),
+    ]);
+
+    expect(selection).toMatchObject({
+      selectedContractLineId: 'line-overlay',
+      decision: 'default',
+      reason: 'bucket_overlay',
+    });
+    expect(buildContractLineAttributionDecision({
+      kind: 'usage_record',
+      recordId: 'usage-generation',
+      selection,
+    })).toEqual({
+      kind: 'usage_record',
+      recordId: 'usage-generation',
+      action: 'mark_unresolved',
+      reason: 'ambiguous',
+    });
+    expect(buildContractLineAttributionDecision({
+      kind: 'usage_record',
+      recordId: 'usage-write',
+      selection,
+      allowBucketOverlay: true,
+    })).toEqual({
+      kind: 'usage_record',
+      recordId: 'usage-write',
+      action: 'assign',
+      contractLineId: 'line-overlay',
+      source: 'auto_bucket_overlay',
+    });
+  });
+
   it('keeps the production table write shapes schema-aware', () => {
     expect(ATTRIBUTION_TABLES).toEqual({
       time_entry: { table: 'time_entries', idColumn: 'entry_id', hasUpdatedAt: true },

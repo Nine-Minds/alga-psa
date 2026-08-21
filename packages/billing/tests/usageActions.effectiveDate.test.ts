@@ -174,4 +174,63 @@ describe('usage actions effective-date contract resolution', () => {
     expect(calls.updates[0]?.contract_line_source).toBe('auto_unique_service');
     expect(revalidatePathMock).toHaveBeenCalledWith('/msp/billing');
   });
+
+  it('persists bucket-overlay attribution as an assigned line on usage create', async () => {
+    const { db, calls } = createUsageDbStub();
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+    getEligibleContractLinesMock.mockResolvedValue([
+      { client_contract_line_id: 'line-overlay', bucket_overlay: { config_id: 'bucket-1' } },
+      { client_contract_line_id: 'line-other' },
+    ]);
+
+    const { createUsageRecord } = await import('../src/actions/usageActions');
+
+    await (createUsageRecord as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      {
+        client_id: 'client-1',
+        service_id: 'service-1',
+        quantity: 3,
+        usage_date: '2025-02-10',
+      },
+    );
+
+    expect(calls.inserts[0]).toMatchObject({
+      contract_line_id: 'line-overlay',
+      contract_line_source: 'auto_bucket_overlay',
+      contract_line_unresolved_reason: null,
+    });
+  });
+
+  it('preserves the original attribution tuple when update resolution fails', async () => {
+    const original = {
+      usage_id: 'usage-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      service_id: 'service-1',
+      quantity: 1,
+      usage_date: '2026-03-11',
+      contract_line_id: 'line-original',
+      contract_line_source: 'explicit',
+      contract_line_unresolved_reason: null,
+    };
+    const { db, calls } = createUsageDbStub({ existing: original });
+    createTenantKnexMock.mockResolvedValue({ knex: db });
+    getEligibleContractLinesMock.mockRejectedValue(new Error('resolver unavailable'));
+
+    const { updateUsageRecord } = await import('../src/actions/usageActions');
+
+    await (updateUsageRecord as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { usage_id: 'usage-1', usage_date: '2027-08-01' },
+    );
+
+    expect(calls.updates[0]).toMatchObject({
+      contract_line_id: 'line-original',
+      contract_line_source: 'explicit',
+      contract_line_unresolved_reason: null,
+    });
+  });
 });

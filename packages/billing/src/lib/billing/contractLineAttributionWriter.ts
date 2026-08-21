@@ -95,14 +95,31 @@ async function loadWindowRecords(params: {
   const { trx, tenant, clientId, windowStart, windowEnd } = params;
   const db = tenantDb(trx, tenant);
 
+  const fixedPriceProjectsQuery = db.table<any>('project_billing_configs as config');
+  db.tenantJoin(
+    fixedPriceProjectsQuery,
+    'projects',
+    'config.project_id',
+    'projects.project_id',
+  );
+  const fixedPriceProjectRows = await fixedPriceProjectsQuery
+    .where({
+      'config.billing_model': 'fixed_price',
+      'projects.client_id': clientId,
+    })
+    .distinct('config.project_id')
+    .select('config.project_id');
+  const fixedPriceProjectIds = fixedPriceProjectRows
+    .map((row: any) => row.project_id)
+    .filter((projectId: unknown): projectId is string => typeof projectId === 'string');
+
   const timeQuery = db.table<any>('time_entries');
   db.tenantJoin(timeQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
   db.tenantJoin(timeQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
   db.tenantJoin(timeQuery, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
   db.tenantJoin(timeQuery, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
 
-  const [timeEntries, usageRecords] = await Promise.all([
-    timeQuery
+  const timeEntriesQuery = timeQuery
       .where('time_entries.tenant', tenant)
       .where('time_entries.invoiced', false)
       .whereNull('time_entries.contract_line_id')
@@ -113,8 +130,18 @@ async function loadWindowRecords(params: {
       .where('time_entries.end_time', '<', windowEnd)
       .where(function (this: Knex.QueryBuilder) {
         this.where('projects.client_id', clientId).orWhere('tickets.client_id', clientId);
-      })
-      .select(
+      });
+  if (fixedPriceProjectIds.length > 0) {
+    timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
+      this.whereNull('projects.project_id').orWhereNotIn(
+        'projects.project_id',
+        fixedPriceProjectIds,
+      );
+    });
+  }
+
+  const [timeEntries, usageRecords] = await Promise.all([
+    timeEntriesQuery.select(
         'time_entries.entry_id',
         'time_entries.service_id',
         'time_entries.start_time',

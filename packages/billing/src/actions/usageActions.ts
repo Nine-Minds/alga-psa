@@ -64,6 +64,7 @@ async function resolveUsageAttribution(params: {
       kind: 'usage_record',
       recordId: 'usage-write',
       selection,
+      allowBucketOverlay: true,
     }),
   };
 }
@@ -251,9 +252,12 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
           }
         } catch (error) {
           console.error('Error determining default contract line during update:', error);
-          finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
-          finalContractLineSource = 'unresolved';
-          finalContractLineUnresolvedReason = 'error';
+          // Resolver failure must not create a mixed attribution tuple. Keep
+          // the original line/source/reason together until a later explicit
+          // edit or reconciliation can replace the tuple atomically.
+          finalContractLineId = originalRecord.contract_line_id ?? null;
+          finalContractLineSource = originalRecord.contract_line_source ?? null;
+          finalContractLineUnresolvedReason = originalRecord.contract_line_unresolved_reason ?? null;
         }
       } else {
         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing

@@ -51,6 +51,30 @@ export interface ContractLineSelectionOptions {
   billingProfileId?: string | null;
 }
 
+/** Reasons allowed by the attribution columns' production CHECK constraint. */
+export type ContractLineAttributionUnresolvedReason = Extract<
+  ContractLineSelectionReason,
+  'ambiguous' | 'no_match' | 'error'
+>;
+
+function toAttributionUnresolvedReason(
+  reason: ContractLineSelectionReason,
+): ContractLineAttributionUnresolvedReason {
+  switch (reason) {
+    case 'no_match':
+    case 'ambiguous':
+    case 'error':
+      return reason;
+    case 'bucket_overlay':
+      return 'ambiguous';
+    // A selected line is required for these successful classifications. Keep
+    // the fallback safe if a malformed selection reaches this boundary.
+    case 'single_candidate':
+    case 'billing_profile':
+      return 'ambiguous';
+  }
+}
+
 export type ContractLineAttributionDecision =
   | {
       kind: 'time_entry' | 'usage_record';
@@ -63,7 +87,7 @@ export type ContractLineAttributionDecision =
       kind: 'time_entry' | 'usage_record';
       recordId: string;
       action: 'mark_unresolved';
-      reason: ContractLineSelectionReason;
+      reason: ContractLineAttributionUnresolvedReason;
     };
 
 /**
@@ -75,18 +99,25 @@ export function buildContractLineAttributionDecision(input: {
   kind: 'time_entry' | 'usage_record';
   recordId: string;
   selection: ContractLineSelectionResult;
+  /** Usage/time-entry create/edit may persist the deterministic overlay choice. */
+  allowBucketOverlay?: boolean;
 }): ContractLineAttributionDecision {
-  const { kind, recordId, selection } = input;
+  const { kind, recordId, selection, allowBucketOverlay = false } = input;
   if (
     selection.selectedContractLineId &&
-    (selection.decision === 'explicit' || selection.decision === 'billing_profile')
+    (selection.decision === 'explicit' ||
+      selection.decision === 'billing_profile' ||
+      (allowBucketOverlay && selection.reason === 'bucket_overlay'))
   ) {
     return {
       kind,
       recordId,
       action: 'assign',
       contractLineId: selection.selectedContractLineId,
-      source: 'reconciled_at_generation',
+      source:
+        allowBucketOverlay && selection.reason === 'bucket_overlay'
+          ? 'auto_bucket_overlay'
+          : 'reconciled_at_generation',
     };
   }
 
@@ -94,7 +125,10 @@ export function buildContractLineAttributionDecision(input: {
     kind,
     recordId,
     action: 'mark_unresolved',
-    reason: selection.reason,
+    // A unique overlay is a deterministic record-write choice, but generation
+    // deliberately does not reconcile that tie-break automatically. Keep the
+    // generation proposal within the production CHECK constraint.
+    reason: toAttributionUnresolvedReason(selection.reason),
   };
 }
 
