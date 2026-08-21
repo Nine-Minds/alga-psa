@@ -90,7 +90,9 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     expect(billingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
     expect(schedulingContractLineDisambiguationSource).toContain("whereNull('contracts.is_system_managed_default')");
     expect(schedulingContractLineDisambiguationSource).toContain(".orWhere('contracts.is_system_managed_default', false)");
-    expect(usageActionsSource).toContain('determineDefaultContractLine');
+    expect(usageActionsSource).toContain("from '@alga-psa/billing/lib/contractLineDisambiguation'");
+    expect(usageActionsSource).toContain('getEligibleContractLines');
+    expect(usageActionsSource).toContain('resolveDeterministicContractLineSelection');
     // Time entries route through `resolveContractLineSelection`, the same
     // disambiguation module with the same system-managed exclusion, which
     // additionally reports *why* it could not pick a line. Both entry points

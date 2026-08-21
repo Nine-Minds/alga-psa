@@ -37,11 +37,11 @@ describe('default-contract observability wiring', () => {
     const source = readRepo('packages/billing/src/lib/billing/billingEngine.ts');
     expect(source).toContain('console.info("[billing_engine.reconcile.unresolved]"');
     expect(source).toContain('decision: "deterministic_single_match"');
-    // The decision now reads the selector's own reason rather than re-deriving
-    // it from the eligible-line count. Same two markers, but sourced from the
-    // signal that also gets persisted, so the log and the stored reason cannot
-    // drift apart (F137).
-    expect(source).toContain('decision: selection.reason === "no_match" ? "no_match" : "ambiguous"');
+    // The decision now reads the attribution decision's own reason rather than
+    // re-deriving it from the eligible-line count. Same two markers, but
+    // sourced from the signal that also gets persisted, so the log and the
+    // stored reason cannot drift apart (F137).
+    expect(source).toContain('decision: attributionDecision.reason === "no_match" ? "no_match" : "ambiguous"');
     expect(source).toContain('"unmatched_resolved_deterministically"');
     expect(source).toContain('"unresolved_ambiguous_count"');
   });
