@@ -236,7 +236,7 @@ const CountryPicker = ({
       >
         <div className="flex items-center gap-2 flex-1">
           {currentCountry && (
-            <span className="text-sm font-mono bg-gray-100 px-1 rounded">
+            <span className="text-sm font-mono bg-[rgb(var(--color-border-200))] px-1 rounded">
               {currentCountry.code}
             </span>
           )}
@@ -257,9 +257,9 @@ const CountryPicker = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
+          <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
             {/* Search Input */}
-            <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+            <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
               <div className="relative">
                 <Input
                   ref={searchInputRef}
@@ -269,7 +269,7 @@ const CountryPicker = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                  className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                   autoComplete="off"
                 />
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -287,17 +287,17 @@ const CountryPicker = ({
                 return (
                   <div key={country.code}>
                     {isFirstOther && (
-                      <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 border-t border-gray-200">
+                      <div className="px-3 py-1 text-xs font-medium text-gray-500 border-t border-[rgb(var(--color-border-200))]">
                         Other Countries
                       </div>
                     )}
                     <div
-                      className="relative flex items-center gap-2 px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
+                      className="relative flex items-center gap-2 px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                       onClick={(e) => handleSelectCountry(country, e)}
                     >
                       <span className="text-base">{getCountryFlag(country.code)}</span>
                       <span className="flex-1 truncate">{country.name}</span>
-                      <span className="text-xs font-mono bg-gray-100 px-1 rounded ml-2">
+                      <span className="text-xs font-mono bg-[rgb(var(--color-border-200))] px-1 rounded ml-2">
                         {country.code}
                       </span>
                     </div>

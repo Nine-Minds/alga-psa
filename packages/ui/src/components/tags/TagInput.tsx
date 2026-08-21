@@ -188,7 +188,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               left: `${buttonPosition.left}px`
             }}
           >
-            <div className={`flex shadow-md rounded-md bg-white border border-gray-200 ${size === 'sm' ? 'shadow-sm' : ''}`}>
+            <div className={`flex shadow-md rounded-md bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] ${size === 'sm' ? 'shadow-sm' : ''}`}>
               <Input
                 ref={inputRef}
                 type="text"
@@ -223,7 +223,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         createPortal(
           <div 
             ref={dropdownRef}
-            className="fixed z-[100000] bg-white border border-gray-200 rounded-md shadow-lg"
+            className="fixed z-[100000] bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-md shadow-lg"
             style={{ 
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`,
@@ -248,7 +248,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 <button
                   key={index}
                   type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[rgb(var(--color-primary-500)/0.08)] flex items-center border-b border-[rgb(var(--color-border-100))] last:border-b-0 transition-colors"
                   onClick={(e) => {
                     console.log('Tag suggestion clicked:', suggestion.tag_text);
                     e.preventDefault();
