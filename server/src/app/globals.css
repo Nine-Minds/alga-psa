@@ -50,7 +50,7 @@
   .sidebar-nav {
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--color-border-300)) var(--color-sidebar-bg);
+    scrollbar-color: rgb(var(--color-border-300)) rgb(var(--color-sidebar-bg));
   }
 
   .sidebar-nav::-webkit-scrollbar {
@@ -58,7 +58,7 @@
   }
 
   .sidebar-nav::-webkit-scrollbar-track {
-    background: var(--color-sidebar-bg);
+    background: rgb(var(--color-sidebar-bg));
   }
 
   .sidebar-nav::-webkit-scrollbar-thumb {
@@ -109,9 +109,44 @@ body,
     margin: 0;
 }
 
-body {
+/* `html body`, not `body`: Mantine's global stylesheet paints the body with its
+   own neutral gray (#242424 in dark), and a bare `body` selector ties with it on
+   specificity, so import order would decide the page ground. */
+html body {
     background-color: rgb(var(--color-background));
     color: rgb(var(--color-text-900));
+}
+
+/* Radix Themes declares `--color-background` on its own theme root, which
+   shadows our identically named token for the entire app subtree — every
+   `rgb(var(--color-background))` below it resolves to an invalid color and
+   paints nothing. Hand the inherited triple back on that element so page
+   grounds keep the pair's background. Radix's own uses of the variable are all
+   surfaces we paint ourselves. The `html` prefix is load-bearing: Radix's dark
+   rule matches the same element through `:is(.dark, .dark-theme)`, so a bare
+   `.radix-themes` selector only ties with it. */
+html .radix-themes {
+    --color-background: var(--alga-color-background);
+}
+
+/* The ground the app shell paints behind the cards. Both modes use the pair's
+   muted neutral step: cards still lift off it, while the pt-2/px-3 gutter around
+   the content reads as part of the shell instead of a near-black gap. */
+.app-shell-ground {
+    background-color: rgb(var(--color-app-ground));
+}
+
+/* Loading placeholders. Hardcoded palette grays sat too dark on light cards and
+   — for the shades with no dark shim — glared on dark ones, so every skeleton
+   block reads through a token instead. The token follows the pair's neutral ramp
+   unless the pair says otherwise (high contrast would otherwise pulse in solid
+   black and white). */
+.skeleton-fill {
+    background-color: rgb(var(--color-skeleton));
+}
+
+.skeleton-fill-strong {
+    background-color: rgb(var(--color-skeleton-strong));
 }
 
 .dark .bg-white {
@@ -222,13 +257,15 @@ body {
     border-color: rgb(var(--color-border-200)) !important;
 }
 
+/* Chrome, not page: the top bar belongs with the rail, the way the product mock
+   on nineminds.com pitches it one step above the page ground. */
 .dark header {
-    background-color: rgb(var(--color-background)) !important;
+    background-color: rgb(var(--color-header-bg)) !important;
     border-color: rgb(var(--color-border-200)) !important;
 }
 
 .dark main {
-    background-color: rgb(var(--color-background));
+    background-color: rgb(var(--color-app-ground));
 }
 
 .dark input,
@@ -261,6 +298,13 @@ body {
 ::placeholder,
 [data-placeholder] {
     color: rgb(var(--color-text-400)) !important;
+}
+
+/* The rail can remain dark while the page is using a light theme. Its search
+   hint must therefore use a rail token, not the page's placeholder token. */
+.app-sidebar-search-input::placeholder {
+    color: rgb(var(--color-sidebar-icon)) !important;
+    opacity: 0.85;
 }
 
 .extension-loading-overlay {
@@ -359,9 +403,26 @@ body {
 }
 
 html.dark {
-    --background: 0, 0, 0;
-    --color-background: 0 0 0;
-    --color-card: 22 28 48;
+    --background: 12, 10, 24;
+    --color-background: 12 10 24;    /* #0c0a18 — site --background */
+    --color-card: 30 24 54;          /* #1e1836 — site --accent, the shell's content surface */
+    /* Shell ground: the surface the cards sit on. border-50, not border-100 —
+       in dark the card is only ~3 luma off border-100 (2.9 on ocean, 3.3 on
+       sunset, and slate is inverted at -11.8), so cards had no fill separation
+       at all and survived on their border alone. border-50 puts the step at
+       ~11.5 on the default pair, matching what light already gets from
+       border-100. Light keeps border-100: moving it there would halve the light
+       step instead (alga 10.6 -> 5.3). */
+    --color-app-ground: var(--color-border-50);
+    /* Loading placeholders, one step above the card so they read without glaring.
+       border-400, not -300: this pair's border ramp is compressed, so -300 sat
+       only 16.4 luma off the card here against 23.7 in light and 26-55 on every
+       other dark pair — the weakest skeleton in the set. -400 is 24.9, matching
+       light. The strong tier is a literal because the ramp jumps 24.9 -> 80.9
+       between -400 and -500; this value is interpolated onto that ramp at 39.7,
+       keeping the two tiers distinguishable without glaring. */
+    --color-skeleton: var(--color-border-400);
+    --color-skeleton-strong: 72 62 104;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -386,62 +447,69 @@ html.dark {
     --badge-error-bg: 127 29 29;        /* red-900 for dark mode */
     --badge-error-text: 254 202 202;    /* red-200 */
     --badge-error-border: 153 27 27;    /* red-800 */
-    --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
-    --badge-default-text: 203 213 225;  /* slate-300 */
-    --badge-default-border: 51 65 85;   /* slate-700 */
-    --badge-secondary-bg: 51 65 85;    /* slate-700 for dark mode */
-    --badge-secondary-text: 226 232 240; /* slate-200 */
-    --badge-secondary-border: 71 85 105; /* slate-600 */
+    --badge-default-bg: 47 39 82;       /* border-mid */
+    --badge-default-text: 201 195 224;  /* text soft */
+    --badge-default-border: 58 47 89;   /* border strong */
+    --badge-secondary-bg: 58 47 89;    /* border strong */
+    --badge-secondary-text: 224 219 240; /* text bright */
+    --badge-secondary-border: 74 62 110;
 
-    /* STATUS COLORS — muted for dark backgrounds */
-    --color-status-success: 74 190 120; /* muted green */
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129; /* #10b981 */
     --color-status-success-foreground: 255 255 255;
-    --color-status-warning: 235 180 50; /* bright amber */
+    --color-status-warning: 245 158 11; /* #f59e0b */
     --color-status-warning-foreground: 255 255 255;
-    --color-status-error: 210 100 100; /* muted red */
+    --color-status-error: 239 68 68;    /* #ef4444 */
     --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
-    --color-border-base: 100 116 139;
-    --color-border-50: 15 23 42;
-    --color-border-100: 30 41 59;
-    --color-border-200: 51 65 85;
-    --color-border-300: 71 85 105;
-    --color-border-400: 100 116 139;
-    --color-border-500: 148 163 184;
-    --color-border-600: 203 213 225;
-    --color-border-700: 226 232 240;
-    --color-border-800: 241 245 249;
-    --color-border-900: 248 250 252;
+    /* Border ramp, retuned 2026-08-21. Measured against --color-card, the dark
+       steps were far subtler than their light counterparts (border-200 was
+       Δ8.4 against light's Δ23.7), so every card, control and table edge went
+       mushy in dark while looking crisp in light. Raised to a Δ18 floor here;
+       pairs that already cleared it (slate, ocean, sky, sunset, vice) keep
+       their own values — a retune must lift a weak edge, never flatten a
+       strong one. High contrast is exempt: its borders are pure black/white. */
+    --color-border-base: 58 47 89;
+    --color-border-50: 19 13 36;     /* #130d24 — site deep well, wells inside cards */
+    --color-border-100: 27 21 48;    /* #1b1530 — the site's muted surface, the shell ground one step under the card */
+    --color-border-200: 49 41 82;    /* #272041 border base */
+    --color-border-300: 59 49 104;    /* #2f2752 border mid */
+    --color-border-400: 75 61 115;    /* #3a2f59 border strong */
+    --color-border-500: 111 104 144;  /* #6f6890 */
+    --color-border-600: 154 146 184;  /* #9a92b8 */
+    --color-border-700: 201 195 224;  /* #c9c3e0 */
+    --color-border-800: 224 219 240;
+    --color-border-900: 232 228 246;  /* #e8e4f6 */
 
     /* TEXT COLORS */
-    --color-text-base: 100 116 139;
-    --color-text-50: 15 23 42;
-    --color-text-100: 30 41 59;
-    --color-text-200: 51 65 85;
-    --color-text-300: 71 85 105;
-    --color-text-400: 100 116 139;
-    --color-text-500: 148 163 184;
-    --color-text-600: 203 213 225;
-    --color-text-700: 226 232 240;
-    --color-text-800: 241 245 249;
-    --color-text-900: 248 250 252;
+    --color-text-base: 111 104 144;
+    --color-text-50: 19 13 36;
+    --color-text-100: 27 21 48;
+    --color-text-200: 39 32 65;
+    --color-text-300: 58 47 89;
+    --color-text-400: 111 104 144;   /* #6f6890 dim */
+    --color-text-500: 154 146 184;   /* #9a92b8 muted */
+    --color-text-600: 201 195 224;   /* #c9c3e0 soft */
+    --color-text-700: 214 209 233;
+    --color-text-800: 224 219 240;
+    --color-text-900: 232 228 246;   /* #e8e4f6 primary */
 
     /* Switch — muted in dark mode for softer contrast */
-    --color-switch-thumb: 190 200 215;
+    --color-switch-thumb: 214 209 233;
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
-    --color-primary-50: 82 46 140;
-    --color-primary-100: 96 54 164;
-    --color-primary-200: 110 61 187;
-    --color-primary-300: 124 69 211;
-    --color-primary-400: 138 77 234;
-    --color-primary-500: 152 85 238;
-    --color-primary-600: 166 115 242;
-    --color-primary-700: 184 145 245;
-    --color-primary-800: 202 168 249;
-    --color-primary-900: 220 197 251;
+    --color-primary-50: 34 23 67;     /* #221743 subtle fill */
+    --color-primary-100: 49 32 92;
+    --color-primary-200: 71 42 129;
+    --color-primary-300: 95 53 168;
+    --color-primary-400: 117 65 202;
+    --color-primary-500: 138 77 234;  /* #8a4dea fill */
+    --color-primary-600: 163 102 240; /* #a366f0 ink */
+    --color-primary-700: 181 137 246;
+    --color-primary-800: 196 181 253; /* #c4b5fd bright accent */
+    --color-primary-900: 222 212 254;
 
     /* Blue (#40cff9) */
     --color-secondary-50: 38 124 149;
@@ -475,7 +543,7 @@ html.dark {
     --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
     --color-alert-warning-bg: 50 40 8;         /* golden amber */
     --color-alert-success-bg: 15 40 25;       /* deep dark green */
-    --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+    --color-alert-info-bg: 49 32 92;          /* #31205c — stays legible on the lifted card */
     --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
@@ -489,24 +557,29 @@ html.dark {
     --color-event-opportunity-hover: 48 108 168;
 
     /* TABLE ROW COLORS */
-    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
-    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
-    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
-    --color-table-status-approved: 10 30 20;     /* muted dark green */
-    --color-table-status-warning: 50 35 18;      /* muted dark orange */
+    --color-table-row-alt: 27 21 48;             /* #1b1530 muted surface */
+    --color-table-hover: 34 23 67;               /* #221743 subtle purple wash */
+    --color-table-selected: 45 30 86;            /* a touch stronger than hover */
+    --color-table-status-approved: 10 34 26;     /* muted dark green */
+    --color-table-status-warning: 48 33 16;      /* muted dark orange */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: #0f172a;
-    --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #1e293b;
-    --color-sidebar-icon: #94a3b8;
+    --color-sidebar-bg: 21 16 36;      /* #151024 */
+    --color-sidebar-text: 232 228 246; /* #e8e4f6 */
+    --color-sidebar-hover: 34 23 67;   /* #221743 */
+    --color-sidebar-icon: 154 146 184; /* #9a92b8 */
+
+    /* Header Colors  */
+    --color-header-bg: 21 16 36;       /* #151024 */
+    --color-header-text: 232 228 246;
+    --color-header-border: 39 32 65;   /* #272041 */
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #1e293b;
-    --color-submenu-text: #f5f5f5;
-    --color-submenu-hover: #808080;
-    --color-submenu-icon: #909090;
+    --color-submenu-bg: 39 32 65;      /* #272041 — one step above the card so flyouts read as elevated */
+    --color-submenu-text: 232 228 246;
+    --color-submenu-hover: 47 39 82;   /* #2f2752 */
+    --color-submenu-icon: 154 146 184;
 
 
     background: rgba(var(--background), 1);
@@ -514,9 +587,14 @@ html.dark {
 
 
 html.light {
-    --background: 255, 255, 255;
-    --color-background: 255 255 255;
+    --background: 247, 248, 250;
+    --color-background: 247 248 250;
     --color-card: 255 255 255;
+    /* Shell ground: the neutral step the shell has always worn under white cards. */
+    --color-app-ground: var(--color-border-100);
+    /* Loading placeholders, one step below the border so they read as a fill. */
+    --color-skeleton: var(--color-border-200);
+    --color-skeleton-strong: var(--color-border-300);
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -651,25 +729,1905 @@ html.light {
     --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
 
     /* Sidebar Colors  */
-    --color-sidebar-bg: #0C111D;
-    --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #808080;
-    --color-sidebar-icon: #909090;
+    --color-sidebar-bg: 12 17 29;
+    --color-sidebar-text: 245 245 245;
+    --color-sidebar-hover: 128 128 128;
+    --color-sidebar-icon: 144 144 144;
+
+    /* Header Colors  */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 15 23 42;
+    --color-header-border: 226 232 240;
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #1b1a1a;
-    --color-submenu-text: #f5f5f5;
-    --color-submenu-hover: #808080;
-    --color-submenu-icon: #909090;
+    --color-submenu-bg: 27 26 26;
+    --color-submenu-text: 245 245 245;
+    --color-submenu-hover: 128 128 128;
+    --color-submenu-icon: 144 144 144;
 
 
     background: rgba(var(--background), 1);
 
 }
 
+/* ---------------------------------------------------------------------------
+   THEME PAIRS
+   A pair is a matched light + dark variant selected tenant-wide and applied as
+   data-theme-pair on <html> (server-rendered, so there is no flash). The
+   attribute raises specificity over the plain html.light / html.dark blocks
+   above, so a pair only has to restate the token VALUES it changes — every
+   dark-mode shim and dark: variant keeps resolving through the same tokens.
+   The shade-inversion contract still holds per variant: *-50 is always the
+   subtlest surface. Absent attribute (or "alga") = the blocks above.
+   --------------------------------------------------------------------------- */
+
+html.light[data-theme-pair="slate"] {
+    --background: 242, 243, 245;
+    --color-background: 242 243 245;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 34 197 94;
+    --color-status-success-foreground: 15 23 42;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 15 23 42;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 15 23 42;
+
+    /* BORDER COLOR */
+    --color-border-base: 185 190 199;
+    --color-border-50: 247 248 249;
+    --color-border-100: 239 240 243;
+    --color-border-200: 226 228 232;
+    --color-border-300: 213 216 222;
+    --color-border-400: 185 190 199;
+    --color-border-500: 107 114 128;
+    --color-border-600: 75 85 99;
+    --color-border-700: 55 65 81;
+    --color-border-800: 31 41 55;
+    --color-border-900: 17 24 39;
+
+    /* TEXT COLORS */
+    --color-text-base: 185 190 199;
+    --color-text-50: 247 248 249;
+    --color-text-100: 239 240 243;
+    --color-text-200: 226 228 232;
+    --color-text-300: 213 216 222;
+    --color-text-400: 185 190 199;
+    --color-text-500: 107 114 128;
+    --color-text-600: 75 85 99;
+    --color-text-700: 55 65 81;
+    --color-text-800: 31 41 55;
+    --color-text-900: 17 24 39;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 246 240 254;
+    --color-primary-100: 224 207 250;
+    --color-primary-200: 203 175 246;
+    --color-primary-300: 181 142 242;
+    --color-primary-400: 160 110 238;
+    --color-primary-500: 138 77 234;
+    --color-primary-600: 124 69 211;
+    --color-primary-700: 110 62 187;
+    --color-primary-800: 96 54 164;
+    --color-primary-900: 82 46 140;
+
+    /* secondary */
+    --color-secondary-50: 236 252 254;
+    --color-secondary-100: 202 243 253;
+    --color-secondary-200: 167 234 252;
+    --color-secondary-300: 133 225 251;
+    --color-secondary-400: 98 216 250;
+    --color-secondary-500: 64 207 249;
+    --color-secondary-600: 58 186 224;
+    --color-secondary-700: 51 166 199;
+    --color-secondary-800: 45 145 174;
+    --color-secondary-900: 38 124 149;
+
+    /* accent */
+    --color-accent-50: 255 246 230;
+    --color-accent-100: 255 228 194;
+    --color-accent-200: 255 210 157;
+    --color-accent-300: 255 192 121;
+    --color-accent-400: 255 174 84;
+    --color-accent-500: 255 156 48;
+    --color-accent-600: 230 141 43;
+    --color-accent-700: 204 125 38;
+    --color-accent-800: 179 110 33;
+    --color-accent-900: 153 94 28;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 240 253 244;
+    --color-alert-info-bg: 246 240 254;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 247 248 249;
+    --color-table-hover: 246 240 254;
+    --color-table-selected: 237 226 253;
+    --color-table-status-approved: 240 253 244;
+    --color-table-status-warning: 255 237 213;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 12 17 29;
+    --color-sidebar-text: 245 245 245;
+    --color-sidebar-hover: 128 128 128;
+    --color-sidebar-icon: 144 144 144;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 17 24 39;
+    --color-header-border: 226 228 232;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 27 26 26;
+    --color-submenu-text: 245 245 245;
+    --color-submenu-hover: 128 128 128;
+    --color-submenu-icon: 144 144 144;
+}
+
+html.dark[data-theme-pair="slate"] {
+    --background: 0, 0, 0;
+    --color-background: 0 0 0;
+    --color-card: 22 28 48;
+
+    /* SEMANTIC BADGE COLORS - not affected by branding */
+    --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
+    --badge-info-text: 191 219 254;     /* blue-200 */
+    --badge-info-border: 30 64 175;     /* blue-800 */
+    --badge-warning-bg: 55 38 6;         /* amber-950 — warm dark gold */
+    --badge-warning-text: 253 224 71;   /* #FDE047 — yellow-300 */
+    --badge-warning-border: 234 179 8;  /* #EAB308 — yellow-500 */
+    --badge-success-bg: 20 83 45;       /* green-900 for dark mode */
+    --badge-success-text: 134 239 172;  /* green-300 — muted */
+    --badge-success-border: 22 101 52;  /* green-800 */
+    --badge-error-bg: 127 29 29;        /* red-900 for dark mode */
+    --badge-error-text: 254 202 202;    /* red-200 */
+    --badge-error-border: 153 27 27;    /* red-800 */
+    --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
+    --badge-default-text: 203 213 225;  /* slate-300 */
+    --badge-default-border: 51 65 85;   /* slate-700 */
+    --badge-secondary-bg: 51 65 85;    /* slate-700 for dark mode */
+    --badge-secondary-text: 226 232 240; /* slate-200 */
+    --badge-secondary-border: 71 85 105; /* slate-600 */
+
+    /* STATUS COLORS — muted for dark backgrounds */
+    --color-status-success: 74 190 120; /* muted green */
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 235 180 50; /* bright amber */
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 210 100 100; /* muted red */
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 100 116 139;
+    --color-border-50: 15 23 42;
+    --color-border-100: 30 41 59;
+    --color-border-200: 51 65 85;
+    --color-border-300: 71 85 105;
+    --color-border-400: 100 116 139;
+    --color-border-500: 148 163 184;
+    --color-border-600: 203 213 225;
+    --color-border-700: 226 232 240;
+    --color-border-800: 241 245 249;
+    --color-border-900: 248 250 252;
+
+    /* TEXT COLORS */
+    --color-text-base: 100 116 139;
+    --color-text-50: 15 23 42;
+    --color-text-100: 30 41 59;
+    --color-text-200: 51 65 85;
+    --color-text-300: 71 85 105;
+    --color-text-400: 100 116 139;
+    --color-text-500: 148 163 184;
+    --color-text-600: 203 213 225;
+    --color-text-700: 226 232 240;
+    --color-text-800: 241 245 249;
+    --color-text-900: 248 250 252;
+
+    /* Switch — muted in dark mode for softer contrast */
+    --color-switch-thumb: 190 200 215;
+
+    /* MAIN COLORS */
+    /* Purple (#8a4dea) */
+    --color-primary-50: 82 46 140;
+    --color-primary-100: 96 54 164;
+    --color-primary-200: 110 61 187;
+    --color-primary-300: 124 69 211;
+    --color-primary-400: 138 77 234;
+    --color-primary-500: 152 85 238;
+    --color-primary-600: 166 115 242;
+    --color-primary-700: 184 145 245;
+    --color-primary-800: 202 168 249;
+    --color-primary-900: 220 197 251;
+
+    /* Blue (#40cff9) */
+    --color-secondary-50: 38 124 149;
+    --color-secondary-100: 45 145 174;
+    --color-secondary-200: 51 166 199;
+    --color-secondary-300: 58 186 224;
+    --color-secondary-400: 64 207 249;
+    --color-secondary-500: 83 215 250;
+    --color-secondary-600: 102 223 251;
+    --color-secondary-700: 140 236 250;
+    --color-secondary-800: 179 243 251;
+    --color-secondary-900: 217 249 253;
+
+    /* Orange (#ff9c30) */
+    --color-accent-50: 45 30 12;
+    --color-accent-100: 80 50 18;
+    --color-accent-200: 204 125 38;
+    --color-accent-300: 230 140 43;
+    --color-accent-400: 255 156 48;
+    --color-accent-500: 255 166 69;
+    --color-accent-600: 255 176 89;
+    --color-accent-700: 255 201 102;
+    --color-accent-800: 255 219 153;
+    --color-accent-900: 255 237 204;
+
+    /* Destructive Colors — softened for dark backgrounds */
+    --color-destructive: 239 68 68; /* red-500 (lighter than light-mode red-600) */
+    --color-destructive-foreground: 254 202 202; /* red-200 */
+
+    /* ALERT BACKGROUND COLORS — hardcoded dark tints (color-mix too subtle on dark surfaces) */
+    --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
+    --color-alert-warning-bg: 50 40 8;         /* golden amber */
+    --color-alert-success-bg: 15 40 25;       /* deep dark green */
+    --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+    --color-alert-default-bg: var(--color-border-50);  /* neutral muted surface */
+
+    /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
+    --color-event-non-billable: 160 90 30;    /* warm amber, visible on dark bg */
+    --color-event-non-billable-hover: 180 105 35;
+    --color-event-interaction: 34 120 70;     /* muted green */
+    --color-event-interaction-hover: 40 140 82;
+    --color-event-appointment: 160 50 80;     /* muted rose */
+    --color-event-appointment-hover: 180 60 90;
+    --color-event-opportunity: 40 90 140;     /* muted blue */
+    --color-event-opportunity-hover: 48 108 168;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
+    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
+    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
+    --color-table-status-approved: 10 30 20;     /* muted dark green */
+    --color-table-status-warning: 50 35 18;      /* muted dark orange */
+
+    /* Sidebar Colors  */
+    --color-sidebar-bg: 15 23 42;
+    --color-sidebar-text: 245 245 245;
+    --color-sidebar-hover: 30 41 59;
+    --color-sidebar-icon: 148 163 184;
+
+    /* Header Colors  */
+    --color-header-bg: 15 23 42;
+    --color-header-text: 245 245 245;
+    --color-header-border: 51 65 85;
+
+
+    /* SubMenu Colors  */
+    --color-submenu-bg: 30 41 59;
+    --color-submenu-text: 245 245 245;
+    --color-submenu-hover: 128 128 128;
+    --color-submenu-icon: 144 144 144;
+}
+
+html.light[data-theme-pair="ocean"] {
+    --background: 245, 247, 251;
+    --color-background: 245 247 251;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 22 163 74;
+    --color-status-success-foreground: 16 24 40;
+    --color-status-warning: 217 119 6;
+    --color-status-warning-foreground: 16 24 40;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 16 24 40;
+
+    /* BORDER COLOR */
+    --color-border-base: 152 162 179;
+    --color-border-50: 238 242 248;
+    --color-border-100: 223 228 235;
+    --color-border-200: 208 213 221;
+    --color-border-300: 180 188 200;
+    --color-border-400: 152 162 179;
+    --color-border-500: 102 112 133;
+    --color-border-600: 52 64 84;
+    --color-border-700: 40 51 69;
+    --color-border-800: 28 37 55;
+    --color-border-900: 16 24 40;
+
+    /* TEXT COLORS */
+    --color-text-base: 152 162 179;
+    --color-text-50: 238 242 248;
+    --color-text-100: 223 228 235;
+    --color-text-200: 208 213 221;
+    --color-text-300: 180 188 200;
+    --color-text-400: 152 162 179;
+    --color-text-500: 102 112 133;
+    --color-text-600: 52 64 84;
+    --color-text-700: 40 51 69;
+    --color-text-800: 28 37 55;
+    --color-text-900: 16 24 40;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 244 246 253;
+    --color-primary-100: 232 237 251;
+    --color-primary-200: 199 211 245;
+    --color-primary-300: 165 184 239;
+    --color-primary-400: 97 131 228;
+    --color-primary-500: 29 78 216;
+    --color-primary-600: 25 66 184;
+    --color-primary-700: 20 55 151;
+    --color-primary-800: 15 39 108;
+    --color-primary-900: 9 23 65;
+
+    /* secondary */
+    --color-secondary-50: 243 248 248;
+    --color-secondary-100: 231 241 241;
+    --color-secondary-200: 195 221 219;
+    --color-secondary-300: 159 200 197;
+    --color-secondary-400: 87 159 154;
+    --color-secondary-500: 15 118 110;
+    --color-secondary-600: 13 100 94;
+    --color-secondary-700: 11 83 77;
+    --color-secondary-800: 8 59 55;
+    --color-secondary-900: 5 35 33;
+
+    /* accent */
+    --color-accent-50: 253 248 243;
+    --color-accent-100: 251 241 230;
+    --color-accent-200: 246 221 193;
+    --color-accent-300: 240 201 155;
+    --color-accent-400: 228 160 81;
+    --color-accent-500: 217 119 6;
+    --color-accent-600: 184 101 5;
+    --color-accent-700: 152 83 4;
+    --color-accent-800: 109 60 3;
+    --color-accent-900: 65 36 2;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 240 253 244;
+    --color-alert-info-bg: 244 246 253;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 238 242 248;
+    --color-table-hover: 219 227 247;
+    --color-table-selected: 202 213 244;
+    --color-table-status-approved: 240 253 244;
+    --color-table-status-warning: 255 242 221;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 8 26 51;
+    --color-sidebar-text: 234 242 255;
+    --color-sidebar-hover: 16 47 87;
+    --color-sidebar-icon: 144 156 173;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 16 24 40;
+    --color-header-border: 208 213 221;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 12 37 69;
+    --color-submenu-text: 234 242 255;
+    --color-submenu-hover: 21 59 104;
+    --color-submenu-icon: 144 156 173;
+}
+
+html.dark[data-theme-pair="ocean"] {
+    --background: 4, 8, 20;
+    --color-background: 4 8 20;
+    --color-card: 11 19 36;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 51 68 95;
+    --color-border-50: 7 13 27;
+    --color-border-100: 9 16 31;
+    --color-border-200: 30 42 64;
+    --color-border-300: 41 55 80;
+    --color-border-400: 51 68 95;
+    --color-border-500: 132 148 173;
+    --color-border-600: 184 197 218;
+    --color-border-700: 202 212 230;
+    --color-border-800: 219 228 243;
+    --color-border-900: 237 243 255;
+
+    /* TEXT COLORS */
+    --color-text-base: 51 68 95;
+    --color-text-50: 7 13 27;
+    --color-text-100: 9 16 31;
+    --color-text-200: 30 42 64;
+    --color-text-300: 41 55 80;
+    --color-text-400: 51 68 95;
+    --color-text-500: 132 148 173;
+    --color-text-600: 184 197 218;
+    --color-text-700: 202 212 230;
+    --color-text-800: 219 228 243;
+    --color-text-900: 237 243 255;
+
+    --color-switch-thumb: 219 228 243;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 18 39 74;
+    --color-primary-100: 30 65 123;
+    --color-primary-200: 41 91 172;
+    --color-primary-300: 50 111 209;
+    --color-primary-400: 118 168 249;
+    --color-primary-500: 59 130 246;
+    --color-primary-600: 177 205 251;
+    --color-primary-700: 206 224 253;
+    --color-primary-800: 235 243 254;
+    --color-primary-900: 245 249 255;
+
+    /* secondary */
+    --color-secondary-50: 14 64 57;
+    --color-secondary-100: 23 106 96;
+    --color-secondary-200: 31 148 134;
+    --color-secondary-300: 38 180 162;
+    --color-secondary-400: 108 225 210;
+    --color-secondary-500: 45 212 191;
+    --color-secondary-600: 171 238 229;
+    --color-secondary-700: 203 244 239;
+    --color-secondary-800: 234 251 249;
+    --color-secondary-900: 245 253 252;
+
+    /* accent */
+    --color-accent-50: 74 47 3;
+    --color-accent-100: 123 79 6;
+    --color-accent-200: 172 111 8;
+    --color-accent-300: 208 134 9;
+    --color-accent-400: 248 187 84;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 251 216 157;
+    --color-accent-700: 253 231 194;
+    --color-accent-800: 254 245 231;
+    --color-accent-900: 255 250 243;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 51 25 26;
+    --color-alert-warning-bg: 51 40 7;
+    --color-alert-success-bg: 11 42 32;
+    --color-alert-info-bg: 18 39 74;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 7 13 27;
+    --color-table-hover: 11 23 47;
+    --color-table-selected: 15 32 65;
+    --color-table-status-approved: 10 36 25;
+    --color-table-status-warning: 46 36 16;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 6 21 43;
+    --color-sidebar-text: 237 243 255;
+    --color-sidebar-hover: 16 43 79;
+    --color-sidebar-icon: 145 154 170;
+
+    /* Header Colors */
+    --color-header-bg: 11 19 36;
+    --color-header-text: 237 243 255;
+    --color-header-border: 30 42 64;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 12 36 67;
+    --color-submenu-text: 237 243 255;
+    --color-submenu-hover: 20 56 95;
+    --color-submenu-icon: 145 154 170;
+}
+
+html.light[data-theme-pair="sky"] {
+    --background: 243, 251, 255;
+    --color-background: 243 251 255;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 22 163 74;
+    --color-status-success-foreground: 8 47 73;
+    --color-status-warning: 217 119 6;
+    --color-status-warning-foreground: 8 47 73;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 8 47 73;
+
+    /* BORDER COLOR */
+    --color-border-base: 125 195 232;
+    --color-border-50: 233 247 255;
+    --color-border-100: 216 240 252;
+    --color-border-200: 199 232 248;
+    --color-border-300: 162 214 240;
+    --color-border-400: 125 195 232;
+    --color-border-500: 84 117 138;
+    --color-border-600: 54 95 120;
+    --color-border-700: 39 79 104;
+    --color-border-800: 23 63 89;
+    --color-border-900: 8 47 73;
+
+    /* TEXT COLORS */
+    --color-text-base: 125 195 232;
+    --color-text-50: 233 247 255;
+    --color-text-100: 216 240 252;
+    --color-text-200: 199 232 248;
+    --color-text-300: 162 214 240;
+    --color-text-400: 125 195 232;
+    --color-text-500: 84 117 138;
+    --color-text-600: 54 95 120;
+    --color-text-700: 39 79 104;
+    --color-text-800: 23 63 89;
+    --color-text-900: 8 47 73;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 242 249 252;
+    --color-primary-100: 230 243 249;
+    --color-primary-200: 192 224 241;
+    --color-primary-300: 154 206 233;
+    --color-primary-400: 78 169 216;
+    --color-primary-500: 2 132 199;
+    --color-primary-600: 2 112 169;
+    --color-primary-700: 1 92 139;
+    --color-primary-800: 1 66 100;
+    --color-primary-900: 1 40 60;
+
+    /* secondary */
+    --color-secondary-50: 243 250 251;
+    --color-secondary-100: 230 244 247;
+    --color-secondary-200: 193 228 236;
+    --color-secondary-300: 156 211 224;
+    --color-secondary-400: 82 178 201;
+    --color-secondary-500: 8 145 178;
+    --color-secondary-600: 7 123 151;
+    --color-secondary-700: 6 102 125;
+    --color-secondary-800: 4 73 89;
+    --color-secondary-900: 2 44 53;
+
+    /* accent */
+    --color-accent-50: 254 247 243;
+    --color-accent-100: 253 238 231;
+    --color-accent-200: 250 213 194;
+    --color-accent-300: 247 188 158;
+    --color-accent-400: 240 138 85;
+    --color-accent-500: 234 88 12;
+    --color-accent-600: 199 75 10;
+    --color-accent-700: 164 62 8;
+    --color-accent-800: 117 44 6;
+    --color-accent-900: 70 26 4;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 240 253 244;
+    --color-alert-info-bg: 242 249 252;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 233 247 255;
+    --color-table-hover: 214 237 248;
+    --color-table-selected: 195 227 244;
+    --color-table-status-approved: 240 253 244;
+    --color-table-status-warning: 255 242 221;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 12 74 110;
+    --color-sidebar-text: 236 254 255;
+    --color-sidebar-hover: 7 89 133;
+    --color-sidebar-icon: 146 182 197;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 8 47 73;
+    --color-header-border: 199 232 248;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 11 94 136;
+    --color-submenu-text: 236 254 255;
+    --color-submenu-hover: 8 118 165;
+    --color-submenu-icon: 146 182 197;
+}
+
+html.dark[data-theme-pair="sky"] {
+    --background: 6, 20, 28;
+    --color-background: 6 20 28;
+    --color-card: 12 37 51;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 37 103 124;
+    --color-border-50: 8 27 37;
+    --color-border-100: 10 32 44;
+    --color-border-200: 23 66 82;
+    --color-border-300: 30 85 103;
+    --color-border-400: 37 103 124;
+    --color-border-500: 120 170 189;
+    --color-border-600: 169 214 229;
+    --color-border-700: 190 226 238;
+    --color-border-800: 211 239 246;
+    --color-border-900: 232 251 255;
+
+    /* TEXT COLORS */
+    --color-text-base: 37 103 124;
+    --color-text-50: 8 27 37;
+    --color-text-100: 10 32 44;
+    --color-text-200: 23 66 82;
+    --color-text-300: 30 85 103;
+    --color-text-400: 37 103 124;
+    --color-text-500: 120 170 189;
+    --color-text-600: 169 214 229;
+    --color-text-700: 190 226 238;
+    --color-text-800: 211 239 246;
+    --color-text-900: 232 251 255;
+
+    --color-switch-thumb: 211 239 246;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 1 40 60;
+    --color-primary-100: 1 66 100;
+    --color-primary-200: 1 92 139;
+    --color-primary-300: 2 112 169;
+    --color-primary-400: 78 169 216;
+    --color-primary-500: 2 132 199;
+    --color-primary-600: 154 206 233;
+    --color-primary-700: 192 224 241;
+    --color-primary-800: 230 243 249;
+    --color-primary-900: 242 249 252;
+
+    /* secondary */
+    --color-secondary-50: 10 63 71;
+    --color-secondary-100: 17 106 119;
+    --color-secondary-200: 24 148 167;
+    --color-secondary-300: 29 179 202;
+    --color-secondary-400: 100 224 243;
+    --color-secondary-500: 34 211 238;
+    --color-secondary-600: 167 237 248;
+    --color-secondary-700: 200 244 251;
+    --color-secondary-800: 233 251 253;
+    --color-secondary-900: 244 253 254;
+
+    /* accent */
+    --color-accent-50: 75 44 18;
+    --color-accent-100: 126 73 30;
+    --color-accent-200: 176 102 42;
+    --color-accent-300: 213 124 51;
+    --color-accent-400: 252 179 119;
+    --color-accent-500: 251 146 60;
+    --color-accent-600: 253 211 177;
+    --color-accent-700: 254 228 206;
+    --color-accent-800: 255 244 236;
+    --color-accent-900: 255 250 245;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 51 25 26;
+    --color-alert-warning-bg: 51 40 7;
+    --color-alert-success-bg: 11 42 32;
+    --color-alert-info-bg: 1 40 60;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 8 27 37;
+    --color-table-hover: 6 33 49;
+    --color-table-selected: 5 42 62;
+    --color-table-status-approved: 10 36 25;
+    --color-table-status-warning: 46 36 16;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 8 47 73;
+    --color-sidebar-text: 236 254 255;
+    --color-sidebar-hover: 12 74 110;
+    --color-sidebar-icon: 145 171 182;
+
+    /* Header Colors */
+    --color-header-bg: 8 47 73;
+    --color-header-text: 232 251 255;
+    --color-header-border: 23 66 82;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 12 74 110;
+    --color-submenu-text: 236 254 255;
+    --color-submenu-hover: 7 89 133;
+    --color-submenu-icon: 145 171 182;
+}
+
+html.light[data-theme-pair="forest"] {
+    --background: 247, 251, 248;
+    --color-background: 247 251 248;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 20 184 166;
+    --color-status-success-foreground: 19 28 22;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 19 28 22;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 19 28 22;
+
+    /* BORDER COLOR */
+    --color-border-base: 183 203 188;
+    --color-border-50: 242 247 243;
+    --color-border-100: 230 239 232;
+    --color-border-200: 213 226 216;
+    --color-border-300: 196 213 200;
+    --color-border-400: 183 203 188;
+    --color-border-500: 107 127 112;
+    --color-border-600: 77 97 82;
+    --color-border-700: 53 71 58;
+    --color-border-800: 35 48 38;
+    --color-border-900: 19 28 22;
+
+    /* TEXT COLORS */
+    --color-text-base: 183 203 188;
+    --color-text-50: 242 247 243;
+    --color-text-100: 230 239 232;
+    --color-text-200: 213 226 216;
+    --color-text-300: 196 213 200;
+    --color-text-400: 183 203 188;
+    --color-text-500: 107 127 112;
+    --color-text-600: 77 97 82;
+    --color-text-700: 53 71 58;
+    --color-text-800: 35 48 38;
+    --color-text-900: 19 28 22;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 232 245 236;
+    --color-primary-100: 190 229 204;
+    --color-primary-200: 148 212 171;
+    --color-primary-300: 106 196 139;
+    --color-primary-400: 64 179 106;
+    --color-primary-500: 22 163 74;
+    --color-primary-600: 19 135 62;
+    --color-primary-700: 15 108 50;
+    --color-primary-800: 12 80 38;
+    --color-primary-900: 8 52 26;
+
+    /* secondary */
+    --color-secondary-50: 239 252 250;
+    --color-secondary-100: 194 231 227;
+    --color-secondary-200: 149 210 204;
+    --color-secondary-300: 103 190 182;
+    --color-secondary-400: 58 169 159;
+    --color-secondary-500: 13 148 136;
+    --color-secondary-600: 11 128 118;
+    --color-secondary-700: 10 109 100;
+    --color-secondary-800: 8 89 82;
+    --color-secondary-900: 6 69 64;
+
+    /* accent */
+    --color-accent-50: 255 248 235;
+    --color-accent-100: 253 230 190;
+    --color-accent-200: 251 212 145;
+    --color-accent-300: 249 194 101;
+    --color-accent-400: 247 176 56;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 214 138 10;
+    --color-accent-700: 184 119 8;
+    --color-accent-800: 153 99 7;
+    --color-accent-900: 122 79 5;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 239 251 247;
+    --color-alert-info-bg: 232 245 236;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 242 247 243;
+    --color-table-hover: 232 245 236;
+    --color-table-selected: 214 236 221;
+    --color-table-status-approved: 239 251 247;
+    --color-table-status-warning: 255 237 213;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 12 21 16;
+    --color-sidebar-text: 228 242 232;
+    --color-sidebar-hover: 23 37 27;
+    --color-sidebar-icon: 147 171 155;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 19 28 22;
+    --color-header-border: 213 226 216;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 18 32 25;
+    --color-submenu-text: 228 242 232;
+    --color-submenu-hover: 29 49 37;
+    --color-submenu-icon: 147 171 155;
+}
+
+html.dark[data-theme-pair="forest"] {
+    --background: 10, 18, 13;
+    --color-background: 10 18 13;
+    --color-card: 18 31 23;
+
+    /* STATUS COLORS */
+    --color-status-success: 20 184 166;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 51 81 60;
+    --color-border-50: 12 21 15;
+    --color-border-100: 15 26 19;
+    --color-border-200: 31 51 39;
+    --color-border-300: 40 64 47;
+    --color-border-400: 51 81 60;
+    --color-border-500: 107 130 114;
+    --color-border-600: 147 171 155;
+    --color-border-700: 194 216 201;
+    --color-border-800: 213 232 218;
+    --color-border-900: 228 242 232;
+
+    /* TEXT COLORS */
+    --color-text-base: 51 81 60;
+    --color-text-50: 12 21 15;
+    --color-text-100: 15 26 19;
+    --color-text-200: 30 50 38;
+    --color-text-300: 40 64 47;
+    --color-text-400: 51 81 60;
+    --color-text-500: 107 130 114;
+    --color-text-600: 147 171 155;
+    --color-text-700: 194 216 201;
+    --color-text-800: 213 232 218;
+    --color-text-900: 228 242 232;
+
+    --color-switch-thumb: 207 226 213;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 18 48 33;
+    --color-primary-100: 19 71 41;
+    --color-primary-200: 20 94 49;
+    --color-primary-300: 20 117 58;
+    --color-primary-400: 21 140 66;
+    --color-primary-500: 22 163 74;
+    --color-primary-600: 63 184 107;
+    --color-primary-700: 105 205 141;
+    --color-primary-800: 146 226 175;
+    --color-primary-900: 187 247 208;
+
+    /* secondary */
+    --color-secondary-50: 8 43 40;
+    --color-secondary-100: 9 64 59;
+    --color-secondary-200: 10 85 78;
+    --color-secondary-300: 11 106 98;
+    --color-secondary-400: 12 127 117;
+    --color-secondary-500: 13 148 136;
+    --color-secondary-600: 48 173 159;
+    --color-secondary-700: 83 197 182;
+    --color-secondary-800: 118 222 205;
+    --color-secondary-900: 153 246 228;
+
+    /* accent */
+    --color-accent-50: 42 28 5;
+    --color-accent-100: 83 54 6;
+    --color-accent-200: 123 80 7;
+    --color-accent-300: 164 106 9;
+    --color-accent-400: 204 132 10;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 247 176 43;
+    --color-accent-700: 249 194 75;
+    --color-accent-800: 251 212 106;
+    --color-accent-900: 253 230 138;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 48 26 26;
+    --color-alert-warning-bg: 48 38 7;
+    --color-alert-success-bg: 10 46 40;
+    --color-alert-info-bg: 18 48 33;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 15 26 19;
+    --color-table-hover: 23 52 36;
+    --color-table-selected: 29 69 48;
+    --color-table-status-approved: 13 49 38;
+    --color-table-status-warning: 46 36 16;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 18 31 23;
+    --color-sidebar-text: 228 242 232;
+    --color-sidebar-hover: 29 51 37;
+    --color-sidebar-icon: 147 171 155;
+
+    /* Header Colors */
+    --color-header-bg: 18 31 23;
+    --color-header-text: 228 242 232;
+    --color-header-border: 30 50 38;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 24 42 31;
+    --color-submenu-text: 228 242 232;
+    --color-submenu-hover: 40 64 47;
+    --color-submenu-icon: 147 171 155;
+}
+
+html.light[data-theme-pair="sunset"] {
+    --background: 253, 250, 246;
+    --color-background: 253 250 246;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 22 163 74;
+    --color-status-success-foreground: 28 25 23;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 28 25 23;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 28 25 23;
+
+    /* BORDER COLOR */
+    --color-border-base: 205 187 156;
+    --color-border-50: 251 246 239;
+    --color-border-100: 244 235 221;
+    --color-border-200: 232 220 200;
+    --color-border-300: 219 203 178;
+    --color-border-400: 205 187 156;
+    --color-border-500: 139 125 109;
+    --color-border-600: 120 113 108;
+    --color-border-700: 87 83 78;
+    --color-border-800: 68 64 60;
+    --color-border-900: 28 25 23;
+
+    /* TEXT COLORS */
+    --color-text-base: 205 187 156;
+    --color-text-50: 251 246 239;
+    --color-text-100: 244 235 221;
+    --color-text-200: 232 220 200;
+    --color-text-300: 219 203 178;
+    --color-text-400: 205 187 156;
+    --color-text-500: 139 125 109;
+    --color-text-600: 120 113 108;
+    --color-text-700: 87 83 78;
+    --color-text-800: 68 64 60;
+    --color-text-900: 28 25 23;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 253 238 226;
+    --color-primary-100: 241 203 183;
+    --color-primary-200: 229 169 140;
+    --color-primary-300: 218 134 98;
+    --color-primary-400: 206 100 55;
+    --color-primary-500: 194 65 12;
+    --color-primary-600: 166 55 10;
+    --color-primary-700: 138 46 9;
+    --color-primary-800: 109 36 7;
+    --color-primary-900: 81 26 5;
+
+    /* secondary */
+    --color-secondary-50: 253 242 247;
+    --color-secondary-100: 246 201 221;
+    --color-secondary-200: 239 161 196;
+    --color-secondary-300: 233 120 170;
+    --color-secondary-400: 226 80 145;
+    --color-secondary-500: 219 39 119;
+    --color-secondary-600: 189 34 103;
+    --color-secondary-700: 159 29 87;
+    --color-secondary-800: 129 23 70;
+    --color-secondary-900: 99 18 54;
+
+    /* accent */
+    --color-accent-50: 254 251 232;
+    --color-accent-100: 250 237 187;
+    --color-accent-200: 246 222 142;
+    --color-accent-300: 242 208 98;
+    --color-accent-400: 238 193 53;
+    --color-accent-500: 234 179 8;
+    --color-accent-600: 202 155 7;
+    --color-accent-700: 171 131 6;
+    --color-accent-800: 139 106 4;
+    --color-accent-900: 107 82 3;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 251 235;
+    --color-alert-success-bg: 240 253 244;
+    --color-alert-info-bg: 253 238 226;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 251 246 239;
+    --color-table-hover: 253 238 226;
+    --color-table-selected: 251 220 198;
+    --color-table-status-approved: 240 253 244;
+    --color-table-status-warning: 254 243 199;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 26 16 8;
+    --color-sidebar-text: 246 237 228;
+    --color-sidebar-hover: 44 28 13;
+    --color-sidebar-icon: 168 147 131;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 28 25 23;
+    --color-header-border: 232 220 200;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 34 20 8;
+    --color-submenu-text: 246 237 228;
+    --color-submenu-hover: 58 36 18;
+    --color-submenu-icon: 168 147 131;
+}
+
+html.dark[data-theme-pair="sunset"] {
+    --background: 20, 11, 5;
+    --color-background: 20 11 5;
+    --color-card: 33 20 8;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 110 72 38;
+    --color-border-50: 24 14 6;
+    --color-border-100: 28 17 7;
+    --color-border-200: 74 47 23;
+    --color-border-300: 92 59 30;
+    --color-border-400: 110 72 38;
+    --color-border-500: 125 106 92;
+    --color-border-600: 168 147 131;
+    --color-border-700: 221 204 188;
+    --color-border-800: 235 224 213;
+    --color-border-900: 246 237 228;
+
+    /* TEXT COLORS */
+    --color-text-base: 110 72 38;
+    --color-text-50: 24 14 6;
+    --color-text-100: 28 17 7;
+    --color-text-200: 74 47 23;
+    --color-text-300: 92 59 30;
+    --color-text-400: 110 72 38;
+    --color-text-500: 125 106 92;
+    --color-text-600: 168 147 131;
+    --color-text-700: 221 204 188;
+    --color-text-800: 235 224 213;
+    --color-text-900: 246 237 228;
+
+    --color-switch-thumb: 224 210 196;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 58 29 10;
+    --color-primary-100: 93 41 10;
+    --color-primary-200: 128 53 11;
+    --color-primary-300: 164 64 11;
+    --color-primary-400: 199 76 12;
+    --color-primary-500: 234 88 12;
+    --color-primary-600: 239 120 51;
+    --color-primary-700: 244 152 91;
+    --color-primary-800: 249 183 131;
+    --color-primary-900: 254 215 170;
+
+    /* secondary */
+    --color-secondary-50: 47 14 31;
+    --color-secondary-100: 85 26 55;
+    --color-secondary-200: 123 37 80;
+    --color-secondary-300: 160 49 104;
+    --color-secondary-400: 198 60 129;
+    --color-secondary-500: 236 72 153;
+    --color-secondary-600: 239 97 167;
+    --color-secondary-700: 241 123 181;
+    --color-secondary-800: 244 148 195;
+    --color-secondary-900: 246 173 209;
+
+    /* accent */
+    --color-accent-50: 43 36 5;
+    --color-accent-100: 81 65 6;
+    --color-accent-200: 119 93 6;
+    --color-accent-300: 158 122 7;
+    --color-accent-400: 196 150 7;
+    --color-accent-500: 234 179 8;
+    --color-accent-600: 239 194 40;
+    --color-accent-700: 244 210 73;
+    --color-accent-800: 249 225 105;
+    --color-accent-900: 254 240 138;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 51 26 23;
+    --color-alert-warning-bg: 51 40 7;
+    --color-alert-success-bg: 11 42 32;
+    --color-alert-info-bg: 58 29 10;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 28 17 7;
+    --color-table-hover: 58 36 18;
+    --color-table-selected: 74 47 23;
+    --color-table-status-approved: 15 42 28;
+    --color-table-status-warning: 58 44 12;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 33 20 8;
+    --color-sidebar-text: 246 237 228;
+    --color-sidebar-hover: 58 36 18;
+    --color-sidebar-icon: 168 147 131;
+
+    /* Header Colors */
+    --color-header-bg: 33 20 8;
+    --color-header-text: 246 237 228;
+    --color-header-border: 58 36 18;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 44 28 13;
+    --color-submenu-text: 246 237 228;
+    --color-submenu-hover: 74 47 23;
+    --color-submenu-icon: 168 147 131;
+}
+
+html.light[data-theme-pair="high-contrast"] {
+    --background: 255, 255, 255;
+    --color-background: 255 255 255;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 20 83 45;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 124 45 18;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 127 29 29;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 31 41 55;
+    --color-border-50: 255 255 255;
+    --color-border-100: 245 245 245;
+    --color-border-200: 17 17 17;
+    --color-border-300: 0 0 0;
+    --color-border-400: 31 41 55;
+    --color-border-500: 55 65 81;
+    --color-border-600: 31 41 55;
+    --color-border-700: 17 24 39;
+    --color-border-800: 0 0 0;
+    --color-border-900: 0 0 0;
+
+    /* TEXT COLORS */
+    --color-text-base: 31 41 55;
+    --color-text-50: 255 255 255;
+    --color-text-100: 245 245 245;
+    --color-text-200: 17 17 17;
+    --color-text-300: 0 0 0;
+    --color-text-400: 31 41 55;
+    --color-text-500: 55 65 81;
+    --color-text-600: 31 41 55;
+    --color-text-700: 17 24 39;
+    --color-text-800: 0 0 0;
+    --color-text-900: 0 0 0;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 245 245 245;
+    --color-primary-100: 229 229 229;
+    --color-primary-200: 196 196 196;
+    --color-primary-300: 143 143 143;
+    --color-primary-400: 69 69 69;
+    --color-primary-500: 26 26 26;
+    --color-primary-600: 13 13 13;
+    --color-primary-700: 8 8 8;
+    --color-primary-800: 4 4 4;
+    --color-primary-900: 0 0 0;
+
+    /* secondary */
+    --color-secondary-50: 245 245 245;
+    --color-secondary-100: 229 229 229;
+    --color-secondary-200: 196 196 196;
+    --color-secondary-300: 143 143 143;
+    --color-secondary-400: 69 69 69;
+    --color-secondary-500: 26 26 26;
+    --color-secondary-600: 13 13 13;
+    --color-secondary-700: 8 8 8;
+    --color-secondary-800: 4 4 4;
+    --color-secondary-900: 0 0 0;
+
+    /* accent */
+    --color-accent-50: 253 241 226;
+    --color-accent-100: 238 209 183;
+    --color-accent-200: 224 178 139;
+    --color-accent-300: 209 146 96;
+    --color-accent-400: 195 115 52;
+    --color-accent-500: 180 83 9;
+    --color-accent-600: 158 73 8;
+    --color-accent-700: 135 62 7;
+    --color-accent-800: 113 52 6;
+    --color-accent-900: 90 41 5;
+
+    --color-destructive: 153 27 27;
+    --color-destructive-foreground: 127 29 29;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 255 255 255;
+    --color-alert-warning-bg: 255 255 255;
+    --color-alert-success-bg: 255 255 255;
+    --color-alert-info-bg: 255 255 255;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 245 245 245;
+    --color-table-hover: 235 235 235;
+    --color-table-selected: 214 214 214;
+    --color-table-status-approved: 255 255 255;
+    --color-table-status-warning: 255 255 255;
+
+    /* Achromatic, but not the solid black the emphasized borders use. */
+    --color-skeleton: 212 212 212;
+    --color-skeleton-strong: 163 163 163;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 0 0 0;
+    --color-sidebar-text: 255 255 255;
+    --color-sidebar-hover: 51 51 51;
+    --color-sidebar-icon: 255 255 255;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 0 0 0;
+    --color-header-border: 17 17 17;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 0 0 0;
+    --color-submenu-text: 255 255 255;
+    --color-submenu-hover: 51 51 51;
+    --color-submenu-icon: 255 255 255;
+
+    /* SEMANTIC BADGE COLORS — AAA-targeting */
+    --badge-info-bg: 255 255 255;
+    --badge-info-text: 23 37 84;
+    --badge-info-border: 23 37 84;
+    --badge-warning-bg: 255 255 255;
+    --badge-warning-text: 87 45 5;
+    --badge-warning-border: 87 45 5;
+    --badge-success-bg: 255 255 255;
+    --badge-success-text: 5 46 22;
+    --badge-success-border: 5 46 22;
+    --badge-error-bg: 255 255 255;
+    --badge-error-text: 105 12 12;
+    --badge-error-border: 105 12 12;
+    --badge-default-bg: 255 255 255;
+    --badge-default-text: 17 17 17;
+    --badge-default-border: 17 17 17;
+    --badge-secondary-bg: 255 255 255;
+    --badge-secondary-text: 31 41 55;
+    --badge-secondary-border: 75 85 99;
+}
+
+html.dark[data-theme-pair="high-contrast"] {
+    /* Card is #000 here; border-50 is too, so the ground stays one step up. */
+    --color-app-ground: var(--color-border-100);
+    --background: 0, 0, 0;
+    --color-background: 0 0 0;
+    --color-card: 0 0 0;
+
+    /* STATUS COLORS */
+    --color-status-success: 74 222 128;
+    --color-status-success-foreground: 0 0 0;
+    --color-status-warning: 253 224 71;
+    --color-status-warning-foreground: 0 0 0;
+    --color-status-error: 252 165 165;
+    --color-status-error-foreground: 0 0 0;
+
+    /* BORDER COLOR */
+    --color-border-base: 156 163 175;
+    --color-border-50: 0 0 0;
+    --color-border-100: 10 10 10;
+    --color-border-200: 245 245 245;
+    --color-border-300: 255 255 255;
+    --color-border-400: 156 163 175;
+    --color-border-500: 209 213 219;
+    --color-border-600: 229 231 235;
+    --color-border-700: 243 244 246;
+    --color-border-800: 255 255 255;
+    --color-border-900: 255 255 255;
+
+    /* TEXT COLORS */
+    --color-text-base: 156 163 175;
+    --color-text-50: 0 0 0;
+    --color-text-100: 10 10 10;
+    --color-text-200: 245 245 245;
+    --color-text-300: 255 255 255;
+    --color-text-400: 156 163 175;
+    --color-text-500: 209 213 219;
+    --color-text-600: 229 231 235;
+    --color-text-700: 243 244 246;
+    --color-text-800: 255 255 255;
+    --color-text-900: 255 255 255;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 13 13 13;
+    --color-primary-100: 26 26 26;
+    --color-primary-200: 38 38 38;
+    --color-primary-300: 56 56 56;
+    --color-primary-400: 84 84 84;
+    --color-primary-500: 115 115 115;
+    --color-primary-600: 153 153 153;
+    --color-primary-700: 192 192 192;
+    --color-primary-800: 224 224 224;
+    --color-primary-900: 255 255 255;
+
+    /* secondary */
+    --color-secondary-50: 13 13 13;
+    --color-secondary-100: 26 26 26;
+    --color-secondary-200: 38 38 38;
+    --color-secondary-300: 56 56 56;
+    --color-secondary-400: 84 84 84;
+    --color-secondary-500: 115 115 115;
+    --color-secondary-600: 153 153 153;
+    --color-secondary-700: 192 192 192;
+    --color-secondary-800: 224 224 224;
+    --color-secondary-900: 255 255 255;
+
+    /* accent */
+    --color-accent-50: 43 26 5;
+    --color-accent-100: 83 52 6;
+    --color-accent-200: 124 79 7;
+    --color-accent-300: 164 105 9;
+    --color-accent-400: 205 132 10;
+    --color-accent-500: 245 158 11;
+    --color-accent-600: 247 176 43;
+    --color-accent-700: 249 194 75;
+    --color-accent-800: 251 212 106;
+    --color-accent-900: 253 230 138;
+
+    --color-destructive: 252 165 165;
+    --color-destructive-foreground: 0 0 0;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 0 0 0;
+    --color-alert-warning-bg: 0 0 0;
+    --color-alert-success-bg: 0 0 0;
+    --color-alert-info-bg: 0 0 0;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 10 10 10;
+    --color-table-hover: 31 31 31;
+    --color-table-selected: 46 46 46;
+    --color-table-status-approved: 0 0 0;
+    --color-table-status-warning: 0 0 0;
+
+    /* Achromatic, but not the solid white the emphasized borders use. */
+    --color-skeleton: 64 64 64;
+    --color-skeleton-strong: 82 82 82;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 0 0 0;
+    --color-sidebar-text: 255 255 255;
+    --color-sidebar-hover: 51 51 51;
+    --color-sidebar-icon: 255 255 255;
+
+    /* Header Colors */
+    --color-header-bg: 0 0 0;
+    --color-header-text: 255 255 255;
+    --color-header-border: 245 245 245;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 0 0 0;
+    --color-submenu-text: 255 255 255;
+    --color-submenu-hover: 51 51 51;
+    --color-submenu-icon: 255 255 255;
+
+    /* SEMANTIC BADGE COLORS — AAA-targeting */
+    --badge-info-bg: 0 0 0;
+    --badge-info-text: 191 219 254;
+    --badge-info-border: 191 219 254;
+    --badge-warning-bg: 0 0 0;
+    --badge-warning-text: 253 224 71;
+    --badge-warning-border: 253 224 71;
+    --badge-success-bg: 0 0 0;
+    --badge-success-text: 134 239 172;
+    --badge-success-border: 134 239 172;
+    --badge-error-bg: 0 0 0;
+    --badge-error-text: 254 202 202;
+    --badge-error-border: 254 202 202;
+    --badge-default-bg: 0 0 0;
+    --badge-default-text: 245 245 245;
+    --badge-default-border: 245 245 245;
+    --badge-secondary-bg: 0 0 0;
+    --badge-secondary-text: 229 231 235;
+    --badge-secondary-border: 156 163 175;
+}
+
+html.light[data-theme-pair="cappuccino"] {
+    --background: 253, 250, 247;
+    --color-background: 253 250 247;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 15 157 88;
+    --color-status-success-foreground: 33 26 20;
+    --color-status-warning: 217 130 27;
+    --color-status-warning-foreground: 33 26 20;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 33 26 20;
+
+    /* BORDER COLOR */
+    --color-border-base: 195 169 136;
+    --color-border-50: 250 246 241;
+    --color-border-100: 244 236 227;
+    --color-border-200: 231 217 201;
+    --color-border-300: 217 198 177;
+    --color-border-400: 195 169 136;
+    --color-border-500: 125 106 91;
+    --color-border-600: 94 79 67;
+    --color-border-700: 69 57 47;
+    --color-border-800: 48 39 31;
+    --color-border-900: 33 26 20;
+
+    /* TEXT COLORS */
+    --color-text-base: 195 169 136;
+    --color-text-50: 250 246 241;
+    --color-text-100: 244 236 227;
+    --color-text-200: 231 217 201;
+    --color-text-300: 217 198 177;
+    --color-text-400: 195 169 136;
+    --color-text-500: 125 106 91;
+    --color-text-600: 94 79 67;
+    --color-text-700: 69 57 47;
+    --color-text-800: 48 39 31;
+    --color-text-900: 33 26 20;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 246 237 228;
+    --color-primary-100: 225 208 194;
+    --color-primary-200: 203 180 161;
+    --color-primary-300: 182 151 127;
+    --color-primary-400: 160 123 94;
+    --color-primary-500: 139 94 60;
+    --color-primary-600: 119 80 51;
+    --color-primary-700: 98 66 42;
+    --color-primary-800: 78 52 33;
+    --color-primary-900: 58 38 24;
+
+    /* secondary */
+    --color-secondary-50: 249 245 241;
+    --color-secondary-100: 240 228 218;
+    --color-secondary-200: 220 194 174;
+    --color-secondary-300: 191 152 122;
+    --color-secondary-400: 145 100 67;
+    --color-secondary-500: 107 68 43;
+    --color-secondary-600: 91 58 37;
+    --color-secondary-700: 75 48 30;
+    --color-secondary-800: 54 34 22;
+    --color-secondary-900: 32 20 13;
+
+    /* accent */
+    --color-accent-50: 253 243 229;
+    --color-accent-100: 246 224 198;
+    --color-accent-200: 239 205 167;
+    --color-accent-300: 231 186 136;
+    --color-accent-400: 224 167 105;
+    --color-accent-500: 217 148 74;
+    --color-accent-600: 186 126 63;
+    --color-accent-700: 154 104 52;
+    --color-accent-800: 123 83 41;
+    --color-accent-900: 92 61 30;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 253 246 236;
+    --color-alert-success-bg: 238 247 242;
+    --color-alert-info-bg: 246 237 228;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 250 246 241;
+    --color-table-hover: 246 237 228;
+    --color-table-selected: 237 223 208;
+    --color-table-status-approved: 238 247 242;
+    --color-table-status-warning: 253 240 221;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 36 26 18;
+    --color-sidebar-text: 245 236 226;
+    --color-sidebar-hover: 58 42 29;
+    --color-sidebar-icon: 179 155 133;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 33 26 20;
+    --color-header-border: 231 217 201;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 44 32 23;
+    --color-submenu-text: 245 236 226;
+    --color-submenu-hover: 63 46 33;
+    --color-submenu-icon: 179 155 133;
+}
+
+html.dark[data-theme-pair="cappuccino"] {
+    --background: 20, 14, 9;
+    --color-background: 20 14 9;
+    --color-card: 42 29 19;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11;
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68;
+    --color-status-error-foreground: 255 255 255;
+
+    /* BORDER COLOR */
+    --color-border-base: 93 69 47;
+    --color-border-50: 26 18 12;
+    --color-border-100: 31 21 14;
+    --color-border-200: 64 46 32;
+    --color-border-300: 77 56 39;
+    --color-border-400: 93 69 47;
+    --color-border-500: 163 144 126;
+    --color-border-600: 200 182 164;
+    --color-border-700: 221 206 192;
+    --color-border-800: 232 221 210;
+    --color-border-900: 245 236 226;
+
+    /* TEXT COLORS */
+    --color-text-base: 93 69 47;
+    --color-text-50: 26 18 12;
+    --color-text-100: 31 21 14;
+    --color-text-200: 58 42 29;
+    --color-text-300: 74 54 38;
+    --color-text-400: 93 69 47;
+    --color-text-500: 163 144 126;
+    --color-text-600: 200 182 164;
+    --color-text-700: 221 206 192;
+    --color-text-800: 232 221 210;
+    --color-text-900: 245 236 226;
+
+    --color-switch-thumb: 232 221 210;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 51 34 15;
+    --color-primary-100: 75 50 25;
+    --color-primary-200: 98 66 34;
+    --color-primary-300: 122 81 44;
+    --color-primary-400: 145 97 53;
+    --color-primary-500: 169 113 63;
+    --color-primary-600: 187 135 86;
+    --color-primary-700: 204 156 109;
+    --color-primary-800: 222 178 132;
+    --color-primary-900: 240 200 155;
+
+    /* secondary */
+    --color-secondary-50: 29 19 12;
+    --color-secondary-100: 38 25 16;
+    --color-secondary-200: 48 32 20;
+    --color-secondary-300: 59 39 25;
+    --color-secondary-400: 65 43 27;
+    --color-secondary-500: 70 47 30;
+    --color-secondary-600: 98 75 58;
+    --color-secondary-700: 128 107 90;
+    --color-secondary-800: 166 149 134;
+    --color-secondary-900: 211 201 191;
+
+    /* accent */
+    --color-accent-50: 58 36 8;
+    --color-accent-100: 90 58 21;
+    --color-accent-200: 122 81 34;
+    --color-accent-300: 153 103 48;
+    --color-accent-400: 185 126 61;
+    --color-accent-500: 217 148 74;
+    --color-accent-600: 224 166 100;
+    --color-accent-700: 232 184 127;
+    --color-accent-800: 239 203 154;
+    --color-accent-900: 246 221 180;
+
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 254 202 202;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 52 26 26;
+    --color-alert-warning-bg: 58 42 8;
+    --color-alert-success-bg: 18 48 31;
+    --color-alert-info-bg: 51 34 15;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 31 21 14;
+    --color-table-hover: 51 36 26;
+    --color-table-selected: 64 44 30;
+    --color-table-status-approved: 18 48 35;
+    --color-table-status-warning: 51 36 15;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 26 18 12;
+    --color-sidebar-text: 245 236 226;
+    --color-sidebar-hover: 51 36 26;
+    --color-sidebar-icon: 163 144 126;
+
+    /* Header Colors */
+    --color-header-bg: 26 18 12;
+    --color-header-text: 245 236 226;
+    --color-header-border: 58 42 29;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 51 36 26;
+    --color-submenu-text: 245 236 226;
+    --color-submenu-hover: 74 54 38;
+    --color-submenu-icon: 163 144 126;
+}
+
+html.light[data-theme-pair="vice"] {
+    --background: 254, 250, 253;
+    --color-background: 254 250 253;
+    --color-card: 255 255 255;
+
+    /* STATUS COLORS */
+    --color-status-success: 13 148 136;
+    --color-status-success-foreground: 33 23 34;
+    --color-status-warning: 234 88 12;
+    --color-status-warning-foreground: 33 23 34;
+    --color-status-error: 220 38 38;
+    --color-status-error-foreground: 33 23 34;
+
+    /* BORDER COLOR */
+    --color-border-base: 209 148 191;
+    --color-border-50: 253 245 250;
+    --color-border-100: 251 233 245;
+    --color-border-200: 242 213 232;
+    --color-border-300: 230 188 217;
+    --color-border-400: 209 148 191;
+    --color-border-500: 124 92 120;
+    --color-border-600: 91 63 90;
+    --color-border-700: 68 47 69;
+    --color-border-800: 47 33 48;
+    --color-border-900: 33 23 34;
+
+    /* TEXT COLORS */
+    --color-text-base: 209 148 191;
+    --color-text-50: 253 245 250;
+    --color-text-100: 251 233 245;
+    --color-text-200: 242 213 232;
+    --color-text-300: 230 188 217;
+    --color-text-400: 209 148 191;
+    --color-text-500: 124 92 120;
+    --color-text-600: 91 63 90;
+    --color-text-700: 68 47 69;
+    --color-text-800: 47 33 48;
+    --color-text-900: 33 23 34;
+
+    --color-switch-thumb: 255 255 255;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 252 239 255;
+    --color-primary-100: 249 204 255;
+    --color-primary-200: 239 153 255;
+    --color-primary-300: 229 102 255;
+    --color-primary-400: 210 51 254;
+    --color-primary-500: 190 0 254;
+    --color-primary-600: 162 0 216;
+    --color-primary-700: 133 0 178;
+    --color-primary-800: 95 0 127;
+    --color-primary-900: 57 0 76;
+
+    /* secondary */
+    --color-secondary-50: 239 249 249;
+    --color-secondary-100: 204 230 230;
+    --color-secondary-200: 153 204 204;
+    --color-secondary-300: 102 178 178;
+    --color-secondary-400: 51 153 153;
+    --color-secondary-500: 0 127 127;
+    --color-secondary-600: 0 108 108;
+    --color-secondary-700: 0 89 89;
+    --color-secondary-800: 0 64 64;
+    --color-secondary-900: 0 38 38;
+
+    /* accent */
+    --color-accent-50: 255 247 245;
+    --color-accent-100: 255 238 235;
+    --color-accent-200: 255 213 204;
+    --color-accent-300: 254 180 163;
+    --color-accent-400: 254 137 112;
+    --color-accent-500: 254 87 51;
+    --color-accent-600: 216 74 43;
+    --color-accent-700: 178 61 36;
+    --color-accent-800: 127 44 26;
+    --color-accent-900: 76 26 15;
+
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 153 27 27;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 254 242 242;
+    --color-alert-warning-bg: 255 244 236;
+    --color-alert-success-bg: 238 250 248;
+    --color-alert-info-bg: 252 239 255;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 253 245 250;
+    --color-table-hover: 252 239 255;
+    --color-table-selected: 249 204 255;
+    --color-table-status-approved: 238 250 248;
+    --color-table-status-warning: 255 232 214;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 25 4 49;
+    --color-sidebar-text: 251 233 245;
+    --color-sidebar-hover: 45 10 82;
+    --color-sidebar-icon: 195 154 212;
+
+    /* Header Colors */
+    --color-header-bg: 255 255 255;
+    --color-header-text: 33 23 34;
+    --color-header-border: 242 213 232;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 36 6 65;
+    --color-submenu-text: 251 233 245;
+    --color-submenu-hover: 53 16 94;
+    --color-submenu-icon: 195 154 212;
+}
+
+html.dark[data-theme-pair="vice"] {
+    --background: 13, 2, 33;
+    --color-background: 13 2 33;
+    --color-card: 36 16 80;
+
+    /* STATUS COLORS */
+    --color-status-success: 16 185 129;
+    --color-status-success-foreground: 13 2 33;
+    --color-status-warning: 251 191 36;
+    --color-status-warning-foreground: 13 2 33;
+    --color-status-error: 251 69 112;
+    --color-status-error-foreground: 13 2 33;
+
+    /* BORDER COLOR */
+    --color-border-base: 138 44 131;
+    --color-border-50: 20 4 48;
+    --color-border-100: 26 6 64;
+    --color-border-200: 84 35 77;
+    --color-border-300: 110 39 103;
+    --color-border-400: 138 44 131;
+    --color-border-500: 197 138 170;
+    --color-border-600: 220 188 230;
+    --color-border-700: 239 214 242;
+    --color-border-800: 248 231 249;
+    --color-border-900: 253 239 249;
+
+    /* TEXT COLORS */
+    --color-text-base: 91 43 168;
+    --color-text-50: 20 4 48;
+    --color-text-100: 26 6 64;
+    --color-text-200: 52 23 107;
+    --color-text-300: 69 32 136;
+    --color-text-400: 91 43 168;
+    --color-text-500: 197 138 170;
+    --color-text-600: 220 188 230;
+    --color-text-700: 239 214 242;
+    --color-text-800: 248 231 249;
+    --color-text-900: 253 239 249;
+
+    --color-switch-thumb: 248 231 249;
+
+    /* MAIN COLORS — primary */
+    --color-primary-50: 57 0 76;
+    --color-primary-100: 95 0 127;
+    --color-primary-200: 133 0 178;
+    --color-primary-300: 162 0 216;
+    --color-primary-400: 181 0 241;
+    --color-primary-500: 190 0 254;
+    --color-primary-600: 203 51 254;
+    --color-primary-700: 216 102 255;
+    --color-primary-800: 229 153 255;
+    --color-primary-900: 242 204 255;
+
+    /* secondary */
+    --color-secondary-50: 7 68 75;
+    --color-secondary-100: 11 114 125;
+    --color-secondary-200: 15 159 174;
+    --color-secondary-300: 19 193 212;
+    --color-secondary-400: 21 216 237;
+    --color-secondary-500: 22 227 249;
+    --color-secondary-600: 69 233 250;
+    --color-secondary-700: 115 239 251;
+    --color-secondary-800: 162 244 252;
+    --color-secondary-900: 208 250 254;
+
+    /* accent */
+    --color-accent-50: 76 33 59;
+    --color-accent-100: 127 55 99;
+    --color-accent-200: 178 76 139;
+    --color-accent-300: 216 93 168;
+    --color-accent-400: 238 102 186;
+    --color-accent-500: 254 109 198;
+    --color-accent-600: 254 138 209;
+    --color-accent-700: 254 167 221;
+    --color-accent-800: 255 196 232;
+    --color-accent-900: 255 226 244;
+
+    --color-destructive: 251 69 112;
+    --color-destructive-foreground: 255 214 225;
+
+    /* ALERT BACKGROUND COLORS */
+    --color-alert-destructive-bg: 58 16 32;
+    --color-alert-warning-bg: 61 42 8;
+    --color-alert-success-bg: 13 58 42;
+    --color-alert-info-bg: 57 0 76;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 26 6 64;
+    --color-table-hover: 42 13 85;
+    --color-table-selected: 52 23 107;
+    --color-table-status-approved: 13 58 42;
+    --color-table-status-warning: 61 42 8;
+
+    /* Sidebar Colors */
+    --color-sidebar-bg: 23 5 56;
+    --color-sidebar-text: 253 239 249;
+    --color-sidebar-hover: 42 13 85;
+    --color-sidebar-icon: 180 140 203;
+
+    /* Header Colors */
+    --color-header-bg: 23 5 56;
+    --color-header-text: 253 239 249;
+    --color-header-border: 52 23 107;
+
+    /* SubMenu Colors */
+    --color-submenu-bg: 46 19 97;
+    --color-submenu-text: 253 239 249;
+    --color-submenu-hover: 61 26 125;
+    --color-submenu-icon: 180 140 203;
+}
+
 html.light,
 html.dark {
+    /* Untouched copy of the page background triple, read back by the
+       .radix-themes rule at the top of this file. */
+    --alga-color-background: var(--color-background);
     --alga-bg: rgb(var(--color-background));
     --alga-fg: rgb(var(--color-text-900));
     --alga-muted: rgb(var(--color-border-50));
@@ -691,6 +2649,25 @@ html.dark {
     --alga-danger: rgb(var(--color-status-error));
     --alga-warning: rgb(var(--color-status-warning));
     --alga-success: rgb(var(--color-status-success));
+}
+
+/* Full-bleed background for the sign-in, password-reset and portal-switch
+   shells. It washes the pair's primary over the pair background instead of
+   literal blue/indigo, so auth follows the tenant's pair — and their branding,
+   which overrides the same primary vars. */
+.auth-page-surface {
+    /* --alga-bg, not --color-background: Radix Themes redeclares the latter
+       inside its wrapper, so the raw token is not resolvable down here. */
+    background-color: var(--alga-bg);
+    background-image: linear-gradient(to bottom right,
+        rgb(var(--color-primary-500) / 0.16) 0%,
+        rgb(var(--color-primary-500) / 0.05) 45%,
+        rgb(var(--color-primary-400) / 0.14) 100%);
+}
+
+/* The high-contrast pair keeps surfaces flat — no translucent washes. */
+html[data-theme-pair="high-contrast"] .auth-page-surface {
+    background-image: none;
 }
 
 /* Give a remote user a caret */
@@ -804,9 +2781,6 @@ html.dark {
     border-color: transparent !important;
   }
 
-  thead tr,
-  thead tr th,
-  table th,
   .rt-TableHeader,
   .rt-TableRow,
   .rt-TableColumnHeaderCell {
@@ -869,6 +2843,28 @@ html.dark {
 
 .switch-root[data-state="checked"] .switch-thumb {
   transform: translateX(17px);
+}
+
+/* High contrast needs more than two neighboring gray track colors to convey
+   state. Invert the track and thumb as the switch moves, so on/off remains
+   unambiguous in both the light and dark variants. */
+html[data-theme-pair="high-contrast"] .switch-root {
+  background-color: rgb(var(--color-card));
+  border: none;
+  box-shadow: inset 0 0 0 2px rgb(var(--color-border-200));
+}
+
+html[data-theme-pair="high-contrast"] .switch-root .switch-thumb {
+  background-color: rgb(var(--color-text-900));
+  box-shadow: none;
+}
+
+html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] {
+  background-color: rgb(var(--color-text-900));
+}
+
+html[data-theme-pair="high-contrast"] .switch-root[data-state="checked"] .switch-thumb {
+  background-color: rgb(var(--color-card));
 }
 
 /* Label styles */
@@ -1047,18 +3043,70 @@ html.dark {
   background: rgb(var(--color-border-200)) !important;
 }
 
-/* Paper-feel background for text editors (light + dark) */
+/* Paper-feel background for text editors: the block should read as a shallow
+   well pressed into the card, not as a panel sitting on it.
+
+   The depth cue is the inset shadow — a tight dark line under the top edge plus
+   a wider falloff — NOT a darker fill. Filling the whole surface is what made an
+   earlier version look disabled in light mode, so the fill stays at the card
+   color and only carries a ~2% scrim that fades out by 40% height, reading as
+   light from above.
+
+   On top of that sit two corner lamps, anchored past the corners and taller than
+   the box so their falloff is horizontal — a wash out of the corner rather than
+   a blob in the middle. Their hues come from the running pair's own tokens, so
+   each theme tints itself. They are deliberately near the threshold of
+   perception: the moment you can name the shape, it is too strong. */
 .editor-paper {
-  background-color: #fefefe;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.03);
+  background:
+    radial-gradient(ellipse 55% 150% at 0% 100%, rgb(var(--color-primary-500) / 0.06) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 130% at 100% 0%, rgb(var(--color-secondary-500) / 0.05) 0%, transparent 65%),
+    linear-gradient(rgb(0 0 0 / 0.022), rgb(0 0 0 / 0.006) 40%),
+    rgb(var(--color-card));
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.1),
+    inset 0 5px 12px -4px rgb(0 0 0 / 0.1),
+    inset 0 0 0 1px rgb(0 0 0 / 0.05);
 }
 
+/* Dark needs roughly half the tint of light for the same apparent strength: the
+   lamps add light against a dark ground instead of subtracting it from a white
+   one, so the same alpha reads far louder. The shadow does the opposite and has
+   to get deeper to stay visible. */
 .dark .editor-paper {
   background:
-    radial-gradient(ellipse 80% 60% at 15% 85%, rgb(45 30 70 / 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 85% 20%, rgb(20 50 65 / 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse 55% 150% at 0% 100%, rgb(var(--color-primary-500) / 0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 130% at 100% 0%, rgb(var(--color-secondary-500) / 0.035) 0%, transparent 65%),
     rgb(var(--color-border-100));
-  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.3), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.05);
+}
+
+/* High contrast opts out of the LAMPS only: its primary/secondary are neutral
+   greys, so a hue tint would just smear the surface. The shading stays, because
+   it costs no contrast — the hard border remains the primary affordance and the
+   shadow is purely additive on top of it. */
+html[data-theme-pair="high-contrast"] .editor-paper {
+  background: rgb(var(--color-card));
+  box-shadow: inset 0 0 0 1px rgb(var(--color-border-300));
+}
+
+/* Same well lit from above, read from whichever wall the ground can show. On
+   white you see the shadow cast down the top inner wall. */
+html.light[data-theme-pair="high-contrast"] .editor-paper {
+  box-shadow:
+    inset 0 2px 3px rgb(0 0 0 / 0.22),
+    inset 0 7px 16px -6px rgb(0 0 0 / 0.18),
+    inset 0 0 0 1px rgb(var(--color-border-300));
+}
+
+/* The dark card is literally #000 — there is no darker to go, so a top shadow
+   would be invisible. The cue flips to the light caught on the bottom wall. */
+html.dark[data-theme-pair="high-contrast"] .editor-paper {
+  box-shadow:
+    inset 0 -3px 6px -2px rgb(255 255 255 / 0.18),
+    inset 0 0 0 1px rgb(var(--color-border-300));
 }
 
 /* Expression editor placeholder (Monaco inline decoration) */
@@ -1069,27 +3117,27 @@ html.dark {
 }
 
 .dark .expression-editor-placeholder {
-  color: #6b7280;
+  color: rgb(var(--color-text-400));
 }
 
 /* ReactFlow dark mode overrides */
 .dark .react-flow__minimap {
-  background-color: #334155;
-  border: 1px solid #475569;
+  background-color: rgb(var(--color-border-200));
+  border: 1px solid rgb(var(--color-border-300));
   border-radius: 6px;
 }
 
 .dark .react-flow__controls {
-  background: #1e293b;
-  border: 1px solid #475569;
+  background: rgb(var(--color-border-100));
+  border: 1px solid rgb(var(--color-border-300));
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .dark .react-flow__controls-button {
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
-  fill: #cbd5e1;
+  background: rgb(var(--color-border-100));
+  border-bottom: 1px solid rgb(var(--color-border-200));
+  fill: rgb(var(--color-text-700));
 }
 
 .dark .react-flow__controls-button:last-child {
@@ -1097,7 +3145,7 @@ html.dark {
 }
 
 .dark .react-flow__controls-button:hover {
-  background: #334155;
+  background: rgb(var(--color-border-200));
 }
 
 /* Override BlockNote theme so parent background shows through (light + dark) */

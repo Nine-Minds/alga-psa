@@ -127,7 +127,8 @@ describe('generateManualInvoice structured errors', () => {
       valid: false,
       code: 'NO_BILLING_EMAIL',
       params: { clientName: 'Omni Energy Partners' },
-      error: 'Cannot generate invoice: No billing email address for "Omni Energy Partners".',
+      error: 'Cannot generate invoice: No billing email address for "Omni Energy Partners". ' +
+        'Please set a billing contact, billing email, or a billing/default location email before generating invoices.',
     });
 
     const result = await generateManualInvoice(request);

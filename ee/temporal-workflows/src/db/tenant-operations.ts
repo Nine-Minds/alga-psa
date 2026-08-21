@@ -334,8 +334,27 @@ export async function createTenantInDB(
         clientId = clientResult[0].client_id;
         log.info('Client created', { clientId, clientName, tenantId });
         
-        // Create default location for the MSP client with email from the tenant setup
-        // Insert minimal required fields to satisfy NOT NULL constraints
+        // Create default location for the MSP client with email from the tenant
+        // setup and the billing address captured from Stripe when available.
+        // Fields still unknown fall back to placeholders ('N/A'/'XX'/'Unknown')
+        // to satisfy NOT NULL constraints; the onboarding wizard lets the user
+        // correct them.
+        const billing = input.billingAddress;
+        let countryCode = 'XX';
+        let countryName = 'Unknown';
+        if (billing?.countryCode) {
+          const country = await tenantScopedDb.table('countries')
+            .where({ code: billing.countryCode.toUpperCase() })
+            .first('code', 'name');
+          if (country) {
+            countryCode = country.code;
+            countryName = country.name;
+          } else {
+            log.warn('Stripe billing country not found in countries table', {
+              countryCode: billing.countryCode,
+            });
+          }
+        }
         await tenantScopedDb.table('client_locations')
           .insert({
             location_id: knex.raw('gen_random_uuid()'),
@@ -343,17 +362,25 @@ export async function createTenantInDB(
             tenant: tenantId,
             location_name: 'Main Office',
             email: input.email.toLowerCase(), // default contact email (lowercased)
-            phone: '',
-            address_line1: 'N/A', // required, placeholder per migration convention
-            city: 'N/A', // required by schema
-            country_code: 'XX', // required by schema (ISO-3166 alpha-2)
-            country_name: 'Unknown', // required by schema
+            phone: billing?.phone || '',
+            address_line1: billing?.line1 || 'N/A',
+            address_line2: billing?.line2 || null,
+            city: billing?.city || 'N/A',
+            state_province: billing?.state || null,
+            postal_code: billing?.postalCode || null,
+            country_code: countryCode,
+            country_name: countryName,
             is_default: true,
             is_active: true,
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           });
-        log.info('Default location created', { clientId, email: input.email });
+        log.info('Default location created', {
+          clientId,
+          email: input.email,
+          hasBillingAddress: !!billing,
+          countryCode,
+        });
         
         // Note: Not updating tenant with client_id as column doesn't exist in schema
       }

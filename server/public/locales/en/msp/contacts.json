@@ -332,7 +332,8 @@
       "remove": "Remove phone {{number}}"
     },
     "fields": {
-      "phoneNumber": "Phone Number",
+      "phoneNumber": "Phone",
+      "extension": "Extension",
       "phoneType": "Phone Type",
       "customPhoneType": "Custom Phone Type",
       "customTypePlaceholder": "Select or enter a custom phone type",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Select exactly one default phone number.",
       "phoneRow": "Phone {{number}}",
       "enterCompletePhoneNumber": "Enter a complete phone number.",
+      "includeCountryCallingCode": "Include the country calling code, starting with +.",
       "enterCustomPhoneType": "Enter a custom phone type.",
       "customTypesUnique": "Custom phone type labels must be unique."
     },

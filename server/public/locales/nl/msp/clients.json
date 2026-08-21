@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "E-mailadres",
     "phone": "Telefoon",
+    "extension": "Toestelnummer",
     "phonePlaceholder": "Telefoonnummer",
     "name": "Naam",
     "creating": "Aanmaken...",
@@ -731,7 +732,10 @@
     "deactivateError": "Kan het contract niet deactiveren",
     "updateError": "Kan contract niet updaten",
     "createContract": "Contract aanmaken",
-    "quickAdd": "Snel toevoegen"
+    "quickAdd": "Snel toevoegen",
+    "billingProfile": "Facturatieprofiel",
+    "billingProfileUnassigned": "Niet toegewezen",
+    "billingProfileUpdated": "Facturatieprofiel bijgewerkt"
   },
   "clientContractDialog": {
     "assignTitle": "Wijs contract toe aan klant",
@@ -956,18 +960,19 @@
     "noteUpdatedSuccess": "De notitie over het externe tegoed is bijgewerkt."
   },
   "clientGridCard": {
-    "actions": "Klantacties",
     "quickView": "Snelle weergave",
-    "defaultClient": "Standaardklant",
     "taxExempt": "Belasting vrijgesteld",
     "taxExemptTooltip": "Deze klant is vrijgesteld van belasting. Er wordt geen belasting geheven op zijn facturen",
-    "type": "Type:",
-    "address": "Adres:",
-    "phone": "Telefoon:",
-    "url": "URL:",
     "clientActions": "Klantacties",
     "default": "Standaard",
-    "selectClient": "Selecteer klant {{name}}"
+    "selectClient": "Selecteer klant {{name}}",
+    "openTickets_one": "{{count}} open",
+    "openTickets_other": "{{count}} open",
+    "lifecycle": {
+      "prospect": "Prospect",
+      "former": "Voormalig"
+    },
+    "noContactDetails": "Geen contactgegevens"
   },
   "clientLanguagePreference": {
     "title": "Taalinstellingen van de client",
@@ -1349,6 +1354,7 @@
         "notes": "Opmerkingen",
         "notesHelper": "Aanvullende opmerkingen over deze locatie",
         "phone": "Telefoon",
+        "extension": "Toestelnummer",
         "phoneHelper": "Telefoonnummer voor deze locatie",
         "placeholder": {
           "addressLine1": "Voer adres in *",
@@ -1366,7 +1372,10 @@
         "stateProvince": "Staat/Provincie",
         "stateProvinceHelper": "Naam van staat of provincie",
         "taxRegion": "Belastingregio",
-        "taxRegionHelper": "Selecteer de toepasselijke belastingregio"
+        "taxRegionHelper": "Selecteer de toepasselijke belastingregio",
+        "defaultBillingProfile": "Standaard facturatieprofiel",
+        "defaultBillingProfileNone": "Geen",
+        "defaultBillingProfileHelper": "Nieuwe tickets op deze locatie starten met dit facturatieprofiel. Het kan altijd op het ticket worden gewijzigd."
       },
       "listTitle": "Locaties",
       "loading": "Locaties laden...",
@@ -1602,6 +1611,54 @@
       "loadFailed": "Kan contactpersoon niet laden."
     }
   },
+  "clientBillingProfiles": {
+    "title": "Facturatieprofielen",
+    "description": "Factureer afzonderlijke locaties, entiteiten of vestigingen binnen deze klant. Kosten worden aan een profiel toegewezen via het contract, de contractregel of het werkitem waar ze vandaan komen; wat niet is toegewezen valt terug op het standaardprofiel.",
+    "loading": "Facturatieprofielen laden…",
+    "defaultBadge": "Standaard",
+    "rename": "Naam wijzigen",
+    "makeDefault": "Als standaard instellen",
+    "archive": "Archiveren",
+    "delete": "Verwijderen",
+    "restore": "Herstellen",
+    "archivedHeading": "Gearchiveerd",
+    "addLabel": "Facturatieprofiel toevoegen",
+    "addPlaceholder": "bijv. Vestiging Noord",
+    "addButton": "Profiel toevoegen",
+    "created": "Facturatieprofiel “{{name}}” aangemaakt",
+    "renamed": "Facturatieprofiel hernoemd",
+    "madeDefault": "“{{name}}” is nu het standaard facturatieprofiel",
+    "archived": "“{{name}}” gearchiveerd",
+    "deleted": "“{{name}}” verwijderd",
+    "restored": "“{{name}}” hersteld",
+    "settings": "Facturatie-instellingen"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Facturatiesegmenten",
+    "restrictedHint": "Deze gebruiker ziet alleen de hieronder geselecteerde segmenten.",
+    "allHint": "Deze gebruiker ziet alle facturatiesegmenten, ook later toegevoegde.",
+    "save": "Segmenttoegang opslaan",
+    "saved": "Portaalsegmenttoegang bijgewerkt",
+    "emptyWarning": "Selecteer minstens één segment, of zet de beperking uit om ze allemaal te tonen."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Instellingen facturatieprofiel opgeslagen",
+    "inherited": "Geërfd: {{value}}",
+    "notSet": "Niet ingesteld",
+    "billsSeparately": "Apart factureren",
+    "billsSeparatelyHint": "Maak een aparte factuur voor dit profiel, met een eigen factuuradres, betaalmethode en saldo.",
+    "billToName": "Factuurnaam",
+    "billingEmail": "Factuur-e-mail",
+    "poNumber": "Inkoopordernummer",
+    "taxIdNumber": "Btw-nummer",
+    "taxExemptionCertificate": "Vrijstellingsverklaring",
+    "invoiceDeliveryMethod": "Factuurverzending",
+    "billingCycle": "Facturatiecyclus",
+    "paymentTerms": "Betalingsvoorwaarden",
+    "taxExempt": "Btw-vrijgesteld",
+    "taxExemptInherited": "Geërfd van de klant ({{value}})",
+    "regionNote": "De belastingregio wordt hier niet ingesteld. Die volgt de plaats van levering — de dienst, dan de locatie van de contractregel, dan de standaard van de klant."
+  },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",
     "scheduleHelp": "Controles draaien dagelijks om 09:00 UTC. Opslaan verzendt niets onmiddellijk.",
@@ -1620,9 +1677,26 @@
     "percentRangeError": "Voer een geheel getal van 1 tot 100 in",
     "notifyClient": "De facturatie-ontvanger van de klant ook e-mailen",
     "notifyClientHelp": "Verstuurt de melding naar de canonieke facturatie-ontvanger van de klant",
+    "replenishmentTier": "Wanneer een melding afgaat",
+    "replenishmentNotifyOnly": "Alleen melden",
+    "replenishmentDraft": "Conceptaanvullingsfactuur maken en melden",
+    "replenishmentAutoIssue": "Aanvullingsfactuur maken en uitgeven",
+    "replenishmentAmount": "Tegoedaanvullingsbedrag",
+    "replenishmentAmountHelp": "Bedrag in de geselecteerde valuta. Pakketmeldingen gebruiken de minuten hieronder.",
+    "replenishmentAmountError": "Voer een positief aanvullingsbedrag in de geselecteerde valuta in",
+    "replenishmentMinutes": "Pakketaanvulling in minuten",
+    "replenishmentMinutesError": "Voer een positief geheel aantal minuten in",
+    "replenishmentHorizon": "Aanvulling overslaan binnen dit aantal dagen voor het einde van het contract",
+    "replenishmentHorizonError": "Voer een aantal dagen van 0 tot 3650 in",
     "save": "Opslaan",
     "saveSuccess": "Prepaid-saldomeldinginstellingen opgeslagen",
     "saveError": "Prepaid-saldomeldinginstellingen konden niet worden opgeslagen",
-    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen"
+    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen",
+    "contractOverrideTitle": "Contractaanvullingsoverschrijving",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Standaard van klant gebruiken",
+    "saveContractOverride": "Contractoverschrijving opslaan",
+    "contractSaveSuccess": "Contractaanvullingsbeleid opgeslagen",
+    "contractSaveError": "Contractaanvullingsbeleid kon niet worden opgeslagen"
   }
 }

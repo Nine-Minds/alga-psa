@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "Numero di telefono",
+      "extension": "Interno",
       "phoneType": "Tipo di telefono",
       "customPhoneType": "Tipo di telefono personalizzato",
       "customTypePlaceholder": "Seleziona o inserisci un tipo di telefono personalizzato",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Seleziona esattamente un numero di telefono predefinito.",
       "phoneRow": "Telefono {{number}}",
       "enterCompletePhoneNumber": "Inserisci un numero di telefono completo.",
+      "includeCountryCallingCode": "Includi il prefisso internazionale, iniziando con +.",
       "enterCustomPhoneType": "Inserisci un tipo di telefono personalizzato.",
       "customTypesUnique": "Le etichette dei tipi di telefono personalizzati devono essere univoche."
     },

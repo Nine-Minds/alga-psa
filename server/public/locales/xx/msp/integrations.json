@@ -722,7 +722,8 @@
             "consentMissing": "11111",
             "expired": "11111",
             "generic": "11111",
-            "validationFailed": "11111"
+            "validationFailed": "11111",
+            "tokenRejected": "11111"
           },
           "cippServerLabel": "11111",
           "connectingSuffix": "11111",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "11111",
               "globalAdmin": "11111",
-              "partnerRelationship": "11111"
+              "partnerRelationship": "11111",
+              "lighthouse": "11111"
             }
           },
           "directReassurance": "11111",
@@ -1881,6 +1883,7 @@
         "environmentProduction": "11111",
         "environmentSandbox": "11111",
         "errors": {
+          "automatedSalesTax": "11111",
           "disconnect": "11111",
           "load": "11111",
           "saveCredentials": "11111"
@@ -1904,7 +1907,19 @@
         "storedClientSecret": "11111 {{value}} 11111",
         "tenantOauthDescription": "11111",
         "tenantOauthTitle": "11111",
-        "title": "11111"
+        "title": "11111",
+        "automatedSalesTax": {
+          "disabledMessage": "11111",
+          "enabledMessage": "11111",
+          "hint": "11111",
+          "label": "11111"
+        },
+        "credentialSource": {
+          "app": "11111",
+          "none": "11111",
+          "tenant": "11111"
+        },
+        "setupGuideLink": "11111"
       },
       "sync": {
         "healthCardTitle": "11111",
@@ -1993,6 +2008,15 @@
         "errors": {
           "previewFailed": "11111",
           "executeFailed": "11111"
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "11111 {{name}} 11111 {{description}} 11111",
+        "labelWithId": "11111 {{label}} 11111 {{id}} 11111",
+        "labelWithRate": "11111 {{name}} 11111 {{rate}} 11111",
+        "pseudo": {
+          "nonTaxable": "11111",
+          "taxable": "11111"
         }
       }
     },

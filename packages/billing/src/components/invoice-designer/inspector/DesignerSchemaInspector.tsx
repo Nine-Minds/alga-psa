@@ -264,7 +264,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
       <label htmlFor={`${domId}-search`} className="text-xs text-slate-500 block mb-1">
         {label}
       </label>
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-2 dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-surface-100))]">
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-2 dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))]">
         <div className="text-[10px] uppercase tracking-wide text-slate-500">Current</div>
         <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{currentLabel}</div>
         <div className="text-[11px] font-mono text-slate-500">{normalizedBinding || 'Unbound'}</div>

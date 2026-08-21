@@ -4,6 +4,16 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string): string {
@@ -81,6 +91,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       if (typeof columnOrCriteria === 'function') {
         const scopedWhere: any = {
           where: vi.fn(() => scopedWhere),
+          orWhere: vi.fn(() => scopedWhere),
           orWhereNull: vi.fn(() => scopedWhere),
         };
         columnOrCriteria.call(scopedWhere);
@@ -101,6 +112,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       );
       return builder;
     }),
+    orWhere: vi.fn(() => builder),
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
@@ -108,6 +120,10 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     }),
     whereNotNull: vi.fn((column: string) => {
       resultRows = resultRows.filter((row) => row[normalizeColumn(column)] != null);
+      return builder;
+    }),
+    whereNull: vi.fn((column: string) => {
+      resultRows = resultRows.filter((row) => row[normalizeColumn(column)] == null);
       return builder;
     }),
     whereNotIn: vi.fn((column: string, values: any[]) => {
@@ -327,7 +343,21 @@ vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () 
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;

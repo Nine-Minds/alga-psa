@@ -80,6 +80,8 @@ Seeding helpers: `seedCustomer` (supports `active: false`), `seedInvoice`,
 | Voids | `voidInvoice` zeroes amounts and stamps a `Voided` private note — the exact shape the drift detector's heuristic matches |
 | CDC | Every mutation journals against a deterministic logical clock; `fetchChanges(since)` replays latest entity state with `deleted` flags. Use `sim.now()` as the cursor between phases |
 | Preferences | `getPreferences()` reports `AutoApplyCredit` from the option |
+| Sales tax | `new QboSimulator({ automatedSalesTax: { defaultTaxCodeId } })` computes `TxnTaxDetail` from each line's `TaxCodeRef` against seeded `TaxCode`/`TaxRate` entities: `NON` is exempt, `TAX` and an **absent** code both resolve to the default jurisdiction, any other id is used as sent, and the transaction-level `TxnTaxCodeRef` is overwritten with AST's own — all faithful to Intuit's documented behavior |
+| Tax catalog | `seedTaxRate` / `seedTaxCode` back the paged `SELECT * FROM TaxCode` and `SELECT Id, RateValue FROM TaxRate` queries the mapping UI issues. Seed the `TAX`/`NON` pseudo codes with `{ pseudo: true }` — Intuit returns them with no `Active` field, which is why an `Active = true` filter must not be pushed server-side |
 
 ## What it refuses to fake
 

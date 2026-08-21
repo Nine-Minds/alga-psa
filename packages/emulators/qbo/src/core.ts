@@ -26,6 +26,12 @@ export class QboWireError extends Error {
 export interface QboEmulatorConfig {
   autoApplyCredits: boolean;
   taxAdjustmentCents: number;
+  /**
+   * TaxCode id AST resolves a TAX-marked (or code-less) line to, standing in
+   * for Intuit's jurisdiction lookup. Null turns Automated Sales Tax off, so
+   * created invoices carry no TxnTaxDetail — the non-AST company file.
+   */
+  automatedSalesTaxDefaultTaxCodeId: string | null;
 }
 
 /**
@@ -64,6 +70,11 @@ export class QboEmulatorCore implements EmulatorCore {
     if (config.taxAdjustmentCents !== undefined) {
       this.sim.options.taxAdjustmentCents = config.taxAdjustmentCents;
     }
+    if (config.automatedSalesTaxDefaultTaxCodeId !== undefined) {
+      this.sim.options.automatedSalesTax = config.automatedSalesTaxDefaultTaxCodeId
+        ? { defaultTaxCodeId: config.automatedSalesTaxDefaultTaxCodeId }
+        : undefined;
+    }
     return this.config();
   }
 
@@ -71,6 +82,7 @@ export class QboEmulatorCore implements EmulatorCore {
     return {
       autoApplyCredits: Boolean(this.sim.options.autoApplyCredits),
       taxAdjustmentCents: this.sim.options.taxAdjustmentCents ?? 0,
+      automatedSalesTaxDefaultTaxCodeId: this.sim.options.automatedSalesTax?.defaultTaxCodeId ?? null,
     };
   }
 

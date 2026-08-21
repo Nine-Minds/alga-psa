@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "Telefonnummer",
+      "extension": "Durchwahl",
       "phoneType": "Telefontyp",
       "customPhoneType": "Benutzerdefinierter Telefontyp",
       "customTypePlaceholder": "Benutzerdefinierten Telefontyp auswählen oder eingeben",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Genau eine Standardtelefonnummer auswählen.",
       "phoneRow": "Telefon {{number}}",
       "enterCompletePhoneNumber": "Geben Sie eine vollständige Telefonnummer ein.",
+      "includeCountryCallingCode": "Geben Sie die Landesvorwahl an, beginnend mit +.",
       "enterCustomPhoneType": "Geben Sie einen benutzerdefinierten Telefontyp ein.",
       "customTypesUnique": "Bezeichnungen benutzerdefinierter Telefontypen müssen eindeutig sein."
     },

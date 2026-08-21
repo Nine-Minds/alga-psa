@@ -343,7 +343,7 @@
       "refresh": "Se produjo un error al actualizar los datos de la factura.",
       "updateFailed": "Error al actualizar la factura",
       "generateFailed": "Error al generar factura",
-      "NO_BILLING_EMAIL": "{{clientName}} no tiene correo electrónico de facturación. Añada una dirección de correo en la ubicación de facturación del cliente e inténtelo de nuevo.",
+      "NO_BILLING_EMAIL": "{{clientName}} no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada e inténtelo de nuevo.",
       "CLIENT_NOT_FOUND": "No se encontró el cliente seleccionado. Actualice la página e inténtelo de nuevo.",
       "SERVICE_NOT_FOUND": "No se encontró el servicio {{serviceId}}. Actualice la página e inténtelo de nuevo.",
       "INVALID_QUANTITY": "La cantidad debe ser mayor que cero.",
@@ -357,7 +357,7 @@
       "salesOrderNotInvoiceable": "Esa orden de venta ya no está disponible para facturar."
     },
     "warnings": {
-      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada una dirección de correo en la ubicación de facturación antes de generar la factura."
+      "noBillingEmail": "Este cliente no tiene correo electrónico de facturación. Añada un contacto de facturación, un correo electrónico de facturación del cliente o una dirección de correo en la ubicación de facturación o predeterminada antes de generar la factura."
     },
     "errorFallback": {
       "title": "algo salió mal",

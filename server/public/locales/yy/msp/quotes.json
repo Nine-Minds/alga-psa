@@ -114,7 +114,9 @@
       "delete": "55555",
       "duplicate": "55555",
       "load": "55555",
-      "send": "55555"
+      "send": "55555",
+      "resend": "55555",
+      "sendReminder": "55555"
     },
     "loading": "55555",
     "rowActions": {

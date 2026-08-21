@@ -25,7 +25,7 @@ export const SecurityPatchingPanel: React.FC<SecurityPatchingPanelProps> = ({
 }) => {
   const { t } = useTranslation('msp/assets');
   if (isLoading) {
-    return <Card className="h-48 animate-pulse bg-gray-50" />;
+    return <Card className="h-48 animate-pulse skeleton-fill" />;
   }
 
   const osVersion = asset.workstation?.os_version || asset.server?.os_version || t('securityPatchingPanel.values.unknown', {

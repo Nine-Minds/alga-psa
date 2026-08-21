@@ -75,7 +75,7 @@ const priorityLabelKey = (priority: ActivityPriority | undefined): 'high' | 'nor
 
 export function NotificationCard({ activity, onViewDetails, onActionComplete }: NotificationCardProps) {
   const { t } = useTranslation('msp/user-activities');
-  const { enabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled } = useFeatureFlag('release-v1-5-feature');
   const { openActivityDrawer } = useActivityDrawer();
   const notification = activity as NotificationActivity;
   const priority = notification.priority as ActivityPriority | undefined;

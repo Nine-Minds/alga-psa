@@ -6,11 +6,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
@@ -34,7 +34,7 @@ import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShor
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
-import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactName, validateEmailAddress, validateEmailAddressField, validatePhoneNumberField } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -89,6 +89,8 @@ interface UserProfileProps {
 
 export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/profile');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const { isAlgaDesk } = useProduct();
@@ -100,12 +102,12 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Rendered beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
 
   // Use SWR hook for avatar - automatically syncs with Header
   const { avatarUrl } = useUserAvatar(user?.user_id, user?.tenant);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [countries, setCountries] = useState<ICountry[]>([]);
-  const [countryCode, setCountryCode] = useState('US');
   const [notificationView, setNotificationView] = useState<NotificationView>('internal');
   const [language, setLanguage] = useState<SupportedLocale | null>(null);
   const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale | undefined>(undefined);
@@ -147,6 +149,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneExtension, setPhoneExtension] = useState('');
   const [timezone, setTimezone] = useState('');
 
   useEffect(() => {
@@ -163,11 +166,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setLastName(currentUser.last_name || '');
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
+        setPhoneExtension(currentUser.phone_extension || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-
-        // Load countries for phone input
-        const countriesData = await getAllCountries();
-        setCountries(countriesData);
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -263,12 +263,15 @@ export default function UserProfile({ userId }: UserProfileProps) {
       }
     });
 
-    // Validate optional phone field if provided
-    if (phone.trim()) {
-      const phoneError = validatePhoneNumber(phone.trim());
-      if (phoneError) {
-        newErrors.phone = phoneError;
+    // Validate optional phone field if provided, and store what the parser made of it
+    let normalizedPhone = phone.trim();
+    if (normalizedPhone) {
+      const phoneResult = translateFieldValidation(validatePhoneNumberField(normalizedPhone), tValidation);
+      if (phoneResult.error) {
+        newErrors.phone = phoneResult.error;
         hasValidationErrors = true;
+      } else {
+        normalizedPhone = phoneResult.value;
       }
     }
 
@@ -284,7 +287,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
         first_name: firstName,
         last_name: lastName,
         email: email,
-        phone: phone,
+        phone: normalizedPhone,
+        phone_extension: phoneExtension,
         timezone: timezone
       });
 
@@ -443,11 +447,13 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   }
                 }}
                 onBlur={() => {
-                  const error = validateEmailAddress(email);
-                  setFieldErrors(prev => ({ ...prev, email: error || '' }));
+                  const result = translateFieldValidation(validateEmailAddressField(email), tValidation);
+                  setFieldErrors(prev => ({ ...prev, email: result.error || '' }));
+                  setFieldWarnings(prev => ({ ...prev, email: result.warnings }));
                 }}
                 className={fieldErrors.email ? 'border-destructive' : ''}
               />
+              <FieldWarnings warnings={fieldWarnings.email ?? []} />
               {fieldErrors.email && (
                 <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>
               )}
@@ -457,6 +463,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 id="phone"
                 label={t('profile.fields.phoneNumber.label')}
                 value={phone}
+                extension={phoneExtension}
+                onExtensionChange={setPhoneExtension}
+                extensionLabel={t('profile.fields.phoneExtension.label')}
                 onChange={(value) => {
                   setPhone(value);
                   // Clear error when user starts typing
@@ -466,17 +475,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 }}
                 onBlur={() => {
                   if (phone.trim()) {
-                    const error = validatePhoneNumber(phone);
-                    setFieldErrors(prev => ({ ...prev, phone: error || '' }));
+                    const result = translateFieldValidation(validatePhoneNumberField(phone), tValidation);
+                    setFieldErrors(prev => ({ ...prev, phone: result.error || '' }));
+                    setFieldWarnings(prev => ({ ...prev, phone: result.warnings }));
                   }
                 }}
-                countryCode={countryCode}
-                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
-                countries={countries}
-                onCountryChange={setCountryCode}
+                countryCode="US"
                 allowExtensions={true}
                 data-automation-id="profile-phone"
               />
+              <FieldWarnings warnings={fieldWarnings.phone ?? []} />
               {fieldErrors.phone && (
                 <p className="text-sm text-destructive mt-1">{fieldErrors.phone}</p>
               )}

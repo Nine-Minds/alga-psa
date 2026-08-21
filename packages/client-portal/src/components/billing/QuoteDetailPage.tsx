@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { displayAddressField, displayCountry } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -103,13 +104,14 @@ function formatClientPortalLocationLines(location: ClientPortalLocationSummary |
   if (!location) return [];
   const lines: string[] = [];
   for (const field of [location.address_line1, location.address_line2, location.address_line3]) {
-    if (typeof field === 'string' && field.trim().length > 0) lines.push(field.trim());
+    const trimmed = displayAddressField(field);
+    if (trimmed) lines.push(trimmed);
   }
   const parts = [location.city, location.state_province, location.postal_code]
-    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .map(displayAddressField)
     .filter((v) => v.length > 0);
   if (parts.length > 0) lines.push(parts.join(', '));
-  const country = (location.country_name || location.country_code || '').trim();
+  const country = displayCountry(location.country_name, location.country_code);
   if (country) lines.push(country);
   return lines;
 }

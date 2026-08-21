@@ -1,0 +1,45 @@
+name: Install ripgrep
+description: >-
+  Install the ripgrep (rg) binary from its GitHub release. A few contract tests
+  shell out to `rg` (execFileSync('rg', ...)) and it is not on the runner by
+  default. We deliberately avoid `apt-get`: the hosted runners' primary Ubuntu
+  mirror (azure.archive.ubuntu.com) is intermittently degraded, and both
+  `apt-get update` and the `.deb` download stall on it — that stall once hung a
+  job for ~6h until it was cancelled. Fetching the static musl binary from the
+  ripgrep release depends only on github.com, which the workflow already relies
+  on for checkout and actions.
+inputs:
+  version:
+    description: ripgrep release version to install (no leading v).
+    required: false
+    default: '14.1.1'
+runs:
+  using: composite
+  steps:
+    - name: Install ripgrep binary
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v rg >/dev/null 2>&1; then
+          echo "ripgrep already present: $(rg --version | head -1)"
+          exit 0
+        fi
+        version='${{ inputs.version }}'
+        dir="ripgrep-${version}-x86_64-unknown-linux-musl"
+        url="https://github.com/BurntSushi/ripgrep/releases/download/${version}/${dir}.tar.gz"
+        ok=
+        for attempt in 1 2 3; do
+          if curl -fsSL --retry 3 --retry-all-errors --connect-timeout 30 --max-time 120 "$url" -o /tmp/rg.tar.gz; then
+            ok=1
+            break
+          fi
+          echo "ripgrep download attempt ${attempt} failed; retrying in 10s" >&2
+          sleep 10
+        done
+        if [ -z "$ok" ]; then
+          echo "failed to download ripgrep after 3 attempts" >&2
+          exit 1
+        fi
+        tar -xzf /tmp/rg.tar.gz -C /tmp
+        sudo install -m 0755 "/tmp/${dir}/rg" /usr/local/bin/rg
+        rg --version | head -1

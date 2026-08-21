@@ -314,6 +314,42 @@
         "title": "Aucun emplacement ajouté pour le moment",
         "description": "Cliquez sur \"Ajouter un emplacement\" pour commencer"
       }
+    },
+    "validation": {
+      "clientName": {
+        "structural": "Veuillez saisir un nom de client valide",
+        "required": "Le nom du client est obligatoire",
+        "emojiOnly": "Ce nom est composé uniquement d’émojis.",
+        "tooShort": "Ce nom ne comporte qu’un seul caractère — est-ce voulu ?",
+        "abbreviationOnly": "Il ne s’agit que d’une abréviation de forme juridique, pas d’un nom.",
+        "repeatedCharacters": "Ce nom répète plusieurs fois le même caractère.",
+        "looksLikeUrl": "Cela ressemble à une adresse web plutôt qu’à un nom.",
+        "noLettersOrNumbers": "Ce nom ne contient ni lettre ni chiffre."
+      },
+      "contactName": {
+        "structural": "Veuillez saisir un nom de contact valide",
+        "placeholder": "Cela ressemble à un espace réservé plutôt qu’à une personne."
+      },
+      "email": {
+        "structural": "Veuillez saisir une adresse e-mail valide",
+        "required": "L’adresse e-mail est obligatoire",
+        "disposableDomain": "{{domain}} est un fournisseur de boîtes jetables.",
+        "reservedDomain": "{{domain}} est réservé à la documentation et aux tests.",
+        "internalDomain": "{{domain}} ne se résout qu’au sein d’un réseau privé."
+      },
+      "url": {
+        "structural": "Veuillez saisir une URL de site web valide (par ex. apple.com)",
+        "ipAddress": "Il s’agit d’une adresse IP et non d’un nom de domaine.",
+        "internalHost": "{{host}} ne se résout qu’au sein d’un réseau privé.",
+        "reservedDomain": "{{host}} est réservé à la documentation et aux tests."
+      },
+      "phone": {
+        "structural": "Veuillez saisir un numéro de téléphone valide",
+        "repeatedDigits": "Ce numéro répète toujours le même chiffre.",
+        "sequentialDigits": "Ce numéro suit le clavier de façon consécutive.",
+        "fictionalRange": "Il se situe dans la plage 555-0100 réservée à la fiction."
+      },
+      "dismissWarning": "Ignorer"
     }
   },
   "commentThread": {

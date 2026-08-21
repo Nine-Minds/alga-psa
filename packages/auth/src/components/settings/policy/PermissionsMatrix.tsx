@@ -478,7 +478,7 @@ export default function PermissionsMatrix() {
         checked={isChecked}
         onChange={(e) => handlePermissionToggle(permission.permission_id, e.target.checked)}
         disabled={!selectedRole || selectedRole === 'all'}
-        className={pendingChange !== undefined ? 'ring-2 ring-purple-500' : ''}
+        className={pendingChange !== undefined ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : ''}
       />
     );
 
@@ -512,7 +512,7 @@ export default function PermissionsMatrix() {
         checked={isChecked}
         onChange={(e) => handlePermissionToggleForRole(permission.permission_id, roleId, e.target.checked)}
         disabled={false}
-        className={pendingChange !== undefined ? 'ring-2 ring-purple-500' : ''}
+        className={pendingChange !== undefined ? 'ring-2 ring-[rgb(var(--color-primary-500))]' : ''}
       />
     );
 

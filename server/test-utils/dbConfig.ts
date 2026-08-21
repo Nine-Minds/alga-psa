@@ -12,7 +12,23 @@ const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '..');
 
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod', 'server'];
-const TEST_DB_NAME = 'test_database';
+
+/**
+ * The suite database, overridable per checkout via `TEST_DB_NAME`.
+ *
+ * Several worktrees of this repo share one PostgreSQL instance, and every suite
+ * that uses `TestContext` drops, recreates and re-migrates this database on
+ * startup. Two worktrees running at once therefore migrate the same database to
+ * two different schemas and tear each other's connections down mid-test — which
+ * surfaces as `Connection terminated unexpectedly`, `terminating connection due
+ * to administrator command`, or constraint errors from a schema the branch under
+ * test never wrote. Those look like product defects and are not.
+ *
+ * Setting `TEST_DB_NAME` per worktree gives each one its own database and makes
+ * the interference impossible. The default is unchanged, so CI and any single
+ * checkout behave exactly as before.
+ */
+const TEST_DB_NAME = process.env.TEST_DB_NAME || 'test_database';
 
 export interface CreateTestDbConnectionOptions {
   databaseName?: string;

@@ -10,6 +10,8 @@ import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
 import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
+import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -24,7 +26,7 @@ import {
   buildCreditNoteVoidedPayload,
 } from '@alga-psa/workflow-streams';
 
-import { validateInvoiceFinalization } from './taxSourceActions';
+import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
 import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
@@ -88,7 +90,7 @@ export async function activateHourBlocksForFinalizedInvoice(
   invoiceId: string,
   knex: Knex | Knex.Transaction,
   tenant: string,
-  userId: string
+  userId: string | null
 ): Promise<void> {
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Row-lock the pending blocks (canonical block_id order — the same order
@@ -208,7 +210,7 @@ async function voidPendingBlockAtFinalization(
   trx: Knex.Transaction,
   tenant: string,
   blockId: string,
-  userId: string,
+  userId: string | null,
   now: string,
   reason: string,
   metadata: Record<string, unknown>,
@@ -568,7 +570,7 @@ type ProjectDepositCreditEvent = {
   creditNoteId: string;
   clientId: string;
   createdAt: string;
-  createdByUserId: string;
+  createdByUserId: string | null;
   amount: number;
   currency: string;
   projectId: string;
@@ -578,7 +580,7 @@ async function issueProjectDepositCreditsForInvoice(
   knex: Knex,
   tenant: string,
   invoice: any,
-  userId: string,
+  userId: string | null,
 ): Promise<ProjectDepositCreditEvent[]> {
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const projectDeposit = await tenantScopedTable(
@@ -671,6 +673,10 @@ async function issueProjectDepositCreditsForInvoice(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        // Credit that came out of an invoice belongs to the entity that
+        // invoice billed — anything else and the credit cannot pay the next
+        // invoice from the same entity (F108).
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoice.invoice_id,
         amount,
         type: 'credit_issuance',
@@ -692,6 +698,7 @@ async function issueProjectDepositCreditsForInvoice(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount,
         remaining_amount: amount,
@@ -1031,7 +1038,13 @@ export async function finalizeInvoiceWithKnex(
   invoiceId: string,
   knex: Knex,
   tenant: string,
-  userId: string
+  userId: string | null,
+  options: {
+    skipAutoApply?: boolean;
+    /** System callers may suppress the issued-state write until delivery is queued. */
+    deferPrepaidActivation?: boolean;
+    markReplenishmentIssued?: boolean;
+  } = {},
 ): Promise<void> {
   let invoice: any;
   let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
@@ -1039,7 +1052,7 @@ export async function finalizeInvoiceWithKnex(
     creditNoteId: string;
     clientId: string;
     createdAt: string;
-    createdByUserId: string;
+    createdByUserId: string | null;
     amount: number;
     currency: string;
     sourceDocumentKind: 'prepayment_invoice' | 'negative_invoice';
@@ -1050,9 +1063,12 @@ export async function finalizeInvoiceWithKnex(
     sourceServicePeriodStart: string | null;
     sourceServicePeriodEnd: string | null;
   } | null = null;
+  let deferPrepaidActivation = options.deferPrepaidActivation === true;
 
   // Validate tax source before finalization
-  const taxValidation = await validateInvoiceFinalization(invoiceId);
+  const taxValidation = userId === null
+    ? await validateInvoiceFinalizationInternal(knex, tenant, invoiceId)
+    : await validateInvoiceFinalization(invoiceId);
   if (isActionMessageError(taxValidation) || isActionPermissionError(taxValidation)) {
     throw expectedInvoiceActionError(getErrorMessage(taxValidation));
   }
@@ -1080,11 +1096,21 @@ export async function finalizeInvoiceWithKnex(
         invoice_id: invoiceId,
         tenant
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {
       throw expectedInvoiceActionError('Invoice not found');
     }
+
+    // Replenishment invoices are payment-gated regardless of whether they are
+    // finalized by the scan worker or by the ordinary manager finalize path.
+    // Lock order is invoice -> alert, matching settlement/payment callers.
+    const linkedReplenishment = await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId })
+      .forUpdate()
+      .first('alert_id');
+    deferPrepaidActivation = deferPrepaidActivation || Boolean(linkedReplenishment);
 
     if (invoice.finalized_at) {
       throw expectedInvoiceActionError('Invoice is already finalized');
@@ -1127,7 +1153,9 @@ export async function finalizeInvoiceWithKnex(
     // Mirrors unfinalize/draft-delete, whose hour-block hooks also run inside
     // the caller's trx (29.8.18 mitigation round 3: pre-fix this ran as a
     // separate transaction after the invoice was already finalized).
-    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    if (!deferPrepaidActivation) {
+      await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    }
 
     // Record audit log
     // await auditLog(
@@ -1149,7 +1177,7 @@ export async function finalizeInvoiceWithKnex(
   // Prepayments and negative invoices use explicit financial-document classification.
   const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
 
-  if (invoice && invoiceCreditHandlingKind === 'prepayment') {
+  if (invoice && invoiceCreditHandlingKind === 'prepayment' && !deferPrepaidActivation) {
     // Prepayment credit is issued here, at finalization — a draft prepayment
     // grants nothing. The invoice carries the chosen expiration date from
     // creation; absent one, the client/default billing settings decide.
@@ -1170,6 +1198,7 @@ export async function finalizeInvoiceWithKnex(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoiceId,
         amount: creditAmount,
         type: 'credit_issuance',
@@ -1187,6 +1216,7 @@ export async function finalizeInvoiceWithKnex(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount,
@@ -1235,6 +1265,7 @@ export async function finalizeInvoiceWithKnex(
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         invoice_id: invoiceId,
         amount: creditAmount,
         type: 'credit_issuance_from_negative_invoice',
@@ -1253,6 +1284,7 @@ export async function finalizeInvoiceWithKnex(
         credit_id: creditNoteId,
         tenant,
         client_id: invoice.client_id,
+        billing_profile_id: invoice.billing_profile_id ?? null,
         transaction_id: transactionId,
         amount: creditAmount,
         remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
@@ -1305,7 +1337,7 @@ export async function finalizeInvoiceWithKnex(
     console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
   }
   // For regular invoices, check if there's available credit to apply
-  else if (invoice && invoice.client_id) {
+  else if (invoice && invoice.client_id && !options.skipAutoApply) {
     // Auto-apply is a policy-controlled *automatic* path only: with the toggle
     // off, the invoice finalizes with credit_applied 0 and manual application
     // (UI / REST) stays available. Eligibility + ordering are enforced inside
@@ -1394,7 +1426,7 @@ export async function finalizeInvoiceWithKnex(
       payload: buildCreditNoteCreatedPayload({
         creditNoteId: createdCreditNote.creditNoteId,
         clientId: createdCreditNote.clientId,
-        createdByUserId: createdCreditNote.createdByUserId,
+        createdByUserId: createdCreditNote.createdByUserId ?? undefined,
         createdAt: createdCreditNote.createdAt,
         amount: createdCreditNote.amount,
         currency: createdCreditNote.currency,
@@ -1410,7 +1442,9 @@ export async function finalizeInvoiceWithKnex(
       ctx: {
         tenantId: tenant,
         occurredAt: createdCreditNote.createdAt,
-        actor: { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId },
+        actor: createdCreditNote.createdByUserId
+          ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
+          : { actorType: 'SYSTEM' },
       },
       idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
     });
@@ -1422,7 +1456,7 @@ export async function finalizeInvoiceWithKnex(
       payload: buildCreditNoteCreatedPayload({
         creditNoteId: event.creditNoteId,
         clientId: event.clientId,
-        createdByUserId: event.createdByUserId,
+        createdByUserId: event.createdByUserId ?? undefined,
         createdAt: event.createdAt,
         amount: event.amount,
         currency: event.currency,
@@ -1437,7 +1471,9 @@ export async function finalizeInvoiceWithKnex(
       ctx: {
         tenantId: tenant,
         occurredAt: event.createdAt,
-        actor: { actorType: 'USER', actorUserId: event.createdByUserId },
+        actor: event.createdByUserId
+          ? { actorType: 'USER', actorUserId: event.createdByUserId }
+          : { actorType: 'SYSTEM' },
       },
       idempotencyKey: `credit_note_created:${event.creditNoteId}`,
     });
@@ -1445,6 +1481,103 @@ export async function finalizeInvoiceWithKnex(
 
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
+
+  if (deferPrepaidActivation && options.markReplenishmentIssued !== false) {
+    await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+      .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+  }
+}
+
+/**
+ * Settle a replenishment invoice exactly once. Replenishment invoices may be
+ * issued/sent while their entitlements remain pending; payment is the only
+ * event that activates the linked credit or hour block. The invoice row is
+ * locked before the entitlement rows and the alert lock is cleared in the
+ * same transaction, so concurrent payment/status callbacks cannot mint twice.
+ */
+export async function settlePrepaidReplenishmentInvoice(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string | null = null,
+): Promise<void> {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .forUpdate()
+      .first();
+    if (!invoice || invoice.status !== 'paid') return;
+
+    // Always acquire invoice before alert. Payment callers commonly already
+    // hold the invoice lock; reversing this order creates an invoice/alert
+    // deadlock against finalization and other status transitions.
+    const alert = await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId })
+      .forUpdate()
+      .first();
+    if (!alert) return;
+
+    const handlingKind = classifyInvoiceCreditHandling(invoice);
+    if (handlingKind === 'prepayment') {
+      const alreadyIssued = await tenantScopedTable(trx, tenant, 'transactions')
+        .where({ invoice_id: invoiceId, type: 'credit_issuance' })
+        .first('transaction_id');
+      if (!alreadyIssued) {
+        const now = new Date().toISOString();
+        const creditAmount = Number(invoice.subtotal);
+        const currencyCode = String(invoice.currency_code ?? 'USD');
+        const expirationDate = invoice.credit_expiration_date
+          ? new Date(invoice.credit_expiration_date).toISOString()
+          : await resolveCreditExpirationDate(trx, tenant, invoice.client_id);
+        const lastTransaction = await tenantScopedTable(trx, tenant, 'transactions')
+          .where({ client_id: invoice.client_id })
+          .orderBy('created_at', 'desc')
+          .first();
+        const transactionId = uuidv4();
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
+          transaction_id: transactionId,
+          client_id: invoice.client_id,
+          invoice_id: invoiceId,
+          amount: creditAmount,
+          type: 'credit_issuance',
+          status: 'completed',
+          description: 'Credit issued from paid replenishment invoice',
+          created_at: now,
+          balance_after: (Number(lastTransaction?.balance_after) || 0) + creditAmount,
+          tenant,
+          expiration_date: expirationDate,
+          currency_code: currencyCode,
+        });
+        await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
+          credit_id: uuidv4(),
+          tenant,
+          client_id: invoice.client_id,
+          transaction_id: transactionId,
+          amount: creditAmount,
+          remaining_amount: creditAmount,
+          created_at: now,
+          expiration_date: expirationDate,
+          is_expired: false,
+          updated_at: now,
+          currency_code: currencyCode,
+        });
+      }
+    }
+
+    await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
+    await tenantScopedTable(trx, tenant, 'prepaid_balance_alerts')
+      .where({ alert_id: alert.alert_id, replenishment_invoice_id: invoiceId })
+      .update({
+        replenishment_status: null,
+        replenishment_invoice_id: null,
+        replenishment_credit_amount: null,
+        replenishment_bucket_minutes: null,
+        replenishment_attempted_at: null,
+        replenishment_error: null,
+        updated_at: trx.fn.now(),
+      });
+  });
 }
 
 export const unfinalizeInvoice = withAuth(async (
@@ -1469,12 +1602,13 @@ export const unfinalizeInvoice = withAuth(async (
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Check if invoice exists and is finalized. FOR UPDATE: this
-      // transaction later deletes credit_tracking rows (project-deposit
-      // rollback) and then writes the invoice row — locking the invoice row
-      // first matches applyCreditToInvoiceInternal's invoice-then-credit
-      // lock order, so a concurrent credit application queues here instead
-      // of deadlocking against the rollback's credit-row locks.
+      // Check if invoice exists and is finalized. Lock the invoice row first
+      // (invoice row, then credit rows — the shared lock order every credit
+      // writer follows) so the credit reversal below cannot interleave with a
+      // concurrent apply/void on the same invoice. This also matches
+      // applyCreditToInvoiceInternal's invoice-then-credit lock order, so a
+      // concurrent credit application queues here instead of deadlocking
+      // against the rollback's credit-row locks.
       const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .forUpdate()
@@ -1503,6 +1637,12 @@ export const unfinalizeInvoice = withAuth(async (
     // Hour blocks minted by this invoice follow it back to draft — unused
     // blocks return to pending; used blocks abort the whole unfinalization.
     await deactivateHourBlocksForUnfinalizedInvoice(trx, tenant, invoiceId, user.user_id);
+
+    // A draft invoice carries no applied credit: reverse the credit
+    // applications (repeat-safe — already-reversed applications are skipped)
+    // so re-finalizing re-applies credit under the then-current draw-down
+    // policy, symmetric with finalize auto-apply.
+    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_unfinalized');
 
     // When unfinalizing make sure the invoice returns to draft status even if some
     // environments only toggle the status flag without storing finalized_at.
@@ -1823,6 +1963,9 @@ async function updateManualInvoiceItemsInternal(
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
+          // Step 1 of the resolution chain; persistManualInvoiceCharges falls
+          // through to the client default when unset (F033).
+          billing_profile_id: item.billing_profile_id ?? null,
         })),
         client,
         session,
@@ -2032,10 +2175,12 @@ export const hardDeleteInvoice = withAuth(async (
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
-    // 1. Get invoice details. FOR UPDATE: deletion rolls back project-deposit
-    // credit_tracking rows before deleting the invoice row — taking the
-    // invoice row lock first preserves the invoice-then-credit lock order
-    // applyCreditToInvoiceInternal relies on (deadlock avoidance).
+    // 1. Get invoice details. Lock the invoice row first (invoice row, then
+    // credit rows — the shared lock order every credit writer follows) so the
+    // credit reversal below cannot interleave with a concurrent apply/void.
+    // The lock also preserves the invoice-then-credit lock order that
+    // applyCreditToInvoiceInternal relies on before the deletion's
+    // project-deposit credit_tracking rollback.
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({
         invoice_id: invoiceId,
@@ -2066,6 +2211,12 @@ export const hardDeleteInvoice = withAuth(async (
         `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
       );
     }
+
+    // Clear the episode lock before deleting the invoice. The replenishment
+    // FK is intentionally restrictive, so this also makes hard deletion
+    // valid while allowing the next scan to replenish again. Keep this after
+    // deletion guards so a rejected delete does not mutate alert state.
+    await clearPrepaidReplenishmentForInvoice(trx, tenant, invoiceId);
 
     await rollbackProjectDepositCreditsForInvoice(
       trx,
@@ -2102,41 +2253,11 @@ export const hardDeleteInvoice = withAuth(async (
        // TODO: Recalculate client balance after reversals
     }
 
-    // 3. Handle credit applied to this invoice
-    if (invoice.credit_applied > 0) {
-        // Find the credit application transaction
-        const creditAppTransaction = await tenantScopedTable(trx, tenant, 'transactions')
-            .where({
-                invoice_id: invoiceId,
-                type: 'credit_application',
-                tenant: tenant
-            })
-            .first();
-
-        // Find related credit tracking entries that were used
-        const creditTrackingUsed = await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .select('credit_id', 'amount_used');
-
-        // Restore the used amounts back to the original credit_tracking entries
-        for (const usage of creditTrackingUsed) {
-            await tenantScopedTable(trx, tenant, 'credit_tracking')
-                .where({ credit_id: usage.credit_id })
-                .increment('remaining_amount', usage.amount_used)
-                .update({ updated_at: new Date().toISOString() }); // Update timestamp
-        }
-
-        // Delete the credit tracking usage records
-        await tenantScopedTable(trx, tenant, 'credit_tracking_usage')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .delete();
-
-        // Delete the credit application transaction itself. The restored
-        // remaining_amounts above put the credit back in the derived balance.
-        await tenantScopedTable(trx, tenant, 'transactions')
-            .where({ transaction_id: creditAppTransaction?.transaction_id })
-            .delete();
-    }
+    // 3. Handle credit applied to this invoice: restore every application's
+    // credits to the pool through the canonical primitive (repeat-safe, all
+    // application transactions, credit rows locked in stable order) BEFORE the
+    // transaction-history cleanup below deletes the provenance it reads.
+    await reverseCreditApplicationsForInvoice(trx, tenant, invoiceId, user.user_id, 'invoice_deleted');
 
     // Handle credit issued *from* this invoice (if it was negative)
     const creditIssuanceTransaction = await tenantScopedTable(trx, tenant, 'transactions')
@@ -2213,14 +2334,24 @@ export const hardDeleteInvoice = withAuth(async (
       )
       .update({ invoiced: false });
 
-    // 6. Delete other transactions related to the invoice (e.g., invoice_generated, price_adjustment)
+    // 6. Delete other transactions related to the invoice (e.g., invoice_generated,
+    // price_adjustment, and the credit_application/credit_adjustment ledger rows —
+    // restoration already completed above, so this cleanup no longer loses credit).
+    // Allocation rows FK the application transactions, so they go first.
+    await tenantScopedTable(trx, tenant, 'credit_allocations')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
     await tenantScopedTable(trx, tenant, 'transactions')
       .where({
         invoice_id: invoiceId,
         tenant
       })
-      // Exclude types already handled (payment, payment_reversal, credit_application, credit_issuance...)
-      .whereNotIn('type', ['payment', 'payment_reversal', 'credit_application', 'credit_issuance_from_negative_invoice'])
+      // Exclude types already handled (payment, payment_reversal, credit_issuance...)
+      .whereNotIn('type', ['payment', 'payment_reversal', 'credit_issuance_from_negative_invoice'])
       .delete();
 
     // 7. Delete join records

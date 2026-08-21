@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  getMicrosoftGraphBaseUrl,
+  getMicrosoftGraphBetaBaseUrl,
+} from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 /**
  * The Direct (GDAP) reachability probe, with no side effects of any kind: it
@@ -38,7 +41,32 @@ export type EntraDirectProbeResult =
       error: string;
       code: 'auth_rejected' | 'consent_missing' | 'validation_failed';
       status?: number;
+      /** Graph's own error code/message, for logs — never shown to the operator. */
+      detail?: string;
     };
+
+/**
+ * Graph's error body, compressed to one loggable line. A bare HTTP status hides
+ * the actual refusal ("status: 400" concealed a wrong-endpoint-version bug);
+ * the code and message name it.
+ */
+function graphErrorDetail(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : undefined;
+  }
+
+  const body = error.response?.data as
+    | { error?: { code?: unknown; message?: unknown } }
+    | undefined;
+  const code = typeof body?.error?.code === 'string' ? body.error.code : null;
+  const message = typeof body?.error?.message === 'string' ? body.error.message : null;
+
+  if (code || message) {
+    return [code, message].filter(Boolean).join(': ');
+  }
+
+  return error.message || undefined;
+}
 
 /**
  * The endpoint whose readability defines a working Direct connection. Mirrors
@@ -46,17 +74,20 @@ export type EntraDirectProbeResult =
  * mode — probing an endpoint the adapter will never call would validate the
  * wrong thing, and would fail every smoke tenant at connect time.
  *
- * Resolved per call rather than at module load so pointing MICROSOFT_GRAPH_BASE_URL
- * at the Graph emulator moves the probe with the adapter.
+ * Resolved per call rather than at module load so pointing the emulator env
+ * overrides at the Graph emulator moves the probe with the adapter.
+ *
+ * managedTenants is beta-only: on v1.0 the segment does not exist and Graph
+ * answers 400, which failed every real Direct connect while the smoke-mode
+ * /organization path (valid on v1.0) kept passing.
  */
 export function entraDirectProbeEndpoint(): string {
-  const graphBaseUrl = getMicrosoftGraphBaseUrl();
   const isSelfTenantSmoke =
     (process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE || '').toLowerCase() === 'true';
 
   return isSelfTenantSmoke
-    ? `${graphBaseUrl}/organization?$top=1`
-    : `${graphBaseUrl}/tenantRelationships/managedTenants/tenants?$top=1`;
+    ? `${getMicrosoftGraphBaseUrl()}/organization?$top=1`
+    : `${getMicrosoftGraphBetaBaseUrl()}/tenantRelationships/managedTenants/tenants?$top=1`;
 }
 
 export async function probeEntraDirectAccess(
@@ -80,6 +111,7 @@ export async function probeEntraDirectAccess(
     };
   } catch (error: unknown) {
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    const detail = graphErrorDetail(error);
 
     if (status === 401) {
       return {
@@ -88,6 +120,7 @@ export async function probeEntraDirectAccess(
         error: 'Microsoft rejected the access token for this connection.',
         code: 'auth_rejected',
         status,
+        detail,
       };
     }
 
@@ -100,6 +133,7 @@ export async function probeEntraDirectAccess(
           'A Global Administrator must grant admin consent for the requested permissions.',
         code: 'consent_missing',
         status,
+        detail,
       };
     }
 
@@ -109,6 +143,7 @@ export async function probeEntraDirectAccess(
       error: 'Unable to read the Microsoft Entra managed tenant list with this connection.',
       code: 'validation_failed',
       status,
+      detail,
     };
   }
 }

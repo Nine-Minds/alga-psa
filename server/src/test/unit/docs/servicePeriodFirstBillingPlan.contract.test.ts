@@ -221,13 +221,21 @@ const servicePeriodPostInventoryRefs = new Set([
   // service-period columns in its fixtures.
   'server/src/test/infrastructure/billing/credits/creditDrawdownPolicy.test.ts',
   'server/src/test/infrastructure/billing/credits/creditServiceTypeRestrictionMode.test.ts',
+  'server/src/test/infrastructure/billing/credits/invoiceCreditReversalLifecycle.test.ts',
   'server/src/test/unit/contractReportActions.sharedContractResults.test.ts',
+  // Batched fixed-charge preview loader suite seeds persisted service-period
+  // rows in its fixtures; it landed after the pass-0 snapshot.
+  'packages/billing/tests/billingEngine.previewFixedAmounts.batchedLoad.test.ts',
   'shared/billingClients/recurringDueWork.ts',
   'shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts',
   // PO overage dialog suite (feature/po-overage-dialog-nan-amount-and-100x-overstatem)
   // landed after the pass-0 snapshot and seeds invoice candidates with persisted
   // service-period columns in its fixtures.
   'packages/billing/tests/automaticInvoices.poOverageDialog.test.tsx',
+  // T013 golden-output gate (billing-profiles S1) landed after the pass-0
+  // snapshot; its baseline fixtures assert persisted service-period columns.
+  'server/src/test/integration/billing/goldenOutput/baseline.json',
+  'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the

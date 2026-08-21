@@ -393,7 +393,7 @@ const ContactAdditionalEmailRow: React.FC<ContactEmailRowProps> = ({
 
   if (compact && !isExpanded) {
     return (
-      <Card className="border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50,255_255_255))] p-3" data-testid={`${id}-row-${index}`}>
+      <Card className="border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3" data-testid={`${id}-row-${index}`}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">

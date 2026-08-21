@@ -722,7 +722,8 @@
             "consentMissing": "Microsoft vous a connecté mais a refusé l'accès à votre liste de locataires gérés. Un administrateur général doit accorder le consentement administrateur pour les autorisations demandées. Rien n'a été enregistré — réessayez une fois le consentement accordé.",
             "expired": "La tentative de connexion a expiré avant de se terminer. Rien n'a été enregistré — relancez la connexion.",
             "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
-            "validationFailed": "Microsoft vous a connecté, mais votre liste de locataires gérés n'a pas pu être lue, donc rien n'a été enregistré. Vérifiez les autorisations de la connexion et réessayez."
+            "validationFailed": "Microsoft vous a connecté, mais la liste des locataires gérés n'a pas pu être lue ; rien n'a été enregistré. Vos autorisations ont été acceptées — en général, le locataire partenaire n'est pas intégré à Microsoft 365 Lighthouse ou n'a aucune relation GDAP active.",
+            "tokenRejected": "Microsoft a rejeté le jeton d'accès de la connexion ; rien n'a été enregistré. Relancez la connexion."
           },
           "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
@@ -941,7 +942,8 @@
             "prerequisites": {
               "appRegistration": "Des identifiants OAuth Microsoft configurés pour ce locataire.",
               "globalAdmin": "Un administrateur général capable d'approuver les autorisations.",
-              "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez."
+              "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez.",
+              "lighthouse": "Microsoft 365 Lighthouse intégré dans votre locataire partenaire."
             }
           },
           "directReassurance": "Vous verrez la demande d'autorisations avant que quoi que ce soit ne soit accordé.",
@@ -1858,6 +1860,7 @@
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
         "errors": {
+          "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
           "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
@@ -1879,9 +1882,21 @@
         "requiredScopes": "Scopes requis",
         "storedClientId": "Client ID enregistré : {{value}}",
         "storedClientSecret": "Client secret enregistré : {{value}}",
-        "tenantOauthDescription": "Collez les identifiants de l'application Intuit enregistrés pour ce tenant, ou laissez vide pour utiliser l'application QuickBooks au niveau de l'application si une est configurée. Les valeurs de secret ne sont jamais renvoyées au navigateur après l'enregistrement.",
-        "tenantOauthTitle": "Application OAuth propre au tenant",
-        "title": "QuickBooks Online"
+        "tenantOauthDescription": "L’application Intuit par laquelle ce locataire se connecte. Les secrets ne sont jamais renvoyés au navigateur après enregistrement.",
+        "tenantOauthTitle": "Identifiants de l’application Intuit",
+        "title": "QuickBooks Online",
+        "automatedSalesTax": {
+          "disabledMessage": "Le mode Automated Sales Tax est désactivé. Alga continue de calculer la taxe pour cette entreprise.",
+          "enabledMessage": "QuickBooks calculera désormais la taxe de vente sur les factures déléguées de cette entreprise.",
+          "hint": "Activez cette option lorsque cette entreprise QuickBooks utilise Automated Sales Tax : Intuit taxe alors les factures exportées d’après l’adresse du client et la taxe revient dans Alga.",
+          "label": "QuickBooks calcule la taxe de vente"
+        },
+        "credentialSource": {
+          "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez connecter QuickBooks sans en enregistrer une. Remplissez les champs ci-dessous uniquement si ce locataire doit utiliser sa propre application Intuit.",
+          "none": "Aucune application Intuit n’est encore disponible. Enregistrez-en une dans le portail Intuit Developer et collez ci-dessous son ID client et son secret — le guide d’installation détaille la marche à suivre.",
+          "tenant": "Ce locataire se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous."
+        },
+        "setupGuideLink": "Guide de configuration QuickBooks"
       },
       "sync": {
         "healthCardTitle": "État de la synchronisation",
@@ -1970,6 +1985,15 @@
         "errors": {
           "previewFailed": "Impossible de charger l’aperçu de l’importation.",
           "executeFailed": "L’importation a échoué."
+        }
+      },
+      "taxCodes": {
+        "labelWithDescription": "{{name}} — {{description}}",
+        "labelWithId": "{{label}} · identifiant {{id}}",
+        "labelWithRate": "{{name}} ({{rate}})",
+        "pseudo": {
+          "nonTaxable": "NON — non taxable",
+          "taxable": "TAX — taxable (Automated Sales Tax choisit le taux)"
         }
       }
     },

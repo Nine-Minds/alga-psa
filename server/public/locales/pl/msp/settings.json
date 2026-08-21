@@ -11,6 +11,7 @@
   "tabs": {
     "general": "Ogólne",
     "experimentalFeatures": "Funkcje eksperymentalne",
+    "appearance": "Wygląd",
     "clientPortal": "Portal klienta",
     "users": "Użytkownicy",
     "teams": "Zespoły",
@@ -783,6 +784,8 @@
         "sections": {
           "general": "Ogólne",
           "generalHelp": "Nazwa, opis, widoczność i domyślność",
+          "appearance": "Wygląd i wartości domyślne",
+          "appearanceHelp": "Przypinanie karty i domyślny widok listy tablicy",
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
           "inbound": "E-mail i odpowiedzi przychodzące",
@@ -803,6 +806,22 @@
         "allSaved": "Wszystkie zmiany zapisane",
         "reopenBadge": "otwórz ponownie",
         "required": "Wymagane"
+      },
+      "appearance": {
+        "pinLabel": "Przypnij do ekranu zgłoszeń",
+        "pinHelp": "Przypięte tablice mają stałą kartę na ekranie zgłoszeń. Nieprzypięte tablice pozostają dostępne z widoku \"Wszystkie zgłoszenia\" oraz z filtra tablic.",
+        "savedView": "Zapisany widok",
+        "inheritsTenant": "Dziedziczy domyślne ustawienia organizacji",
+        "openBoard": "Otwórz tę tablicę",
+        "resetToTenant": "Przywróć domyślny widok organizacji",
+        "arrangeNote": "Ustaw widok tej tablicy bezpośrednio na tablicy, a następnie zapisz go w menu \"Widok\".",
+        "preview": "Podgląd",
+        "summary": {
+          "openOnly": "Tylko otwarte",
+          "columns": "{{columns}} kolumn",
+          "density": "gęstość {{level}}",
+          "sortedBy": "sortowanie według {{field}}"
+        }
       },
       "empty": "Nie znaleziono tablic.",
       "searchPlaceholder": "Szukaj tablic…"
@@ -1115,25 +1134,42 @@
       "fields": {
         "companyName": "Nazwa firmy",
         "companyLogo": "Logo firmy",
+        "companyLogoDark": "Logo na ciemne tło",
         "colorPalette": "Paleta kolorów",
         "primaryColor": "Kolor główny",
         "secondaryColor": "Kolor dodatkowy",
         "supportEmail": "E-mail wsparcia",
         "supportPhone": "Telefon wsparcia",
-        "heroGradient": "Gradient nagłówka pulpitu"
+        "heroGradient": "Gradient nagłówka pulpitu",
+        "sidebarStyle": "Kolor panelu bocznego",
+        "sidebarColor": "Własny kolor panelu bocznego",
+        "followTheme": "Użyj motywu organizacji w portalu"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
+        "colorPalette": "To akcenty nałożone na motyw organizacji: kolor podstawowy maluje przyciski, linki i baner powitalny, kolor dodatkowy drugą połowę banera i akcenty pomocnicze, a panel boczny przejmuje ten, który wybierzesz. Wszystkie pozostałe powierzchnie — strona, karty, tekst, obramowania — pochodzą z motywu w Ustawieniach → Wygląd.",
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
+        "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
+        "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
         "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów.",
-        "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta."
+        "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta.",
+        "sidebarStyle": "Nadaje panelowi bocznemu portalu klienta kolor główny lub dodatkowy.",
+        "sidebarColor": "Dowolny kolor. Panel używa jego przyciemnionego odcienia, aby jasny tekst panelu bocznego pozostał czytelny.",
+        "followTheme": "Gdy włączone, portal klienta używa motywu wybranego w Ustawienia → Wygląd. Gdy wyłączone, kolory poniżej go zastępują.",
+        "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
+      },
+      "sidebarStyle": {
+        "default": "Domyślny (ciemny grafit)",
+        "primary": "Kolor główny",
+        "secondary": "Kolor dodatkowy",
+        "custom": "Kolor własny"
       },
       "preview": "Podgląd",
       "previewDarkMode": "Podgląd trybu ciemnego",
@@ -1287,6 +1323,130 @@
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
     "brandingUpdated": "Ustawienia marki zaktualizowane"
+  },
+  "appearance": {
+    "title": "Motyw",
+    "description": "Wybierz parę jasny/ciemny widoczną dla wszystkich w tej organizacji — zarówno w aplikacji MSP, jak i w portalu klienta. Każda osoba nadal sama wybiera tryb jasny, ciemny lub systemowy.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Wygląd domyślny: czyste białe powierzchnie za dnia, fioletowy odcień nocą."
+      },
+      "slate": {
+        "label": "Łupek",
+        "description": "Neutralne szarości z pierwotnym niebiesko-szarym motywem ciemnym."
+      },
+      "ocean": {
+        "label": "Ocean",
+        "description": "Granatowy panel boczny z chłodnymi błękitami na wyrazistych, lekko schłodzonych powierzchniach."
+      },
+      "sky": {
+        "label": "Niebo",
+        "description": "Jaśniejszy, lżejszy błękit z indygo jako kolorem dodatkowym."
+      },
+      "forest": {
+        "label": "Las",
+        "description": "Głębokie zielenie z turkusowym kolorem powodzenia, aby statusy pozostały czytelne."
+      },
+      "sunset": {
+        "label": "Zachód słońca",
+        "description": "Ciepłe pomarańcze i zmierzchowy róż na powierzchniach w odcieniu piasku."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kawowe brązy na kremowym tle, wypalone espresso po zmroku."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonowy róż i cyjan na fiolecie nocnego Miami."
+      },
+      "highContrast": {
+        "label": "Wysoki kontrast",
+        "description": "Tylko czerń i biel z wyraźnymi obramowaniami. Tylko kolory statusów zachowują swoją barwę."
+      },
+      "custom": {
+        "label": "Własny",
+        "description": "Twoje własne kolory, edytowane poniżej."
+      }
+    },
+    "custom": {
+      "title": "Motyw własny",
+      "description": "Zbuduj własne warianty jasny i ciemny. Pełne skale kolorów są wyprowadzane z tych kolorów podstawowych, a kontrast jest sprawdzany przed zapisaniem motywu.",
+      "lightMode": "Wariant jasny",
+      "darkMode": "Wariant ciemny",
+      "previewAlt": "Podgląd motywu własnego",
+      "seededFrom": "Te kolory wychodzą z motywu {{pair}} — zmień tylko te, na których Ci zależy, a pełne skale dostosują się same.",
+      "contrastTitle": "Te kolory są zbyt podobne, aby dało się je odczytać. Popraw je przed zapisaniem:",
+      "contrastIssue": "{{foreground}} może być trudny do odczytania na tle {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Tło strony",
+        "card": "Powierzchnia karty",
+        "surface": "Powierzchnia wyniesiona",
+        "textPrimary": "Tekst podstawowy",
+        "textSecondary": "Tekst pomocniczy",
+        "textMuted": "Tekst wyciszony",
+        "border": "Obramowanie",
+        "borderStrong": "Mocne obramowanie",
+        "primary": "Kolor podstawowy",
+        "secondary": "Kolor pomocniczy",
+        "accent": "Kolor akcentu",
+        "sidebarBg": "Tło panelu bocznego",
+        "sidebarText": "Tekst panelu bocznego",
+        "sidebarHover": "Panel boczny po najechaniu",
+        "headerBg": "Tło nagłówka",
+        "buttonLabel": "Białe etykiety przycisków"
+      },
+      "actions": {
+        "save": "Zapisz i użyj motywu własnego",
+        "reset": "Przywróć kolory motywu {{pair}}",
+        "resetDone": "Kolory przywrócone do motywu {{pair}} — zapisz, aby zastosować",
+        "useSaved": "Użyj moich zapisanych kolorów",
+        "useSavedDone": "Zapisane kolory wróciły — zapisz, aby zastosować"
+      },
+      "contrastHints": {
+        "lighten": "Wybierz jaśniejszy {{foreground}} lub ciemniejszy {{background}}.",
+        "darken": "Wybierz ciemniejszy {{foreground}} lub jaśniejszy {{background}}."
+      },
+      "mock": {
+        "caption": "Wskaż kolor poniżej, aby zobaczyć, którą część aplikacji maluje.",
+        "showing": "Wyróżnione: {{token}}",
+        "nav": "Start",
+        "navActive": "Zgłoszenia",
+        "navMuted": "Raporty",
+        "headerTitle": "Zgłoszenia",
+        "cardTitle": "Drukarka w recepcji offline",
+        "cardBody": "Przypisano do Dana Reyes",
+        "cardMuted": "Zaktualizowano 2 godziny temu",
+        "primaryAction": "Zapisz",
+        "secondaryAction": "Przypisz",
+        "ghostAction": "Anuluj",
+        "surface": "Ostatnia aktywność"
+      }
+    },
+    "whiteLabel": {
+      "title": "Własna marka w aplikacji MSP",
+      "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
+      "logoHelp": "Menu boczne MSP jest ciemne w obu motywach, dlatego używa logo na ciemne tła, jeśli je prześlesz, a w przeciwnym razie logo głównego.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo na ciemne tła"
+      },
+      "colors": {
+        "label": "Używaj kolorów swojej marki w aplikacji MSP",
+        "help": "Domyślnie wyłączone. Po włączeniu kolory podstawowy i dodatkowy zastępują akcenty motywu dla użytkowników MSP, tak jak już dzieje się to w portalu klienta."
+      }
+    },
+    "messages": {
+      "loadFailed": "Nie udało się wczytać ustawień wyglądu",
+      "saved": "Zaktualizowano wygląd",
+      "saveFailed": "Nie udało się zapisać ustawień wyglądu",
+      "discarded": "Podgląd odrzucony"
+    },
+    "unsaved": {
+      "notice": "Oglądasz podgląd niezapisanego motywu. Pozostali widzą zapisany motyw, dopóki go nie zastosujesz.",
+      "save": "Zastosuj dla wszystkich",
+      "discard": "Odrzuć"
+    }
   },
   "mspLanguage": {
     "title": "Język organizacji",

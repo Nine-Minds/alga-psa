@@ -477,15 +477,24 @@ export class TemporalJobRunner implements IJobRunner {
             logger.warn('Failed to delete schedule:', error);
           }
         }
-        await this.updateJobStatus(jobId, tenantId, JobStatus.Failed, {
-          error: 'Schedule cancelled',
-        });
-        // Null external_id so reconcilers see the tracker as torn down
-        // (pg-boss parity — external_id is the cross-backend liveness marker).
+        // A cancelled schedule is routine teardown (reconcilers replace
+        // schedules on config changes), not a failure — closing it as failed
+        // would trip failure metrics forever. Null external_id so reconcilers
+        // see the tracker as torn down (pg-boss parity — external_id is the
+        // cross-backend liveness marker).
         await runWithTenant(tenantId, async () => {
           await tenantScopedTable(knex, 'jobs', tenantId)
             .where({ job_id: jobId })
-            .update({ external_id: null, updated_at: new Date() });
+            .update({
+              status: JobStatus.Completed,
+              metadata: JSON.stringify({
+                ...metadata,
+                cancelReason: 'Schedule cancelled',
+                cancelledAt: new Date().toISOString(),
+              }),
+              external_id: null,
+              updated_at: new Date(),
+            });
         });
         return true;
       }

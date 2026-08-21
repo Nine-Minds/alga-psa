@@ -8,7 +8,8 @@ import { AutomationProps, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-export const NO_BOARD_VALUE = 'no-board';
+export { NO_BOARD_VALUE } from '../lib/boardFilterValues';
+import { NO_BOARD_VALUE } from '../lib/boardFilterValues';
 
 interface BoardFilterPickerProps {
   id?: string;
@@ -213,10 +214,10 @@ export const BoardFilterPicker: React.FC<BoardFilterPickerProps & AutomationProp
           onValueChange={handleValueChange}
           placeholder={displayLabel || resolvedPlaceholder}
           className={className}
-          selectedClassName="bg-gray-50"
-          hoverClassName="hover:bg-gray-50"
-          triggerClassName={`focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${!disabled ? 'hover:border-gray-400' : ''}`}
-          contentClassName="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))]"
+          selectedClassName="bg-[rgb(var(--color-table-selected))]"
+          hoverClassName="hover:bg-[rgb(var(--color-primary-500)/0.08)]"
+          triggerClassName={`focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent ${!disabled ? 'hover:border-[rgb(var(--color-border-400))]' : ''}`}
+          contentClassName="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))]"
           multiSelect={multiSelect}
           showExclude={showExclude}
           showReset={showReset}

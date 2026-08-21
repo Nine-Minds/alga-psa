@@ -158,6 +158,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
 
+# Shared source is compiled into the worker's dist tree, so its bare imports
+# must resolve from the worker image rather than shared/node_modules.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
+
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
 # install as symlinks WITHOUT their own dependencies, so a bare third-party
@@ -227,6 +231,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
+
+# Catch missing bare dependencies imported by shared code compiled into the
+# worker's dist tree before the image can be deployed.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps

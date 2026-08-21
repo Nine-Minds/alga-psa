@@ -16,6 +16,7 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -360,6 +361,30 @@ export function BentoTimelineTile({
   // Threading: which comment currently has its inline reply composer open.
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
+  // Composer is collapsed until asked for. Both slots are sticky, so a
+  // half-typed draft follows the reader down a long timeline either way.
+  const [showComposer, setShowComposer] = useState(false);
+  const [composerPlacement, setComposerPlacement] = useState<'top' | 'bottom'>('top');
+  // Proxy for "the tile header is still on screen" — the header itself lives
+  // inside BentoTile, so the filter row directly beneath it is the sentinel.
+  const headerAnchorRef = useRef<HTMLDivElement>(null);
+  const [headerAnchorVisible, setHeaderAnchorVisible] = useState(true);
+
+  useEffect(() => {
+    const el = headerAnchorRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderAnchorVisible(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const openComposer = useCallback((placement: 'top' | 'bottom') => {
+    setComposerPlacement(placement);
+    setShowComposer(true);
+  }, []);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -368,7 +393,7 @@ export function BentoTimelineTile({
     userId: currentUser?.id,
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: () => setHasDraft(false),
+    onDiscard: () => { setHasDraft(false); setShowComposer(false); },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -586,12 +611,19 @@ export function BentoTimelineTile({
     );
     if (success) {
       setHasDraft(false);
+      setShowComposer(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
       composeUploadSession.resetDraftTracking();
     }
     return success;
   }, [onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, composeUploadSession]);
+
+  const handleCancelCompose = useCallback(() => {
+    onNewCommentContentChange(DEFAULT_BLOCK);
+    setHasDraft(false);
+    setShowComposer(false);
+  }, [onNewCommentContentChange]);
 
   useEffect(() => {
     if (composerLane !== 'resolution') {
@@ -604,9 +636,14 @@ export function BentoTimelineTile({
   // mod+s/mod+Enter sends the draft. The dialog scope only activates while a
   // draft exists, so page-scope shortcuts keep working on a pristine composer.
   usePageCreateShortcut(() => {
-    const editable = composerRef.current?.querySelector<HTMLElement>('[contenteditable="true"]');
-    editable?.focus({ preventScroll: true });
-    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!showComposer) openComposer(headerAnchorVisible ? 'top' : 'bottom');
+    // Focus after the composer has mounted; no scrolling — it opens where the
+    // reader already is.
+    requestAnimationFrame(() => {
+      composerRef.current
+        ?.querySelector<HTMLElement>('[contenteditable="true"]')
+        ?.focus({ preventScroll: true });
+    });
   });
   useDialogSubmitShortcut(() => { void handleSend(); }, {
     active: hasDraft,
@@ -671,11 +708,7 @@ export function BentoTimelineTile({
   };
 
   const composer = (
-    <div
-      id={`${id}-composer`}
-      ref={composerRef}
-      className="mt-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3"
-    >
+    <div id={`${id}-composer`} ref={composerRef} className="p-3">
       {composerLane === 'client' ? (
         <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
           {contactFirstName
@@ -694,6 +727,7 @@ export function BentoTimelineTile({
         }}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
+        autoFocus
       />
       <div className="flex items-center gap-2 mt-2">
         <div
@@ -725,6 +759,15 @@ export function BentoTimelineTile({
           ))}
         </div>
         <div className="flex-1" />
+        <Button
+          id={`${id}-composer-cancel`}
+          size="sm"
+          variant="outline"
+          onClick={handleCancelCompose}
+          disabled={isSubmitting}
+        >
+          {t('common.cancel', 'Cancel')}
+        </Button>
         <Button
           id={`${id}-composer-send`}
           size="sm"
@@ -794,7 +837,7 @@ export function BentoTimelineTile({
         </button>
       }
     >
-      <div id={`${id}-filters`} className="flex flex-wrap gap-1.5 mb-3">
+      <div ref={headerAnchorRef} id={`${id}-filters`} className="flex flex-wrap items-center gap-1.5 mb-3">
         {laneFilters.map((laneFilter) => {
           const count =
             laneFilter.value === 'everything' ? nodes.length : counts[laneFilter.value as Lane];
@@ -815,7 +858,25 @@ export function BentoTimelineTile({
             </button>
           );
         })}
+        {!showComposer && (
+          <Button
+            id={`${id}-add-comment-btn`}
+            className="ml-auto"
+            onClick={() => openComposer('top')}
+          >
+            {t('conversation.addComment', 'Add Comment')}
+          </Button>
+        )}
       </div>
+
+      <StickyComposerDock
+        id={`${id}-composer-top`}
+        side="top"
+        visible={showComposer && composerPlacement === 'top'}
+        expanded
+      >
+        {composer}
+      </StickyComposerDock>
 
       {visible.length === 0 ? (
         <BentoTileEmpty id={`${id}-empty`}>
@@ -883,7 +944,19 @@ export function BentoTimelineTile({
         </ol>
       )}
 
-      {composer}
+      <StickyComposerDock
+        id={`${id}-composer-dock`}
+        visible={showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible}
+        expanded={showComposer && composerPlacement === 'bottom'}
+        placeholder={
+          contactFirstName
+            ? t('bento.timeline.replyTo', 'Reply to {{name}}', { name: contactFirstName })
+            : t('bento.timeline.writeReply', 'Write a reply')
+        }
+        onExpand={() => openComposer('bottom')}
+      >
+        {composer}
+      </StickyComposerDock>
     </BentoTile>
   );
 }

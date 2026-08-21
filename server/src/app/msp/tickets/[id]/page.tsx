@@ -196,7 +196,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
 
     const associatedAssets =
       !isAlgaDesk && ticketData.ticket?.client_id && ticketData.ticket?.ticket_id ? (
-        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
+        <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse skeleton-fill h-32 rounded-lg"></div>}>
           <AssociatedAssets
             id="ticket-details-associated-assets"
             entityId={ticketData.ticket.ticket_id}

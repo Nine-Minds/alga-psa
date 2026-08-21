@@ -12,6 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        uses: ./.github/actions/install-ripgrep
       - name: Check for bidirectional Unicode controls
         run: npm run guard:no-bidi-control-chars

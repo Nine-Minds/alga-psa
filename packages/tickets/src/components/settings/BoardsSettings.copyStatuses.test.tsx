@@ -774,7 +774,11 @@ describe('BoardsSettings ticket status copy flow', () => {
       expect(screen.getByTestId('save-board-button')).toBeInTheDocument();
     });
     expect(screen.queryByTestId('add-board-button')).not.toBeInTheDocument();
-    expect(screen.getByText('Support Renamed')).toBeInTheDocument();
+    // getAllByText, not getByText: the editor header and the Appearance
+    // section's board-header preview both legitimately render the board name,
+    // so the name now appears more than once. The assertion is still "the saved
+    // name is reflected in the editor".
+    expect(screen.getAllByText('Support Renamed').length).toBeGreaterThan(0);
   });
 
   it('shows an incomplete auto-close rule error inside the Automation section, not a top banner', async () => {

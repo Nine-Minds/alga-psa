@@ -9,6 +9,7 @@
   "tabs": {
     "general": "Allgemein",
     "experimentalFeatures": "Experimentelle Funktionen",
+    "appearance": "Erscheinungsbild",
     "clientPortal": "Kundenportal",
     "users": "Benutzer",
     "teams": "Teams",
@@ -779,6 +780,8 @@
         "sections": {
           "general": "Allgemein",
           "generalHelp": "Name, Beschreibung, Sichtbarkeit und Standard",
+          "appearance": "Darstellung & Standardwerte",
+          "appearanceHelp": "Tab-Anheftung und die Standard-Listenansicht des Boards",
           "assignment": "Zuweisung & SLA",
           "assignmentHelp": "Standard-Routing, SLA und Board-Manager",
           "inbound": "E-Mail & eingehende Antworten",
@@ -799,6 +802,22 @@
         "allSaved": "Alle Änderungen gespeichert",
         "reopenBadge": "erneut öffnen",
         "required": "Erforderlich"
+      },
+      "appearance": {
+        "pinLabel": "An den Ticket-Bildschirm anheften",
+        "pinHelp": "Angeheftete Boards erhalten einen festen Tab auf dem Ticket-Bildschirm. Nicht angeheftete Boards bleiben über „Alle Tickets“ und den Board-Filter erreichbar.",
+        "savedView": "Gespeicherte Ansicht",
+        "inheritsTenant": "Übernimmt die Mandantenstandards",
+        "openBoard": "Dieses Board öffnen",
+        "resetToTenant": "Auf Mandantenstandard zurücksetzen",
+        "arrangeNote": "Richten Sie die Ansicht dieses Boards direkt auf dem Board ein und speichern Sie sie anschließend über das Menü „Ansicht“.",
+        "preview": "Vorschau",
+        "summary": {
+          "openOnly": "Nur offene",
+          "columns": "{{columns}} Spalten",
+          "density": "Dichte {{level}}",
+          "sortedBy": "sortiert nach {{field}}"
+        }
       },
       "empty": "Keine Boards gefunden.",
       "searchPlaceholder": "Boards suchen…"
@@ -1109,25 +1128,42 @@
       "fields": {
         "companyName": "Firmenname",
         "companyLogo": "Firmenlogo",
+        "companyLogoDark": "Logo für dunkle Hintergründe",
         "colorPalette": "Farbpalette",
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
         "supportEmail": "Support-E-Mail",
         "supportPhone": "Support-Telefon",
-        "heroGradient": "Dashboard-Hintergrundverlauf"
+        "heroGradient": "Dashboard-Hintergrundverlauf",
+        "sidebarStyle": "Farbe der Seitenleiste",
+        "sidebarColor": "Eigene Farbe der Seitenleiste",
+        "followTheme": "Organisationsdesign im Kundenportal verwenden"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
+        "colorPalette": "Das sind Akzente auf dem Organisations-Theme: Die Primärfarbe färbt Schaltflächen, Links und das Willkommensbanner, die Sekundärfarbe die zweite Hälfte des Banners und ergänzende Akzente, und das Seitenmenü übernimmt die von Ihnen gewählte Farbe. Alle übrigen Flächen – Seite, Karten, Text, Rahmen – stammen aus dem Theme unter Einstellungen → Darstellung.",
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
+        "companyLogoMsp": "Dieses Logo ersetzt außerdem die Alga-Marke im MSP-Seitenmenü.",
+        "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
         "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
-        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard."
+        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard.",
+        "sidebarStyle": "Färbt die Seitenleiste des Kundenportals in Ihrer Primär- oder Sekundärfarbe.",
+        "sidebarColor": "Eine beliebige Farbe. Das Panel verwendet einen abgedunkelten Farbton davon, damit der helle Text der Seitenleiste lesbar bleibt.",
+        "followTheme": "Wenn aktiviert, verwendet das Kundenportal das unter Einstellungen → Erscheinungsbild gewählte Design. Wenn deaktiviert, überschreiben die Farben unten dieses Design.",
+        "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
+      },
+      "sidebarStyle": {
+        "default": "Standard (dunkles Schiefergrau)",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "custom": "Eigene Farbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",
@@ -1281,6 +1317,130 @@
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
     "brandingUpdated": "Branding-Einstellungen aktualisiert"
+  },
+  "appearance": {
+    "title": "Design",
+    "description": "Wählen Sie das Hell-/Dunkel-Paar, das alle in dieser Organisation sehen – in der MSP-App und im Kundenportal. Jede Person wählt weiterhin selbst zwischen Hell, Dunkel und System.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "Das Standarddesign: klare weiße Flächen bei Tag, violett getönt bei Nacht."
+      },
+      "slate": {
+        "label": "Schiefer",
+        "description": "Neutrale Grautöne mit dem ursprünglichen blaugrauen Dunkeldesign."
+      },
+      "ocean": {
+        "label": "Ozean",
+        "description": "Ein marineblaues Seitenmenü mit kühlen Blautönen auf klaren, leicht kühlen Flächen."
+      },
+      "sky": {
+        "label": "Himmel",
+        "description": "Ein helleres, luftigeres Blau mit indigofarbener Sekundärfarbe."
+      },
+      "forest": {
+        "label": "Wald",
+        "description": "Tiefe Grüntöne mit türkisfarbener Erfolgsfarbe, damit Status lesbar bleibt."
+      },
+      "sunset": {
+        "label": "Sonnenuntergang",
+        "description": "Warme Orangetöne und Dämmerungsrosa auf sandfarbenen Flächen."
+      },
+      "cappuccino": {
+        "label": "Cappuccino",
+        "description": "Kaffeebraun auf Creme, geröstetes Espresso-Dunkel."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Neonpink und Cyan auf einem Miami-Nachtviolett."
+      },
+      "highContrast": {
+        "label": "Hoher Kontrast",
+        "description": "Nur Schwarz und Weiß mit betonten Rahmen. Nur die Statusfarben behalten ihren Farbton."
+      },
+      "custom": {
+        "label": "Benutzerdefiniert",
+        "description": "Ihre eigenen Farben, unten bearbeitet."
+      }
+    },
+    "custom": {
+      "title": "Eigenes Design",
+      "description": "Erstellen Sie eigene helle und dunkle Varianten. Die vollständigen Farbskalen werden aus diesen Grundfarben abgeleitet, und der Kontrast wird vor dem Speichern geprüft.",
+      "lightMode": "Helle Variante",
+      "darkMode": "Dunkle Variante",
+      "previewAlt": "Vorschau des eigenen Designs",
+      "seededFrom": "Diese Farben starten beim Design {{pair}} – ändern Sie nur die wenigen, die Sie brauchen, die vollen Farbskalen folgen automatisch.",
+      "contrastTitle": "Diese Farben liegen zu nah beieinander und sind schlecht lesbar. Bitte vor dem Speichern korrigieren:",
+      "contrastIssue": "{{foreground}} ist auf {{background}} möglicherweise schwer lesbar. {{hint}}",
+      "tokens": {
+        "background": "Seitenhintergrund",
+        "card": "Kartenfläche",
+        "surface": "Erhöhte Fläche",
+        "textPrimary": "Primärer Text",
+        "textSecondary": "Sekundärer Text",
+        "textMuted": "Gedämpfter Text",
+        "border": "Rahmen",
+        "borderStrong": "Kräftiger Rahmen",
+        "primary": "Primärfarbe",
+        "secondary": "Sekundärfarbe",
+        "accent": "Akzentfarbe",
+        "sidebarBg": "Hintergrund der Seitenleiste",
+        "sidebarText": "Text der Seitenleiste",
+        "sidebarHover": "Seitenleiste beim Überfahren",
+        "headerBg": "Kopfzeilenhintergrund",
+        "buttonLabel": "Weiße Schaltflächenbeschriftungen"
+      },
+      "actions": {
+        "save": "Eigenes Design speichern und verwenden",
+        "reset": "Auf Farben von {{pair}} zurücksetzen",
+        "resetDone": "Farben auf das Design {{pair}} zurückgesetzt – zum Anwenden speichern",
+        "useSaved": "Meine gespeicherten Farben verwenden",
+        "useSavedDone": "Ihre gespeicherten Farben sind wieder da – zum Anwenden speichern"
+      },
+      "contrastHints": {
+        "lighten": "Wählen Sie ein helleres {{foreground}} oder ein dunkleres {{background}}.",
+        "darken": "Wählen Sie ein dunkleres {{foreground}} oder ein helleres {{background}}."
+      },
+      "mock": {
+        "caption": "Zeigen Sie unten auf eine Farbe, um zu sehen, welchen Teil der App sie einfärbt.",
+        "showing": "Hervorgehoben: {{token}}",
+        "nav": "Start",
+        "navActive": "Tickets",
+        "navMuted": "Berichte",
+        "headerTitle": "Tickets",
+        "cardTitle": "Drucker am Empfang offline",
+        "cardBody": "Zugewiesen an Dana Reyes",
+        "cardMuted": "Vor 2 Stunden aktualisiert",
+        "primaryAction": "Speichern",
+        "secondaryAction": "Zuweisen",
+        "ghostAction": "Abbrechen",
+        "surface": "Letzte Aktivität"
+      }
+    },
+    "whiteLabel": {
+      "title": "MSP-App mit eigener Marke",
+      "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
+      "logoHelp": "Das MSP-Seitenmenü ist in beiden Designs dunkel. Es verwendet daher das Logo für dunkle Hintergründe, sofern vorhanden, und sonst das Hauptlogo.",
+      "fields": {
+        "logo": "Logo",
+        "logoDark": "Logo für dunkle Hintergründe"
+      },
+      "colors": {
+        "label": "Markenfarben in der MSP-App verwenden",
+        "help": "Standardmäßig deaktiviert. Wenn aktiviert, ersetzen Ihre Primär- und Sekundärfarben die Designakzente für MSP-Benutzer, so wie bereits im Kundenportal."
+      }
+    },
+    "messages": {
+      "loadFailed": "Einstellungen zum Erscheinungsbild konnten nicht geladen werden",
+      "saved": "Erscheinungsbild aktualisiert",
+      "saveFailed": "Einstellungen zum Erscheinungsbild konnten nicht gespeichert werden",
+      "discarded": "Vorschau verworfen"
+    },
+    "unsaved": {
+      "notice": "Sie sehen eine Vorschau eines nicht gespeicherten Themes. Alle anderen behalten das gespeicherte, bis Sie es anwenden.",
+      "save": "Für alle übernehmen",
+      "discard": "Verwerfen"
+    }
   },
   "mspLanguage": {
     "title": "Organisationssprache",

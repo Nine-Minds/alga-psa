@@ -1,5 +1,6 @@
 'use client';
 
+/* global process */
 
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
@@ -11,6 +12,7 @@ import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
   type PortalHeroGradient,
+  type PortalSidebarStyle,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
 import {
   getTenantLocaleSettingsAction,
@@ -28,20 +30,25 @@ import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
+import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
 import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
+import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useActionPolling } from '@alga-psa/ui/hooks';
+import { useActionPolling, useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getClientPortalFeatureSettings,
   updateClientPortalFeatureSettings,
 } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
+const RELEASE_V1_5_FLAG = 'release-v1-5-feature';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
+const DEFAULT_PORTAL_SIDEBAR_STYLE: PortalSidebarStyle = 'default';
 
 const hexToRgb = (hex: string): [number, number, number] | null => {
   const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -64,16 +71,39 @@ const getPrimaryShadeEnd = (primary: string, isDark: boolean): string => {
   )) as [number, number, number]);
 };
 
+/** Mirror the sidebar tint generateBrandingStyles emits (800 light / 900 dark). */
+const getSidebarShade = (hex: string, isDark: boolean): string | null => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+
+  const factor = isDark ? 0.3 : 0.5;
+  return rgbToCss(rgb.map((channel) => Math.max(0, Math.round(channel * factor))) as [number, number, number]);
+};
+
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
+  // Only Enterprise puts the tenant mark on MSP surfaces, so only there does the
+  // portal logo deserve the extra sentence.
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const releaseV15Flag = useFeatureFlag(RELEASE_V1_5_FLAG, { defaultValue: false });
+  const advancedAppearanceEnabled = isEEAvailable && releaseV15Flag.enabled;
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
+  const [logoDarkUrl, setLogoDarkUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
   const [portalHeroGradient, setPortalHeroGradient] = useState<PortalHeroGradient>(
     DEFAULT_PORTAL_HERO_GRADIENT,
   );
+  const [portalSidebarStyle, setPortalSidebarStyle] = useState<PortalSidebarStyle>(
+    DEFAULT_PORTAL_SIDEBAR_STYLE,
+  );
+  const [portalSidebarColor, setPortalSidebarColor] = useState<string>('');
+  const [portalFollowsTheme, setPortalFollowsTheme] = useState<boolean>(false);
+  // Core colors of the tenant theme, so the preview can show what the portal
+  // looks like once it stops using the brand colors below.
+  const [themeTokens, setThemeTokens] = useState<{ light: CustomThemeTokens; dark: CustomThemeTokens } | null>(null);
   const [clientName, setClientName] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [supportPhone, setSupportPhone] = useState<string>('');
@@ -142,9 +172,13 @@ const ClientPortalSettings = () => {
 
         if (brandingSettings) {
           setLogoUrl(brandingSettings.logoUrl || '');
+          setLogoDarkUrl(brandingSettings.logoDarkUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
           setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
+          setPortalSidebarStyle(brandingSettings.portalSidebarStyle ?? DEFAULT_PORTAL_SIDEBAR_STYLE);
+          setPortalSidebarColor(brandingSettings.portalSidebarColor ?? '');
+          setPortalFollowsTheme(brandingSettings.portalFollowsTheme ?? false);
           setClientName(brandingSettings.clientName || '');
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
@@ -167,6 +201,34 @@ const ClientPortalSettings = () => {
 
     loadTenantSettings();
   }, []);
+
+  useEffect(() => {
+    if (!advancedAppearanceEnabled) {
+      setThemeTokens(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getTenantThemeAction()
+      .then((theme) => {
+        if (cancelled) return;
+        setThemeTokens(
+          theme.pairId === 'custom' && theme.customTheme
+            ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
+            : customThemePresetFor(theme.pairId),
+        );
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('Failed to load tenant theme for the client portal preview:', error);
+          setThemeTokens(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [advancedAppearanceEnabled]);
 
   const handleClientPortalLocaleChange = async (next: string) => {
     if (next === UNSET_LOCALE_VALUE) {
@@ -242,15 +304,24 @@ const ClientPortalSettings = () => {
     primaryColor: string;
     secondaryColor: string;
     portalHeroGradient: PortalHeroGradient;
+    portalSidebarStyle: PortalSidebarStyle;
+    portalSidebarColor: string;
+    portalFollowsTheme: boolean;
     clientName: string;
     supportEmail: string;
     supportPhone: string;
   }>) => {
     const brandingData = {
       logoUrl: logoUrl, // Keep existing logo URL
+      logoDarkUrl: logoDarkUrl, // Keep existing dark logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
       portalHeroGradient: updates.portalHeroGradient ?? portalHeroGradient,
+      portalSidebarStyle: updates.portalSidebarStyle ?? portalSidebarStyle,
+      portalSidebarColor: updates.portalSidebarColor ?? portalSidebarColor,
+      ...(advancedAppearanceEnabled
+        ? { portalFollowsTheme: updates.portalFollowsTheme ?? portalFollowsTheme }
+        : {}),
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
       supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
       supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
@@ -267,6 +338,9 @@ const ClientPortalSettings = () => {
         primaryColor,
         secondaryColor,
         portalHeroGradient,
+        portalSidebarStyle,
+        portalSidebarColor,
+        portalFollowsTheme,
         clientName,
         supportEmail,
         supportPhone,
@@ -308,9 +382,30 @@ const ClientPortalSettings = () => {
     return result;
   };
 
+  // Same wrappers for the optional dark-surface logo variant
+  const handleDarkLogoUpload = async (entityId: string, formData: FormData) => {
+    const result = await uploadTenantLogo(entityId, formData, 'dark');
+    if (result.success) {
+      await refreshBranding();
+    }
+    return result;
+  };
+
+  const handleDarkLogoDelete = async (entityId: string) => {
+    const result = await deleteTenantLogo(entityId, 'dark');
+    if (result.success) {
+      await refreshBranding();
+    }
+    return result;
+  };
+
   return (
     <div className="space-y-6">
-      <ClientPortalDomainSettings />
+      <ClientPortalDomainSettings
+        headerAction={advancedAppearanceEnabled ? (
+          <CopyClientPortalLinkButton id="copy-client-portal-link-branding-button" />
+        ) : undefined}
+      />
 
       <Card>
         <CardHeader>
@@ -464,28 +559,58 @@ const ClientPortalSettings = () => {
               </p>
             </div>
 
-            {/* Logo Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('clientPortal.branding.fields.companyLogo')}
-              </label>
-              {tenantId && (
-                <EntityImageUpload
-                  entityType="tenant"
-                  entityId={tenantId}
-                  entityName={clientName || 'Client Portal'}
-                  imageUrl={logoUrl}
-                  uploadAction={handleLogoUpload}
-                  deleteAction={handleLogoDelete}
-                  onImageChange={(newLogoUrl) => {
-                    setLogoUrl(newLogoUrl || '');
-                  }}
-                  size="lg"
-                />
-              )}
-              <p className="text-sm text-gray-500 mt-2">
-                {t('clientPortal.branding.help.companyLogo')}
-              </p>
+            {/* Logo uploads — the light and dark marks side by side, since they
+                are two versions of the same thing. */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('clientPortal.branding.fields.companyLogo')}
+                </label>
+                {tenantId && (
+                  <EntityImageUpload
+                    entityType="tenant"
+                    entityId={tenantId}
+                    entityName={clientName || 'Client Portal'}
+                    imageUrl={logoUrl}
+                    uploadAction={handleLogoUpload}
+                    deleteAction={handleLogoDelete}
+                    onImageChange={(newLogoUrl) => {
+                      setLogoUrl(newLogoUrl || '');
+                    }}
+                    size="lg"
+                  />
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  {t('clientPortal.branding.help.companyLogo')}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('clientPortal.branding.fields.companyLogoDark', {
+                    defaultValue: 'Logo for dark backgrounds',
+                  })}
+                </label>
+                {tenantId && (
+                  <EntityImageUpload
+                    entityType="tenant"
+                    entityId={tenantId}
+                    entityName={clientName || 'Client Portal'}
+                    imageUrl={logoDarkUrl}
+                    uploadAction={handleDarkLogoUpload}
+                    deleteAction={handleDarkLogoDelete}
+                    onImageChange={(newLogoUrl) => {
+                      setLogoDarkUrl(newLogoUrl || '');
+                    }}
+                    size="lg"
+                  />
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  {t('clientPortal.branding.help.companyLogoDark', {
+                    defaultValue: 'Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.',
+                  })}
+                </p>
+              </div>
             </div>
 
             {/* Color Palette */}
@@ -493,6 +618,54 @@ const ClientPortalSettings = () => {
               <label className="block text-sm font-medium text-gray-700">
                 {t('clientPortal.branding.fields.colorPalette')}
               </label>
+              {advancedAppearanceEnabled && (
+                <>
+                  <p className="text-sm text-gray-500" data-automation-id="client-portal-palette-scope">
+                    {t('clientPortal.branding.help.colorPalette', {
+                      defaultValue:
+                        'These are accents on top of the organization theme: the primary color paints buttons, links and the welcome banner, the secondary color the banner’s second half and supporting accents, and the side panel picks up whichever you choose. Every other surface — page, cards, text, borders — comes from the theme under Settings → Appearance.',
+                    })}
+                  </p>
+
+                  <div className="flex items-start justify-between gap-6 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+                    <div>
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        {t('clientPortal.branding.fields.followTheme', {
+                          defaultValue: 'Use the organization theme in the portal',
+                        })}
+                      </div>
+                      <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                        {t('clientPortal.branding.help.followTheme', {
+                          defaultValue:
+                            'When on, the client portal uses the theme chosen under Settings → Appearance. When off, the colors below override it.',
+                        })}
+                      </p>
+                    </div>
+                    <Switch
+                      id="client-portal-follow-theme"
+                      checked={portalFollowsTheme}
+                      disabled={brandingLoading || brandingSaving}
+                      onCheckedChange={setPortalFollowsTheme}
+                      aria-label={t('clientPortal.branding.fields.followTheme', {
+                        defaultValue: 'Use the organization theme in the portal',
+                      })}
+                      data-automation-id="client-portal-follow-theme-switch"
+                    />
+                  </div>
+
+                  {portalFollowsTheme && (
+                    <p
+                      className="text-xs text-[rgb(var(--color-text-500))]"
+                      data-automation-id="client-portal-follow-theme-note"
+                    >
+                      {t('clientPortal.branding.help.followThemeActive', {
+                        defaultValue:
+                          'The colors below are kept but not applied while the portal follows the organization theme.',
+                      })}
+                    </p>
+                  )}
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -590,6 +763,85 @@ const ClientPortalSettings = () => {
                   })}
                 </p>
               </div>
+
+              <div>
+                <CustomSelect
+                  id="client-portal-sidebar-style"
+                  label={t('clientPortal.branding.fields.sidebarStyle', { defaultValue: 'Side panel color' })}
+                  options={[
+                    {
+                      value: 'default',
+                      label: t('clientPortal.branding.sidebarStyle.default', {
+                        defaultValue: 'Default (dark slate)',
+                      }),
+                    },
+                    {
+                      value: 'primary',
+                      label: t('clientPortal.branding.sidebarStyle.primary', {
+                        defaultValue: 'Primary color',
+                      }),
+                    },
+                    {
+                      value: 'secondary',
+                      label: t('clientPortal.branding.sidebarStyle.secondary', {
+                        defaultValue: 'Secondary color',
+                      }),
+                    },
+                    {
+                      value: 'custom',
+                      label: t('clientPortal.branding.sidebarStyle.custom', {
+                        defaultValue: 'Custom color',
+                      }),
+                    },
+                  ]}
+                  value={portalSidebarStyle}
+                  onValueChange={(value) => setPortalSidebarStyle(value as PortalSidebarStyle)}
+                  className="!w-fit"
+                  disabled={brandingLoading || brandingSaving}
+                  data-automation-id="client-portal-sidebar-style-select"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('clientPortal.branding.help.sidebarStyle', {
+                    defaultValue: 'Tints the client portal side panel with your primary or secondary color.',
+                  })}
+                </p>
+              </div>
+
+              {portalSidebarStyle === 'custom' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    {t('clientPortal.branding.fields.sidebarColor', {
+                      defaultValue: 'Custom side panel color',
+                    })}
+                  </label>
+                  <ColorPicker
+                    currentBackgroundColor={portalSidebarColor || '#0C111D'}
+                    onSave={(color) => setPortalSidebarColor(color || '')}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md transition-colors w-fit"
+                        disabled={brandingLoading || brandingSaving}
+                        data-automation-id="client-portal-sidebar-color-picker"
+                      >
+                        <div
+                          className="w-8 h-8 rounded border border-gray-300"
+                          style={{ backgroundColor: portalSidebarColor || '#0C111D' }}
+                        />
+                        <span className="text-sm">{portalSidebarColor || '#0C111D'}</span>
+                      </button>
+                    }
+                    showTextColor={false}
+                    previewType="circle"
+                    colorMode="tag"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('clientPortal.branding.help.sidebarColor', {
+                      defaultValue: 'Any color you like. The panel uses a darkened shade of it so the light side panel text stays readable.',
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Preview Selection Buttons */}
@@ -665,11 +917,26 @@ const ClientPortalSettings = () => {
                 const text = isDark ? 'text-slate-300' : 'text-gray-700';
                 const subtext = isDark ? 'text-slate-400' : 'text-gray-500';
                 const sidebarInactiveText = isDark ? '#94a3b8' : '#cbd5e1';
-                const previewPrimary = primaryColor || (isDark ? '#9855EE' : '#8A4DEA');
-                const previewSecondary = secondaryColor || (isDark ? '#53D7FA' : '#40CFF9');
+                // While the portal follows the organization theme its own brand
+                // colors are inert, so the preview shows the theme's instead.
+                const themeColors = advancedAppearanceEnabled && portalFollowsTheme
+                  ? themeTokens?.[isDark ? 'dark' : 'light']
+                  : undefined;
+                const previewPrimary = themeColors?.primary || primaryColor || (isDark ? '#9855EE' : '#8A4DEA');
+                const previewSecondary = themeColors?.secondary || secondaryColor || (isDark ? '#53D7FA' : '#40CFF9');
+                const sidebarTint = themeColors
+                  ? themeColors.sidebarBg
+                  : portalSidebarStyle === 'primary'
+                    ? getSidebarShade(previewPrimary, isDark)
+                    : portalSidebarStyle === 'secondary'
+                      ? getSidebarShade(previewSecondary, isDark)
+                      : portalSidebarStyle === 'custom' && portalSidebarColor
+                        ? getSidebarShade(portalSidebarColor, isDark)
+                        : null;
+                const previewSidebarLogo = logoDarkUrl || logoUrl;
                 const heroGradientEnd = portalHeroGradient === 'primary-secondary'
                   ? previewSecondary
-                  : primaryColor
+                  : primaryColor || themeColors
                     ? getPrimaryShadeEnd(previewPrimary, isDark)
                     : isDark
                       ? '#B891F5'
@@ -679,14 +946,17 @@ const ClientPortalSettings = () => {
                   <div className={`border ${borderCls} rounded-lg overflow-hidden ${pageBg} max-h-[560px] overflow-y-auto`}>
                     <div className="flex">
                       {/* Sidebar */}
-                      <aside className="w-40 shrink-0 bg-slate-900 text-white py-3">
+                      <aside
+                        className={`w-40 shrink-0 text-white py-3 ${sidebarTint ? '' : 'bg-slate-900'}`}
+                        style={sidebarTint ? { backgroundColor: sidebarTint } : undefined}
+                      >
                         <div className="px-3 flex items-center gap-2">
-                          {logoUrl ? (
-                            <img src={logoUrl} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                          {previewSidebarLogo ? (
+                            <img src={previewSidebarLogo} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
                           ) : (
                             <div
                               className="h-6 w-6 rounded-full"
-                              style={{ backgroundColor: primaryColor || '#8B5CF6' }}
+                              style={{ backgroundColor: previewPrimary }}
                             />
                           )}
                           <span className="text-sm font-semibold truncate">
@@ -712,7 +982,7 @@ const ClientPortalSettings = () => {
                                 className="mx-2 rounded px-2 py-1 text-xs"
                                 style={
                                   item.active
-                                    ? { backgroundColor: `${primaryColor || '#8B5CF6'}33`, color: '#fff' }
+                                    ? { backgroundColor: `${previewPrimary}33`, color: '#fff' }
                                     : { color: sidebarInactiveText }
                                 }
                               >
@@ -778,7 +1048,7 @@ const ClientPortalSettings = () => {
                                 <div className={`text-[10px] truncate ${subtext}`}>{card.label}</div>
                                 <div
                                   className="mt-1 text-sm font-semibold"
-                                  style={{ color: idx === 0 ? primaryColor || '#8B5CF6' : isDark ? '#f1f5f9' : '#111' }}
+                                  style={{ color: idx === 0 ? previewPrimary : isDark ? '#f1f5f9' : '#111' }}
                                 >
                                   {card.value}
                                 </div>
@@ -817,8 +1087,8 @@ const ClientPortalSettings = () => {
                                 <div
                                   className="flex w-9 flex-col items-center justify-center rounded py-1"
                                   style={{
-                                    backgroundColor: `${primaryColor || '#8B5CF6'}1A`,
-                                    color: primaryColor || '#8B5CF6',
+                                    backgroundColor: `${previewPrimary}1A`,
+                                    color: previewPrimary,
                                   }}
                                 >
                                   <div className="text-[9px] font-semibold uppercase tracking-wider">May</div>
@@ -846,8 +1116,9 @@ const ClientPortalSettings = () => {
                   <SignInPagePreview
                     branding={{
                       logoUrl,
-                      primaryColor: primaryColor || '#8B5CF6',
-                      secondaryColor: secondaryColor || '#6366F1',
+                      logoDarkUrl,
+                      primaryColor: (advancedAppearanceEnabled && portalFollowsTheme ? themeTokens?.[previewTheme].primary : '') || primaryColor || '#8B5CF6',
+                      secondaryColor: (advancedAppearanceEnabled && portalFollowsTheme ? themeTokens?.[previewTheme].secondary : '') || secondaryColor || '#6366F1',
                       clientName
                     }}
                   />

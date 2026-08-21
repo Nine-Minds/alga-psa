@@ -50,6 +50,45 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 
+export interface ClientPortalThemeRequestContext {
+  isClientPortal: boolean;
+  portalDomain?: string;
+  tenantSlug?: string;
+}
+
+/**
+ * Preserve the tenant hints carried by canonical client-portal auth URLs.
+ * The root layout cannot read search params, so middleware promotes these
+ * validated values to request headers for server-rendered theme resolution.
+ */
+export function getClientPortalThemeRequestContext(
+  pathname: string,
+  searchParams: URLSearchParams,
+): ClientPortalThemeRequestContext {
+  const rawPortalDomain = searchParams.get('portalDomain')?.trim() ?? '';
+  const portalDomain = rawPortalDomain.length <= 253
+    && /^[a-z0-9.-]+(?::\d+)?$/i.test(rawPortalDomain)
+    ? rawPortalDomain.toLowerCase()
+    : undefined;
+
+  const rawTenantSlug = searchParams.get('tenant')?.trim() ?? '';
+  const tenantSlug = /^[a-f0-9]{12}$/i.test(rawTenantSlug)
+    ? rawTenantSlug.toLowerCase()
+    : undefined;
+
+  const isClientPortal = pathname.includes('/client-portal')
+    || (pathname.startsWith('/auth/') && (
+      searchParams.get('portal') === 'client'
+      || Boolean(portalDomain)
+    ));
+
+  return {
+    isClientPortal,
+    ...(isClientPortal && portalDomain ? { portalDomain } : {}),
+    ...(isClientPortal && tenantSlug ? { tenantSlug } : {}),
+  };
+}
+
 // Helper function to get canonical URL (reads env var dynamically for testing)
 function getCanonicalUrl(): URL | null {
   return process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
@@ -253,6 +292,19 @@ const _middleware = auth((request) => {
   // Clone request headers so we can pass additional metadata downstream
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', pathname);
+  const clientPortalThemeContext = getClientPortalThemeRequestContext(
+    pathname,
+    request.nextUrl.searchParams,
+  );
+  if (clientPortalThemeContext.isClientPortal) {
+    requestHeaders.set('x-client-portal-theme-context', '1');
+  }
+  if (clientPortalThemeContext.portalDomain) {
+    requestHeaders.set('x-client-portal-domain', clientPortalThemeContext.portalDomain);
+  }
+  if (clientPortalThemeContext.tenantSlug) {
+    requestHeaders.set('x-client-portal-tenant-slug', clientPortalThemeContext.tenantSlug);
+  }
 
   // Create a response that will be modified throughout the middleware chain
   let response = NextResponse.next({

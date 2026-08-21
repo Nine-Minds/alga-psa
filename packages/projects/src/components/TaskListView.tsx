@@ -145,7 +145,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
   return (
     <div className="w-full bg-[rgb(var(--color-border-200))] rounded-full h-1.5 overflow-hidden">
       <div
-        className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+        className="bg-[rgb(var(--color-primary-600))] h-1.5 rounded-full transition-all duration-300"
         style={{ width: `${Math.min(percentage, 100)}%` }}
       />
     </div>
@@ -1446,7 +1446,7 @@ export default function TaskListView({
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-semibold text-[rgb(var(--color-text-900))]">{phaseGroup.phase.phase_name}</h4>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]">
                                   {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
                                 {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (
@@ -1504,7 +1504,7 @@ export default function TaskListView({
                               {/* Completion percentage */}
                               {phaseGroup.totalTasks > 0 && (
                                 <div className="text-right min-w-[80px]">
-                                  <div className="text-lg font-bold text-purple-600">
+                                  <div className="text-lg font-bold text-[rgb(var(--color-primary-600))]">
                                     {phaseGroup.completionPercentage}%
                                   </div>
                                   <div className="text-xs text-[rgb(var(--color-text-500))]">
@@ -1722,7 +1722,7 @@ export default function TaskListView({
                                                       return newSet;
                                                     });
                                                   }}
-                                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                                  className="text-xs text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium mt-0.5"
                                                 >
                                                   {expandedTitles.has(task.task_id)
                                                     ? t('projectDetail.seeLess', 'See less')
@@ -1753,7 +1753,7 @@ export default function TaskListView({
                                                         return newSet;
                                                       });
                                                     }}
-                                                    className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-0.5"
+                                                    className="text-xs text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] font-medium mt-0.5"
                                                   >
                                                     {expandedDescriptions.has(task.task_id)
                                                       ? t('projectDetail.seeLess', 'See less')

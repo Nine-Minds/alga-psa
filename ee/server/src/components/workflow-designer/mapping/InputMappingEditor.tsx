@@ -571,7 +571,7 @@ const MappingFieldEditor: React.FC<{
           <button
             id={`${idPrefix}-ask-ai`}
             type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-[rgb(var(--color-primary-700))] transition-colors hover:text-[rgb(var(--color-primary-900))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2 dark:text-[rgb(var(--color-primary-300))] dark:hover:text-[rgb(var(--color-primary-200))]"
             title={t('inputMappingEditor.askAi.shortcutHint', { defaultValue: showRegexAskAi ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance' })}
             aria-label={t('inputMappingEditor.askAi.ariaLabel', { defaultValue: showRegexAskAi ? 'Ask AI for regex help' : 'Ask AI for JSONata help' })}
             onClick={openQuickAsk}
@@ -2094,7 +2094,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     <button
                       id={`mapping-${stepId}-${field.name}-ask-ai`}
                       type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-[rgb(var(--color-primary-700))] transition-colors hover:text-[rgb(var(--color-primary-900))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2 dark:text-[rgb(var(--color-primary-300))] dark:hover:text-[rgb(var(--color-primary-200))]"
                       title={t('inputMappingEditor.askAi.shortcutHint', {
                         defaultValue: isRegexTransformActionId(actionId) ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance'
                       })}

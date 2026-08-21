@@ -14,6 +14,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
@@ -157,6 +158,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
+  // Which sticky slot the composer opens into — decided at open time so it
+  // opens where the reader clicked and never moves mid-draft.
+  const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
@@ -220,37 +224,31 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     deleteDocumentFn: deleteDocument,
   });
 
-  const addCommentBtnRef = useRef<HTMLButtonElement>(null);
-  const editorAreaRef = useRef<HTMLDivElement>(null);
-  const [addCommentBtnVisible, setAddCommentBtnVisible] = useState(true);
+  // Observed on the header row rather than the button itself: the button
+  // unmounts while the editor is open, and an unmounted sentinel would report
+  // "visible" and yank the collapsed bar out from under the reader.
+  const headerAnchorRef = useRef<HTMLDivElement>(null);
+  const [headerAnchorVisible, setHeaderAnchorVisible] = useState(true);
 
   useEffect(() => {
-    const el = addCommentBtnRef.current;
-    if (!el) {
-      setAddCommentBtnVisible(true);
-      return;
-    }
+    const el = headerAnchorRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
-      ([entry]) => setAddCommentBtnVisible(entry.isIntersecting),
+      ([entry]) => setHeaderAnchorVisible(entry.isIntersecting),
       { threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [showEditor]);
+  }, []);
 
-  const handleAddCommentClick = (scrollToEditor = false) => {
+  const handleAddCommentClick = (placement: 'top' | 'bottom' = 'top') => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
       setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
+    setEditorPlacement(placement);
     setShowEditor(true);
-    if (scrollToEditor) {
-      // Wait for editor to render, then scroll to it
-      requestAnimationFrame(() => {
-        editorAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      });
-    }
   };
   const handleSubmitComment = async () => {
     let success = false;
@@ -301,7 +299,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     composeUploadSession.requestDiscard();
   };
 
-  usePageCreateShortcut(() => { handleAddCommentClick(true); }, { enabled: !showEditor });
+  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor });
   useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
     active: showEditor,
     enabled: !isSubmitting,
@@ -681,123 +679,130 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
 
+  // One composer, rendered into whichever sticky slot was asked for.
+  const composerBlock = (
+    <div className='flex items-start min-w-0 max-w-full'>
+      <div className="mr-2">
+        {/* Use UserAvatar component for current user */}
+        <UserAvatar
+          {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
+          userId={currentUser?.id || ''}
+          userName={currentUser?.name || ''}
+          avatarUrl={userMap[currentUser?.id || '']?.avatarUrl || currentUser?.avatarUrl || null}
+          size="md"
+        />
+      </div>
+      <div className='flex-grow min-w-0 max-w-full'>
+        {/* Toggle switches above the editor */}
+        <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
+          {!hideInternalTab && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id={`${compId}-internal-toggle`}
+                checked={isInternalToggle}
+                onCheckedChange={setIsInternalToggle}
+              />
+              <Label htmlFor={`${id}-internal-toggle`}>
+                {isInternalToggle ? t('conversation.markedAsInternal', 'Marked as Internal') : t('conversation.markAsInternal', 'Mark as Internal')}
+              </Label>
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`${compId}-resolution-toggle`}
+              checked={isResolutionToggle}
+              onCheckedChange={setIsResolutionToggle}
+            />
+            <Label htmlFor={`${id}-resolution-toggle`}>
+              {isResolutionToggle ? t('conversation.markedAsResolution', 'Marked as Resolution') : t('conversation.markAsResolution', 'Mark as Resolution')}
+            </Label>
+          </div>
+
+          {!hideInternalTab && isResolutionToggle && (
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`${compId}-resolution-close-status-select`}>
+                  {t('tickets.conversation.closeStatus', 'Close status')}
+                </Label>
+                <CustomSelect
+                  id={`${compId}-resolution-close-status-select`}
+                  value={resolutionCloseStatusId}
+                  options={[
+                    {
+                      value: NO_STATUS_CHANGE,
+                      label: t('tickets.conversation.noStatusChange', 'Do not change status'),
+                    },
+                    ...closedStatusOptions,
+                  ]}
+                  onValueChange={setResolutionCloseStatusId}
+                  className="!w-64"
+                  disabled={closedStatusOptions.length === 0}
+                />
+              </div>
+              <TicketNotificationSuppressionControl
+                idPrefix={`${compId}-resolution-notification-suppression`}
+                value={notificationSuppression}
+                onChange={setNotificationSuppression}
+                disabled={resolutionCloseStatusId === NO_STATUS_CHANGE}
+              />
+            </div>
+          )}
+        </div>
+        <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
+          <TextEditor
+            {...withDataAutomationId({ id: `${compId}-editor` })}
+            key={editorKey}
+            roomName={`ticket-${ticket.ticket_id}`}
+            initialContent={DEFAULT_BLOCK}
+            onContentChange={onNewCommentContentChange}
+            searchMentions={searchUsersForMentions}
+            uploadFile={composeUploadSession.uploadFile}
+            autoFocus
+          />
+        </Suspense>
+        <div className="flex justify-end space-x-2 mt-1">
+          <Button
+            id={`${compId}-add-comment-btn`}
+            onClick={handleSubmitComment}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? tCore('common.loading', 'Loading...') : t('conversation.addComment', 'Add Comment')}
+          </Button>
+          <Button
+            id={`${compId}-cancel-comment-btn`}
+            onClick={handleCancelComment}
+            variant="outline"
+            disabled={isSubmitting}
+          >
+            {tCore('common.cancel', 'Cancel')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
       <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
+        <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
           {!showEditor && (
             <Button
-              ref={addCommentBtnRef}
               id={`${compId}-show-comment-editor-btn`}
-              onClick={() => handleAddCommentClick()}
+              onClick={() => handleAddCommentClick('top')}
             >
               {t('conversation.addComment', 'Add Comment')}
             </Button>
           )}
         </div>
-        <div className='mb-3' ref={editorAreaRef}>
-          {showEditor && (
-            <div className='flex items-start min-w-0 max-w-full'>
-              <div className="mr-2">
-                {/* Use UserAvatar component for current user */}
-                <UserAvatar
-                  {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
-                  userId={currentUser?.id || ''}
-                  userName={currentUser?.name || ''}
-                  avatarUrl={userMap[currentUser?.id || '']?.avatarUrl || currentUser?.avatarUrl || null}
-                  size="md"
-                />
-              </div>
-              <div className='flex-grow min-w-0 max-w-full'>
-                {/* Toggle switches above the editor */}
-                <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
-                  {!hideInternalTab && (
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id={`${compId}-internal-toggle`}
-                        checked={isInternalToggle}
-                        onCheckedChange={setIsInternalToggle}
-                      />
-                      <Label htmlFor={`${id}-internal-toggle`}>
-                        {isInternalToggle ? t('conversation.markedAsInternal', 'Marked as Internal') : t('conversation.markAsInternal', 'Mark as Internal')}
-                      </Label>
-                    </div>
-                  )}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id={`${compId}-resolution-toggle`}
-                      checked={isResolutionToggle}
-                      onCheckedChange={setIsResolutionToggle}
-                    />
-                    <Label htmlFor={`${id}-resolution-toggle`}>
-                      {isResolutionToggle ? t('conversation.markedAsResolution', 'Marked as Resolution') : t('conversation.markAsResolution', 'Mark as Resolution')}
-                    </Label>
-                  </div>
-
-                  {!hideInternalTab && isResolutionToggle && (
-                    <div className="flex flex-wrap items-start gap-3">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`${compId}-resolution-close-status-select`}>
-                          {t('tickets.conversation.closeStatus', 'Close status')}
-                        </Label>
-                        <CustomSelect
-                          id={`${compId}-resolution-close-status-select`}
-                          value={resolutionCloseStatusId}
-                          options={[
-                            {
-                              value: NO_STATUS_CHANGE,
-                              label: t('tickets.conversation.noStatusChange', 'Do not change status'),
-                            },
-                            ...closedStatusOptions,
-                          ]}
-                          onValueChange={setResolutionCloseStatusId}
-                          className="!w-64"
-                          disabled={closedStatusOptions.length === 0}
-                        />
-                      </div>
-                      <TicketNotificationSuppressionControl
-                        idPrefix={`${compId}-resolution-notification-suppression`}
-                        value={notificationSuppression}
-                        onChange={setNotificationSuppression}
-                        disabled={resolutionCloseStatusId === NO_STATUS_CHANGE}
-                      />
-                    </div>
-                  )}
-                </div>
-                <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
-                  <TextEditor
-                    {...withDataAutomationId({ id: `${compId}-editor` })}
-                    key={editorKey}
-                    roomName={`ticket-${ticket.ticket_id}`}
-                    initialContent={DEFAULT_BLOCK}
-                    onContentChange={onNewCommentContentChange}
-                    searchMentions={searchUsersForMentions}
-                    uploadFile={composeUploadSession.uploadFile}
-                    autoFocus
-                  />
-                </Suspense>
-                <div className="flex justify-end space-x-2 mt-1">
-                  <Button
-                    id={`${compId}-add-comment-btn`}
-                    onClick={handleSubmitComment}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? tCore('common.loading', 'Loading...') : t('conversation.addComment', 'Add Comment')}
-                  </Button>
-                  <Button
-                    id={`${compId}-cancel-comment-btn`}
-                    onClick={handleCancelComment}
-                    variant="outline"
-                    disabled={isSubmitting}
-                  >
-                    {tCore('common.cancel', 'Cancel')}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <StickyComposerDock
+          id={`${compId}-composer-top`}
+          side="top"
+          visible={showEditor && editorPlacement === 'top'}
+          expanded
+        >
+          <div className="p-3">{composerBlock}</div>
+        </StickyComposerDock>
         <CustomTabs
           tabs={tabContent}
           value={activeTab}
@@ -814,19 +819,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             </button>
           }
         />
+        {/* Collapsed bar, once the header button is off-screen. Opens the
+            composer right here rather than sending the reader back up. */}
+        <StickyComposerDock
+          id={`${compId}-composer-dock`}
+          visible={showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          expanded={showEditor && editorPlacement === 'bottom'}
+          placeholder={t('conversation.typeComment', 'Type your comment here...')}
+          onExpand={() => handleAddCommentClick('bottom')}
+        >
+          <div className="p-3">{composerBlock}</div>
+        </StickyComposerDock>
       </div>
-      {/* Floating Add Comment button when the top button scrolls out of view */}
-      {!showEditor && !addCommentBtnVisible && (
-        <div className="sticky bottom-4 flex justify-end px-6 pb-4 pointer-events-none">
-          <Button
-            id={`${compId}-floating-add-comment-btn`}
-            onClick={() => handleAddCommentClick(true)}
-            className="pointer-events-auto shadow-lg"
-          >
-            {t('conversation.addComment', 'Add Comment')}
-          </Button>
-        </div>
-      )}
       <ConfirmationDialog
         id={`${compId}-clipboard-draft-cancel-dialog`}
         isOpen={composeUploadSession.showDraftCancelDialog}

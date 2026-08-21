@@ -431,7 +431,7 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
@@ -499,7 +499,7 @@ function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
@@ -612,7 +612,7 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyDuration = t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' });
@@ -648,7 +648,7 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-                <thead className="bg-[rgb(var(--color-background-100))]">
+                <thead className="bg-[rgb(var(--color-border-100))]">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.assignee', { defaultValue: 'Assignee' })}</th>
                     <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.created', { defaultValue: 'Created' })}</th>
@@ -736,7 +736,7 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
@@ -785,7 +785,7 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-              <thead className="bg-[rgb(var(--color-background-100))]">
+              <thead className="bg-[rgb(var(--color-border-100))]">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.user', { defaultValue: 'User' })}</th>
                   <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.workedHours', { defaultValue: 'Worked hours' })}</th>
@@ -885,7 +885,7 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyDuration = t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' });
@@ -958,7 +958,7 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-              <thead className="bg-[rgb(var(--color-background-100))]">
+              <thead className="bg-[rgb(var(--color-border-100))]">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.channel', { defaultValue: 'Channel' })}</th>
                   <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.status', { defaultValue: 'Status' })}</th>
@@ -1061,7 +1061,7 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     };
   }, [rangeDays, t]);
 
-  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
@@ -1167,7 +1167,7 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const { t } = useTranslation('msp/reports');
   const [selectedReportId, setSelectedReportId] = useState<EmbeddedReportId>('ticket-workload');
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(30);
-  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
 
   const visibleReports = useMemo(
     () =>
@@ -1182,7 +1182,7 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const selectedReport = visibleReports.find((report) => report.id === selectedReportId);
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--color-background-50))] p-6">
+    <div className="min-h-screen bg-[rgb(var(--color-border-50))] p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>

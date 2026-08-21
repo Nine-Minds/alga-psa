@@ -245,3 +245,6 @@ server/secrets-playwright/
 tools/i18n/*/reports/
 tools/i18n/*/review-state.json
 tools/i18n/*/baseline.json
+
+# T013 gate writes this on a diff for inspection; never committed.
+server/src/test/integration/billing/goldenOutput/baseline.actual.json

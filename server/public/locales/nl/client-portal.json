@@ -377,7 +377,8 @@
       "recentInvoicesTitle": "Recente facturen",
       "billingHistoryTitle": "Facturatiegeschiedenis",
       "labels": {
-        "defaultTag": "(Standaard)"
+        "defaultTag": "(Standaard)",
+        "paysFor": "Betaalt voor {{profile}}"
       },
       "actions": {
         "setDefault": "Als standaard instellen",
@@ -391,7 +392,8 @@
         "expiryMonth": "Maand",
         "expiryYear": "Jaar",
         "cvv": "CVV",
-        "setAsDefault": "Instellen als standaard betaalmethode"
+        "setAsDefault": "Instellen als standaard betaalmethode",
+        "billingProfile": "Betaalt voor"
       },
       "history": {
         "period": "Periode",
@@ -893,6 +895,15 @@
         "backToBilling": "Terug naar facturatie",
         "viewInvoice": "Factuur bekijken"
       }
+    },
+    "segments": {
+      "allSegments": "Hele organisatie",
+      "organizationTotalLabel": "Totaal van uw organisatie",
+      "periodLabel": "{{start}} tot {{end}}",
+      "selectorLabel": "Tonen",
+      "empty": "Geen gefactureerde kosten in deze periode.",
+      "chargesTitle": "Kosten in dit segment",
+      "noCharges": "Geen kosten in deze periode."
     }
   },
   "assets": {

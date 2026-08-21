@@ -3,7 +3,7 @@
 /**
  * Asset Passwords Section — flag-gated dynamic import wrapper.
  *
- * With the `release-v1.5-feature` flag OFF this renders the exact legacy
+ * With the `release-v1-5-feature` flag OFF this renders the exact legacy
  * "Passwords & Secrets — coming soon" placeholder card that existed before the
  * credentials vault (in both EE and CE builds), so flag-off asset pages are
  * byte-preserved. With the flag ON it dynamically imports the EE/CE vault
@@ -35,7 +35,7 @@ const VaultAssetCredentialsSection = dynamic(
 
 export function AssetCredentialsSection({ assetId, clientId }: AssetCredentialsSectionProps) {
   const { t } = useTranslation('msp/assets');
-  const releaseFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
+  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
   const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   if (!flagEnabled) {

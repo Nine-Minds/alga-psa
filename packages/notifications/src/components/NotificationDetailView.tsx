@@ -91,7 +91,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
   // high gets a muted attention-red left accent, low renders dimmed. The type
   // icon/styling above is unchanged. Distinct from the ticket priority rendered
   // from metadata.changes.priority. Flag off: exactly today's markup.
-  const { enabled: priorityEnabled } = useFeatureFlag('release-v1.5-feature');
+  const { enabled: priorityEnabled } = useFeatureFlag('release-v1-5-feature');
   const priorityContainerClass = priorityEnabled
     ? notification.priority === 'high'
       ? ' border-l-4 border-rose-500'

@@ -24,7 +24,7 @@ interface UsageBasedServicesStepProps {
 
 export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [bucketSchedules, setBucketSchedules] = React.useState<Array<{

@@ -20,7 +20,7 @@ Feature posture:
   `assertTierAccess(TIER_FEATURES.CREDENTIALS)` (new tier feature, minimum tier
   `pro`). CE builds get render-nothing stubs via the `@enterprise` alias, the
   same pattern as `HuduClientPasswordsTab`.
-- **All new/changed UI is gated behind the `release-v1.5-feature` flag.** Flag
+- **All new/changed UI is gated behind the `release-v1-5-feature` flag.** Flag
   off ⇒ no nav item, no tabs change, and the existing Hudu-only client
   Passwords tab keeps its current behavior exactly.
 - **No client-portal exposure** in v1.
@@ -375,7 +375,7 @@ CE stubs for the action barrel and components via the `@enterprise` alias so CE
 bundles compile without EE code (existing `packages/ee/.../_stub.ts` /
 CE-stub-component pattern).
 
-### UI (all behind `release-v1.5-feature`)
+### UI (all behind `release-v1-5-feature`)
 
 New package area `packages/ee/src/components/credentials/` (CE stubs) with EE
 implementations in `ee/server/src/components/credentials/`:
@@ -414,7 +414,7 @@ i18n CI checks.
 |---|---|---|
 | Edition | `@enterprise` alias; CE stubs render null | Feature absent in CE |
 | Tier | `assertTierAccess(TIER_FEATURES.CREDENTIALS)` server-side; `getCredentialsContext` for UI | Actions throw tier error; UI hidden |
-| Release flag | `useFeatureFlag('release-v1.5-feature')` | Existing UI/behavior preserved (incl. Hudu-only client tab) |
+| Release flag | `useFeatureFlag('release-v1-5-feature')` | Existing UI/behavior preserved (incl. Hudu-only client tab) |
 
 New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
 `FEATURE_MINIMUM_TIER` (`pro`) in `packages/types` tier constants.
@@ -464,7 +464,7 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
   key with arbitrary extension secrets.
 - **Hosted values wiring:** add `ALGA_VAULT_CREDENTIALS_TRANSIT_KEY` to
   `hosted.values.yaml` (the value is only referenced by name; the key's
-  material lives in Vault). Before enabling the `release-v1.5-feature` flag in
+  material lives in Vault). Before enabling the `release-v1-5-feature` flag in
   hosted, create the transit key with key-derivation allowed:
 
   ```sh
@@ -499,7 +499,7 @@ New tier feature: add `CREDENTIALS` to `TIER_FEATURES` /
 1. Apply the migrations (tables + permission seed).
 2. Create the transit key in Vault (above) and add the env name to
    `hosted.values.yaml`.
-3. Enable the `release-v1.5-feature` flag in PostHog.
+3. Enable the `release-v1-5-feature` flag in PostHog.
 4. The nav item / client tab / asset section appear automatically (EE + Pro
    tier + flag).
 

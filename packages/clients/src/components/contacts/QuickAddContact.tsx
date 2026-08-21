@@ -18,10 +18,13 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import {
-  validateContactName,
-  validateEmailAddress,
-  validateNotes
+  validateContactNameField,
+  validateEmailAddressField,
+  validateNotes,
+  translateFieldValidation,
+  type FieldValidation
 } from '@alga-psa/validation';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
@@ -87,6 +90,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 }) => {
   const { toast } = useToast();
   const { t } = useTranslation('msp/contacts');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const [fullName, setFullName] = useState('');
   const [emailState, setEmailState] = useState<QuickAddContactEmailState>({
     email: '',
@@ -109,6 +114,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Rendered beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
@@ -184,6 +191,19 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     let nextError: string | null = null;
     const trimmedValue = value.trim();
 
+    const applyField = (raw: FieldValidation) => {
+      const result = translateFieldValidation(raw, tValidation);
+      setFieldWarnings(prev => ({ ...prev, [fieldName]: result.warnings }));
+      return result.error;
+    };
+
+    // An opinion about a value the field no longer holds is just noise.
+    const clearWarnings = () => setFieldWarnings(prev => ({ ...prev, [fieldName]: [] }));
+
+    if (!trimmedValue) {
+      clearWarnings();
+    }
+
     switch (fieldName) {
       case 'contact_name':
         if (!trimmedValue) {
@@ -195,7 +215,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         } else if (/^\s+$/.test(value)) {
           nextError = t('quickAddContact.validation.fullNameSpaces', { defaultValue: 'Full name cannot contain only spaces' });
         } else {
-          nextError = validateContactName(trimmedValue);
+          nextError = applyField(validateContactNameField(trimmedValue));
         }
         break;
       case 'contact_email':
@@ -206,7 +226,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         } else if (/^\s+$/.test(value)) {
           nextError = t('quickAddContact.validation.emailSpaces', { defaultValue: 'Email address cannot contain only spaces' });
         } else {
-          nextError = validateEmailAddress(trimmedValue);
+          nextError = applyField(validateEmailAddressField(trimmedValue));
         }
         break;
       case 'role':
@@ -558,6 +578,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               {fieldErrors.contact_name && (
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
               )}
+              <FieldWarnings warnings={fieldWarnings.contact_name ?? []} />
             </div>
             <div>
               <ContactEmailAddressesEditor
@@ -565,6 +586,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 value={emailState}
                 onChange={(value) => {
                   setEmailState(value);
+                  // Keeps the warning slot below in step with the primary address.
+                  setFieldWarnings(prev => ({
+                    ...prev,
+                    contact_email: value.email.trim()
+                      ? translateFieldValidation(validateEmailAddressField(value.email), tValidation).warnings
+                      : []
+                  }));
                   if (fieldErrors.contact_email) {
                     setFieldErrors(prev => ({ ...prev, contact_email: '' }));
                   }
@@ -573,6 +601,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 errorMessages={hasAttemptedSubmit ? emailValidationErrors : undefined}
                 onValidationChange={setEmailValidationErrors}
               />
+              <FieldWarnings warnings={fieldWarnings.contact_email ?? []} />
             </div>
             <div>
               <ContactPhoneNumbersEditor

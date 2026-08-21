@@ -15,7 +15,7 @@ export interface TicketLayoutPreference {
 }
 
 const DEFAULT_LAYOUT_PREFERENCE: TicketLayoutPreference = {
-  layout: 'entry',
+  layout: 'grid',
   timelineOrder: 'asc',
 };
 

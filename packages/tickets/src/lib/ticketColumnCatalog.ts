@@ -76,3 +76,37 @@ export function resolveTicketColumnVisibility(
   }
   return out;
 }
+
+const TICKET_COLUMN_KEYS: readonly string[] = TICKET_COLUMNS.map((c) => c.key);
+
+/**
+ * Resolve a stored (sparse, possibly stale) column order into a complete one:
+ * stored keys first in stored order, filtered to keys the catalog still knows,
+ * then every remaining catalog key in catalog order.
+ *
+ * Both halves matter. Filtering the stored half means a column deleted from
+ * TICKET_COLUMNS does not survive in a saved board view as a key nothing can
+ * render. Appending the remainder means a column *added* to TICKET_COLUMNS after
+ * a board saved its view still appears — it does not silently vanish for that
+ * board because it happened not to be in an array written before it existed.
+ * A stored order is therefore a preference about the columns it names, never an
+ * exhaustive declaration of the column set.
+ */
+export function resolveTicketColumnOrder(
+  stored?: readonly string[] | null,
+): TicketListColumnKey[] {
+  const seen = new Set<string>();
+  const ordered: TicketListColumnKey[] = [];
+
+  for (const key of stored ?? []) {
+    if (!TICKET_COLUMN_KEYS.includes(key) || seen.has(key)) continue;
+    seen.add(key);
+    ordered.push(key as TicketListColumnKey);
+  }
+  for (const col of TICKET_COLUMNS) {
+    if (seen.has(col.key)) continue;
+    seen.add(col.key);
+    ordered.push(col.key);
+  }
+  return ordered;
+}

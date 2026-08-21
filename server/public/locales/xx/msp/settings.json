@@ -9,6 +9,7 @@
   "tabs": {
     "general": "11111",
     "experimentalFeatures": "11111",
+    "appearance": "11111",
     "clientPortal": "11111",
     "users": "11111",
     "teams": "11111",
@@ -779,6 +780,8 @@
         "sections": {
           "general": "11111",
           "generalHelp": "11111",
+          "appearance": "11111",
+          "appearanceHelp": "11111",
           "assignment": "11111",
           "assignmentHelp": "11111",
           "inbound": "11111",
@@ -799,6 +802,22 @@
         "allSaved": "11111",
         "reopenBadge": "11111",
         "required": "11111"
+      },
+      "appearance": {
+        "pinLabel": "11111",
+        "pinHelp": "11111",
+        "savedView": "11111",
+        "inheritsTenant": "11111",
+        "openBoard": "11111",
+        "resetToTenant": "11111",
+        "arrangeNote": "11111",
+        "preview": "11111",
+        "summary": {
+          "openOnly": "11111",
+          "columns": "11111 {{columns}} 11111",
+          "density": "11111 {{level}} 11111",
+          "sortedBy": "11111 {{field}} 11111"
+        }
       },
       "empty": "11111",
       "searchPlaceholder": "11111"
@@ -1109,25 +1128,42 @@
       "fields": {
         "companyName": "11111",
         "companyLogo": "11111",
+        "companyLogoDark": "11111",
         "colorPalette": "11111",
         "primaryColor": "11111",
         "secondaryColor": "11111",
         "supportEmail": "11111",
         "supportPhone": "11111",
-        "heroGradient": "11111"
+        "heroGradient": "11111",
+        "sidebarStyle": "11111",
+        "sidebarColor": "11111",
+        "followTheme": "11111"
       },
       "help": {
         "companyName": "11111",
+        "colorPalette": "11111",
         "companyLogo": "11111",
+        "companyLogoMsp": "11111",
+        "companyLogoDark": "11111",
         "primaryColor": "11111",
         "secondaryColor": "11111",
         "supportEmail": "11111",
         "supportPhone": "11111",
-        "heroGradient": "11111"
+        "heroGradient": "11111",
+        "sidebarStyle": "11111",
+        "sidebarColor": "11111",
+        "followTheme": "11111",
+        "followThemeActive": "11111"
       },
       "heroGradient": {
         "primaryShades": "11111",
         "primarySecondary": "11111"
+      },
+      "sidebarStyle": {
+        "default": "11111",
+        "primary": "11111",
+        "secondary": "11111",
+        "custom": "11111"
       },
       "preview": "11111",
       "previewDarkMode": "11111",
@@ -1281,6 +1317,130 @@
     "yourCompanyName": "11111",
     "brandingPreviewMode": "11111",
     "brandingUpdated": "11111"
+  },
+  "appearance": {
+    "title": "11111",
+    "description": "11111",
+    "pairs": {
+      "alga": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "slate": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "ocean": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "sky": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "forest": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "sunset": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "cappuccino": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "vice": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "highContrast": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "custom": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "custom": {
+      "title": "11111",
+      "description": "11111",
+      "lightMode": "11111",
+      "darkMode": "11111",
+      "previewAlt": "11111",
+      "seededFrom": "11111 {{pair}} 11111",
+      "contrastTitle": "11111",
+      "contrastIssue": "11111 {{foreground}} 11111 {{background}} 11111 {{hint}} 11111",
+      "tokens": {
+        "background": "11111",
+        "card": "11111",
+        "surface": "11111",
+        "textPrimary": "11111",
+        "textSecondary": "11111",
+        "textMuted": "11111",
+        "border": "11111",
+        "borderStrong": "11111",
+        "primary": "11111",
+        "secondary": "11111",
+        "accent": "11111",
+        "sidebarBg": "11111",
+        "sidebarText": "11111",
+        "sidebarHover": "11111",
+        "headerBg": "11111",
+        "buttonLabel": "11111"
+      },
+      "actions": {
+        "save": "11111",
+        "reset": "11111 {{pair}} 11111",
+        "resetDone": "11111 {{pair}} 11111",
+        "useSaved": "11111",
+        "useSavedDone": "11111"
+      },
+      "contrastHints": {
+        "lighten": "11111 {{foreground}} 11111 {{background}} 11111",
+        "darken": "11111 {{foreground}} 11111 {{background}} 11111"
+      },
+      "mock": {
+        "caption": "11111",
+        "showing": "11111 {{token}} 11111",
+        "nav": "11111",
+        "navActive": "11111",
+        "navMuted": "11111",
+        "headerTitle": "11111",
+        "cardTitle": "11111",
+        "cardBody": "11111",
+        "cardMuted": "11111",
+        "primaryAction": "11111",
+        "secondaryAction": "11111",
+        "ghostAction": "11111",
+        "surface": "11111"
+      }
+    },
+    "whiteLabel": {
+      "title": "11111",
+      "description": "11111",
+      "logoHelp": "11111",
+      "fields": {
+        "logo": "11111",
+        "logoDark": "11111"
+      },
+      "colors": {
+        "label": "11111",
+        "help": "11111"
+      }
+    },
+    "messages": {
+      "loadFailed": "11111",
+      "saved": "11111",
+      "saveFailed": "11111",
+      "discarded": "11111"
+    },
+    "unsaved": {
+      "notice": "11111",
+      "save": "11111",
+      "discard": "11111"
+    }
   },
   "mspLanguage": {
     "title": "11111",

@@ -4,6 +4,16 @@ import {
   buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string) {
@@ -352,13 +362,35 @@ vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
     calculateBillingForExecutionWindow = mocks.calculateBillingForExecutionWindow;
     rolloverUnapprovedTime = vi.fn(async () => undefined);
   },
+}));
+
+// Generation runs reconcile -> calculate -> persist inside one transaction.
+// Reconciliation is covered by contractLineAttributionWriter.test.ts and the
+// real-PostgreSQL billingInvoiceTiming integration suite; this filter-based
+// knex stub cannot express the writer's query shape, so it is stubbed out.
+vi.mock('../../../../../packages/billing/src/lib/billing/contractLineAttributionWriter', () => ({
+  reconcileWindowAttribution: vi.fn(async () => ({ assigned: 0, markedUnresolved: 0 })),
 }));
 
 vi.mock('@alga-psa/billing/models/invoice', () => ({

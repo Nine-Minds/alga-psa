@@ -3,6 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 const billingEngineSource = readFileSync(
   new URL('../../../../../packages/billing/src/lib/billing/billingEngine.ts', import.meta.url),
   'utf8',
@@ -115,6 +125,17 @@ describe('project schedule charge selection', () => {
   beforeEach(() => {
     engine = new BillingEngine();
     vi.restoreAllMocks();
+    // Project schedule charges resolve a billing profile like every other
+    // charge (F033). This suite has no database, so step 5 is answered
+    // directly rather than reached through knex.
+    (engine as any).tenant = 'tenant-1';
+    vi.spyOn(engine as any, 'initKnex').mockResolvedValue(undefined);
+    vi.spyOn(engine as any, 'getClientDefaultBillingProfileId')
+      .mockResolvedValue('unit-test-default-billing-profile');
+    // The project is the only segment-bearing record behind a schedule charge
+    // (F030). No project here carries one, so every charge falls through to
+    // the client default — the unsegmented answer.
+    vi.spyOn(engine as any, 'loadProjectBillingProfileIds').mockResolvedValue(new Map());
   });
 
   it('T011: recurring runs pick up only approved recurring milestones for the client', async () => {
@@ -402,6 +423,16 @@ describe('project billing engine orchestration', () => {
 
   beforeEach(() => {
     engine = new BillingEngine();
+    // Same as above: step 5 of the attribution chain is answered directly,
+    // since this suite has no database behind the engine.
+    (engine as any).tenant = 'tenant-1';
+    vi.spyOn(engine as any, 'initKnex').mockResolvedValue(undefined);
+    vi.spyOn(engine as any, 'getClientDefaultBillingProfileId')
+      .mockResolvedValue('unit-test-default-billing-profile');
+    // The project is the only segment-bearing record behind a schedule charge
+    // (F030). No project here carries one, so every charge falls through to
+    // the client default — the unsegmented answer.
+    vi.spyOn(engine as any, 'loadProjectBillingProfileIds').mockResolvedValue(new Map());
     identityAdjustments(engine);
     vi.spyOn(engine as any, 'getProjectMaterialCurrencyWarnings').mockResolvedValue([]);
   });

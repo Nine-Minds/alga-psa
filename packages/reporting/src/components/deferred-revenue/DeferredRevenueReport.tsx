@@ -129,7 +129,7 @@ function CreditDetailList({ details, currency, formatCurrency }: { details: Cred
       ) : (
         <div className="mt-2 overflow-x-auto">
           <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-            <thead className="bg-[rgb(var(--color-background-100))]">
+            <thead className="bg-[rgb(var(--color-border-100))]">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.date', { defaultValue: 'Issued' })}</th>
                 <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.description', { defaultValue: 'Description' })}</th>
@@ -158,7 +158,7 @@ function CreditDetailList({ details, currency, formatCurrency }: { details: Cred
                     {detail.qboReachable ? (
                       <span className="text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.reachable', { defaultValue: 'Synced' })}</span>
                     ) : (
-                      <span className="font-medium text-[rgb(var(--color-destructive-600))]" title={t('deferredRevenue.detail.notReachableTitle', { defaultValue: 'Prepayment / project-deposit credits never export to QuickBooks — Alga is the system of record.' })}>
+                      <span className="font-medium text-[rgb(var(--color-destructive))]" title={t('deferredRevenue.detail.notReachableTitle', { defaultValue: 'Prepayment / project-deposit credits never export to QuickBooks — Alga is the system of record.' })}>
                         {t('deferredRevenue.detail.notReachable', { defaultValue: 'Not in QBO' })}
                       </span>
                     )}
@@ -187,7 +187,7 @@ function BucketDetailList({ details, currency, formatCurrency }: { details: Buck
       ) : (
         <div className="mt-2 overflow-x-auto">
           <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-            <thead className="bg-[rgb(var(--color-background-100))]">
+            <thead className="bg-[rgb(var(--color-border-100))]">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.line', { defaultValue: 'Line' })}</th>
                 <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.period', { defaultValue: 'Period' })}</th>
@@ -259,7 +259,7 @@ function SummaryCards({ sections, formatCurrency }: { sections: CurrencySection[
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[rgb(var(--color-text-500))]">{t('deferredRevenue.summary.delta', { defaultValue: 'Change vs prior month' })}</span>
-                <span className={`tabular-nums ${delta >= 0 ? 'text-[rgb(var(--color-text-700))]' : 'text-[rgb(var(--color-destructive-600))]'}`}>
+                <span className={`tabular-nums ${delta >= 0 ? 'text-[rgb(var(--color-text-700))]' : 'text-[rgb(var(--color-destructive))]'}`}>
                   {formatCents(delta, section.currencyCode, formatCurrency)}
                 </span>
               </div>
@@ -288,7 +288,7 @@ function DeferredRevenueTable({
   return (
     <div className="overflow-x-auto rounded-md border border-[rgb(var(--color-border-200))]">
       <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
-        <thead className="bg-[rgb(var(--color-background-100))]">
+        <thead className="bg-[rgb(var(--color-border-100))]">
           <tr>
             <th rowSpan={2} className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">
               {t('deferredRevenue.table.client', { defaultValue: 'Client' })}
@@ -340,7 +340,7 @@ function DeferredRevenueTable({
               );
             })
           )}
-          <tr className="bg-[rgb(var(--color-background-100))]">
+          <tr className="bg-[rgb(var(--color-border-100))]">
             <td className="px-4 py-3 font-semibold text-[rgb(var(--color-text-900))]">
               {t('deferredRevenue.table.tenantTotal', { defaultValue: 'Tenant total' })}
             </td>
@@ -371,7 +371,7 @@ function ClientRow({
 }) {
   return (
     <>
-      <tr className="cursor-pointer hover:bg-[rgb(var(--color-background-50))]" onClick={onToggle}>
+      <tr className="cursor-pointer hover:bg-[rgb(var(--color-border-50))]" onClick={onToggle}>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             {expanded ? (
@@ -390,7 +390,7 @@ function ClientRow({
       </tr>
       {expanded ? (
         <tr>
-          <td colSpan={13} className="border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] p-0">
+          <td colSpan={13} className="border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-0">
             <div className="divide-y divide-[rgb(var(--color-border-200))]">
               <CreditDetailList details={client.creditDetails} currency={currency} formatCurrency={formatCurrency} />
               <BucketDetailList details={client.bucketDetails} currency={currency} formatCurrency={formatCurrency} />
@@ -552,7 +552,7 @@ export default function DeferredRevenueReport() {
       </div>
 
       {error ? (
-        <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>
+        <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>
       ) : !report ? (
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

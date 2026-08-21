@@ -1,0 +1,24 @@
+{
+  "artifact": "baseline.json",
+  "pre_s1_commit": "fcd7f8cfdf92d86ddd8aade72794e566d0082037",
+  "pre_s1_tree": "c1c58f276a48edeaab16c79c4a4f9b4a2dcc67f2",
+  "baseline_sha256": "7913a9ba98236358f8aedc3edf8362d048a62a32afa08a13e3c7f9eb5f657221",
+  "captured_with": {
+    "command": "server/src/test/integration/billing/goldenOutput/verify-baseline-provenance.sh --capture",
+    "harness": "goldenOutputBaseline.integration.test.ts, copied from the capture branch into the pre-S1 worktree (it is additive; it did not exist pre-S1)",
+    "database": "scratch test Postgres 127.0.0.1:5472; createTestDbConnection drops/recreates test_database and runs the pre-S1 migration set (no client_billing_profiles table)",
+    "env": [
+      "GOLDEN_CAPTURE=1",
+      "TZ=UTC (vitest config default)",
+      "DB_HOST",
+      "DB_PORT",
+      "DB_USER_ADMIN",
+      "DB_USER_SERVER"
+    ]
+  },
+  "provenance_notes": [
+    "verify mode re-creates the pre-S1 worktree, re-runs the capture, and byte-diffs against the committed baseline.json; it also checks this manifest's baseline_sha256 against the committed file and pre_s1_tree against `git rev-parse <pre_s1_commit>^{tree}`.",
+    "Workspace packages (@alga-psa/*) resolve to the PRE-S1 worktree's own packages/ via a locally rebuilt symlink farm; third-party node_modules entries are shared from the main worktree. Engine sources, test-utils, vitest config, and migrations are all the pre-S1 tree's.",
+    "Because the harness file is the only capture-branch input, later slices must keep it runnable against the pre-S1 tree (imports restricted to modules that exist at pre_s1_commit)."
+  ]
+}

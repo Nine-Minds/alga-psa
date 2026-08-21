@@ -24,6 +24,14 @@ import { getClientById } from '@alga-psa/clients/actions';
 import { useClientCrossFeature } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { UNASSIGNED_BILLING_PROFILE_VALUE } from '@alga-psa/ui/components/BillingProfilePicker';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
+import { toast } from 'react-hot-toast';
+import {
+  assignBillingProfile,
+  getClientBillingProfiles,
+} from '../../actions/clientBillingProfileActions';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -39,10 +47,13 @@ interface ClientContractAssignmentProps {
 
 interface DetailedClientContract extends IClientContract {
   contract_name: string;
+  billing_profile_id?: string | null;
   description?: string;
   contract_line_count: number;
   contract_line_names?: string[];
 }
+
+const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
 const isClientContractActionError = (
   result: ClientContractMutationResult,
@@ -217,6 +228,68 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     return t('clientContractAssignment.manualRenewal', { defaultValue: 'Manual renewal' });
   };
 
+  // Billing profile assignment (F044). The column exists only while the client
+  // holds more than one profile — decision D6, read through the one hook that
+  // owns that rule.
+  const { profiles: billingProfiles, isSegmented } = useClientBillingProfiles(
+    clientId,
+    loadClientBillingProfiles,
+  );
+
+  const handleAssignContractProfile = async (
+    clientContractId: string,
+    billingProfileId: string | null,
+  ) => {
+    try {
+      await assignBillingProfile({
+        target: { kind: 'contract', clientContractId },
+        billingProfileId,
+      });
+      setClientContracts((current) =>
+        current.map((contract) =>
+          contract.client_contract_id === clientContractId
+            ? { ...contract, billing_profile_id: billingProfileId }
+            : contract,
+        ),
+      );
+      toast.success(t('clientContractAssignment.billingProfileUpdated', {
+        defaultValue: 'Billing profile updated',
+      }));
+    } catch (assignError) {
+      toast.error(getErrorMessage(assignError));
+    }
+  };
+
+  const billingProfileColumn: ColumnDefinition<DetailedClientContract> = {
+    title: t('clientContractAssignment.billingProfile', { defaultValue: 'Billing Profile' }),
+    dataIndex: 'billing_profile_id',
+    render: (_value, record) => (
+      <CustomSelect
+        id={`contract-billing-profile-${record.client_contract_id}`}
+        value={record.billing_profile_id ?? UNASSIGNED_BILLING_PROFILE_VALUE}
+        onValueChange={(next) =>
+          void handleAssignContractProfile(
+            record.client_contract_id!,
+            next === UNASSIGNED_BILLING_PROFILE_VALUE ? null : next,
+          )
+        }
+        options={[
+          {
+            value: UNASSIGNED_BILLING_PROFILE_VALUE,
+            label: t('clientContractAssignment.billingProfileUnassigned', {
+              defaultValue: 'Not assigned',
+            }),
+          },
+          ...billingProfiles.map((profile) => ({
+            value: profile.billing_profile_id,
+            label: profile.is_default ? `${profile.name} (default)` : profile.name,
+          })),
+        ]}
+        size="sm"
+      />
+    ),
+  };
+
   const contractColumns: ColumnDefinition<DetailedClientContract>[] = [
     {
       title: t('clientContractAssignment.contractName', { defaultValue: 'Contract Name' }),
@@ -285,6 +358,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         return contractLineNames.join(', ');
       },
     },
+    ...(isSegmented ? [billingProfileColumn] : []),
     {
       title: t('clientContractAssignment.actions', { defaultValue: 'Actions' }),
       dataIndex: 'client_contract_id',
@@ -377,7 +451,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
               </Button>
               <Button
                 id="create-contract-button"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
                 onClick={() => setIsWizardOpen(true)}
                 disabled={!renderContractWizard}
               >

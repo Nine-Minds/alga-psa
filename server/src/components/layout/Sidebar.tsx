@@ -18,6 +18,7 @@ import {
   type NavigationSection,
   type NavMode,
 } from '@/config/menuConfig';
+import { useMspBranding } from './MspBrandingContext';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -63,6 +64,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
+  const mspBranding = useMspBranding();
+  // The rail is dark in both themes, but a tenant that uploaded a dark-surface
+  // variant means it for exactly this kind of surface.
+  const tenantLogoUrl = mspBranding.logoDarkUrl || mspBranding.logoUrl;
+  const [failedTenantLogoUrl, setFailedTenantLogoUrl] = useState<string | null>(null);
+  const brandDisplayName = mspBranding.displayName || appDisplayName;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -229,7 +236,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               sideOffset={5}
             >
               {item.name}
-              <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+              <Tooltip.Arrow style={{ fill: 'rgb(var(--color-submenu-bg))' }} />
             </Tooltip.Content>
           </Tooltip.Portal>
         </Tooltip.Root>
@@ -283,16 +290,27 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-          <Image
-            src="/images/avatar-purple-background.png"
-            alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
-            width={200}
-            height={200}
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{appDisplayName}</span>
+        {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
+          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img
+              src={tenantLogoUrl}
+              alt={brandDisplayName}
+              className="w-full h-full object-contain"
+              onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
+            />
+          </div>
+        ) : (
+          <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+            <Image
+              src="/images/avatar-purple-background.png"
+              alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
+              width={200}
+              height={200}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
       </a>
 
       {/* Back to Main button - shown in settings and billing modes */}
@@ -310,7 +328,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <button
               id="settings-back-to-main-button"
               onClick={handleBackToMain}
-              className="w-full px-3 py-2 flex items-center gap-2 text-base text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
+              className="w-full px-3 py-2 flex items-center gap-2 text-base text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
               <span>{backToMainLabel}</span>
@@ -322,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     id="settings-back-to-main-button"
                     onClick={handleBackToMain}
-                    className="w-full p-2 flex items-center justify-center text-purple-400 hover:text-purple-300 hover:bg-white/10 rounded-md transition-colors"
+                    className="w-full p-2 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-white/10 rounded-md transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -334,7 +352,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     sideOffset={5}
                   >
                     {backToMainLabel}
-                    <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+                    <Tooltip.Arrow style={{ fill: 'rgb(var(--color-submenu-bg))' }} />
                   </Tooltip.Content>
                 </Tooltip.Portal>
               </Tooltip.Root>

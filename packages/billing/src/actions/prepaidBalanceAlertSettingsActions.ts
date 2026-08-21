@@ -61,7 +61,7 @@ export const getPrepaidBalanceAlertSettings = withAuth(async (
 });
 
 /**
- * Persist only the four prepaid-alert policy columns. This deliberately does
+ * Persist only the prepaid-alert policy and replenishment columns. This deliberately does
  * not route through the broad null-delete behavior of updateClientBillingSettings:
  * unrelated billing settings are never touched. Disabling both alert types
  * forces client opt-in off.

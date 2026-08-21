@@ -20,10 +20,12 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getPrepaidBalanceAlertSettingsAsync,
   updatePrepaidBalanceAlertSettingsAsync,
+  getPrepaidReplenishmentContractOverridesAsync,
+  updatePrepaidReplenishmentContractOverrideAsync,
   type PrepaidBalanceAlertSettingsInput,
 } from '../../lib/billingHelpers';
 
-const PREPAID_BALANCE_ALERT_FLAG = 'release-v1.5-feature';
+const PREPAID_BALANCE_ALERT_FLAG = 'release-v1-5-feature';
 
 interface ClientPrepaidBalanceAlertSettingsProps {
   clientId: string;
@@ -31,6 +33,15 @@ interface ClientPrepaidBalanceAlertSettingsProps {
 }
 
 type SettingsLoadState = 'not-loaded' | 'loading' | 'loaded' | 'failed';
+type ReplenishmentTier = 'notify' | 'draft' | 'auto_issue';
+type ContractOverride = {
+  clientContractId: string;
+  contractName: string;
+  prepaidReplenishmentTier: ReplenishmentTier | null;
+  prepaidCreditReplenishmentAmount: number | null;
+  prepaidBucketReplenishmentMinutes: number | null;
+  prepaidReplenishmentHorizonDays: number | null;
+};
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -40,6 +51,10 @@ const isUsableSettingsResult = (value: unknown): value is {
   prepaidCreditAlertCurrencyCode: string | null;
   bucketUsageAlertPercent: number | null;
   notifyClientOnPrepaidAlert: boolean;
+  prepaidReplenishmentTier?: ReplenishmentTier;
+  prepaidCreditReplenishmentAmount?: number | null;
+  prepaidBucketReplenishmentMinutes?: number | null;
+  prepaidReplenishmentHorizonDays?: number;
   defaultCurrencyCode?: string;
 } => {
   if (!value || typeof value !== 'object') return false;
@@ -57,6 +72,29 @@ const isUsableSettingsResult = (value: unknown): value is {
     (typeof bucketPercent === 'number' && Number.isInteger(bucketPercent) && bucketPercent >= 1 && bucketPercent <= 100);
   const validDefaultCurrency =
     defaultCurrency === undefined || (typeof defaultCurrency === 'string' && /^[A-Z]{3}$/.test(defaultCurrency));
+  const validReplenishmentTier =
+    result.prepaidReplenishmentTier === undefined ||
+    result.prepaidReplenishmentTier === 'notify' ||
+    result.prepaidReplenishmentTier === 'draft' ||
+    result.prepaidReplenishmentTier === 'auto_issue';
+  const validReplenishmentAmount =
+    result.prepaidCreditReplenishmentAmount === undefined ||
+    result.prepaidCreditReplenishmentAmount === null ||
+    (typeof result.prepaidCreditReplenishmentAmount === 'number' &&
+      Number.isInteger(result.prepaidCreditReplenishmentAmount) &&
+      result.prepaidCreditReplenishmentAmount > 0);
+  const validBucketReplenishmentMinutes =
+    result.prepaidBucketReplenishmentMinutes === undefined ||
+    result.prepaidBucketReplenishmentMinutes === null ||
+    (typeof result.prepaidBucketReplenishmentMinutes === 'number' &&
+      Number.isInteger(result.prepaidBucketReplenishmentMinutes) &&
+      result.prepaidBucketReplenishmentMinutes > 0);
+  const validReplenishmentHorizon =
+    result.prepaidReplenishmentHorizonDays === undefined ||
+    (typeof result.prepaidReplenishmentHorizonDays === 'number' &&
+      Number.isInteger(result.prepaidReplenishmentHorizonDays) &&
+      result.prepaidReplenishmentHorizonDays >= 0 &&
+      result.prepaidReplenishmentHorizonDays <= 3650);
 
   return (
     validThreshold &&
@@ -64,13 +102,17 @@ const isUsableSettingsResult = (value: unknown): value is {
     (threshold === null) === (currency === null) &&
     validBucketPercent &&
     typeof result.notifyClientOnPrepaidAlert === 'boolean' &&
+    validReplenishmentTier &&
+    validReplenishmentAmount &&
+    validBucketReplenishmentMinutes &&
+    validReplenishmentHorizon &&
     validDefaultCurrency
   );
 };
 
 /**
  * Per-client prepaid balance alert policy. Fully gated behind
- * `release-v1.5-feature`: while the flag is loading, unavailable, or disabled
+ * `release-v1-5-feature`: while the flag is loading, unavailable, or disabled
  * the card renders nothing (no skeleton, spacer, or altered tab markup).
  * Saving only persists the policy; the daily 09:00 UTC scan evaluates it.
  */
@@ -90,7 +132,17 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
   const [bucketEnabled, setBucketEnabled] = useState(false);
   const [bucketPercent, setBucketPercent] = useState('');
   const [notifyClient, setNotifyClient] = useState(false);
+  const [replenishmentTier, setReplenishmentTier] = useState<ReplenishmentTier>('draft');
+  const [creditReplenishmentAmount, setCreditReplenishmentAmount] = useState('');
+  const [bucketReplenishmentMinutes, setBucketReplenishmentMinutes] = useState('');
+  const [replenishmentHorizonDays, setReplenishmentHorizonDays] = useState('30');
   const [fieldErrors, setFieldErrors] = useState<{ credit?: string; bucket?: string }>({});
+  const [contractOverrides, setContractOverrides] = useState<ContractOverride[]>([]);
+  const [selectedContractId, setSelectedContractId] = useState('');
+  const [contractTier, setContractTier] = useState<ReplenishmentTier | 'inherit'>('inherit');
+  const [contractBucketMinutes, setContractBucketMinutes] = useState('');
+  const [contractHorizonDays, setContractHorizonDays] = useState('30');
+  const [savingContract, setSavingContract] = useState(false);
 
   useEffect(() => {
     if (!clientId) {
@@ -115,7 +167,10 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     setSettingsLoadState('loading');
     (async () => {
       try {
-        const result = await getPrepaidBalanceAlertSettingsAsync(clientId);
+        const [result, contractResult] = await Promise.all([
+          getPrepaidBalanceAlertSettingsAsync(clientId),
+          getPrepaidReplenishmentContractOverridesAsync(clientId),
+        ]);
         if (cancelled) return;
         if (isReturnedActionError(result)) {
           handleError(result, t('clientPrepaidBalanceAlertSettings.loadError', { defaultValue: 'Failed to load settings' }));
@@ -150,6 +205,25 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
         setBucketEnabled(result.bucketUsageAlertPercent != null);
         setBucketPercent(result.bucketUsageAlertPercent != null ? String(result.bucketUsageAlertPercent) : '');
         setNotifyClient(result.notifyClientOnPrepaidAlert && hasPolicy);
+        setReplenishmentTier(result.prepaidReplenishmentTier ?? 'draft');
+        setCreditReplenishmentAmount(
+          result.prepaidCreditReplenishmentAmount != null
+            ? (result.prepaidCreditReplenishmentAmount / 10 ** fractionDigits).toFixed(fractionDigits)
+            : ''
+        );
+        setBucketReplenishmentMinutes(
+          result.prepaidBucketReplenishmentMinutes != null ? String(result.prepaidBucketReplenishmentMinutes) : ''
+        );
+        setReplenishmentHorizonDays(String(result.prepaidReplenishmentHorizonDays ?? 30));
+        const overrides = Array.isArray(contractResult) ? contractResult as ContractOverride[] : [];
+        setContractOverrides(overrides);
+        if (overrides.length > 0) {
+          const first = overrides[0];
+          setSelectedContractId(first.clientContractId);
+          setContractTier(first.prepaidReplenishmentTier ?? 'inherit');
+          setContractBucketMinutes(first.prepaidBucketReplenishmentMinutes == null ? '' : String(first.prepaidBucketReplenishmentMinutes));
+          setContractHorizonDays(String(first.prepaidReplenishmentHorizonDays ?? 30));
+        }
         setLoadedClientId(clientId);
         setSettingsLoadState('loaded');
       } catch (error) {
@@ -179,6 +253,18 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
     return minorUnits > 0 ? minorUnits : null;
   };
 
+  const parseCreditReplenishmentMinorUnits = (): number | null => {
+    if (!creditEnabled) return null;
+    const value = Number(creditReplenishmentAmount);
+    const fractionDigits = currencyFractionDigits(creditCurrency);
+    const factor = 10 ** fractionDigits;
+    if (!Number.isFinite(value) || value <= 0 || !Number.isSafeInteger(Math.round(value * factor))) return null;
+    // Reject precision that the selected currency cannot represent instead of
+    // silently rounding an operator's invoice amount.
+    if (Math.abs(value * factor - Math.round(value * factor)) > 1e-8) return null;
+    return Math.round(value * factor);
+  };
+
   const validate = (): boolean => {
     const errors: { credit?: string; bucket?: string } = {};
     if (creditEnabled) {
@@ -197,6 +283,23 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
         });
       }
     }
+    if (replenishmentTier !== 'notify') {
+      if (creditEnabled && parseCreditReplenishmentMinorUnits() == null) {
+        errors.credit = t('clientPrepaidBalanceAlertSettings.replenishmentAmountError', {
+          defaultValue: 'Enter a positive credit top-up amount in the selected currency',
+        });
+      }
+      if (bucketEnabled && (!/^\d+$/.test(bucketReplenishmentMinutes.trim()) || Number(bucketReplenishmentMinutes) <= 0)) {
+        errors.bucket = t('clientPrepaidBalanceAlertSettings.replenishmentMinutesError', {
+          defaultValue: 'Enter a positive whole number of minutes',
+        });
+      }
+      if (!/^\d+$/.test(replenishmentHorizonDays.trim()) || Number(replenishmentHorizonDays) > 3650) {
+        errors.bucket = t('clientPrepaidBalanceAlertSettings.replenishmentHorizonError', {
+          defaultValue: 'Enter a number of days from 0 to 3650',
+        });
+      }
+    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -204,7 +307,20 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
   const isBucketPercentValid =
     !bucketEnabled ||
     (/^\d+$/.test(bucketPercent.trim()) && Number(bucketPercent) >= 1 && Number(bucketPercent) <= 100);
-  const formIsValid = (!creditEnabled || parseCreditMinorUnits() != null) && isBucketPercentValid;
+  const replenishmentAmountIsValid =
+    replenishmentTier === 'notify' ||
+    (!creditEnabled || parseCreditReplenishmentMinorUnits() != null);
+  const bucketReplenishmentMinutesIsValid =
+    replenishmentTier === 'notify' ||
+    (!bucketEnabled || (/^\d+$/.test(bucketReplenishmentMinutes.trim()) && Number(bucketReplenishmentMinutes) > 0));
+  const replenishmentHorizonIsValid =
+    /^\d+$/.test(replenishmentHorizonDays.trim()) && Number(replenishmentHorizonDays) <= 3650;
+  const formIsValid =
+    (!creditEnabled || parseCreditMinorUnits() != null) &&
+    isBucketPercentValid &&
+    replenishmentAmountIsValid &&
+    bucketReplenishmentMinutesIsValid &&
+    replenishmentHorizonIsValid;
   const showCreditError = creditEnabled && creditAmount.trim() !== '' && parseCreditMinorUnits() == null;
   const showBucketError = bucketEnabled && bucketPercent.trim() !== '' && !isBucketPercentValid;
   const settingsLoadedForClient = settingsLoadState === 'loaded' && loadedClientId === clientId;
@@ -218,6 +334,12 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
         prepaidCreditAlertThreshold: parseCreditMinorUnits(),
         prepaidCreditAlertCurrencyCode: creditEnabled ? creditCurrency : null,
         bucketUsageAlertPercent: bucketEnabled ? parseInt(bucketPercent, 10) : null,
+        prepaidReplenishmentTier: anyAlertEnabled ? replenishmentTier : 'notify',
+        prepaidCreditReplenishmentAmount:
+          anyAlertEnabled && replenishmentTier !== 'notify' && creditEnabled ? parseCreditReplenishmentMinorUnits() : null,
+        prepaidBucketReplenishmentMinutes:
+          anyAlertEnabled && replenishmentTier !== 'notify' && bucketEnabled ? Number(bucketReplenishmentMinutes) : null,
+        prepaidReplenishmentHorizonDays: Number(replenishmentHorizonDays),
         // Client opt-in only makes sense while at least one alert type is
         // enabled; the server also forces this off when both are disabled.
         notifyClientOnPrepaidAlert: anyAlertEnabled && notifyClient,
@@ -234,6 +356,38 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
       handleError(error, message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const selectContractOverride = (clientContractId: string) => {
+    const override = contractOverrides.find((item) => item.clientContractId === clientContractId);
+    if (!override) return;
+    setSelectedContractId(clientContractId);
+    setContractTier(override.prepaidReplenishmentTier ?? 'inherit');
+    setContractBucketMinutes(override.prepaidBucketReplenishmentMinutes == null ? '' : String(override.prepaidBucketReplenishmentMinutes));
+    setContractHorizonDays(String(override.prepaidReplenishmentHorizonDays ?? 30));
+  };
+
+  const handleContractOverrideSave = async () => {
+    if (!selectedContractId || savingContract) return;
+    setSavingContract(true);
+    try {
+      const result = await updatePrepaidReplenishmentContractOverrideAsync({
+        clientId,
+        clientContractId: selectedContractId,
+        prepaidReplenishmentTier: contractTier === 'inherit' ? null : contractTier,
+        // Credit alerts observe one client-wide ledger and therefore always
+        // use the client policy. Contract overrides apply to bucket subjects.
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: contractTier === 'inherit' ? null : (contractBucketMinutes.trim() === '' ? null : Number(contractBucketMinutes)),
+        prepaidReplenishmentHorizonDays: contractTier === 'inherit' ? null : Number(contractHorizonDays),
+      });
+      if (isReturnedActionError(result)) throw result;
+      toast.success(t('clientPrepaidBalanceAlertSettings.contractSaveSuccess', { defaultValue: 'Contract replenishment policy saved' }));
+    } catch (error) {
+      handleError(error, t('clientPrepaidBalanceAlertSettings.contractSaveError', { defaultValue: 'Failed to save contract replenishment policy' }));
+    } finally {
+      setSavingContract(false);
     }
   };
 
@@ -337,6 +491,7 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
               </div>
               <div className="space-y-2">
                 <CustomSelect
+                  id="prepaid-credit-currency"
                   label={t('clientPrepaidBalanceAlertSettings.creditCurrency', { defaultValue: 'Currency' })}
                   value={creditCurrency}
                   onValueChange={setCreditCurrency}
@@ -399,6 +554,115 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                   })}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Replenishment action controls share the alert episode and scan. */}
+          {anyAlertEnabled && (
+            <div className="ml-8 space-y-3 rounded-md border p-3">
+              <CustomSelect
+                id="prepaid-replenishment-tier"
+                label={t('clientPrepaidBalanceAlertSettings.replenishmentTier', { defaultValue: 'When an alert fires' })}
+                value={replenishmentTier}
+                onValueChange={(value) => setReplenishmentTier(value as ReplenishmentTier)}
+                options={[
+                  { value: 'notify', label: t('clientPrepaidBalanceAlertSettings.replenishmentNotifyOnly', { defaultValue: 'Notify only' }) },
+                  { value: 'draft', label: t('clientPrepaidBalanceAlertSettings.replenishmentDraft', { defaultValue: 'Draft a top-up invoice and notify' }) },
+                  { value: 'auto_issue', label: t('clientPrepaidBalanceAlertSettings.replenishmentAutoIssue', { defaultValue: 'Draft and issue a top-up invoice' }) },
+                ]}
+              />
+              {replenishmentTier !== 'notify' && (
+                <>
+                  {creditEnabled && (
+                    <div className="space-y-2">
+                    <Label htmlFor="prepaid-replenishment-amount">
+                      {t('clientPrepaidBalanceAlertSettings.replenishmentAmount', { defaultValue: 'Credit top-up amount' })}
+                    </Label>
+                    <Input
+                      id="prepaid-replenishment-amount"
+                      type="number"
+                      min="1"
+                      step={String(1 / 10 ** currencyFractionDigits(creditCurrency))}
+                      value={creditReplenishmentAmount}
+                      onChange={(e) => setCreditReplenishmentAmount(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      {t('clientPrepaidBalanceAlertSettings.replenishmentAmountHelp', {
+                        defaultValue: 'Amount in the selected currency. Bucket alerts use the minutes below.',
+                      })}
+                    </p>
+                    </div>
+                  )}
+                  {bucketEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="prepaid-bucket-replenishment-minutes">
+                        {t('clientPrepaidBalanceAlertSettings.replenishmentMinutes', { defaultValue: 'Bucket top-up minutes' })}
+                      </Label>
+                      <Input
+                        id="prepaid-bucket-replenishment-minutes"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={bucketReplenishmentMinutes}
+                        onChange={(e) => setBucketReplenishmentMinutes(e.target.value)}
+                        className="max-w-xs"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="prepaid-replenishment-horizon">
+                      {t('clientPrepaidBalanceAlertSettings.replenishmentHorizon', { defaultValue: 'Skip top-ups within this many days of contract end' })}
+                    </Label>
+                    <Input
+                      id="prepaid-replenishment-horizon"
+                      type="number"
+                      min="0"
+                      max="3650"
+                      step="1"
+                      value={replenishmentHorizonDays}
+                      onChange={(e) => setReplenishmentHorizonDays(e.target.value)}
+                      className="max-w-xs"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {bucketEnabled && contractOverrides.length > 0 && (
+            <div className="ml-8 space-y-3 rounded-md border p-3">
+              <Text as="div" size="2" weight="medium">
+                {t('clientPrepaidBalanceAlertSettings.contractOverrideTitle', { defaultValue: 'Contract replenishment override' })}
+              </Text>
+              <CustomSelect
+                id="prepaid-replenishment-contract"
+                label={t('clientPrepaidBalanceAlertSettings.contractOverrideContract', { defaultValue: 'Contract' })}
+                value={selectedContractId}
+                onValueChange={selectContractOverride}
+                options={contractOverrides.map((item) => ({ value: item.clientContractId, label: item.contractName }))}
+              />
+              <CustomSelect
+                id="prepaid-contract-replenishment-tier"
+                label={t('clientPrepaidBalanceAlertSettings.replenishmentTier', { defaultValue: 'When an alert fires' })}
+                value={contractTier}
+                onValueChange={(value) => setContractTier(value as ReplenishmentTier | 'inherit')}
+                options={[
+                  { value: 'inherit', label: t('clientPrepaidBalanceAlertSettings.contractOverrideInherit', { defaultValue: 'Use client default' }) },
+                  { value: 'notify', label: t('clientPrepaidBalanceAlertSettings.replenishmentNotifyOnly', { defaultValue: 'Notify only' }) },
+                  { value: 'draft', label: t('clientPrepaidBalanceAlertSettings.replenishmentDraft', { defaultValue: 'Draft a top-up invoice and notify' }) },
+                  { value: 'auto_issue', label: t('clientPrepaidBalanceAlertSettings.replenishmentAutoIssue', { defaultValue: 'Draft and issue a top-up invoice' }) },
+                ]}
+              />
+              {contractTier !== 'inherit' && contractTier !== 'notify' && (
+                <>
+                  <Input aria-label={t('clientPrepaidBalanceAlertSettings.replenishmentMinutes', { defaultValue: 'Bucket top-up minutes' })} type="number" min="0" step="1" value={contractBucketMinutes} onChange={(e) => setContractBucketMinutes(e.target.value)} placeholder={t('clientPrepaidBalanceAlertSettings.replenishmentMinutes', { defaultValue: 'Bucket top-up minutes' })} />
+                  <Input aria-label={t('clientPrepaidBalanceAlertSettings.replenishmentHorizon', { defaultValue: 'Replenishment horizon days' })} type="number" min="0" step="1" value={contractHorizonDays} onChange={(e) => setContractHorizonDays(e.target.value)} />
+                </>
+              )}
+              <Button id="save-prepaid-contract-replenishment" onClick={handleContractOverrideSave} disabled={savingContract}>
+                {savingContract ? t('common.actions.saving', { defaultValue: 'Saving...' }) : t('clientPrepaidBalanceAlertSettings.saveContractOverride', { defaultValue: 'Save contract override' })}
+              </Button>
             </div>
           )}
 

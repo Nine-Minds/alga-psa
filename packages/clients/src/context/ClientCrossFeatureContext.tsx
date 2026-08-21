@@ -42,6 +42,16 @@ export interface ClientOpportunitiesRenderProps {
   clientLifecycleStatus?: string | null;
 }
 
+export interface ClientBillingProfileSpendRenderProps {
+  clientId: string;
+}
+
+export interface ClientUnresolvedChargeReviewRenderProps {
+  clientId: string;
+  windowStart: string;
+  windowEnd: string;
+}
+
 export interface ClientTicketsRenderProps {
   clientId: string;
   clientName?: string;
@@ -121,6 +131,17 @@ export interface ClientCrossFeatureCallbacks {
   renderHourBlocksSection?: (props: HourBlocksSectionRenderProps) => ReactNode;
   /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
   renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
+  /**
+   * Optional: spend broken down by billing profile. Lives in the billing
+   * package, which the clients package must not depend on, so it arrives
+   * through this seam. Renders nothing for a single-profile client.
+   */
+  renderClientBillingProfileSpend?: (props: ClientBillingProfileSpendRenderProps) => ReactNode;
+  /**
+   * Optional: the queue of time entries and usage records with no contract
+   * line, and the two remedies for them. Also lives in the billing package.
+   */
+  renderClientUnresolvedChargeReview?: (props: ClientUnresolvedChargeReviewRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;

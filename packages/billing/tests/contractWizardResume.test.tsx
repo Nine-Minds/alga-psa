@@ -26,7 +26,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   };
 });
 
-// ContractWizard reads the release-v1.5-feature flag to select the bucket
+// ContractWizard reads the release-v1-5-feature flag to select the bucket
 // authoring path; default the flag off (legacy UI) for the resume tests.
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),

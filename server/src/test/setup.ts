@@ -79,7 +79,12 @@ afterEach(async () => {
 //    edition into every later file in the shared fork.
 // Guarded vars: EDITION flips Temporal-vs-PgBoss and CE/EE dispatch; the
 // base-URL trio feeds getEmailWebhookBaseUrl and friends (a leaked
-// localhost NEXTAUTH_URL makes webhook probes silently enter polling mode).
+// localhost NEXTAUTH_URL makes webhook probes silently enter polling mode);
+// the MICROSOFT_*_BASE_URL overrides swap Graph or the OAuth authority for an emulator —
+// no test file sets those, but server/knexfile.cjs opens with
+// require('dotenv').config(), so the first suite that reaches it (e.g. the
+// search-backfill script) dumps the developer's whole server/.env into the
+// shared fork and every later Microsoft OAuth assertion reads the emulator.
 // TZ shifts every date the process formats — a timezone test that sets it
 // and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
@@ -88,6 +93,9 @@ const GUARDED_ENV_VARS = [
   'APPLICATION_URL',
   'NEXTAUTH_URL',
   'NEXT_PUBLIC_BASE_URL',
+  'MICROSOFT_LOGIN_BASE_URL',
+  'MICROSOFT_GRAPH_BASE_URL',
+  'MICROSOFT_GRAPH_BETA_BASE_URL',
   'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];

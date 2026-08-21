@@ -8,6 +8,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import {
   buildSalesOrderConfirmationEmailContent,
   dedupeRecipients,
@@ -95,9 +96,10 @@ async function renderStoredSalesOrderPdf(
 }
 
 /**
- * Resolve the recipient email(s) for a Sales Order: any explicitly-passed addresses, else the
- * client's billing email. (SOs carry only a client_id — no contact — so the client billing email is
- * the canonical recipient, mirroring how a quote falls back to clients.billing_email.)
+ * Resolve the recipient email(s) for a Sales Order: any explicitly-passed addresses, then the
+ * client's billing recipient. An SO carries only a client_id — no contact of its own — so the
+ * recipient is whoever `resolveInvoiceBillingRecipient` would send that client's invoice to
+ * (billing contact, then clients.billing_email, then a billing or default location email).
  */
 async function resolveSalesOrderRecipients(
   knex: any,
@@ -105,14 +107,11 @@ async function resolveSalesOrderRecipients(
   clientId: string | null | undefined,
   explicit: string[] = [],
 ): Promise<{ recipients: string[]; clientName: string | null }> {
-  const client = clientId
-    ? await knex('clients')
-        .select('billing_email', 'client_name')
-        .where({ tenant, client_id: clientId })
-        .first()
+  const recipient = clientId
+    ? await resolveInvoiceBillingRecipient({ knexOrTrx: knex, tenantId: tenant, clientId })
     : null;
-  const recipients = dedupeRecipients([...explicit, client?.billing_email ?? '']);
-  return { recipients, clientName: client?.client_name ?? null };
+  const recipients = dedupeRecipients([...explicit, recipient?.recipientEmail ?? '']);
+  return { recipients, clientName: recipient?.clientName || null };
 }
 
 /**

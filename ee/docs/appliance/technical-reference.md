@@ -190,9 +190,18 @@ Flux applies the appliance topology and Helm releases from the pinned config bun
 
 The status view summarizes Flux and Helm health, but the underlying deployment model remains GitOps-style reconciliation from OCI artifacts.
 
-## Support Bundles
+## Remote Support And Support Bundles
 
-Support begins with an exportable support bundle rather than a remote support tunnel.
+Connected Pro and Premium appliances can authorize an outbound-only,
+time-limited remote support pod from Manage → Support. The pod is intentionally
+root-equivalent, has no inbound listener or service-account token, and records
+the terminal locally before accepting or forwarding bytes. The selected release
+must contain an immutable `supportAgent` digest. Customer revocation, original
+expiry, idle timeout, recording failure, or the recording cap closes access.
+See `remote-support.md` for the protocol, reboot/resume, and retention contract.
+
+An exportable support bundle remains the first fallback for Essentials,
+disconnected appliances, and any appliance where remote support is unavailable.
 
 The bundle is meant to capture enough data to diagnose:
 

@@ -47,6 +47,16 @@ export interface FetchStripeDetailsInput {
   checkoutSessionId: string;
 }
 
+export interface StripeBillingAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  countryCode?: string; // ISO-3166 alpha-2
+  phone?: string;
+}
+
 export interface FetchStripeDetailsResult {
   stripeCustomerId: string;
   stripeSubscriptionId?: string;
@@ -55,6 +65,23 @@ export interface FetchStripeDetailsResult {
   stripeBaseItemId?: string;          // Base fee item (multi-item only)
   stripeBasePriceId?: string;         // Base fee price (multi-item only)
   licenseCount?: number;
+  billingAddress?: StripeBillingAddress;
+}
+
+function toBillingAddress(
+  address: Stripe.Address | null | undefined,
+  phone?: string | null
+): StripeBillingAddress | undefined {
+  const result: StripeBillingAddress = {
+    line1: address?.line1 ?? undefined,
+    line2: address?.line2 ?? undefined,
+    city: address?.city ?? undefined,
+    state: address?.state ?? undefined,
+    postalCode: address?.postal_code ?? undefined,
+    countryCode: address?.country ?? undefined,
+    phone: phone ?? undefined,
+  };
+  return Object.values(result).some(v => v) ? result : undefined;
 }
 
 /**
@@ -98,7 +125,27 @@ export async function fetchStripeDetailsFromCheckout(
 
     const result: FetchStripeDetailsResult = {
       stripeCustomerId: session.customer as string,
+      billingAddress: toBillingAddress(
+        session.customer_details?.address,
+        session.customer_details?.phone
+      ),
     };
+
+    // Checkout collected no address (e.g. trial without payment method) —
+    // fall back to the address stored on the Stripe customer, if any.
+    if (!result.billingAddress?.countryCode) {
+      try {
+        const customer = await stripe.customers.retrieve(result.stripeCustomerId);
+        if (!customer.deleted) {
+          result.billingAddress = toBillingAddress(customer.address, customer.phone) ?? result.billingAddress;
+        }
+      } catch (customerError) {
+        log.warn('Failed to fetch Stripe customer for billing address fallback', {
+          customerId: result.stripeCustomerId,
+          error: customerError instanceof Error ? customerError.message : 'Unknown error',
+        });
+      }
+    }
 
     // If this was a subscription checkout, fetch subscription details
     if (session.subscription) {

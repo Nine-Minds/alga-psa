@@ -34,6 +34,12 @@ describe('bucket math (exact cross-multiplication)', () => {
     expect(bucketCapacity({ minutesUsed: 0, totalMinutes: 600, rolledOverMinutes: 120, configuredPercent: 80 })).toBe(720);
   });
 
+  it('composes settled additive hour-block minutes into the observation', () => {
+    const input = { minutesUsed: 800, totalMinutes: 1000, rolledOverMinutes: 0, additionalMinutes: 500, configuredPercent: 80 };
+    expect(bucketCapacity(input)).toBe(1500);
+    expect(bucketThresholdReached(input)).toBe(false);
+  });
+
   it('does not alert one unit below the exact boundary', () => {
     // capacity 1000, 80% => boundary at 800 minutes. 799 must not alert.
     const input = { minutesUsed: 799, totalMinutes: 900, rolledOverMinutes: 100, configuredPercent: 80 };

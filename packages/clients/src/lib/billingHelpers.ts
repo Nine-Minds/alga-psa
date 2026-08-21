@@ -9,9 +9,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';import {
   PREPAID_BALANCE_ALERT_FLAG,
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
+  getPrepaidReplenishmentContractOverridesDb,
+  updatePrepaidReplenishmentContractOverrideDb,
   prepaidBalanceAlertSettingsInputSchema,
   type PrepaidBalanceAlertSettingsInput,
   type PrepaidBalanceAlertSettingsWithDefault,
+  type PrepaidReplenishmentContractOverride,
 } from '@shared/billingClients/prepaidBalanceAlertSettings';
 import {
   actionError,
@@ -518,7 +521,7 @@ export const getEffectiveTaxSourceForClientAsync = withAuth(async (
 
 // ---------------------------------------------------------------------------
 // Prepaid balance alert policy (task 29.8.20). Clients UI path: independently
-// gated on release-v1.5-feature with a false default and billing_settings
+// gated on release-v1-5-feature with a false default and billing_settings
 // read/update permissions, delegating persistence to the shared module.
 // ---------------------------------------------------------------------------
 
@@ -595,6 +598,40 @@ export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
   } catch (error) {
     console.error('Error updating prepaid balance alert settings:', error);
     return actionError('Failed to update prepaid balance alert settings');
+  }
+});
+
+export const getPrepaidReplenishmentContractOverridesAsync = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string,
+): Promise<PrepaidReplenishmentContractOverride[] | ActionMessageError | ActionPermissionError> => {
+  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
+  if (!(await hasPermission(_user, 'billing_settings', 'read'))) return permissionError('Permission denied: billing_settings read required');
+  const { knex } = await createTenantKnex();
+  return getPrepaidReplenishmentContractOverridesDb(knex, tenant, clientId);
+});
+
+export const updatePrepaidReplenishmentContractOverrideAsync = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    clientId: string;
+    clientContractId: string;
+    prepaidReplenishmentTier: 'notify' | 'draft' | 'auto_issue' | null;
+    prepaidCreditReplenishmentAmount: number | null;
+    prepaidBucketReplenishmentMinutes: number | null;
+    prepaidReplenishmentHorizonDays: number | null;
+  },
+): Promise<{ success: true } | ActionMessageError | ActionPermissionError> => {
+  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE);
+  if (!(await hasPermission(_user, 'billing_settings', 'update'))) return permissionError('Permission denied: billing_settings update required');
+  try {
+    const { knex } = await createTenantKnex();
+    await updatePrepaidReplenishmentContractOverrideDb(knex, tenant, input);
+    return { success: true };
+  } catch {
+    return actionError('Failed to update contract replenishment policy');
   }
 });
 

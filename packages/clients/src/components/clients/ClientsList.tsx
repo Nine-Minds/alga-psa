@@ -97,22 +97,22 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
         data-automation-id={linkId}
         href={`/msp/clients/${client.client_id}`}
         onClick={onClick}
-        className="text-blue-600 hover:underline font-medium whitespace-normal break-words"
+        className="text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] hover:underline font-medium whitespace-normal break-words"
         title={client.client_name}
       >
         {client.client_name}
       </a>
       {isDefault && (
-        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title={t('clientsList.defaultClient', { defaultValue: 'Default Client' })}>
-          <Shield className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
-          <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">{t('clientsList.default', { defaultValue: 'Default' })}</span>
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[rgb(var(--color-primary-500)/0.14)]" title={t('clientsList.defaultClient', { defaultValue: 'Default Client' })}>
+          <Shield className="h-3 w-3 text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] mr-1" />
+          <span className="text-xs text-[rgb(var(--color-primary-700))] dark:text-[rgb(var(--color-primary-300))] font-medium">{t('clientsList.default', { defaultValue: 'Default' })}</span>
         </div>
       )}
       {client.is_tax_exempt && (
         <Tooltip content={t('clientsList.taxExemptTooltip', { defaultValue: 'This client is tax exempt - no taxes will be applied to their invoices' })}>
-          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40">
-            <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400 mr-1" />
-            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">{t('clientsList.taxExempt', { defaultValue: 'Tax Exempt' })}</span>
+          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-[rgb(var(--color-accent-500)/0.16)]">
+            <ShieldOff className="h-3 w-3 text-[rgb(var(--color-accent-600))] dark:text-[rgb(var(--color-accent-300))] mr-1" />
+            <span className="text-xs text-[rgb(var(--color-accent-700))] dark:text-[rgb(var(--color-accent-300))] font-medium">{t('clientsList.taxExempt', { defaultValue: 'Tax Exempt' })}</span>
           </div>
         </Tooltip>
       )}
@@ -251,7 +251,7 @@ const ClientsList = ({
             width: '8%',
             render: (text: string | null, record: IClient) => (
                 record.url && record.url.trim() !== '' ? (
-                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline whitespace-normal break-words block" title={record.url}>
+                    <a href={record.url.startsWith('http') ? record.url : `https://${record.url}`} target="_blank" rel="noopener noreferrer" className="text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))] hover:underline whitespace-normal break-words block" title={record.url}>
                         {record.url}
                     </a>
                 ) : t('common.states.na', { defaultValue: 'N/A' })
@@ -299,11 +299,11 @@ const ClientsList = ({
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content 
                             align="end" 
-                            className="bg-white rounded-md shadow-lg p-1 border border-gray-200 min-w-[120px] z-50"
+                            className="bg-[rgb(var(--color-card))] rounded-md shadow-lg p-1 border border-[rgb(var(--color-border-200))] min-w-[120px] z-50"
                         >
                             {onQuickView && (
                                 <DropdownMenu.Item 
-                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-[rgb(var(--color-border-100))] flex items-center rounded"
                                     onSelect={() => onQuickView(record)}
                                 >
                                     <ExternalLink size={14} className="mr-2" />
@@ -311,7 +311,7 @@ const ClientsList = ({
                                 </DropdownMenu.Item>
                             )}
                             <DropdownMenu.Item 
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
+                                className="px-2 py-1 text-sm cursor-pointer hover:bg-[rgb(var(--color-border-100))] flex items-center rounded"
                                 onSelect={() => handleEditClient(record.client_id)}
                             >
                                 <Pencil size={14} className="mr-2" />

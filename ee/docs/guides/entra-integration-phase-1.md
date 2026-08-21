@@ -20,6 +20,19 @@ All user-visible Entra surfaces are feature-flag gated.
   - View endpoints/actions: `system_settings.read`
   - Connect/map/sync/resolve endpoints/actions: `system_settings.update`
 
+For the `direct` connection type, Microsoft-side prerequisites also apply:
+
+- The MSP's partner tenant must be onboarded to **Microsoft 365 Lighthouse** with active
+  **GDAP** relationships to its customer tenants. The integration reads the managed tenant
+  list from the Lighthouse `managedTenants` Graph API; a partner tenant without Lighthouse
+  gets an empty or failing tenant list no matter how the OAuth app is configured.
+- The person clicking through the connect flow must be able to grant **admin consent** in
+  the MSP tenant: `ManagedTenants.Read.All` and `Directory.Read.All` are admin-consent
+  scopes, so a non-admin hits Microsoft's "needs admin approval" screen.
+- The `managedTenants` API is a **beta** Graph API (`https://graph.microsoft.com/beta`);
+  it does not exist on v1.0. Alga targets the beta endpoint for these calls and v1.0 for
+  everything else — a version regression fails every Direct connect with a Graph 400.
+
 ## Connection Path Decision Guide
 
 Choose one connection type per tenant:
@@ -80,6 +93,33 @@ For direct Microsoft OAuth credentials, resolution order is:
 1. Tenant secrets (`microsoft_client_id` + `microsoft_client_secret`, optional `microsoft_tenant_id`)
 2. Environment variables (`MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`)
 3. App secrets (`MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`)
+
+## Azure App Registration Requirements (Direct)
+
+Whichever slot the credentials come from, the Azure app registration they name must have:
+
+- **Redirect URI** (Web platform): `https://<your-host>/api/auth/microsoft/entra/callback`.
+  The URI is built from `NEXT_PUBLIC_BASE_URL`/`NEXTAUTH_URL`, and Microsoft rejects any
+  URI not registered — the operator sees `AADSTS50011` after consenting.
+- **Delegated Microsoft Graph permissions** (from
+  `ee/server/src/lib/integrations/entra/auth/directScopes.ts`): `User.Read`,
+  `ManagedTenants.Read.All`, `Directory.Read.All`, plus `offline_access`. Grant admin
+  consent for the two admin-consent scopes.
+
+One app registration is often shared across every Alga Microsoft integration. Each flow
+has its own callback, and Microsoft validates them independently, so a shared app must
+register **all** of the callbacks it will serve:
+
+| Callback path | Used by |
+| --- | --- |
+| `/api/auth/microsoft/callback` | Email mailbox OAuth |
+| `/api/auth/microsoft/email-setup/callback` | M365 email provider setup wizard |
+| `/api/auth/microsoft/calendar/callback` | Calendar integration |
+| `/api/auth/microsoft/entra/callback` | Entra Identity direct connect |
+
+(The `/api/email/webhooks/microsoft` and `/api/calendar/webhooks/microsoft` paths are
+Graph change-notification webhooks, not OAuth redirects — they do not belong in the
+redirect URI list.)
 
 ## Feature Flags (Phase 1)
 

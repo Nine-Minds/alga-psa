@@ -82,7 +82,7 @@ export function OpportunityBoard({
         className={`flex w-60 flex-none flex-col rounded-xl border p-2.5 transition-colors ${
           dropTarget === column && droppable
             ? 'border-[rgb(var(--color-primary-400))] bg-[rgb(var(--color-primary-50))]'
-            : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card-50,248_250_252))]'
+            : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))]'
         } ${blocked ? 'cursor-not-allowed opacity-60' : ''}`}
         onDragOver={(e) => {
           if (droppable) {

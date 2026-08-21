@@ -17,10 +17,14 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 
 const getSettingsMock = vi.fn();
 const updateSettingsMock = vi.fn();
+const getContractOverridesMock = vi.fn();
+const updateContractOverrideMock = vi.fn();
 
 vi.mock('../../lib/billingHelpers', () => ({
   getPrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => getSettingsMock(...args),
   updatePrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => updateSettingsMock(...args),
+  getPrepaidReplenishmentContractOverridesAsync: (...args: unknown[]) => getContractOverridesMock(...args),
+  updatePrepaidReplenishmentContractOverrideAsync: (...args: unknown[]) => updateContractOverrideMock(...args),
 }));
 
 vi.mock('next-auth/react', () => ({
@@ -58,15 +62,20 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     flagLoading = false;
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
+    getContractOverridesMock.mockReset();
+    updateContractOverrideMock.mockReset();
     toastMock.mockReset();
     getSettingsMock.mockResolvedValue({
       prepaidCreditAlertThreshold: null,
       prepaidCreditAlertCurrencyCode: null,
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'EUR',
     });
     updateSettingsMock.mockResolvedValue({ success: true });
+    getContractOverridesMock.mockResolvedValue([]);
+    updateContractOverrideMock.mockResolvedValue({ success: true });
   });
 
   it('renders nothing while the feature flag is loading', async () => {
@@ -111,8 +120,35 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: 'EUR',
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
+  });
+
+  it('displays and saves credit replenishment in currency units, not raw minor units', async () => {
+    getSettingsMock.mockResolvedValueOnce({
+      prepaidCreditAlertThreshold: 5000,
+      prepaidCreditAlertCurrencyCode: 'EUR',
+      bucketUsageAlertPercent: null,
+      notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'draft',
+      prepaidCreditReplenishmentAmount: 50000,
+      prepaidBucketReplenishmentMinutes: null,
+      prepaidReplenishmentHorizonDays: 30,
+      defaultCurrencyCode: 'EUR',
+    });
+    render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="EUR" />);
+    const topUp = await screen.findByDisplayValue('500.00');
+    expect(topUp).toBeDefined();
+    await userEvent.clear(topUp);
+    await userEvent.type(topUp, '750');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(updateSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
+      prepaidCreditReplenishmentAmount: 75000,
+    })));
   });
 
   it('validates whole-percent bucket input and does not submit invalid values', async () => {
@@ -144,6 +180,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: 80,
         notifyClientOnPrepaidAlert: true,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -209,6 +249,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -219,6 +263,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
       prepaidCreditAlertCurrencyCode: 'JPY',
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'USD',
     });
     render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="USD" />);

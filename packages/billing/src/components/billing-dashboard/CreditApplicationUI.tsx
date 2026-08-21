@@ -42,7 +42,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   onCancel
 }) => {
   const { t } = useTranslation('msp/credits');
-  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
   const [availableCredits, setAvailableCredits] = useState<ICreditTracking[]>([]);

@@ -152,6 +152,7 @@ export function Input({
       )}
       <input
         {...finalAutomationProps}
+        id={id}
         ref={mergedRef}
         className={`w-full ${inputSizeClasses[size]} border rounded-lg shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${
           hasErrorState

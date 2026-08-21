@@ -529,6 +529,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Adres e-mail",
     "phone": "Telefon",
+    "extension": "Numer wewnętrzny",
     "phonePlaceholder": "Numer telefonu",
     "name": "Nazwa",
     "creating": "Tworzenie...",
@@ -781,7 +782,10 @@
     "deactivateError": "Nie udało się dezaktywować umowy",
     "updateError": "Nie udało się zaktualizować umowy",
     "createContract": "Utwórz umowę",
-    "quickAdd": "Szybkie dodawanie"
+    "quickAdd": "Szybkie dodawanie",
+    "billingProfile": "Profil rozliczeniowy",
+    "billingProfileUnassigned": "Nieprzypisany",
+    "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy"
   },
   "clientContractDialog": {
     "assignTitle": "Przypisz umowę do klienta",
@@ -1006,18 +1010,21 @@
     "noteUpdatedSuccess": "Zaktualizowano notatkę o kredycie zewnętrznym."
   },
   "clientGridCard": {
-    "actions": "Działania klienta",
     "quickView": "Szybki podgląd",
-    "defaultClient": "Klient domyślny",
     "taxExempt": "Zwolnione z podatku",
     "taxExemptTooltip": "Ten klient jest zwolniony z podatku — na jego fakturach nie zostaną naliczone żadne podatki",
-    "type": "Typ:",
-    "address": "Adres:",
-    "phone": "Telefon:",
-    "url": "Adres URL:",
     "clientActions": "Działania klienta",
     "default": "Domyślny",
-    "selectClient": "Wybierz klienta {{name}}"
+    "selectClient": "Wybierz klienta {{name}}",
+    "openTickets_one": "{{count}} otwarte",
+    "openTickets_few": "{{count}} otwarte",
+    "openTickets_many": "{{count}} otwartych",
+    "openTickets_other": "{{count}} otwartych",
+    "lifecycle": {
+      "prospect": "Potencjalny",
+      "former": "Byly"
+    },
+    "noContactDetails": "Brak danych kontaktowych"
   },
   "clientLanguagePreference": {
     "title": "Ustawienia języka klienta",
@@ -1399,6 +1406,7 @@
         "notes": "Notatki",
         "notesHelper": "Dodatkowe uwagi na temat tej lokalizacji",
         "phone": "Telefon",
+        "extension": "Numer wewnętrzny",
         "phoneHelper": "Numer telefonu do tej lokalizacji",
         "placeholder": {
           "addressLine1": "Wpisz adres *",
@@ -1416,7 +1424,10 @@
         "stateProvince": "Stan/Prowincja",
         "stateProvinceHelper": "Nazwa stanu lub prowincji",
         "taxRegion": "Region podatkowy",
-        "taxRegionHelper": "Wybierz odpowiedni region podatkowy"
+        "taxRegionHelper": "Wybierz odpowiedni region podatkowy",
+        "defaultBillingProfile": "Domyślny profil rozliczeniowy",
+        "defaultBillingProfileNone": "Brak",
+        "defaultBillingProfileHelper": "Nowe zgłoszenia w tej lokalizacji startują z tym profilem rozliczeniowym. Zawsze można go zmienić w zgłoszeniu."
       },
       "listTitle": "Lokalizacje",
       "loading": "Ładowanie lokalizacji...",
@@ -1652,6 +1663,54 @@
       "loadFailed": "Nie udało się załadować kontaktu."
     }
   },
+  "clientBillingProfiles": {
+    "title": "Profile rozliczeniowe",
+    "description": "Rozliczaj oddzielnie lokalizacje, podmioty lub zakłady w obrębie tego klienta. Opłaty są przypisywane do profilu przez umowę, pozycję umowy lub element pracy, z którego pochodzą; to, co nieprzypisane, trafia do profilu domyślnego.",
+    "loading": "Ładowanie profili rozliczeniowych…",
+    "defaultBadge": "Domyślny",
+    "rename": "Zmień nazwę",
+    "makeDefault": "Ustaw jako domyślny",
+    "archive": "Archiwizuj",
+    "delete": "Usuń",
+    "restore": "Przywróć",
+    "archivedHeading": "Zarchiwizowane",
+    "addLabel": "Dodaj profil rozliczeniowy",
+    "addPlaceholder": "np. Zakład Północ",
+    "addButton": "Dodaj profil",
+    "created": "Utworzono profil rozliczeniowy „{{name}}”",
+    "renamed": "Zmieniono nazwę profilu rozliczeniowego",
+    "madeDefault": "„{{name}}” jest teraz domyślnym profilem rozliczeniowym",
+    "archived": "Zarchiwizowano „{{name}}”",
+    "deleted": "Usunięto „{{name}}”",
+    "restored": "Przywrócono „{{name}}”",
+    "settings": "Ustawienia rozliczeń"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmenty rozliczeniowe",
+    "restrictedHint": "Ten użytkownik widzi tylko segmenty wybrane poniżej.",
+    "allHint": "Ten użytkownik widzi wszystkie segmenty rozliczeniowe, także dodane później.",
+    "save": "Zapisz dostęp do segmentów",
+    "saved": "Zaktualizowano dostęp do segmentów portalu",
+    "emptyWarning": "Wybierz co najmniej jeden segment albo wyłącz ograniczenie, aby pokazać wszystkie."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Zapisano ustawienia profilu rozliczeniowego",
+    "inherited": "Dziedziczone: {{value}}",
+    "notSet": "Nie ustawiono",
+    "billsSeparately": "Rozliczaj osobno",
+    "billsSeparatelyHint": "Wystawiaj osobną fakturę dla tego profilu, z własnym odbiorcą, metodą płatności i saldem.",
+    "billToName": "Nazwa na fakturze",
+    "billingEmail": "E-mail do faktur",
+    "poNumber": "Numer zamówienia",
+    "taxIdNumber": "NIP",
+    "taxExemptionCertificate": "Certyfikat zwolnienia podatkowego",
+    "invoiceDeliveryMethod": "Sposób dostarczania faktur",
+    "billingCycle": "Cykl rozliczeniowy",
+    "paymentTerms": "Warunki płatności",
+    "taxExempt": "Zwolniony z podatku",
+    "taxExemptInherited": "Dziedziczone od klienta ({{value}})",
+    "regionNote": "Regionu podatkowego nie ustawia się tutaj. Wynika on z miejsca wykonania — usługa, potem lokalizacja pozycji umowy, potem domyślna wartość klienta."
+  },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",
     "scheduleHelp": "Kontrole są uruchamiane codziennie o 09:00 UTC. Zapisanie nie wysyła niczego natychmiast.",
@@ -1670,9 +1729,26 @@
     "percentRangeError": "Wprowadź liczbę całkowitą od 1 do 100",
     "notifyClient": "Wyślij również e-mail do odbiorcy faktur klienta",
     "notifyClientHelp": "Wysyła alert do kanonicznego odbiorcy faktur klienta",
+    "replenishmentTier": "Gdy alert zostanie wywołany",
+    "replenishmentNotifyOnly": "Tylko powiadom",
+    "replenishmentDraft": "Utwórz roboczą fakturę doładowania i powiadom",
+    "replenishmentAutoIssue": "Utwórz i wystaw fakturę doładowania",
+    "replenishmentAmount": "Kwota doładowania kredytu (jednostki podrzędne)",
+    "replenishmentAmountHelp": "Dotyczy alertów kredytu. Alerty pakietu korzystają z minut poniżej.",
+    "replenishmentAmountError": "Wprowadź dodatnią całkowitą kwotę doładowania kredytu",
+    "replenishmentMinutes": "Minuty doładowania pakietu",
+    "replenishmentMinutesError": "Wprowadź dodatnią liczbę całkowitą minut",
+    "replenishmentHorizon": "Pomiń doładowanie w tylu dniach przed końcem umowy",
+    "replenishmentHorizonError": "Wprowadź liczbę dni od 0 do 3650",
     "save": "Zapisz",
     "saveSuccess": "Zapisano ustawienia alertu salda przedpłaconego",
     "saveError": "Nie udało się zapisać ustawień alertu salda przedpłaconego",
-    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego"
+    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego",
+    "contractOverrideTitle": "Zastąpienie doładowania dla umowy",
+    "contractOverrideContract": "Umowa",
+    "contractOverrideInherit": "Użyj domyślnych ustawień klienta",
+    "saveContractOverride": "Zapisz zastąpienie umowy",
+    "contractSaveSuccess": "Zapisano zasadę doładowania umowy",
+    "contractSaveError": "Nie udało się zapisać zasady doładowania umowy"
   }
 }

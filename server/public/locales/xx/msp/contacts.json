@@ -333,6 +333,7 @@
     },
     "fields": {
       "phoneNumber": "11111",
+      "extension": "11111",
       "phoneType": "11111",
       "customPhoneType": "11111",
       "customTypePlaceholder": "11111",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "11111",
       "phoneRow": "11111 {{number}} 11111",
       "enterCompletePhoneNumber": "11111",
+      "includeCountryCallingCode": "11111",
       "enterCustomPhoneType": "11111",
       "customTypesUnique": "11111"
     },

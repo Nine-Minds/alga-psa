@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Endereço de email",
     "phone": "Telefone",
+    "extension": "Ramal",
     "phonePlaceholder": "Número de telefone",
     "name": "Nome",
     "creating": "Criando...",
@@ -731,7 +732,10 @@
     "deactivateError": "Falha ao desativar contrato",
     "updateError": "Falha ao atualizar o contrato",
     "createContract": "Criar contrato",
-    "quickAdd": "Adição rápida"
+    "quickAdd": "Adição rápida",
+    "billingProfile": "Perfil de faturamento",
+    "billingProfileUnassigned": "Não atribuído",
+    "billingProfileUpdated": "Perfil de faturamento atualizado"
   },
   "clientContractDialog": {
     "assignTitle": "Atribuir contrato ao cliente",
@@ -956,18 +960,19 @@
     "noteUpdatedSuccess": "A nota de crédito externo foi atualizada."
   },
   "clientGridCard": {
-    "actions": "Ações do cliente",
     "quickView": "Visualização rápida",
-    "defaultClient": "Cliente padrão",
     "taxExempt": "Isento de impostos",
     "taxExemptTooltip": "Este cliente está isento de impostos - nenhum imposto será aplicado às suas faturas",
-    "type": "Tipo:",
-    "address": "Endereço:",
-    "phone": "Telefone:",
-    "url": "URL:",
     "clientActions": "Ações do cliente",
     "default": "Padrão",
-    "selectClient": "Selecione o cliente {{name}}"
+    "selectClient": "Selecione o cliente {{name}}",
+    "openTickets_one": "{{count}} aberto",
+    "openTickets_other": "{{count}} abertos",
+    "lifecycle": {
+      "prospect": "Cliente potencial",
+      "former": "Anterior"
+    },
+    "noContactDetails": "Sem dados de contato"
   },
   "clientLanguagePreference": {
     "title": "Configurações de idioma do cliente",
@@ -1349,6 +1354,7 @@
         "notes": "Notas",
         "notesHelper": "Notas adicionais sobre este local",
         "phone": "Telefone",
+        "extension": "Ramal",
         "phoneHelper": "Número de telefone deste local",
         "placeholder": {
           "addressLine1": "Insira o endereço *",
@@ -1366,7 +1372,10 @@
         "stateProvince": "Estado/Província",
         "stateProvinceHelper": "Nome do estado ou província",
         "taxRegion": "Região Fiscal",
-        "taxRegionHelper": "Selecione a região fiscal aplicável"
+        "taxRegionHelper": "Selecione a região fiscal aplicável",
+        "defaultBillingProfile": "Perfil de faturamento padrão",
+        "defaultBillingProfileNone": "Nenhum",
+        "defaultBillingProfileHelper": "Novos tickets nesta localização começam com este perfil de faturamento. Pode sempre ser alterado no ticket."
       },
       "listTitle": "Locais",
       "loading": "Carregando locais...",
@@ -1602,6 +1611,54 @@
       "loadFailed": "Falha ao carregar o contato."
     }
   },
+  "clientBillingProfiles": {
+    "title": "Perfis de faturamento",
+    "description": "Fature separadamente instalações, entidades ou unidades dentro deste cliente. Os encargos são atribuídos a um perfil através do contrato, da linha de contrato ou do item de trabalho de onde provêm; o que não estiver atribuído recai no perfil padrão.",
+    "loading": "A carregar perfis de faturamento…",
+    "defaultBadge": "Predefinido",
+    "rename": "Mudar o nome",
+    "makeDefault": "Definir como padrão",
+    "archive": "Arquivar",
+    "delete": "Eliminar",
+    "restore": "Restaurar",
+    "archivedHeading": "Arquivados",
+    "addLabel": "Adicionar um perfil de faturamento",
+    "addPlaceholder": "ex.: Unidade Norte",
+    "addButton": "Adicionar perfil",
+    "created": "Perfil de faturamento «{{name}}» criado",
+    "renamed": "Perfil de faturamento renomeado",
+    "madeDefault": "«{{name}}» é agora o perfil de faturamento padrão",
+    "archived": "«{{name}}» arquivado",
+    "deleted": "«{{name}}» eliminado",
+    "restored": "«{{name}}» restaurado",
+    "settings": "Configurações de faturamento"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmentos de faturamento",
+    "restrictedHint": "Este usuário vê apenas os segmentos selecionados abaixo.",
+    "allHint": "Este usuário vê todos os segmentos de faturamento, incluindo os adicionados depois.",
+    "save": "Salvar acesso aos segmentos",
+    "saved": "Acesso aos segmentos do portal atualizado",
+    "emptyWarning": "Selecione ao menos um segmento, ou desative a restrição para mostrar todos."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Configurações do perfil de faturamento salvas",
+    "inherited": "Herdado: {{value}}",
+    "notSet": "Não definido",
+    "billsSeparately": "Faturar separadamente",
+    "billsSeparatelyHint": "Gerar uma fatura separada para este perfil, com seu próprio destinatário, forma de pagamento e saldo.",
+    "billToName": "Nome de faturamento",
+    "billingEmail": "E-mail de faturamento",
+    "poNumber": "Número da ordem de compra",
+    "taxIdNumber": "Número fiscal",
+    "taxExemptionCertificate": "Certificado de isenção fiscal",
+    "invoiceDeliveryMethod": "Forma de envio das faturas",
+    "billingCycle": "Ciclo de faturamento",
+    "paymentTerms": "Condições de pagamento",
+    "taxExempt": "Isento de imposto",
+    "taxExemptInherited": "Herdado do cliente ({{value}})",
+    "regionNote": "A região fiscal não é definida aqui. Ela segue o local de entrega — o serviço, depois a localização da linha de contrato, depois o padrão do cliente."
+  },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",
     "scheduleHelp": "As verificações são executadas diariamente às 09:00 UTC. Salvar não envia nada imediatamente.",
@@ -1620,9 +1677,26 @@
     "percentRangeError": "Informe um número inteiro de 1 a 100",
     "notifyClient": "Enviar também um e-mail ao destinatário de faturamento do cliente",
     "notifyClientHelp": "Envia o alerta ao destinatário de faturamento canônico do cliente",
+    "replenishmentTier": "Quando um alerta é disparado",
+    "replenishmentNotifyOnly": "Apenas notificar",
+    "replenishmentDraft": "Criar um rascunho de fatura de reabastecimento e notificar",
+    "replenishmentAutoIssue": "Criar e emitir uma fatura de reabastecimento",
+    "replenishmentAmount": "Valor de reabastecimento de crédito",
+    "replenishmentAmountHelp": "Valor na moeda selecionada. Os alertas de pacote usam os minutos abaixo.",
+    "replenishmentAmountError": "Informe um valor de reabastecimento positivo na moeda selecionada",
+    "replenishmentMinutes": "Minutos de reabastecimento do pacote",
+    "replenishmentMinutesError": "Informe um número inteiro positivo de minutos",
+    "replenishmentHorizon": "Ignorar o reabastecimento dentro deste número de dias do fim do contrato",
+    "replenishmentHorizonError": "Informe um número de dias de 0 a 3650",
     "save": "Salvar",
     "saveSuccess": "Configurações de alerta de saldo pré-pago salvas",
     "saveError": "Não foi possível salvar as configurações de alerta de saldo pré-pago",
-    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago"
+    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago",
+    "contractOverrideTitle": "Substituição de reabastecimento do contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar padrão do cliente",
+    "saveContractOverride": "Salvar substituição do contrato",
+    "contractSaveSuccess": "Política de reabastecimento do contrato salva",
+    "contractSaveError": "Não foi possível salvar a política de reabastecimento do contrato"
   }
 }

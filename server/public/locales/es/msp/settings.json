@@ -9,6 +9,7 @@
   "tabs": {
     "general": "General",
     "experimentalFeatures": "Funciones experimentales",
+    "appearance": "Apariencia",
     "clientPortal": "Portal de clientes",
     "users": "Usuarios",
     "teams": "Equipos",
@@ -779,6 +780,8 @@
         "sections": {
           "general": "General",
           "generalHelp": "Nombre, descripción, visibilidad y predeterminado",
+          "appearance": "Apariencia y valores predeterminados",
+          "appearanceHelp": "Anclaje de pestaña y vista de lista predeterminada del tablero",
           "assignment": "Asignación y SLA",
           "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
           "inbound": "Correo y respuestas entrantes",
@@ -799,6 +802,22 @@
         "allSaved": "Todos los cambios guardados",
         "reopenBadge": "reabrir",
         "required": "Obligatorio"
+      },
+      "appearance": {
+        "pinLabel": "Anclar a la pantalla de tickets",
+        "pinHelp": "Los tableros anclados tienen una pestaña fija en la pantalla de tickets. Los tableros sin anclar siguen siendo accesibles desde \"Todos los tickets\" y el filtro de tableros.",
+        "savedView": "Vista guardada",
+        "inheritsTenant": "Hereda los valores predeterminados del inquilino",
+        "openBoard": "Abrir este tablero",
+        "resetToTenant": "Restablecer al valor predeterminado del inquilino",
+        "arrangeNote": "Organice la vista de este tablero en el propio tablero y luego guárdela desde el menú \"Vista\".",
+        "preview": "Vista previa",
+        "summary": {
+          "openOnly": "Solo abiertos",
+          "columns": "{{columns}} columnas",
+          "density": "densidad {{level}}",
+          "sortedBy": "ordenado por {{field}}"
+        }
       },
       "empty": "No se encontraron tableros.",
       "searchPlaceholder": "Buscar tableros…"
@@ -1109,25 +1128,42 @@
       "fields": {
         "companyName": "Nombre de la empresa",
         "companyLogo": "Logotipo de la empresa",
+        "companyLogoDark": "Logotipo para fondos oscuros",
         "colorPalette": "Paleta de colores",
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
         "supportEmail": "Correo de soporte",
         "supportPhone": "Teléfono de soporte",
-        "heroGradient": "Degradado del encabezado del panel"
+        "heroGradient": "Degradado del encabezado del panel",
+        "sidebarStyle": "Color del panel lateral",
+        "sidebarColor": "Color personalizado del panel lateral",
+        "followTheme": "Usar el tema de la organización en el portal"
       },
       "help": {
         "companyName": "Esto se mostrará en el encabezado del portal del cliente",
+        "colorPalette": "Son acentos sobre el tema de la organización: el color primario pinta botones, enlaces y el banner de bienvenida, el color secundario la otra mitad del banner y los acentos de apoyo, y el panel lateral adopta el que elija. Todas las demás superficies —página, tarjetas, texto, bordes— vienen del tema en Configuración → Apariencia.",
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
+        "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
+        "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
         "supportPhone": "Opcional. Se muestra junto al correo de soporte en los correos enviados a los clientes.",
-        "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente."
+        "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente.",
+        "sidebarStyle": "Aplica su color primario o secundario al panel lateral del portal del cliente.",
+        "sidebarColor": "Cualquier color que desee. El panel usa un tono oscurecido para que el texto claro del panel lateral siga siendo legible.",
+        "followTheme": "Si está activado, el portal de clientes usa el tema elegido en Configuración → Apariencia. Si está desactivado, los colores de abajo lo sustituyen.",
+        "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",
         "primarySecondary": "Color primario a color secundario"
+      },
+      "sidebarStyle": {
+        "default": "Predeterminado (pizarra oscura)",
+        "primary": "Color primario",
+        "secondary": "Color secundario",
+        "custom": "Color personalizado"
       },
       "preview": "Vista previa",
       "previewDarkMode": "Vista previa en modo oscuro",
@@ -1281,6 +1317,130 @@
     "yourCompanyName": "Nombre de su empresa",
     "brandingPreviewMode": "Modo de tema de vista previa de marca",
     "brandingUpdated": "Configuración de marca actualizada"
+  },
+  "appearance": {
+    "title": "Tema",
+    "description": "Elija el par claro/oscuro que verá todo el mundo en esta organización, tanto en la aplicación MSP como en el portal de clientes. Cada persona sigue eligiendo claro, oscuro o sistema por su cuenta.",
+    "pairs": {
+      "alga": {
+        "label": "Alga",
+        "description": "El aspecto predeterminado: superficies blancas y limpias de día, con matiz violeta de noche."
+      },
+      "slate": {
+        "label": "Pizarra",
+        "description": "Grises neutros con el tema oscuro azul pizarra original."
+      },
+      "ocean": {
+        "label": "Océano",
+        "description": "Un panel lateral azul marino con azules fríos sobre superficies nítidas y ligeramente frías."
+      },
+      "sky": {
+        "label": "Cielo",
+        "description": "Un azul más claro y ligero con un secundario índigo."
+      },
+      "forest": {
+        "label": "Bosque",
+        "description": "Verdes profundos con un color de éxito turquesa para que el estado siga siendo legible."
+      },
+      "sunset": {
+        "label": "Atardecer",
+        "description": "Naranjas cálidos y rosa del crepúsculo sobre superficies con matiz arena."
+      },
+      "cappuccino": {
+        "label": "Capuchino",
+        "description": "Marrones de café sobre crema y un espresso tostado al oscurecer."
+      },
+      "vice": {
+        "label": "Vice",
+        "description": "Rosa y cian de neón sobre un púrpura de noche en Miami."
+      },
+      "highContrast": {
+        "label": "Alto contraste",
+        "description": "Solo blanco y negro, con bordes acentuados. Solo los colores de estado conservan su tono."
+      },
+      "custom": {
+        "label": "Personalizado",
+        "description": "Sus propios colores, editados abajo."
+      }
+    },
+    "custom": {
+      "title": "Tema personalizado",
+      "description": "Cree sus propias variantes clara y oscura. Las escalas de color completas se derivan de estos colores base y el contraste se comprueba antes de poder guardar el tema.",
+      "lightMode": "Variante clara",
+      "darkMode": "Variante oscura",
+      "previewAlt": "Vista previa del tema personalizado",
+      "seededFrom": "Estos colores parten del tema {{pair}}: cambie solo los que le interesen y las escalas completas se ajustan solas.",
+      "contrastTitle": "Estos colores están demasiado juntos para leerse. Corríjalos antes de guardar:",
+      "contrastIssue": "{{foreground}} puede ser difícil de leer sobre {{background}}. {{hint}}",
+      "tokens": {
+        "background": "Fondo de página",
+        "card": "Superficie de tarjeta",
+        "surface": "Superficie elevada",
+        "textPrimary": "Texto principal",
+        "textSecondary": "Texto secundario",
+        "textMuted": "Texto atenuado",
+        "border": "Borde",
+        "borderStrong": "Borde intenso",
+        "primary": "Color principal",
+        "secondary": "Color secundario",
+        "accent": "Color de acento",
+        "sidebarBg": "Fondo del panel lateral",
+        "sidebarText": "Texto del panel lateral",
+        "sidebarHover": "Panel lateral al pasar el cursor",
+        "headerBg": "Fondo del encabezado",
+        "buttonLabel": "Etiquetas de botón en blanco"
+      },
+      "actions": {
+        "save": "Guardar y usar el tema personalizado",
+        "reset": "Restablecer a los colores de {{pair}}",
+        "resetDone": "Colores restablecidos al tema {{pair}}: guarde para aplicarlos",
+        "useSaved": "Usar mis colores guardados",
+        "useSavedDone": "Sus colores guardados han vuelto: guarde para aplicarlos"
+      },
+      "contrastHints": {
+        "lighten": "Elija un {{foreground}} más claro o un {{background}} más oscuro.",
+        "darken": "Elija un {{foreground}} más oscuro o un {{background}} más claro."
+      },
+      "mock": {
+        "caption": "Señale un color de abajo para ver qué parte de la aplicación pinta.",
+        "showing": "Resaltado: {{token}}",
+        "nav": "Inicio",
+        "navActive": "Tickets",
+        "navMuted": "Informes",
+        "headerTitle": "Tickets",
+        "cardTitle": "Impresora sin conexión en recepción",
+        "cardBody": "Asignado a Dana Reyes",
+        "cardMuted": "Actualizado hace 2 horas",
+        "primaryAction": "Guardar",
+        "secondaryAction": "Asignar",
+        "ghostAction": "Cancelar",
+        "surface": "Actividad reciente"
+      }
+    },
+    "whiteLabel": {
+      "title": "Marca propia en la aplicación MSP",
+      "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
+      "logoHelp": "El menú lateral MSP es oscuro en ambos temas, así que usa el logotipo para fondos oscuros cuando lo proporciona y, si no, el logotipo principal.",
+      "fields": {
+        "logo": "Logotipo",
+        "logoDark": "Logotipo para fondos oscuros"
+      },
+      "colors": {
+        "label": "Usar sus colores de marca en la aplicación MSP",
+        "help": "Desactivado de forma predeterminada. Cuando está activado, sus colores primario y secundario sustituyen a los acentos del tema para los usuarios MSP, igual que ya ocurre en el portal de clientes."
+      }
+    },
+    "messages": {
+      "loadFailed": "No se pudieron cargar los ajustes de apariencia",
+      "saved": "Apariencia actualizada",
+      "saveFailed": "No se pudieron guardar los ajustes de apariencia",
+      "discarded": "Vista previa descartada"
+    },
+    "unsaved": {
+      "notice": "Está viendo una vista previa de un tema sin guardar. El resto conserva el tema guardado hasta que lo aplique.",
+      "save": "Aplicar para todos",
+      "discard": "Descartar"
+    }
   },
   "mspLanguage": {
     "title": "Idioma de la organización",

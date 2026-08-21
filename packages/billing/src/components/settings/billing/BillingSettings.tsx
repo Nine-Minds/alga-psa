@@ -123,7 +123,7 @@ const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1.5-feature', {
+  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
     defaultValue: false,
   });
 

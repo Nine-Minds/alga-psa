@@ -39,6 +39,7 @@ import {
   Megaphone,
   Monitor,
   Package,
+  Palette,
   Percent,
   Plug,
   Puzzle,
@@ -296,6 +297,13 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings/users' },
       { name: 'Teams', translationKey: 'settings.tabs.teams', icon: Users, href: '/msp/settings?tab=teams' },
       { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings/language' },
+      {
+        name: 'Appearance',
+        translationKey: 'settings.tabs.appearance',
+        icon: Palette,
+        href: '/msp/settings/appearance',
+        availableEditions: ENTERPRISE_ONLY_EDITIONS,
+      },
       { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings/client-portal' },
       { name: 'License', translationKey: 'settings.tabs.license', icon: BadgeCheck, href: '/msp/licenses', requiresSelfHost: true },
     ]

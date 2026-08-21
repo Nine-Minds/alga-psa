@@ -270,7 +270,7 @@ export default function DocumentUpload({
 
                     <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                        isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
+                        isDragging ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))]' : 'border-gray-300'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -279,7 +279,7 @@ export default function DocumentUpload({
                     <div className="space-y-4">
                         <div className="flex flex-col items-center justify-center text-gray-600">
                             <Upload
-                                className={`w-12 h-12 mb-4 ${isDragging ? 'text-purple-500' : 'text-gray-400'}`}
+                                className={`w-12 h-12 mb-4 ${isDragging ? 'text-[rgb(var(--color-primary-500))]' : 'text-gray-400'}`}
                                 strokeWidth={1.5}
                             />
                             <p className="text-sm">

@@ -114,7 +114,9 @@
       "delete": "Impossibile eliminare il preventivo.",
       "duplicate": "Impossibile duplicare il preventivo.",
       "load": "Impossibile caricare le virgolette",
-      "send": "Impossibile inviare il preventivo."
+      "send": "Impossibile inviare il preventivo.",
+      "resend": "Impossibile rinviare il preventivo.",
+      "sendReminder": "Impossibile inviare il promemoria del preventivo."
     },
     "loading": "Caricamento preventivi...",
     "rowActions": {

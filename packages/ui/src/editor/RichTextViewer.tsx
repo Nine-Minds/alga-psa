@@ -581,15 +581,21 @@ function RichTextViewerInternal({
     return () => { cancelled = true; };
   }, [rawMarkdown, editor]);
 
-  // Update editor when display blocks change
+  // Update editor when display blocks change. Keyed on contentKey (a JSON
+  // string) and never on displayBlocks: callers rebuild that array on every
+  // render, and replaceBlocks rewrites the whole ProseMirror doc — which wipes
+  // the reader's text selection mid-highlight. initialContent already seeded
+  // the editor, so the first run is a no-op we skip.
+  const appliedContentKey = useRef(contentKey);
   useEffect(() => {
-    if (editor && displayBlocks) {
-      editor.replaceBlocks(
-        editor.document.map((b) => b.id),
-        displayBlocks as any
-      );
-    }
-  }, [editor, contentKey, displayBlocks]);
+    if (!editor || appliedContentKey.current === contentKey) return;
+    appliedContentKey.current = contentKey;
+    editor.replaceBlocks(
+      editor.document.map((b) => b.id),
+      displayBlocks as any
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- displayBlocks is read fresh; contentKey is its stable identity
+  }, [editor, contentKey]);
 
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>

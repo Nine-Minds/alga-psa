@@ -288,9 +288,25 @@ async function upsertClientTaxSettings(taxRateId: string) {
     baseData.tax_rate_id = taxRateId;
   }
 
+  // Since S7 the table is keyed per billing profile — reverse-charge
+  // applicability is a property of the legal entity being billed, not of the
+  // client (decision D9). The fixture seeds the client's default profile's row,
+  // which is the one the pre-S7 schema held.
+  const conflictColumns = ['tenant', 'client_id'];
+  if ('billing_profile_id' in clientTaxSettingsColumns) {
+    const defaultProfile = await tenantTable(context, 'client_billing_profiles')
+      .where({ client_id: context.clientId, is_default: true })
+      .first('billing_profile_id');
+    if (!defaultProfile) {
+      return;
+    }
+    baseData.billing_profile_id = defaultProfile.billing_profile_id;
+    conflictColumns.push('billing_profile_id');
+  }
+
   await tenantTable(context, 'client_tax_settings')
     .insert(baseData)
-    .onConflict(['tenant', 'client_id'])
+    .onConflict(conflictColumns)
     .merge(baseData);
 }
 

@@ -303,7 +303,7 @@ export function ContractWizard({
 }: ContractWizardProps) {
   const { t } = useTranslation("msp/contracts");
   const { enabled: bucketPoolEditorEnabled } = useFeatureFlag(
-    "release-v1.5-feature",
+    "release-v1-5-feature",
     { defaultValue: false },
   );
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
@@ -572,7 +572,7 @@ export function ContractWizard({
         template_id: wizardData.template_id,
       };
 
-      // The release-v1.5-feature flag selects exactly one bucket-authoring
+      // The release-v1-5-feature flag selects exactly one bucket-authoring
       // path. Flag OFF: the legacy per-service bucket_overlay payload is
       // submitted and bucket_pools is never present. Flag ON: the pool payload
       // is submitted and the conflicting legacy bucket_overlay fields are

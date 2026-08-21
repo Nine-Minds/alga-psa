@@ -304,7 +304,9 @@ const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   useActionPolling(fetchMetrics, { intervalMs: 15000 });
 
   const activeJobs = metrics?.active ?? 0;
-  const failedJobs = metrics?.failed ?? 0;
+  // The dot is labelled "Failed last 24h", so it must use the time-bounded
+  // count — the all-time `failed` would keep it amber forever.
+  const failedJobs = metrics?.failedLast24h ?? 0;
   const hasAttention = failedJobs > 0;
 
   return (
@@ -502,7 +504,7 @@ export default function Header({
           <button
             id="workflow-designer-ask-ai"
             type="button"
-            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:bg-purple-950/30 dark:hover:text-purple-200"
+            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-[rgb(var(--color-primary-600))] transition-colors hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2"
             aria-label={t('header.quickAsk.ariaLabel', { defaultValue: 'Ask AI about this workflow' })}
             title={t('header.quickAsk.shortcutHint', { defaultValue: 'Open Quick Ask for workflow guidance' })}
             onClick={handleWorkflowQuickAskOpen}

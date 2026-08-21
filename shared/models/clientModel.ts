@@ -16,6 +16,13 @@ import {
 } from '../interfaces/client.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
+// LEVERAGE: pattern client-creation-prerequisites — six client-creation sites each
+// have to remember the same list of post-insert ensure-* calls (default contract,
+// default billing profile, default tax settings). A single
+// `ensureClientPrerequisites(trx, tenant, client)` seam below these callers would
+// make forgetting one impossible; today a missed call silently breaks billing for
+// clients created through that path.
+import { ensureClientDefaultBillingProfile } from '../billingClients/billingProfiles';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -223,9 +230,13 @@ export class ClientModel {
       });
     }
 
-    // Create default client tax settings
+    // Create default client tax settings. Keyed per billing profile since S7:
+    // reverse-charge applicability is per legal entity, and the client's
+    // default profile is the entity a freshly created client bills as.
+    const defaultBillingProfileId = await ensureClientDefaultBillingProfile(trx, tenant, clientId);
     await db.table('client_tax_settings').insert({
       client_id: clientId,
+      billing_profile_id: defaultBillingProfileId,
       tenant,
       is_reverse_charge_applicable: false,
       created_at: new Date().toISOString(),
@@ -289,6 +300,10 @@ export class ClientModel {
     const [client] = await tenantDb(trx, tenant).table('clients')
       .insert(insertData)
       .returning('*');
+
+    await ensureClientDefaultBillingProfile(trx, tenant, client.client_id, {
+      clientName: client.client_name,
+    });
 
     await ensureDefaultContractForClientIfBillingConfigured(trx, {
       tenant,

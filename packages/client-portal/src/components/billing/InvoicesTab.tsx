@@ -14,6 +14,7 @@ import {
   sendClientInvoiceEmail,
 } from '@alga-psa/client-portal/actions';
 import ClientInvoicePreview from './ClientInvoicePreview';
+import { triggerInvoicePdfDownload } from './invoicePdfDownload';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -132,15 +133,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         return;
       }
 
-      if (result.success && result.fileId) {
-        // Trigger download
-        const downloadUrl = `/api/documents/download/${result.fileId}`;
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = '';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      if (result.success && triggerInvoicePdfDownload(result)) {
         toast.success(t('invoice.downloadComplete', 'PDF downloaded successfully.'));
       } else {
         toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));

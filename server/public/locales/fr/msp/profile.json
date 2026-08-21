@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Numéro de téléphone"
       },
+      "phoneExtension": {
+        "label": "Poste"
+      },
       "timeZone": {
         "label": "Fuseau horaire"
       }

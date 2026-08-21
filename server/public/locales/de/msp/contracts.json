@@ -471,6 +471,12 @@
       "createCustom": "Benutzerdefiniert erstellen",
       "expandLine": "Vertragslinie ausklappen"
     },
+    "billingProfile": {
+      "hint": "Buchungen dieser Position werden diesem Profil zugeordnet und überschreiben den Vertrag.",
+      "label": "Abrechnungsprofil",
+      "none": "Profil des Vertrags verwenden",
+      "updated": "Abrechnungsprofil aktualisiert"
+    },
     "bucket": {
       "billingPeriod": "Abrechnungsperiode: {{period}}",
       "defaultUnit": "Einheit",

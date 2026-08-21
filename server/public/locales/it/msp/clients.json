@@ -479,6 +479,7 @@
     "email": "E-mail",
     "emailPlaceholder": "Indirizzo e-mail",
     "phone": "Telefono",
+    "extension": "Interno",
     "phonePlaceholder": "Numero di telefono",
     "name": "Nome",
     "creating": "Creazione...",
@@ -731,7 +732,10 @@
     "deactivateError": "Impossibile disattivare il contratto",
     "updateError": "Impossibile aggiornare il contratto",
     "createContract": "Crea contratto",
-    "quickAdd": "Aggiunta rapida"
+    "quickAdd": "Aggiunta rapida",
+    "billingProfile": "Profilo di fatturazione",
+    "billingProfileUnassigned": "Non assegnato",
+    "billingProfileUpdated": "Profilo di fatturazione aggiornato"
   },
   "clientContractDialog": {
     "assignTitle": "Assegnare contratto al cliente",
@@ -956,18 +960,19 @@
     "noteUpdatedSuccess": "La nota sul credito esterno è stata aggiornata."
   },
   "clientGridCard": {
-    "actions": "Azioni del cliente",
     "quickView": "Visualizzazione rapida",
-    "defaultClient": "Cliente predefinito",
     "taxExempt": "Esente da tasse",
     "taxExemptTooltip": "Questo cliente è esente da imposte: alle sue fatture non verrà applicata alcuna imposta",
-    "type": "Tipo:",
-    "address": "Indirizzo:",
-    "phone": "Telefono:",
-    "url": "URL:",
     "clientActions": "Azioni del cliente",
     "default": "Predefinito",
-    "selectClient": "Seleziona cliente {{name}}"
+    "selectClient": "Seleziona cliente {{name}}",
+    "openTickets_one": "{{count}} aperto",
+    "openTickets_other": "{{count}} aperti",
+    "lifecycle": {
+      "prospect": "Potenziale",
+      "former": "Precedente"
+    },
+    "noContactDetails": "Nessun contatto"
   },
   "clientLanguagePreference": {
     "title": "Impostazioni della lingua del client",
@@ -1349,6 +1354,7 @@
         "notes": "Note",
         "notesHelper": "Ulteriori note su questa posizione",
         "phone": "Telefono",
+        "extension": "Interno",
         "phoneHelper": "Numero di telefono per questa posizione",
         "placeholder": {
           "addressLine1": "Inserisci l'indirizzo *",
@@ -1366,7 +1372,10 @@
         "stateProvince": "Stato/Provincia",
         "stateProvinceHelper": "Nome dello stato o della provincia",
         "taxRegion": "Regione fiscale",
-        "taxRegionHelper": "Seleziona la regione fiscale applicabile"
+        "taxRegionHelper": "Seleziona la regione fiscale applicabile",
+        "defaultBillingProfile": "Profilo di fatturazione predefinito",
+        "defaultBillingProfileNone": "Nessuno",
+        "defaultBillingProfileHelper": "I nuovi ticket in questa sede partono con questo profilo di fatturazione. Può sempre essere cambiato sul ticket."
       },
       "listTitle": "Posizioni",
       "loading": "Caricamento posizioni...",
@@ -1602,6 +1611,54 @@
       "loadFailed": "Impossibile caricare il contatto."
     }
   },
+  "clientBillingProfiles": {
+    "title": "Profili di fatturazione",
+    "description": "Fattura separatamente sedi, entità o stabilimenti allʼinterno di questo cliente. Gli addebiti vengono attribuiti a un profilo tramite il contratto, la riga di contratto o lʼelemento di lavoro da cui provengono; ciò che non è assegnato ricade sul profilo predefinito.",
+    "loading": "Caricamento profili di fatturazione…",
+    "defaultBadge": "Predefinito",
+    "rename": "Rinomina",
+    "makeDefault": "Imposta come predefinito",
+    "archive": "Archivia",
+    "delete": "Elimina",
+    "restore": "Ripristina",
+    "archivedHeading": "Archiviati",
+    "addLabel": "Aggiungi un profilo di fatturazione",
+    "addPlaceholder": "es. Stabilimento Nord",
+    "addButton": "Aggiungi profilo",
+    "created": "Profilo di fatturazione «{{name}}» creato",
+    "renamed": "Profilo di fatturazione rinominato",
+    "madeDefault": "«{{name}}» è ora il profilo di fatturazione predefinito",
+    "archived": "«{{name}}» archiviato",
+    "deleted": "«{{name}}» eliminato",
+    "restored": "«{{name}}» ripristinato",
+    "settings": "Impostazioni di fatturazione"
+  },
+  "portalBillingProfileAccess": {
+    "label": "Segmenti di fatturazione",
+    "restrictedHint": "Questo utente vede solo i segmenti selezionati qui sotto.",
+    "allHint": "Questo utente vede tutti i segmenti di fatturazione, compresi quelli aggiunti in seguito.",
+    "save": "Salva accesso ai segmenti",
+    "saved": "Accesso ai segmenti del portale aggiornato",
+    "emptyWarning": "Seleziona almeno un segmento oppure disattiva la restrizione per mostrarli tutti."
+  },
+  "clientBillingProfileSettings": {
+    "saved": "Impostazioni del profilo di fatturazione salvate",
+    "inherited": "Ereditato: {{value}}",
+    "notSet": "Non impostato",
+    "billsSeparately": "Fattura separatamente",
+    "billsSeparatelyHint": "Genera una fattura separata per questo profilo, con proprio intestatario, metodo di pagamento e saldo.",
+    "billToName": "Intestatario fattura",
+    "billingEmail": "Email di fatturazione",
+    "poNumber": "Numero ordine",
+    "taxIdNumber": "Partita IVA",
+    "taxExemptionCertificate": "Certificato di esenzione",
+    "invoiceDeliveryMethod": "Modalità di invio fatture",
+    "billingCycle": "Ciclo di fatturazione",
+    "paymentTerms": "Termini di pagamento",
+    "taxExempt": "Esente da imposta",
+    "taxExemptInherited": "Ereditato dal cliente ({{value}})",
+    "regionNote": "La regione fiscale non si imposta qui. Segue il luogo di erogazione: il servizio, poi la sede della riga di contratto, poi il valore predefinito del cliente."
+  },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Avvisi saldo prepagato",
     "scheduleHelp": "I controlli vengono eseguiti ogni giorno alle 09:00 UTC. Il salvataggio non invia nulla immediatamente.",
@@ -1620,9 +1677,26 @@
     "percentRangeError": "Inserire un numero intero da 1 a 100",
     "notifyClient": "Invia anche un’e-mail al destinatario di fatturazione del cliente",
     "notifyClientHelp": "Invia l’avviso al destinatario di fatturazione canonico del cliente",
+    "replenishmentTier": "Quando scatta un avviso",
+    "replenishmentNotifyOnly": "Solo notifica",
+    "replenishmentDraft": "Creare una bozza di fattura di ricarica e notificare",
+    "replenishmentAutoIssue": "Creare ed emettere una fattura di ricarica",
+    "replenishmentAmount": "Importo di ricarica del credito",
+    "replenishmentAmountHelp": "Importo nella valuta selezionata. Gli avvisi dei pacchetti usano i minuti sottostanti.",
+    "replenishmentAmountError": "Inserire un importo di ricarica positivo nella valuta selezionata",
+    "replenishmentMinutes": "Minuti di ricarica del pacchetto",
+    "replenishmentMinutesError": "Inserire un numero intero positivo di minuti",
+    "replenishmentHorizon": "Saltare la ricarica entro questi giorni dalla fine del contratto",
+    "replenishmentHorizonError": "Inserire un numero di giorni da 0 a 3650",
     "save": "Salva",
     "saveSuccess": "Impostazioni avviso saldo prepagato salvate",
     "saveError": "Impossibile salvare le impostazioni avviso saldo prepagato",
-    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato"
+    "loadError": "Impossibile caricare le impostazioni avviso saldo prepagato",
+    "contractOverrideTitle": "Sostituzione della ricarica del contratto",
+    "contractOverrideContract": "Contratto",
+    "contractOverrideInherit": "Usa impostazione predefinita del cliente",
+    "saveContractOverride": "Salva sostituzione del contratto",
+    "contractSaveSuccess": "Criterio di ricarica del contratto salvato",
+    "contractSaveError": "Impossibile salvare il criterio di ricarica del contratto"
   }
 }

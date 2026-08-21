@@ -14,6 +14,7 @@ import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/c
 import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -25,7 +26,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, deleteContact, listInboundTicketDestinationOptions, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { validateContactName, validateRole } from '@alga-psa/validation';
+import { translateFieldValidation, validateContactNameField, validateRole, type FieldValidation } from '@alga-psa/validation';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useToast } from '@alga-psa/ui';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
@@ -101,15 +102,23 @@ const TextDetailItem: React.FC<{
   onEdit: (value: string) => void;
   automationId?: string;
   validate?: (value: string) => string | null;
-}> = ({ label, value, onEdit, automationId, validate }) => {
+  /** Structural error blocks; the warnings it also returns never do. */
+  validateField?: (value: string) => FieldValidation;
+}> = ({ label, value, onEdit, automationId, validate, validateField }) => {
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
 
   const handleBlur = () => {
     // Professional SaaS validation pattern: validate on blur, not while typing
-    if (validate) {
-      const validationError = validate(localValue);
-      setError(validationError);
+    if (validateField) {
+      const result = translateFieldValidation(validateField(localValue), tValidation);
+      setError(result.error);
+      setWarnings(result.warnings);
+    } else if (validate) {
+      setError(validate(localValue));
     }
 
     if (localValue !== value) {
@@ -133,11 +142,12 @@ const TextDetailItem: React.FC<{
         value={localValue}
         onChange={handleChange}
         onBlur={handleBlur}
-        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent ${
           error ? 'border-red-500' : 'border-gray-200'
         }`}
         data-automation-id={automationId}
       />
+      <FieldWarnings warnings={warnings} />
       {error && (
         <div className="text-red-500 text-xs mt-1">{error}</div>
       )}
@@ -529,7 +539,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         return;
       }
 
-      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers);
+      const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers });
       setPhoneValidationErrors(currentPhoneErrors);
       if (currentPhoneErrors.length > 0) {
         toast({
@@ -659,7 +669,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
               automationId="full-name-field"
-              validate={validateContactName}
+              validateField={validateContactNameField}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">{t('contactDetails.fields.client', { defaultValue: 'Client' })}</Text>

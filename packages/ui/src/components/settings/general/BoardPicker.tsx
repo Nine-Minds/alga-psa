@@ -198,7 +198,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
         <Popover.Portal>
           <Popover.Content
             id={`${id}-content`}
-            className={`z-[9999] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
+            className={`z-[9999] bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
             sideOffset={5}
             align="start"
             style={{
@@ -217,7 +217,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               // Calling it manually here causes conflicts with the trigger's own toggle logic.
             }}
           >
-            <div className="p-3 space-y-3 bg-white">
+            <div className="p-3 space-y-3">
               <div className="w-full">
                 <CustomSelect
                   value={filterState}
@@ -242,7 +242,7 @@ export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
               </div>
             </div>
             <div
-              className="max-h-60 overflow-y-auto border-t bg-white"
+              className="max-h-60 overflow-y-auto border-t border-[rgb(var(--color-border-200))]"
               role="listbox"
               id={`${id}-boards-listbox`}
               aria-label="Boards"

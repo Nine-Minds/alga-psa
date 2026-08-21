@@ -316,7 +316,7 @@ export function IntervalManagement({
       
       {/* Action buttons */}
       {selectedIntervalIds.length > 0 && (
-        <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
+        <Card className="p-3 bg-[rgb(var(--color-table-selected))]">
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium">

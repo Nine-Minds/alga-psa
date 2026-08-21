@@ -27,17 +27,17 @@ const SettingsTabSkeleton = ({
     <>
       {/* Dropdown Section Skeleton */}
       {showDropdowns && (
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-[rgb(var(--color-border-50))] rounded-lg">
           <div className="flex items-end gap-3">
             <div className="space-y-2">
-              <div className="h-5 bg-gray-200 rounded w-20"></div>
-              <div className="h-10 bg-gray-200 rounded w-40"></div>
+              <div className="h-5 skeleton-fill rounded w-20"></div>
+              <div className="h-10 skeleton-fill rounded w-40"></div>
             </div>
             <div className="space-y-2">
-              <div className="h-5 bg-gray-200 rounded w-20"></div>
-              <div className="h-10 bg-gray-200 rounded w-40"></div>
+              <div className="h-5 skeleton-fill rounded w-20"></div>
+              <div className="h-10 skeleton-fill rounded w-40"></div>
             </div>
-            <div className="h-10 bg-gray-200 rounded w-24"></div>
+            <div className="h-10 skeleton-fill rounded w-24"></div>
           </div>
         </div>
       )}
@@ -46,9 +46,9 @@ const SettingsTabSkeleton = ({
       {showTextArea && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <div className="h-5 bg-gray-200 rounded w-32"></div>
-            <div className="h-24 bg-gray-200 rounded w-full"></div>
-            <div className="h-9 bg-gray-200 rounded w-28"></div>
+            <div className="h-5 skeleton-fill rounded w-32"></div>
+            <div className="h-24 skeleton-fill rounded w-full"></div>
+            <div className="h-9 skeleton-fill rounded w-28"></div>
           </div>
         </div>
       )}
@@ -58,24 +58,24 @@ const SettingsTabSkeleton = ({
         <div className="space-y-4">              
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <div className="bg-gray-50 border-b">
+            <div className="bg-[rgb(var(--color-border-50))] border-b">
               <div className="grid grid-cols-4 gap-4 p-4">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-4 bg-gray-200 rounded w-16"></div>
+                <div className="h-4 skeleton-fill rounded w-24"></div>
+                <div className="h-4 skeleton-fill rounded w-32"></div>
+                <div className="h-4 skeleton-fill rounded w-20"></div>
+                <div className="h-4 skeleton-fill rounded w-16"></div>
               </div>
             </div>
             
             {/* Table Rows */}
             {Array.from({ length: 5 }, (_, rowIndex) => (
-              <div key={rowIndex} className="border-b last:border-b-0 bg-white">
+              <div key={rowIndex} className="border-b last:border-b-0 bg-[rgb(var(--color-card))]">
                 <div className="grid grid-cols-4 gap-4 p-4">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 skeleton-fill rounded"></div>
+                  <div className="h-4 skeleton-fill rounded"></div>
+                  <div className="h-4 skeleton-fill rounded"></div>
                   <div className="flex justify-center">
-                    <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                    <div className="h-8 w-8 skeleton-fill rounded"></div>
                   </div>
                 </div>
               </div>
@@ -90,15 +90,15 @@ const SettingsTabSkeleton = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-10 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 skeleton-fill rounded w-24"></div>
+                <div className="h-10 skeleton-fill rounded w-full"></div>
               </div>
             ))}
           </div>
           
           <div className="flex justify-end space-x-2 pt-4">
-            <div className="h-9 bg-gray-200 rounded w-20"></div>
-            <div className="h-9 bg-gray-200 rounded w-24"></div>
+            <div className="h-9 skeleton-fill rounded w-20"></div>
+            <div className="h-9 skeleton-fill rounded w-24"></div>
           </div>
         </div>
       )}
@@ -131,13 +131,13 @@ const SettingsTabSkeleton = ({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                <span className="block h-6 bg-gray-200 rounded w-40"></span>
+                <span className="block h-6 skeleton-fill rounded w-40"></span>
               </CardTitle>
               <CardDescription>
-                <span className="block h-4 bg-gray-200 rounded w-64 mt-2"></span>
+                <span className="block h-4 skeleton-fill rounded w-64 mt-2"></span>
               </CardDescription>
             </div>
-            <div className="h-9 bg-gray-200 rounded w-24"></div>
+            <div className="h-9 skeleton-fill rounded w-24"></div>
           </div>
         </CardHeader>
         

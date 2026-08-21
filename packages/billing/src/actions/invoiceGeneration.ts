@@ -8,7 +8,15 @@ import { SharedNumberingService } from '@alga-psa/shared/services/numberingServi
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
-import { BillingEngine } from '../lib/billing/billingEngine';
+import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
+import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import {
+  getCycleBillingProfileId,
+  resolveInvoiceProfileScope,
+  scopeChargesToProfile,
+} from '../lib/billing/billingProfileInvoiceScope';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -34,7 +42,7 @@ import Invoice from '@alga-psa/billing/models/invoice';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
-import { StorageService } from '@alga-psa/storage/StorageService';
+import { getStoredInvoicePdf } from '../services/invoicePdfDeliveryService';
 import { toPlainDate, toISODate, toISOTimestamp } from '@alga-psa/core';
 import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
@@ -456,6 +464,8 @@ async function persistProjectScheduleCharges(
         is_manual: false,
         is_discount: false,
         is_taxable: charge.is_taxable ?? false,
+        billing_profile_id: charge.billing_profile_id ?? null,
+        billing_profile_source: charge.billing_profile_source ?? null,
         created_by: userId,
         created_at: now,
         tenant,
@@ -651,6 +661,13 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
   if (error instanceof Error) {
     if (error.message.startsWith('Permission denied')) {
       return permissionError(error.message);
+    }
+
+    // An expected, actionable refusal, not a failure: a contract covers these
+    // items but more than one line matched, so they may not be billed at
+    // catalog rate until someone decides (F139). The message names them.
+    if (error instanceof UnresolvedCatalogPricingError) {
+      return actionError(error.message);
     }
 
     if (error.message === 'Billing cycle not found') {
@@ -1455,6 +1472,58 @@ export async function calculateBillingForSelectionInputs(input: {
   );
 }
 
+class RollbackReconciliation extends Error {
+  constructor(readonly billingResult: IBillingResult) {
+    super('Reconciliation was intentionally rolled back after calculation.');
+    this.name = 'RollbackReconciliation';
+  }
+}
+
+/**
+ * Reconcile only at an explicit billing boundary. Generation commits the
+ * reconciliation transaction after calculation; preview and PO checks throw a
+ * sentinel so the same calculation sees the writes but the transaction rolls
+ * them back before returning.
+ */
+async function calculateBillingWithReconciledAttribution(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+  persistReconciliation: boolean;
+}): Promise<IBillingResult> {
+  const canonicalSelection = assertSameRecurringSelectionWindow(params.selectorInputs);
+
+  try {
+    return await withTransaction(params.knex, async (trx: Knex.Transaction) => {
+      await reconcileWindowAttribution({
+        trx,
+        tenant: params.tenant,
+        clientId: canonicalSelection.clientId,
+        windowStart: canonicalSelection.windowStart,
+        windowEnd: canonicalSelection.windowEnd,
+      });
+
+      const billingResult = await calculateBillingForSelectionInputs({
+        billingEngine: BillingEngine.forTransaction(trx, params.tenant),
+        selectorInputs: params.selectorInputs,
+      });
+
+      if (params.persistReconciliation && billingResult.error) {
+        throw new Error(billingResult.error);
+      }
+      if (!params.persistReconciliation) {
+        throw new RollbackReconciliation(billingResult);
+      }
+      return billingResult;
+    });
+  } catch (error) {
+    if (error instanceof RollbackReconciliation) {
+      return error.billingResult;
+    }
+    throw error;
+  }
+}
+
 export async function calculateBillingForSelectionInput(input: {
   billingEngine: BillingEngine;
   selectorInput: IRecurringDueSelectionInput;
@@ -1487,10 +1556,11 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
   const client_id = selectorInput.clientId;
   const cycleEnd = selectorInput.windowEnd;
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInput({
-    billingEngine,
-    selectorInput,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
+    selectorInputs: [selectorInput],
+    persistReconciliation: false,
   });
   if (billingResult.error) {
     throw new Error(billingResult.error);
@@ -1776,10 +1846,11 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     }
   }
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInputs({
-    billingEngine,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
     selectorInputs,
+    persistReconciliation: false,
   });
 
   if (billingResult.error) {
@@ -2606,10 +2677,11 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     );
   }
 
-  const billingEngine = new BillingEngine();
-  const billingResult = await calculateBillingForSelectionInputs({
-    billingEngine,
+  const billingResult = await calculateBillingWithReconciledAttribution({
+    knex,
+    tenant,
     selectorInputs: params.normalizedSelectorInputs,
+    persistReconciliation: true,
   });
   if (billingResult.error) {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), normalizedSelectorInput);
@@ -2809,41 +2881,6 @@ export const generateInvoicePDF = withAuth(async (
   });
 });
 
-/**
- * Bytes of the invoice's filed PDF: reuses the document already on file — unless a
- * different template was asked for — and refreshes it while the invoice has not been
- * issued yet. Falls back to a plain render if the document store is unavailable: a
- * download must not depend on filing succeeding.
- */
-async function getStoredInvoicePdf(options: {
-  tenant: string;
-  invoiceId: string;
-  invoiceNumber: string;
-  userId: string;
-  templateId?: string;
-}): Promise<Buffer> {
-  const pdfGenerationService = createPDFGenerationService(options.tenant);
-
-  try {
-    const stored = await pdfGenerationService.generateAndStore({
-      invoiceId: options.invoiceId,
-      invoiceNumber: options.invoiceNumber,
-      templateId: options.templateId,
-      userId: options.userId,
-    });
-
-    const { buffer } = await StorageService.downloadFile(stored.file_id);
-    return Buffer.from(buffer);
-  } catch (error) {
-    console.error('[downloadInvoicePDF] Falling back to an unfiled render:', error);
-    return pdfGenerationService.generatePDF({
-      invoiceId: options.invoiceId,
-      userId: options.userId,
-      templateId: options.templateId,
-    });
-  }
-}
-
 export const downloadInvoicePDF = withAuth(async (
   user,
   { tenant },
@@ -2881,6 +2918,7 @@ export const downloadInvoicePDF = withAuth(async (
       invoiceNumber: invoice.invoice_number,
       userId: user.user_id,
       templateId: templateId || undefined,
+      logLabel: '[downloadInvoicePDF]',
     });
 
     console.log('[downloadInvoicePDF] PDF generated, size:', pdfBuffer.length, 'bytes');
@@ -2943,15 +2981,42 @@ export const createInvoiceFromBillingResult = withAuth(async (
   const useTaxDelegation = await shouldUseTaxDelegation(clientId);
 
   const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);
-  const invoicePoNumber = clientContractId
+
+  // Which profile this invoice bills (F094–F096). For a cycle created before
+  // S8, or a client nobody has segmented, this is the client's default profile
+  // and nothing downstream changes.
+  const cycleBillingProfileId = billing_cycle_id
+    ? await getCycleBillingProfileId(knex, tenant, billing_cycle_id)
+    : null;
+  const profileScope = await resolveInvoiceProfileScope(
+    knex,
+    tenant,
+    clientId,
+    cycleBillingProfileId,
+    { userId },
+  );
+  // F095 — bill-to, PO, delivery, and tax identity come from the profile,
+  // falling back to the client field by field.
+  const billingIdentity = await resolveEffectiveBillingIdentity(
+    knex,
+    tenant,
+    clientId,
+    profileScope.billingProfileId,
+  );
+
+  const contractPoNumber = clientContractId
     ? (await getClientContractPurchaseOrderContext({ knex, tenant, clientContractId })).po_number
     : null;
+  // A PO on the contract is specific to that agreement and outranks the
+  // profile's standing PO number.
+  const invoicePoNumber = contractPoNumber ?? billingIdentity.poNumber ?? null;
 
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
     ...(options.projectId ? { project_id: options.projectId } : {}),
     client_contract_id: clientContractId,
+    billing_profile_id: profileScope.billingProfileId,
     po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
     due_date,
@@ -3033,13 +3098,17 @@ export const createInvoiceFromBillingResult = withAuth(async (
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
+    // F094 — the charges this cycle's profile is responsible for. Returns the
+    // full set unchanged unless some profile of this client bills separately,
+    // so an unsegmented client's invoice is untouched.
+    const scopedCharges = scopeChargesToProfile(billingResult.charges, profileScope);
     const capDeltas = await prepareProjectCapChargesForPersistence(
       trx,
-      billingResult.charges,
+      scopedCharges,
     );
     persistedCapDeltas = capDeltas;
-    const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);
-    const standardCharges = billingResult.charges.filter((charge) => !isProjectScheduleCharge(charge));
+    const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
+    const standardCharges = scopedCharges.filter((charge) => !isProjectScheduleCharge(charge));
     const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
@@ -3120,6 +3189,12 @@ export const createInvoiceFromBillingResult = withAuth(async (
     // Process discounts (if any) - This might need adjustment if persistInvoiceCharges handles them
     // For now, assume discounts are separate and need processing here.
     let discountSubtotalAdjustment = 0;
+    // An invoice-level discount is not attributable to one segment — it applies
+    // across the whole invoice — so it takes the client default, which is what
+    // the chain's terminal step means (F029).
+    const discountBillingProfileId = billingResult.discounts.length > 0
+      ? await getClientDefaultBillingProfileId(trx, tenant, client.client_id)
+      : null;
     for (const discount of billingResult.discounts) {
       const netAmount = Math.round(-(discount.amount || 0));
       const discountItem = {
@@ -3135,6 +3210,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
         is_taxable: false,
         is_discount: true,
         is_manual: false,
+        billing_profile_id: discountBillingProfileId,
+        billing_profile_source: 'client_default' as const,
         tenant,
         created_by: userId
       };

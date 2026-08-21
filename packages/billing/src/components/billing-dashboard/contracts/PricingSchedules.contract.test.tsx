@@ -107,7 +107,7 @@ function renderList(props: { currencyCode?: string } = {}) {
   };
 }
 
-describe('PricingSchedules contract-currency custom rate (release-v1.5-feature)', () => {
+describe('PricingSchedules contract-currency custom rate (release-v1-5-feature)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagState.enabled = false;

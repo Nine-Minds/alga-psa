@@ -145,7 +145,10 @@ const defaultProps: BentoTimelineTileProps = {
 };
 
 function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
-  return render(<BentoTimelineTile {...defaultProps} {...overrides} />);
+  const result = render(<BentoTimelineTile {...defaultProps} {...overrides} />);
+  // The composer is collapsed behind the header button until asked for.
+  fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+  return result;
 }
 
 describe('BentoTimelineTile composer heading', () => {
