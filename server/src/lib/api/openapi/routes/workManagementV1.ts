@@ -77,6 +77,70 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ticketNotificationSuppressionProperties = {
+    suppressContactNotifications: zOpenApi.boolean().optional().describe(
+      'When true, suppresses customer-facing email and portal notifications for this operation.',
+    ),
+    suppressInternalNotifications: zOpenApi.boolean().optional().describe(
+      'When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true.',
+    ),
+  };
+
+  const TicketUpdateBody = registry.registerSchema(
+    'WorkV1TicketUpdateBody',
+    zOpenApi.object({
+      title: zOpenApi.string().min(1).max(255).optional(),
+      url: zOpenApi.string().url().optional(),
+      board_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().uuid().optional(),
+      location_id: zOpenApi.string().uuid().optional(),
+      contact_name_id: zOpenApi.string().uuid().nullable().optional(),
+      status_id: zOpenApi.string().uuid().optional(),
+      category_id: zOpenApi.string().uuid().optional(),
+      subcategory_id: zOpenApi.string().uuid().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      priority_id: zOpenApi.string().uuid().optional(),
+      attributes: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      tags: zOpenApi.array(zOpenApi.string()).optional(),
+      override_close_rules: zOpenApi.boolean().optional(),
+      override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      ...ticketNotificationSuppressionProperties,
+    }).describe('Ticket fields to update. Notification suppression applies only to this operation.'),
+  );
+
+  const TicketStatusUpdateBody = registry.registerSchema(
+    'WorkV1TicketStatusUpdateBody',
+    zOpenApi.object({
+      status_id: zOpenApi.string().uuid(),
+      closed_at: zOpenApi.string().datetime().optional(),
+      closed_by: zOpenApi.string().uuid().optional(),
+      override_close_rules: zOpenApi.boolean().optional(),
+      override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      ...ticketNotificationSuppressionProperties,
+    }),
+  );
+
+  const TicketAssignmentUpdateBody = registry.registerSchema(
+    'WorkV1TicketAssignmentUpdateBody',
+    zOpenApi.object({
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      ...ticketNotificationSuppressionProperties,
+    }),
+  );
+
+  const TicketCommentCreateBody = registry.registerSchema(
+    'WorkV1TicketCommentCreateBody',
+    zOpenApi.object({
+      comment_text: zOpenApi.string().min(1).max(5000),
+      is_internal: zOpenApi.boolean().optional().default(false),
+      is_resolution: zOpenApi.boolean().optional().default(false),
+      time_spent: zOpenApi.number().min(0).optional(),
+      metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
+      parent_comment_id: zOpenApi.string().uuid().optional(),
+      ...ticketNotificationSuppressionProperties,
+    }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history.'),
+  );
+
   const CreateTagBody = registry.registerSchema(
     'WorkV1CreateTagBody',
     zOpenApi.object({
@@ -212,11 +276,11 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/tickets/stats', summary: 'Get ticket stats', description: 'Returns ticket aggregate stats for authorized tickets.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}', summary: 'Delete ticket', description: 'Deletes ticket UUID.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}', summary: 'Get ticket', description: 'Gets ticket UUID with authorization check.', family: 'ticket' },
-    { method: 'put', path: '/api/v1/tickets/{id}', summary: 'Update ticket', description: 'Updates ticket UUID.', family: 'ticket' },
-    { method: 'put', path: '/api/v1/tickets/{id}/assignment', summary: 'Update ticket assignment', description: 'Updates ticket assignment target.', family: 'ticket' },
+    { method: 'put', path: '/api/v1/tickets/{id}', summary: 'Update ticket', description: 'Updates ticket fields. Optional suppression flags make this operation silent for customer notifications or for all human notifications while preserving audit, workflow, and webhook records.', family: 'ticket' },
+    { method: 'put', path: '/api/v1/tickets/{id}/assignment', summary: 'Update ticket assignment', description: 'Updates the primary ticket assignment, with optional per-operation notification suppression.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/comments', summary: 'List ticket comments', description: 'Lists comments for ticket UUID.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets/{id}/comments', summary: 'Add ticket comment', description: 'Adds comment to ticket UUID.', family: 'ticket' },
-    { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates status for ticket UUID.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/comments', summary: 'Add ticket comment', description: 'Adds a comment to the ticket, with optional per-operation notification suppression.', family: 'ticket' },
+    { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates ticket status, with optional per-operation notification suppression.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/time-entries', summary: 'List ticket time entries', description: 'Returns the caller\'s time entries on the ticket plus, when permitted, other team members\' entries (or an anonymized aggregate when the caller lacks timesheet:read_all).', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/bundle', summary: 'Get ticket bundle', description: 'Returns bundle membership for the ticket: role (master, child, or standalone), the master ticket, child tickets, and bundle settings.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.', family: 'ticket' },
@@ -311,7 +375,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
-    if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody };
+    if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
+      let schema = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
+      if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;
+      if (def.method === 'put' && def.path === '/api/v1/tickets/{id}/status') schema = TicketStatusUpdateBody;
+      if (def.method === 'put' && def.path === '/api/v1/tickets/{id}/assignment') schema = TicketAssignmentUpdateBody;
+      if (def.method === 'post' && def.path === '/api/v1/tickets/{id}/comments') schema = TicketCommentCreateBody;
+      req.body = { schema };
+    }
     if (def.path.startsWith('/api/v1/tags') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/tags' && def.method === 'post' ? CreateTagBody : GenericBody };
     if (def.path.startsWith('/api/v1/time-entries') && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-entries' && def.method === 'post' ? CreateTimeEntryBody : GenericBody };
     if ((def.path.startsWith('/api/v1/time-sheets') || def.path.startsWith('/api/v1/time-periods') || def.path.startsWith('/api/v1/schedules')) && (def.method === 'post' || def.method === 'put' || def.method === 'delete')) req.body = { schema: def.path === '/api/v1/time-sheets' && def.method === 'post' ? CreateTimeSheetBody : GenericBody };
@@ -432,6 +503,27 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       description: zOpenApi.string().max(1000).nullable().optional(),
     }),
   );
+  const TicketChecklistItemParams = registry.registerSchema(
+    'WorkV1TicketChecklistItemParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
+      itemId: zOpenApi.string().uuid().describe('Ticket checklist item UUID.'),
+    }),
+  );
+  const TicketChecklistCreateBody = registry.registerSchema(
+    'WorkV1TicketChecklistCreateBody',
+    zOpenApi.object({
+      item_name: zOpenApi.string().min(1).describe('Checklist item name.'),
+      description: zOpenApi.string().nullable().optional(),
+      is_required: zOpenApi.boolean().optional().describe('Whether the item gates ticket closure. Defaults to true.'),
+    }),
+  );
+  const TicketChecklistCompletionBody = registry.registerSchema(
+    'WorkV1TicketChecklistCompletionBody',
+    zOpenApi.object({
+      completed: zOpenApi.boolean().describe('True to complete the item; false to remove its completion signoff.'),
+    }),
+  );
 
   const ticketStdResponses = (success: { code: number; description: string }, withNotFound = true) => ({
     [success.code]: { description: success.description, schema: ApiSuccess },
@@ -506,6 +598,36 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/checklist',
+    summary: 'List ticket checklist items',
+    description: 'Returns ticket checklist items in display order, including required state and completion attribution.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket checklist items.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/checklist',
+    summary: 'Add a ticket checklist item',
+    description: 'Adds a manual checklist item to the end of the ticket checklist.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketChecklistCreateBody } },
+    responses: ticketStdResponses({ code: 201, description: 'Checklist item created.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch', path: '/api/v1/tickets/{id}/checklist/{itemId}',
+    summary: 'Set ticket checklist item completion',
+    description: 'Completes or uncompletes an item. Completion records the authenticated user and time; uncompletion clears the current signoff while preserving it in ticket audit history.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketChecklistItemParams, body: { schema: TicketChecklistCompletionBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Checklist item completion updated.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/documents',
     summary: 'Upload a ticket document',
     description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.',
@@ -554,14 +676,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       user_id: zOpenApi.string().uuid().describe('User to add as an additional agent.'),
       role: zOpenApi.string().max(50).optional().describe('Resource role recorded on the assignment; defaults to support.'),
+      ...ticketNotificationSuppressionProperties,
     }),
   );
   const TicketTeamAssignBody = registry.registerSchema(
     'WorkV1TicketTeamAssignBody',
     zOpenApi.object({
       team_id: zOpenApi.string().uuid().describe('Team to assign to the ticket.'),
-      suppressContactNotifications: zOpenApi.boolean().optional(),
-      suppressInternalNotifications: zOpenApi.boolean().optional(),
+      ...ticketNotificationSuppressionProperties,
     }),
   );
   const TicketTeamRemoveBody = registry.registerSchema(
@@ -585,7 +707,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/agents',
     summary: 'Add a ticket additional agent',
-    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
+    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: TicketAgentBody } },
     responses: {
@@ -615,7 +737,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'put', path: '/api/v1/tickets/{id}/team',
     summary: 'Assign a team to a ticket',
-    description: 'Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team\'s active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.',
+    description: 'Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team\'s active members as team_member additional agents. Optional suppression flags silence the assignment notification. Returns the updated ticket. A team without a lead is rejected with 400.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: TicketTeamAssignBody } },
     responses: ticketStdResponses({ code: 200, description: 'Team assigned; updated ticket returned.' }),

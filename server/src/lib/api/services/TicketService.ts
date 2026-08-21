@@ -91,6 +91,30 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   'mobile_list',
 ]);
 
+type TicketNotificationSuppressionInput = {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+};
+
+function resolveTicketNotificationSuppression(input: TicketNotificationSuppressionInput): {
+  suppressContactNotifications: boolean;
+  suppressInternalNotifications: boolean;
+} {
+  const suppressContactNotifications = input.suppressContactNotifications === true;
+  const suppressInternalNotifications = input.suppressInternalNotifications === true;
+
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['suppressInternalNotifications'],
+        message: 'suppressInternalNotifications requires suppressContactNotifications',
+      },
+    ]);
+  }
+
+  return { suppressContactNotifications, suppressInternalNotifications };
+}
+
 function ticketUploadValidationMessage(error: unknown): string | null {
   if (!(error instanceof Error)) {
     return null;
@@ -797,6 +821,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<TicketAgentsResponse> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
@@ -814,7 +839,8 @@ export class TicketService extends BaseService<ITicket> {
           context.userId,
           ticketId,
           data.user_id,
-          data.role ?? 'support'
+          data.role ?? 'support',
+          notificationSuppression,
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -869,6 +895,7 @@ export class TicketService extends BaseService<ITicket> {
   async assignTeam(ticketId: string, data: AssignTicketTeamData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { ticket, assignedTo } = await withTransaction(knex, async (trx) => {
       let resolvedAssignedTo: string;
@@ -896,8 +923,7 @@ export class TicketService extends BaseService<ITicket> {
       userId: assignedTo,
       assignedByUserId: context.userId,
       changes: { assigned_team_id: data.team_id },
-      suppressContactNotifications: data.suppressContactNotifications === true,
-      suppressInternalNotifications: data.suppressInternalNotifications === true,
+      ...notificationSuppression,
     });
 
     return this.withDescriptionHtml(ticket);
@@ -1535,21 +1561,12 @@ export class TicketService extends BaseService<ITicket> {
       // Close-rule override flags are request options, not ticket columns.
       const overrideCloseRules = (cleanedData as any).override_close_rules === true;
       const overrideCloseRulesReason = (cleanedData as any).override_close_rules_reason ?? null;
-      const suppressContactNotifications = (cleanedData as any).suppressContactNotifications === true;
-      const suppressInternalNotifications = (cleanedData as any).suppressInternalNotifications === true;
+      const { suppressContactNotifications, suppressInternalNotifications } =
+        resolveTicketNotificationSuppression(cleanedData as TicketNotificationSuppressionInput);
       delete (cleanedData as any).override_close_rules;
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
-
-      if (suppressInternalNotifications && !suppressContactNotifications) {
-        throw new ValidationError('Validation failed', [
-          {
-            path: ['suppressInternalNotifications'],
-            message: 'suppressInternalNotifications requires suppressContactNotifications',
-          },
-        ]);
-      }
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -2020,6 +2037,7 @@ export class TicketService extends BaseService<ITicket> {
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2174,7 +2192,8 @@ export class TicketService extends BaseService<ITicket> {
             content: comment.note,
             author: authorName,
             isInternal: comment.is_internal
-          }
+          },
+          ...notificationSuppression,
         }
       };
     });

@@ -20,6 +20,22 @@ const ticketNotificationSuppressionSchema = {
   suppressInternalNotifications: z.boolean().optional(),
 };
 
+function validateTicketNotificationSuppression(
+  value: {
+    suppressContactNotifications?: boolean;
+    suppressInternalNotifications?: boolean;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.suppressInternalNotifications === true && value.suppressContactNotifications !== true) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['suppressInternalNotifications'],
+      message: 'suppressInternalNotifications requires suppressContactNotifications',
+    });
+  }
+}
+
 function getVisibleCommentLength(value: string): number {
   return formatBlockNoteContent(value).text.trim().length;
 }
@@ -52,7 +68,7 @@ export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend(
   // ticket:close_override. Stripped before the row update.
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional(),
-});
+}).superRefine(validateTicketNotificationSuppression);
 
 // Ticket status update schema
 export const updateTicketStatusSchema = z.object({
@@ -62,13 +78,29 @@ export const updateTicketStatusSchema = z.object({
   ...ticketNotificationSuppressionSchema,
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional()
-});
+}).superRefine(validateTicketNotificationSuppression);
 
 // Ticket assignment schema
 export const updateTicketAssignmentSchema = z.object({
   assigned_to: uuidSchema.nullable().optional(),
   ...ticketNotificationSuppressionSchema,
-});
+}).superRefine(validateTicketNotificationSuppression);
+
+// Mobile ticket checklist writes intentionally expose only the subset needed
+// for field execution. Template administration, assignment editing, ordering,
+// and deletion remain on the web surface.
+export const createTicketChecklistItemSchema = z.object({
+  item_name: z.string().trim().min(1, 'Checklist item name is required'),
+  description: z.string().nullable().optional(),
+  is_required: z.boolean().optional(),
+}).strict();
+
+export const updateTicketChecklistCompletionSchema = z.object({
+  completed: z.boolean(),
+}).strict();
+
+export type CreateTicketChecklistItemData = z.infer<typeof createTicketChecklistItemSchema>;
+export type UpdateTicketChecklistCompletionData = z.infer<typeof updateTicketChecklistCompletionSchema>;
 
 export const createTicketMaterialSchema = z.object({
   service_id: uuidSchema,
@@ -213,7 +245,8 @@ export const createTicketCommentSchema = z.object({
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
-});
+  ...ticketNotificationSuppressionSchema,
+}).superRefine(validateTicketNotificationSuppression);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -357,8 +390,9 @@ export const linkTicketAssetSchema = z.object({
 // Add an additional agent to a ticket (POST /api/v1/tickets/{id}/agents).
 export const addTicketAgentSchema = z.object({
   user_id: uuidSchema,
-  role: z.string().trim().min(1).max(50).optional()
-});
+  role: z.string().trim().min(1).max(50).optional(),
+  ...ticketNotificationSuppressionSchema,
+}).superRefine(validateTicketNotificationSuppression);
 
 const ticketAgentSchema = z.object({
   user_id: uuidSchema,
@@ -382,7 +416,7 @@ export const ticketAgentsResponseSchema = z.object({
 export const assignTicketTeamSchema = z.object({
   team_id: uuidSchema,
   ...ticketNotificationSuppressionSchema
-});
+}).superRefine(validateTicketNotificationSuppression);
 
 // Remove a ticket's team (DELETE /api/v1/tickets/{id}/team). `mode` decides what
 // happens to the additional agents the team assignment created.
