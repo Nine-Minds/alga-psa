@@ -27,6 +27,10 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useToast } from "@alga-psa/ui/hooks/use-toast";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import {
+  isActionMessageError,
+  isActionPermissionError,
+} from "@alga-psa/ui/lib/errorHandling";
+import {
   listRmmAlertRules,
   createRmmAlertRule,
   updateRmmAlertRule,
@@ -177,11 +181,13 @@ function isValidRegex(pattern: string): boolean {
   }
 }
 
-function actionResultError(result: {
-  actionError?: string;
-  permissionError?: string;
-}): string | undefined {
-  return result.actionError ?? result.permissionError;
+// Takes `unknown` on purpose: ee/server compiles with `strict: false`, where a
+// boolean `if (res.success)` does not narrow the ActionResult union, so the
+// type-predicate guards have to do the discriminating.
+function actionResultError(result: unknown): string | undefined {
+  if (isActionMessageError(result)) return result.actionError;
+  if (isActionPermissionError(result)) return result.permissionError;
+  return undefined;
 }
 
 function formatWindowSchedule(
