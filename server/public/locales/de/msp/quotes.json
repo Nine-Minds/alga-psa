@@ -114,7 +114,9 @@
       "delete": "Das Angebot konnte nicht gelöscht werden.",
       "duplicate": "Das Angebot konnte nicht dupliziert werden.",
       "load": "Angebote konnten nicht geladen werden",
-      "send": "Angebot konnte nicht gesendet werden."
+      "send": "Angebot konnte nicht gesendet werden.",
+      "resend": "Das Angebot konnte nicht erneut gesendet werden.",
+      "sendReminder": "Die Erinnerung konnte nicht gesendet werden."
     },
     "loading": "Angebote werden geladen...",
     "rowActions": {

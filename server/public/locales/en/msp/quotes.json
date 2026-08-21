@@ -114,7 +114,9 @@
       "delete": "Failed to delete quote.",
       "duplicate": "Failed to duplicate quote.",
       "load": "Failed to load quotes",
-      "send": "Failed to send quote."
+      "send": "Failed to send quote.",
+      "resend": "Failed to resend quote.",
+      "sendReminder": "Failed to send quote reminder."
     },
     "loading": "Loading quotes...",
     "rowActions": {

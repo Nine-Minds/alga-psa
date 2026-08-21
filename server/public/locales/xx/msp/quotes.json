@@ -114,7 +114,9 @@
       "delete": "11111",
       "duplicate": "11111",
       "load": "11111",
-      "send": "11111"
+      "send": "11111",
+      "resend": "11111",
+      "sendReminder": "11111"
     },
     "loading": "11111",
     "rowActions": {

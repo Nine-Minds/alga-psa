@@ -114,7 +114,9 @@
       "delete": "Échec de la suppression du devis.",
       "duplicate": "Échec de la duplication du devis.",
       "load": "Échec du chargement des devis",
-      "send": "Échec de l'envoi du devis."
+      "send": "Échec de l'envoi du devis.",
+      "resend": "Échec de la relance du devis.",
+      "sendReminder": "Échec de l'envoi du rappel du devis."
     },
     "loading": "Chargement des devis...",
     "rowActions": {
