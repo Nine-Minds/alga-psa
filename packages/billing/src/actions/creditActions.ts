@@ -742,49 +742,65 @@ export const createPrepaymentInvoice = withAuth(async (
             ? new Date(manualExpirationDate).toISOString()
             : undefined;
 
-        // Get client's currency
-        const clientCurrency = client.default_currency_code || 'USD';
-        const prepaymentProfileId = await resolvePaymentBillingProfileId(
+        return createPrepaymentInvoiceInternal(
             trx,
             tenant,
             clientId,
-            billingProfileId ?? null
+            client,
+            amount,
+            await generateInvoiceNumber(),
+            expirationDate,
+            billingProfileId,
         );
-
-        // Create the prepayment invoice
-        const [createdInvoice] = await tenantScopedTable(trx, tenant, 'invoices')
-            .insert({
-                client_id: clientId,
-                billing_profile_id: prepaymentProfileId,
-                tenant,
-                invoice_date: new Date().toISOString(),
-                due_date: new Date().toISOString(), // Due immediately
-                subtotal: amount,
-                tax: 0, // Prepayments typically don't have tax
-                total_amount: amount,
-                status: 'draft',
-                invoice_number: await generateInvoiceNumber(),
-                // `billing_period_start/end` stores the invoice window, not the service period.
-                // Prepayments are not service-backed, so we set the window to "now" — there is no
-                // recurring_service_periods row for this invoice. Column rename to `invoice_window_*` is pending.
-                billing_period_start: new Date().toISOString(),
-                billing_period_end: new Date().toISOString(),
-                credit_applied: 0,
-                currency_code: clientCurrency,
-                is_prepayment: true,
-                credit_expiration_date: expirationDate,
-            })
-            .returning('*');
-
-        // No credit is issued here: the credit_issuance transaction and
-        // credit_tracking entry are created at finalization, so a draft
-        // prepayment grants nothing.
-        return createdInvoice;
     });
 
     return createdInvoice;
     });
 });
+
+/** Shared draft prepayment core used by the authenticated action and system replenishment. */
+export async function createPrepaymentInvoiceInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    client: DbRow,
+    amount: number,
+    invoiceNumber: string,
+    manualExpirationDate?: string,
+    billingProfileId?: string,
+): Promise<IInvoice> {
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Prepayment amount must be greater than zero');
+    }
+    const now = new Date().toISOString();
+    const prepaymentProfileId = await resolvePaymentBillingProfileId(
+        trx,
+        tenant,
+        clientId,
+        billingProfileId ?? null,
+    );
+    const [createdInvoice] = await tenantScopedTable(trx, tenant, 'invoices')
+        .insert({
+            client_id: clientId,
+            billing_profile_id: prepaymentProfileId,
+            tenant,
+            invoice_date: now,
+            due_date: now,
+            subtotal: amount,
+            tax: 0,
+            total_amount: amount,
+            status: 'draft',
+            invoice_number: invoiceNumber,
+            billing_period_start: now,
+            billing_period_end: now,
+            credit_applied: 0,
+            currency_code: client.default_currency_code || 'USD',
+            is_prepayment: true,
+            credit_expiration_date: manualExpirationDate,
+        })
+        .returning('*');
+    return createdInvoice as IInvoice;
+}
 
 
 /**

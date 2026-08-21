@@ -1726,9 +1726,26 @@
     "percentRangeError": "Wprowadź liczbę całkowitą od 1 do 100",
     "notifyClient": "Wyślij również e-mail do odbiorcy faktur klienta",
     "notifyClientHelp": "Wysyła alert do kanonicznego odbiorcy faktur klienta",
+    "replenishmentTier": "Gdy alert zostanie wywołany",
+    "replenishmentNotifyOnly": "Tylko powiadom",
+    "replenishmentDraft": "Utwórz roboczą fakturę doładowania i powiadom",
+    "replenishmentAutoIssue": "Utwórz i wystaw fakturę doładowania",
+    "replenishmentAmount": "Kwota doładowania kredytu (jednostki podrzędne)",
+    "replenishmentAmountHelp": "Dotyczy alertów kredytu. Alerty pakietu korzystają z minut poniżej.",
+    "replenishmentAmountError": "Wprowadź dodatnią całkowitą kwotę doładowania kredytu",
+    "replenishmentMinutes": "Minuty doładowania pakietu",
+    "replenishmentMinutesError": "Wprowadź dodatnią liczbę całkowitą minut",
+    "replenishmentHorizon": "Pomiń doładowanie w tylu dniach przed końcem umowy",
+    "replenishmentHorizonError": "Wprowadź liczbę dni od 0 do 3650",
     "save": "Zapisz",
     "saveSuccess": "Zapisano ustawienia alertu salda przedpłaconego",
     "saveError": "Nie udało się zapisać ustawień alertu salda przedpłaconego",
-    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego"
+    "loadError": "Nie udało się załadować ustawień alertu salda przedpłaconego",
+    "contractOverrideTitle": "Zastąpienie doładowania dla umowy",
+    "contractOverrideContract": "Umowa",
+    "contractOverrideInherit": "Użyj domyślnych ustawień klienta",
+    "saveContractOverride": "Zapisz zastąpienie umowy",
+    "contractSaveSuccess": "Zapisano zasadę doładowania umowy",
+    "contractSaveError": "Nie udało się zapisać zasady doładowania umowy"
   }
 }

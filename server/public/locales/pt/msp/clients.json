@@ -1676,9 +1676,26 @@
     "percentRangeError": "Informe um número inteiro de 1 a 100",
     "notifyClient": "Enviar também um e-mail ao destinatário de faturamento do cliente",
     "notifyClientHelp": "Envia o alerta ao destinatário de faturamento canônico do cliente",
+    "replenishmentTier": "Quando um alerta é disparado",
+    "replenishmentNotifyOnly": "Apenas notificar",
+    "replenishmentDraft": "Criar um rascunho de fatura de reabastecimento e notificar",
+    "replenishmentAutoIssue": "Criar e emitir uma fatura de reabastecimento",
+    "replenishmentAmount": "Valor de reabastecimento de crédito",
+    "replenishmentAmountHelp": "Valor na moeda selecionada. Os alertas de pacote usam os minutos abaixo.",
+    "replenishmentAmountError": "Informe um valor de reabastecimento positivo na moeda selecionada",
+    "replenishmentMinutes": "Minutos de reabastecimento do pacote",
+    "replenishmentMinutesError": "Informe um número inteiro positivo de minutos",
+    "replenishmentHorizon": "Ignorar o reabastecimento dentro deste número de dias do fim do contrato",
+    "replenishmentHorizonError": "Informe um número de dias de 0 a 3650",
     "save": "Salvar",
     "saveSuccess": "Configurações de alerta de saldo pré-pago salvas",
     "saveError": "Não foi possível salvar as configurações de alerta de saldo pré-pago",
-    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago"
+    "loadError": "Não foi possível carregar as configurações de alerta de saldo pré-pago",
+    "contractOverrideTitle": "Substituição de reabastecimento do contrato",
+    "contractOverrideContract": "Contrato",
+    "contractOverrideInherit": "Usar padrão do cliente",
+    "saveContractOverride": "Salvar substituição do contrato",
+    "contractSaveSuccess": "Política de reabastecimento do contrato salva",
+    "contractSaveError": "Não foi possível salvar a política de reabastecimento do contrato"
   }
 }

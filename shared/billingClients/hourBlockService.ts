@@ -603,3 +603,59 @@ export async function getAvailableHourBlockMinutes(
     .first<{ total: string | number }>();
   return Number(row?.total ?? 0);
 }
+
+/**
+ * Apply the same active/expiration/scope eligibility as the burn engine while
+ * assigning each block to at most one bucket subject. A client can have two
+ * bucket_usage rows for the same service (for example, overlapping retainer
+ * lines); returning the full client total for both observations would double
+ * count one balance and make both detectors appear recovered.
+ */
+export async function getAvailableHourBlockMinutesForSubjects(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  subjects: Array<{ key: string; serviceId: string }>,
+): Promise<Map<string, number>> {
+  const result = new Map(subjects.map((subject) => [subject.key, 0]));
+  if (subjects.length === 0) return result;
+
+  const db = tenantDb(conn, tenant);
+  const timeZone = await resolveEffectiveTimeZone(conn, tenant);
+  const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
+  const blocks = await db.table('hour_blocks as hb')
+    .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
+    .where('hb.remaining_minutes', '>', 0)
+    .where(function (this: Knex.QueryBuilder) {
+      this.whereNull('hb.expiration_date').orWhere('hb.expiration_date', '>=', today);
+    })
+    .select('hb.block_id', 'hb.remaining_minutes', 'hb.replenishment_bucket_usage_id')
+    .orderBy('hb.block_id', 'asc');
+  if (blocks.length === 0) return result;
+
+  const scopes = await db.table('hour_block_service_scopes')
+    .where({ tenant })
+    .whereIn('block_id', blocks.map((block) => block.block_id))
+    .select('block_id', 'service_id');
+  const scopeMap = new Map<string, string[]>();
+  for (const scope of scopes) {
+    const values = scopeMap.get(scope.block_id) ?? [];
+    values.push(scope.service_id);
+    scopeMap.set(scope.block_id, values);
+  }
+
+  const orderedSubjects = [...subjects].sort((a, b) => a.key.localeCompare(b.key));
+  for (const block of blocks) {
+    const scopedServices = scopeMap.get(block.block_id) ?? [];
+    const attributedOwner = block.replenishment_bucket_usage_id
+      ? orderedSubjects.find((subject) => subject.key === block.replenishment_bucket_usage_id)
+      : undefined;
+    const owner = attributedOwner ?? orderedSubjects.find((subject) =>
+      scopedServices.length === 0 || scopedServices.includes(subject.serviceId),
+    );
+    if (!owner) continue;
+    if (scopedServices.length > 0 && !scopedServices.includes(owner.serviceId)) continue;
+    result.set(owner.key, (result.get(owner.key) ?? 0) + Number(block.remaining_minutes));
+  }
+  return result;
+}

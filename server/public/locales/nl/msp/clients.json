@@ -1676,9 +1676,26 @@
     "percentRangeError": "Voer een geheel getal van 1 tot 100 in",
     "notifyClient": "De facturatie-ontvanger van de klant ook e-mailen",
     "notifyClientHelp": "Verstuurt de melding naar de canonieke facturatie-ontvanger van de klant",
+    "replenishmentTier": "Wanneer een melding afgaat",
+    "replenishmentNotifyOnly": "Alleen melden",
+    "replenishmentDraft": "Conceptaanvullingsfactuur maken en melden",
+    "replenishmentAutoIssue": "Aanvullingsfactuur maken en uitgeven",
+    "replenishmentAmount": "Tegoedaanvullingsbedrag",
+    "replenishmentAmountHelp": "Bedrag in de geselecteerde valuta. Pakketmeldingen gebruiken de minuten hieronder.",
+    "replenishmentAmountError": "Voer een positief aanvullingsbedrag in de geselecteerde valuta in",
+    "replenishmentMinutes": "Pakketaanvulling in minuten",
+    "replenishmentMinutesError": "Voer een positief geheel aantal minuten in",
+    "replenishmentHorizon": "Aanvulling overslaan binnen dit aantal dagen voor het einde van het contract",
+    "replenishmentHorizonError": "Voer een aantal dagen van 0 tot 3650 in",
     "save": "Opslaan",
     "saveSuccess": "Prepaid-saldomeldinginstellingen opgeslagen",
     "saveError": "Prepaid-saldomeldinginstellingen konden niet worden opgeslagen",
-    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen"
+    "loadError": "Prepaid-saldomeldinginstellingen konden niet worden geladen",
+    "contractOverrideTitle": "Contractaanvullingsoverschrijving",
+    "contractOverrideContract": "Contract",
+    "contractOverrideInherit": "Standaard van klant gebruiken",
+    "saveContractOverride": "Contractoverschrijving opslaan",
+    "contractSaveSuccess": "Contractaanvullingsbeleid opgeslagen",
+    "contractSaveError": "Contractaanvullingsbeleid kon niet worden opgeslagen"
   }
 }

@@ -1676,9 +1676,26 @@
     "percentRangeError": "Geben Sie eine ganze Zahl von 1 bis 100 ein",
     "notifyClient": "Auch den Rechnungsempfänger des Kunden per E-Mail benachrichtigen",
     "notifyClientHelp": "Sendet die Warnung an den kanonischen Rechnungsempfänger des Kunden",
+    "replenishmentTier": "Wenn eine Warnung ausgelöst wird",
+    "replenishmentNotifyOnly": "Nur benachrichtigen",
+    "replenishmentDraft": "Auffüllungsrechnung als Entwurf erstellen und benachrichtigen",
+    "replenishmentAutoIssue": "Auffüllungsrechnung erstellen und ausstellen",
+    "replenishmentAmount": "Guthaben-Auffüllungsbetrag",
+    "replenishmentAmountHelp": "Betrag in der ausgewählten Währung. Paket-Warnungen verwenden die Minuten unten.",
+    "replenishmentAmountError": "Geben Sie einen positiven Auffüllungsbetrag in der ausgewählten Währung ein",
+    "replenishmentMinutes": "Paket-Auffüllung in Minuten",
+    "replenishmentMinutesError": "Geben Sie eine positive ganze Zahl an Minuten ein",
+    "replenishmentHorizon": "Auffüllung in diesen Tagen vor Vertragsende überspringen",
+    "replenishmentHorizonError": "Geben Sie eine Anzahl von Tagen von 0 bis 3650 ein",
     "save": "Speichern",
     "saveSuccess": "Prepaid-Saldo-Warnungseinstellungen gespeichert",
     "saveError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht gespeichert werden",
-    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden"
+    "loadError": "Prepaid-Saldo-Warnungseinstellungen konnten nicht geladen werden",
+    "contractOverrideTitle": "Vertragsspezifische Auffüllungsüberschreibung",
+    "contractOverrideContract": "Vertrag",
+    "contractOverrideInherit": "Kundenstandard verwenden",
+    "saveContractOverride": "Vertragsüberschreibung speichern",
+    "contractSaveSuccess": "Vertragsauffüllungsrichtlinie gespeichert",
+    "contractSaveError": "Vertragsauffüllungsrichtlinie konnte nicht gespeichert werden"
   }
 }

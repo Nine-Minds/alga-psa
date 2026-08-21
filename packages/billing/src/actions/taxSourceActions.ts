@@ -130,16 +130,11 @@ export interface InvoiceFinalizationValidation {
   warning?: string;
 }
 
-export const validateInvoiceFinalization = withAuth(async (
-  _user,
-  { tenant },
-  invoiceId: string
-): Promise<InvoiceFinalizationValidation | TaxSourceActionError> => {
-  if (!await hasPermission(_user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
-  }
-  const { knex } = await createTenantKnex();
-
+export async function validateInvoiceFinalizationInternal(
+  knex: Knex,
+  tenant: string,
+  invoiceId: string,
+): Promise<InvoiceFinalizationValidation> {
   if (!tenant) {
     return { canFinalize: false, code: 'no_tenant', error: 'No tenant context' };
   }
@@ -171,6 +166,18 @@ export const validateInvoiceFinalization = withAuth(async (
   }
 
   return { canFinalize: true };
+}
+
+export const validateInvoiceFinalization = withAuth(async (
+  _user,
+  { tenant },
+  invoiceId: string
+): Promise<InvoiceFinalizationValidation | TaxSourceActionError> => {
+  if (!await hasPermission(_user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required');
+  }
+  const { knex } = await createTenantKnex();
+  return validateInvoiceFinalizationInternal(knex, tenant, invoiceId);
 });
 
 /**

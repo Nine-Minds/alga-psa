@@ -78,6 +78,7 @@ const SUBTYPES = [
   // Prepaid Alerts
   { category: 'Prepaid Alerts', name: 'prepaid-credit-low-balance', description: 'When a client prepaid credit balance drops below its configured floor' },
   { category: 'Prepaid Alerts', name: 'prepaid-bucket-threshold-reached', description: 'When a client prepaid hour bucket reaches its configured consumption threshold' },
+  { category: 'Prepaid Alerts', name: 'prepaid-replenishment-created', description: 'When an automatic prepaid replenishment invoice is created or issued' },
 ];
 
 /**
